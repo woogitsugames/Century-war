@@ -242,15 +242,20 @@ class Missions(private val profile: Profile) {
         }
     }
 
-    /** Wynik przekazujemy dokładnie raz dla każdej zakończonej bitwy. */
-    fun onBattleEnd(battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true, newStars: Int = 0) {
+    /** Wynik i zaakceptowane komendy gracza rozliczamy po zakończeniu bitwy. */
+    fun onBattleEnd(
+        battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true,
+        newStars: Int = 0, playerCommands: Replay.Log? = null,
+    ) {
         if (!refreshInternal(nowMillis, false)) return
-        for (item in state.daily) updateBattle(item, battle, newStars)
-        for (item in state.weekly) updateBattle(item, battle, newStars)
+        val upgrades = playerCommands?.commands?.count { it.kind == Replay.Kind.UNIT_UPGRADE } ?: 0
+        val cards = playerCommands?.commands?.count { it.kind == Replay.Kind.CARD } ?: 0
+        for (item in state.daily) updateBattle(item, battle, newStars, upgrades, cards)
+        for (item in state.weekly) updateBattle(item, battle, newStars, upgrades, cards)
         if (persist) profile.save()
     }
 
-    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int) {
+    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int, upgrades: Int, cards: Int) {
         val player = battle.player
         val won = battle.winner == 0
         val campaign = battle.cfg.mode == Mode.CAMPAIGN
@@ -286,7 +291,22 @@ class Missions(private val profile: Profile) {
             MissionType.GOLD -> item.add(player.goldEarned.toInt().coerceAtLeast(0))
             MissionType.KILL_VALUE -> item.add(player.killValue)
             MissionType.HARD_WINS -> if (won && battle.cfg.aiPower >= 1.2f && Modifier.FOG_OF_WAR !in battle.cfg.modifiers) item.add(1)
+            MissionType.WEATHER_WINS -> if (won && !endless && battle.weather != Weather.CLEAR) item.add(1)
+            MissionType.WEEKLY_WAVES -> if (endless && battle.cfg.weekly == state.weeklyWeek) item.reach(battle.wave)
+            MissionType.CUSTOM_SKIRMISH -> if (skirmish && !SkirmishSetup.isRanked(battle.cfg)) item.add(1)
+            MissionType.ENDLESS_BOSSES -> if (endless) item.add(battle.bossesDefeated)
+            MissionType.UNIT_UPGRADES -> item.add(upgrades)
+            MissionType.REPLAYS_WATCHED -> Unit // Rozlicza odtwarzacz.
+            MissionType.ENDLESS_CARDS -> if (endless) item.add(cards)
         }
+    }
+
+    /** Licz odtworzenie dopiero po rzeczywistym oglądaniu powtórki. */
+    fun onReplayWatched(nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true) {
+        if (!refreshInternal(nowMillis, false)) return
+        for (item in state.daily) if (item.type == MissionType.REPLAYS_WATCHED) item.add(1)
+        for (item in state.weekly) if (item.type == MissionType.REPLAYS_WATCHED) item.add(1)
+        if (persist) profile.save()
     }
 
     /** Wywoływane przez Profile.buy wyłącznie po udanym zakupie. */
