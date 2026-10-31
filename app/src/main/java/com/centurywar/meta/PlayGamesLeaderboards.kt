@@ -65,6 +65,16 @@ class PlayGamesLeaderboards(
     private var lastSyncedJson: String? = null
     private val queuedScores = LinkedHashMap<String, Long>()
     private val sentScores = HashMap<String, Long>()
+    private var dailyDay = System.currentTimeMillis() / 86_400_000L
+
+    /** Nowe okno UTC nie może dziedziczyć rekordu z dnia poprzedniego. */
+    private fun refreshDailyDay() {
+        val today = System.currentTimeMillis() / 86_400_000L
+        if (today == dailyDay) return
+        dailyDay = today
+        queuedScores.remove("daily")
+        sentScores.remove("daily")
+    }
 
     private val delayedSave = Runnable { syncCloud() }
 
@@ -106,6 +116,9 @@ class PlayGamesLeaderboards(
     }
 
     private fun onAuthenticated() {
+        // Konto mogło zmienić się w ustawieniach Google między wznowieniami.
+        sentScores.clear()
+        refreshDailyDay()
         flushScores()
         publishSavedScores(latestLocalJson)
         syncCloud()
@@ -135,6 +148,7 @@ class PlayGamesLeaderboards(
         if (score < 0) return
         handler.post {
             if (closed) return@post
+            refreshDailyDay()
             val key = if (board == "daily" || board.startsWith("daily_")) "daily" else board
             if (!boardIds.containsKey(key)) return@post
             val old = queuedScores[key]
@@ -145,6 +159,7 @@ class PlayGamesLeaderboards(
 
     private fun flushScores() {
         if (!authenticated || closed) return
+        refreshDailyDay()
         val iterator = queuedScores.entries.iterator()
         while (iterator.hasNext()) {
             val (key, score) = iterator.next()
@@ -167,6 +182,7 @@ class PlayGamesLeaderboards(
     /** Wznawia wyniki istniejącego profilu, także potyczkę bez wywołania z ekranu. */
     private fun publishSavedScores(json: String) {
         try {
+            refreshDailyDay()
             val all = JSONObject(json).optJSONObject("boards") ?: return
             val day = System.currentTimeMillis() / 86_400_000L
             for (key in arrayOf(
