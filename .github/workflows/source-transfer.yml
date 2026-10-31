@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [claude/bold-sagan-vwz5gm]
 
+concurrency:
+  group: source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
