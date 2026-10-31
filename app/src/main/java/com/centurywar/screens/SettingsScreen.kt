@@ -88,7 +88,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         chrome.dim(c, 120)
         ui.panel(c, panel)
         chrome.title(c, L["settings"])
-        for ((i, b) in rows.withIndex()) {
+        for ((i, b) in rows().withIndex()) {
             if (b !== reset) {
                 rowR.set(panel.left + 16 * dp, b.r.top - 3 * dp, panel.right - 16 * dp, b.r.bottom + 3 * dp)
                 ui.fill.color = if (i % 2 == 0) Color.argb(36, 255, 255, 255) else Color.argb(14, 255, 255, 255)

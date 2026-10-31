@@ -54,21 +54,14 @@ W Play Games Services → Setup and management → Achievements utwórz osiągni
 5. Reguła konfliktu: **suma gwiazdek × 100 + medale wydane na badania + medale posiadane + liczba bitew**. Wyższa suma wygrywa. Remis podczas porównania chmury z urządzeniem pozostawia wersję lokalną. Dwie konfliktujące wersje chmurowe porównywane są tą samą regułą (remis pozostawia pierwszą).
 6. Nie dodawaj medali z obu wersji: oznaczałoby to podwojenie waluty. Save i load są asynchroniczne, lokalny postęp pozostaje dostępny offline.
 
-## 5. Integracja UI w późniejszym zadaniu
+## 5. Integracja UI (zrealizowana)
 
-Ze względu na blokadę app/src/main/java/com/centurywar/screens/* obecne ekrany nie zostały zmodyfikowane.
-
-W RankingsScreen.kt dodaj przycisk „Ranking globalny”. W zdarzeniu kliknięcia:
-
-    g.online.showUi(board(tab))
-
-Metoda akceptuje również dzienny klucz w postaci daily_123, mapując go na tablicę daily z oknem dziennym. Flaga g.online.available jest prawdziwa tylko przy aktywnym uwierzytelnieniu. Kliknięcie wywołania showUi może uruchomić logowanie ręczne.
-
-W BattleScreen.kt, w gałęzi potyczki po zapisaniu rekordu, dodaj:
-
-    g.online.submit(Profile.BOARD_SKIRMISH, score)
-
-Integracja obecnie nadrabia takie wyniki z zapisywanego Profile.boards, lecz wywołanie bezpośrednie jest docelowe.
+- **Rankingi → Ranking globalny**: przycisk jest widoczny tylko wtedy, gdy podano poprawne ID PGS i inicjalizacja SDK powiodła się. Wybór otwiera odpowiednią tablicę (endless, daily, campaign, skirmish). Użytkownik niezalogowany może zalogować się przy otwieraniu tablicy.
+- **Ustawienia → Play Games**: ekran pokazuje stan konta (sprawdzanie, niezalogowany, połączono, synchronizacja, błąd) oraz przycisk zalogowania albo ręcznej synchronizacji.
+- Wznowienie aplikacji uruchamia asynchroniczną kontrolę `isAuthenticated`; nigdy nie blokuje ekranu.
+- Wyniki zwycięskiej potyczki wysyłane są bezpośrednio, a zapisane wcześniej rekordy może dosłać mechanizm synchronizacji profilu.
+- `g.online.available` informuje, czy funkcjonalność została poprawnie skonfigurowana i zainicjalizowana. **Nie** oznacza, że gracz jest zalogowany; do prezentacji stanu służy `g.online.state`.
+- Brak ID oznacza pełny tryb lokalny bez prób logowania. Dla skonfigurowanej gry brak sieci nie wpływa na rozgrywkę.
 
 ## 6. Testy akceptacyjne na urządzeniu
 
