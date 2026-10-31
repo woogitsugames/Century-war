@@ -462,11 +462,38 @@ class ScreenshotTest {
             until(TutorialOverlay.S_TURRET); shot(g, "${tag}_tut07_turret"); tapHole()
             repeat(5) { g.frame(c, 1f / 60f) }
             shot(g, "${tag}_tut07_turret_buy"); tapHole()
-            until(TutorialOverlay.S_BARRAGE); shot(g, "${tag}_tut08_barrage"); tapHole()
-            shot(g, "${tag}_tut08_barrage_aim"); tapHole()
+            b.player.gold = maxOf(b.player.gold, b.armoryCost(b.player) * 2f)
+            until(TutorialOverlay.S_ARMORY); shot(g, "${tag}_tut08_armory"); tapHole()
+            assertTrue("$tag: zbrojownia", b.player.armory > 0)
+            // Bot wystawia przeciwników blisko bazy: oba kroki obronne dają się aktywować.
+            fun enemyPush() {
+                for (i in 0..2) {
+                    val enemy = b.units[i]
+                    enemy.active = true; enemy.dying = -1f; enemy.side = 1
+                    enemy.x = b.player.baseFront + 140f + i * 20f
+                }
+                b.enemy.aliveCount = maxOf(b.enemy.aliveCount, 3)
+            }
+            enemyPush()
+            until(TutorialOverlay.S_STANCE); shot(g, "${tag}_tut09_stance"); tapHole()
+            assertTrue("$tag: postawa Trzymaj", b.player.hold)
+            enemyPush()
+            until(TutorialOverlay.S_RALLY); shot(g, "${tag}_tut10_rally"); tapHole()
+            assertTrue("$tag: Zryw", b.player.abilityCd[1] > 0f)
+            until(TutorialOverlay.S_BARRAGE); shot(g, "${tag}_tut11_barrage"); tapHole()
+            shot(g, "${tag}_tut11_barrage_aim")
+            val startX = tut.hole.centerX() - tut.hole.width() * 0.2f
+            val finishX = tut.hole.centerX() + tut.hole.width() * 0.2f
+            val aimY = tut.hole.centerY()
+            g.pushTouch(TouchEvent.DOWN, startX, aimY, 0)
+            g.pushTouch(TouchEvent.MOVE, finishX, aimY, 0)
+            g.pushTouch(TouchEvent.UP, finishX, aimY, 0)
+            g.frame(c, 1f / 60f)
+            shot(g, "${tag}_tut11_barrage_drag")
+            tapHole() // przeciągnięcie ustawia znacznik, dotknięcie zatwierdza ostrzał
             assertTrue("$tag: ostrzał samouczka", b.player.barragesUsed > 0)
-            until(TutorialOverlay.S_CAMERA); shot(g, "${tag}_tut09_camera"); next()
-            until(TutorialOverlay.S_DONE); shot(g, "${tag}_tut10_done"); next()
+            until(TutorialOverlay.S_CAMERA); shot(g, "${tag}_tut12_camera"); next()
+            until(TutorialOverlay.S_DONE); shot(g, "${tag}_tut13_done"); next()
             repeat(5) { g.frame(c, 1f / 60f) }
             assertTrue("$tag: samouczek zakończony", tut.finished && g.profile.tutorialDone)
             println("$tag tutorial ok: t=${b.time} era=${b.player.era} turrets=${b.player.turretEra.count { it >= 0 }} kills=${b.player.kills}")
