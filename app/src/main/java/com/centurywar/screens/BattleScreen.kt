@@ -119,6 +119,11 @@ class BattleScreen(
     private val restartEnd = btn(RESTART + 100)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     private val variantBtn = Array(2) { btn(VARIANT0 + it) }
+    /** Wyliczone poza renderem linie opisów; rysowanie bez tworzenia StringBuilder. */
+    private val variantText = Array(2) { Array(4) { "" } }
+    private val variantTextCount = IntArray(2)
+    private var variantTextEra = -1
+    private var variantTextLang = -1
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
     private val closeBtn = btn(CLOSE)
@@ -211,6 +216,7 @@ class BattleScreen(
         val vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
         for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
             (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
+        variantTextEra = -1 // zmiana rozmiaru wymaga ponownego łamania opisów
         layoutTurretPanel()
         layoutUpgradePanel()
     }
@@ -413,6 +419,7 @@ class BattleScreen(
         restartEnd.label = L["restart"]
         restartEnd.iconId = Icons.RESTART
 
+        cacheVariantText()
         val choiceOpen = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
             doctrineBtn[i].visible = choiceOpen && battle.pendingVariant == null && !paused
@@ -936,6 +943,30 @@ class BattleScreen(
     }
 
 
+    /** Łamanie tekstów tylko przy zmianie epoki, języka lub rozmiaru ekranu. */
+    private fun cacheVariantText() {
+        val era = battle.pendingVariant ?: return
+        if (variantTextEra == era && variantTextLang == L.lang) return
+        val spec = Defs.spec(era)
+        for (i in variantText.indices) {
+            var line = ""
+            var count = 0
+            val width = variantBtn[i].r.width() - 18 * dp
+            for (word in L[spec.variants[i].descKey].split(' ')) {
+                val next = if (line.isEmpty()) word else "$line $word"
+                if (ui.measure(next, 12.5f) > width && line.isNotEmpty() && count < 3) {
+                    variantText[i][count++] = line
+                    line = word
+                } else line = next
+            }
+            variantText[i][count++] = line
+            variantTextCount[i] = count
+            for (j in count until variantText[i].size) variantText[i][j] = ""
+        }
+        variantTextEra = era
+        variantTextLang = L.lang
+    }
+
     /** Modal dwóch wariantów: ikonki tych samych jednostek co na polu bitwy. */
     private fun drawVariants(c: Canvas) {
         val era = battle.pendingVariant ?: return
@@ -952,8 +983,10 @@ class BattleScreen(
             val name = L[v.nameKey]
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
-            ui.wrap(c, L[v.descKey], tmpR.centerX(), tmpR.top + 58 * dp,
-                tmpR.width() - 18 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
+            for (line in 0 until variantTextCount[i]) {
+                ui.text(c, variantText[i][line], tmpR.centerX(),
+                    tmpR.top + (58f + line * 17f) * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
+            }
             val imgH = min(72 * dp, tmpR.height() * 0.32f)
             val iy = tmpR.bottom - 28 * dp
             for (role in 0..3) {
