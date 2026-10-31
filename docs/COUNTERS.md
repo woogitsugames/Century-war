@@ -56,4 +56,120 @@ Uruchamianie na maszynie z Android SDK 36:
 ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
 ```
 
-Po zmianie mechaniki należy też porównać wydruki testu `BattleSimTest.campaignStagesFinish` z gałęzią bazową. Wyników symulacji nie należy uznawać za potwierdzone bez wykonania testów na rzeczywistym środowisku JVM/Android Gradle Plugin.
+## Zweryfikowane wyniki (GitHub Actions, 31.10.2026)
+
+Uruchomienie: [Walidacja kontr 06 — Actions](https://github.com/woogitsugames/Century-war/actions/runs/41201671953).
+Porównano identyczny `BattleSimTest` na `claude/bold-sagan-vwz5gm` (przed zmianą)
+i `gpt/06-counters` (po zmianie), ze stałymi seedami zawartymi w teście.
+Nowe `CounterBattleSimTest` sprawdzono dodatkowo na nowej gałęzi.
+
+| Parametr | Przed | Po |
+|---|---:|---:|
+| Zakończone etapy kampanii w 30 min | 25/32 | 29/32 |
+| Etapy z `TIMEOUT` | 7 (3, 4, 6, 18, 22, 25, 32) | 3 (4, 6, 14) |
+| Zwycięstwa strony 0 | 16 | 16 |
+| Zwycięstwa strony 1 | 9 | 13 |
+| Pełna potyczka `over` | `true` | `true` |
+| Tryb bez końca `over` | `true` | `true` |
+
+**Regresja do obserwacji:** etap 14 kończył się przed zmianą, a po zmianie przekracza 30 min.
+Etapy 4 i 6 przekraczają limit w obu wersjach. System kontr zmienia również zwycięzców
+niektórych etapów; nie jest zamiennikiem osobnego strojenia balansu.
+
+### Oryginalny stdout: wersja bazowa
+
+```text
+stage 1 era 0-0 power 0.72: winner=0 t=12.0min eras=0/0 kills=222/144
+stage 2 era 0-0 power 0.78: winner=0 t=25.9min eras=0/0 kills=370/326
+stage 3 era 0-1 power 0.84: TIMEOUT t=30.0min eras=1/1 kills=364/384
+stage 4 era 0-1 power 0.89: TIMEOUT t=30.0min eras=1/1 kills=425/472
+stage 5 era 1-1 power 0.83: winner=0 t=14.2min eras=1/1 kills=262/214
+stage 6 era 1-1 power 0.89: TIMEOUT t=30.0min eras=1/1 kills=546/500
+stage 7 era 1-2 power 0.95: winner=0 t=9.5min eras=2/2 kills=160/135
+stage 8 era 0-2 power 1.01: winner=0 t=11.1min eras=2/2 kills=189/145
+stage 9 era 2-2 power 0.94: winner=1 t=4.2min eras=2/2 kills=45/74
+stage 10 era 2-2 power 1.00: winner=1 t=4.5min eras=2/2 kills=38/71
+stage 11 era 2-3 power 1.06: winner=0 t=8.4min eras=3/3 kills=190/135
+stage 12 era 0-3 power 1.12: winner=0 t=7.6min eras=3/3 kills=168/147
+stage 13 era 3-3 power 1.06: winner=1 t=6.4min eras=3/3 kills=100/128
+stage 14 era 3-3 power 1.11: winner=1 t=7.5min eras=3/3 kills=103/138
+stage 15 era 3-4 power 1.17: winner=0 t=6.3min eras=4/4 kills=109/84
+stage 16 era 1-4 power 1.23: winner=0 t=11.9min eras=4/4 kills=215/177
+stage 17 era 4-4 power 1.17: winner=0 t=8.5min eras=4/4 kills=171/103
+stage 18 era 4-4 power 1.23: TIMEOUT t=30.0min eras=4/4 kills=600/553
+stage 19 era 4-5 power 1.28: winner=0 t=14.8min eras=5/5 kills=342/258
+stage 20 era 2-5 power 1.34: winner=0 t=8.5min eras=4/4 kills=182/109
+stage 21 era 5-5 power 1.28: winner=1 t=6.0min eras=5/5 kills=85/110
+stage 22 era 5-5 power 1.34: TIMEOUT t=30.0min eras=5/5 kills=555/455
+stage 23 era 5-6 power 1.40: winner=1 t=8.9min eras=6/6 kills=135/170
+stage 24 era 3-6 power 1.45: winner=0 t=8.2min eras=5/5 kills=178/134
+stage 25 era 6-6 power 1.39: TIMEOUT t=30.0min eras=6/6 kills=649/553
+stage 26 era 6-6 power 1.45: winner=1 t=14.5min eras=6/6 kills=316/323
+stage 27 era 6-7 power 1.51: winner=1 t=5.8min eras=6/7 kills=55/90
+stage 28 era 4-7 power 1.57: winner=0 t=5.7min eras=5/5 kills=111/67
+stage 29 era 7-7 power 1.50: winner=0 t=7.9min eras=7/7 kills=158/102
+stage 30 era 7-7 power 1.56: winner=0 t=13.6min eras=7/7 kills=315/211
+stage 31 era 7-7 power 1.62: winner=1 t=6.3min eras=7/7 kills=108/149
+stage 32 era 5-7 power 1.68: TIMEOUT t=30.0min eras=7/7 kills=644/592
+endless over=true wave=16 t=6.7385345 score=4682 era=2
+skirmish over=true winner=0 t=10.61231 eras=3/3 kills=181/137
+```
+
+### Oryginalny stdout: system kontr
+
+```text
+stage 1 era 0-0 power 0.72: winner=0 t=14.3min eras=0/0 kills=234/184
+stage 2 era 0-0 power 0.78: winner=0 t=23.1min eras=0/0 kills=373/294
+stage 3 era 0-1 power 0.84: winner=0 t=12.7min eras=1/1 kills=211/196
+stage 4 era 0-1 power 0.89: TIMEOUT t=30.0min eras=1/1 kills=528/466
+stage 5 era 1-1 power 0.83: winner=0 t=16.0min eras=1/1 kills=292/241
+stage 6 era 1-1 power 0.89: TIMEOUT t=30.0min eras=1/1 kills=580/487
+stage 7 era 1-2 power 0.95: winner=1 t=9.1min eras=2/2 kills=134/194
+stage 8 era 0-2 power 1.01: winner=0 t=11.1min eras=2/2 kills=196/173
+stage 9 era 2-2 power 0.94: winner=1 t=6.1min eras=2/2 kills=96/94
+stage 10 era 2-2 power 1.00: winner=0 t=12.0min eras=2/2 kills=217/187
+stage 11 era 2-3 power 1.06: winner=1 t=9.2min eras=3/3 kills=170/231
+stage 12 era 0-3 power 1.12: winner=1 t=7.4min eras=3/3 kills=140/161
+stage 13 era 3-3 power 1.06: winner=0 t=17.6min eras=3/3 kills=406/327
+stage 14 era 3-3 power 1.11: TIMEOUT t=30.0min eras=3/3 kills=474/534
+stage 15 era 3-4 power 1.17: winner=0 t=7.4min eras=4/4 kills=148/96
+stage 16 era 1-4 power 1.23: winner=0 t=8.9min eras=4/4 kills=179/123
+stage 17 era 4-4 power 1.17: winner=1 t=10.6min eras=4/4 kills=159/237
+stage 18 era 4-4 power 1.23: winner=1 t=6.6min eras=4/4 kills=114/154
+stage 19 era 4-5 power 1.28: winner=0 t=5.6min eras=5/5 kills=130/108
+stage 20 era 2-5 power 1.34: winner=1 t=13.8min eras=5/5 kills=260/256
+stage 21 era 5-5 power 1.28: winner=1 t=9.6min eras=5/5 kills=173/203
+stage 22 era 5-5 power 1.34: winner=1 t=6.1min eras=5/5 kills=86/116
+stage 23 era 5-6 power 1.40: winner=0 t=7.8min eras=6/6 kills=182/119
+stage 24 era 3-6 power 1.45: winner=0 t=8.2min eras=5/5 kills=194/133
+stage 25 era 6-6 power 1.39: winner=1 t=8.3min eras=6/6 kills=177/163
+stage 26 era 6-6 power 1.45: winner=1 t=19.1min eras=6/6 kills=417/394
+stage 27 era 6-7 power 1.51: winner=0 t=7.8min eras=7/7 kills=157/108
+stage 28 era 4-7 power 1.57: winner=0 t=9.7min eras=6/6 kills=199/127
+stage 29 era 7-7 power 1.50: winner=0 t=7.3min eras=7/7 kills=174/108
+stage 30 era 7-7 power 1.56: winner=1 t=8.4min eras=7/7 kills=140/195
+stage 31 era 7-7 power 1.62: winner=1 t=3.9min eras=7/7 kills=70/84
+stage 32 era 5-7 power 1.68: winner=0 t=9.0min eras=7/7 kills=219/200
+endless over=true wave=30 t=12.07612 score=8822 era=3
+skirmish over=true winner=1 t=9.372891 eras=3/3 kills=142/170
+```
+
+### Końcówki logów Gradle
+
+```text
+# GitHub Actions, Android SDK 36, JDK 17
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 1m 26s
+
+> Task :app:testDebugUnitTest
+BUILD SUCCESSFUL in 17s
+
+# Kotlin JVM, przed zmianą:
+BUILD SUCCESSFUL in 54s
+
+# Kotlin JVM, po zmianie:
+BUILD SUCCESSFUL in 23s
+```
+
+Nie uruchamiano wolnego `ScreenshotTest`, bo zlecenie nie dotyczy grafiki.
+
