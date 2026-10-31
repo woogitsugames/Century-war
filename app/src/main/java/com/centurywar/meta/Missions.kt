@@ -5,12 +5,14 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import com.centurywar.game.Rng
+import com.centurywar.game.Replay
+import com.centurywar.game.Weather
 import com.centurywar.game.Role
 import org.json.JSONArray
 import org.json.JSONObject
 
 /** Zadania rozliczane po bitwie lub po udanym zakupie badania. */
-enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int = 0) {
+enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int = 0, val weight: Int = 3) {
     BATTLES(2, 12),
     WINS(1, 6, 2),
     KILLS(45, 300),
@@ -40,6 +42,14 @@ enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int =
     GOLD(2_000, 20_000),
     KILL_VALUE(500, 8_000),
     HARD_WINS(1, 4, 3),
+    // Nowe misje pojawiają się rzadziej niż podstawowe.
+    WEATHER_WINS(1, 3, 2, 2),
+    WEEKLY_WAVES(10, 20, 3, 2),
+    CUSTOM_SKIRMISH(1, 3, 2, 2),
+    ENDLESS_BOSSES(1, 3, 3, 2),
+    UNIT_UPGRADES(2, 12, 2, 2),
+    REPLAYS_WATCHED(1, 3, 1, 2),
+    ENDLESS_CARDS(2, 10, 2, 2),
 }
 
 /** Stałe nagrody i cele pozostają niezmienione do końca okresu. */
@@ -127,7 +137,9 @@ class MissionState {
 
     private fun readItems(json: JSONArray?, output: MutableList<MissionItem>) {
         if (json == null) return
-        for (i in 0 until minOf(json.length(), 3)) {
+        // Pomiń nieznany typ i sprawdź również kolejne poprawne wpisy.
+        for (i in 0 until minOf(json.length(), 64)) {
+            if (output.size == 3) break
             json.optJSONObject(i)?.let { MissionItem.fromJson(it)?.let(output::add) }
         }
     }
