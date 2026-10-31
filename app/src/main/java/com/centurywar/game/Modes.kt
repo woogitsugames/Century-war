@@ -28,6 +28,10 @@ enum class Modifier(val key: String) {
     SLOW_XP("m_slowxp"),
     ARMORED_FOE("m_armored"),
     FOG_OF_WAR("m_fog"),
+    FORCE_DIESEL("m_diesel"),
+    FORCE_TESLA("m_tesla"),
+    FORCE_CYBER("m_cyber"),
+    FORCE_BIO("m_bio"),
 }
 
 enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
@@ -96,7 +100,15 @@ object Campaign {
             val start = if (sub == 3) maxOf(0, era - 2) else era
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
             val power = 0.72f + i * 0.028f + sub * 0.03f
-            val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
+            val basic = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
+            val forced = when (i) {
+                16 -> Modifier.FORCE_DIESEL
+                17 -> Modifier.FORCE_TESLA
+                24 -> Modifier.FORCE_CYBER
+                25 -> Modifier.FORCE_BIO
+                else -> null
+            }
+            val mods = if (forced == null) basic else basic + forced
             add(Stage(i, "stage_${i + 1}", start, max, power, mods))
         }
     }
@@ -120,13 +132,20 @@ object Daily {
 
     fun config(day: Long, bonuses: Bonuses): BattleConfig {
         val rng = Rng(day * 7919L + 17L)
-        val all = Modifier.values()
-        val mods = HashSet<Modifier>()
+        val all = Modifier.values().filter { it.ordinal <= Modifier.FOG_OF_WAR.ordinal }
+        val mods = LinkedHashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
-        val start = rng.nextInt(3)
-        // W wyzwaniu dnia wszyscy grają tymi samymi, ujednoliconymi bonusami. Ranking jest wtedy uczciwy.
-        return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f, start, minOf(7, start + 3), mods, normalizedBonuses(bonuses))
+        val start = rng.nextInt(7)
+        val maxEra = minOf(Defs.ERA_COUNT - 1, start + 3)
+        if (rng.nextInt(3) == 0) {
+            val branchEra = if (start <= 6 && maxEra >= 6 && rng.nextInt(2) == 0) 6
+                else if (start <= 4 && maxEra >= 4) 4 else if (start <= 6 && maxEra >= 6) 6 else -1
+            if (branchEra == 4) mods.add(if (rng.nextInt(2) == 0) Modifier.FORCE_DIESEL else Modifier.FORCE_TESLA)
+            if (branchEra == 6) mods.add(if (rng.nextInt(2) == 0) Modifier.FORCE_CYBER else Modifier.FORCE_BIO)
+        }
+        // Modyfikator wariantu i seed są wspólne dla wszystkich w danym dniu UTC.
+        return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f, start, maxEra, mods, normalizedBonuses(bonuses))
     }
 
     private fun normalizedBonuses(b: Bonuses) = Bonuses(
