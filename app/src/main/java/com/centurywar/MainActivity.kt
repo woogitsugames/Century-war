@@ -26,6 +26,7 @@ import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
 import com.centurywar.notifications.DailyReminders
+import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -41,6 +42,7 @@ class MainActivity : Activity(), Host {
     private lateinit var game: Game
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
+    private var playGames: PlayGamesLeaderboards? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +51,14 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        if ((application as? CenturyWarApp)?.playGamesReady == true) {
+            try {
+                playGames = PlayGamesLeaderboards(this, game)
+                game.online = playGames!!
+            } catch (_: RuntimeException) {
+                // Niepowodzenie PGS nie blokuje uruchomienia gry.
+            }
+        }
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
@@ -121,6 +131,7 @@ class MainActivity : Activity(), Host {
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
         DailyReminders.refresh(this)
+        playGames?.refreshSignIn()
     }
 
     override fun onPause() {
@@ -146,6 +157,7 @@ class MainActivity : Activity(), Host {
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
     override fun onDestroy() {
+        playGames?.close()
         game.sound?.release()
         super.onDestroy()
     }

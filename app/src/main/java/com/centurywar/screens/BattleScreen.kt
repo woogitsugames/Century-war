@@ -478,7 +478,10 @@ class BattleScreen(
             }
             Mode.SKIRMISH -> {
                 reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
-                if (won) newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
+                if (won) {
+                    newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
+                    g.online.submit(Profile.BOARD_SKIRMISH, score)
+                }
             }
             Mode.ENDLESS -> {
                 reward = battle.wave * 3 + battle.player.kills / 10

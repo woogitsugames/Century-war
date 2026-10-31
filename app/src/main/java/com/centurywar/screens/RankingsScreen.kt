@@ -11,6 +11,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Daily
+import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import kotlin.math.min
 
@@ -20,6 +21,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val back = btn(-1)
     private val rename = btn(-2)
     private val achievementsButton = btn(101)
+    private val global = btn(-3)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
     private val panel = RectF()
@@ -57,10 +59,19 @@ class RankingsScreen(g: Game) : Screen(g) {
         achievementsButton.iconId = Icons.MEDAL
         val aw = min(178 * dp, pw * 0.48f)
         achievementsButton.set(panel.right - aw - 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
+        global.visible = g.online.available
+        if (global.visible) {
+            global.label = L["global_ranking"]
+            global.iconId = Icons.GLOBE
+            val gw = min(270 * dp, pw - 32 * dp)
+            global.set(panel.centerX() - gw / 2, panel.bottom - 96 * dp, gw, 38 * dp)
+        }
     }
 
     override fun update(dt: Float) {
         this.dt = dt
+        // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
+        if (global.visible != g.online.available) layout()
         for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }
 
@@ -71,13 +82,14 @@ class RankingsScreen(g: Game) : Screen(g) {
         for (b in tabs) ui.button(c, b, 13f)
         ui.button(c, back, 16f); ui.button(c, rename, 14f)
         ui.button(c, achievementsButton, 13f)
+        if (global.visible) ui.button(c, global, 14f)
         chrome.title(c, L["rankings"])
         val list = g.profile.top(board(tab))
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
         var y = panel.top + 54 * dp
-        val bottomLimit = panel.bottom - 52 * dp
+        val bottomLimit = panel.bottom - (if (global.visible) 102 * dp else 52 * dp)
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
             ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
@@ -114,13 +126,22 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.fill.color = Color.argb(60, 255, 255, 255); c.drawRect(row, ui.fill)
         ui.textO(c, "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(hrs)} h",
             panel.centerX(), panel.bottom - 28 * dp, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)
-        ui.text(c, L["online_note"], panel.centerX(), panel.bottom - 13 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
+        val onlineStatus = if (!global.visible) "online_note" else when (g.online.state) {
+            OnlineState.CONNECTED -> "pgs_connected"
+            OnlineState.SYNCING -> "pgs_syncing"
+            OnlineState.CHECKING -> "pgs_checking"
+            OnlineState.SIGNED_OUT -> "pgs_signed_out"
+            OnlineState.ERROR -> "pgs_error"
+            else -> "pgs_disabled"
+        }
+        ui.text(c, L[onlineStatus], panel.centerX(), panel.bottom - 13 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
     }
 
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()
             101 -> g.push(AchievementsScreen(g))
+            -3 -> if (g.online.available) g.online.showUi(board(tab))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
             in 0..3 -> tab = b.id
         }

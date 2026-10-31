@@ -148,6 +148,18 @@ object L {
             "Глобальний рейтинг: Google Play Games (після налаштування в Play Console)",
             "Wereldwijde ranglijst: Google Play Games (na instelling in Play Console)",
             "Küresel sıralama: Google Play Games (Play Console ayarından sonra)"),
+        "global_ranking" to t("Ranking globalny", "Global ranking", "Weltrangliste", "Clasificación mundial", "Classement mondial", "Classifica globale", "Ranking mundial", "Світовий рейтинг", "Wereldranglijst", "Küresel sıralama"),
+        "play_games" to t("Play Games", "Play Games", "Play Games", "Play Games", "Play Games", "Play Games", "Play Games", "Play Games", "Play Games", "Play Games"),
+        "pgs_disabled" to t("Niedostępne", "Unavailable", "Nicht verfügbar", "No disponible", "Indisponible", "Non disponibile", "Indisponível", "Недоступно", "Niet beschikbaar", "Kullanılamıyor"),
+        "pgs_checking" to t("Sprawdzanie…", "Checking…", "Prüfen…", "Comprobando…", "Vérification…", "Verifica…", "Verificando…", "Перевірка…", "Controleren…", "Kontrol ediliyor…"),
+        "pgs_signed_out" to t("Niezalogowany", "Signed out", "Abgemeldet", "Sin sesión", "Déconnecté", "Disconnesso", "Desconectado", "Не ввійшли", "Uitgelogd", "Oturum kapalı"),
+        "pgs_connected" to t("Połączono", "Connected", "Verbunden", "Conectado", "Connecté", "Connesso", "Conectado", "Підключено", "Verbonden", "Bağlandı"),
+        "pgs_syncing" to t("Synchronizacja…", "Syncing…", "Synchronisieren…", "Sincronizando…", "Synchronisation…", "Sincronizzazione…", "Sincronizando…", "Синхронізація…", "Synchroniseren…", "Eşitleniyor…"),
+        "pgs_error" to t("Błąd połączenia", "Connection error", "Verbindungsfehler", "Error de conexión", "Erreur de connexion", "Errore di connessione", "Erro de conexão", "Помилка з’єднання", "Verbindingsfout", "Bağlantı hatası"),
+        "pgs_sign_in" to t("Zaloguj", "Sign in", "Anmelden", "Iniciar sesión", "Se connecter", "Accedi", "Entrar", "Увійти", "Aanmelden", "Giriş yap"),
+        "pgs_sync" to t("Synchronizuj", "Sync now", "Synchronisieren", "Sincronizar", "Synchroniser", "Sincronizza", "Sincronizar", "Синхронізувати", "Synchroniseer", "Eşitle"),
+        "pgs_info" to t("Globalne wyniki i postęp zapisany w chmurze.", "Global scores and cloud-saved progress.", "Globale Punkte und Cloud-Spielstand.", "Puntuaciones globales y progreso en la nube.", "Scores mondiaux et progression dans le cloud.", "Punteggi globali e progressi nel cloud.", "Pontuações globais e progresso na nuvem.", "Світові результати й прогрес у хмарі.", "Wereldscores en voortgang in de cloud.", "Küresel puanlar ve bulut kaydı."),
+        "pgs_account_status" to t("Stan konta", "Account status", "Kontostatus", "Estado de la cuenta", "Statut du compte", "Stato account", "Estado da conta", "Стан облікового запису", "Accountstatus", "Hesap durumu"),
         "stats" to t("Statystyki", "Statistics", "Statistik", "Estadísticas", "Statistiques", "Statistiche", "Estatísticas", "Статистика", "Statistieken", "İstatistikler"),
 
         // --- bitwa

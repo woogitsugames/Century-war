@@ -14,6 +14,8 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
+import com.centurywar.meta.OnlineLeaderboards
+import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -65,6 +67,30 @@ class ScreenshotTest {
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
+    /** Testuje układ rankingów i ustawień przy aktywnym PGS, bez połączeń sieciowych. */
+    @Test
+    fun playGamesMenus() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.online = object : OnlineLeaderboards {
+                override val available = true
+                override val state = OnlineState.SIGNED_OUT
+                override fun submit(board: String, score: Long) {}
+            }
+            g.setScreen(RankingsScreen(g))
+            shot(g, "${tag}_pgs_rankings")
+            g.setScreen(SettingsScreen(g))
+            shot(g, "${tag}_pgs_settings")
+            g.setScreen(PlayGamesScreen(g))
+            shot(g, "${tag}_pgs_signin")
+        }
+    }
+
     @Test
     fun menus() {
         for ((tag, dims) in mapOf(
