@@ -47,10 +47,17 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         private set
     var fxIntensity = 1f
         private set
-    private var nextParticleFlashAt = 0f
-    private var nextBaseFlashAt = 0f
+    private var nextVisualFlashAt = 0f
     private val lastBaseFlash = FloatArray(2)
     private val baseFlashUntil = FloatArray(2)
+
+    /** Wspólny limit rozbłysków (< 3 Hz) także dla nowych efektów. */
+    private fun allowFlash(): Boolean {
+        if (!g.profile.reduceFlash) return true
+        if (time < nextVisualFlashAt) return false
+        nextVisualFlashAt = time + 0.34f
+        return true
+    }
     private var time = 0f
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -383,9 +390,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.save(); c.translate(-PIC_OX, -PIC_OY)
         val flashAlpha = if (g.profile.reduceFlash) {
             // Pierwsza klatka kolejnego uderzenia; maks. 1 rozbłysk na 0,34 s.
-            if (s.baseFlash > lastBaseFlash[s.index] + 0.005f && time >= nextBaseFlashAt) {
+            if (s.baseFlash > lastBaseFlash[s.index] + 0.005f && allowFlash()) {
                 baseFlashUntil[s.index] = time + 0.15f
-                nextBaseFlashAt = time + 0.34f
             }
             lastBaseFlash[s.index] = s.baseFlash
             if (time <= baseFlashUntil[s.index]) (s.baseFlash / 0.15f * 22f).toInt().coerceIn(0, 22) else 0
@@ -464,7 +470,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         men.windup = if (!u.moving && u.cd > 0f && cool > 0.3f)
             ((cool - u.cd - 0.25f) / (cool - 0.25f)).coerceIn(0f, 1f) else -1f
         pen.alpha = alpha
-        pen.flash = u.flash > 0f
+        pen.flash = u.flash > 0f && allowFlash()
         drawBody(def, team, walk, atk, u.tier)
         pen.flash = false
         c.restore()
@@ -679,10 +685,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun spawnParticle(x: Float, h: Float, vx: Float, vh: Float, life: Float, size: Float, color: Int, type: Int) {
         val maxP = g.quality.maxParticles
-        if (type == 2 && g.profile.reduceFlash) {
-            if (time < nextParticleFlashAt) return
-            nextParticleFlashAt = time + 0.34f
-        }
+        if (type == 2 && !allowFlash()) return
         if (pcount >= maxP || pcount >= PMAX) return
         val i = pcount++
         px[i] = x; ph[i] = h; pvx[i] = vx; pvh[i] = vh; plife[i] = life; pmax[i] = life; psize[i] = size; pcol[i] = color; ptype[i] = type
