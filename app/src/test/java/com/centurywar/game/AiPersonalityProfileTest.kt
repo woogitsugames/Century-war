@@ -9,13 +9,19 @@ import org.junit.Test
 class AiPersonalityProfileTest {
     private companion object {
         const val SEEDS = 20
-        const val LIMIT_SECONDS = 720f
+        /**
+         * Bitwa gra do rozstrzygnięcia: presja oblężnicza od 480 s kończy ją zwykle przed 900 s.
+         * Dawny limit 720 s ucinał większość partii i liczył remis jako porażkę przeciwnika,
+         * przez co nawet lustrzany BALANCED wygrywał ~12%. Limit to tylko bezpiecznik.
+         */
+        const val LIMIT_SECONDS = 1800f
         const val SAMPLE_STEPS = 300 // 5 sekund przy stałym kroku 60 Hz
     }
 
     private class Result(val name: AiPersonality, val startEra: Int) {
         var games = 0
         var wins = 0
+        var draws = 0
         var finished = 0
         var evolveTime = 0.0
         var evolves = 0.0
@@ -71,6 +77,7 @@ class AiPersonalityProfileTest {
             games++
             if (b.over) finished++
             if (b.winner == 1 && b.over) wins++
+            if (!b.over) draws++
             if (startEra == 0) evolveTime += if (firstEvolve >= 0f) firstEvolve.toDouble() else LIMIT_SECONDS.toDouble()
             evolves += b.enemy.erasAdvanced
             for (r in roles.indices) roles[r] += b.enemy.spawnedByRole[r].toLong()
@@ -99,7 +106,7 @@ class AiPersonalityProfileTest {
             12 -> if (pushingSamples == 0) 0.0 else pushingAlive / pushingSamples
             13 -> if (sampleCount == 0) 0.0 else holdSamples.toDouble() / sampleCount
             14 -> avg(duration)
-            15 -> wins.toDouble() / games
+            15 -> (wins + 0.5 * draws) / games
             16 -> avg(upgrades)
             17 -> if (waveReleases == 0) 0.0 else waveReleaseUnits / waveReleases
             else -> error("Miara poza zakresem")
@@ -160,7 +167,9 @@ class AiPersonalityProfileTest {
                 assertTrue("Oblężnik powinien ruszać największą falą: " + lines,
                     static[siege].metric(17) >= static[i].metric(17))
             }
-            val winRate = (advancing[i].wins + static[i].wins).toDouble() / (SEEDS * 2)
+            // Nierozstrzygnięta partia (tylko po bezpieczniku) liczy się jako pół wygranej.
+            val winRate = (advancing[i].wins + static[i].wins +
+                0.5 * (advancing[i].draws + static[i].draws)) / (SEEDS * 2)
             assertTrue(p.name + ": wygrane spoza 30-70% (" + winRate + ")\n" + lines,
                 winRate in 0.30..0.70)
         }

@@ -39,16 +39,16 @@ enum class AiPersonality(
         4.5f, 0.35f, 1.2f, 10, true,
     ),
     ENGINEER(
-        12, 26, 48, 14,
+        14, 36, 36, 14,
         8f, 0.78f, 9f, 0.90f, 5f, 2f,
-        2, 3, 5, false, 1.20f, 6,
+        2, 3, 5, false, 0.70f, 5,
         0.75f, 0.82f, 1.0f, 18, true,
     ),
     ECONOMIST(
         23, 22, 17, 38,
-        185f, 0.07f, 0f, 0.73f, 14f, 5f,
+        120f, 0.15f, 0f, 0.73f, 14f, 5f,
         4, 5, 6, false, 0.80f, 6,
-        0.90f, 0.52f, 0.60f, 55, false,
+        0.90f, 0.52f, 1.20f, 25, false,
     ),
     SIEGER(
         10, 20, 35, 35,
