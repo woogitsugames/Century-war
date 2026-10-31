@@ -46,7 +46,6 @@ class ReplayScreen(
     private var watchedSeconds = 0f
     private var replayAchievementChecked = false
     private var draggingTime = false
-    private var watchedSeconds = 0f
     private var watchedClaimed = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1

@@ -75,7 +75,7 @@ class MenuBg {
     private var tile = 1f
 
     /** [dt] jest ignorowane, jeśli w tej klatce czas już przesunięto (wspólny zegar). */
-    fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean): Float {
+    fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean = true): Float {
         if (animated) {
             val now = System.nanoTime()
             if (now - lastFrameNanos > 4_000_000L) { time += dt; lastFrameNanos = now }
