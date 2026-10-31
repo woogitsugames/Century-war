@@ -13,6 +13,14 @@ class Ai(private val b: Battle, sideIndex: Int) {
     private var think = 0.4f
     private var plannedRole: Role? = null
 
+    /** Stan wewnętrzny do zapisu/wczytania bitwy ([BattleSnapshot]). */
+    var thinkTimer: Float
+        get() = think
+        set(v) { think = v }
+    var plannedRoleState: Role?
+        get() = plannedRole
+        set(v) { plannedRole = v }
+
     fun update(dt: Float) {
         think -= dt
         if (think > 0f) return
@@ -88,16 +96,16 @@ class Ai(private val b: Battle, sideIndex: Int) {
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < 35) return Role.ELITE
         if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
         if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
-        // Preferuj kontrę na czołową jednostkę wroga, jeśli pozwala na nią budżet.
+        // Kontra na pierwszą linię wroga, bez dodatkowego losowania.
         if (r < 65) {
-            val foeRole = b.frontUnit(1 - me.index)?.def?.role
-            val counter = when (foeRole) {
+            val enemyRole = b.frontUnit(1 - me.index)?.def?.role
+            val answer = when (enemyRole) {
                 Role.MELEE -> Role.HEAVY
                 Role.RANGED -> Role.MELEE
                 Role.HEAVY -> Role.RANGED
                 else -> null
             }
-            if (counter != null && me.gold >= Defs.unit(me.era, counter).cost) return counter
+            if (answer != null && me.gold >= Defs.unit(me.era, answer).cost) return answer
         }
         if (heavy * 3 < melee + ranged && r < 45) return Role.HEAVY
         return if (ranged < melee) Role.RANGED else Role.MELEE

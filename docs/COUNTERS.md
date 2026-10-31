@@ -32,7 +32,7 @@ Ta premia dotyczy obrażeń **pocisku wieży** i jego eksplozji; nie jest premi�
 3. `Projectile.shooterRole` przechowuje rolę do chwili trafienia, niezależnie od tego, czy strzelec nadal żyje. `Projectile.turretEra` identyfikuje pociski wieży. Oba pola są nadpisywane przy każdym wystrzale; przy ostrzale specjalnym są zerowane (`null` / `-1`), aby pula pocisków nie przenosiła starego bonusu.
 4. Ostrzał specjalny pozostaje neutralny wobec ról. Obrażenia baz nadal podlegają dotychczasowym zasadom `siegeMul`, `siegePressure` i XP.
 5. `Ai.pickRole` wykorzystuje rolę jednostki na pierwszej linii wroga. Z prawdopodobieństwem ograniczonym istniejącą liczbą losową preferuje dostępną finansowo kontrę; zachowuje wcześniejsze warunki obrony, elity, modyfikatora Horda strzelców i składu własnej armii.
-6. `CounterTexts.roleHint(role, polish)` oraz `CounterTexts.turretHint(polish)` udostępniają gotowe teksty PL/EN. Nie zmieniano równolegle edytowanych plików UI.
+6. `CodexScreen` wyświetla kontry jednostek, bonus oblężniczy elity i premię późnych wież. Teksty pochodzą z `engine/L.kt` (10 języków).
 
 ## Ograniczenie: wieże nie mają HP
 
@@ -173,3 +173,13 @@ BUILD SUCCESSFUL in 23s
 
 Nie uruchamiano wolnego `ScreenshotTest`, bo zlecenie nie dotyczy grafiki.
 
+
+## Integracja z aktualną bazą
+
+Po pierwotnej implementacji gałąź bazowa została rozbudowana o zapis bitwy, Kodeks i pełne tłumaczenia. Obecną implementację przeniesiono na aktualną bazę.
+
+- `BattleSnapshot.VERSION = 3`: zrzuty przechowują `Projectile.shooterRole` i `Projectile.turretEra`; przy odczycie walidowane są zakresy enumów oraz epok.
+- Odcisk balansu zawiera macierz kontr i premię wież, dzięki czemu niezgodne zrzuty są odrzucane.
+- Dodano dwa testy porównujące przebieg po wznowieniu pocisku w locie: strzelec przeciw ciężkiemu celowi oraz wieża z Epoki pary przeciw ciężkiej jednostce.
+- Kodeks pokazuje podpowiedź na kartach wszystkich czterech ról oraz późnych wież, z tłumaczeniem na 10 języków i prealokowanym tekstem.
+- Wcześniejsze surowe wyniki symulacji (wyżej) pochodzą z wersji bazowej sprzed integracji. Aktualny test przejścia na nową bazę jest osobno dokumentowany w PR.
