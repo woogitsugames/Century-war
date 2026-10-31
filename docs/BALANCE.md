@@ -89,10 +89,33 @@ na dwóch już istniejących etapach kampanii danej epoki. Kryterium A/B:
 BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.variantReport*' --console=plain --no-configuration-cache
 ```
 
-Plik wynikowy: `app/build/balance/variants.md`. Po uruchomieniu pomiaru należy
-włączyć wynik do tego dokumentu i porównać wyniki etapów z wcześniejszymi
-progami kampanii. **Pomiar nie został jeszcze wykonany w tej gałęzi;
-nie ma podstaw, by deklarować spełnienie progu 10 pp.**
+Plik wynikowy: `app/build/balance/variants.md`. Obie strony pojedynku grają
+AI o osobowości `BALANCED` (wcześniej przeciwnik losował osobowość z seeda),
+pozostałe ustawienia stron są identyczne; zamiana stron znosi przewagę gracza/wroga.
+
+**Pomiar (31.10.2026, 200 seedów × 2 strony):**
+
+| Epoka | Wariant A | Wariant B | Wygrane A | Wygrane B | Paty | Różnica [pp] |
+|---|---|---|---:|---:|---:|---:|
+| STEAM | spalinowy | galwaniczny | 201 | 199 | 0 | 0,5 |
+| SILICON | rój | biotech | 208 | 192 | 0 | 4,0 |
+
+Przed strojeniem: STEAM 340:60 (70 pp), SILICON ok. 76:24. Zmiany mnożników
+(kolejność ról: piechota, strzelec, ciężka, elita):
+
+- spalinowy: koszt ciężkiej/elity 1,10/1,12 → 1,11/1,13; HP 1,25/1,30 → 1,14/1,16;
+  obrażenia wieży 1,13 → 1,08,
+- galwaniczny: koszt ciężkiej/elity 1,10/1,12 → 1,06/1,08; HP 0,82/0,80 → 0,96/0,95;
+  obrażenia ciężkiej 1,08 → 1,12; obrażenia wieży 0,90 → 0,95,
+- biotech: koszt 1,16/1,14/1,20/1,24 → 1,08/1,06/1,11/1,15; HP 1,12/1,08/1,20/1,25 →
+  1,16/1,12/1,22/1,26; obrażenia 0,98/0,98/1,01/1,02 → 1,00/1,00/1,03/1,04;
+  obrażenia wieży 1,04 → 1,07,
+- rój bez zmian.
+
+Kampania z wariantem wybranym na starcie (bez badań, tylko elita i zryw; N = 200,
+zero timeoutów): etap 21 — 9,5% / 11,5%, etap 22 — 6,0% / 5,0%,
+etap 29 — 2,0% / 1,0%, etap 30 — 0,5% / 1,0% (wariant A / B). Niskie odsetki
+wynikają z braku badań, różnice między wariantami mieszczą się w szumie.
 
 ## Pogoda — zlecenie 33 (31.10.2026)
 

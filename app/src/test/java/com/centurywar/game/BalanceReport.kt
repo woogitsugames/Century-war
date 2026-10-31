@@ -256,6 +256,8 @@ class BalanceReport {
         val b = Battle(cfg)
         check(b.chooseVariant(first))
         b.enemy.eraVariant = second
+        // Lustro: przeciwnik nie losuje osobowości z seeda, obie strony grają tak samo.
+        b.ai = Ai(b, 1, AiPersonality.BALANCED)
         b.playerAi = Ai(b, 0, AiPersonality.BALANCED)
         val limit = (30f * 60f / Battle.STEP).toInt()
         var ticks = 0
@@ -280,6 +282,8 @@ class BalanceReport {
             .append("Seedów na epokę: $runs, z zamianą stron (łącznie ${runs * 2} bitew).\n\n")
             .append("| Epoka | Wygrane A | Wygrane B | Remisy/paty | Różnica A–B [pp] |\n")
             .append("|---|---:|---:|---:|---:|\n")
+        // Sekcje kampanii po tabeli zbiorczej, żeby wiersze epok nie trafiały do cudzej tabeli.
+        val campaign = StringBuilder()
         for (style in arrayOf(EraArt.STEAM, EraArt.SILICON)) {
             val era = Defs.eraOf(style)
             var winsA = 0
@@ -304,7 +308,7 @@ class BalanceReport {
             assertEquals("Remisy/paty w epoce ${style.name}", 0, stalemates)
             assertTrue("Warianty ${style.name}: różnica ${fmt(diff)} pp > 10 pp", diff <= 10.0)
 
-            out.append("\n## Kampania ${style.name}\n\n")
+            campaign.append("\n## Kampania ${style.name}\n\n")
                 .append("| Etap | Wariant | N | Zwycięstwa | Odsetek [%] | Timeout |\n")
                 .append("|---:|---:|---:|---:|---:|---:|\n")
             val stages = Campaign.stages.filter { it.startEra == era && it.maxEra >= era }.take(2)
@@ -330,13 +334,13 @@ class BalanceReport {
                         if (battle.winner == 0 && battle.over) wins++
                     }
                     val pct = wins * 100.0 / runs
-                    out.append("| ${stage.index + 1} | $variant | $runs | $wins | ${fmt(pct)} | $timeout |\n")
+                    campaign.append("| ${stage.index + 1} | $variant | $runs | $wins | ${fmt(pct)} | $timeout |\n")
                     println("VARIANT CAMPAIGN stage=${stage.index + 1} v=$variant wins=${fmt(pct)}%")
                     assertEquals("Timeout etapu ${stage.index + 1} wariant $variant", 0, timeout)
                 }
             }
         }
-        File(dir, "variants.md").writeText(out.toString())
+        File(dir, "variants.md").writeText(out.append(campaign).toString())
     }
 
     /** Lustrzane pojedynki bez badań, z tą samą siłą i możliwością elit obu stron. */
