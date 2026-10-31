@@ -82,7 +82,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         val mr = 42 * dp
         val mx = panel.left + 26 * dp + mr
         val my = panel.top + 52 * dp + mr
-        ui.medallion(c, mx, my, mr, Ui.ERA[when (mode) { Mode.ENDLESS -> 3; Mode.DAILY -> 7; else -> 2 }], modeIcon)
+        ui.medallion(c, mx, my, mr, Ui.ERA[when (mode) { Mode.ENDLESS -> 3; Mode.DAILY -> Defs.ERA_COUNT - 1; else -> 2 }], modeIcon)
         val x = mx + mr + 18 * dp
         var y = panel.top + 58 * dp
         val tw = panel.right - 24 * dp - x
@@ -114,7 +114,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 if (y < lowLimit) pr.top(Profile.dailyBoard(day)).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
             }
             else -> {
-                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[7]]), x, y)
+                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]]), x, y)
                 y += line(c, Icons.SKULL, L.f("ai_power", (aiPower() * 100).toInt()), x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 ui.bar(c, x + 32 * dp, y - 14 * dp, min(tw - 32 * dp, 220 * dp), 9 * dp, aiPower() / 1.8f, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 y += 14 * dp
