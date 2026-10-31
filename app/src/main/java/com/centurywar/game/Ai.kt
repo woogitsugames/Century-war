@@ -99,7 +99,7 @@ class Ai(
                 nextHoldAt = b.time + 24f
             }
         } else if (b.time >= nextHoldAt && danger >= 3 && ownPower > 0f &&
-            ownPower < enemyPower * 0.6f
+            me.baseHp < me.baseMaxHp * 0.7f && ownPower < enemyPower * 0.6f
         ) {
             me.hold = true
             holdUntil = b.time + 2.5f
@@ -164,16 +164,10 @@ class Ai(
                 }
             }
         }
-        val delay = if (personality == AiPersonality.ENGINEER) 20f else 35f
+        val delay = if (personality == AiPersonality.ENGINEER) 28f else 35f
         if (saving || b.time < delay) return
 
         val reserve = Defs.unit(me.era, Role.HEAVY).cost
-        if (personality == AiPersonality.ENGINEER && b.time > 50f && me.armory < 2 &&
-            me.gold > b.armoryCost(me) + reserve * 2
-        ) {
-            if (b.buyArmory(me)) return
-        }
-
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
             if (cost >= 0 && me.gold > cost + reserve * 2) {
@@ -216,10 +210,10 @@ class Ai(
         val r = b.rng.nextInt(100)
         val eliteCost = Defs.unit(me.era, Role.ELITE).cost
         val eliteChance = when (personality) {
-            AiPersonality.SIEGER -> 58
+            AiPersonality.SIEGER -> 35
             AiPersonality.ECONOMIST -> 48
-            AiPersonality.ASSAULT -> 12
-            AiPersonality.ENGINEER -> 20
+            AiPersonality.ASSAULT -> 32
+            AiPersonality.ENGINEER -> 32
             AiPersonality.BALANCED -> 35
         }
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < eliteChance) return Role.ELITE
@@ -232,9 +226,9 @@ class Ai(
         if (enemyHeavy >= 2 && enemyHeavy > enemyRanged && r < 35) return Role.RANGED
         if (enemyMelee >= 3 && r < 25) return Role.RANGED
 
-        if (personality == AiPersonality.ASSAULT && r < 45) return Role.MELEE
+        if (personality == AiPersonality.ASSAULT && b.time < 90f && r in 35..60) return Role.MELEE
         if (personality == AiPersonality.ENGINEER && r in 35..57 &&
-            me.gold >= Defs.unit(me.era, Role.HEAVY).cost
+            heavy * 3 < melee + ranged && me.gold >= Defs.unit(me.era, Role.HEAVY).cost
         ) return Role.HEAVY
 
         if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
