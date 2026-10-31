@@ -210,6 +210,47 @@ class ProfileRobustnessTest {
     }
 
     @Test
+    fun malformedScalarInV2IsNotSilentlyConvertedToZero() {
+        val file = profileFile()
+        val original = Profile(file).apply { medals = 8123; name = "Stary postęp"; save() }
+        assertEquals(8123, original.medals)
+        val broken = JSONObject(file.readText()).put("medals", JSONObject().put("złe", 1)).toString()
+        file.writeText(broken)
+        val loaded = Profile(file).apply { load() }
+        assertEquals("", loaded.name)
+        assertEquals(0, loaded.medals)
+        assertEquals(broken, File(file.parentFile, file.name + ".corrupt").readText())
+    }
+
+    @Test
+    fun savingExternallyExtendedLeaderboardKeepsTopTwenty() {
+        val file = profileFile()
+        val p = Profile(file)
+        p.boards[Profile.BOARD_ENDLESS] = (0 until 300).map {
+            ScoreEntry("Gracz $it", it.toLong(), 12L)
+        }.toMutableList()
+        p.save()
+        val a = JSONObject(file.readText()).getJSONObject("boards").getJSONArray(Profile.BOARD_ENDLESS)
+        assertEquals(20, a.length())
+        assertEquals(299L, a.getJSONObject(0).getLong("s"))
+        assertEquals(280L, a.getJSONObject(19).getLong("s"))
+    }
+
+    @Test
+    fun futureMainProfileCannotBeReplacedByNewerTemp() {
+        val file = profileFile()
+        Profile(file).apply { medals = 120; save() }
+        val backupV2 = file.readText()
+        val future = JSONObject().put("v", Profile.CURRENT_VERSION + 1).put("medals", 5000).toString()
+        file.writeText(future)
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        tmp.writeText(backupV2)
+        assertTrue(tmp.setLastModified(file.lastModified() + 10_000L))
+        Profile(file).apply { load(); medals = 900; save() }
+        assertEquals(future, file.readText())
+    }
+
+    @Test
     fun futureProfileVersionIsNotOverwritten() {
         val file = profileFile()
         val future = JSONObject().put("v", Profile.CURRENT_VERSION + 1)

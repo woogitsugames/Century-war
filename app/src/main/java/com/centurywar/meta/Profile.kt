@@ -220,6 +220,17 @@ class Profile(private val file: File) {
             for (key in mandatory) {
                 if (!json.has(key) || json.isNull(key)) error("Niepełny profil: $key")
             }
+            // Nie zamieniamy uszkodzonych wartości na domyślne po cichu.
+            for (key in arrayOf("name", "lang")) {
+                if (json.opt(key) !is String) error("Niepoprawny tekst: $key")
+            }
+            for (key in arrayOf("medals", "bestWave", "lastRankedDaily", "quality",
+                "fpsCap", "skirmishDiff", "battles", "wins", "totalKills", "playSeconds")) {
+                if (json.opt(key) !is Number) error("Niepoprawna liczba: $key")
+            }
+            for (key in arrayOf("tutorialDone", "vibration", "sound", "showFps")) {
+                if (json.opt(key) !is Boolean) error("Niepoprawna flaga: $key")
+            }
         }
         fun obj(key: String): JSONObject? {
             if (!json.has(key) || json.isNull(key)) return null
@@ -232,13 +243,21 @@ class Profile(private val file: File) {
         }
 
         val newLevels = HashMap<String, Int>()
-        obj("levels")?.let { l -> l.keys().forEach { newLevels[it] = l.optInt(it) } }
+        obj("levels")?.let { l ->
+            l.keys().forEach { key ->
+                if (strict && l.opt(key) !is Number) error("Niepoprawny poziom: $key")
+                newLevels[key] = l.optInt(key)
+            }
+        }
         for (def in research) {
             newLevels[def.key]?.let { newLevels[def.key] = it.coerceIn(0, def.max) }
         }
         val newStars = IntArray(stars.size)
         arr("stars")?.let { a ->
-            for (i in 0 until minOf(a.length(), newStars.size)) newStars[i] = a.optInt(i).coerceIn(0, 3)
+            for (i in 0 until a.length()) {
+                if (strict && a.opt(i) !is Number) error("Niepoprawna gwiazdka: $i")
+                if (i < newStars.size) newStars[i] = a.optInt(i).coerceIn(0, 3)
+            }
         }
         val newBoards = HashMap<String, MutableList<ScoreEntry>>()
         obj("boards")?.let { b ->
@@ -247,6 +266,9 @@ class Profile(private val file: File) {
                 val best = ArrayList<ScoreEntry>(20)
                 for (i in 0 until entries.length()) {
                     val e = entries.getJSONObject(i)
+                    if (strict && (e.opt("n") !is String || e.opt("s") !is Number || e.opt("d") !is Number)) {
+                        error("Niepoprawny wpis rankingu: $key/$i")
+                    }
                     val score = e.optLong("s")
                     if (best.size >= 20 && score <= best[best.lastIndex].score) continue
                     val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"))
@@ -307,6 +329,17 @@ class Profile(private val file: File) {
     fun load() {
         val tmp = File(file.parentFile, file.name + ".tmp")
         if (!file.exists() && !tmp.exists()) return
+        // Nawet starsza data pliku z przyszłej wersji jest ważniejsza niż zapis .tmp.
+        if (file.exists()) {
+            try {
+                if (JSONObject(file.readText(Charsets.UTF_8)).optInt("v", 1) > CURRENT_VERSION) {
+                    newerProfileVersion = true
+                    return
+                }
+            } catch (_: Exception) {
+                // Uszkodzony plik zostanie obsłużony w pętli poniżej.
+            }
+        }
         val tmpFirst = tmp.exists() && (!file.exists() || tmp.lastModified() >= file.lastModified())
         val candidates = if (tmpFirst) arrayOf(tmp, file) else arrayOf(file, tmp)
         for (candidate in candidates) {
@@ -323,7 +356,17 @@ class Profile(private val file: File) {
                 newerProfileVersion = false
                 if (candidate == tmp) {
                     // Przerwany zapis: odtwarzamy pełną, zweryfikowaną zawartość .tmp.
-                    tmp.renameTo(file)
+                    if (!tmp.renameTo(file)) {
+                        try {
+                            java.nio.file.Files.move(
+                                tmp.toPath(), file.toPath(),
+                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            )
+                        } catch (_: Exception) {
+                            // Poprawny zapis wciąż jest dostępny jako .tmp.
+                        }
+                    }
                 } else if (tmp.exists() && tmp.lastModified() <= file.lastModified()) {
                     tmp.delete()
                 }
@@ -333,6 +376,7 @@ class Profile(private val file: File) {
             }
         }
         clearInMemory()
+        newerProfileVersion = false
     }
 
     @Synchronized
