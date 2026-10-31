@@ -46,6 +46,7 @@ class ReplayScreen(
     private val backward = btn(5)
     private val forward = btn(6)
     private val camera = btn(7)
+    private val controls = arrayOf(backward, slower, pause, faster, forward, camera)
     private val progressBar = RectF()
     private val minimap = RectF()
     private val hud = RectF()
@@ -124,11 +125,7 @@ class ReplayScreen(
         footer.set(0f, h - g.insetB - 112 * dp, w, h)
         progressBar.set(left + 12 * dp, footer.top + 18 * dp, right - 12 * dp, footer.top + 29 * dp)
         val gap = 5 * dp
-        val size = minOf(86 * dp, (right - left - 6 * gap) / 7f)
-        val x0 = (left + right - (7 * size + 6 * gap)) / 2f
         val y = footer.top + 47 * dp
-        val controls = arrayOf(backward, slower, pause, faster, forward, camera)
-        // 6 przycisków; wolne miejsce po siódmej pozycji zostawia odstęp na dotyk.
         val six = minOf(100 * dp, (right - left - 5 * gap) / 6f)
         val start = (left + right - (6 * six + 5 * gap)) / 2f
         for (i in controls.indices) controls[i].set(start + i * (six + gap), y, six, 43 * dp)
@@ -168,6 +165,8 @@ class ReplayScreen(
         if (p.broken) { state = BROKEN; return }
         if (p.finished) paused = true
         val r = renderer ?: return
+        g.music?.setEra(p.battle.player.era)
+        g.music?.setIntensity(0f)
         if (follow) r.follow(dt)
         if (!p.seeking && !paused && speed == 1) BattleSfx.play(g, p.battle.fx, r.camX, r.worldVisible)
         else p.battle.fx.count = 0
@@ -231,7 +230,7 @@ class ReplayScreen(
         ui.textO(c, statusText, w * 0.5f, g.insetT + 46 * dp,
             ui.fit(statusText, 12f, w - g.insetL - g.insetR - 22 * dp), Ui.TEXT, Paint.Align.CENTER)
         drawTimeline(c, p)
-        for (b in arrayOf(backward, slower, pause, faster, forward, camera)) ui.button(c, b, 12f)
+        for (b in controls) ui.button(c, b, 12f)
         ui.text(c, timeText, footer.centerX(), footer.top + 13 * dp, 11f, Ui.TEXT, Paint.Align.CENTER)
         if (p.seeking) ui.textO(c, loadingText, footer.centerX(), footer.top - 12 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
         drawMini(c, p, r)
