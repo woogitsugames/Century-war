@@ -25,7 +25,7 @@ Pytania dotyczące prywatności oraz przyszłe wnioski o dostęp do danych lub i
 **Obecna wersja nie przesyła do wydawcy danych osobowych ani danych o rozgrywce.** Nie wymaga rejestracji ani logowania, nie używa analityki, reklam, narzędzi śledzących ani aktywnego połączenia z zewnętrznym serwerem.
 
 Wyłącznie w pamięci aplikacji na urządzeniu przechowujemy:
-- podany przez gracza pseudonim (domyślnie „Dowódca”);
+- podany przez gracza pseudonim (początkowa nazwa dowódcy zależy od języka gry);
 - postęp kampanii, zdobyte gwiazdki, medale, badania i wyniki rankingów lokalnych;
 - statystyki rozgrywki i ustawienia, np. język, jakość grafiki, dźwięk i wibracje.
 
