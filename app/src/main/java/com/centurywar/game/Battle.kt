@@ -199,8 +199,7 @@ class Battle(val cfg: BattleConfig) {
         e.incomeMul *= cfg.aiPower
         e.xpMul *= cfg.aiPower
         if (Modifier.ARMORED_FOE in mods) e.hpMul *= 1.3f
-        if (e.slots > 0) e.slots = min(Defs.MAX_TURRET_SLOTS, 2 + max(0, cfg.stageIndex) / 10)
-        e.cap = if (cfg.aiPower > 1.2f) 14 else 12
+        // Przeciwnik ma ten sam limit armii i slotów co strona bez badań.
         if (endless) {
             e.queueMax = QUEUE_CAP
             e.cap = 30
