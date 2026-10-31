@@ -10,6 +10,7 @@ class AiPersonalityTest {
     private fun autoplay(config: BattleConfig, minutes: Float = 15f): Battle {
         val battle = Battle(config)
         battle.playerAi = Ai(battle, 0, AiPersonality.BALANCED)
+        BattleController(battle)
         val limit = (minutes * 60f / Battle.STEP).toInt()
         var steps = 0
         while (!battle.over && steps++ < limit) {
