@@ -33,7 +33,7 @@ jobs:
           ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*BattleBranchesTest*' --tests '*VariantBalanceReportTest*' --console=plain --no-configuration-cache
       - name: Screenshoty UI
         run: |
-          ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.menus*' --console=plain --no-configuration-cache
+          ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.menus*' --tests '*ScreenshotTest.eraBranches*' --console=plain --no-configuration-cache
       - name: Zapis raportow
         if: always()
         uses: actions/upload-artifact@v4
