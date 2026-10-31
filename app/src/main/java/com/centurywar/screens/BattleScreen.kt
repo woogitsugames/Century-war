@@ -751,7 +751,47 @@ class BattleScreen(
         Mode.SKIRMISH -> SkirmishSetupScreen(g)
     }
 
+    private fun setPauseVolume(x: Float) {
+        if (pauseSliderMusic) {
+            g.profile.musicVolume = ui.volumeFromX(pauseMusicRect, x)
+            g.applyMusicVolume()
+        } else {
+            g.profile.sfxVolume = ui.volumeFromX(pauseSfxRect, x)
+            g.applySfxVolume()
+        }
+    }
+
     override fun onTouch(e: TouchEvent): Boolean {
+        if (pauseSliderPointer >= 0) {
+            if (e.action == TouchEvent.CANCEL) {
+                pauseSliderPointer = -1
+                g.profile.save()
+                return true
+            }
+            if (e.pointer != pauseSliderPointer) return true
+            if (e.action == TouchEvent.MOVE || e.action == TouchEvent.UP) {
+                setPauseVolume(e.x)
+                if (e.action == TouchEvent.UP) {
+                    pauseSliderPointer = -1
+                    g.profile.save()
+                }
+            }
+            return true
+        }
+        if (paused && !finished && e.action == TouchEvent.DOWN) {
+            // Strefy suwaków nie obejmują przycisków, także przy multi-touch.
+            val rect = when {
+                pauseSfxRect.contains(e.x, e.y) -> pauseSfxRect
+                pauseMusicRect.contains(e.x, e.y) -> pauseMusicRect
+                else -> null
+            }
+            if (rect != null) {
+                pauseSliderPointer = e.pointer
+                pauseSliderMusic = rect === pauseMusicRect
+                setPauseVolume(e.x)
+                return true
+            }
+        }
         if (aimingBarrage) {
             when (e.action) {
                 TouchEvent.DOWN -> {
@@ -809,6 +849,10 @@ class BattleScreen(
         if (finished) { g.setScreen(nextScreen()); return true }
         if (showUpgrade >= 0) { showUpgrade = -1; return true }
         if (showTurrets) { showTurrets = false; return true }
+        if (pauseSliderPointer >= 0) {
+            pauseSliderPointer = -1
+            g.profile.save()
+        }
         paused = !paused
         return true
     }
