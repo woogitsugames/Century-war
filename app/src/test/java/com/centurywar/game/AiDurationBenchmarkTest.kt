@@ -10,7 +10,7 @@ class AiDurationBenchmarkTest {
             BattleConfig(Mode.SKIRMISH, 301L, 1.0f, 0, 0,
                 setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
                 playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f, incomeMul = 0.5f)),
-            BattleConfig(Mode.SKIRMISH, 302L, 1.0f, 1, 1,
+            BattleConfig(Mode.SKIRMISH, 302L, 1.0f, 4, 4,
                 setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
                 playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f, incomeMul = 0.5f)),
             BattleConfig(Mode.SKIRMISH, 303L, 1.0f, 2, 2,
