@@ -441,6 +441,7 @@ class SnapshotStore(private val file: File) {
         val my = synchronized(lock) { ++seq }
         io.execute {
             if (synchronized(lock) { my != seq }) return@execute
+            GameIoCounter.diskAccess()
             file.delete()
             tmp.delete()
             synchronized(lock) { written = my }
@@ -462,12 +463,14 @@ class SnapshotStore(private val file: File) {
     fun delete() {
         synchronized(lock) {
             written = ++seq
+            GameIoCounter.diskAccess()
             file.delete()
             tmp.delete()
         }
     }
 
     fun load(): ByteArray? = synchronized(lock) {
+        GameIoCounter.diskAccess()
         try {
             if (!file.isFile || file.length() > (1 shl 20)) null else file.readBytes()
         } catch (_: Exception) {
@@ -484,6 +487,7 @@ class SnapshotStore(private val file: File) {
     }
 
     private fun writeAtomic(bytes: ByteArray): Boolean = try {
+        GameIoCounter.diskAccess()
         file.parentFile?.mkdirs()
         FileOutputStream(tmp).use { it.write(bytes); it.flush(); it.fd.sync() }
         if (!tmp.renameTo(file)) {
