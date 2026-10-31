@@ -60,6 +60,7 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        game.applySfxVolume()
         if ((application as? CenturyWarApp)?.playGamesReady == true) {
             try {
                 playGames = PlayGamesLeaderboards(this, game)
