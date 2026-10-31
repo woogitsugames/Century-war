@@ -25,7 +25,7 @@ Once the address is provided, privacy questions and future requests to access or
 **The current version does not transmit personal data or gameplay data to the publisher.** It does not require an account or sign-in and does not include analytics, advertising, tracking tools, or an active connection to an external server.
 
 The app stores the following data **on your device only**:
-- the nickname you choose (the default name is "Commander" in the English interface);
+- the nickname you choose (the current default stored name is "Dowódca");
 - campaign progress, stars, medals, research upgrades, and local leaderboard records;
 - gameplay statistics and settings, including language, graphics quality, sound, and vibration.
 
