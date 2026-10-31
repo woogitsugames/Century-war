@@ -72,6 +72,15 @@ class ReleaseConfigTest {
         assertEquals("@xml/data_extraction_rules", app.getAttribute("android:dataExtractionRules"))
     }
 
+    @Test fun activityHandlesLocaleWithoutRestart() {
+        val activities = xml("AndroidManifest.xml").getElementsByTagName("activity")
+        val main = (0 until activities.length).map { activities.item(it) as Element }
+            .first { it.getAttribute("android:name") == ".MainActivity" }
+        val flags = main.getAttribute("android:configChanges").split('|').toSet()
+        assertTrue("Brak locale w configChanges", "locale" in flags)
+        assertTrue("Brak layoutDirection w configChanges", "layoutDirection" in flags)
+    }
+
     @Test fun baselineProfileContainsGameLoopAndBattleRules() {
         val lines = File("src/main/baseline-prof.txt").readLines()
             .map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
