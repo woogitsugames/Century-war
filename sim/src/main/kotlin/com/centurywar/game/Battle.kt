@@ -31,6 +31,9 @@ class Fighter {
     /** 0 = stoi, 1 = pełny krok marszu; dochodzi płynnie w ok. 0,15 s. */
     var stride = 0f
     var prevStride = 0f
+    // Tylko dla renderera: ostatni cios i siła odchylenia. Nie wpływają na symulację ani zapis.
+    var hitStep = -1
+    var hitPow = 0f
     /** 0: zwykła jednostka, 1: boss z odrzutem, 2: boss z aurą. */
     var bossKind = 0
     var bossCd = 0f
@@ -749,6 +752,7 @@ class Battle(val cfg: BattleConfig) {
         f.x = s.baseFront - s.dir * 30f
         f.prevX = Float.NaN
         f.stride = 0f; f.prevStride = 0f
+        f.hitStep = -1; f.hitPow = 0f
         f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier)
         f.hp = f.maxHp
         f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier) * when (def.role) {
@@ -810,7 +814,7 @@ class Battle(val cfg: BattleConfig) {
         if (u.burnLeft > 0f) {
             val tick = min(dt, u.burnLeft)
             u.burnLeft -= tick
-            damageUnit(u, u.burnDps * tick, 1 - u.side)
+            damageUnit(u, u.burnDps * tick, 1 - u.side, direct = false)
             if (!u.alive) return
         }
         if (u.bossCd > 0f) u.bossCd -= dt
@@ -962,11 +966,15 @@ class Battle(val cfg: BattleConfig) {
     }
 
     /** Bez roli strzelca i epoki wieży (podpalenie, odrzut bossa) mnożnik kontr wynosi 1. */
-    private fun damageUnit(u: Fighter, d: Float, attacker: Int, shooterRole: Role? = null, turretEra: Int = -1) {
+    private fun damageUnit(u: Fighter, d: Float, attacker: Int, shooterRole: Role? = null, turretEra: Int = -1, direct: Boolean = true) {
         if (!u.alive) return
         val multiplier = if (shooterRole != null) Defs.counterMultiplier(shooterRole, u.def.role)
             else Defs.turretCounterMultiplier(turretEra, u.def)
         u.hp -= d * multiplier
+        if (direct) {
+            u.hitStep = stepCount
+            u.hitPow = (d * multiplier / max(1f, u.maxHp) * 4f).coerceIn(0f, 1f)
+        }
         u.flash = 0.12f
         if (u.hp <= 0f) {
             u.hp = 0f
