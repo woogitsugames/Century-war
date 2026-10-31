@@ -62,6 +62,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     init {
         applyLanguage()
+        if (profile.name.isBlank()) profile.name = L["default_name"]
         setQuality(effectiveQualityLevel())
     }
 

@@ -42,7 +42,7 @@ class Profile(private val file: File) {
         fun dailyBoard(day: Long) = "daily_$day"
     }
 
-    var name = "Dowódca"
+    var name = ""            // pusty = nowy profil; Game nadaje L["default_name"]
     var medals = 0
     val levels = HashMap<String, Int>()
     val stars = IntArray(Campaign.stages.size)
