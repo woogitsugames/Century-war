@@ -33,7 +33,7 @@
 ### Kampania (36 etapów)
 - Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Epoka żelaza), więc bitwa trwa kilka minut.
 - Co 4. etap to „wielki” etap przez 2–3 epoki.
-- Siła wroga rośnie od 72% do ok. 170% (jawny mnożnik złota i XP AI, widoczny przed bitwą).
+- Siła wroga to jawny mnożnik złota i XP AI, widoczny przed bitwą: od 72% na początku do ok. 370% w ostatnich etapach. Druga połowa kampanii zakłada rozwinięte badania (strojenie w `docs/BALANCE.md`).
 - Gwiazdki zależą od HP bazy po zwycięstwie: ≥75% = ★★★, ≥40% = ★★.
 - Od etapu 3 bitwy dostają modyfikatory, więc każdy etap gra się inaczej.
 
@@ -57,7 +57,7 @@
 - **Awans epoki** zużywa XP. HP bazy rośnie proporcjonalnie i dostaje +10%.
 - **Rangi weteranów:** w ostatniej dostępnej epoce nadwyżka XP daje rangi (+6% obrażeń i HP za rangę).
 - **Zbrojownia:** złoto w bitwie zamieniane na +8% obrażeń i HP. Przewaga ekonomiczna nie przepada, gdy armia jest pełna.
-- **Presja oblężnicza:** po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę. Koniec z wiecznym patem.
+- **Presja oblężnicza:** po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę, a blokada stopniowo uszczupla HP baz zależnie od pozycji frontu, nawet bez trafień. Koniec z wiecznym patem. Nie dotyczy trybu bez końca.
 - **Postawa:** Naprzód albo Trzymaj (jednostki czekają na linii obrony).
 - **Kolejka:** 5 jednostek. Limit armii: 12, z badaniami do 18.
 - **Uczciwe AI:** AI gra według tych samych zasad co gracz. Trudność to wyłącznie jawny mnożnik. Po porażce gra podpowiada, dlaczego przegrałeś.

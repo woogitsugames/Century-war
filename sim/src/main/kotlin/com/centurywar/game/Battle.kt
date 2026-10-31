@@ -171,6 +171,13 @@ class FxBuffer {
 class Battle(val cfg: BattleConfig) {
     companion object {
         const val STEP = 1f / 60f
+        // Strojenie balansu (docs/BALANCE.md, BalanceReport).
+        /** HP baz poza Endless względem Defs.baseHp: bitwa trwa minuty, nie jedną. */
+        const val BALANCE_BASE_HP_MUL = 3f
+        /** Od tej sekundy rośnie presja oblężnicza i działa blokada baz. */
+        const val SIEGE_START = 480f
+        /** Ułamek HP bazy na sekundę przy pełnej kontroli frontu przez wroga (przed presją). */
+        const val SIEGE_ATTRITION = 0.0032f
         const val MAX_UNITS = 72
         const val MAX_PROJ = 160
         const val QUEUE_CAP = 32
@@ -225,6 +232,8 @@ class Battle(val cfg: BattleConfig) {
         val mods = cfg.modifiers
         for (s in sides) {
             s.era = cfg.startEra
+            // Bitwy kampanii, potyczek i wyzwania dnia trwają kilka minut, nie jedną.
+            if (!endless) s.baseHpMul *= BALANCE_BASE_HP_MUL
             if (Modifier.DOUBLE_INCOME in mods) s.incomeMul *= 2f
             if (Modifier.FRAGILE_BASES in mods) s.baseHpMul *= 0.5f
             if (Modifier.FAST_UNITS in mods) s.speedMul *= 1.5f
@@ -611,6 +620,7 @@ class Battle(val cfg: BattleConfig) {
         if (endless) for (u in units) if (u.alive && u.bossKind == 2) { bossAuraX = u.x; break }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
+        if (!endless && !over && time >= SIEGE_START) applySiegeAttrition(dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
@@ -641,7 +651,18 @@ class Battle(val cfg: BattleConfig) {
      * Presja oblężnicza: po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę.
      * Dzięki temu bitwa zawsze kiedyś się kończy (koniec z wiecznym patem przy wieżach).
      */
-    fun siegePressure(): Float = if (endless || time < 480f) 1f else 1f + (time - 480f) / 60f * 0.2f
+    fun siegePressure(): Float = if (endless || time < SIEGE_START) 1f else 1f + (time - SIEGE_START) / 60f * 0.2f
+
+    /**
+     * Blokada po [SIEGE_START]: obie bazy tracą HP proporcjonalnie do tego, jak daleko
+     * przeciwnik trzyma front, więc nawet nieruchomy front w końcu rozstrzyga bitwę.
+     */
+    private fun applySiegeAttrition(dt: Float) {
+        val control = ((player.front + enemy.front) * 0.5f / Defs.LANE).coerceIn(0f, 1f)
+        val rate = SIEGE_ATTRITION * siegePressure() * dt
+        player.baseHp -= player.baseMaxHp * rate * (1f - control)
+        enemy.baseHp -= enemy.baseMaxHp * rate * control
+    }
 
     fun surrender() { if (!over) { pendingChoice = null; pendingCards = null; finish(1) } }
 

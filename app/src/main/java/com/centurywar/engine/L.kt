@@ -406,7 +406,7 @@ object L {
 
         // --- badania
         "r_startGold" to t("Skarbiec", "Treasury", "Schatzkammer", "Tesoro", "Trésor", "Tesoreria", "Tesouro", "Скарбниця", "Schatkist", "Hazine"),
-        "r_startGold_d" to t("+40 złota na start", "+40 starting gold", "+40 Startgold", "+40 de oro inicial", "+40 or de départ", "+40 oro iniziale", "+40 de ouro inicial", "+40 золота на старті", "+40 startgoud", "+40 başlangıç altını"),
+        "r_startGold_d" to t("+20 złota na start", "+20 starting gold", "+20 Startgold", "+20 de oro inicial", "+20 or de départ", "+20 oro iniziale", "+20 de ouro inicial", "+20 золота на старті", "+20 startgoud", "+20 başlangıç altını"),
         "r_income" to t("Handel", "Trade", "Handel", "Comercio", "Commerce", "Commercio", "Comércio", "Торгівля", "Handel", "Ticaret"),
         "r_income_d" to t("+6% przychodu", "+6% income", "+6% Einkommen", "+6% ingresos", "+6% revenus", "+6% entrate", "+6% renda", "+6% доходу", "+6% inkomen", "+%6 gelir"),
         "r_unitHp" to t("Pancerze", "Armor", "Rüstung", "Armadura", "Armures", "Armature", "Armaduras", "Обладунки", "Bepantsering", "Zırh"),

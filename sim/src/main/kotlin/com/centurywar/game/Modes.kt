@@ -97,9 +97,25 @@ object Campaign {
             val sub = i % 4
             val start = if (sub == 3) maxOf(0, era - 2) else era
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
-            val power = 0.72f + i * (0.868f / (Defs.ERA_COUNT * 4 - 1)) + sub * 0.03f
+            val power = (0.72f + i * (0.868f / (Defs.ERA_COUNT * 4 - 1)) + sub * 0.03f) * stageRamp(i)
             val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
             add(Stage(i, "stage_${i + 1}", start, max, power, mods))
+        }
+    }
+
+    /**
+     * Mnożnik siły AI w drugiej połowie kampanii. Zmierzony w BalanceReport (docs/BALANCE.md):
+     * etapy 1-18 strojone pod gracza z ~10% badań, 19-27 pod ~40%, 28-36 pod ~80%.
+     * Badania dają dużą przewagę, więc bez tego późna kampania wygrywa się w minutę.
+     */
+    private fun stageRamp(i: Int): Float {
+        val n = Defs.ERA_COUNT * 4
+        val midStart = n / 2          // etap 19
+        val lateStart = n * 3 / 4     // etap 28
+        return when {
+            i < midStart -> 1f
+            i < lateStart -> 1f + 0.35f * (i - midStart + 1) / (lateStart - midStart)
+            else -> 1.35f + 0.85f * (i - lateStart + 1) / (n - lateStart)
         }
     }
 

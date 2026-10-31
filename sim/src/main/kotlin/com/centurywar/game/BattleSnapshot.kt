@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 6
+    const val VERSION = 7
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -37,6 +37,7 @@ object BattleSnapshot {
         fun mixF(v: Float) = mix(v.toRawBits())
         mix(Defs.ERA_COUNT); mixF(Defs.LANE); mixF(Defs.BASE_FRONT); mix(Defs.MAX_TURRET_SLOTS)
         mix(Defs.MAX_UNIT_TIER); mixF(Defs.tierStatMul(2)); mixF(Defs.tierStatMul(3))
+        mixF(Battle.BALANCE_BASE_HP_MUL); mixF(Battle.SIEGE_START); mixF(Battle.SIEGE_ATTRITION)
         for (u in Defs.allUnits) {
             mix(u.id); mix(u.era); mix(u.role.ordinal); mix(u.cost); mixF(u.hp); mixF(u.dmg); mixF(u.range)
             mixF(u.cooldown); mixF(u.speed); mixF(u.trainTime); mixF(u.size); mixF(u.splash); mix(u.projectile); mixF(u.siegeMul)

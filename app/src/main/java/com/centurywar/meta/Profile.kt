@@ -164,7 +164,7 @@ class Profile(private val file: File) {
     }
 
     fun bonuses() = Bonuses(
-        startGold = level("r_startGold") * 40f,
+        startGold = level("r_startGold") * 20f,
         incomeMul = 1f + level("r_income") * 0.06f,
         unitHpMul = 1f + level("r_unitHp") * 0.04f,
         unitDmgMul = 1f + level("r_unitDmg") * 0.04f,
