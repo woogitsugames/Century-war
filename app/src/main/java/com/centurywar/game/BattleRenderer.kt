@@ -772,9 +772,78 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- efekty
 
+    private fun emitMuzzle(x: Float, h: Float, dir: Float, type: Int) {
+        val energy = type == Proj.PLASMA || type == Proj.BEAM
+        spawnParticle(x, h, 0f, 0f, 0.11f,
+            if (energy) 15f else 10f, if (energy) 0xFF8FEFFF.toInt() else 0xFFFFE890.toInt(), 2)
+        if (energy) return
+        val powder = type == Proj.BULLET || type == Proj.BALL
+        val heavy = type == Proj.SHELL || type == Proj.ROCKET
+        if (!powder && !heavy) return
+        val n = if (g.quality.level == 1) 1 else if (heavy) 7 else 4
+        for (j in 0 until n) {
+            val v = if (heavy) rnd(45f, 100f) else rnd(12f, 45f)
+            spawnParticle(x, h, -dir * v + rnd(-14f, 14f),
+                rnd(16f, 65f), if (heavy) 0.85f else 0.62f,
+                if (heavy) rnd(11f, 18f) else rnd(6f, 12f),
+                if (powder) 0xB0DFD8CC.toInt() else 0xAA97938E.toInt(), 3)
+        }
+    }
+
+    private fun emitExplosion(x: Float, h: Float, size: Float, side: Int) {
+        val scale = size.coerceIn(0.25f, 3.5f)
+        val art = Defs.spec(b.sides[side.coerceIn(0, 1)].era).art
+        val ancient = art == EraArt.TRIBAL || art == EraArt.BRONZE ||
+            art == EraArt.IRON || art == EraArt.FEUDAL
+        val orbital = art == EraArt.ORBITAL
+        val flash = when {
+            orbital -> 0xFFC0FCFF.toInt()
+            ancient -> 0xFFE4C9A0.toInt()
+            else -> 0xFFFFF0AD.toInt()
+        }
+        val ring = when {
+            orbital -> 0xFF6CD8FF.toInt()
+            ancient -> 0xFFB69B79.toInt()
+            else -> 0xFFFFA24B.toInt()
+        }
+        val cloud = when {
+            orbital -> 0x807A70B4.toInt()
+            ancient -> 0xB09A8B79.toInt()
+            else -> 0xB05D5551.toInt()
+        }
+        spawnParticle(x, h, 0f, 0f, 0.26f, 38f * scale, flash, 2)
+        spawnParticle(x, h + 9f, 0f, 0f, 0.42f, 55f * scale, ring, 1)
+        spawnParticle(x, 2f, 0f, 0f, 0.47f, 62f * scale, ring, 4)
+        val n = if (g.quality.level == 1) 4 else if (g.quality.level == 2) 8 else 12
+        for (j in 0 until n) {
+            val debris = if (ancient) 0xFF877766.toInt() else if (orbital) 0xFF8DE5FC.toInt()
+                else if (j % 2 == 0) 0xFFFF904A.toInt() else 0xFF514B45.toInt()
+            spawnParticle(x, h, rnd(-210f, 210f) * scale,
+                rnd(100f, 305f) * scale, 0.48f + rnd(0f, 0.32f),
+                (if (ancient) 5f else 4f) * scale, debris, 0)
+        }
+        val clouds = if (g.quality.level == 1) 2 else if (g.quality.level == 2) 5 else 9
+        for (j in 0 until clouds) {
+            spawnParticle(x + rnd(-20f, 20f) * scale, h + rnd(0f, 20f),
+                rnd(-45f, 45f) * scale, rnd(30f, 105f) * scale,
+                rnd(0.7f, 1.5f), rnd(8f, 19f) * scale, cloud, 3)
+        }
+        if (g.quality.level >= 2) for (j in 0 until 5) {
+            spawnParticle(x + rnd(-20f, 20f) * scale, 3f,
+                rnd(-90f, 90f) * scale, rnd(5f, 25f),
+                0.55f, rnd(6f, 13f) * scale, 0xA0AAA096.toInt(), 3)
+        }
+        addScar(x, 22f * scale)
+        trauma = min(1f, trauma + when {
+            scale >= 2f -> 0.8f
+            scale >= 1.15f -> 0.075f
+            scale >= 0.9f -> 0.035f
+            else -> 0f
+        })
+    }
+
     private fun consumeFx() {
         val fx = b.fx
-        val dp = 1f
         for (i in 0 until fx.count) {
             val x = fx.x[i]; val h = fx.h[i]
             when (fx.type[i]) {
@@ -783,16 +852,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                     val s = fx.value[i]
                     for (j in 0 until 6) spawnParticle(x, 20f, rnd(-60f, 60f), rnd(20f, 90f), 0.7f, 6f * s, 0xC0A09080.toInt(), 3)
                 }
-                FxBuffer.EXPLOSION -> {
-                    val s = fx.value[i]
-                    spawnParticle(x, h, 0f, 0f, 0.35f, 60f * s, 0xFFFFC060.toInt(), 1)
-                    spawnParticle(x, h, 0f, 0f, 0.18f, 40f * s, 0xFFFFF0C0.toInt(), 2)
-                    val n = if (g.quality.level == 1) 4 else 9
-                    for (j in 0 until n) spawnParticle(x, h, rnd(-200f, 200f) * s, rnd(80f, 320f) * s, 0.6f, 5f * s, if (j % 2 == 0) 0xFFFF8030.toInt() else 0xFF5A5040.toInt(), 0)
-                    for (j in 0 until n / 2) spawnParticle(x, h + 10f, rnd(-30f, 30f), rnd(20f, 60f), 1.2f, 18f * s, 0x90505050.toInt(), 3)
-                    if (s > 1.2f) shake = min(1.5f, shake + 0.6f) else if (s > 0.9f) shake = min(1f, shake + 0.15f)
-                }
-                FxBuffer.MUZZLE -> spawnParticle(x, h, 0f, 0f, 0.07f, 9f * dp, 0xFFFFE890.toInt(), 2)
+                FxBuffer.EXPLOSION -> emitExplosion(x, h, fx.value[i], fx.side[i])
+                FxBuffer.MUZZLE -> emitMuzzle(x, h, b.sides[fx.side[i]].dir, fx.value[i].toInt())
                 FxBuffer.BASE_HIT -> for (j in 0 until 3) spawnParticle(x, h + rnd(0f, 120f), -b.sides[fx.side[i]].dir * rnd(20f, 140f), rnd(60f, 200f), 0.6f, 5f, 0xFF8A7A6A.toInt(), 0)
                 FxBuffer.EVOLVE -> {
                     val sd = b.sides[fx.side[i]]
@@ -808,7 +869,17 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                     val s = goldStrings.getOrPut(v) { "+$v" }
                     addText(x, h, s, Ui.GOLD, 13f)
                 }
-                FxBuffer.BARRAGE -> shake = min(1.2f, shake + 0.4f)
+                FxBuffer.BARRAGE -> {
+                    val side = b.sides[fx.side[i]]
+                    val atX = side.baseFront - side.dir * 165f
+                    spawnParticle(atX, 210f, 0f, 0f, 0.28f, 40f, 0xD0FFE4A1.toInt(), 2)
+                    spawnParticle(atX, 210f, 0f, 0f, 0.4f, 65f, 0xA0E6C070.toInt(), 1)
+                    for (j in 0 until if (g.quality.level == 1) 3 else 9) {
+                        spawnParticle(atX, 210f, side.dir * rnd(30f, 180f),
+                            rnd(35f, 230f), 0.7f, 6f, 0xFFFFBF72.toInt(), 0)
+                    }
+                    trauma = min(1f, trauma + 0.32f)
+                }
             }
         }
         fx.count = 0
@@ -821,10 +892,26 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     private fun spawnParticle(x: Float, h: Float, vx: Float, vh: Float, life: Float, size: Float, color: Int, type: Int) {
-        val maxP = g.quality.maxParticles
-        if (pcount >= maxP || pcount >= PMAX) return
-        val i = pcount++
-        px[i] = x; ph[i] = h; pvx[i] = vx; pvh[i] = vh; plife[i] = life; pmax[i] = life; psize[i] = size; pcol[i] = color; ptype[i] = type
+        val limit = min(PMAX, g.quality.maxParticles)
+        if (limit <= 0) return
+        val priority = if (type == 3) 0 else if (type == 0) 2 else 3
+        var i = pcount
+        if (pcount < limit) pcount++
+        else {
+            // Gdy pula pełna, błysk/fala/odłamek zastępuje mniej istotny dym.
+            var lowest = priority
+            i = -1
+            for (j in 0 until pcount) {
+                if (pprio[j] >= lowest) continue
+                lowest = pprio[j]
+                i = j
+                if (lowest == 0) break
+            }
+            if (i < 0) return
+        }
+        px[i] = x; ph[i] = h; pvx[i] = vx; pvh[i] = vh
+        plife[i] = life; pmax[i] = life; psize[i] = size; pcol[i] = color; ptype[i] = type
+        pprio[i] = priority
     }
 
     private fun updateParticles(c: Canvas, dt: Float) {
@@ -834,7 +921,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             if (plife[i] <= 0f) {
                 val last = --pcount
                 px[i] = px[last]; ph[i] = ph[last]; pvx[i] = pvx[last]; pvh[i] = pvh[last]; plife[i] = plife[last]
-                pmax[i] = pmax[last]; psize[i] = psize[last]; pcol[i] = pcol[last]; ptype[i] = ptype[last]
+                pmax[i] = pmax[last]; psize[i] = psize[last]; pcol[i] = pcol[last]; ptype[i] = ptype[last]; pprio[i] = pprio[last]
                 continue
             }
             val t = plife[i] / pmax[i]
@@ -852,6 +939,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                 1 -> { line.color = fill.color; line.strokeWidth = 6f * k * t; c.drawCircle(x, y, psize[i] * k * (1.4f - t), line) }
                 2 -> c.drawCircle(x, y, psize[i] * k * (0.5f + t * 0.5f), fill)
                 3 -> c.drawCircle(x, y, psize[i] * k * (1.6f - t * 0.8f), fill)
+                4 -> {
+                    val radius = psize[i] * k * (1.4f - t)
+                    line.color = fill.color; line.strokeWidth = (2f + t * 4f) * k
+                    rect.set(x - radius, groundY - radius * 0.2f, x + radius, groundY + radius * 0.2f)
+                    c.drawOval(rect, line)
+                }
             }
             i++
         }
