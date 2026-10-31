@@ -105,17 +105,17 @@ class BattleSimTest {
 
     @Test
     fun dailyEraSelectionChangesOnlyFromNextUtcDay() {
-        val old = Daily.config(Daily.ERA_EXPANSION_DAY - 1, Bonuses())
-        val oldAgain = Daily.config(Daily.ERA_EXPANSION_DAY - 1, Bonuses(unitDmgMul = 5f))
+        val old = Daily.config(Daily.RELEASE_DAY - 1, Bonuses())
+        val oldAgain = Daily.config(Daily.RELEASE_DAY - 1, Bonuses(unitDmgMul = 5f))
         assertTrue(old.startEra == oldAgain.startEra && old.maxEra == oldAgain.maxEra)
         assertTrue(old.startEra != 2 && old.maxEra != 2)
-        val fresh = Daily.config(Daily.ERA_EXPANSION_DAY, Bonuses())
+        val fresh = Daily.config(Daily.RELEASE_DAY, Bonuses())
         assertTrue(fresh.startEra in 0 until Defs.ERA_COUNT && fresh.maxEra in fresh.startEra until Defs.ERA_COUNT)
-        val start = Daily.ERA_EXPANSION_DAY * 86_400_000L
-        assertTrue(Daily.dayNumber(start - 1) == Daily.ERA_EXPANSION_DAY - 1)
-        assertTrue(Daily.dayNumber(start) == Daily.ERA_EXPANSION_DAY)
+        val start = Daily.RELEASE_DAY * 86_400_000L
+        assertTrue(Daily.dayNumber(start - 1) == Daily.RELEASE_DAY - 1)
+        assertTrue(Daily.dayNumber(start) == Daily.RELEASE_DAY)
         // Dzisiejsze i niedawne wyzwania dnia nie mogą zależeć od nowej epoki.
-        assertTrue(Daily.ERA_EXPANSION_DAY > 20757L)
+        assertTrue(Daily.RELEASE_DAY > 20757L)
     }
 
     @Test

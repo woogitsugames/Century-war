@@ -95,7 +95,7 @@ class ReplayVerifierTest {
     }
 
     @Test fun verifiesDailyWithIndependentWeather() {
-        val day = (Daily.WEATHER_DAY until Daily.WEATHER_DAY + 20L).first {
+        val day = (Daily.RELEASE_DAY until Daily.RELEASE_DAY + 20L).first {
             Daily.config(it, Bonuses()).weather != Weather.CLEAR
         }
         val cfg = Daily.config(day, Research.bonuses(IntArray(Research.defs.size)))

@@ -13,7 +13,7 @@ class BattleVariantsTest {
         val mods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
-        val historical = day < Daily.ERA_EXPANSION_DAY
+        val historical = day < Daily.RELEASE_DAY
         val rolledStart = if (historical) rng.nextInt(3) else rng.nextInt(6)
         val start = if (historical && rolledStart >= 2) rolledStart + 1 else rolledStart
         val rolledMax = if (historical) minOf(7, rolledStart + 3)
@@ -27,8 +27,8 @@ class BattleVariantsTest {
 
     @Test
     fun dailyDaysBeforeVariantsAreBitwiseStable() {
-        assertTrue(Daily.VARIANTS_DAY >= Daily.ERA_EXPANSION_DAY)
-        for (day in 20000L until Daily.VARIANTS_DAY) {
+        assertTrue(Daily.RELEASE_DAY >= Daily.RELEASE_DAY)
+        for (day in 20000L until Daily.RELEASE_DAY) {
             val old = legacyConfig(day)
             val actual = Daily.config(day, Bonuses())
             assertEquals("start $day", old.startEra, actual.startEra)
