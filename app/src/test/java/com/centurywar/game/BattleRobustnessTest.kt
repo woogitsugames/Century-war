@@ -54,6 +54,8 @@ class BattleRobustnessTest {
             b.player.xp = 10_000_000f
             assertFalse(b.canEvolve(b.player))
             assertFalse(b.evolve(b.player))
+            // Epoka z wariantami (zlecenie 28) czeka najpierw na wybór gracza.
+            if (b.pendingVariant != null) assertTrue(b.chooseVariant(0))
             b.step()
             assertEquals(era, b.player.era)
             assertTrue("Brak awansu rangi dla epoki $era", b.player.rank > 0)

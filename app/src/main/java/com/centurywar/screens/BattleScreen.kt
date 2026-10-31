@@ -318,7 +318,13 @@ class BattleScreen(
         if (!paused && !finished) {
             tut?.update(dt)
             if (battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null) {
-                acc += dt * speed * tutScale
+                // Zamiast porzucać czas przy ×3/×5, ograniczamy tempo do budżetu CPU.
+                val budgetMs = (g.cpuBudgetMs * 0.75f - g.frameMetrics.avgRenderMs).coerceAtLeast(1.5f)
+                val availableSteps = if (sampledStepFrames < 30 || avgStepNs <= 0f) 20f
+                    else (budgetMs * 1_000_000f / avgStepNs).coerceIn(1f, 20f)
+                val allowedSpeed = availableSteps * Battle.STEP / dt.coerceAtLeast(0.001f)
+                effectiveSpeed = min(speed.toFloat(), allowedSpeed.coerceAtLeast(1f))
+                acc += dt * effectiveSpeed * tutScale
                 var steps = 0
                 val startedNs = System.nanoTime()
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
@@ -341,6 +347,7 @@ class BattleScreen(
                 g.snapshots?.saveAsync(snapshotBytes())
             }
         }
+        if (paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
         // Przy zmianie epoki zamawiamy nowe próbki przed pierwszym ostrzałem.
         if (preparedPlayerEra != battle.player.era) {
             BattleSfx.prepareEra(g, battle.player.era)
@@ -916,7 +923,7 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
         if (aimingBarrage) r.drawBarrageAim(c, aimWorldX, fieldRect)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
         val regularTextScale = ui.textScale
