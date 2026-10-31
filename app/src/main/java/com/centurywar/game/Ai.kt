@@ -17,6 +17,9 @@ class Ai(
 
     private var think = 0.4f
     private var plannedRole: Role? = null
+    private var saveEra = -1
+    private var saveUntil = 0f
+    private var evolveReadyAt = -1f
     private var enemyNear = 0
     private var enemyRanged = 0
     private var enemyMelee = 0
@@ -33,9 +36,18 @@ class Ai(
         if (think > 0f || b.over) return
         think = 0.45f + b.rng.nextFloat() * 0.3f
 
-        if (b.canEvolveSide(me) && b.evolve(me)) plannedRole = null
-
         observeBattlefield()
+        if (b.canEvolveSide(me)) {
+            if (evolveReadyAt < 0f) evolveReadyAt = b.time
+            val delay = personality == AiPersonality.ECONOMIST &&
+                enemyNear < 2 && b.time - evolveReadyAt < 7f
+            if (!delay && b.evolve(me)) {
+                plannedRole = null
+                evolveReadyAt = -1f
+            }
+        } else {
+            evolveReadyAt = -1f
+        }
         managePosture()
         useAbilities()
 
@@ -133,8 +145,12 @@ class Ai(
 
     /** Przed awansem odkładamy złoto na armię następnej epoki, o ile front jest bezpieczny. */
     private fun savingForNextEra(): Boolean {
-        if (me.era >= b.cfg.maxEra || enemyNear > 0 || me.aliveCount < 2) return false
-        return me.xp >= Defs.evolveXp[me.era] * 0.86f
+        if (me.era >= b.cfg.maxEra || me.xp < Defs.evolveXp[me.era] * 0.86f) return false
+        if (saveEra != me.era) {
+            saveEra = me.era
+            saveUntil = b.time + 12f
+        }
+        return b.time < saveUntil && enemyNear == 0 && me.aliveCount >= 2
     }
 
     private fun manageTurrets(saving: Boolean) {
