@@ -71,7 +71,9 @@ class BackdropsTest {
             assertEquals(EraArt.COMBUSTION, backdrops.artInCache)
             assertEquals(3, backdrops.cacheBuilds)
 
-            Palette.select(Palette.HIGH_CONTRAST)
+            val changedPalette = if (Palette.selected == Palette.HIGH_CONTRAST)
+                Palette.STANDARD else Palette.HIGH_CONTRAST
+            Palette.select(changedPalette)
             draw()
             assertEquals(4, backdrops.cacheBuilds)
 
