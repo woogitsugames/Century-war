@@ -23,6 +23,7 @@ import java.security.MessageDigest
 
 private val json = Json { ignoreUnknownKeys = false; encodeDefaults = true }
 private const val MAX_REQUEST_BYTES = 1_048_576
+private const val MAX_DELETE_BYTES = 1_024
 
 private suspend fun ApplicationCall.fail(status: HttpStatusCode, code: String) {
     respondText(json.encodeToString(ErrorResponse(code)), ContentType.Application.Json, status)
@@ -43,6 +44,58 @@ fun Application.leaderboardModule(
     val workers = Semaphore(2)
 
     routing {
+        get("/healthz") {
+            val healthy = withContext(Dispatchers.IO) {
+                runCatching { store.healthy() }.getOrDefault(false)
+            }
+            call.respondText(
+                if (healthy) "ok\n" else "unavailable\n",
+                ContentType.Text.Plain,
+                if (healthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable,
+            )
+        }
+
+        post("/v1/player/delete") {
+            if (!limiter.allow("delete-ip:" + call.request.local.remoteHost, 20)) {
+                call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
+                return@post
+            }
+            val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+            if (length != null && length > MAX_DELETE_BYTES) {
+                call.fail(HttpStatusCode.PayloadTooLarge, "body_too_large")
+                return@post
+            }
+            val raw = call.receiveChannel().readRemaining(MAX_DELETE_BYTES + 1L).readByteArray()
+            if (raw.size > MAX_DELETE_BYTES) {
+                call.fail(HttpStatusCode.PayloadTooLarge, "body_too_large")
+                return@post
+            }
+            val body = raw.toString(Charsets.UTF_8)
+            if (!auth.valid(
+                    "POST", call.request.uri, body,
+                    call.request.headers["X-CW-Timestamp"],
+                    call.request.headers["X-CW-Nonce"],
+                    call.request.headers["X-CW-Signature"],
+                    true,
+                )
+            ) {
+                call.fail(HttpStatusCode.Unauthorized, "invalid_signature_or_nonce")
+                return@post
+            }
+            val input = runCatching { json.decodeFromString<DeletePlayerRequest>(body) }.getOrNull()
+            if (input == null || !validPlayer(input.player)) {
+                call.fail(HttpStatusCode.BadRequest, "invalid_player")
+                return@post
+            }
+            withContext(Dispatchers.IO) { store.deletePlayer(input.player) }
+            limiter.forget("post-player:" + input.player)
+            call.respondText(
+                json.encodeToString(DeletePlayerReceipt(true)),
+                ContentType.Application.Json,
+                HttpStatusCode.OK,
+            )
+        }
+
         post("/v1/score") {
             val remote = call.request.local.remoteHost
             if (!limiter.allow("post-ip:" + remote, 20)) {
