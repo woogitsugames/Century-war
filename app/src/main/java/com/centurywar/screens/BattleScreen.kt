@@ -187,6 +187,18 @@ class BattleScreen(
     private var upgradeRoleShown = -1
     private var upgradeTierShown = -1
     private var upgradeTierText = ""
+    private val variantDescLines = Array(2) { arrayOfNulls<String>(16) }
+    private val variantDescCount = IntArray(2)
+    private val variantDescKey = IntArray(2) { -1 }
+    private var variantDescWidth = -1f
+    private var variantDescScale = -1f
+    private var variantDescLanguage = -1
+    private val choiceDescLines = Array(3) { arrayOfNulls<String>(16) }
+    private val choiceDescCount = IntArray(3)
+    private val choiceDescKey = IntArray(3) { -1 }
+    private var choiceDescWidth = -1f
+    private var choiceDescScale = -1f
+    private var choiceDescLanguage = -1
     private var hudH = 0f
     private var topH = 0f
 
@@ -274,6 +286,9 @@ class BattleScreen(
             (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
         layoutTurretPanel()
         layoutUpgradePanel()
+        // Szerokość paneli zmienia łamanie opisów wariantów i kart.
+        variantDescWidth = -1f
+        choiceDescWidth = -1f
     }
 
     private fun layoutResults() {
@@ -327,6 +342,8 @@ class BattleScreen(
         turretHeadingEra = -1
         slotLabelLanguage = -1
         pauseLanguage = -1
+        variantDescLanguage = -1
+        choiceDescLanguage = -1
         tut?.onLanguageChanged()
         super.onLanguageChanged()
         if (finished) refreshResultTexts()
@@ -1184,10 +1201,12 @@ class BattleScreen(
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
             var x = ex - isz / 2
-            for (i in p.doctrines.indices.reversed()) {
+            var i = p.doctrines.size - 1
+            while (i >= 0) {
                 if (x < (if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp)) break
                 Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)
                 x -= isz + 3 * dp
+                i--
             }
         }
     }
@@ -1330,8 +1349,16 @@ class BattleScreen(
             val name = L[v.nameKey]
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
-            ui.wrap(c, L[v.descKey], tmpR.centerX(), tmpR.top + 58 * dp,
-                tmpR.width() - 18 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
+            val wrapWidth = tmpR.width() - 18 * dp
+            val key = era * 2 + i
+            if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
+                variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
+                variantDescKey[i] = key
+                variantDescCount[i] = HintFrame.wrapInto(ui, L[v.descKey],
+                    wrapWidth, 12.5f, variantDescLines[i])
+            }
+            drawWrappedLines(c, variantDescLines[i], variantDescCount[i],
+                tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
             val imgH = min(72 * dp, tmpR.height() * 0.32f)
             val iy = tmpR.bottom - 28 * dp
             for (role in 0..3) {
@@ -1340,6 +1367,9 @@ class BattleScreen(
                 r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
             }
         }
+        variantDescLanguage = L.lang
+        variantDescWidth = variantBtn[0].r.width() - 18 * dp
+        variantDescScale = ui.textScale
     }
 
     private fun drawChoices(c: Canvas) {
@@ -1372,9 +1402,21 @@ class BattleScreen(
             }
             val descKey = if (cards == null) doctrineDescKeys[doctrines!![i].ordinal]
                 else cardDescKeys[cards[i].ordinal]
-            ui.wrap(c, L[descKey], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
-                tmpR.width() - 22 * dp, 12f, Ui.TEXT, Paint.Align.CENTER)
+            val wrapWidth = tmpR.width() - 22 * dp
+            val choiceKey = if (cards == null) doctrines!![i].ordinal else 100 + cards[i].ordinal
+            if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
+                choiceDescWidth != wrapWidth || choiceDescScale != ui.textScale) {
+                choiceDescKey[i] = choiceKey
+                choiceDescCount[i] = HintFrame.wrapInto(ui, L[descKey],
+                    wrapWidth, 12f, choiceDescLines[i])
+            }
+            drawWrappedLines(c, choiceDescLines[i], choiceDescCount[i],
+                tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
+                12f, Ui.TEXT, Paint.Align.CENTER)
         }
+        choiceDescLanguage = L.lang
+        choiceDescWidth = doctrineBtn[0].r.width() - 22 * dp
+        choiceDescScale = ui.textScale
     }
 
     /** Wynik i tłumaczenia wyliczamy przy końcu bitwy, nie w każdej klatce. */
