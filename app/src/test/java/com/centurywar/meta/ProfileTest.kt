@@ -125,4 +125,28 @@ class ProfileTest {
         f.writeText("""{"name":"Stary profil"}""")
         assertEquals(0.5f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
     }
+
+    @Test
+    fun screenShakeDefaultsPersistsAndClamps() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(2, p.screenShake)
+        p.screenShake = 1
+        p.save()
+        assertEquals(1, Profile(f).also { it.load() }.screenShake)
+
+        // Zapis v3 sprzed dodania ustawienia nadal musi być poprawny.
+        val old = org.json.JSONObject(p.toJson())
+        old.remove("screenShake")
+        f.writeText(old.toString())
+        assertEquals(2, Profile(f).also { it.load() }.screenShake)
+
+        old.put("screenShake", -5)
+        f.writeText(old.toString())
+        assertEquals(0, Profile(f).also { it.load() }.screenShake)
+        old.put("screenShake", 100)
+        f.writeText(old.toString())
+        assertEquals(2, Profile(f).also { it.load() }.screenShake)
+    }
+
 }

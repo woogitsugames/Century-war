@@ -23,6 +23,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val fps = btn(2)
     private val lang = btn(3)
     private val vib = btn(4)
+    private val shakeBtn = btn(13)
     private val showFps = btn(5)
     private val snd = btn(8)
     private val music = btn(12)
@@ -31,17 +32,17 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val notifications = btn(9)
     private val notifyHour = btn(10)
     private val playGames = btn(11)
-    private val localRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, reset)
+    private val localRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = if (g.online.available) onlineRows else localRows
     private fun iconOf(b: Button) = when (b) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
-        vib -> Icons.VIBRATE; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
+        vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
-        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"
+        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
         else -> "play_games"
     }
@@ -102,6 +103,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         music.visible = false // miejsce na ręcznie rysowany suwak, nie na przycisk
         vib.label = if (p.vibration) L["on"] else L["off"]
         vib.color = if (p.vibration) Ui.BTN_GREEN else Ui.BTN
+        shakeBtn.label = L[when (p.screenShake) { 0 -> "shake_off"; 1 -> "shake_low"; else -> "shake_full" }]
         showFps.label = if (p.showFps) L["on"] else L["off"]
         showFps.color = if (p.showFps) Ui.BTN_GREEN else Ui.BTN
         name.label = p.name
@@ -215,6 +217,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             2 -> { p.fpsCap = when (p.fpsCap) { 0 -> 60; 60 -> 30; else -> 0 }; g.applyFrameRate() }
             3 -> { val i = L.indexOf(p.lang); p.lang = if (p.lang.isEmpty()) L.CODES[0] else if (i in 0 until L.CODES.size - 1) L.CODES[i + 1] else ""; g.applyLanguage() }
             4 -> p.vibration = !p.vibration
+            13 -> p.screenShake = (p.screenShake + 1) % 3
             8 -> p.sound = !p.sound
             5 -> p.showFps = !p.showFps
             6 -> g.host.requestText(L["name"], p.name) { n -> p.name = n; p.save() }
