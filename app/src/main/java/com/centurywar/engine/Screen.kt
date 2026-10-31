@@ -19,6 +19,8 @@ abstract class Screen(val g: Game) {
 
     /** Wywoływane po każdej zmianie rozmiaru (obrót, rozłożenie Folda, multi-window). */
     open fun layout() {}
+    /** Odświeża także teksty buforowane przez ekran po zmianie języka. */
+    open fun onLanguageChanged() { layout() }
     open fun update(dt: Float) {}
     abstract fun render(c: Canvas)
     open fun onClick(b: Button) {}
