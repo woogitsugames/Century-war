@@ -1,0 +1,56 @@
+name: Test balansu Endless (10 seedów)
+on:
+  pull_request:
+    branches: ['claude/**']
+    paths:
+      - 'sim/**'
+      - 'server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt'
+      - '.github/workflows/endless-balance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  balance:
+    name: Porównanie fali AI
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Zmodyfikowany kod
+        run: |
+          set -o pipefail
+          chmod +x ./gradlew
+          ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache | tee "$RUNNER_TEMP/new.log"
+      - name: Kod bazowy
+        run: |
+          set -o pipefail
+          git worktree add --detach "$RUNNER_TEMP/cw-baseline" b23b1e91744d276671ad78b964e2fb7fde8f3c3b
+          cp server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt "$RUNNER_TEMP/cw-baseline/server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt"
+          (cd "$RUNNER_TEMP/cw-baseline" && chmod +x ./gradlew && ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache) | tee "$RUNNER_TEMP/old.log"
+      - name: Porównanie średniej
+        run: |
+          old=$(grep -oE 'ENDLESS_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/old.log" | tail -1 | cut -d= -f2)
+          new=$(grep -oE 'ENDLESS_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/new.log" | tail -1 | cut -d= -f2)
+          test -n "$old" && test -n "$new"
+          awk -v old="$old" -v now="$new" 'BEGIN {
+            if (old <= 0) exit 2;
+            diff = (now-old)/old*100;
+            printf "Endless 10 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
+            if (diff > 15 || diff < -15) exit 1;
+          }'
+      - name: Logi balansu
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: endless-ten-seed-balance
+          path: |
+            ${{ runner.temp }}/old.log
+            ${{ runner.temp }}/new.log
+          retention-days: 14
