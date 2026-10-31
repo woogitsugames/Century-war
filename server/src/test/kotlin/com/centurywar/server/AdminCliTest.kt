@@ -32,7 +32,7 @@ class AdminCliTest {
 
             val csv = StringBuilder()
             assertEquals(0, runAdmin(listOf("export-csv"), store, csv, StringBuilder()))
-            assertEquals(2, csv.lines().count { it.isNotBlank() })
+            assertEquals(2, csv.toString().lines().count { it.isNotBlank() })
             assertTrue(csv.contains("\"true\""))
             assertTrue(csv.contains("\"hash-abc\""))
 
