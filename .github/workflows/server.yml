@@ -43,6 +43,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Testy endpointów i weryfikatora
         run: ./gradlew :server:test --console=plain --stacktrace
+      - name: Buduj obraz Docker
+        run: docker build -f server/Dockerfile -t century-war-score:ci .
       - name: Zapisz raporty testów
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
