@@ -112,9 +112,13 @@ class AboutScreen(g: Game) : Screen(g) {
         if (privacy.visible) ui.button(c, privacy, 13f)
         ui.textO(c, licenseTitle, tx, firstRow - 18 * dp, 19f, Ui.GOLD)
         val step = 103 * dp
-        for (i in entries.indices) {
+        var i = 0
+        while (i < entries.size) {
             val y = firstRow + i * step
-            if (y + 96 * dp < contentTop || y > contentBottom) continue
+            if (y + 96 * dp < contentTop || y > contentBottom) {
+                i++
+                continue
+            }
             val e = entries[i]
             row.set(panel.left + 14 * dp, y, panel.right - 14 * dp, y + 96 * dp)
             ui.fill.color = if (i % 2 == 0) Color.argb(55, 255, 255, 255)
@@ -131,6 +135,7 @@ class AboutScreen(g: Game) : Screen(g) {
             ui.textO(c, e.url, x, y + 84 * dp,
                 ui.fit(e.url, 11f, width, 8f), Ui.TEXT)
             if (links[i].visible) ui.button(c, links[i], 12f)
+            i++
         }
         if (fullLicense.visible) ui.button(c, fullLicense, 12f)
         c.restore()
