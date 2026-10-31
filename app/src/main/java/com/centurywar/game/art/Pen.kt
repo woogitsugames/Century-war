@@ -49,6 +49,11 @@ class Pen {
     var alpha = 1f
     /** Postać właśnie trafiona: wszystko wybielone. */
     var flash = false
+    /** Dodatkowy odcień płomieni (bez wybielania). */
+    var tint = 0xFFFF8C40.toInt()
+    var tintAmt = 0f
+    /** Stopień zwęglenia maszyny, 0..1. */
+    var char = 0f
     /** Grubość konturu w jednostkach lokalnych (canvas jest już przeskalowany). */
     var ow = 1.5f
     /** Poziom szczegółów: 1 = tani telefon, 3 = pełny. */
@@ -60,16 +65,29 @@ class Pen {
         fill.isAntiAlias = aa; stroke.isAntiAlias = aa; line.isAntiAlias = aa
     }
 
+    /** Przyciemnia bez zmiany kanału alfa (dym, szybki blask i szkło pozostają półprzezroczyste). */
+    private fun scorched(color: Int): Int {
+        if (char <= 0f || color == OUTLINE) return color
+        val mixed = mix(color, 0xFF32343A.toInt(), char)
+        return (color and 0xFF000000.toInt()) or (mixed and 0x00FFFFFF)
+    }
+
     fun c(color: Int): Int {
-        var col = color
+        var col = scorched(color)
         if (flash) col = mix(col, 0xFFFFFFFF.toInt(), 0.78f)
+        else if (tintAmt > 0f) {
+            val mixed = mix(col, tint, tintAmt)
+            col = (col and 0xFF000000.toInt()) or (mixed and 0x00FFFFFF)
+        }
         if (alpha >= 1f) return col
         return Color.argb((Color.alpha(col) * alpha).toInt(), Color.red(col), Color.green(col), Color.blue(col))
     }
 
     /** Kolor bez wybielenia przy trafieniu (np. świecące elementy), ale z przezroczystością. */
-    fun raw(color: Int): Int =
-        if (alpha >= 1f) color else Color.argb((Color.alpha(color) * alpha).toInt(), Color.red(color), Color.green(color), Color.blue(color))
+    fun raw(color: Int): Int {
+        val col = scorched(color)
+        return if (alpha >= 1f) col else Color.argb((Color.alpha(col) * alpha).toInt(), Color.red(col), Color.green(col), Color.blue(col))
+    }
 
     fun fp(color: Int): Paint { fill.color = c(color); return fill }
     fun gp(color: Int): Paint { fill.color = raw(color); return fill }

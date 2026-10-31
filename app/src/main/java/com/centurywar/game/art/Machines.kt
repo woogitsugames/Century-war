@@ -35,6 +35,10 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         else if (windup >= 0f) smooth(windup.coerceIn(0f, 1f)) else 0f
     private fun rock(walk: Float, atk: Float): Float =
         if (p.hi) Motion.hullTilt(atk) + sin(walk * 1.7f + phase) * stride * 0.7f else 0f
+    /** Wizualny odruch zwierzęcia po trafieniu (0..1). */
+    var recoil = 0f
+    /** Poduszka unoszącego się pojazdu zanika w trakcie zniszczenia. */
+    var crashed = 0f
 
     private val WOOD = 0xFF8A6038.toInt()
     private val WOOD_D = 0xFF5E3E22.toInt()
@@ -90,6 +94,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     private fun rider(era: Int, weapon: Int, team: Int, walk: Float, atk: Float) {
         val bob = if (p.hi) sin((walk + phase) * 2f) * stride * 1.4f else 0f
         cv.save(); cv.translate(-4f, -26f + bob); cv.scale(0.86f, 0.86f)
+        if (recoil > 0f) cv.rotate(-15f * recoil, 0f, -14f)
         men.draw(era, false, weapon, team, 0f, atk, true, false)
         cv.restore()
     }
@@ -119,9 +124,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         cv.save(); cv.translate(0f, bob)
         // ogon
         p.path.reset(); p.path.moveTo(-25f, -46f); p.path.quadTo(-38f, -40f, -34f, -20f); p.path.quadTo(-30f, -34f, -24f, -40f); p.path.close(); p.shape(mane)
-        // Szyja i łeb kołyszą się razem; przed uderzeniem koń unosi głowę.
+        // Szyja i łeb kołyszą się razem; przed uderzeniem koń unosi głowę, po trafieniu szarpie.
         cv.save()
-        cv.rotate(sin(stepPhase) * stride * 2f - ready(atk) * 4f, 16f, -50f)
+        cv.rotate(sin(stepPhase) * stride * 2f - ready(atk) * 4f - 9f * recoil, 16f, -50f)
         p.quad(12f, -50f, 26f, -68f, 34f, -62f, 24f, -38f); p.shape(hide)
         val pa = p.path; pa.reset()
         pa.moveTo(24f, -70f); pa.lineTo(31f, -71f); pa.lineTo(44f, -60f); pa.quadTo(46f, -55f, 42f, -54f); pa.lineTo(33f, -56f); pa.lineTo(26f, -60f); pa.close()
@@ -232,6 +237,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         if (tusker && p.hi) { // kudły
             for (i in 0..5) { val x = -32f + i * 10f; p.tri(x, -36f, x + 5f, -24f, x + 9f, -35f); p.shapeF(hd) }
         }
+        // Łeb mamuta/słonia odchyla się przy uderzeniu.
+        cv.save(); cv.rotate(-8f * recoil, 8f, -64f)
         // głowa
         p.circle(34f, -66f, 15f, hide)
         if (tusker) { p.circle(30f, -79f, 9f, hide) } // kopuła czaszki mamuta
@@ -251,6 +258,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             p.quad(28f, -80f, 42f, -78f, 46f, -64f, 30f, -66f); p.shape(BRONZE)
             if (p.hi) p.rivets(31f, -72f, 43f, 3, 1f, 0xFF8A5A20.toInt())
         }
+        cv.restore()
         // grzbiet: kosz / wieża w barwach drużyny
         if (tusker) {
             p.quad(-26f, -82f, 16f, -84f, 20f, -60f, -24f, -58f); p.shape(team)
@@ -691,11 +699,11 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     // ================================================================== poduszkowiec
 
     fun hover(team: Int, atk: Float) {
-        val bob = sin(time * 4f + phase) * 2.5f
+        val bob = sin(time * 4f + phase) * 2.5f * (1f - crashed)
         val hull = 0xFF6A6290.toInt()
         val armor = 0xFFDADDE8.toInt()
         // poduszka energii
-        val pulse = 0.6f + 0.4f * sin(time * 9f + phase * 1.7f)
+        val pulse = (0.6f + 0.4f * sin(time * 9f + phase * 1.7f)) * (1f - crashed)
         p.r.set(-40f, -10f, 40f, 4f); cv.drawOval(p.r, p.gp((((90 * pulse).toInt()) shl 24) or 0x78DCFF))
         p.r.set(-28f, -7f, 28f, 1f); cv.drawOval(p.r, p.gp((((150 * pulse).toInt()) shl 24) or 0xB0F4FF))
         cv.save(); cv.translate(0f, bob)
