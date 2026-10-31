@@ -21,7 +21,10 @@ import javax.crypto.spec.SecretKeySpec
 
 enum class ScoreSendStatus { DISABLED, QUEUED, SENDING, SENT, REJECTED, OFFLINE, INVALID_NICK }
 
-data class GlobalEntry(val rank: Long, val player: String, val nick: String, val score: Long)
+data class GlobalEntry(val rank: Long, val player: String, val nick: String, val score: Long) {
+    val rankLabel = rank.toString() + "."
+    val scoreLabel = score.toString()
+}
 data class GlobalRankingView(
     val top: List<GlobalEntry> = emptyList(),
     val around: List<GlobalEntry> = emptyList(),
