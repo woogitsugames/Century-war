@@ -262,11 +262,26 @@ class Profile(private val file: File) {
      */
     @Synchronized
     fun fromJson(json: String) {
+        // Zgoda na serwer rankingu i UUID są wyłącznie lokalne: chmura nie może
+        // aktywować wysyłki na innym urządzeniu.
+        val localId = playerId
+        val localConsent = globalRanking
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
         restore(migrate(o, version), version >= CURRENT_VERSION)
+        playerId = localId
+        globalRanking = localConsent && localId.isNotEmpty()
     }
+
+    /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
+    @Synchronized
+    fun toCloudJson(): String = cloudJson(toJson())
+
+    private fun cloudJson(json: String): String = JSONObject(json).apply {
+        remove("playerId")
+        remove("globalRanking")
+    }.toString()
 
     /**
      * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
@@ -298,7 +313,7 @@ class Profile(private val file: File) {
                     // Poprzedni zapis zostaje na miejscu, nowy można odzyskać z .tmp.
                 }
             }
-            if (saved) onSaved?.invoke(json)
+            if (saved) onSaved?.invoke(cloudJson(json))
         } catch (_: Exception) {
             // Brak miejsca itp. — gra działa dalej, zapis spróbuje ponownie przy kolejnej okazji.
         }
