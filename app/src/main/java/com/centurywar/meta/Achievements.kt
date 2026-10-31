@@ -138,8 +138,7 @@ object Achievements {
         if (cfg.mode == Mode.ENDLESS && battle.wave > profile.bestWave) profile.bestWave = battle.wave
 
         val player = battle.player
-        if (cfg.mode == Mode.DAILY && cfg.seed != profile.achievementLastDailySeed) {
-            profile.achievementLastDailySeed = cfg.seed
+        if (cfg.mode == Mode.DAILY && cfg.seed >= 0L && profile.achievementDailySeeds.add(cfg.seed)) {
             add(profile, AchievementMetric.DAILY_DAYS)
         }
         if (cfg.mode == Mode.SKIRMISH && won && cfg.aiPower >= 1.6f) {
