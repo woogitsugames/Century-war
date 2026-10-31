@@ -127,7 +127,7 @@ fun Application.leaderboardModule(
             }
 
             val input = runCatching { json.decodeFromString<ScoreSubmission>(body) }.getOrNull()
-            if (input == null || !validPlayer(input.player) || !validNick(input.nick)) {
+            if (input == null || !validPlayer(input.player)) {
                 call.fail(HttpStatusCode.BadRequest, "invalid_submission")
                 return@post
             }
@@ -138,6 +138,10 @@ fun Application.leaderboardModule(
             val metadataError = runCatching { validateSubmission(input) }.exceptionOrNull()
             if (metadataError != null) {
                 call.fail(HttpStatusCode.BadRequest, metadataError.message ?: "invalid_submission")
+                return@post
+            }
+            if (store.isBlocked(input.player)) {
+                call.fail(HttpStatusCode.Forbidden, "blocked_player")
                 return@post
             }
             if (!limiter.allow("post-player:" + input.player, 6)) {
@@ -156,7 +160,12 @@ fun Application.leaderboardModule(
                 return@post
             }
             val replay = verification.getOrThrow()
-            val result = store.save(input, replay, receivedAt, sha256(body))
+            val result = try {
+                store.save(input, replay, receivedAt, sha256(body))
+            } catch (_: BlockedPlayerException) {
+                call.fail(HttpStatusCode.Forbidden, "blocked_player")
+                return@post
+            }
             if (!result.inserted && replay.board == "daily") {
                 call.fail(HttpStatusCode.Conflict, "daily_already_submitted")
                 return@post
