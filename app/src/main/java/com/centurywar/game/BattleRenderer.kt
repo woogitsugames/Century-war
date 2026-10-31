@@ -417,6 +417,101 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- jednostki
 
+    /** Rozpoznawanie śmierci po serial, bez zmian w buforze zdarzeń i zapisie bitwy. */
+    private fun detectDeaths() {
+        for (i in b.units.indices) {
+            val u = b.units[i]
+            if (!u.active || u.dying < 0f || seenDeaths[i] == u.serial) continue
+            seenDeaths[i] = u.serial
+            val d = u.def
+            val low = g.quality.level == 1
+            if (motorBody(d.body)) {
+                addWreck(u)
+                spawnParticle(u.x, 32f * d.size, 0f, 0f, 0.13f, 25f * d.size,
+                    0xFFFFCC78.toInt(), 2)
+                val n = if (low) 2 else 6
+                for (j in 0 until n) {
+                    spawnParticle(u.x, 30f * d.size, rnd(-170f, 170f), rnd(55f, 200f),
+                        0.5f, 3.5f * d.size,
+                        if (j % 2 == 0) 0xFFFFB050.toInt() else 0xFF666E76.toInt(), 0)
+                }
+            } else {
+                val n = if (low) 2 else 5
+                for (j in 0 until n) {
+                    spawnParticle(u.x + rnd(-10f, 10f) * d.size, 2f,
+                        rnd(-45f, 45f), 0f, 0.5f + rnd(0f, 0.25f),
+                        (7f + rnd(0f, 7f)) * d.size, 0xA8A38E70.toInt(), 4)
+                }
+                if (d.body == Body.SIEGE || d.body == Body.CANNON) {
+                    for (j in 0 until n) {
+                        spawnParticle(u.x, 35f * d.size, rnd(-125f, 125f), rnd(50f, 200f),
+                            0.6f, 4f * d.size,
+                            if (d.body == Body.SIEGE) 0xFF865333.toInt() else 0xFF777C80.toInt(), 0)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun addWreck(u: Fighter) {
+        var slot = wcount
+        if (wcount < WMAX) wcount++
+        else {
+            slot = 0
+            for (i in 1 until WMAX) if (wage[i] > wage[slot]) slot = i
+        }
+        wx[slot] = u.x
+        wside[slot] = u.side
+        wdef[slot] = u.def.id
+        wtier[slot] = u.tier
+        wage[slot] = u.dying
+        wsmoke[slot] = 0.12f
+    }
+
+    /** Wraki pozostają krócej na LOW. Nie ma ciał ani dodatkowych jednostek w symulacji. */
+    private fun drawWrecks(c: Canvas, dt: Float) {
+        val low = g.quality.level == 1
+        val life = if (low) 1f else 2.5f
+        val tail = if (low) 0.25f else 0.45f
+        var i = 0
+        while (i < wcount) {
+            wage[i] += dt
+            if (wage[i] >= life) {
+                val last = --wcount
+                wx[i] = wx[last]; wside[i] = wside[last]; wdef[i] = wdef[last]
+                wtier[i] = wtier[last]; wage[i] = wage[last]; wsmoke[i] = wsmoke[last]
+                continue
+            }
+            wsmoke[i] -= dt
+            if (wsmoke[i] <= 0f) {
+                wsmoke[i] += if (low) 0.48f else 0.24f
+                spawnParticle(wx[i] + rnd(-12f, 12f), 18f,
+                    rnd(-15f, 15f), rnd(35f, 75f), 0.75f, 10f,
+                    0xA04D4B48.toInt(), 3)
+            }
+            val def = Defs.allUnits[wdef[i]]
+            val x = sx(wx[i])
+            val margin = 130f * k * def.size
+            if (x >= -margin && x <= viewW + margin) {
+                c.save()
+                c.translate(x, groundY)
+                c.scale(k * def.size * b.sides[wside[i]].dir, k * def.size)
+                c.translate(0f, 13f)
+                c.scale(1f, 0.72f)
+                pen.alpha = ((life - wage[i]) / tail).coerceIn(0f, 1f)
+                pen.flash = false; pen.tintAmt = 0f; pen.char = 1f
+                men.stride = 0f; men.windup = -1f
+                mach.crashed = 1f
+                val team = if (wside[i] == 0) Ui.PLAYER else Ui.ENEMY
+                drawBody(def, team, 0f, 0f, wtier[i])
+                pen.alpha = 1f; pen.char = 0f
+                mach.crashed = 0f
+                c.restore()
+            }
+            i++
+        }
+    }
+
     private fun mix(a: Float, b: Float) = a + (b - a) * lerp
 
     private fun deathFade(dying: Float): Float =
@@ -649,17 +744,44 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- efekty
 
+    /** Typ trafionego ciała z najbliższej jednostki ofiary; FxBuffer pozostaje bez zmian. */
+    private fun hitBody(x: Float, side: Int): Int {
+        var closest = Float.MAX_VALUE
+        var body = Body.HUMAN
+        for (u in b.units) {
+            if (!u.active || u.side != side) continue
+            val d = abs(u.x - x)
+            if (d < closest) { closest = d; body = u.def.body }
+        }
+        return body
+    }
+
     private fun consumeFx() {
         val fx = b.fx
         val dp = 1f
         for (i in 0 until fx.count) {
             val x = fx.x[i]; val h = fx.h[i]
             when (fx.type[i]) {
-                FxBuffer.HIT -> for (j in 0 until 3) spawnParticle(x, h, rnd(-80f, 80f), rnd(40f, 160f), 0.35f, 3f, 0xFFFFD080.toInt(), 0)
-                FxBuffer.DEATH -> {
-                    val s = fx.value[i]
-                    for (j in 0 until 6) spawnParticle(x, 20f, rnd(-60f, 60f), rnd(20f, 90f), 0.7f, 6f * s, 0xC0A09080.toInt(), 3)
+                FxBuffer.HIT -> {
+                    val body = hitBody(x, fx.side[i])
+                    val away = -b.sides[fx.side[i]].dir
+                    val metal = body == Body.CANNON || motorBody(body)
+                    val wood = body == Body.SIEGE
+                    val n = if (g.quality.level == 1) 2 else 5
+                    for (j in 0 until n) {
+                        val color = when {
+                            metal && j % 2 == 0 -> 0xFFFFD375.toInt()
+                            metal -> 0xFF737B83.toInt()
+                            wood -> 0xFF95643C.toInt()
+                            else -> 0xFFC2A585.toInt()
+                        }
+                        spawnParticle(x, h, away * rnd(35f, 145f) + rnd(-25f, 25f),
+                            rnd(25f, 150f), if (metal) 0.3f else 0.4f,
+                            if (metal) 2.8f else 3.8f, color, 0)
+                    }
                 }
+                // Zgon obsługujemy przez serial w detectDeaths, z podziałem na typ ciała.
+                FxBuffer.DEATH -> { }
                 FxBuffer.EXPLOSION -> {
                     val s = fx.value[i]
                     spawnParticle(x, h, 0f, 0f, 0.35f, 60f * s, 0xFFFFC060.toInt(), 1)
@@ -720,6 +842,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             when (ptype[i]) {
                 0 -> { pvh[i] -= 700f * dt; if (ph[i] < 0f) { ph[i] = 0f; pvh[i] *= -0.3f; pvx[i] *= 0.6f } }
                 3 -> { pvx[i] *= 0.98f }
+                4 -> { pvx[i] *= 0.94f }
             }
             val x = sx(px[i]); val y = sy(ph[i])
             val a = Color.alpha(pcol[i]) / 255f
@@ -729,6 +852,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                 1 -> { line.color = fill.color; line.strokeWidth = 6f * k * t; c.drawCircle(x, y, psize[i] * k * (1.4f - t), line) }
                 2 -> c.drawCircle(x, y, psize[i] * k * (0.5f + t * 0.5f), fill)
                 3 -> c.drawCircle(x, y, psize[i] * k * (1.6f - t * 0.8f), fill)
+                4 -> {
+                    val rad = psize[i] * k * (1.3f - t * 0.3f)
+                    rect.set(x - rad, y - rad * 0.22f, x + rad, y + rad * 0.22f)
+                    c.drawOval(rect, fill)
+                }
             }
             i++
         }
