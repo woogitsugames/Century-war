@@ -30,6 +30,15 @@ internal object NickModeration {
         )
         val result = StringBuilder(plain.length)
         for (ch in plain) {
+            // Ligatury i litery, których rozkład NFKD nie usuwa.
+            when (ch) {
+                'ß' -> { result.append("ss"); continue }
+                'æ' -> { result.append("ae"); continue }
+                'œ' -> { result.append("oe"); continue }
+                'ø' -> { result.append('o'); continue }
+                'ł' -> { result.append('l'); continue }
+                'ı' -> { result.append('i'); continue }
+            }
             val mapped = when (ch) {
                 '0' -> 'o'
                 '1', '!', '|' -> 'i'
