@@ -193,7 +193,6 @@ class BattleSnapshotTest {
     @Test
     fun variantModalAndTurretSurviveSnapshot() {
         val a = Battle(BattleConfig(Mode.SKIRMISH, 17L, 0.9f, 4, 6))
-        a.ai = null
         assertEquals(4, a.pendingVariantEra)
         val b = roundTrip(a)
         assertEquals(a.pendingVariantEra, b.pendingVariantEra)
@@ -215,7 +214,6 @@ class BattleSnapshotTest {
     fun teslaChainProjectileResumesAtSameFrame() {
         val cfg = BattleConfig(Mode.SKIRMISH, 18L, 1f, 4, 4, setOf(Modifier.FORCE_TESLA))
         val a = Battle(cfg)
-        a.ai = null
         a.enemy.dmgMul = 0f
         a.enemy.hold = true
         a.spawn(a.player, a.player.unit(Role.RANGED))
