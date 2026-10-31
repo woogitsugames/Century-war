@@ -2,12 +2,14 @@ package com.centurywar.screens
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
+import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.meta.OnlineState
 import kotlin.math.max
@@ -23,22 +25,23 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val vib = btn(4)
     private val showFps = btn(5)
     private val snd = btn(8)
+    private val music = btn(12)
     private val name = btn(6)
     private val reset = btn(7)
     private val notifications = btn(9)
     private val notifyHour = btn(10)
     private val playGames = btn(11)
-    private val localRows = listOf(quality, fps, lang, snd, vib, showFps, name, notifications, notifyHour, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, vib, showFps, name, notifications, notifyHour, playGames, reset)
+    private val localRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = if (g.online.available) onlineRows else localRows
     private fun iconOf(b: Button) = when (b) {
-        quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER
+        quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
-        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; vib -> "vibration"
+        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
         else -> "play_games"
     }
@@ -50,6 +53,9 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val rowR = RectF()
     private var resetArmed = 0f
     private var dt = 0f
+    private var musicPointer = -1
+    private var shownMusicPercent = -1
+    private var musicPercentLabel = ""
 
     override fun layout() {
         chrome.layoutBack(back)
@@ -73,6 +79,11 @@ class SettingsScreen(g: Game) : Screen(g) {
             val left = panel.left + 12 * dp + col * columnWidth
             val y = panel.top + 24 * dp + line * step
             if (b === reset) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
+            else if (b === music) {
+                // Suwak potrzebuje więcej miejsca niż przycisk, inaczej na 720p ma kilka dp.
+                val sw = max(bw, columnWidth * 0.52f)
+                b.set(left + columnWidth - 10 * dp - sw, y + 4 * dp, sw, step - 10 * dp)
+            }
             else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
         }
         reset.iconId = Icons.RESTART
@@ -88,6 +99,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         lang.label = L.indexOf(p.lang).let { if (it >= 0) L.NAMES[it] else "Auto" }
         snd.label = if (p.sound) L["on"] else L["off"]
         snd.color = if (p.sound) Ui.BTN_GREEN else Ui.BTN
+        music.visible = false // miejsce na ręcznie rysowany suwak, nie na przycisk
         vib.label = if (p.vibration) L["on"] else L["off"]
         vib.color = if (p.vibration) Ui.BTN_GREEN else Ui.BTN
         showFps.label = if (p.showFps) L["on"] else L["off"]
@@ -130,9 +142,69 @@ class SettingsScreen(g: Game) : Screen(g) {
                 ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp,
                     ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
             }
-            ui.button(c, b, 15f)
+            if (b === music) drawMusicSlider(c) else ui.button(c, b, 15f)
         }
         ui.button(c, back, 16f)
+    }
+
+
+    private fun drawMusicSlider(c: Canvas) {
+        val left = music.r.left + 14 * dp
+        val right = music.r.right - 55 * dp
+        val y = music.r.centerY()
+        val fraction = g.profile.musicVolume
+        ui.fill.color = Ui.OUTLINE
+        c.drawRoundRect(left, y - 6 * dp, right, y + 6 * dp, 6 * dp, 6 * dp, ui.fill)
+        ui.fill.color = Ui.DIM
+        c.drawRoundRect(left, y - 3 * dp, right, y + 3 * dp, 3 * dp, 3 * dp, ui.fill)
+        ui.fill.color = Ui.GOLD
+        val x = left + (right - left) * fraction
+        c.drawRoundRect(left, y - 3 * dp, x, y + 3 * dp, 3 * dp, 3 * dp, ui.fill)
+        ui.fill.color = Ui.TEXT
+        c.drawCircle(x, y, 8 * dp, ui.fill)
+        val percent = (fraction * 100f + 0.5f).toInt()
+        if (percent != shownMusicPercent) {
+            shownMusicPercent = percent
+            musicPercentLabel = percent.toString() + "%"
+        }
+        ui.textO(c, musicPercentLabel, music.r.right - 5 * dp, y + 5 * dp, 13f,
+            Ui.TEXT, Paint.Align.RIGHT)
+    }
+
+    private fun setMusicFromX(x: Float) {
+        val left = music.r.left + 14 * dp
+        val right = music.r.right - 55 * dp
+        val portion = ((x - left) / (right - left).coerceAtLeast(1f)).coerceIn(0f, 1f)
+        g.profile.musicVolume = (portion * 100f + 0.5f).toInt() / 100f
+        g.applyMusicVolume()
+    }
+
+    override fun onTouch(e: TouchEvent): Boolean {
+        if (musicPointer >= 0) {
+            if (e.action == TouchEvent.CANCEL) {
+                musicPointer = -1
+                g.profile.save()
+                return true
+            }
+            if (e.pointer != musicPointer) return true
+            when (e.action) {
+                TouchEvent.MOVE -> setMusicFromX(e.x)
+                TouchEvent.UP -> {
+                    setMusicFromX(e.x)
+                    musicPointer = -1
+                    g.profile.save()
+                }
+            }
+            return true
+        }
+        // Strefa dotyku suwaka obejmuje cały pas wiersza w pionie (niski wiersz na 720p).
+        if (e.action == TouchEvent.DOWN && e.x >= music.r.left && e.x <= music.r.right &&
+            e.y >= music.r.top - 5 * dp && e.y <= music.r.bottom + 5 * dp) {
+            musicPointer = e.pointer
+            setMusicFromX(e.x)
+            return true
+        }
+        return false
     }
 
     override fun onClick(b: Button) {

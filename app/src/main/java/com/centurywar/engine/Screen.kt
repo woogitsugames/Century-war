@@ -26,12 +26,15 @@ abstract class Screen(val g: Game) {
     open fun onBack(): Boolean = false
     open fun onDrag(dx: Float, dy: Float) {}
     open fun onTap(x: Float, y: Float) {}
+    /** true oznacza, że ekran przejął surowe zdarzenie dotyku. */
+    open fun onTouch(e: TouchEvent): Boolean = false
     open fun onPause() {}
 
     fun btn(id: Int, label: String = "", sub: String = ""): Button =
         Button(id).also { it.label = label; it.sub = sub; buttons.add(it) }
 
     fun handle(e: TouchEvent) {
+        if (onTouch(e)) return
         when (e.action) {
             TouchEvent.DOWN -> {
                 if (activePointer != -1) return

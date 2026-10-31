@@ -71,6 +71,7 @@ object Icons {
     const val CODEX = 50
     const val HEART = 51
     const val SPEAKER = 52
+    const val NOTE = 53
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -170,6 +171,7 @@ object Icons {
             CODEX -> codex(c)
             HEART -> heart(c)
             SPEAKER -> speaker(c)
+            NOTE -> note(c)
         }
         c.restoreToCount(save)
     }
@@ -822,6 +824,17 @@ object Icons {
         shape(c, STEEL)
         stroke(c, 0.36f, -0.26f, 0.36f, 0.26f, ow * 1.1f, WHITE)
         stroke(c, 0.62f, -0.46f, 0.62f, 0.46f, ow * 1.1f, WHITE)
+    }
+
+    /** Dwie ósemki z belką (muzyka). */
+    private fun note(c: Canvas) {
+        stroke(c, -0.3f, -0.4f, -0.3f, 0.5f, ow * 1.6f, GOLD)
+        stroke(c, 0.72f, -0.7f, 0.72f, 0.26f, ow * 1.6f, GOLD)
+        p.reset()
+        p.moveTo(-0.36f, -0.56f); p.lineTo(0.78f, -0.86f); p.lineTo(0.78f, -0.56f); p.lineTo(-0.36f, -0.26f); p.close()
+        shape(c, GOLD)
+        circle(c, -0.52f, 0.56f, 0.3f, GOLD)
+        circle(c, 0.5f, 0.32f, 0.3f, GOLD)
     }
 
     private fun vibrate(c: Canvas) {
