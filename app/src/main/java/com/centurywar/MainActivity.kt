@@ -89,7 +89,8 @@ class MainActivity : Activity(), Host {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             setPadding(0, 0, 0, (32f * resources.displayMetrics.density).toInt())
             setTextColor(Color.WHITE)
-            setBackgroundResource(R.drawable.bg_launch)
+            // Tło startowe; gdyby zasób nie dał się wczytać (stare API, testy), wystarczy kolor.
+            try { setBackgroundResource(R.drawable.bg_launch) } catch (_: Exception) { setBackgroundColor(0xFF13263E.toInt()) }
         })
         // Profil i zrzut są potrzebne przed pierwszą klatką, ale nigdy nie czytamy ich na UI.
         val app = applicationContext

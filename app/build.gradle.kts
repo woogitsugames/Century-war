@@ -104,6 +104,8 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Robolectric widzi zasoby aplikacji (ekran startowy, ikony).
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
