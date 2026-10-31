@@ -83,7 +83,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val mach = Machines(pen, men)
     private val bases = Bases(pen)
     /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
-    private val basePics = arrayOfNulls<Picture>(Defs.ERA_COUNT * 2)
+    private val basePics = arrayOfNulls<Picture>(EraArt.entries.size * 2)
     private var basePicDetail = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
@@ -327,9 +327,9 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     // ---------------------------------------------------------------- bazy
 
     /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
-    private fun basePicture(side: Int, era: Int, team: Int): Picture {
+    private fun basePicture(side: Int, art: EraArt, team: Int): Picture {
         if (basePicDetail != pen.detail) { for (i in basePics.indices) basePics[i] = null; basePicDetail = pen.detail }
-        val idx = side * Defs.ERA_COUNT + era
+        val idx = side * EraArt.entries.size + art.ordinal
         basePics[idx]?.let { return it }
         val pic = Picture()
         val rc = pic.beginRecording((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
@@ -338,7 +338,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.cv = rc
         pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
         pen.setAntiAlias(true)
-        bases.body(era, team)
+        bases.body(art, team)
         pic.endRecording()
         pen.cv = saved
         pen.setAntiAlias(g.quality.antialias)
@@ -352,7 +352,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         if (s.index == 1 && bx > viewW + 400 * k) return
         val team = if (s.index == 0) Ui.PLAYER else Ui.ENEMY
         val e = s.era
-        val pic = basePicture(s.index, e, team)
+        val art = Defs.sideArt(e, s.eraVariant)
+        val pic = basePicture(s.index, art, team)
         c.save()
         c.translate(bx, groundY)
         c.scale(k * s.dir, k)
@@ -369,12 +370,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             c.restore()
         } else c.drawPicture(pic)
         c.restore()
-        bases.live(e, team)
-        if (Defs.spec(e).art == EraArt.STEAM && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
+        bases.live(art, team)
+        if (art == EraArt.STEAM && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
 
         // flaga drużyny
-        val fx0 = bases.flagX(e)
-        val flagTop = bases.flagTop(e)
+        val fx0 = bases.flagX(art)
+        val flagTop = bases.flagTop(art)
         val wave = sin(time * 5f + s.index) * 6f
         val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
         val fp = pen.path
@@ -390,12 +391,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         // wieża z platformami na wieżyczki
         if (s.slots > 0) {
             val top = b.turretHeight(s.slots - 1) + 20f
-            bases.tower(e, team, top)
+            bases.tower(art, team, top)
             for (i in 0 until s.slots) {
                 val hh = b.turretHeight(i)
-                bases.platform(e, -hh + 8f)
+                bases.platform(art, -hh + 8f)
                 val te = s.turretEra[i]
-                if (te >= 0) bases.turret(te, -40f, -hh + 8f, s.turretFire[i] > 0f, team)
+                if (te >= 0) bases.turret(Defs.sideArt(te, s.turretVariant[i]), -40f, -hh + 8f, s.turretFire[i] > 0f, team)
             }
         }
         c.restore()
@@ -456,8 +457,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
         pen.ow = 1.5f / def.size
-        when (def.body) {
-            Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
+        if (def.variant >= 0 && (def.role == Role.HEAVY || def.role == Role.ELITE)) {
+            mach.variantMachine(def.art, def.role == Role.ELITE, team, walk, atk)
+        } else when (def.body) {
+            Body.HUMAN -> men.draw(def.art, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
             Body.BEAST -> mach.beast(def.era, def.role == Role.ELITE, team, walk, atk)
             Body.SIEGE -> if (Defs.spec(def.era).art == EraArt.IRON) mach.scorpion(team, walk, atk) else mach.trebuchet(team, walk, atk)
             Body.CANNON -> mach.cannon(team, walk, atk)
@@ -509,8 +512,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun unitWidth(d: UnitDef) = when (d.body) {
         Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
-        Body.VEHICLE -> if (d.role == Role.ELITE && Defs.spec(d.era).art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
-        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+        Body.VEHICLE -> if (d.role == Role.ELITE && d.art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
+        Body.MECH -> if (d.art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
     }
 
     private fun iconShift(d: UnitDef) = when (d.body) {
@@ -518,8 +521,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     private fun unitHeight(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (Defs.spec(d.era).art == EraArt.BRONZE) 120f else 92f) else 80f
-        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.art == EraArt.BRONZE) 120f else 92f) else 80f
+        Body.MECH -> if (d.art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
     }
 
     // ---------------------------------------------------------------- pociski

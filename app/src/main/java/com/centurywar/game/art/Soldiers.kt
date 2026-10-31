@@ -79,10 +79,13 @@ class Soldiers(private val p: Pen) {
      * @param walk faza chodu (0 = stoi), @param atk 1..0 animacja ataku,
      * @param mounted jeździec (nogi zgięte w siodle), @param heavy osiłek epoki plemion.
      */
-    fun draw(epoch: Int, ranged: Boolean, weapon: Int, team: Int, walk: Float, atk: Float, mounted: Boolean, heavy: Boolean) {
-        // Styl postaci jest niezależny od miejsca epoki na osi historii.
-        val era = Defs.artPreset(epoch)
-        ironStyle = Defs.spec(epoch).art == EraArt.IRON
+    fun draw(epoch: Int, ranged: Boolean, weapon: Int, team: Int, walk: Float, atk: Float, mounted: Boolean, heavy: Boolean) =
+        draw(Defs.spec(epoch).art, ranged, weapon, team, walk, atk, mounted, heavy)
+
+    fun draw(art: EraArt, ranged: Boolean, weapon: Int, team: Int, walk: Float, atk: Float, mounted: Boolean, heavy: Boolean) {
+        // Styl postaci nie zależy od położenia epoki w tablicy.
+        val era = Defs.artPreset(art)
+        ironStyle = art == EraArt.IRON
         val sk = skin[era]
         val teamD = dark(team, 0.28f)
         val sleeve = when (era) { 0, 1 -> sk; 2 -> MAIL; 7 -> ARMOR; else -> team }

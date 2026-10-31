@@ -86,6 +86,7 @@ class BattleScreen(
         const val QUIT = 22
         const val CONTINUE = 23
         const val DOCTRINE0 = 30 // 30..32
+        const val VARIANT0 = 80 // 80..81
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
         const val CLOSE = 60
@@ -117,6 +118,7 @@ class BattleScreen(
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
+    private val variantBtn = Array(2) { btn(VARIANT0 + it) }
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
     private val closeBtn = btn(CLOSE)
@@ -139,7 +141,7 @@ class BattleScreen(
         for (i in 0..3) {
             val role = roles[i]
             unitBtn[i].icon = { c, rr ->
-                val def = Defs.unit(battle.player.era, role)
+                val def = battle.player.unit(role)
                 r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp,
                     Ui.PLAYER, battle.player.unitTier[role.ordinal])
             }
@@ -204,6 +206,11 @@ class BattleScreen(
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
         val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
         for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
+        val freeW = w - g.insetL - g.insetR - 50 * dp
+        val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
+        val vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
+        for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
+            (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
         layoutTurretPanel()
         layoutUpgradePanel()
     }
@@ -253,7 +260,7 @@ class BattleScreen(
         val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
             tut?.update(dt)
-            if (battle.pendingChoice == null && battle.pendingCards == null) {
+            if (battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null) {
                 acc += dt * speed * tutScale
                 var steps = 0
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
@@ -319,10 +326,10 @@ class BattleScreen(
     private fun refreshButtons() {
         val p = battle.player
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
-        val modal = paused || finished || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
+        val modal = paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
         for (i in 0..3) {
             val role = roles[i]
-            val def = Defs.unit(p.era, role)
+            val def = p.unit(role)
             val b = unitBtn[i]
             b.visible = !modal
             val locked = role == Role.ELITE && !p.eliteUnlocked
@@ -406,10 +413,14 @@ class BattleScreen(
         restartEnd.label = L["restart"]
         restartEnd.iconId = Icons.RESTART
 
-        val choiceOpen = battle.pendingChoice != null || battle.pendingCards != null
+        val choiceOpen = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
-            doctrineBtn[i].visible = choiceOpen && !paused
+            doctrineBtn[i].visible = choiceOpen && battle.pendingVariant == null && !paused
             doctrineBtn[i].label = ""
+        }
+        for (i in 0..1) {
+            variantBtn[i].visible = battle.pendingVariant != null && !paused && !finished
+            variantBtn[i].label = ""
         }
         val tp = showTurrets && !modal
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
@@ -430,7 +441,7 @@ class BattleScreen(
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
                 slotBuy[i].highlight = slotBuy[i].enabled
             }
-            slotSell[i].label = "${L["sell"]} ${if (te >= 0) p.turretCost(te) / 2 else 0}"
+            slotSell[i].label = "${L["sell"]} ${if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0}"
             slotSell[i].iconId = Icons.COIN
             slotSell[i].color = Ui.BTN_RED
         }
@@ -483,6 +494,7 @@ class BattleScreen(
                 if (battle.pendingCards != null) commands.card(b.id - DOCTRINE0)
                 else commands.doctrine(b.id - DOCTRINE0)
             }
+            in VARIANT0..VARIANT0 + 1 -> if (commands.variant(b.id - VARIANT0)) g.haptic(40)
             in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
                 val i = b.id - SLOT_BUY0
                 if (p.turretEra[i] < 0) commands.buyTurret(i) else commands.upgradeTurret(i)
@@ -492,7 +504,7 @@ class BattleScreen(
     }
 
     private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex,
-        tutorial && !g.profile.tutorialDone)
+        tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled)
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -664,7 +676,7 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
@@ -674,9 +686,9 @@ class BattleScreen(
         drawQueue(c)
         ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
-        if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && !paused && !finished) drawTurretPanel(c)
-        if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && !paused && !finished) drawUpgradePanel(c)
-        if ((battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
+        if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawTurretPanel(c)
+        if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawUpgradePanel(c)
+        if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
         if (!finished) tut?.draw(c)
         if (paused && !finished) {
             c.drawColor(Color.argb(150, 0, 0, 0))
@@ -858,7 +870,7 @@ class BattleScreen(
         val role = roles[idx]
         val current = battle.player.unitTier[idx]
         val next = min(Defs.MAX_UNIT_TIER, current + 1)
-        val def = Defs.unit(battle.player.era, role)
+        val def = battle.player.unit(role)
         val pr = upgradePanel
         c.drawColor(Color.argb(158, 0, 0, 0))
         ui.panel(c, pr)
@@ -900,7 +912,7 @@ class BattleScreen(
     private fun drawTurretPanel(c: Canvas) {
         val p = battle.player
         ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, "${L["turrets"]} — ${L[Defs.eras[p.era].turret.nameKey]}", 16f,
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, "${L["turrets"]} — ${L[Defs.turret(p.era, p.eraVariant).nameKey]}", 16f,
             Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
         for (i in 0 until p.slots) {
             val b = slotBuy[i]
@@ -913,7 +925,7 @@ class BattleScreen(
             ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
             if (te < 0) ui.textO(c, (i + 1).toString(), panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             val tx = panel.left + 28 * dp + mr * 2
-            val name = if (te >= 0) L[Defs.eras[te].turret.nameKey] else L["empty"]
+            val name = if (te >= 0) L[Defs.turret(te, p.turretVariant[i]).nameKey] else L["empty"]
             val avail = b.r.left - tx - 6 * dp
             ui.textO(c, L.f("slot", i + 1), tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
             ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
@@ -924,7 +936,36 @@ class BattleScreen(
     }
 
 
+    /** Modal dwóch wariantów: ikonki tych samych jednostek co na polu bitwy. */
+    private fun drawVariants(c: Canvas) {
+        val era = battle.pendingVariant ?: return
+        val variants = Defs.spec(era).variants
+        c.drawColor(Color.argb(175, 0, 0, 0))
+        ui.ribbon(c, w / 2, variantBtn[0].r.top - 27 * dp,
+            L["choose_variant"], 21f, Ui.RIBBON, min(340 * dp, w * 0.7f))
+        for (i in variants.indices) {
+            val v = variants[i]
+            val b = variantBtn[i]
+            val off = if (b.pressed) 3 * dp else 0f
+            tmpR.set(b.r.left, b.r.top + off, b.r.right, b.r.bottom + off)
+            ui.panel(c, tmpR, Color.argb(247, 40, 48, 70), 14f)
+            val name = L[v.nameKey]
+            ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
+                ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
+            ui.wrap(c, L[v.descKey], tmpR.centerX(), tmpR.top + 58 * dp,
+                tmpR.width() - 18 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
+            val imgH = min(72 * dp, tmpR.height() * 0.32f)
+            val iy = tmpR.bottom - 28 * dp
+            for (role in 0..3) {
+                val def = Defs.unit(era, roles[role], i)
+                val xx = tmpR.left + (role + 0.5f) * tmpR.width() / 4f
+                r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
+            }
+        }
+    }
+
     private fun drawChoices(c: Canvas) {
+        if (battle.pendingVariant != null) { drawVariants(c); return }
         val cards = battle.pendingCards
         val doctrines = battle.pendingChoice
         if (cards == null && doctrines == null) return
