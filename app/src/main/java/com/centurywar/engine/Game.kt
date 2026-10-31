@@ -22,6 +22,7 @@ interface Host {
     fun applyRenderScale(scale: Float)
     fun applyFrameRate(fps: Int)
     fun exit()
+    fun onWantsBackChanged(wantsBack: Boolean) {}
     fun onBattleWon() {}
     fun onNotificationSettingsChanged() {}
     fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {}
@@ -73,6 +74,18 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     private var screen: Screen? = null
     private val stack = ArrayList<Screen>()
+    /** Publikowany tylko po zmianie; odczyt przez Activity odbywa się na wątku UI. */
+    @Volatile var wantsBack = false
+        private set
+
+    private fun refreshBackHandling() {
+        val s = screen
+        val next = stack.isNotEmpty() || (s != null && (s !is MenuScreen || s.hasOpenModal))
+        if (next != wantsBack) {
+            wantsBack = next
+            host.onWantsBackChanged(next)
+        }
+    }
     private val input = ArrayList<TouchEvent>()
     private val inputPool = ArrayList<TouchEvent>()
     private val inputLock = Any()
@@ -144,6 +157,13 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         L.setCode(profile.lang)
     }
 
+    /** Na wątku gry; przeładowuje napisy aktywnego ekranu i ekranów na stosie. */
+    fun onLanguageChanged() {
+        applyLanguage()
+        screen?.onLanguageChanged()
+        for (s in stack) s.onLanguageChanged()
+    }
+
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
 
     fun setQuality(level: Int) {
@@ -199,6 +219,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen = s
         syncMusicScreen(s)
         s.layout()
+        refreshBackHandling()
     }
 
     fun push(s: Screen) {
@@ -206,20 +227,23 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen = s
         syncMusicScreen(s)
         s.layout()
+        refreshBackHandling()
     }
 
     fun pop() {
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
         screen = stack.removeAt(stack.size - 1)
         screen?.let { syncMusicScreen(it); it.layout() }
+        refreshBackHandling()
     }
 
     val current get() = screen
 
     fun back() {
         val s = screen ?: return
-        if (s.onBack()) return
+        if (s.onBack()) { refreshBackHandling(); return }
         if (stack.isNotEmpty()) pop() else if (s !is MenuScreen) setScreen(MenuScreen(this)) else host.exit()
+        refreshBackHandling()
     }
 
     fun haptic(ms: Long = 12) { if (profile.vibration) host.vibrate(ms) }
@@ -262,6 +286,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (s0 !== screen) screen?.layout()
 
         screen?.update(dt)
+        refreshBackHandling()
         screen?.render(c)
         drawAchievementNotice(c, dt)
 

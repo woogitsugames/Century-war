@@ -17,6 +17,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 class MenuScreen(g: Game) : Screen(g) {
+    /** W menu Wstecz przechwytujemy tylko przy otwartym oknie. */
+    val hasOpenModal get() = g.resumeOffer != null
     private val bg = MenuBg()
     private val campaign = btn(1)
     private val endless = btn(2)
@@ -157,6 +159,11 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     private var subKey = Long.MIN_VALUE
+
+    override fun onLanguageChanged() {
+        subKey = Long.MIN_VALUE
+        super.onLanguageChanged()
+    }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)

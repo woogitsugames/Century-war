@@ -123,6 +123,15 @@ class TutorialOverlay(
         skipBtn.label = L["tut_skip"]
     }
 
+    /** Aktualizuje teksty bieżącego kroku bez restartowania samouczka. */
+    fun onLanguageChanged() {
+        wrapKey = null
+        title = L[TITLES[step]]
+        counter = if (step < STEPS) L.f("tut_step", step + 1, STEPS) else ""
+        nextBtn.label = if (step == S_DONE) L["tut_go"] else L["tut_next"]
+        skipBtn.label = L["tut_skip"]
+    }
+
     // ---------------------------------------------------------------- logika
 
     /** Mnożnik tempa symulacji: 0 = stoi i czeka na gracza, < 1 = zwolnione na czas czytania. */

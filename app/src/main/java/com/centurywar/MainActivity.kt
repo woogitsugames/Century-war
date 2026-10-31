@@ -18,6 +18,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.EditText
+import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
@@ -51,6 +52,8 @@ class MainActivity : Activity(), Host {
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
     private var playGames: PlayGamesLeaderboards? = null
+    private val gameBackCallback by lazy { OnBackInvokedCallback { game.requestBack() } }
+    private var gameBackRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,11 +97,6 @@ class MainActivity : Activity(), Host {
             val (l, t, r, b) = safeInsets(insets)
             game.post { game.setInsets(l, t, r, b) }
             insets
-        }
-        if (Build.VERSION.SDK_INT >= 33) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-                game.requestBack()
-            }
         }
         applyFrameRate(profile.fpsCap)
         hideSystemBars()
@@ -170,8 +168,26 @@ class MainActivity : Activity(), Host {
         super.onPause()
     }
 
-    /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
+    /** Na Androidzie 13+ brak callbacku w menu pozwala systemowi animować wyjście. */
+    override fun onWantsBackChanged(wantsBack: Boolean) {
+        if (Build.VERSION.SDK_INT < 33) return
+        runOnUiThread {
+            if (isFinishing || isDestroyed || wantsBack == gameBackRegistered) return@runOnUiThread
+            if (wantsBack) {
+                onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, gameBackCallback)
+            } else {
+                onBackInvokedDispatcher.unregisterOnBackInvokedCallback(gameBackCallback)
+            }
+            gameBackRegistered = wantsBack
+        }
+    }
+
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= 33 && gameBackRegistered) {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(gameBackCallback)
+            gameBackRegistered = false
+        }
         playGames?.close()
         game.music?.release()
         game.sound?.release()
@@ -266,6 +282,11 @@ class MainActivity : Activity(), Host {
         super.onConfigurationChanged(newConfig)
         // Złożenie/rozłożenie Folda nie restartuje Activity (configChanges), więc orientację ustawiamy tutaj.
         applyOrientation(newConfig)
+        // supportsRtl=false: nie przestawiamy układu; tylko teksty dla języka Auto.
+        // Bitwa i jej stan pozostają na tym samym wątku gry.
+        if (::game.isInitialized) game.post {
+            if (game.profile.lang.isEmpty()) game.onLanguageChanged()
+        }
     }
 
     override fun applyRenderScale(scale: Float) {

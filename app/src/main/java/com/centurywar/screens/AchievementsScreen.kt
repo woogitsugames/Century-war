@@ -71,6 +71,12 @@ class AchievementsScreen(g: Game) : Screen(g) {
         }
     }
 
+    override fun onLanguageChanged() {
+        // Wymuś przeliczenie napisu postępu mimo niezmienionej liczby osiągnięć.
+        lastComplete = -1
+        super.onLanguageChanged()
+    }
+
     override fun update(dt: Float) {
         this.dt = dt
         refreshProgress()

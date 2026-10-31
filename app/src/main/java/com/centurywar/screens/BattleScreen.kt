@@ -247,6 +247,16 @@ class BattleScreen(
 
     // ---------------------------------------------------------------- logika
 
+    override fun onLanguageChanged() {
+        // Napisy bitwy są buforowane według wartości, nie języka.
+        waveShown = -1
+        nextThemeShown = -1
+        siegeKey = -1
+        upgradeRoleShown = -1
+        tut?.onLanguageChanged()
+        super.onLanguageChanged()
+    }
+
     private var frameDt = 0f
 
     override fun update(dt: Float) {
