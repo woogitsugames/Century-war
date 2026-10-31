@@ -33,9 +33,55 @@ class Button(val id: Int) {
     var subIcon = -1
     /** Kolor podpisu [sub] (0 = złoty). */
     var subColor = 0
+    /** Tekst opisu przytrzymania (może zostać ustawiony dopiero przy otwieraniu dymka). */
+    var tooltipTitle = ""
+    var tooltipBody = ""
 
     fun set(l: Float, t: Float, w: Float, h: Float): Button { r.set(l, t, l + w, t + h); return this }
     fun contains(x: Float, y: Float) = visible && r.contains(x, y)
+}
+
+/** Bufor dwóch wierszy opisu, przeliczany tylko po zmianie treści lub szerokości. */
+class TooltipBubble {
+    var title = ""
+        private set
+    var body = ""
+        private set
+    val lines = arrayOf("", "")
+    var lineCount = 0
+        private set
+    private var lastWidth = -1f
+    private var lastScale = -1f
+
+    fun set(newTitle: String, newBody: String) {
+        if (title == newTitle && body == newBody) return
+        title = newTitle; body = newBody; lastWidth = -1f
+    }
+
+    fun prepare(ui: Ui, width: Float) {
+        if (width == lastWidth && lastScale == ui.textScale) return
+        lastWidth = width; lastScale = ui.textScale
+        lines[0] = ""; lines[1] = ""; lineCount = 0
+        if (body.isEmpty()) return
+        // Dzielenie napisów odbywa się przy zmianie opisu/wymiarów, nie w każdej klatce.
+        val words = body.split(' ')
+        var first = ""
+        var second = ""
+        var onSecond = false
+        for (word in words) {
+            if (word.isEmpty()) continue
+            val next = if (first.isEmpty()) word else "$first $word"
+            if (!onSecond && ui.measure(next, 12.5f) <= width) {
+                first = next
+            } else {
+                onSecond = true
+                second = if (second.isEmpty()) word else "$second $word"
+            }
+        }
+        lines[0] = first
+        lines[1] = second
+        lineCount = if (second.isNotEmpty()) 2 else 1
+    }
 }
 
 /**
@@ -99,6 +145,35 @@ class Ui {
     private val tmp = RectF()
     private val tmp2 = RectF()
     private val path = Path()
+    private val tooltipRect = RectF()
+
+    /** Wektorowy dymek przy przycisku, zawsze wewnątrz bezpiecznego obszaru ekranu. */
+    fun tooltip(c: Canvas, anchor: RectF, content: TooltipBubble,
+                safeL: Float, safeT: Float, safeR: Float, safeB: Float) {
+        val margin = 8f * dp
+        val width = min(355f * dp, safeR - safeL - 2f * margin)
+        if (width <= 55f * dp) return
+        val pad = 14f * dp
+        content.prepare(this, width - 2f * pad)
+        val lineH = 17f * dp * textScale
+        val height = (38f * dp + content.lineCount * lineH).coerceAtMost(safeB - safeT - margin * 2)
+        if (height <= 0f) return
+        val left = (anchor.centerX() - width / 2f).coerceIn(safeL + margin,
+            (safeR - margin - width).coerceAtLeast(safeL + margin))
+        val above = anchor.top - height - 9f * dp
+        val below = anchor.bottom + 9f * dp
+        val top = (if (above >= safeT + margin) above else below)
+            .coerceIn(safeT + margin, (safeB - margin - height).coerceAtLeast(safeT + margin))
+        tooltipRect.set(left, top, left + width, top + height)
+        panel(c, tooltipRect)
+        textO(c, content.title, left + width / 2f, top + 23f * dp,
+            fit(content.title, 16f, width - 2f * pad), GOLD, Paint.Align.CENTER, 1.8f)
+        for (i in 0 until content.lineCount) {
+            val line = content.lines[i]
+            text(c, line, left + width / 2f, top + 39f * dp + i * lineH,
+                fit(line, 12.5f, width - 2f * pad, 10f), TEXT, Paint.Align.CENTER)
+        }
+    }
 
     // ------------------------------------------------------------ tekst
 
