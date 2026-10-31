@@ -131,6 +131,7 @@ jobs:
             --tests '*ProfileCloudTest*' \
             --tests '*BattleHistoryTest*' \
             --tests '*StartupTest*' \
+            --tests '*StabilityPathsTest*' \
             --tests '*SkirmishSetupTest*' \
             --tests '*BattleScreenTest*' \
             --tests '*BackLocaleTest*' \
