@@ -291,20 +291,32 @@ class PlayGamesLeaderboards(
                 finishSync(false)
                 return
             }
-            val first = readJson(conflict.snapshot)
-            val second = readJson(conflict.conflictingSnapshot)
+            val serverSnapshot = conflict.snapshot ?: run {
+                finishSync(false)
+                return
+            }
+            val deviceSnapshot = conflict.conflictingSnapshot ?: run {
+                finishSync(false)
+                return
+            }
+            val conflictId = conflict.conflictId ?: run {
+                finishSync(false)
+                return
+            }
+            val first = readJson(serverSnapshot)
+            val second = readJson(deviceSnapshot)
             if (first == null && second == null) {
                 finishSync(false)
                 return
             }
             val winner = if (second != null && (first.isNullOrEmpty() ||
                     (second.isNotEmpty() && Profile.preferCloud(first, second)))) {
-                conflict.conflictingSnapshot
+                deviceSnapshot
             } else {
-                conflict.snapshot
+                serverSnapshot
             }
             try {
-                snapshotsClient.resolveConflict(conflict.conflictId, winner)
+                snapshotsClient.resolveConflict(conflictId, winner)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) handleOpen(task.result, attempt + 1)
                         else finishSync(false)
@@ -333,7 +345,7 @@ class PlayGamesLeaderboards(
             var appliedCloud = false
             if (useCloud) {
                 try {
-                    game.profile.fromJson(cloudJson!!)
+                    game.profile.fromJson(cloudJson)
                     game.profile.save()
                     game.applyLanguage()
                     game.setQuality(game.effectiveQualityLevel())
