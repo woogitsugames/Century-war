@@ -92,6 +92,7 @@ class Side(val index: Int) {
     var kills = 0
     var killValue = 0
     var spawned = 0
+    val spawnedByRole = IntArray(Role.entries.size)
     var goldEarned = 0f
 
     fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
@@ -351,15 +352,26 @@ class Battle(val cfg: BattleConfig) {
     fun abilityReady(side: Side, i: Int): Boolean =
         !over && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
 
-    fun castBarrage(side: Side): Boolean {
+    /** Bez argumentu celu zachowuje dawny, losowy rozrzut ostrzału. */
+    fun castBarrage(side: Side): Boolean = castBarrage(side, Float.NaN)
+
+    /** Ostrzał skupiony wokół wskazanego miejsca, ograniczony do zasięgu zdolności. */
+    fun castBarrage(side: Side, targetX: Float): Boolean {
         if (!abilityReady(side, 0)) return false
         side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
         val count = 16
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
         val type = barrageProj(side.era)
+        val aimed = targetX.isFinite()
+        val aimDistance = (targetX - side.baseFront) * side.dir
         for (i in 0 until count) {
             val p = allocProj() ?: break
-            val tx = side.baseFront + side.dir * (220f + rng.nextFloat() * 1150f)
+            val dist = if (aimed) {
+                (aimDistance + (rng.nextFloat() - 0.5f) * 240f).coerceIn(220f, 1370f)
+            } else {
+                220f + rng.nextFloat() * 1150f
+            }
+            val tx = side.baseFront + side.dir * dist
             p.side = side.index
             p.type = type
             p.era = side.era
@@ -516,6 +528,7 @@ class Battle(val cfg: BattleConfig) {
         f.moving = false
         f.serial = ++serialCounter
         s.spawned++
+        s.spawnedByRole[def.role.ordinal]++
         s.aliveCount++
         return true
     }
