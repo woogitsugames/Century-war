@@ -1,0 +1,24 @@
+name: Weryfikacja AI
+
+on:
+  pull_request:
+    branches:
+      - claude/bold-sagan-vwz5gm
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: APK debug
+        run: ./gradlew :app:assembleDebug --console=plain
+      - name: Symulacje bitwy
+        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*AiPersonalityTest*' --console=plain
