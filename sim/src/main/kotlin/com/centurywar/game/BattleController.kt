@@ -213,7 +213,7 @@ class BattleController(
             val argument = packed.toInt()
             require(step >= previous && step <= currentStep && code in kinds.indices)
             val valid = when (kinds[code]) {
-                Replay.Kind.QUEUE -> argument in 0 until Role.values().size
+                Replay.Kind.QUEUE, Replay.Kind.UNIT_UPGRADE -> argument in 0 until Role.values().size
                 Replay.Kind.BUY_TURRET, Replay.Kind.UPGRADE_TURRET, Replay.Kind.SELL_TURRET ->
                     argument in 0 until Defs.MAX_TURRET_SLOTS
                 Replay.Kind.STANCE -> argument == 0 || argument == 1

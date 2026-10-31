@@ -95,6 +95,20 @@ object L {
 
     // kolejność kolumn: pl, en, de, es, fr, it, pt, uk, nl, tr
     private val table: HashMap<String, Array<out String>> = hashMapOf(
+        // --- odtwarzacz bitew
+        "replay" to t("Powtórka", "Replay", "Wiederholung", "Repetición", "Replay", "Replay", "Repetição", "Повтор", "Herhaling", "Tekrar"),
+        "replay_list" to t("Powtórki", "Replays", "Wiederholungen", "Repeticiones", "Replays", "Replay", "Repetições", "Повтори", "Herhalingen", "Tekrarlar"),
+        "replay_pin" to t("Przypnij", "Pin", "Anheften", "Fijar", "Épingler", "Fissa", "Fixar", "Закріпити", "Vastzetten", "Sabitle"),
+        "replay_delete" to t("Usuń", "Delete", "Löschen", "Eliminar", "Supprimer", "Elimina", "Eliminar", "Видалити", "Verwijderen", "Sil"),
+        "replay_broken" to t("Uszkodzona powtórka", "Replay is corrupted", "Wiederholung beschädigt", "Repetición dañada", "Replay endommagé", "Replay danneggiato", "Repetição corrompida", "Повтор пошкоджено", "Herhaling beschadigd", "Tekrar bozuk"),
+        "replay_old_version" to t("Powtórka z innej wersji gry", "Replay from another game version", "Wiederholung aus anderer Spielversion", "Repetición de otra versión", "Replay d'une autre version", "Replay di un'altra versione", "Repetição de outra versão", "Повтор з іншої версії", "Herhaling uit andere versie", "Farklı oyun sürümü"),
+        "replay_loading" to t("Wczytywanie powtórki…", "Loading replay…", "Wiederholung wird geladen…", "Cargando repetición…", "Chargement du replay…", "Caricamento replay…", "A carregar repetição…", "Завантаження повтору…", "Herhaling laden…", "Tekrar yükleniyor…"),
+        "replay_empty" to t("Brak zapisanych powtórek", "No saved replays", "Keine gespeicherten Wiederholungen", "No hay repeticiones", "Aucun replay enregistré", "Nessun replay salvato", "Sem repetições guardadas", "Немає збережених повторів", "Geen herhalingen", "Kayıtlı tekrar yok"),
+        "replay_pause" to t("Pauza", "Pause", "Pause", "Pausa", "Pause", "Pausa", "Pausa", "Пауза", "Pauze", "Duraklat"),
+        "replay_play" to t("Odtwórz", "Play", "Abspielen", "Reproducir", "Lire", "Riproduci", "Reproduzir", "Відтворити", "Afspelen", "Oynat"),
+        "replay_follow" to t("Śledź", "Follow", "Folgen", "Seguir", "Suivre", "Segui", "Seguir", "Стежити", "Volgen", "Takip et"),
+        "replay_camera" to t("Kamera", "Camera", "Kamera", "Cámara", "Caméra", "Camera", "Câmara", "Камера", "Camera", "Kamera"),
+        "replay_doctrines" to t("Doktryny i karty", "Doctrines and cards", "Doktrinen und Karten", "Doctrinas y cartas", "Doctrines et cartes", "Dottrine e carte", "Doutrinas e cartas", "Доктрини та карти", "Doctrines en kaarten", "Doktrinler ve kartlar"),
         // --- menu
         "title" to t("CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR"),
         "subtitle" to t("Wojna przez stulecia", "War across the centuries", "Krieg durch die Jahrhunderte", "Guerra a través de los siglos", "La guerre à travers les siècles", "Guerra attraverso i secoli", "Guerra através dos séculos", "Війна крізь століття", "Oorlog door de eeuwen heen", "Yüzyıllar boyu savaş"),

@@ -108,6 +108,24 @@ class ProfileTest {
         assertEquals(321, p.medals)
     }
 
+
+    @Test
+    fun replayIdIsOptionalBackwardCompatibleAndSurvivesJson() {
+        val f = tmpFile()
+        val board = Profile.BOARD_ENDLESS
+        f.writeText("""{"v":3,"boards":{"endless":[{"n":"Stary","s":90,"d":12}]}}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(null, old.top(board).single().replay)
+        assertTrue(old.submit(board, 200L, 13L, "battle_001"))
+        old.save()
+        val again = Profile(f).also { it.load() }
+        assertEquals("battle_001", again.top(board).first().replay)
+        assertEquals(null, again.top(board).last().replay)
+        // ID jest wyłącznie nazwą pliku, nie może zawierać ścieżek.
+        again.submit(board, 100L, 14L, "../invalid")
+        assertEquals(null, again.top(board).first { it.score == 100L }.replay)
+    }
+
     @Test
     fun musicVolumeDefaultsPersistsAndClamps() {
         val f = tmpFile()

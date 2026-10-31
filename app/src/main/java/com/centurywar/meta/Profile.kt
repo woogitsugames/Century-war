@@ -12,7 +12,7 @@ class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: 
     fun cost(level: Int): Int = (baseCost * growth.pow(level)).toInt()
 }
 
-class ScoreEntry(val name: String, val score: Long, val day: Long)
+class ScoreEntry(val name: String, val score: Long, val day: Long, val replay: String? = null)
 
 /**
  * Trwały postęp gracza: medale, badania, gwiazdki kampanii, rekordy i ustawienia.
@@ -23,6 +23,7 @@ class Profile(private val file: File) {
 
     companion object {
         const val CURRENT_VERSION = 3
+        private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
         const val IRON_FIRST_STAGE = 8
         const val INSERTED_STAGE_COUNT = 4
@@ -194,10 +195,10 @@ class Profile(private val file: File) {
      * liście (a nie po nazwie): zmiana nazwy dowódcy nie może robić "rekordu" ze słabszego wyniku.
      */
     @Synchronized
-    fun submit(board: String, score: Long, day: Long): Boolean {
+    fun submit(board: String, score: Long, day: Long, replay: String? = null): Boolean {
         val list = boards.getOrPut(board) { ArrayList() }
         val prevBest = list.maxOfOrNull { it.score } ?: -1L
-        list.add(ScoreEntry(name, score, day))
+        list.add(ScoreEntry(name, score, day, replay?.takeIf { REPLAY_ID.matches(it) }))
         list.sortByDescending { it.score }
         while (list.size > 20) list.removeAt(list.size - 1)
         return score > prevBest
@@ -246,7 +247,9 @@ class Profile(private val file: File) {
         for ((k, list) in boards) {
             b.put(k, JSONArray().apply {
                 list.sortedByDescending { it.score }.take(20).forEach {
-                    put(JSONObject().put("n", it.name).put("s", it.score).put("d", it.day))
+                    put(JSONObject().put("n", it.name).put("s", it.score).put("d", it.day).apply {
+                        it.replay?.let { id -> put("r", id) }
+                    })
                 }
             })
         }
@@ -366,7 +369,8 @@ class Profile(private val file: File) {
                     }
                     val score = e.optLong("s")
                     if (best.size >= 20 && score <= best[best.lastIndex].score) continue
-                    val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"))
+                    val id = e.optString("r", "").takeIf { REPLAY_ID.matches(it) }
+                    val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"), id)
                     var pos = 0
                     while (pos < best.size && best[pos].score >= score) pos++
                     best.add(pos, entry)

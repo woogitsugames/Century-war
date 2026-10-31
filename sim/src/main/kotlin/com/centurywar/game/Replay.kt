@@ -97,24 +97,7 @@ object Replay {
             val step = battle.stepCount
             while (index < log.commands.size && log.commands[index].step == step && !battle.over) {
                 val command = log.commands[index]
-                val accepted = when (command.kind) {
-                    Kind.QUEUE -> controller.queue(Role.values()[command.argument])
-                    Kind.CANCEL -> controller.cancel()
-                    Kind.EVOLVE -> controller.evolve()
-                    Kind.BUY_TURRET -> controller.buyTurret(command.argument)
-                    Kind.UPGRADE_TURRET -> controller.upgradeTurret(command.argument)
-                    Kind.SELL_TURRET -> controller.sellTurret(command.argument)
-                    Kind.ARMORY -> controller.armory()
-                    Kind.BARRAGE -> controller.barrage()
-                    Kind.RALLY -> controller.rally()
-                    Kind.STANCE -> controller.stance(command.argument == 1)
-                    Kind.DOCTRINE -> controller.doctrine(command.argument)
-                    Kind.SURRENDER -> controller.surrender()
-                    Kind.TUTORIAL_GOLD -> controller.tutorialGold(command.argument)
-                    Kind.BARRAGE_AT -> controller.barrage(command.argument.toFloat())
-                    Kind.CARD -> controller.card(command.argument)
-                    Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
-                }
+                val accepted = applyCommand(controller, command)
                 require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
             }
@@ -136,6 +119,25 @@ object Replay {
             time = battle.time,
             wave = battle.wave,
         )
+    }
+
+    internal fun applyCommand(controller: BattleController, command: Command): Boolean = when (command.kind) {
+        Kind.QUEUE -> controller.queue(Role.values()[command.argument])
+        Kind.CANCEL -> controller.cancel()
+        Kind.EVOLVE -> controller.evolve()
+        Kind.BUY_TURRET -> controller.buyTurret(command.argument)
+        Kind.UPGRADE_TURRET -> controller.upgradeTurret(command.argument)
+        Kind.SELL_TURRET -> controller.sellTurret(command.argument)
+        Kind.ARMORY -> controller.armory()
+        Kind.BARRAGE -> controller.barrage()
+        Kind.RALLY -> controller.rally()
+        Kind.STANCE -> controller.stance(command.argument == 1)
+        Kind.DOCTRINE -> controller.doctrine(command.argument)
+        Kind.SURRENDER -> controller.surrender()
+        Kind.TUTORIAL_GOLD -> controller.tutorialGold(command.argument)
+        Kind.BARRAGE_AT -> controller.barrage(command.argument.toFloat())
+        Kind.CARD -> controller.card(command.argument)
+        Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
     }
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {

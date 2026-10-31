@@ -10,6 +10,9 @@ import com.centurywar.engine.TouchEvent
 import com.centurywar.game.Ai
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
+import com.centurywar.game.BattleController
+import com.centurywar.game.ReplayRecord
+import com.centurywar.game.ReplayPlayer
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
@@ -21,6 +24,7 @@ import com.centurywar.meta.Missions
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
+import com.centurywar.meta.ReplayStore
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +32,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Renderuje ekrany gry do PNG (Robolectric + natywna Skia), żeby obejrzeć UI
@@ -257,6 +263,54 @@ class ScreenshotTest {
             shot(g, "${tag}_endless_boss_with_cards")
             endless.chooseEndlessCard(0)
             shot(g, "${tag}_endless_boss")
+        }
+    }
+
+
+    /** Odtwarzacz i lista w telefonach oraz obu orientacjach rozłożonego Folda. */
+    @Test
+    fun replays() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 299L, 0.65f, startEra = 2, maxEra = 4,
+            playerBonuses = Bonuses(baseHpMul = 15f))
+        val original = Battle(cfg)
+        val commands = BattleController(original)
+        original.playerAi = Ai(original, 0)
+        repeat(60 * 32) {
+            if (!original.over) {
+                original.step()
+                original.fx.count = 0
+            }
+        }
+        if (!original.over) commands.surrender()
+        val bytes = ReplayRecord.encode(cfg, commands.log(), ReplayRecord.Meta(
+            cfg.mode, cfg.stageIndex, original.winner, original.score(),
+            original.time, original.wave, 1793461200000L, "Dowódca",
+        ))
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val store = ReplayStore(File.createTempFile("cw-replay", "").apply { delete(); mkdirs() })
+            g.replays = store
+            val id = store.newId()
+            store.saveAsync(id, bytes)
+            val ready = CountDownLatch(1)
+            store.listAsync { ready.countDown() }
+            assertTrue(ready.await(8, TimeUnit.SECONDS))
+
+            g.setScreen(ReplayListScreen(g))
+            // Lista trafia na wątek gry przez Game.post.
+            shot(g, "${tag}_replay_list", 5)
+
+            val screen = ReplayScreen(g, bytes)
+            g.setScreen(screen)
+            val player = field(screen, "player").get(screen) as ReplayPlayer
+            player.advance(minOf(900, player.totalSteps))
+            shot(g, "${tag}_replay_viewer", 5)
         }
     }
 
