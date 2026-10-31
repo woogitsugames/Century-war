@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -29,6 +30,8 @@ import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
+import com.centurywar.engine.HapticGate
+import com.centurywar.engine.HapticKind
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
@@ -66,6 +69,8 @@ class MainActivity : Activity(), Host {
     private lateinit var game: Game
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
+    private val hapticGate = HapticGate()
+    private var hapticEffects: Array<Array<VibrationEffect>>? = null
     private var playGames: PlayGamesLeaderboards? = null
     private val gameBackCallback by lazy { OnBackInvokedCallback { game.requestBack() } }
     private var gameBackRegistered = false
@@ -145,6 +150,12 @@ class MainActivity : Activity(), Host {
         } else {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        // Tworzymy efekty raz, nigdy przy dotknięciu ani podczas renderowania.
+        if (vibrator?.hasVibrator() == true) {
+            hapticEffects = Array(2) { level ->
+                Array(HapticKind.entries.size) { i -> createHapticEffect(HapticKind.entries[i], level + 1) }
+            }
         }
 
         if (Build.VERSION.SDK_INT >= 28) {
@@ -372,12 +383,63 @@ class MainActivity : Activity(), Host {
         }, "licenses-reader").start()
     }
 
-    override fun vibrate(ms: Long) {
-        val v = vibrator ?: return
-        try {
-            v.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-        } catch (_: Exception) { }
+    /** Wzory krótkie i odmienne dla każdego istotnego zdarzenia. */
+    private fun createHapticEffect(kind: HapticKind, level: Int): VibrationEffect {
+        val weak = level == 1
+        if (kind == HapticKind.TAP) {
+            if (Build.VERSION.SDK_INT >= 29) {
+                return VibrationEffect.createPredefined(
+                    if (weak) VibrationEffect.EFFECT_TICK else VibrationEffect.EFFECT_CLICK)
+            }
+            return VibrationEffect.createOneShot(if (weak) 8L else 12L, if (weak) 70 else 125)
+        }
+        val times: LongArray
+        val amplitudes: IntArray
+        when (kind) {
+            HapticKind.HEAVY_HIT -> {
+                times = longArrayOf(0, 22, 25, 16)
+                amplitudes = intArrayOf(0, 185, 0, 120)
+            }
+            HapticKind.BARRAGE -> {
+                times = longArrayOf(0, 9, 18, 11, 24, 15)
+                amplitudes = intArrayOf(0, 95, 0, 120, 0, 105)
+            }
+            HapticKind.EVOLVE -> {
+                times = longArrayOf(0, 11, 24, 18)
+                amplitudes = intArrayOf(0, 85, 0, 160)
+            }
+            HapticKind.VICTORY -> {
+                times = longArrayOf(0, 12, 27, 15, 24, 20)
+                amplitudes = intArrayOf(0, 95, 0, 120, 0, 170)
+            }
+            HapticKind.DEFEAT -> {
+                times = longArrayOf(0, 30, 33, 12)
+                amplitudes = intArrayOf(0, 150, 0, 65)
+            }
+            HapticKind.BOSS -> {
+                times = longArrayOf(0, 25, 22, 28)
+                amplitudes = intArrayOf(0, 125, 0, 195)
+            }
+            HapticKind.TAP -> error("Obsłużone wyżej")
+        }
+        if (weak) {
+            for (i in amplitudes.indices) amplitudes[i] = (amplitudes[i] * 0.48f).toInt()
+            for (i in 1 until times.size step 2) times[i] = (times[i] * 0.75f).toLong()
+        }
+        return VibrationEffect.createWaveform(times, amplitudes, -1)
     }
+
+    override fun haptic(kind: HapticKind) {
+        val v = vibrator ?: return
+        val effects = hapticEffects ?: return
+        val level = if (::game.isInitialized) game.profile.vibrationLevel else 0
+        if (level == 0) return
+        if (!hapticGate.allow(kind, SystemClock.uptimeMillis())) return
+        try { v.vibrate(effects[level - 1][kind.ordinal]) } catch (_: Exception) { }
+    }
+
+    /** Obsługa starszych wywołań Host; nowe sygnały przechodzą przez haptic(kind). */
+    override fun vibrate(ms: Long) { haptic(HapticKind.TAP) }
 
     override fun requestText(title: String, current: String, onResult: (String) -> Unit) {
         runOnUiThread {

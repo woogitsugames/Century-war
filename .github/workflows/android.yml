@@ -75,6 +75,8 @@ jobs:
             --tests '*LTest*' \
             --tests '*AchievementsTest*' \
             --tests '*Achievement60Test*' \
+          --tests '*HapticGateTest*' \
+          --tests '*BattleHapticsTest*' \
             --tests '*SoundSynthTest*' \
             --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \

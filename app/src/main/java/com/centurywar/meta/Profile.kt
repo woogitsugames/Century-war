@@ -161,7 +161,13 @@ class Profile(private val file: File) {
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
-    var vibration = true
+    /** Siła wibracji: 0 wyłączone, 1 słabe, 2 pełne. */
+    var vibrationLevel = 2
+        set(value) { field = value.coerceIn(0, 2) }
+    /** Zgodność z kodem używającym dawnego ustawienia logicznego. */
+    var vibration: Boolean
+        get() = vibrationLevel != 0
+        set(value) { vibrationLevel = if (value) 2 else 0 }
     var screenShake = 2     // 0 wyłączone, 1 słabe, 2 pełne
     /** 0 standard, 1 błękit/bursztyn, 2 turkus/koral, 3 wysoki kontrast. */
     var palette = 0
@@ -378,7 +384,8 @@ class Profile(private val file: File) {
         o.put("globalRanking", globalRanking)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
-        o.put("vibration", vibration)
+        o.put("vibration", vibration) // zgodność ze starszą wersją v3
+        o.put("vibrationLevel", vibrationLevel)
         o.put("screenShake", screenShake.coerceIn(0, 2))
         o.put("palette", palette)
         o.put("teamMarkers", teamMarkers)
@@ -555,9 +562,14 @@ class Profile(private val file: File) {
                 "fpsCap", "skirmishDiff", "battles", "wins", "totalKills", "playSeconds")) {
                 if (json.opt(key) !is Number) error("Niepoprawna liczba: $key")
             }
-            for (key in arrayOf("tutorialDone", "vibration", "sound", "showFps")) {
+            for (key in arrayOf("tutorialDone", "sound", "showFps")) {
                 if (json.opt(key) !is Boolean) error("Niepoprawna flaga: $key")
             }
+            // Stare profile v3 miały Boolean, nowe mają liczbę 0..2.
+            if (json.opt("vibration") !is Boolean && json.opt("vibration") !is Number)
+                error("Niepoprawna wartość wibracji")
+            if (json.has("vibrationLevel") && json.opt("vibrationLevel") !is Number)
+                error("Niepoprawny poziom wibracji")
         }
         fun obj(key: String): JSONObject? {
             if (!json.has(key) || json.isNull(key)) return null
@@ -723,7 +735,11 @@ class Profile(private val file: File) {
         globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
-        vibration = json.optBoolean("vibration", true)
+        vibrationLevel = when (val stored = if (json.has("vibrationLevel")) json.opt("vibrationLevel") else json.opt("vibration")) {
+            is Boolean -> if (stored) 2 else 0
+            is Number -> stored.toInt().coerceIn(0, 2)
+            else -> 2
+        }
         screenShake = json.optInt("screenShake", 2).coerceIn(0, 2)
         palette = json.optInt("palette", 0)
         teamMarkers = json.optBoolean("teamMarkers", false)
@@ -774,11 +790,11 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
-        quality = 0; fpsCap = 0; vibration = true; screenShake = 2; sound = true
+        quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         playerId = ""; globalRanking = false
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
-        quality = 0; fpsCap = 0; vibration = true; sound = true
+        quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
         palette = 0; teamMarkers = false; textScale = 100
         reduceShake = false; reduceFlash = false
         showFps = false; lang = ""; skirmishDiff = 1; skirmishSetup = SkirmishSetup.defaults()
