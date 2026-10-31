@@ -281,9 +281,13 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
             draggingPower = true
         }
         if (!draggingPower) return false
-        if (e.action != TouchEvent.CANCEL) {
+        if (e.action == TouchEvent.CANCEL) {
+            setup = g.profile.skirmishSetup
+            layout()
+        } else {
             val frac = ((e.x - slider.left) / slider.width()).coerceIn(0f, 1f)
-            saveSetup(setup.copy(powerPercent = (60 + kotlin.math.round(frac * 28).toInt() * 5)))
+            setup = setup.copy(powerPercent = 60 + kotlin.math.round(frac * 28).toInt() * 5).sanitized()
+            if (e.action == TouchEvent.UP) saveSetup(setup) else layout()
         }
         if (e.action == TouchEvent.UP || e.action == TouchEvent.CANCEL) draggingPower = false
         return true
