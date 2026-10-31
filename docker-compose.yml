@@ -1,0 +1,25 @@
+services:
+  leaderboard:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: century-war-score:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CW_HMAC_KEY: ${CW_HMAC_KEY:?Ustaw CW_HMAC_KEY w pliku .env}
+      CW_GAME_VERSION: ${CW_GAME_VERSION:-0.3.0}
+      CW_DATABASE_PATH: /var/lib/cw/leaderboards.db
+      PORT: "8080"
+    volumes:
+      - cw-data:/var/lib/cw
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  cw-data:
