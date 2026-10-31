@@ -166,7 +166,7 @@ class AiPersonalityTest {
     }
 
     @Test
-    fun aiWaitsForEraWhenXpAlmostReadyAndItHasAnArmy() {
+    fun economistSavesBrieflyButEvolvesAsSoonAsXpIsReady() {
         val cfg = BattleConfig(Mode.SKIRMISH, 12L, 1f, startEra = 0, maxEra = 1,
             aiPersonality = AiPersonality.ECONOMIST)
         val b = Battle(cfg)
@@ -176,15 +176,55 @@ class AiPersonalityTest {
         me.xp = Defs.evolveXp[me.era] * 0.9f
         b.ai!!.update(1f)
         assertEquals(0, me.queueSize)
-        b.time = 13f
+        b.time = 16f
         b.ai!!.update(1f)
-        assertTrue("oszczędzanie nie może blokować produkcji bez końca", me.queueSize > 0)
+        assertTrue("oszczędzanie nie może blokować szkolenia bez końca", me.queueSize > 0)
         me.xp = Defs.evolveXp[me.era].toFloat()
         b.ai!!.update(1f)
-        assertEquals("ekonomista odracza awans", 0, me.era)
-        b.time = 21f
+        assertEquals("ekonomista awansuje bez zwłoki po zdobyciu XP", 1, me.era)
+    }
+
+    @Test
+    fun siegeHoldsUntilTheWaveIsReady() {
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 421L, 1f,
+            startEra = 2, maxEra = 2, aiPersonality = AiPersonality.SIEGER))
+        val me = b.enemy
+        repeat(4) { assertTrue(b.spawn(me, Defs.unit(me.era, Role.MELEE))) }
         b.ai!!.update(1f)
-        assertEquals(1, me.era)
+        assertTrue("oblężnik nie wysyła pojedynczych oddziałów", me.hold)
+        repeat(AiPersonality.SIEGER.pushArmySize - 4) {
+            assertTrue(b.spawn(me, Defs.unit(me.era, Role.MELEE)))
+        }
+        b.ai!!.update(1f)
+        assertFalse("pełna fala musi ruszyć do ataku", me.hold)
+    }
+
+    @Test
+    fun engineerBuildsEarlierThanEconomistWithoutFreeGold() {
+        fun run(personality: AiPersonality): Battle {
+            val b = Battle(BattleConfig(Mode.SKIRMISH, 423L, 1f,
+                startEra = 2, maxEra = 2, aiPersonality = personality))
+            b.time = 40f
+            b.enemy.gold = 2000f
+            b.ai!!.update(1f)
+            return b
+        }
+        val engineer = run(AiPersonality.ENGINEER)
+        val economist = run(AiPersonality.ECONOMIST)
+        assertTrue(engineer.enemy.turretsBuilt > economist.enemy.turretsBuilt)
+        assertEquals(0, economist.enemy.turretsBuilt)
+        assertEquals(1, engineer.enemy.turretsBuilt)
+        assertTrue(engineer.enemy.gold < 2000f)
+    }
+
+    @Test
+    fun assaultRalliesDuringItsFirstAdvance() {
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 424L, 1f,
+            aiPersonality = AiPersonality.ASSAULT))
+        repeat(3) { assertTrue(b.spawn(b.enemy, Defs.unit(0, Role.MELEE))) }
+        b.ai!!.update(1f)
+        assertTrue("szturm używa Zrywu bez czekania na kontakt z wrogiem",
+            b.enemy.abilityCd[1] > 0f)
     }
 
     @Test
