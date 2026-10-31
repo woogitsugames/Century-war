@@ -102,6 +102,25 @@ class AiPersonalityTest {
     }
 
     @Test
+    fun siegeDoctrineImprovesDamageToEnemyBase() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 777L, 1f, startEra = 0, maxEra = 0)
+        val normal = Battle(cfg)
+        val improved = Battle(cfg)
+        val def = Defs.unit(0, Role.MELEE)
+        assertTrue(normal.spawn(normal.player, def))
+        assertTrue(improved.spawn(improved.player, def))
+        normal.units[0].x = normal.enemy.baseFront - 12f
+        improved.units[0].x = improved.enemy.baseFront - 12f
+        improved.applyDoctrine(improved.player, Doctrine.SIEGE)
+        repeat(120) { normal.step(); improved.step() }
+        val normalDamage = normal.enemy.baseMaxHp - normal.enemy.baseHp
+        val improvedDamage = improved.enemy.baseMaxHp - improved.enemy.baseHp
+        assertTrue("zwykła jednostka powinna zaatakować bazę", normalDamage > 0f)
+        assertTrue("doktryna oblężnicza musi zwiększać obrażenia bazy",
+            improvedDamage > normalDamage * 1.2f)
+    }
+
+    @Test
     fun noUndisclosedArmyOrTurretBonuses() {
         val b = Battle(BattleConfig(Mode.CAMPAIGN, 18L, 1.7f,
             stageIndex = 24))
