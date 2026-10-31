@@ -24,7 +24,7 @@ class Profile(private val file: File) {
     companion object {
         const val CURRENT_VERSION = 3
         const val HINT_COUNT = 17
-        const val HINT_VALID_MASK = (1L shl HINT_COUNT) - 1L
+        const val HINT_VALID_MASK = 131071L
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
             Thread(task, "cw-hints").apply { isDaemon = true }
         }
