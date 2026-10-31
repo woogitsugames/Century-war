@@ -40,6 +40,7 @@ jobs:
             --tests '*LTest*' \
             --console=plain --no-configuration-cache
       - name: Test zrzutow ekranu menu
+        if: success() || failure()
         run: |
           bash ./gradlew :app:testDebugUnitTest \
             --tests '*ScreenshotTest.menus*' \
