@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.file.Files
+import java.util.UUID
 
 class ScoreClientTest {
     @Test fun hmacMatchesServerReferenceVector() {
@@ -27,6 +29,49 @@ class ScoreClientTest {
         assertFalse(ScoreClient.configured("https://scores.example/other", key))
         assertFalse(ScoreClient.configured("https://user@scores.example", key))
         assertTrue(ScoreClient.configured("https://scores.example", key))
+    }
+
+    @Test fun deletionQueuePersistsAndDoesNotExpire() {
+        val dir = Files.createTempDirectory("cw-deletion-test-")
+        val file = dir.resolve("deletions.txt").toFile()
+        val a = UUID.randomUUID().toString()
+        val b = UUID.randomUUID().toString()
+        try {
+            val pending = PendingDeletions(file)
+            assertTrue(pending.load())
+            assertTrue(pending.add(a))
+            assertTrue(pending.add(b))
+            assertTrue(pending.add(a))
+            assertEquals(a, pending.first())
+            val reopened = PendingDeletions(file)
+            assertTrue(reopened.load())
+            assertTrue(reopened.contains(a))
+            assertTrue(reopened.contains(b))
+            assertTrue(reopened.remove(a))
+            assertEquals(b, reopened.first())
+            val again = PendingDeletions(file)
+            assertTrue(again.load())
+            assertFalse(again.contains(a))
+            assertEquals(b, again.first())
+            assertTrue(again.remove(b))
+            assertFalse(file.exists())
+        } finally {
+            file.delete()
+            dir.toFile().delete()
+        }
+    }
+
+    @Test fun deletionRequestHasIndependentSignature() {
+        val nonce = "2f1c9b12-9420-44bf-81ac-11c10e6db407"
+        val body = "{\"player\":\"a16036d5-800a-4898-aea3-11b6548de7b4\"}"
+        val scoreSig = ScoreClient.sign(
+            "test-secret-at-least-32-characters-long!".toByteArray(), "1800000000",
+            nonce, "POST", "/v1/score", body)
+        val deleteSig = ScoreClient.sign(
+            "test-secret-at-least-32-characters-long!".toByteArray(), "1800000000",
+            nonce, "POST", "/v1/player/delete", body)
+        assertEquals(64, deleteSig.length)
+        assertFalse(scoreSig == deleteSig)
     }
 
     @Test fun nicknameRulesMatchServer() {
