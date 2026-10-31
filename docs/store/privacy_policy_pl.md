@@ -7,59 +7,97 @@ lang: pl
 
 # Polityka prywatności gry Century War
 
-**Obowiązuje od:** 31 października 2026 r.  
-**Dotyczy:** aplikacji Century War na Androida, wersja bazowa 0.1.0 (bez usług sieciowych).
+**Obowiązuje od:** 1 listopada 2026 r.  
+**Dotyczy:** gry Century War na Androida, w tym integracji Google Play Games, jeżeli została skonfigurowana w opublikowanym wydaniu.
 
 ## 1. Wydawca i kontakt
 
-Gra Century War jest rozwijana pod marką **WooGitsu Games**. Administratorem danych, jeżeli w przyszłości pojawią się usługi sieciowe, będzie wydawca wskazany w Google Play.
+Century War jest rozwijana pod marką **WooGitsu Games**. Wydawca odpowiada za własne funkcje gry oraz informacje dotyczące prywatności przedstawione użytkownikom w Google Play. Google przetwarza dane swojej usługi Google Play Games zgodnie z własnymi zasadami.
 
-**Dane wymagające uzupełnienia przed upublicznieniem strony:**
+**Do uzupełnienia przed publikacją:**
 - Pełna nazwa prawna wydawcy: **[UZUPEŁNIJ_NAZWĘ_PRAWNĄ_WYDAWCY]**
 - Kontakt w sprawach prywatności: **[UZUPEŁNIJ_EMAIL_KONTAKTOWY]**
 
-Pytania dotyczące prywatności oraz przyszłe wnioski o dostęp do danych lub ich usunięcie można kierować na wskazany wyżej adres po jego uzupełnieniu.
+Na ten adres można kierować pytania o przetwarzanie danych i wnioski dotyczące danych obsługiwanych przez wydawcę. Dane przechowywane przez Google Play Games usuwa się również za pomocą narzędzi Google opisanych poniżej.
 
-## 2. Jakie dane przetwarza obecna wersja
+## 2. Dane przechowywane na urządzeniu
 
-**Obecna wersja nie przesyła do wydawcy danych osobowych ani danych o rozgrywce.** Nie wymaga rejestracji ani logowania, nie używa analityki, reklam, narzędzi śledzących ani aktywnego połączenia z zewnętrznym serwerem.
+Gra zapisuje w prywatnej pamięci aplikacji:
+- pseudonim dowódcy wybrany w grze;
+- etapy kampanii, gwiazdki, medale, badania, misje, osiągnięcia i lokalne rekordy;
+- statystyki (np. liczbę bitew, zwycięstw, pokonanych jednostek i czas gry);
+- ustawienia gry (np. język, jakość grafiki, dźwięk, wibracje, przypomnienia i ich godzinę);
+- tymczasowy zapis przerwanej bitwy do wznowienia (plik battle.snap).
 
-Wyłącznie w pamięci aplikacji na urządzeniu przechowujemy:
-- podany przez gracza pseudonim (początkowa nazwa dowódcy zależy od języka gry);
-- postęp kampanii, zdobyte gwiazdki, medale, badania i wyniki rankingów lokalnych;
-- statystyki rozgrywki i ustawienia, np. język, jakość grafiki, dźwięk i wibracje;
-- tymczasowy zapis przerwanej bitwy, aby można ją było wznowić (usuwany po zakończeniu bitwy i nigdy nieobjęty kopią zapasową urządzenia).
+Podstawowa rozgrywka, lokalne rankingi i zapisywanie postępu **działają bez internetu**. Gra nie wymaga zakładania konta u wydawcy. Nie prosi o dostęp do lokalizacji, kontaktów, mikrofonu ani aparatu. Nie ma reklam, zakupów w aplikacji ani czatu.
 
-Dane te służą do zapisywania postępu i obsługi funkcji gry. **Nie są wysyłane przez grę do wydawcy ani sprzedawane innym podmiotom.** Nie prosimy o imię i nazwisko, adres e-mail, numer telefonu, lokalizację ani kontakty.
+Plik battle.snap służy wyłącznie lokalnemu wznowieniu bitwy, nie jest wysyłany w zapisie chmurowym Play Games i nie jest objęty regułami systemowej kopii zapasowej.
 
-## 3. Rankingi i funkcje sieciowe
+## 3. Google Play Games — konto i uwierzytelnianie
 
-W obecnej wersji rankingi są **wyłącznie lokalne**. Integracja z Google Play Games Services i własny serwer rankingowy **nie są aktywne**.
+Gra zawiera integrację **Google Play Games Services v2**. Działa ona tylko w wydaniach, w których wydawca skonfigurował identyfikatory usługi. Korzystanie z sieciowych funkcji Google Play Games nie jest wymagane do gry bez internetu.
 
-W przyszłych wersjach możemy zaoferować dobrowolne rankingi internetowe. W takim przypadku po świadomym włączeniu funkcji gra może przesyłać pseudonim, losowy identyfikator profilu (UUID), wynik, identyfikator wyzwania i czas zgłoszenia. Serwer obsługujący połączenie może także przetwarzać adres IP w logach technicznych. UUID i pseudonim są danymi **pseudonimowymi**, a nie gwarantowanie anonimowymi. Jeżeli gracz wybierze integrację z Google Play Games, Google może przetwarzać identyfikator i dane profilu gracza zgodnie z własną polityką.
+Po włączeniu integracji SDK Google może **automatycznie uwierzytelnić profil Gier Play przy uruchomieniu gry**, jeśli konto jest do tego skonfigurowane. Gra sprawdza stan uwierzytelnienia również przy powrocie z tła. W Ustawieniach gry, na ekranie Play Games, można ponowić logowanie lub wywołać synchronizację. **Przesłanie wyników i kopii profilu może nastąpić automatycznie po uwierzytelnieniu** — nie jest wymagane osobne potwierdzenie każdego zapisu.
 
-**Przed uruchomieniem takich funkcji** zaktualizujemy tę politykę i deklarację Bezpieczeństwo danych w Google Play, określimy okres przechowywania wyników, odbiorców danych i sposób wycofania się z usługi. Funkcje sieciowe nie są potrzebne do rozgrywki offline.
+Uwierzytelnienie wykorzystuje tożsamość konta Gier Play, w tym identyfikator gracza i nazwę profilu. Google może przetwarzać również awatar oraz dane analityczne i diagnostyczne swoich usług. Aplikacja nie wymaga podania wydawcy adresu e-mail, numeru telefonu ani hasła do konta Google.
 
-## 4. Reklamy i zakupy
+**Wylogowanie / wyłączenie logowania:** obecna aplikacja nie ma przycisku wylogowania z Play Games ani odrębnego wyłącznika chmury. Usługą i automatycznym logowaniem dla gier zarządza się przez ustawienia konta/profilu Gier Play w Google Play lub ustawieniach Androida; sposób wyświetlania opcji zależy od urządzenia i wersji usług. Zmiana konta lub wyłączenie uwierzytelniania Play Games **nie usuwa automatycznie** wcześniej zapisanych danych.
 
-W pierwszej wersji **nie ma reklam ani zakupów w aplikacji**. Ewentualne reklamy z nagrodą i zakupy kosmetyczne są jedynie planowane. Jeśli zostaną dodane, przed ich udostępnieniem ujawnimy odpowiednich dostawców SDK i zasady przetwarzania danych.
+Zasady Google: https://policies.google.com/privacy  
+Zarządzanie profilem: https://play.google.com/games/profile  
+Pomoc Google: https://support.google.com/googleplay/answer/9130646?hl=pl
 
-## 5. Kopia zapasowa Androida
+## 4. Rankingi Google Play Games i zapis w chmurze
 
-Android może — zależnie od ustawień konta i urządzenia — uwzględniać lokalne dane gry w systemowej kopii zapasowej. Jest to mechanizm systemowy zarządzany przez użytkownika i dostawcę systemu; wydawca nie uzyskuje z tego tytułu dostępu do kopii. Informacje o kopiach zapasowych znajdują się w ustawieniach Androida i polityce prywatności Google.
+Po skonfigurowaniu usługi i uwierzytelnieniu aplikacja może wysyłać do Google wyniki **czterech rankingów**: oblężenie bez końca, wyzwanie dnia, gwiazdki kampanii i potyczka. W publicznych tabelach Google może być widoczna nazwa profilu Play Games i wynik zgodnie z ustawieniami widoczności konta. Pseudonim wybrany *w grze* nie jest wysyłany jako publiczna nazwa do interfejsu rankingu PGS.
 
-## 6. Przechowywanie i usuwanie danych
+**Zapis w chmurze obejmuje cały profil gry w formacie JSON**, nie tylko stan kampanii: pseudonim wybrany w grze, lokalne wyniki (także zapisane w nich nazwy i daty), postęp, medale, badania, misje, lokalne osiągnięcia, statystyki oraz ustawienia. Przesyłany profil może zostać odczytany po ponownym uruchomieniu gry lub na innym urządzeniu, na którym uwierzytelniono to samo konto PGS. W przypadku konfliktu wersji gra wybiera profil o większym postępie według własnych reguł.
 
-Lokalne dane są przechowywane do czasu usunięcia ich przez użytkownika. Funkcja resetowania postępu w ustawieniach gry zeruje osiągnięcia i statystyki, ale **zachowuje wybrany pseudonim**. Aby usunąć również pseudonim i inne lokalne dane, należy wyczyścić pamięć aplikacji w ustawieniach Androida lub ją odinstalować. Kopie zapasowe Androida mogą podlegać odrębnym ustawieniom i okresom przechowywania Google.
+**Osiągnięcia Google Play Games:** w bieżącym kodzie działa system osiągnięć lokalnych, ale ich przesyłanie do usługi osiągnięć Google nie jest jeszcze podłączone. Osiągnięcia lokalne są jednak częścią profilu objętego kopią w chmurze.
 
-Obecna wersja nie tworzy kont użytkowników ani kopii danych u wydawcy, dlatego nie ma danych serwerowych do usunięcia.
+Nie prowadzimy obecnie czynnego własnego serwera rankingowego, do którego aplikacja przesyłałaby te informacje. Jeśli taka funkcja zostanie uruchomiona, polityka zostanie zaktualizowana przed jej udostępnieniem.
 
-## 7. Bezpieczeństwo i prywatność dzieci
+Google deklaruje szyfrowanie danych Play Games w transmisji (HTTPS). Informacje o zakresie danych, przechowywaniu i ustawieniach widoczności: https://developer.android.com/games/pgs/data-collection
 
-Dane rozgrywki są przechowywane w prywatnej pamięci aplikacji Android. Obecna wersja nie zawiera publicznej komunikacji między graczami, reklam spersonalizowanych ani zewnętrznych czatów. Ocena wieku gry zostanie określona na podstawie kwestionariusza IARC i faktycznej zawartości aplikacji.
+## 5. Lokalne powiadomienia o wyzwaniu dnia
 
-## 8. Zmiany dokumentu
+Gra może przypominać raz dziennie o wyzwaniu dnia, **po pierwszym zwycięstwie** i przy włączonych przypomnieniach. Godzinę można zmienić w Ustawieniach gry. Na Androidzie 13 i nowszym aplikacja prosi o systemowe zezwolenie na powiadomienia po pierwszym zwycięstwie, a nie przy samym uruchomieniu.
 
-Zmiany funkcji gry i zasad przetwarzania danych będą odzwierciedlane w aktualizacji tej strony, z nową datą obowiązywania, przed uruchomieniem nowych sposobów zbierania danych.
+Przypomnienia są planowane lokalnie przez Android AlarmManager i pokazywane przez NotificationManager. Harmonogram może zostać odtworzony po restarcie telefonu, aktualizacji aplikacji lub zmianie czasu. **Do wysłania przypomnienia gra nie przekazuje danych na serwer** i nie korzysta z Firebase Cloud Messaging ani innych powiadomień push.
 
-_Wersja angielska: privacy-policy-en (po opublikowaniu obydwu stron w GitHub Pages)._
+Przypomnienia można wyłączyć w **Ustawieniach gry** oraz niezależnie w **ustawieniach powiadomień Androida**.
+
+## 6. Uprawnienia Androida
+
+| Uprawnienie | Wykorzystanie |
+|---|---|
+| INTERNET | Połączenie z Play Games przy skonfigurowanej usłudze; rozgrywka bez niego nadal działa |
+| POST_NOTIFICATIONS | Lokalne przypomnienie o wyzwaniu dnia, za zgodą użytkownika na Androidzie 13+ |
+| RECEIVE_BOOT_COMPLETED | Ponowne zaplanowanie przypomnienia po restarcie urządzenia |
+| VIBRATE | Wibracje stanowiące efekt gry, które można wyłączyć w ustawieniach |
+
+Uprawnienie INTERNET nie oznacza, że każda funkcja gry wymaga stałego połączenia.
+
+## 7. Systemowa kopia zapasowa Androida
+
+Android może przechowywać kopię danych aplikacji zgodnie z ustawieniami urządzenia i konta Google. Reguły aplikacji ograniczają chmurową kopię Androida i przenoszenie danych do **profile.json**; plik battle.snap jest pominięty. Wydawca nie otrzymuje automatycznie dostępu do kopii systemowej.
+
+Kopia Androida jest **oddzielna** od synchronizacji Saved Games w Google Play Games i może podlegać innym zasadom usuwania oraz przywracania. Zobacz https://developer.android.com/identity/data/autobackup i https://policies.google.com/privacy.
+
+## 8. Usuwanie danych i okres przechowywania
+
+- **Dane lokalne:** funkcja „Resetuj postęp” usuwa postęp i rekordy, lecz **zachowuje pseudonim**. Aby usunąć również pseudonim i inne dane lokalne, wyczyść pamięć aplikacji w Androidzie lub odinstaluj grę. Kopia Androida może pozostawać dostępna według ustawień konta.
+- **Dane Google Play Games:** przejdź do https://play.google.com/games/profile, wybierz ustawienia danych Gier Play i **usuń dane tej konkretnej gry**. Alternatywnie skorzystaj z: Sklep Play → profil → Ustawienia → Ogólne → Profil w Grach Play → Prywatność i ustawienia → Usuń profil i dane gier. Nazwy opcji mogą się zmieniać. Możliwe jest też usunięcie całego profilu Gier Play. Szczegóły: https://support.google.com/googleplay/answer/9130646?hl=pl.
+- **Ważne:** reset lokalny nie jest usunięciem danych PGS; ponowna synchronizacja może przywrócić postęp z chmury. Usunięcie danych PGS nie usuwa automatycznie lokalnego profilu ani systemowej kopii Androida.
+
+Okres przechowywania danych przez Google jest określany przez Google i ustawienia konta użytkownika. Wydawca nie przechowuje obecnie osobnej bazy profili na własnym serwerze.
+
+## 9. Ochrona danych i dzieci
+
+Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Nie udostępnia czatu, wiadomości między graczami, własnego mechanizmu wymiany plików ani lokalizacji. Rankingi PGS mogą jednak pokazywać nazwy profili Google i wyniki zgodnie z wybraną widocznością. Klasyfikacja wieku jest ustalana na podstawie ankiety IARC, a nie stanowi automatycznej deklaracji kierowania produktu do dzieci.
+
+## 10. Zmiany polityki
+
+Przed wprowadzeniem nowych sposobów przetwarzania danych (np. własnych rankingów sieciowych, reklam lub zakupów) zaktualizujemy politykę i informacje w Google Play.
+
+_Wersja angielska: /store/privacy-policy-en/._

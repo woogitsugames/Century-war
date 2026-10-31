@@ -4,40 +4,49 @@
 Century War: Wojna epok
 
 ## Krótki opis
-8 epok, 32 jednostki, kampania 32 etapów i Kodeks. Offline, w 10 językach.
+9 epok, 36 jednostek, 36 etapów kampanii. Strategia bez internetu.
 
 ## Pełny opis
-Zacznij od prostych wojowników plemiennych i poprowadź armię aż do ery orbitalnej. W Century War każda bitwa to starcie o kontrolę jednego frontu: szkol jednostki, buduj obronę, zdobywaj doświadczenie i awansuj do kolejnych epok.
 
-Wygraj sprytem, nie szybkością klikania. Złoto pozwala rozwijać armię, zdobywane doświadczenie odblokowuje nowe epoki, a wybierane doktryny zmieniają sposób prowadzenia walki. Po bitwie zdobywasz medale i inwestujesz je w trwałe badania.
+Poprowadź armię od wojowników plemiennych aż po erę orbitalną. W Century War walczysz o jeden front: szkol jednostki, stawiaj wieże, zdobywaj doświadczenie i przechodź do kolejnych epok.
+
+Złoto pozwala wzmacniać wojsko i obronę, doświadczenie otwiera kolejne epoki, a doktryny zmieniają taktykę. Po bitwie otrzymujesz medale, które możesz przeznaczyć na trwałe badania.
 
 CO CZEKA NA DOWÓDCĘ?
-• 8 epok — od plemion i brązu po stal, krzem i erę orbitalną.
-• 32 jednostki — 4 typy w każdej epoce: walczące wręcz, dystansowe, ciężkie i elitarne.
-• Kampania 32 etapów — nowe wyzwania, modyfikatory bitew i nawet 96 gwiazdek do zdobycia.
-• Oblężenie bez końca — odpieraj kolejne fale, wybieraj doktryny i pobij własny rekord.
-• Wyzwanie dnia — ta sama konfiguracja bitwy dla każdego dowódcy i jedno podejście rankingowe dziennie.
-• Potyczka — niezależne starcia z 4 poziomami trudności.
-• Badania — 13 ścieżek rozwoju, które pozwalają ulepszać armię między bitwami.
-• Wieże, zdolności specjalne i kontrola frontu — dopasuj taktykę do sytuacji.
-• Rankingi lokalne — porównuj swoje wyniki w kampanii, potyczkach, oblężeniu i wyzwaniu dnia.
-• Kodeks — ilustrowana encyklopedia epok: jednostki, ich role i statystyki, wieże i ostrzał specjalny, także z uwzględnieniem badań.
-• Samouczek — pierwsza bitwa krok po kroku uczy szkolenia, kontroli frontu, awansu epoki i doktryn.
-• Wznowienie bitwy — przerwij walkę w dowolnej chwili i wróć dokładnie tam, gdzie skończyłeś.
-• Szczegółowa grafika — żołnierze, machiny wojenne i bazy starannie narysowane dla każdej epoki.
-• 10 języków — polski, angielski, niemiecki, hiszpański, francuski, włoski, portugalski, ukraiński, niderlandzki i turecki.
+- **9 epok** — od plemion przez epokę brązu i żelaza po erę orbitalną.
+- **36 jednostek** — po cztery role na epokę: walka wręcz, dystansowa, ciężka i elitarna.
+- **36 etapów kampanii** — modyfikatory bitew i do 108 gwiazdek do zdobycia.
+- **Oblężenie bez końca** — kolejne fale wroga, bossowie i wybór kart rozwijających armię.
+- **Wyzwanie dnia** — wspólna konfiguracja bitwy i jedno podejście rankingowe dziennie; potem można trenować.
+- **Potyczka** — cztery poziomy trudności.
+- **Badania** — 13 ścieżek trwałego rozwoju.
+- **Wieże, ostrzały specjalne i kontrola frontu** — taktyczne decyzje podczas każdej bitwy.
+- **Rankingi lokalne** — własne rekordy w kampanii, potyczce, oblężeniu i wyzwaniu dnia.
+- **Osiągnięcia i misje lokalne** — zdobywaj nagrody i śledź postępy.
+- **Kodeks i samouczek** — poznaj jednostki, ich statystyki i zasady walki.
+- **Wznawianie bitwy** — wróć do przerwanego starcia.
+- **10 języków** — polski, angielski, niemiecki, hiszpański, francuski, włoski, portugalski, ukraiński, niderlandzki i turecki.
 
-GRAJ TAK, JAK LUBISZ
-Century War działa offline: kampania, potyczki, badania, wyzwanie dnia i rankingi zapisane na urządzeniu nie wymagają połączenia z internetem. Postęp jest przechowywany lokalnie. Gra nie zawiera reklam w pierwszej wersji.
+GRAJ BEZ STAŁEGO POŁĄCZENIA
 
-Krótka, taktyczna rozgrywka sprawdza się także w drodze — a gdy coś Ci przerwie, bitwa na Ciebie poczeka. Automatyczne dostosowanie jakości grafiki pomaga na słabszych telefonach, a interfejs skaluje się do tabletów i urządzeń składanych typu Fold.
+Kampania, potyczka, oblężenie bez końca, wyzwanie dnia i lokalny zapis postępu **działają bez internetu**. Krótkie bitwy pasują również do gry w podróży. Jakość grafiki dostosowuje się do możliwości urządzenia, a interfejs obsługuje większe ekrany i urządzenia składane.
+
+W wydaniach z **poprawnie skonfigurowanym Google Play Games** można dodatkowo korzystać z internetowych tablic wyników oraz synchronizacji profilu w chmurze po uwierzytelnieniu w Grach Play. Połączenie z Google nie jest wymagane do podstawowej rozgrywki. Osiągnięcia działają obecnie **lokalnie**; przesyłanie odblokowań do usługi osiągnięć Google Play Games nie jest jeszcze dostępne.
+
+Po pierwszym zwycięstwie możesz otrzymywać **lokalne przypomnienie o wyzwaniu dnia**. Godzinę i włączenie przypomnień ustawiasz w grze; na nowszych Androidach wymagana jest zgoda na powiadomienia. Przypomnienia nie wymagają serwera push.
+
+W grze nie ma reklam, zakupów w aplikacji ani rozgrywki wieloosobowej.
 
 Zbuduj armię. Zmień epokę. Przejmij front.
 
-## ASO — propozycje fraz (do badań, nie jako lista do wklejenia w opis)
-strategia offline; gra strategiczna Android; wojna epok; ewolucja armii; bitwy strategiczne; strategia czasu rzeczywistego; obrona bazy; gra z jednostkami; strategia na telefon; kampania strategiczna; taktyka wojskowa; tower defense; bitwy 2D; gry offline.
+## ASO — propozycje fraz (nie kopiować jako blok słów kluczowych)
+strategia bez internetu; strategia Android; wojna epok; ewolucja armii; bitwy strategiczne; obrona bazy; kampania strategiczna; taktyka wojskowa; bitwy 2D; gry bez internetu.
 
 ## Kontrola przed publikacją
-- Lista opisuje funkcje obecnej wersji: rankingi są **lokalne**, nie globalne.
-- Bez informacji o reklamach z nagrodą, zakupach i rozgrywce wieloosobowej, dopóki nie zostaną wdrożone.
-- Słowa kluczowe należy wplatać naturalnie, bez powtarzania ich w sztucznym bloku w Google Play.
+- **Limity Google Play:** tytuł **23/30 znaków**; krótki opis **66/80 znaków**.
+- Zweryfikuj liczby **9 epok / 36 jednostek / 36 etapów / 108 gwiazdek** w końcowej wersji gry.
+- Rozróżniaj **rankingi lokalne** (bez internetu) i **rankingi Google Play Games** (tylko po skonfigurowaniu ID i uwierzytelnieniu).
+- W gałęzi bazowej games_ids.xml zawiera REPLACE_ME. **Nie publikuj opisu funkcji sieciowych jako dostępnych**, dopóki release nie ma poprawnych ID i testów Play Games; w przeciwnym razie usuń warunkowy akapit o PGS z publicznej karty.
+- **Nie obiecuj osiągnięć Google Play Games** przed wdrożeniem adaptera: lokalne osiągnięcia działają, ale wysyłka do Google nie jest podłączona.
+- Przypomnienia są **lokalne**, po pierwszym zwycięstwie i z uprawnieniem systemowym, a nie push.
+- Nie reklamuj niewdrożonych reklam, zakupów, multiplayera ani własnych rankingów serwerowych. Sprawdź opis względem finalnego AAB i polityki prywatności.
