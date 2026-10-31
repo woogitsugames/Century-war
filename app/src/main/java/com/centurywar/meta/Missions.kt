@@ -182,34 +182,56 @@ class Missions(private val profile: Profile) {
             changed = true
         }
         if (state.weeklyWeek != week || state.weekly.size != 3) {
+            val preserve = state.weeklyWeek == week
             state.weeklyWeek = week
-            select(state.weekly, "w_$week", week * 7L - 3L, true, emptySet())
+            select(state.weekly, "w_$week", week * 7L - 3L, true, emptySet(), preserve)
             changed = true
         }
         if (state.dailyDay != day || state.daily.size != 3) {
+            val preserve = state.dailyDay == day
             state.dailyDay = day
-            select(state.daily, "d_$day", day, false, state.weekly.mapTo(HashSet()) { it.type })
+            select(state.daily, "d_$day", day, false, state.weekly.mapTo(HashSet()) { it.type }, preserve)
             changed = true
         }
         if (changed && persist) profile.save()
         return true
     }
 
-    /** Rng używa numeru dnia UTC; numer poniedziałku zapewnia stały zestaw przez tydzień. */
+    /** Sprawdzaj dostępność celu w aktualnym profilu. Wszystkie tryby są w menu od początku. */
+    private fun unlocked(type: MissionType): Boolean = when (type) {
+        MissionType.ELITES -> profile.level("r_elite") > 0
+        MissionType.RALLIES -> profile.level("r_rally") > 0
+        MissionType.WEATHER_WINS -> profile.unlockedStage() >= 4
+        MissionType.REPLAYS_WATCHED -> profile.battles > 0
+        MissionType.STARS -> profile.totalStars() < Campaign.stages.size * 3
+        else -> true
+    }
+
+    /** Stały seed UTC, porządek enum i losowanie ważone bez powtórzeń. */
     private fun select(
         output: MutableList<MissionItem>, prefix: String, seed: Long,
-        weekly: Boolean, excluded: Set<MissionType>,
+        weekly: Boolean, excluded: Set<MissionType>, preserve: Boolean,
     ) {
+        // Po pominięciu nieznanego typu zachowaj postęp innych misji z tego okresu.
+        val retained = if (preserve) output.filter {
+            it.id.startsWith(prefix + "_") && it.type !in excluded && unlocked(it.type)
+        }.distinctBy { it.type }.take(3) else emptyList()
         output.clear()
+        output.addAll(retained)
         val rng = Rng(seed)
-        val available = MissionType.values().filter { type ->
-            type !in excluded &&
-                (type != MissionType.ELITES || profile.level("r_elite") > 0) &&
-                (type != MissionType.RALLIES || profile.level("r_rally") > 0)
+        val used = retained.mapTo(HashSet()) { it.type }
+        val available = MissionType.values().filter {
+            it !in excluded && it !in used && unlocked(it)
         }.toMutableList()
         val stars = profile.totalStars().coerceIn(0, Campaign.stages.size * 3)
-        repeat(3) {
-            val type = available.removeAt(rng.nextInt(available.size))
+        repeat(3 - output.size) {
+            var roll = rng.nextInt(available.sumOf { it.weight })
+            var selected = 0
+            for (i in available.indices) {
+                roll -= available[i].weight
+                if (roll < 0) { selected = i; break }
+            }
+            val type = available.removeAt(selected)
             val modifier = if (type == MissionType.MODIFIER_WINS) {
                 val values = Modifier.values()
                 values[rng.nextInt(values.size)]
