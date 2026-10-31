@@ -1,5 +1,7 @@
 package com.centurywar.server
 
+import com.centurywar.game.Campaign
+import com.centurywar.game.Research
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -12,9 +14,15 @@ data class ScoreSubmission(
     val day: Long? = null,
     val seed: Long,
     val stage: Int? = null,
-    /** Zapis [com.centurywar.game.Replay.encode]: ten sam format, który nagrywa gra. */
+    /** Zapis komend z BattleController, zakodowany przez Replay.encode. */
     val replay: String,
     val score: Long,
+    /** Poziomy w kolejności Research.defs; wymagane od wersji 0.2.0. */
+    val research: List<Int> = emptyList(),
+    /** 0..3 wyłącznie dla potyczki. */
+    val difficulty: Int? = null,
+    /** Tylko samouczek pierwszego etapu kampanii. */
+    val tutorial: Boolean = false,
 )
 
 @Serializable
@@ -59,7 +67,7 @@ internal fun validBoard(board: String): Boolean =
 
 internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
     "campaign" -> {
-        require(stage != null && stage in 0 until com.centurywar.game.Campaign.stages.size) { "invalid_stage" }
+        require(stage != null && stage in Campaign.stages.indices) { "invalid_stage" }
         "campaign_" + stage
     }
     "daily", "endless", "skirmish" -> {
@@ -67,6 +75,16 @@ internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
         board
     }
     else -> throw IllegalArgumentException("invalid_board")
+}
+
+/** Błędy danych wejściowych -> HTTP 400, przed kosztownym odtwarzaniem bitwy. */
+internal fun validateSubmission(input: ScoreSubmission) {
+    submittedBoard(input.board, input.stage)
+    require(Research.valid(input.research)) { "invalid_research" }
+    require(if (input.board == "skirmish") input.difficulty != null && input.difficulty in 0..3
+            else input.difficulty == null) { "invalid_difficulty" }
+    require(!input.tutorial || (input.board == "campaign" && input.stage == 0)) { "invalid_tutorial" }
+    require(input.board != "daily" || input.research.all { it == 0 }) { "invalid_research" }
 }
 
 internal fun todayUtc(nowMillis: Long): Long = Math.floorDiv(nowMillis, 86_400_000L)
