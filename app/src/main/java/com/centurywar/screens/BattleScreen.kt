@@ -21,6 +21,8 @@ import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
 import com.centurywar.game.Doctrine
+import com.centurywar.game.EndlessCard
+import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.meta.Profile
@@ -167,7 +169,7 @@ class BattleScreen(
         for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, pausePanel.top + 52 * dp + i * (bh + 12 * dp), bw, bh)
         layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
-        val chH = min(168 * dp, h * 0.5f)
+        val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
         for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
         layoutTurretPanel()
     }
@@ -208,7 +210,7 @@ class BattleScreen(
         val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
             tut?.update(dt)
-            if (battle.pendingChoice == null) {
+            if (battle.pendingChoice == null && battle.pendingCards == null) {
                 acc += dt * speed * tutScale
                 var steps = 0
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
@@ -260,7 +262,7 @@ class BattleScreen(
     private fun refreshButtons() {
         val p = battle.player
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
-        val modal = paused || finished || battle.pendingChoice != null
+        val modal = paused || finished || battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..3) {
             val role = roles[i]
             val def = Defs.unit(p.era, role)
@@ -324,9 +326,9 @@ class BattleScreen(
         restartEnd.label = L["restart"]
         restartEnd.iconId = Icons.RESTART
 
-        val choice = battle.pendingChoice
+        val choiceOpen = battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
-            doctrineBtn[i].visible = choice != null && !paused
+            doctrineBtn[i].visible = choiceOpen && !paused
             doctrineBtn[i].label = ""
         }
         val tp = showTurrets && !modal
@@ -391,7 +393,10 @@ class BattleScreen(
             }
             QUIT -> { paused = false; battle.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
-            in DOCTRINE0..DOCTRINE0 + 2 -> battle.chooseDoctrine(b.id - DOCTRINE0)
+            in DOCTRINE0..DOCTRINE0 + 2 -> {
+                if (battle.pendingCards != null) battle.chooseEndlessCard(b.id - DOCTRINE0)
+                else battle.chooseDoctrine(b.id - DOCTRINE0)
+            }
             in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
                 val i = b.id - SLOT_BUY0
                 if (p.turretEra[i] < 0) battle.buyTurret(p, i) else battle.upgradeTurret(p, i)
@@ -533,8 +538,34 @@ class BattleScreen(
         Doctrine.PLUNDER -> Icons.BAG
     }
 
+
+    private fun endlessIcon(card: EndlessCard): Int = when (card) {
+        EndlessCard.ECONOMY, EndlessCard.EXTRA_GOLD -> Icons.COINS
+        EndlessCard.SIEGE, EndlessCard.AUTO_BARRAGE -> Icons.BOMB
+        EndlessCard.BULWARK, EndlessCard.FORTRESS, EndlessCard.FRONTLINE_PLATE -> Icons.SHIELD
+        EndlessCard.SWIFT, EndlessCard.MARCH, EndlessCard.DRILL_SERGEANT -> Icons.BOLT
+        EndlessCard.VETERAN, EndlessCard.ELITE_SCHOOL -> Icons.CHEVRONS
+        EndlessCard.FURY, EndlessCard.BERSERK -> Icons.FLAME
+        EndlessCard.ARSENAL, EndlessCard.TOWER_SLOT, EndlessCard.RAPID_TOWERS -> Icons.TOWER
+        EndlessCard.TACTICS, EndlessCard.RALLY_MASTER -> Icons.HOURGLASS
+        EndlessCard.PLUNDER, EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER -> Icons.BAG
+        EndlessCard.FREE_ELITE, EndlessCard.MOBILIZATION -> Icons.HELMET
+        EndlessCard.BURNING_TOWERS -> Icons.METEOR
+        EndlessCard.CLONING -> Icons.PERSON
+        EndlessCard.MEDIC, EndlessCard.REPAIR_CREW -> Icons.HEART
+        EndlessCard.SHARPSHOOTERS -> Icons.CROSSHAIR
+        EndlessCard.LAST_STAND -> Icons.CROWN
+    }
+
+    private fun rarityLabel(r: EndlessRarity): String = L[when (r) {
+        EndlessRarity.COMMON -> "er_common"
+        EndlessRarity.UNCOMMON -> "er_uncommon"
+        EndlessRarity.RARE -> "er_rare"
+        EndlessRarity.LEGENDARY -> "er_legendary"
+    }]
+
     override fun render(c: Canvas) {
-        r.render(c, if (paused || battle.pendingChoice != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
@@ -542,8 +573,8 @@ class BattleScreen(
         drawQueue(c)
         ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
-        if (showTurrets && battle.pendingChoice == null && !paused && !finished) drawTurretPanel(c)
-        if (battle.pendingChoice != null && !finished) drawDoctrines(c)
+        if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && !paused && !finished) drawTurretPanel(c)
+        if ((battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
         if (!finished) tut?.draw(c)
         if (paused && !finished) {
             c.drawColor(Color.argb(150, 0, 0, 0))
@@ -642,6 +673,24 @@ class BattleScreen(
                 ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
             } else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         }
+        if (battle.endless) {
+            val boss = battle.currentBoss()
+            if (boss != null) {
+                val bw = min(260 * dp, w - g.insetL - g.insetR - 30 * dp)
+                val bx = (w - bw) * 0.5f
+                ui.textO(c, if (boss.bossKind == 1) L["boss_knockback"] else L["boss_aura"],
+                    w * 0.5f, topBar.bottom + 18 * dp, 12f, Ui.ENEMY, Paint.Align.CENTER, 1.7f)
+                ui.bar(c, bx, topBar.bottom + 23 * dp, bw, 8 * dp,
+                    boss.hp / boss.maxHp, Ui.ENEMY)
+            }
+            if (battle.wave != nextThemeShown) {
+                nextThemeShown = battle.wave
+                nextThemeText = L["next_wave"] + " " + L[battle.nextWaveKey]
+            }
+            ui.textO(c, nextThemeText, w * 0.5f,
+                topBar.bottom + (if (boss == null) 20f else 47f) * dp,
+                11f, Ui.GOLD, Paint.Align.CENTER, 1.7f)
+        }
         // przeciwnik (epoka) + doktryny gracza jako ikony
         val ex = pauseBtn.r.left - 10 * dp
         ui.textO(c, L[Defs.eraKeys[e.era]], ex, t + 15 * dp, 12f, Ui.ENEMY, Paint.Align.RIGHT, 2f)
@@ -662,6 +711,8 @@ class BattleScreen(
     private var siegeText = ""
     private var waveShown = -1
     private var waveText = ""
+    private var nextThemeShown = -1
+    private var nextThemeText = ""
 
     /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
     private fun timeStr(t: Float): String {
@@ -723,21 +774,36 @@ class BattleScreen(
         ui.closeButton(c, closeBtn)
     }
 
-    private fun drawDoctrines(c: Canvas) {
-        val ch = battle.pendingChoice ?: return
+
+    private fun drawChoices(c: Canvas) {
+        val cards = battle.pendingCards
+        val doctrines = battle.pendingChoice
+        if (cards == null && doctrines == null) return
         c.drawColor(Color.argb(160, 0, 0, 0))
-        ui.ribbon(c, w / 2, doctrineBtn[0].r.top - 34 * dp, L["choose_doctrine"], 22f, Ui.RIBBON, 300 * dp)
+        ui.ribbon(c, w / 2, doctrineBtn[0].r.top - 34 * dp,
+            if (cards == null) L["choose_doctrine"] else L["choose_card"],
+            22f, Ui.RIBBON, 300 * dp)
         for (i in 0..2) {
             val b = doctrineBtn[i]
             val off = if (b.pressed) 3 * dp else 0f
             tmpR.set(b.r.left, b.r.top + off, b.r.right, b.r.bottom + off)
+            val rarity = cards?.get(i)?.rarity
+            val trim = if (rarity == null) Ui.GOLD else Ui.ERA[min(7, rarity.ordinal * 2)]
             ui.panel(c, tmpR, Color.argb(245, 40, 48, 70), 14f)
-            val mr = min(36 * dp, b.r.width() * 0.2f)
-            val my = tmpR.top + 18 * dp + mr
-            ui.medallion(c, tmpR.centerX(), my, mr, Ui.ERA[(i * 3 + ch[i].ordinal) % 8], doctrineIcon(ch[i]))
-            val name = L[ch[i].key]
-            ui.textO(c, name, tmpR.centerX(), my + mr + 26 * dp, ui.fit(name, 19f, tmpR.width() - 24 * dp), Ui.GOLD, Paint.Align.CENTER)
-            ui.wrap(c, L[ch[i].key + "_d"], tmpR.centerX(), my + mr + 48 * dp, tmpR.width() - 28 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
+            val mr = min(33 * dp, min(b.r.width() * 0.2f, b.r.height() * 0.18f))
+            val my = tmpR.top + 10 * dp + mr
+            val icon = if (cards == null) doctrineIcon(doctrines!![i]) else endlessIcon(cards[i])
+            ui.medallion(c, tmpR.centerX(), my, mr, trim, icon)
+            val key = if (cards == null) doctrines!![i].key else cards[i].textKey
+            val name = L[key]
+            ui.textO(c, name, tmpR.centerX(), my + mr + 23 * dp,
+                ui.fit(name, 17f, tmpR.width() - 18 * dp), Ui.GOLD, Paint.Align.CENTER)
+            if (rarity != null) {
+                ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
+                    10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            }
+            ui.wrap(c, L[key + "_d"], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
+                tmpR.width() - 22 * dp, 12f, Ui.TEXT, Paint.Align.CENTER)
         }
     }
 
@@ -784,7 +850,10 @@ class BattleScreen(
         }
         row(Icons.STOPWATCH, L["time"], timeStr(battle.time))
         row(Icons.SKULL, L["kills"], battle.player.kills.toString())
-        if (cfg.mode == Mode.ENDLESS) row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
+        if (cfg.mode == Mode.ENDLESS) {
+            row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
+            row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
+        }
         if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
         row(Icons.MEDAL, L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
