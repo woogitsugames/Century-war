@@ -109,6 +109,59 @@ class ProfileTest {
     }
 
     @Test
+    fun accessibilityRoundTripAndLegacyDefaults() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(0, p.palette)
+        assertEquals(100, p.textScale)
+        assertFalse(p.teamMarkers)
+        assertFalse(p.reduceShake)
+        assertFalse(p.reduceFlash)
+        p.palette = 3
+        p.textScale = 130
+        p.teamMarkers = true
+        p.reduceShake = true
+        p.reduceFlash = true
+        p.save()
+        val restored = Profile(f).also { it.load() }
+        assertEquals(3, restored.palette)
+        assertEquals(130, restored.textScale)
+        assertTrue(restored.teamMarkers)
+        assertTrue(restored.reduceShake)
+        assertTrue(restored.reduceFlash)
+
+        f.writeText("""{"v":1,"name":"stary profil"}""")
+        val legacy = Profile(f).also { it.load() }
+        assertEquals(0, legacy.palette)
+        assertEquals(100, legacy.textScale)
+        assertFalse(legacy.teamMarkers)
+        assertFalse(legacy.reduceShake)
+        assertFalse(legacy.reduceFlash)
+    }
+
+    @Test
+    fun accessibilityClampsUntrustedSettings() {
+        val f = tmpFile()
+        f.writeText("""{"palette":99,"textScale":999,"teamMarkers":true,"reduceShake":true,"reduceFlash":true}""")
+        val high = Profile(f).also { it.load() }
+        assertEquals(3, high.palette)
+        assertEquals(130, high.textScale)
+        assertTrue(high.teamMarkers)
+        assertTrue(high.reduceShake)
+        assertTrue(high.reduceFlash)
+
+        f.writeText("""{"palette":-8,"textScale":-40}""")
+        val low = Profile(f).also { it.load() }
+        assertEquals(0, low.palette)
+        assertEquals(100, low.textScale)
+        assertFalse(low.teamMarkers)
+        low.textScale = 115
+        assertEquals(115, low.textScale)
+        low.textScale = 999
+        assertEquals(130, low.textScale)
+    }
+
+    @Test
     fun musicVolumeDefaultsPersistsAndClamps() {
         val f = tmpFile()
         val p = Profile(f)
