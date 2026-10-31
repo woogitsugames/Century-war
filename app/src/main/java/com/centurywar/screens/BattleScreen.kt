@@ -84,6 +84,9 @@ class BattleScreen(
 
     /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
     private val roles = Role.values()
+    /** Klucze opisów są składane raz, nie przy każdym renderowaniu modala. */
+    private val doctrineDescKeys = Doctrine.values().map { it.key + "_d" }.toTypedArray()
+    private val cardDescKeys = EndlessCard.values().map { it.textKey + "_d" }.toTypedArray()
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
     private val turretBtn = btn(TURRET)
     private val armoryBtn = btn(ARMORY)
@@ -802,7 +805,9 @@ class BattleScreen(
                 ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
                     10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
-            ui.wrap(c, L[key + "_d"], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
+            val descKey = if (cards == null) doctrineDescKeys[doctrines!![i].ordinal]
+                else cardDescKeys[cards[i].ordinal]
+            ui.wrap(c, L[descKey], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
                 tmpR.width() - 22 * dp, 12f, Ui.TEXT, Paint.Align.CENTER)
         }
     }
