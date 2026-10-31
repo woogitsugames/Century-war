@@ -8,7 +8,7 @@ import kotlin.system.exitProcess
 fun main(args: Array<String>) {
     val dbPath = System.getenv("CW_DATABASE_PATH") ?: "./data/leaderboards.db"
     if (args.firstOrNull() == "admin") {
-        File(dbPath).absoluteFile.parentFile?.mkdirs()
+        require(File(dbPath).isFile) { "Nie znaleziono bazy rankingu: $dbPath" }
         SqliteStore("jdbc:sqlite:" + dbPath).use { store ->
             val code = runAdmin(args.drop(1), store)
             if (code != 0) exitProcess(code)
