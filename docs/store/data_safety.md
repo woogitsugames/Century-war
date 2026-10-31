@@ -16,11 +16,14 @@
 |---|---|---|
 | Prywatna pamięć aplikacji | Plik profile.json: pseudonim, postęp kampanii, gwiazdki, medale, badania, misje, osiągnięcia, statystyki, wyniki i ustawienia | Lokalne zapisywanie rozgrywki; nie wymaga internetu |
 | Prywatna pamięć aplikacji | battle.snap: stan przerwanej bitwy | Lokalna możliwość wznowienia; nie jest częścią JSON profilu ani backupu |
+| Prywatna pamięć aplikacji | files/crash: maks. 10 raportów (wersja, model urządzenia, Android, ekran, 30 zdarzeń technicznych, stos bez wiadomości wyjątków) | Diagnoza awarii; bez pseudonimu i ID, tylko lokalnie; bez automatycznej transmisji lub backupu |
 | Google Play Games, po konfiguracji i uwierzytelnieniu | Cztery liczbowe wyniki: oblężenie bez końca, wyzwanie dnia, kampania i potyczka | Tablice wyników PGS; w publicznym rankingu tożsamość gracza pochodzi z profilu Play Games |
 | Google Play Games — Saved Games, po konfiguracji i uwierzytelnieniu | **Cały wynik Profile.toJson()**, nie tylko liczba medali: w tym pseudonim gracza, rekordy z nazwami, dniami i wynikami, postęp, badania, statystyki, osiągnięcia lokalne, misje i ustawienia (np. język, dźwięk, godzina przypomnienia) | Odczyt i zapis kopii profilu w chmurze po zalogowaniu oraz przy późniejszych zapisach lokalnych |
 | Google Play Games SDK / Google | Tożsamość profilu Gier Play (np. identyfikator gracza, nazwa, awatar), dane analityczne i diagnostyczne SDK | Zakres wynikający z dokumentacji dostawcy; może obejmować automatyczne zbieranie po zainicjowaniu SDK |
 | Wydawca — opcjonalny własny serwer rankingu | UUID v4, pseudonim, wynik, tryb, parametry bitwy, badania, komendy powtórki do weryfikacji | Tylko przy skonfigurowanym HTTPS i zgodzie. SQLite zapisuje UUID, nick, wynik, metadane i SHA-256 zgłoszenia; nie przechowuje pełnej powtórki ani IP. IP służy tymczasowo do limitów i może być w logach proxy. |
 | Android — kopia systemowa | Tylko profile.json (przez reguły kopii i przenoszenia urządzeń) | Mechanizm Androida zależny od konta i ustawień; nie jest tym samym co Saved Games PGS |
+
+**Raporty problemów:** po awarii pojawia się jednorazowa propozycja udostępnienia; Ustawienia → O grze → Zgłoś problem pozwala otworzyć systemowe ACTION_SEND z tekstem. Nic nie jest wysyłane bez wyboru użytkownika. Ręczne wysłanie do wskazanego odbiorcy należy ocenić osobno od automatycznego zbierania danych przez SDK PGS; samo lokalne tworzenie raportów nie jest zbieraniem przez wydawcę.
 
 Przetwarzanie **na urządzeniu** nie jest samo w sobie „zbieraniem” w formularzu Google Play. Natomiast transfer przez osadzony SDK jest zbieraniem również wtedy, gdy wydawca nie otrzymuje tych danych na własny serwer. Pseudonim i identyfikatory pseudonimowe nie stają się anonimowe tylko przez brak nazwiska.
 
