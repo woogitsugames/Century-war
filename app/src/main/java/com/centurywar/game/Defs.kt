@@ -91,101 +91,129 @@ object Proj {
     const val BOULDER = 11
 }
 
-/**
- * Wszystkie dane balansu w jednym miejscu. Statystyki liczymy wzorem
- * (szablon roli × współczynnik epoki), więc balans stroi się kilkoma liczbami,
- * a nie setką ręcznie wpisanych wartości.
- */
+/** Identyfikatory stylów, niezależne od miejsca epoki w kampanii. */
+enum class EraArt { TRIBAL, BRONZE, IRON, FEUDAL, POWDER, STEAM, STEEL, SILICON, ORBITAL }
+
+/** Rodzaj krajobrazu i obiektów tła. */
+enum class Terrain { WOODS, DESERT, PAVED_HILLS, PINES, INDUSTRIAL, CITY, SPACE }
+
+/** Komplet danych jednej epoki. Paleta: niebo góra/dół, trzy plany wzgórz, grunt. */
+class EraSpec(
+    val nameKey: String,
+    val unitNames: Array<String>,
+    val weapons: IntArray,
+    val heavyBody: Int,
+    val eliteBody: Int,
+    val rangedProj: Int,
+    val heavyProj: Int,
+    val eliteProj: Int,
+    val turretName: String,
+    val turretProj: Int,
+    val abilityKey: String,
+    val barrageProj: Int,
+    val evolveXp: Int,
+    val art: EraArt,
+    val terrain: Terrain,
+    val palette: IntArray,
+    val accent: Int,
+    val fastTurret: Boolean,
+)
+
+/** Dane epok bez równoległych tablic; każda kolejna jest jednym wpisem. */
 object Defs {
-    const val ERA_COUNT = 8
     const val LANE = 2800f
     const val BASE_FRONT = 190f
     const val MAX_TURRET_SLOTS = 4
 
-    private const val STAT_GROWTH = 2.05f
-    private const val COST_GROWTH = 1.9f
+    // Dziewięć przejść przy końcowych statystykach zbliżonych do dawnych ośmiu.
+    private const val STAT_GROWTH = 1.8740649f
+    private const val COST_GROWTH = 1.7535147f
+    private const val BASE_GROWTH = 1.7130706f
+    private const val INCOME_GROWTH = 1.6724897f
 
-    val eraKeys = arrayOf(
-        "era_tribal", "era_bronze", "era_feudal", "era_powder",
-        "era_steam", "era_steel", "era_silicon", "era_orbital",
+    val specs: Array<EraSpec> = arrayOf(
+        EraSpec("era_tribal", arrayOf("u_clubman", "u_slinger", "u_brute", "u_tusker"),
+            intArrayOf(Weapon.CLUB, Weapon.SLING, Weapon.CLUB, Weapon.SPEAR), Body.HUMAN, Body.BEAST,
+            Proj.STONE, Proj.NONE, Proj.NONE, "t_rock", Proj.STONE, "ab_rocks", Proj.BOULDER,
+            950, EraArt.TRIBAL, Terrain.WOODS,
+            intArrayOf(0xFF6EBEF0.toInt(), 0xFFC8E6FA.toInt(), 0xFF7FA0B8.toInt(), 0xFF5A8C50.toInt(), 0xFF3C6E3C.toInt(), 0xFF967846.toInt()), 0xFF96683C.toInt(), false),
+        EraSpec("era_bronze", arrayOf("u_spearman", "u_javelineer", "u_chariot", "u_warbeast"),
+            intArrayOf(Weapon.SPEAR, Weapon.SPEAR, Weapon.BOW, Weapon.SPEAR), Body.BEAST, Body.BEAST,
+            Proj.JAVELIN, Proj.ARROW, Proj.NONE, "t_ballista", Proj.JAVELIN, "ab_spears", Proj.JAVELIN,
+            2400, EraArt.BRONZE, Terrain.DESERT,
+            intArrayOf(0xFF78B4E6.toInt(), 0xFFF0DCB4.toInt(), 0xFFC8AA7A.toInt(), 0xFFB48C5A.toInt(), 0xFF9C7448.toInt(), 0xFFC8AA6E.toInt()), 0xFFC48032.toInt(), false),
+        EraSpec("era_iron", arrayOf("u_iron_guard", "u_iron_bow", "u_iron_rider", "u_iron_scorpion"),
+            intArrayOf(Weapon.SPEAR, Weapon.BOW, Weapon.SWORD, Weapon.CROSSBOW), Body.BEAST, Body.SIEGE,
+            Proj.ARROW, Proj.NONE, Proj.BOLT, "t_iron_ballista", Proj.BOLT, "ab_iron_pilum", Proj.JAVELIN,
+            4100, EraArt.IRON, Terrain.PAVED_HILLS,
+            intArrayOf(0xFF79A9DA.toInt(), 0xFFD9D5C0.toInt(), 0xFF97A0AC.toInt(), 0xFF718C62.toInt(), 0xFF667D50.toInt(), 0xFF857C61.toInt()), 0xFFA9744C.toInt(), false),
+        EraSpec("era_feudal", arrayOf("u_footman", "u_crossbow", "u_knight", "u_trebuchet"),
+            intArrayOf(Weapon.SWORD, Weapon.CROSSBOW, Weapon.PIKE, Weapon.SWORD), Body.BEAST, Body.SIEGE,
+            Proj.BOLT, Proj.NONE, Proj.BOULDER, "t_arrow", Proj.ARROW, "ab_arrows", Proj.ARROW,
+            6200, EraArt.FEUDAL, Terrain.PINES,
+            intArrayOf(0xFF64AAE6.toInt(), 0xFFD2E6F5.toInt(), 0xFF7E9EB0.toInt(), 0xFF50825A.toInt(), 0xFF326440.toInt(), 0xFF788C46.toInt()), 0xFF547096.toInt(), false),
+        EraSpec("era_powder", arrayOf("u_pikeman", "u_musketeer", "u_dragoon", "u_cannon"),
+            intArrayOf(Weapon.PIKE, Weapon.MUSKET, Weapon.SWORD, Weapon.MUSKET), Body.BEAST, Body.CANNON,
+            Proj.BULLET, Proj.NONE, Proj.BALL, "t_cannon", Proj.BALL, "ab_cannons", Proj.BALL,
+            14500, EraArt.POWDER, Terrain.WOODS,
+            intArrayOf(0xFF82AAD2.toInt(), 0xFFE6D2BE.toInt(), 0xFF8C9AA0.toInt(), 0xFF6E8250.toInt(), 0xFF506440.toInt(), 0xFF8C7850.toInt()), 0xFF963A32.toInt(), false),
+        EraSpec("era_steam", arrayOf("u_rifleman", "u_sharpshooter", "u_walker", "u_ironclad"),
+            intArrayOf(Weapon.RIFLE, Weapon.RIFLE, Weapon.MG, Weapon.MG), Body.MECH, Body.VEHICLE,
+            Proj.BULLET, Proj.BULLET, Proj.SHELL, "t_gatling", Proj.BULLET, "ab_shells", Proj.SHELL,
+            34500, EraArt.STEAM, Terrain.INDUSTRIAL,
+            intArrayOf(0xFF969696.toInt(), 0xFFD2BEA0.toInt(), 0xFF7C7A78.toInt(), 0xFF646458.toInt(), 0xFF4E4E46.toInt(), 0xFF6E5F50.toInt()), 0xFF8C7040.toInt(), true),
+        EraSpec("era_steel", arrayOf("u_infantry", "u_gunner", "u_halftrack", "u_heavytank"),
+            intArrayOf(Weapon.RIFLE, Weapon.MG, Weapon.MG, Weapon.MG), Body.VEHICLE, Body.VEHICLE,
+            Proj.BULLET, Proj.BULLET, Proj.SHELL, "t_flak", Proj.SHELL, "ab_bombers", Proj.SHELL,
+            82000, EraArt.STEEL, Terrain.INDUSTRIAL,
+            intArrayOf(0xFF78828C.toInt(), 0xFFC8BEAA.toInt(), 0xFF6E7478.toInt(), 0xFF5A644B.toInt(), 0xFF464E3A.toInt(), 0xFF696450.toInt()), 0xFF606E4A.toInt(), false),
+        EraSpec("era_silicon", arrayOf("u_marine", "u_rocketeer", "u_apc", "u_mech"),
+            intArrayOf(Weapon.RIFLE, Weapon.LAUNCHER, Weapon.MG, Weapon.LAUNCHER), Body.VEHICLE, Body.MECH,
+            Proj.ROCKET, Proj.BULLET, Proj.ROCKET, "t_missile", Proj.ROCKET, "ab_missiles", Proj.ROCKET,
+            194000, EraArt.SILICON, Terrain.CITY,
+            intArrayOf(0xFF3C6EAA.toInt(), 0xFFAAC8E6.toInt(), 0xFF46506E.toInt(), 0xFF3C465A.toInt(), 0xFF2A3246.toInt(), 0xFF5A5A5F.toInt()), 0xFF288CA0.toInt(), false),
+        EraSpec("era_orbital", arrayOf("u_plasma", "u_railgunner", "u_hovertank", "u_titan"),
+            intArrayOf(Weapon.BLASTER, Weapon.RAIL, Weapon.BLASTER, Weapon.RAIL), Body.HOVER, Body.MECH,
+            Proj.BEAM, Proj.PLASMA, Proj.PLASMA, "t_laser", Proj.BEAM, "ab_orbital", Proj.BEAM,
+            Int.MAX_VALUE, EraArt.ORBITAL, Terrain.SPACE,
+            intArrayOf(0xFF140F32.toInt(), 0xFF5A3278.toInt(), 0xFF3A2860.toInt(), 0xFF2C2050.toInt(), 0xFF22183E.toInt(), 0xFF463C5A.toInt()), 0xFF6E4CAA.toInt(), false),
     )
+    val ERA_COUNT: Int = specs.size
+    val eraKeys: Array<String> = Array(ERA_COUNT) { specs[it].nameKey }
+    val evolveXp: IntArray = IntArray(ERA_COUNT) { specs[it].evolveXp }
 
-    private val unitNames = arrayOf(
-        arrayOf("u_clubman", "u_slinger", "u_brute", "u_tusker"),
-        arrayOf("u_spearman", "u_javelineer", "u_chariot", "u_warbeast"),
-        arrayOf("u_footman", "u_crossbow", "u_knight", "u_trebuchet"),
-        arrayOf("u_pikeman", "u_musketeer", "u_dragoon", "u_cannon"),
-        arrayOf("u_rifleman", "u_sharpshooter", "u_walker", "u_ironclad"),
-        arrayOf("u_infantry", "u_gunner", "u_halftrack", "u_heavytank"),
-        arrayOf("u_marine", "u_rocketeer", "u_apc", "u_mech"),
-        arrayOf("u_plasma", "u_railgunner", "u_hovertank", "u_titan"),
-    )
-
-    private val weapons = arrayOf(
-        intArrayOf(Weapon.CLUB, Weapon.SLING, Weapon.CLUB, Weapon.SPEAR),
-        intArrayOf(Weapon.SPEAR, Weapon.SPEAR, Weapon.BOW, Weapon.SPEAR),
-        intArrayOf(Weapon.SWORD, Weapon.CROSSBOW, Weapon.PIKE, Weapon.SWORD),
-        intArrayOf(Weapon.PIKE, Weapon.MUSKET, Weapon.SWORD, Weapon.MUSKET),
-        intArrayOf(Weapon.RIFLE, Weapon.RIFLE, Weapon.MG, Weapon.MG),
-        intArrayOf(Weapon.RIFLE, Weapon.MG, Weapon.MG, Weapon.MG),
-        intArrayOf(Weapon.RIFLE, Weapon.LAUNCHER, Weapon.MG, Weapon.LAUNCHER),
-        intArrayOf(Weapon.BLASTER, Weapon.RAIL, Weapon.BLASTER, Weapon.RAIL),
-    )
-
-    private val heavyBody = intArrayOf(Body.HUMAN, Body.BEAST, Body.BEAST, Body.BEAST, Body.MECH, Body.VEHICLE, Body.VEHICLE, Body.HOVER)
-    private val eliteBody = intArrayOf(Body.BEAST, Body.BEAST, Body.SIEGE, Body.CANNON, Body.VEHICLE, Body.VEHICLE, Body.MECH, Body.MECH)
-
-    private val rangedProj = intArrayOf(Proj.STONE, Proj.JAVELIN, Proj.BOLT, Proj.BULLET, Proj.BULLET, Proj.BULLET, Proj.ROCKET, Proj.BEAM)
-    private val eliteProj = intArrayOf(Proj.NONE, Proj.NONE, Proj.BOULDER, Proj.BALL, Proj.SHELL, Proj.SHELL, Proj.ROCKET, Proj.PLASMA)
-    private val heavyProj = intArrayOf(Proj.NONE, Proj.ARROW, Proj.NONE, Proj.NONE, Proj.BULLET, Proj.BULLET, Proj.BULLET, Proj.PLASMA)
-
-    private val turretNames = arrayOf(
-        "t_rock", "t_ballista", "t_arrow", "t_cannon", "t_gatling", "t_flak", "t_missile", "t_laser",
-    )
-    private val turretProj = intArrayOf(Proj.STONE, Proj.JAVELIN, Proj.ARROW, Proj.BALL, Proj.BULLET, Proj.SHELL, Proj.ROCKET, Proj.BEAM)
-    private val abilityKeys = arrayOf(
-        "ab_rocks", "ab_spears", "ab_arrows", "ab_cannons", "ab_shells", "ab_bombers", "ab_missiles", "ab_orbital",
-    )
-
-    val evolveXp = intArrayOf(1000, 2600, 6400, 15500, 37000, 88000, 210000, Int.MAX_VALUE)
-
+    fun spec(era: Int): EraSpec = specs[era]
     fun statScale(era: Int): Float = STAT_GROWTH.pow(era)
     fun costScale(era: Int): Float = COST_GROWTH.pow(era)
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
-
-    /** Płaska tablica wszystkich jednostek; id = era * 4 + rola. */
-    val allUnits: Array<UnitDef> = Array(ERA_COUNT * 4) { eras[it / 4].units[it % 4] }
+    /** Identyfikator = numer epoki * liczba ról + rola. */
+    val allUnits: Array<UnitDef> = Array(ERA_COUNT * Role.values().size) { eras[it / Role.values().size].units[it % Role.values().size] }
 
     fun unit(era: Int, role: Role): UnitDef = eras[era].units[role.ordinal]
 
     private fun buildEra(e: Int): EraDef {
+        val spec = specs[e]
         val s = statScale(e)
         val c = costScale(e)
-        val sp = 1f + e * 0.035f
-        val n = unitNames[e]
-        val w = weapons[e]
+        val sp = 1f + (e * 7f / (ERA_COUNT - 1)) * 0.035f
+        val n = spec.unitNames
+        val w = spec.weapons
         val units = arrayOf(
-            UnitDef(e * 4 + 0, e, Role.MELEE, n[0], (15 * c).toInt(), 72 * s, 15 * s, 30f, 1.0f, 64 * sp, 1.2f, 1.0f, 0f, Proj.NONE, w[0], Body.HUMAN, 1f),
-            UnitDef(e * 4 + 1, e, Role.RANGED, n[1], (26 * c).toInt(), 46 * s, 12.5f * s, 250f + e * 12f, 1.3f, 60 * sp, 1.6f, 0.95f, 0f, rangedProj[e], w[1], Body.HUMAN, 1f),
-            UnitDef(e * 4 + 2, e, Role.HEAVY, n[2], (62 * c).toInt(), 265 * s, 30 * s, if (heavyProj[e] == Proj.NONE) 36f else 160f, 1.4f, 50 * sp, 3.0f, 1.3f, 0f, heavyProj[e], w[2], heavyBody[e], 1f),
-            UnitDef(e * 4 + 3, e, Role.ELITE, n[3], (165 * c).toInt(), 540 * s, 58 * s, if (eliteProj[e] == Proj.NONE) 44f else 340f, 2.1f, 40 * sp, 6.0f, 1.75f, if (eliteProj[e] == Proj.NONE) 40f else 85f, eliteProj[e], w[3], eliteBody[e], 1.6f),
+            UnitDef(e * 4, e, Role.MELEE, n[0], (15 * c).toInt(), 72 * s, 15 * s, 30f, 1f, 64 * sp, 1.2f, 1f, 0f, Proj.NONE, w[0], Body.HUMAN, 1f),
+            UnitDef(e * 4 + 1, e, Role.RANGED, n[1], (26 * c).toInt(), 46 * s, 12.5f * s, 250f + e * 10.5f, 1.3f, 60 * sp, 1.6f, 0.95f, 0f, spec.rangedProj, w[1], Body.HUMAN, 1f),
+            UnitDef(e * 4 + 2, e, Role.HEAVY, n[2], (62 * c).toInt(), 265 * s, 30 * s, if (spec.heavyProj == Proj.NONE) 36f else 160f, 1.4f, 50 * sp, 3f, 1.3f, 0f, spec.heavyProj, w[2], spec.heavyBody, 1f),
+            UnitDef(e * 4 + 3, e, Role.ELITE, n[3], (165 * c).toInt(), 540 * s, 58 * s, if (spec.eliteProj == Proj.NONE) 44f else 340f, 2.1f, 40 * sp, 6f, 1.75f, if (spec.eliteProj == Proj.NONE) 40f else 85f, spec.eliteProj, w[3], spec.eliteBody, 1.6f),
         )
-        val turret = TurretDef(
-            e, turretNames[e], (110 * c).toInt(), 20 * s, 540f + e * 15f,
-            if (e == 4) 0.45f else 1.25f,
-            if (turretProj[e] == Proj.SHELL || turretProj[e] == Proj.BALL || turretProj[e] == Proj.ROCKET) 60f else 0f,
-            turretProj[e],
-        ).let { if (it.era == 4) TurretDef(it.era, it.nameKey, it.cost, it.dmg * 0.4f, it.range, it.cooldown, it.splash, it.projectile) else it }
-        return EraDef(e, eraKeys[e], evolveXp[e], units, turret, abilityKeys[e])
+        val turret = TurretDef(e, spec.turretName, (110 * c).toInt(),
+            20 * s * if (spec.fastTurret) 0.4f else 1f, 540f + e * 13.125f,
+            if (spec.fastTurret) 0.45f else 1.25f,
+            if (spec.turretProj == Proj.SHELL || spec.turretProj == Proj.BALL || spec.turretProj == Proj.ROCKET) 60f else 0f,
+            spec.turretProj)
+        return EraDef(e, spec.nameKey, spec.evolveXp, units, turret, spec.abilityKey)
     }
 
-    /** Bazowe HP bazy w danej epoce, przed bonusami. */
-    fun baseHp(era: Int): Float = 1600f * 1.85f.pow(era)
-
-    /** Pasywny przychód złota na sekundę w danej epoce. */
-    fun income(era: Int): Float = 2.6f * 1.8f.pow(era)
-
-    /** Obrażenia jednego pocisku zdolności specjalnej. */
+    fun baseHp(era: Int): Float = 1600f * BASE_GROWTH.pow(era)
+    fun income(era: Int): Float = 2.6f * INCOME_GROWTH.pow(era)
     fun abilityDmg(era: Int): Float = 46f * statScale(era)
 }
