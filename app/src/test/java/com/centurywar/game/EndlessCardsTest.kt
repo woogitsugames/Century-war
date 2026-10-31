@@ -48,6 +48,23 @@ class EndlessCardsTest {
     }
 
     @Test
+    fun baseHpCardEffectsSurviveEraAdvancement() {
+        val b = newBattle()
+        val p = b.player
+        b.applyEndlessCard(p, EndlessCard.BLOOD_GOLD)
+        assertEquals(0.8f, p.baseHpMul, 0.001f)
+        val ratioBefore = p.baseHp / p.baseMaxHp
+        p.xp = Defs.evolveXp[0].toFloat()
+        assertTrue(b.evolve(p))
+        assertEquals(Defs.baseHp(1) * 0.8f, p.baseMaxHp, 0.01f)
+        assertTrue(p.baseHp / p.baseMaxHp >= ratioBefore)
+
+        b.chooseDoctrine(0)
+        b.applyEndlessCard(p, EndlessCard.FORTRESS)
+        assertEquals(1f, p.baseHpMul, 0.001f)
+    }
+
+    @Test
     fun freeEliteArrivesWithNewWaveAndCloningCreatesCopy() {
         val b = newBattle()
         val p = b.player
