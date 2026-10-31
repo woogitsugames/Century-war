@@ -94,8 +94,9 @@ class Sound(private val ctx: Context) {
 
     init {
         pool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0 && !released) {
-                for (i in 0 until COUNT) if (ids.get(i) == sampleId) {
+            if (status == 0) synchronized(this) {
+                // load() i wpis ID są pod tym samym zamkiem: callback nie wyprzedzi zapisu.
+                if (!released) for (i in 0 until COUNT) if (ids.get(i) == sampleId) {
                     ready.set(i, 1)
                     break
                 }
