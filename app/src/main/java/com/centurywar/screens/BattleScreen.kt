@@ -56,6 +56,8 @@ class BattleScreen(
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
+    private var preparedPlayerEra = -1
+    private var preparedEnemyEra = -1
     private var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
@@ -268,6 +270,15 @@ class BattleScreen(
                 g.snapshots?.saveAsync(snapshotBytes())
             }
         }
+        // Przy zmianie epoki zamawiamy nowe próbki przed pierwszym ostrzałem.
+        if (preparedPlayerEra != battle.player.era) {
+            prepareEraSound(battle.player.era)
+            preparedPlayerEra = battle.player.era
+        }
+        if (preparedEnemyEra != battle.enemy.era) {
+            prepareEraSound(battle.enemy.era)
+            preparedEnemyEra = battle.enemy.era
+        }
         // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
         val music = g.music
         if (music != null) {
@@ -286,6 +297,25 @@ class BattleScreen(
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
+    }
+
+    /** Ładowanie odpowiednich wariantów wyłącznie w wątku Sound, bez I/O gry. */
+    private fun prepareEraSound(era: Int) {
+        val sound = g.sound ?: return
+        val style = Defs.specs[era].art
+        sound.prewarm(hitSound(style))
+        sound.prewarm(barrageSound(style))
+        sound.prewarm(evolveSound(style))
+        sound.prewarm(Sound.DEATH_HUMAN)
+        sound.prewarm(Sound.DEATH_BEAST)
+        sound.prewarm(Sound.DEATH_MACHINE)
+        sound.prewarm(Sound.EXPLOSION)
+        sound.prewarm(Sound.THUMP)
+        sound.prewarm(Sound.BOSS)
+        for (unit in Defs.eras[era].units) {
+            if (unit.projectile != Proj.NONE) sound.prewarm(shotSound(unit.projectile, style, false))
+        }
+        sound.prewarm(shotSound(Defs.eras[era].turret.projectile, style, true))
     }
 
     /** Styl bierze się z definicji epoki, a nie z numeru tekstury lub muzyki. */
