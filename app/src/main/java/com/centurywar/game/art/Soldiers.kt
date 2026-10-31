@@ -23,6 +23,10 @@ class Soldiers(private val p: Pen) {
     private var ironStyle = false
     /** 0..1: jak bardzo postać idzie (płynne ruszanie i zatrzymywanie, bez skoku nóg). */
     var stride = 1f
+    /** Wizualne odchylenie górnej połowy ciała po trafieniu (0..1). */
+    var recoil = 0f
+    /** Ugięcie nóg podczas upadku (0..1). */
+    var collapse = 0f
     /**
      * 0..1: przygotowanie do kolejnego ataku w trakcie odnowienia (napinanie łuku,
      * zamach). -1 poza walką. Dzięki temu animacja ataku to ciągły cykl, bez skoków.
@@ -94,6 +98,7 @@ class Soldiers(private val p: Pen) {
         if (mounted) mountedLeg(-2f, era, true) else leg(walk + Math.PI.toFloat(), era, true, walk != 0f)
 
         // ---- tylna ręka
+        cv.save(); cv.rotate(-7f * recoil, 0f, -27f)
         val swing = when {
             gun -> -0.05f + atk * 0.06f
             spear -> -0.05f
@@ -106,12 +111,12 @@ class Soldiers(private val p: Pen) {
             else -> 0.2f + sin(walk) * 0.08f * stride
         }
         val thrust = if (spear && atk > 0f) sin(atk * 3.1416f) * 9f else 0f
-        val recoil = if (gun) atk * atk * 2.5f else 0f
+        val gunKick = if (gun) atk * atk * 2.5f else 0f
         val sleeveB = dark(sleeve, 0.22f)
         val handB = dark(hand, 0.15f)
         when {
             gun || spear -> {
-                cv.save(); cv.translate(-1f + thrust - recoil, -45f); cv.rotate(deg(swing))
+                cv.save(); cv.translate(-1f + thrust - gunKick, -45f); cv.rotate(deg(swing))
                 val gx = if (spear) 17f else if (weapon == Weapon.LAUNCHER) 14f else 20f
                 val gy = if (weapon == Weapon.LAUNCHER) -2f else 3f
                 p.poly2(0f, 0f, gx * 0.5f, 7f, gx, gy); p.limb(4.4f, sleeveB); p.circle(gx, gy, 2.3f, handB)
@@ -126,13 +131,16 @@ class Soldiers(private val p: Pen) {
             }
         }
 
+        cv.restore()
+
         // ---- przednia noga
         if (mounted) mountedLeg(2f, era, false) else leg(walk, era, false, walk != 0f)
 
         // ---- spódnica / poły
         skirt(era, team, teamD)
 
-        // ---- tułów
+        // ---- tułów i głowa odchylają się od trafienia wokół bioder.
+        cv.save(); cv.rotate(-12f * recoil, 0f, -27f); cv.translate(-2.5f * recoil, 0f)
         torso(era, team, teamD, heavy)
         if (ironStyle) ironArmor(team, teamD)
 
@@ -147,7 +155,7 @@ class Soldiers(private val p: Pen) {
 
         // ---- przednia ręka z bronią
         cv.save()
-        cv.translate(1.5f + thrust - recoil, -46f)
+        cv.translate(1.5f + thrust - gunKick, -46f)
         if (weapon != Weapon.BOW) cv.rotate(deg(swing))
         if (weapon == Weapon.BOW) {
             // łuk w tylnej ręce, cięciwa ciągnięta przednią
@@ -165,6 +173,7 @@ class Soldiers(private val p: Pen) {
             if ((era == 3 || era == 4) && p.hi) p.segF(hx * 0.8f, hy + 0.8f, hx * 0.92f, hy + 0.3f, 4.2f, if (era == 3) 0xFFECE6D4.toInt() else teamD) // mankiet
             p.circle(hx, hy, if (heavy) 2.9f else 2.4f, hand)
         }
+        cv.restore()
         cv.restore()
     }
 
@@ -226,9 +235,10 @@ class Soldiers(private val p: Pen) {
         }
         val hx = if (back) -1.5f else 1.5f
         val hy = -27f
-        val kx = hx + sin(th) * 13.5f
-        val ky = hy + cos(th) * 13.5f
-        val sa = th - 0.12f - lift * 0.75f
+        val bend = collapse * (if (back) -0.45f else 0.55f)
+        val kx = hx + sin(th + bend) * 13.5f
+        val ky = hy + cos(th + bend) * 13.5f + collapse * 2f
+        val sa = th - 0.12f - lift * 0.75f - collapse * 0.45f
         val fx = kx + sin(sa) * 13f
         val fy = ky + cos(sa) * 13f - 0.5f
         val shadeT = if (back) 0.25f else 0f
