@@ -14,6 +14,8 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
+import com.centurywar.game.Daily
+import com.centurywar.game.Weekly
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
@@ -128,8 +130,25 @@ class ScreenshotTest {
             g.setScreen(ResearchScreen(g)); shot(g, "${tag}_research")
             g.setScreen(ModeScreen(g, Mode.ENDLESS)); shot(g, "${tag}_mode_endless")
             g.setScreen(ModeScreen(g, Mode.DAILY)); shot(g, "${tag}_mode_daily")
+            val weeklyWeek = Weekly.currentWeek()
+            g.profile.claimWeekly(weeklyWeek, 20, weeklyWeek)
+            g.profile.submit(Profile.weeklyBoard(weeklyWeek), 17890, Daily.dayNumber())
+            g.profile.submit(Profile.weeklyBoard(weeklyWeek - 1), 16200, Daily.dayNumber() - 7L)
+            g.setScreen(ModeScreen(g, Mode.DAILY, true)); shot(g, "${tag}_mode_weekly")
             g.setScreen(ModeScreen(g, Mode.SKIRMISH)); shot(g, "${tag}_mode_skirmish")
             g.setScreen(RankingsScreen(g)); shot(g, "${tag}_rankings")
+            val weeklyRanking = RankingsScreen(g)
+            g.setScreen(weeklyRanking)
+            field(weeklyRanking, "tab").setInt(weeklyRanking, 4)
+            shot(g, "${tag}_rankings_weekly")
+            field(weeklyRanking, "previousWeek").setBoolean(weeklyRanking, true)
+            shot(g, "${tag}_rankings_previous_week")
+            val weeklyResults = BattleScreen(g, Weekly.config(weeklyWeek))
+            g.setScreen(weeklyResults)
+            val weeklyBattle = field(weeklyResults, "battle").get(weeklyResults) as Battle
+            weeklyBattle.wave = 20
+            weeklyBattle.surrender()
+            shot(g, "${tag}_weekly_results", 90)
             g.setScreen(SettingsScreen(g)); shot(g, "${tag}_settings")
             g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_codex_era0")
             g.profile.levels["r_unitDmg"] = 5; g.profile.levels["r_unitHp"] = 4; g.profile.levels["r_train"] = 3
