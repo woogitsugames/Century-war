@@ -420,6 +420,7 @@ class Battle(val cfg: BattleConfig) {
         playerAi?.update(dt)
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
+        if (!endless && time >= 480f) applySiegeAttrition(dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
@@ -447,6 +448,14 @@ class Battle(val cfg: BattleConfig) {
      * Dzięki temu bitwa zawsze kiedyś się kończy (koniec z wiecznym patem przy wieżach).
      */
     fun siegePressure(): Float = if (endless || time < 480f) 1f else 1f + (time - 480f) / 60f * 0.2f
+
+    /** Blokada po 8 minutach wyczerpuje bazy nawet przy nieruchomym froncie. */
+    private fun applySiegeAttrition(dt: Float) {
+        val control = ((player.front + enemy.front) * 0.5f / Defs.LANE).coerceIn(0f, 1f)
+        val rate = 0.0032f * siegePressure() * dt
+        player.baseHp -= Defs.baseHp(player.era) * rate * (1f - control)
+        enemy.baseHp -= Defs.baseHp(enemy.era) * rate * control
+    }
 
     fun surrender() { if (!over) { pendingChoice = null; finish(1) } }
 
