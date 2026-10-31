@@ -101,6 +101,7 @@ abstract class Screen(val g: Game) {
                 if (activePointer == -1 || (e.action == TouchEvent.UP && e.pointer != activePointer)) return
                 activePointer = -1
                 val consumed = heldButton != null
+                val inactiveTarget = touchCandidate
                 heldButton = null
                 touchCandidate = null
                 if (e.action == TouchEvent.UP && !dragging && !consumed) {
@@ -116,6 +117,9 @@ abstract class Screen(val g: Game) {
                             break
                         }
                     }
+                    // Wyłączony przycisk (np. informacja o kolejce) nie jest tapem pola bitwy.
+                    if (!hit && inactiveTarget != null && !inactiveTarget.enabled &&
+                        inactiveTarget.contains(e.x, e.y)) hit = true
                     if (!hit) onTap(e.x, e.y)
                 }
                 for (b in buttons) b.pressed = false
