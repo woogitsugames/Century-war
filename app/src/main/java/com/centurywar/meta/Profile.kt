@@ -182,7 +182,19 @@ class Profile(private val file: File) {
 
 
     /** Przyjmuje tylko poprawny JSON. Dane są przypisywane po pełnym odczycie tablic. */
-    private fun restore(json: JSONObject) {
+    private fun restore(json: JSONObject, strict: Boolean) {
+        if (strict) {
+            // Nie uznajemy uciętego, syntaktycznie poprawnego JSON za pełny zapis v2.
+            val mandatory = arrayOf(
+                "name", "medals", "levels", "stars", "bestWave", "lastRankedDaily",
+                "tutorialDone", "quality", "fpsCap", "vibration", "sound",
+                "showFps", "lang", "skirmishDiff", "battles", "wins",
+                "totalKills", "playSeconds", "boards",
+            )
+            for (key in mandatory) {
+                if (!json.has(key) || json.isNull(key)) error("Niepełny profil: $key")
+            }
+        }
         fun obj(key: String): JSONObject? {
             if (!json.has(key) || json.isNull(key)) return null
             return json.optJSONObject(key) ?: error("Niepoprawny obiekt: $key")
@@ -277,7 +289,7 @@ class Profile(private val file: File) {
                     newerProfileVersion = true
                     return
                 }
-                restore(migrate(json, version))
+                restore(migrate(json, version), version >= CURRENT_VERSION)
                 newerProfileVersion = false
                 if (candidate == tmp) {
                     // Przerwany zapis: odtwarzamy pełną, zweryfikowaną zawartość .tmp.
