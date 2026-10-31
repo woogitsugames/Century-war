@@ -1163,6 +1163,7 @@ object L {
 
     // --- zlecenie 62: klucze osobnej części dla ograniczenia konfliktów
     private fun part62(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "cx62_rally_d" to t("Tempo armii +%d%% przez %d s. Odnowienie: %d s.", "Army tempo +%d%% for %d s. Cooldown: %d s.", "Armeetempo +%d%% für %d s. Abklingzeit: %d s.", "Ritmo del ejército +%d%% durante %d s. Recarga: %d s.", "Cadence de l’armée +%d%% pendant %d s. Recharge : %d s.", "Ritmo esercito +%d%% per %d s. Ricarica: %d s.", "Ritmo do exército +%d%% por %d s. Recarga: %d s.", "Темп армії +%d%% на %d с. Відновлення: %d с.", "Legertempo +%d%% voor %d s. Herlaadtijd: %d s.", "Ordu temposu +%%%d, %d sn sürer. Dolum: %d sn."),
         "cx62_eras" to t("Epoki", "Eras", "Epochen", "Eras", "Ères", "Epoche", "Eras", "Епохи", "Tijdperken", "Çağlar"),
         "cx62_units" to t("Jednostki", "Units", "Einheiten", "Unidades", "Unités", "Unità", "Unidades", "Бійці", "Eenheden", "Birimler"),
         "cx62_variants" to t("Warianty", "Variants", "Varianten", "Variantes", "Variantes", "Varianti", "Variantes", "Варіанти", "Varianten", "Varyantlar"),
