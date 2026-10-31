@@ -9,6 +9,8 @@ import com.centurywar.engine.TouchEvent
 import com.centurywar.game.Ai
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
+import com.centurywar.game.BattleRenderer
+import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
@@ -188,6 +190,55 @@ class ScreenshotTest {
             shot(g, "${tag}_endless_boss_with_cards")
             endless.chooseEndlessCard(0)
             shot(g, "${tag}_endless_boss")
+        }
+    }
+
+    /** Bossowie, podwójna zdolność, zapowiedzi i Kodeks na wszystkich formatach. */
+    @Test
+    fun endlessBossVariants() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            for (w in intArrayOf(10, 20, 30, 40, 50, 60)) {
+                val screen = BattleScreen(g, BattleConfig(Mode.ENDLESS, 802L + w, 1f))
+                g.setScreen(screen)
+                val b = field(screen, "battle").get(screen) as Battle
+                b.wave = w - 1
+                b.nextBossToSpawn = w
+                b.waveTimer = 0f
+                b.step()
+                b.pendingCards?.let { b.chooseEndlessCard(0) }
+                val boss = b.currentBoss()!!
+                val renderer = field(screen, "r").get(screen) as BattleRenderer
+                boss.x = b.player.baseFront + renderer.worldVisible * 0.54f
+                renderer.camX = boss.x - renderer.worldVisible * 0.5f
+                renderer.clampCam()
+                shot(g, "${tag}_endless_boss_${w}")
+            }
+            val preview = BattleScreen(g, BattleConfig(Mode.ENDLESS, 901L, 1f))
+            g.setScreen(preview)
+            val battle = field(preview, "battle").get(preview) as Battle
+            battle.wave = 9
+            battle.nextBossToSpawn = 10
+            shot(g, "${tag}_endless_next_boss_kind")
+            battle.wave = 10
+            battle.nextWaveTheme = EndlessWaveTheme.SIEGE_TRAIN
+            shot(g, "${tag}_endless_siege_train_preview")
+            battle.nextWaveTheme = EndlessWaveTheme.SKIRMISHERS
+            field(preview, "nextThemeShown").setInt(preview, -1)
+            shot(g, "${tag}_endless_skirmishers_preview")
+            val codex = CodexScreen(g, 0)
+            g.setScreen(codex)
+            val end = field(codex, "maxScroll").getFloat(codex)
+            field(codex, "scroll").setFloat(codex, end * 0.5f)
+            shot(g, "${tag}_codex_endless_bosses")
+            field(codex, "scroll").setFloat(codex, end)
+            shot(g, "${tag}_codex_endless_waves")
         }
     }
 
