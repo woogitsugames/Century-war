@@ -1,0 +1,101 @@
+# Century War: dokument projektowy (GDD)
+
+## 1. Kierunek gry
+
+**Gatunek:** strategia „wojna na jednym pasie przez epoki” (lane battler / evolution war), jak w Age of War. Projekt jest jednak **własny**: nazwy, jednostki, grafika, mechaniki i balans są oryginalne.
+
+**Główna różnica wobec Age of War:** AoW to jeden mecz na 15–30 minut bez żadnego postępu. Century War to **krótkie bitwy (5–15 min) plus metaprogresja na tygodnie**: kampania, badania, rekordy, wyzwanie dnia i rankingi.
+
+**Pętla rozgrywki:**
+1. Bitwa: szkolisz jednostki za złoto, zabijasz wrogów (złoto i XP), awansujesz epokę, burzysz bazę wroga.
+2. Po bitwie dostajesz medale, także za porażkę.
+3. Medale wydajesz na badania (trwałe ulepszenia).
+4. Wracasz na trudniejszy etap, po więcej gwiazdek albo po lepszy wynik w rankingu.
+
+**Styl graficzny:** płaski cartoon z grubym konturem, rysowany wektorowo kodem. Jest czytelny na małym ekranie, ostry na Foldzie, a APK waży ok. 100 KB (release). Docelowo można podmienić renderer jednostek na ręcznie rysowane sprite'y w tym samym stylu.
+
+## 2. Zawartość
+
+| Element | Ilość |
+|---|---|
+| Epoki | **8**: Plemiona, Epoka brązu, Feudalizm, Epoka prochu, Epoka pary, Epoka stali, Epoka krzemu, Era orbitalna |
+| Jednostki | **32** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
+| Wieże | **8** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
+| Ostrzały specjalne | **8** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
+| Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki |
+| Modyfikatory bitew | **10**, np. Mgła wojny, Kruche bazy, Horda strzelców |
+| Etapy kampanii | **32** (4 na epokę), po 3 gwiazdki = **96 gwiazdek** |
+| Badania | **13** drzew, łącznie **110 poziomów** |
+| Tryby | Kampania, Oblężenie bez końca, Wyzwanie dnia, Potyczka (4 poziomy trudności) |
+| Rankingi | 4 tablice: fale oblężenia, wyzwanie dnia, gwiazdki kampanii, potyczka |
+
+### Kampania (32 etapy)
+- Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Feudalizm), więc bitwa trwa kilka minut.
+- Co 4. etap to „wielki” etap przez 2–3 epoki.
+- Siła wroga rośnie od 72% do ok. 170% (jawny mnożnik złota i XP AI, widoczny przed bitwą).
+- Gwiazdki zależą od HP bazy po zwycięstwie: ≥75% = ★★★, ≥40% = ★★.
+- Od etapu 3 bitwy dostają modyfikatory, więc każdy etap gra się inaczej.
+
+### Oblężenie bez końca
+- Fale co ~16–28 s. Co 6 fal wróg wchodzi w nową epokę, a od fali 48 jednostki wroga stają się coraz silniejsze.
+- Co 5 fal gracz wybiera doktrynę (lekki roguelite).
+- Wynik = fale × 250 + zabici × 12 + czas.
+
+### Wyzwanie dnia
+- Ten sam seed, epoki i modyfikatory dla każdego gracza na świecie (dzień UTC).
+- Badania są wyłączone, wszyscy mają te same bonusy, więc ranking jest uczciwy.
+- 1 podejście rankingowe dziennie, kolejne to trening.
+
+## 3. Mechaniki bitwy
+
+- **Ekonomia:** pasywny przychód rośnie z epoką. **Kontrola terytorium** daje od 70% do 130% przychodu zależnie od położenia linii frontu, więc opłaca się naciskać.
+- **XP:** za zabójstwa, za obrażenia zadane bazie, za straty własne (mniej) oraz mały stały przyrost.
+- **Awans epoki** zużywa XP. HP bazy rośnie proporcjonalnie i dostaje +10%.
+- **Rangi weteranów:** w ostatniej dostępnej epoce nadwyżka XP daje rangi (+6% obrażeń i HP za rangę).
+- **Zbrojownia:** złoto w bitwie zamieniane na +8% obrażeń i HP. Przewaga ekonomiczna nie przepada, gdy armia jest pełna.
+- **Presja oblężnicza:** po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę. Koniec z wiecznym patem.
+- **Postawa:** Naprzód albo Trzymaj (jednostki czekają na linii obrony).
+- **Kolejka:** 5 jednostek. Limit armii: 12, z badaniami do 18.
+- **Uczciwe AI:** AI gra według tych samych zasad co gracz. Trudność to wyłącznie jawny mnożnik. Po porażce gra podpowiada, dlaczego przegrałeś.
+
+## 4. Metaprogresja (badania za medale)
+
+| Badanie | Poziomy | Efekt na poziom |
+|---|---|---|
+| Doktryna elit | 1 | odblokowuje jednostki elitarne |
+| Okrzyk bojowy | 1 | odblokowuje Zryw |
+| Handel | 12 | +6% przychodu |
+| Kowalstwo | 15 | +4% obrażeń |
+| Pancerze | 15 | +4% HP |
+| Skarbiec | 10 | +40 złota na start |
+| Fortyfikacje | 10 | +8% HP bazy |
+| Balistyka | 10 | +6% obrażeń wież |
+| Musztra | 10 | +5% szybkości szkolenia |
+| Kroniki | 10 | +5% XP |
+| Koszary | 6 | +1 limit armii |
+| Sztab | 8 | −5% odnowienia zdolności |
+| Inżynieria | 2 | +1 slot wieży |
+
+Koszty rosną wykładniczo (×1,33–1,6 na poziom), więc pełne drzewko to wiele tygodni regularnej gry.
+
+## 5. Technologia
+
+- **Kotlin, Android SDK 36** (targetSdk/compileSdk 36, minSdk 26 = Android 8.0+). Bez bibliotek: brak AndroidX i silników, więc szybki start i mały APK.
+- **Własna pętla gry** na `SurfaceView` z `lockHardwareCanvas()` (rysowanie przez GPU), tempo zgodne z ekranem (60/90/120 Hz) i opcjonalny limit 30/60 FPS.
+- **Stały krok symulacji 60 Hz**, deterministyczny (seed). Ta sama bitwa wychodzi identycznie na każdym telefonie, co jest podstawą pod anty-cheat rankingu.
+- **Symulacja w czystym Kotlinie** (bez Androida) jest testowana w JUnit: AI kontra AI przez wszystkie 32 etapy.
+- **Optymalizacja na tanie telefony:** auto-wykrywanie klasy urządzenia (RAM, rdzenie). Na słabych telefonach bufor renderowany w 60–80% rozdzielczości (skalowanie sprzętowe), mniej cząsteczek, bez antyaliasingu i paralaksy. Dynamiczne obniżanie jakości przy spadkach FPS. Zero alokacji w pętli (pule obiektów).
+- **Flagowce i Foldy:** pełna rozdzielczość (limit ~3,9 MPx bufora). `configChanges` obsługuje składanie i rozkładanie bez restartu gry. Układ HUD i kamera dopasowują się do proporcji 4:3…21:9. Obsługiwane wycięcia ekranu, `appCategory="game"` (Android 16 nie wymusza wtedy obrotu na dużych ekranach) oraz predictive back.
+- **Zapis:** JSON w pamięci aplikacji, zapis atomowy.
+- **Rankingi:** lokalne tablice już działają. Ranking globalny wymaga konfiguracji Google Play Games Services w Play Console (interfejs `OnlineLeaderboards` jest gotowy, opis w kodzie).
+
+## 6. Plan dalszych prac
+
+1. Ranking globalny: Google Play Games Services (Leaderboards + Achievements) i zapis w chmurze.
+2. Dźwięk i muzyka (SFX dla każdej epoki, muzyka zmieniana z epoką).
+3. Osiągnięcia oraz dzienne i tygodniowe misje.
+4. Bohater/dowódca na polu bitwy (jednostka z poziomami między bitwami).
+5. Asynchroniczne PvP: obrona gracza sterowana przez AI, ligi sezonowe.
+6. Kosmetyka bez wpływu na balans (skórki epok, sztandary).
+7. Grafika: ręcznie rysowane sprite'y w obecnym stylu, animacje śmierci i trafień.
+8. Monetyzacja przyjazna graczom: reklamy tylko z nagrodą, jednorazowe „bez reklam”, zero pay-to-win.

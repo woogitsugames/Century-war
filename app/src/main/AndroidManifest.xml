@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="true"
+        android:appCategory="game"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="33"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:isGame="true"
+        android:label="@string/app_name"
+        android:resizeableActivity="true"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.CenturyWar">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|density|uiMode|fontScale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            tools:ignore="DiscouragedApi">
+            <!-- appCategory="game" zwalnia grę z ignorowania orientacji na dużych ekranach w Androidzie 16 -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Telefony 21:9 i dalej, oraz Foldy: bez czarnych pasów -->
+        <meta-data android:name="android.max_aspect" android:value="3.0" />
+    </application>
+</manifest>

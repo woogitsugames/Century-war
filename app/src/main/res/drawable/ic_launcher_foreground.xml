@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- tarcza -->
+    <path android:fillColor="#F2C14E" android:pathData="M54,28 L74,35 V52 C74,66 65,75 54,80 C43,75 34,66 34,52 V35 Z" />
+    <path android:fillColor="#C0392B" android:pathData="M54,33 L69,38.5 V52 C69,63 62,70 54,74.5 C46,70 39,63 39,52 V38.5 Z" />
+    <!-- skrzyżowane miecze -->
+    <path android:fillColor="#ECF0F1" android:pathData="M40,40 L43,37 L66,60 L63,63 Z" />
+    <path android:fillColor="#ECF0F1" android:pathData="M68,40 L65,37 L42,60 L45,63 Z" />
+    <path android:fillColor="#5D4037" android:pathData="M61,63 L66,58 L69,61 L64,66 Z M47,63 L42,58 L39,61 L44,66 Z" />
+</vector>
