@@ -109,12 +109,14 @@ class HintOverlay(
 
     /** Wyłączenie i wszystkie stany modalne ukrywają dymek, nie zatrzymując bitwy. */
     fun update(dt: Float, blocked: Boolean = false) {
+        val b = battle
+        val suppressed = blocked || b?.pendingChoice != null || b?.pendingCards != null
         if (activeId >= 0) {
             elapsed += dt
-            if (blocked || !g.profile.hintsEnabled || elapsed >= DISPLAY_TIME) dismiss()
+            if (suppressed || !g.profile.hintsEnabled || elapsed >= DISPLAY_TIME) dismiss()
         }
-        val b = battle ?: return
-        if (blocked || activeId >= 0 || !g.profile.hintsEnabled || b.over) return
+        if (b == null) return
+        if (suppressed || activeId >= 0 || !g.profile.hintsEnabled || b.over) return
         sinceCheck += dt
         if (sinceCheck < CHECK_EVERY) return
         sinceCheck = 0f
