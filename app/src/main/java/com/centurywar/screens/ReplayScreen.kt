@@ -58,8 +58,17 @@ class ReplayScreen(
     private var markCount = 0
     private var timeKey = -1
     private var timeText = ""
-    private var statusKey = -1
+    private var statusTimer = 0.25f
+    private var statusPlayerEra = -1
+    private var statusEnemyEra = -1
+    private var statusPlayerGold = Int.MIN_VALUE
+    private var statusEnemyGold = Int.MIN_VALUE
+    private var statusPlayerHp = Int.MIN_VALUE
+    private var statusEnemyHp = Int.MIN_VALUE
+    private var statusWave = -1
+    private val statusBuffer = StringBuilder(128)
     private var statusText = ""
+    private var speedText = "×1"
     private var doctrineState = ""
     private var doctrineHash = -1
     private val cardDefs = EndlessCard.values()
@@ -136,8 +145,8 @@ class ReplayScreen(
         for (i in controls.indices) controls[i].set(start + i * (six + gap), y, six, 43 * dp)
         backward.label = "-10s"; backward.iconId = Icons.BACK
         forward.label = "+10s"; forward.iconId = Icons.PLAY
-        slower.label = "×1"; slower.iconId = Icons.SPEED
-        faster.label = "×8"; faster.iconId = Icons.SPEED
+        slower.label = "−"; slower.iconId = -1
+        faster.label = "+"; faster.iconId = -1
         pause.label = L["replay_pause"]; pause.iconId = Icons.PAUSE
         camera.label = L["replay_follow"]; camera.iconId = Icons.CROSSHAIR
         minimap.set(right - 172 * dp, top + 4 * dp, right - 53 * dp, top + 20 * dp)
@@ -149,7 +158,11 @@ class ReplayScreen(
         val p = player ?: return
         if (p.broken) { state = BROKEN; return }
         if (p.seeking) {
-            p.seekStep(2_000_000L)
+            // Mierzony budżet CPU, zamiast szacowania czasu jednego kroku na urządzeniu.
+            val startNs = System.nanoTime()
+            do {
+                p.seekStep(12_000L)
+            } while (p.seeking && !p.broken && System.nanoTime() - startNs < SEEK_BUDGET_NS)
             rebuildRenderer()
         } else if (!paused && !p.finished) {
             acc += dt * speed
@@ -169,28 +182,42 @@ class ReplayScreen(
         if (follow) r.follow(dt)
         if (!p.seeking && !paused && speed == 1) BattleSfx.play(g, p.battle, r.camX, r.worldVisible)
         else p.battle.fx.count = 0
-        refreshLabels(p)
+        refreshLabels(p, dt)
     }
 
-    private fun refreshLabels(p: ReplayPlayer) {
+    private fun refreshLabels(p: ReplayPlayer, dt: Float) {
+        statusTimer = (statusTimer + dt).coerceAtMost(0.25f)
         val sec = p.battle.time.toInt()
         if (sec != timeKey) {
             timeKey = sec
             timeText = clock(sec) + " / " + clock(p.totalSteps / 60)
         }
         val b = p.battle
-        val key = b.player.era * 100_000 + b.enemy.era * 10_000 +
-            b.player.gold.toInt().coerceIn(0, 9999) + b.enemy.gold.toInt().coerceIn(0, 9999) * 31 +
-            b.wave * 17 + b.player.doctrines.size * 53
-        if (key != statusKey) {
-            statusKey = key
-            val wave = if (b.cfg.mode == Mode.ENDLESS) "  " + L.f("wave", b.wave) else ""
-            statusText = "${L[Defs.eras[b.player.era].nameKey]} ${b.player.gold.toInt()}  " +
-                "${L[Defs.eras[b.enemy.era].nameKey]} ${b.enemy.gold.toInt()}  " +
-                "HP ${b.player.baseHp.toInt()}/${b.enemy.baseHp.toInt()}" + wave
+        val playerGold = b.player.gold.toInt()
+        val enemyGold = b.enemy.gold.toInt()
+        val playerHp = b.player.baseHp.toInt()
+        val enemyHp = b.enemy.baseHp.toInt()
+        if (statusTimer >= 0.25f && (statusPlayerEra != b.player.era ||
+                statusEnemyEra != b.enemy.era || statusPlayerGold != playerGold ||
+                statusEnemyGold != enemyGold || statusPlayerHp != playerHp ||
+                statusEnemyHp != enemyHp || statusWave != b.wave)) {
+            statusTimer = 0f
+            statusPlayerEra = b.player.era
+            statusEnemyEra = b.enemy.era
+            statusPlayerGold = playerGold
+            statusEnemyGold = enemyGold
+            statusPlayerHp = playerHp
+            statusEnemyHp = enemyHp
+            statusWave = b.wave
+            statusBuffer.setLength(0)
+            statusBuffer.append(L[Defs.eras[b.player.era].nameKey]).append(' ').append(playerGold)
+                .append("  ").append(L[Defs.eras[b.enemy.era].nameKey]).append(' ').append(enemyGold)
+                .append("  HP ").append(playerHp).append('/').append(enemyHp)
+            if (b.cfg.mode == Mode.ENDLESS) statusBuffer.append("  ").append(L.f("wave", b.wave))
+            statusText = statusBuffer.toString()
         }
         var dh = 13
-        for (d in b.player.doctrines) dh = dh * 31 + d.ordinal
+        for (i in b.player.doctrines.indices) dh = dh * 31 + b.player.doctrines[i].ordinal
         for (i in b.player.cardStacks.indices) dh = dh * 31 + b.player.cardStacks[i]
         if (dh != doctrineHash) {
             doctrineHash = dh
@@ -204,8 +231,6 @@ class ReplayScreen(
         }
         pause.label = if (paused) L["replay_play"] else L["replay_pause"]
         pause.iconId = if (paused) Icons.PLAY else Icons.PAUSE
-        slower.label = when (speed) { 1 -> "×1"; 3 -> "×3"; else -> "×8" }
-        faster.label = slower.label
         camera.label = if (follow) L["replay_follow"] else L["replay_camera"]
         if (p.seeking) {
             val percent = (100f * p.progress).toInt()
@@ -233,7 +258,7 @@ class ReplayScreen(
         }
         val p = player ?: return
         val r = renderer ?: return
-        r.lerp = 1f
+        r.lerp = if (paused || p.seeking) 1f else (acc / Battle.STEP).coerceIn(0f, 1f)
         r.render(c, if (!paused && speed == 1 && !p.seeking) frameDt else 0f, w, h)
         ui.fill.color = Color.argb(218, 26, 32, 48); c.drawRect(hud, ui.fill)
         ui.fill.color = Color.argb(222, 26, 32, 48); c.drawRect(footer, ui.fill)
@@ -244,6 +269,8 @@ class ReplayScreen(
         drawTimeline(c, p)
         for (b in controls) ui.button(c, b, 12f)
         ui.text(c, timeText, footer.centerX(), footer.top + 13 * dp, 11f, Ui.TEXT, Paint.Align.CENTER)
+        ui.text(c, speedText, footer.right - g.insetR - 14 * dp,
+            footer.top + 13 * dp, 11f, Ui.GOLD, Paint.Align.RIGHT)
         if (p.seeking) ui.textO(c, loadingText, footer.centerX(), footer.top - 12 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
         drawMini(c, p, r)
         // Lista doktryn i kart jest buforowana przy zmianie stanu, a nie składana na klatkę.
@@ -325,12 +352,25 @@ class ReplayScreen(
         when (b.id) {
             1 -> g.pop()
             2 -> if (p != null) { paused = !paused; acc = 0f }
-            3 -> speed = when (speed) { 8 -> 3; 3 -> 1; else -> 1 }
-            4 -> speed = when (speed) { 1 -> 3; 3 -> 8; else -> 8 }
-            5 -> p?.let { it.requestSeek(it.step - 600); paused = true; rebuildRenderer() }
-            6 -> p?.let { it.requestSeek(it.step + 600); paused = true; rebuildRenderer() }
+            3 -> { speed = when (speed) { 8 -> 3; 3 -> 1; else -> 1 }; refreshSpeed() }
+            4 -> { speed = when (speed) { 1 -> 3; 3 -> 8; else -> 8 }; refreshSpeed() }
+            5 -> p?.let { it.requestSeek(it.step - 600); paused = true; acc = 0f; rebuildRenderer() }
+            6 -> p?.let { it.requestSeek(it.step + 600); paused = true; acc = 0f; rebuildRenderer() }
             7 -> follow = !follow
         }
+    }
+
+    private fun refreshSpeed() {
+        speedText = when (speed) { 1 -> "×1"; 3 -> "×3"; else -> "×8" }
+    }
+
+    override fun onLanguageChanged() {
+        timeKey = -1
+        statusTimer = 0.25f
+        statusPlayerEra = -1
+        doctrineHash = -1
+        lastProgress = -1
+        super.onLanguageChanged()
     }
 
     override fun isDragScreen() = true
@@ -358,5 +398,6 @@ class ReplayScreen(
         const val READY = 1
         const val OLD = 2
         const val BROKEN = 3
+        const val SEEK_BUDGET_NS = 6_000_000L
     }
 }
