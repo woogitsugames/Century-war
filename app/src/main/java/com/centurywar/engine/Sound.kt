@@ -132,7 +132,7 @@ class Sound(private val ctx: Context) {
         val quiet = if (priority >= 3) 1f else (1f - budget / 3.4f).coerceIn(0.26f, 1f)
         val gain = (vol * volume * quiet).coerceIn(0f, 0.9f)
         if (gain < 0.01f) return
-        budget = (budget + gain * if (priority >= 3) 0.65f else 1f).coerceAtMost(5f)
+        budget = (budget + gain * (if (priority >= 3) 0.65f else 1f)).coerceAtMost(5f)
         pitchState = pitchState * 1664525 + 1013904223
         val jitter = 1f + ((pitchState ushr 24) / 255f - 0.5f) * 0.1f
         val lr = pan.coerceIn(-1f, 1f)
