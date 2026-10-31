@@ -260,8 +260,9 @@ class ScreenshotTest {
                 val name = "${tag}_access_palette${pal}_battle"
                 shot(g, name, 2)
                 if (tag == "phone720") {
-                    val raw = BitmapFactory.decodeFile(File(out, "${name}.png").path)
-                    assertTrue(raw != null)
+                    val raw = requireNotNull(BitmapFactory.decodeFile(File(out, "${name}.png").path)) {
+                        "Nie udało się odczytać zrzutu: $name"
+                    }
                     for ((visionName, matrix) in vision) {
                         val pixels = IntArray(raw.width * raw.height)
                         raw.getPixels(pixels, 0, raw.width, 0, 0, raw.width, raw.height)
