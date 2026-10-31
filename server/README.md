@@ -16,7 +16,8 @@ implementacji reguł walki — większe ryzyko różnic oraz błędów anty-chea
   Aplikacja ma opcjonalny klient HTTPS w `meta/ScoreClient.kt`, aktywowany
   tylko po zgodzie użytkownika i podaniu poprawnej konfiguracji.
 - Baza: `players` (UUID i pseudonim), `scores` (wynik i skrót SHA-256 zgłoszenia),
-  `used_nonces` (przeciw ponownemu przesłaniu POST). **Nie zapisujemy logu bitwy,
+  `used_nonces` (przeciw ponownemu przesłaniu POST) oraz `blocked_players` (blokady UUID).
+  **Nie zapisujemy logu bitwy,
   emaila ani adresu IP**. Nick i UUID są jednak danymi pseudonimowymi, mogą podlegać RODO.
 
 ## Lokalnie
@@ -109,7 +110,12 @@ nie jest poprawną, zweryfikowaną powtórką):
 Pozostałe pola: `day` (`daily` — dzień UTC od epoki Unix; `weekly` — numer tygodnia
 z `Weekly.weekNumber(day)`), `stage` (tylko `campaign`, indeks 0–35). Gracz to losowy **UUID v4**, utrwalany
 lokalnie na urządzeniu; `nick` ma 1–24 znaki Unicode: litery, cyfry,
-spację oraz `._-`, bez białych znaków na końcach.
+spację oraz `._-`, bez białych znaków na końcach. Jeżeli nick zawiera
+słowo ze słownika moderacji (10 języków gry) albo nie spełnia reguł,
+serwer **przyjmuje poprawną powtórkę**, ale zapisuje nick zastępczy
+`Dowódca-XXXX` (4 znaki z SHA-256 UUID). Filtr normalizuje akcenty,
+wielkość liter, niektóre podobne znaki i rozdzielanie liter. Wcześniej
+zapisane obraźliwe nicki są maskowane przy odczycie.
 
 Serwer **nie przyjmuje** modyfikacji rozgrywki od klienta. Konfiguracje:
 - `daily`: `day` = dzisiejszy dzień UTC, `seed=day`, `Daily.config()`
@@ -135,7 +141,8 @@ Niepoprawne logi nie zajmują miejsca w rankingu.
 Ograniczenia: 1 MiB żądania, limity formatu `Replay` (32 768 komend),
 maks. 90 000 kroków (pozostałe tryby) lub 216 000 (endless i weekly). Wynik musi być dodatni. Błędy: `400` (format),
 `401` (podpis / nonce), `409` (drugie zgłoszenie daily),
-`413` (rozmiar), `422` (niezgodna powtórka), `429` (limit).
+`413` (rozmiar), `422` (niezgodna powtórka), `429` (limit),
+`403` (UUID zablokowane przez moderatora).
 
 Odpowiedź `200`:
 ```json
@@ -222,6 +229,17 @@ Brak wyniku gracza daje pustą listę. JSON:
   wielu kontenerów z jedną lokalną bazą, bez zmiany warstwy danych.
 - Dane wyników i pseudonimy wymagają polityki retencji, informacji o
   przetwarzaniu i funkcji usunięcia/zmiany identyfikatora przed publikacją.
+
+## Moderacja administracyjna
+
+Bez panelu WWW: polecenia w tym samym programie `server admin ...` to
+`recent [limit]`, `delete-score UUID board day`, `block UUID`,
+`unblock UUID` i `export-csv` (stdout). Na VPS uruchom je przez
+`docker compose run --rm --no-deps -T leaderboard admin ...`.
+Blokady ukrywają istniejące wyniki i zatrzymują nowe zgłoszenia, bez
+zmiany schematu API. Usunięcie danych z `/v1/player/delete` usuwa
+również wpis blokady dla danego UUID. Pełne przykłady, kopie i uprawnienia
+w instrukcji dla właściciela poniżej.
 
 ## Wdrożenie: Docker Compose / VPS
 

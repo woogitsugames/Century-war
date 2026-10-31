@@ -194,7 +194,88 @@ usuwane przez tę operację**. Wnioski i prośby o potwierdzenie usunięcia moż
 kierować na adres kontaktowy wydawcy z opublikowanej polityki prywatności.
 Przed publikacją uzupełnij ten adres i przetestuj rzeczywisty proces.
 
-## 9. Codzienna obsługa
+## 9. Moderowanie pseudonimów i wyników (CLI)
+
+**Nie ma panelu WWW ani administracyjnego endpointu API.** Dostęp do komend
+ma wyłącznie operator z dostępem SSH i uprawnieniami do Docker Compose oraz
+wolumenu SQLite. Nie udostępniaj takich uprawnień graczom.
+
+Serwer czyści pseudonimy na podstawie pliku
+server/src/main/resources/forbidden-nicks.txt (10 języków: pl, en, de, es,
+fr, it, pt, uk, nl, tr). Filtr ignoruje wielkość liter, akcenty, część
+zamienników cyfr/znaków (0→o, 1→i, @→a) i rozdzielanie liter znakami.
+Zakazany albo niepoprawny nick jest zamieniany na **Dowódca-XXXX**, gdzie
+XXXX to pierwsze 4 znaki szesnastkowe skrótu SHA-256 UUID gracza. Wynik gry
+nadal jest zapisywany, a API dla Androida pozostaje bez zmian. Stare nicki
+są filtrowane także podczas odczytu rankingu. Słownik można rozszerzać
+w repozytorium i wdrażać kolejną wersją obrazu. Może wystąpić nadmierne
+blokowanie lub przeoczenie nowych form zapisu; sprawdzaj zgłoszenia ręcznie.
+
+**Krok 1.** Zaloguj się na VPS, sprawdź usługę i wykonaj spójną kopię bazy
+(zgodnie z krokiem 6), zanim cokolwiek usuniesz:
+
+~~~bash
+cd /opt/century-war
+docker compose ps
+sudo bash /opt/century-war/server/backup-sqlite.sh
+docker compose run --rm --no-deps -T leaderboard admin help
+~~~
+
+**Krok 2.** Obejrzyj ostatnie wyniki. Zwrócone kolumny: UUID, plansza,
+day (liczba dni UTC od 1970-01-01), wynik, czas weryfikacji Unix,
+stan blokady i publiczny nick. Zapisz UUID i planszę dokładnie z listy:
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin recent 20
+docker compose run --rm --no-deps -T leaderboard admin recent 100
+~~~
+
+**Krok 3.** Zablokuj gracza na wszystkich planszach albo odblokuj po
+weryfikacji zgłoszenia. Blokada działa bez restartowania serwera: istniejące
+wyniki znikają z /v1/top i /v1/around, a nowe zgłoszenia otrzymują HTTP
+403 blocked_player. Odblokowanie przywraca poprzednie wpisy (o ile ich
+wcześniej nie usunięto):
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin block UUID_TUTAJ
+docker compose run --rm --no-deps -T leaderboard admin unblock UUID_TUTAJ
+~~~
+
+**Krok 4.** Aby usunąć jeden wynik, podaj UUID, nazwę planszy i day
+**z konkretnego wiersza** listy (nie numer tygodnia ani aktualną datę).
+deleted oznacza sukces; not_found (kod zakończenia 1) — brak takiego
+rekordu. Usunięcia nie można cofnąć inaczej niż przez kontrolowany backup:
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin delete-score UUID_TUTAJ endless 20000
+~~~
+
+**Krok 5.** Wyeksportuj wszystkie wyniki, również zablokowane, do CSV.
+CSV jest wypisywane na stdout i zawiera UUID, pseudonim, planszę, wynik,
+dane weryfikacji oraz kolumnę blocked. Dane mogą podlegać RODO, więc
+ogranicz dostęp do pliku i ustal termin usunięcia. Eksport jest odpowiednio
+cytowany i zabezpieczony przed interpretacją niebezpiecznych wartości jako
+formuł w arkuszu:
+
+~~~bash
+umask 077
+docker compose run --rm --no-deps -T leaderboard admin export-csv > ranking-moderacja.csv
+chmod 600 ranking-moderacja.csv
+~~~
+
+Komendy administracyjne działają na **tym samym wolumenie** co kontener
+serwera; nie wymagają klucza HMAC i nie uruchamiają serwera HTTP. Nie
+wykonuj ich na kopii .db pobranej zwykłym cp przy aktywnym WAL.
+Błędny UUID albo plansza nie wykonują operacji.
+
+**Usunięcie danych przez gracza ma pierwszeństwo przed blokadą:** endpoint
+POST /v1/player/delete usuwa także wpis UUID z tabeli blokad, aby usunąć
+wszystkie dane tego identyfikatora. To oznacza, że przy obecnym systemie
+UUID bez silnego uwierzytelniania gracz może ominąć blokadę, generując nowe
+UUID albo żądając usunięcia danych i przesyłając nowy wynik. Do ochrony
+przed trwałymi nadużyciami potrzebny będzie mocniejszy mechanizm tożsamości.
+
+## 10. Codzienna obsługa
 
 - docker compose ps — czy kontener ma status healthy.
 - docker compose logs --tail=100 leaderboard — błędy aplikacji (nie publikuj logów z danymi).

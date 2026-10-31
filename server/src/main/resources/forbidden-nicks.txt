@@ -1,0 +1,128 @@
+# Jeden wpis w wierszu, języki gry: pl, en, de, es, fr, it, pt, uk, nl, tr.
+# Wpisy są normalizowane tak samo jak pseudonimy. Rozbudowuj ostrożnie: krótkie
+# wyrazy mogą być fragmentami niewinnych słów i powodować fałszywe alarmy.
+
+# pl
+kurwa
+kurwy
+kurwisko
+chuj
+chujek
+pizda
+pizdziec
+jebac
+jebany
+pierdol
+skurwysyn
+dziwka
+
+# en
+fuck
+fack
+fck
+fucker
+fuckyou
+motherfucker
+shit
+bullshit
+bitch
+cunt
+nigger
+nigga
+asshole
+dickhead
+bastard
+sonofabitch
+
+# de
+scheisse
+scheiß
+arschloch
+hurensohn
+fotze
+wichser
+fickdich
+missgeburt
+
+# es
+mierda
+puta
+puto
+cabron
+pendejo
+coño
+joder
+hijoputa
+gilipollas
+chingada
+
+# fr
+merde
+putain
+pute
+connard
+connasse
+salope
+encule
+enculé
+nique
+fdp
+
+# it
+cazzo
+merda
+stronzo
+stronza
+troia
+vaffanculo
+puttana
+figlio di puttana
+
+# pt
+caralho
+porra
+puta
+merda
+viado
+filhodaputa
+arrombado
+foder
+buceta
+
+# uk
+хуй
+хуи
+пизда
+пізда
+блядь
+блять
+сука
+їбати
+єбати
+йобаний
+підор
+мудак
+
+# nl
+kanker
+klootzak
+kutwijf
+hoerenzoon
+hoer
+tering
+godverdomme
+tyfuslijer
+mongool
+
+# tr
+siktir
+orospu
+orospuçocuğu
+amk
+yarrak
+piç
+pic
+serefsiz
+şerefsiz
+götveren
+amına
