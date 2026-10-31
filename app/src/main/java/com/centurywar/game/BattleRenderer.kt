@@ -10,6 +10,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import com.centurywar.engine.Game
+import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Ui
 import com.centurywar.game.art.Bases
@@ -74,6 +75,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val ttext = arrayOfNulls<String>(TMAX)
     private val tcol = IntArray(TMAX)
     private val tsize = FloatArray(TMAX)
+
+    /** Kolory i symbole zdolności: tablice współdzielone, nie tworzone w klatce. */
+    private val bossColors = intArrayOf(0, 0xFFE4A85B.toInt(), 0xFF60C7E6.toInt(),
+        0xFF8BBF88.toInt(), 0xFFE2B96E.toInt(), 0xFFF0785D.toInt())
+    private val bossIcons = intArrayOf(Icons.CROWN, Icons.ADVANCE, Icons.SPEED,
+        Icons.SHIELD, Icons.HELMET, Icons.FLAME)
 
     private val goldStrings = HashMap<Int, String>()
 
@@ -414,15 +421,37 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val s = b.sides[u.side]
         alpha = if (u.dying >= 0f) max(0f, 1f - u.dying / 0.8f) else 1f
         val def = u.def
+        val bossScale = if (u.isBoss) 1.25f else 1f
+        if (u.isBoss) {
+            val ring = bossColors[u.bossKind]
+            // Zasięg aury pokazany cienkim pasem; pierścień pod stopami widoczny w marszu.
+            if (u.hasBossAbility(EndlessBosses.AURA)) {
+                fill.color = col(0x4460C7E6)
+                c.drawRect(sx(u.x - EndlessBosses.AURA_RANGE), groundY - 7f * k,
+                    sx(u.x + EndlessBosses.AURA_RANGE), groundY + 4f * k, fill)
+            }
+            fill.color = col(Ui.OUTLINE)
+            rect.set(x - 38f * k * def.size, groundY - 11f * k,
+                x + 38f * k * def.size, groundY + 8f * k)
+            c.drawOval(rect, fill)
+            fill.color = col(ring)
+            rect.inset(3f * k, 3f * k)
+            c.drawOval(rect, fill)
+            if (u.bossSecondaryKind != EndlessBosses.NONE) {
+                line.color = col(bossColors[u.bossSecondaryKind]); line.strokeWidth = 2.5f * k
+                rect.inset(-7f * k, -3f * k)
+                c.drawOval(rect, line)
+            }
+        }
         if (g.quality.shadows) {
             fill.color = col(Color.argb(70, 0, 0, 0))
-            val sw = shadowW(def) * k * def.size
+            val sw = shadowW(def) * k * def.size * bossScale
             rect.set(x - sw, groundY - 3.5f * k, x + sw, groundY + 3.5f * k)
             c.drawOval(rect, fill)
         }
         c.save()
         c.translate(x, groundY)
-        val sc = k * def.size
+        val sc = k * def.size * bossScale
         c.scale(sc * s.dir, sc)
         if (u.dying >= 0f) c.rotate(-min(80f, u.dying * 200f))
         val team = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
@@ -440,10 +469,19 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawBody(def, team, walk, atk, u.tier)
         pen.flash = false
         c.restore()
-        // pasek HP, gdy ranny
-        if (u.dying < 0f && u.hp < u.maxHp) {
-            val bw = 36f * k * def.size
-            val top = groundY - unitHeight(def) * k * def.size - 12f * k
+        if (u.isBoss && u.dying < 0f) {
+            val top = groundY - unitHeight(def) * k * def.size * bossScale - 35f * k
+            val second = u.bossSecondaryKind
+            val shift = if (second != EndlessBosses.NONE) 13f * k else 0f
+            Icons.draw(c, bossIcons[u.bossKind], x - shift, top, 22f * k,
+                bossColors[u.bossKind], dp = g.ui.dp)
+            if (second != EndlessBosses.NONE) Icons.draw(c, bossIcons[second], x + shift, top,
+                22f * k, bossColors[second], dp = g.ui.dp)
+        }
+        // pasek HP, gdy ranny; bossa pokazujemy zawsze.
+        if (u.dying < 0f && (u.hp < u.maxHp || u.isBoss)) {
+            val bw = 36f * k * def.size * bossScale
+            val top = groundY - unitHeight(def) * k * def.size * bossScale - 12f * k
             val bh = 4.5f * k
             fill.color = Color.argb(200, 20, 18, 24)
             c.drawRect(x - bw / 2 - k, top - k, x + bw / 2 + k, top + bh + k, fill)
