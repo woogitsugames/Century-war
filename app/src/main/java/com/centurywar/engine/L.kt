@@ -241,5 +241,37 @@ object L {
         "r_elite_d" to ("Odblokowuje jednostki elitarne" to "Unlocks elite units"),
         "r_rally" to ("Okrzyk bojowy" to "War Cry"),
         "r_rally_d" to ("Odblokowuje Zryw (+40% tempa)" to "Unlocks Rally (+40% tempo)"),
+
+        // ================================================================
+        // --- samouczek interaktywny (screens/TutorialOverlay.kt)
+        // Blok dopisany na końcu tabeli celowo: format "klucz" to ("pl" to "en").
+        // ================================================================
+        "tut_step" to ("Samouczek %d/%d" to "Tutorial %d/%d"),
+        "tut_skip" to ("Pomiń samouczek" to "Skip tutorial"),
+        "tut_next" to ("Dalej" to "Next"),
+        "tut_go" to ("Do boju!" to "To battle!"),
+        "tut_melee_t" to ("Wyszkol pałkarza" to "Train a Clubman"),
+        "tut_melee" to ("Dotknij podświetlonego przycisku. Jednostka kosztuje złoto i po chwili rusza na wroga. Bitwa na ciebie poczeka." to "Tap the highlighted button. Units cost gold and march on the enemy once trained. The battle will wait for you."),
+        "tut_income_t" to ("Złoto i teren" to "Gold and territory"),
+        "tut_income" to ("Złoto wpływa samo. Im dalej twoje wojsko odepchnie wroga, tym więcej terenu kontrolujesz i tym szybciej rośnie przychód." to "Gold flows in by itself. The further your army pushes the enemy back, the more territory you hold and the faster your income grows."),
+        "tut_ranged_t" to ("Wsparcie z dystansu" to "Ranged support"),
+        "tut_ranged" to ("Wyszkol procarza. Strzela zza pleców pałkarzy: piechota z przodu, strzelcy z tyłu to najlepszy oddział." to "Train a Slinger. It shoots from behind your Clubmen: melee in front, ranged behind is the best squad."),
+        "tut_kill_t" to ("Pierwszy pokonany wróg!" to "First enemy down!"),
+        "tut_kill" to ("Za każdego pokonanego wroga dostajesz złoto i doświadczenie (XP). XP wypełnia ten pasek i powoli rośnie też z czasem." to "Every enemy you defeat gives you gold and experience (XP). XP fills this bar and also grows slowly over time."),
+        "tut_evolve_t" to ("Nowa epoka" to "A new era"),
+        "tut_evolve_wait" to ("Pasek XP jest prawie pełny. Gdy się zapełni, przycisk Awans zaświeci się na złoto." to "The XP bar is almost full. When it fills up, the Evolve button lights up gold."),
+        "tut_evolve" to ("Naciśnij Awans! Wejdziesz w kolejną epokę: silniejsze jednostki, wieże i mocniejsza baza." to "Press Evolve! You enter the next era: stronger units, turrets and a tougher base."),
+        "tut_doctrine_t" to ("Wybierz doktrynę" to "Pick a doctrine"),
+        "tut_doctrine" to ("Każdy awans daje wybór jednej z trzech doktryn: stałej premii do końca bitwy. Wybierz tę, która pasuje do twojego stylu." to "Every new era lets you pick one of three doctrines: a permanent bonus for the rest of the battle. Choose the one that fits your style."),
+        "tut_turret_t" to ("Wieże obronne" to "Defense turrets"),
+        "tut_turret_open" to ("Otwórz panel wież. Wieża stoi przy bazie i sama ostrzeliwuje wrogów, którzy podejdą za blisko." to "Open the turret panel. Turrets stand by your base and shoot any enemy that comes too close."),
+        "tut_turret_buy" to ("Kup pierwszą wieżę w wolnym slocie. Po awansie epoki możesz ją ulepszyć." to "Buy your first turret in a free slot. After a new era you can upgrade it."),
+        "tut_barrage_t" to ("Ostrzał!" to "Barrage!"),
+        "tut_barrage" to ("Wrogowie zbili się w grupę. Użyj ostrzału: pociski spadną na pole przed twoją bazą. Potem zdolność musi się odnowić." to "The enemies are bunched up. Use the barrage: projectiles rain on the field in front of your base. Then the ability needs to recharge."),
+        "tut_camera_t" to ("Rozejrzyj się" to "Look around"),
+        "tut_camera" to ("Przeciągnij palcem po polu bitwy, aby przesunąć widok, albo dotknij minimapy, aby skoczyć w wybrane miejsce." to "Drag across the battlefield to move the camera, or tap the minimap to jump to any spot."),
+        "tut_done_t" to ("Gotowe, dowódco!" to "Well done, commander!"),
+        "tut_done" to ("Znasz podstawy. Zniszcz wrogą bazę po prawej stronie, zanim wróg zniszczy twoją." to "You know the basics. Destroy the enemy base on the right before the enemy destroys yours."),
+        // --- koniec bloku samouczka
     )
 }

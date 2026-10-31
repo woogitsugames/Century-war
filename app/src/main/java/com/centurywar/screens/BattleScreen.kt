@@ -36,7 +36,6 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     private var showTurrets = false
     private var finished = false
     private var resultTime = 0f
-    private var tutorial = if (!g.profile.tutorialDone && cfg.mode == Mode.CAMPAIGN) 0f else -1f
 
     // wynik
     private var reward = 0
@@ -82,6 +81,9 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     private val topBar = RectF()
     private val mini = RectF()
+    private val goldRect = RectF()
+    private val xpRect = RectF()
+    private val fieldRect = RectF()
     private val panel = RectF()
     private var hudH = 0f
     private var topH = 0f
@@ -95,6 +97,19 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             }
         }
         r.camX = -120f
+    }
+
+    /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
+    private val tut: TutorialOverlay? =
+        if (cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, TutorialOverlay.Targets(
+            unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
+            arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
+            goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
+        )) else null
+
+    init {
+        // przyciski samouczka na początku listy: mają pierwszeństwo przed HUD pod spodem
+        tut?.let { buttons.add(0, it.nextBtn); buttons.add(0, it.skipBtn) }
     }
 
     override fun layout() {
@@ -119,6 +134,9 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         pauseBtn.set(rr - 46 * dp, t, 46 * dp, 40 * dp)
         mini.set(evolveBtn.r.right + 16 * dp, t + 13 * dp, pauseBtn.r.left - 112 * dp, t + 29 * dp)
         if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
+        goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
+        xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
+        fieldRect.set(0f, topH + g.insetT, w, h - hudH)
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
@@ -167,10 +185,11 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     override fun update(dt: Float) {
         frameDt = dt
-        if (tutorial >= 0f) tutorial += dt
+        val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
+            tut?.update(dt)
             if (battle.pendingChoice == null) {
-                acc += dt * speed
+                acc += dt * speed * tutScale
                 var steps = 0
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
                 if (steps == 20) acc = 0f
@@ -315,7 +334,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     private val costCache = IntArray(5) { -1 }
     private val costText = Array(5) { "" }
     private var armoryLv = -1
-    private val speedLabels = arrayOf("", "×1", "×2", "×3")
+    private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
 
     private fun costStr(slot: Int, v: Int): String {
         if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
@@ -325,6 +344,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     override fun onClick(b: Button) {
         val p = battle.player
+        val t = tut
+        if (t != null && (t.onClick(b) || !t.allows(b))) return
         when (b.id) {
             in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, Role.values()[b.id - UNIT0])
             TURRET -> showTurrets = !showTurrets
@@ -349,7 +370,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         }
     }
 
-    private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex)
+    private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex,
+        tutorial && !g.profile.tutorialDone)
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -361,16 +383,17 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         r.camX -= dx / r.k
         r.clampCam()
         manualCam = 4f
+        tut?.onCamera()
     }
 
     override fun onTap(x: Float, y: Float) {
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
             r.camX = (x - mini.left) / mini.width() * Defs.LANE - r.worldVisible / 2
             r.clampCam(); manualCam = 5f
+            tut?.onCamera()
             return
         }
         if (showTurrets && !panel.contains(x, y)) showTurrets = false
-        if (tutorial in 0f..60f) tutorial = 61f
     }
 
     override fun onBack(): Boolean {
@@ -443,7 +466,6 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     private val pausePanel = RectF()
     private val resultPanel = RectF()
-    private val tutRect = RectF()
     private val tmpR = RectF()
     private val actionBtns get() = actionArr
     private val actionArr = arrayOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)
@@ -469,7 +491,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     }
 
     override fun render(c: Canvas) {
-        r.render(c, if (paused || battle.pendingChoice != null) 0f else frameDt * speed, w, h)
+        r.render(c, if (paused || battle.pendingChoice != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
@@ -478,8 +500,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
         if (showTurrets && battle.pendingChoice == null && !paused && !finished) drawTurretPanel(c)
-        if (tutorial in 0f..60f) drawTutorial(c)
         if (battle.pendingChoice != null && !finished) drawDoctrines(c)
+        if (!finished) tut?.draw(c)
         if (paused && !finished) {
             c.drawColor(Color.argb(150, 0, 0, 0))
             ui.panel(c, pausePanel)
@@ -659,16 +681,6 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             ui.textO(c, name, tmpR.centerX(), my + mr + 26 * dp, ui.fit(name, 19f, tmpR.width() - 24 * dp), Ui.GOLD, Paint.Align.CENTER)
             ui.wrap(c, L[ch[i].key + "_d"], tmpR.centerX(), my + mr + 48 * dp, tmpR.width() - 28 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
         }
-    }
-
-    private fun drawTutorial(c: Canvas) {
-        val key = when { tutorial < 12f -> "tut_1"; tutorial < 30f -> "tut_2"; else -> "tut_3" }
-        val s = L[key]
-        val tw = ui.measure(s, 15f, true) + 40 * dp
-        val y = topH + g.insetT + 22 * dp
-        tutRect.set(w / 2 - tw / 2, y, w / 2 + tw / 2, y + 40 * dp)
-        ui.card(c, tutRect, Color.argb(240, 70, 50, 20), 12f, Ui.GOLD)
-        ui.textO(c, s, w / 2, y + 25 * dp, 15f, Ui.GOLD, Paint.Align.CENTER)
     }
 
     private fun drawResults(c: Canvas) {
