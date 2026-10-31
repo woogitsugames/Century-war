@@ -21,6 +21,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val back = btn(-1)
     private val rename = btn(-2)
     private val achievementsButton = btn(101)
+    private val replayListButton = btn(102)
     private val global = btn(-3)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
@@ -59,6 +60,9 @@ class RankingsScreen(g: Game) : Screen(g) {
         achievementsButton.iconId = Icons.MEDAL
         val aw = min(178 * dp, pw * 0.48f)
         achievementsButton.set(panel.right - aw - 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
+        replayListButton.label = L["replay_list"]
+        replayListButton.iconId = Icons.PLAY
+        replayListButton.set(panel.left + 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
         global.visible = g.online.available
         if (global.visible) {
             global.label = L["global_ranking"]
@@ -82,6 +86,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         for (b in tabs) ui.button(c, b, 13f)
         ui.button(c, back, 16f); ui.button(c, rename, 14f)
         ui.button(c, achievementsButton, 13f)
+        ui.button(c, replayListButton, 13f)
         if (global.visible) ui.button(c, global, 14f)
         chrome.title(c, L["rankings"])
         val list = g.profile.top(board(tab))
@@ -117,7 +122,9 @@ class RankingsScreen(g: Game) : Screen(g) {
             val col = if (i == 0) Ui.GOLD else if (me) Ui.XP else Ui.TEXT
             if (me) Icons.draw(c, Icons.HELMET, l + 52 * dp, cy, 20 * dp, dp = dp)
             ui.textO(c, e.name, l + (if (me) 68 else 48) * dp, cy + 5 * dp, 15f, col, Paint.Align.LEFT, 1.8f)
-            ui.textO(c, e.score.toString(), r - 12 * dp, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
+            if (e.replay != null) Icons.draw(c, Icons.PLAY, r - 15 * dp, cy, 17 * dp, Ui.GOLD, dp = dp)
+            ui.textO(c, e.score.toString(), r - (if (e.replay != null) 33 else 12) * dp,
+                cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
         val pr = g.profile
@@ -137,10 +144,19 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.text(c, L[onlineStatus], panel.centerX(), panel.bottom - 13 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
     }
 
+    override fun onTap(x: Float, y: Float) {
+        if (x < panel.left || x > panel.right) return
+        val index = ((y - (panel.top + 54 * dp)) / (34 * dp)).toInt()
+        if (y < panel.top + 54 * dp || y >= panel.top + 54 * dp + 34 * dp * (index + 1)) return
+        val id = g.profile.top(board(tab)).getOrNull(index)?.replay ?: return
+        g.push(ReplayScreen(g, id))
+    }
+
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()
             101 -> g.push(AchievementsScreen(g))
+            102 -> g.push(ReplayListScreen(g))
             -3 -> if (g.online.available) g.online.showUi(board(tab))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
             in 0..3 -> tab = b.id
