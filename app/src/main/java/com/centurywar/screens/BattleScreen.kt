@@ -25,6 +25,7 @@ import com.centurywar.game.Doctrine
 import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
+import com.centurywar.game.Weekly
 import com.centurywar.game.Role
 import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
@@ -65,6 +66,7 @@ class BattleScreen(
     private var reward = 0
     private var newRecord = false
     private var tipKey = ""
+    private var weeklyResultLabel = ""
 
     private companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
@@ -491,12 +493,16 @@ class BattleScreen(
         }
     }
 
-    private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex,
-        tutorial && !g.profile.tutorialDone)
+    private fun BattleConfig.copyWithSeed() = BattleConfig(
+        mode, if (mode == Mode.DAILY || weekly >= 0L) seed else seed + 1, aiPower,
+        startEra, maxEra, modifiers, playerBonuses, stageIndex,
+        tutorial && !g.profile.tutorialDone, aiPersonality, weekly, weeklyCard,
+    )
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
-        Mode.ENDLESS, Mode.DAILY, Mode.SKIRMISH -> ModeScreen(g, cfg.mode)
+        Mode.ENDLESS -> if (cfg.weekly >= 0L) ModeScreen(g, Mode.DAILY, true) else ModeScreen(g, Mode.ENDLESS)
+        Mode.DAILY, Mode.SKIRMISH -> ModeScreen(g, cfg.mode)
     }
 
     override fun onDrag(dx: Float, dy: Float) {
@@ -578,10 +584,25 @@ class BattleScreen(
                 }
             }
             Mode.ENDLESS -> {
-                reward = battle.wave * 3 + battle.player.kills / 10
-                if (battle.wave > pr.bestWave) pr.bestWave = battle.wave
-                newRecord = pr.submit(Profile.BOARD_ENDLESS, score, day)
-                g.online.submit(Profile.BOARD_ENDLESS, score)
+                if (cfg.weekly >= 0L) {
+                    val currentWeek = Weekly.currentWeek()
+                    // Tydzień wyniku pochodzi z konfiguracji, nie z chwili zakończenia.
+                    val bonus = pr.claimWeekly(cfg.weekly, battle.wave, currentWeek)
+                    reward = (battle.wave * 3 + battle.player.kills / 10) / 2 + bonus
+                    newRecord = pr.submit(Profile.weeklyBoard(cfg.weekly), score, day)
+                    pr.syncWeekly(currentWeek)
+                    weeklyResultLabel = L[when {
+                        battle.wave >= Weekly.threshold(2) -> "weekly_gold"
+                        battle.wave >= Weekly.threshold(1) -> "weekly_silver"
+                        battle.wave >= Weekly.threshold(0) -> "weekly_bronze"
+                        else -> "weekly_no_tier"
+                    }]
+                } else {
+                    reward = battle.wave * 3 + battle.player.kills / 10
+                    if (battle.wave > pr.bestWave) pr.bestWave = battle.wave
+                    newRecord = pr.submit(Profile.BOARD_ENDLESS, score, day)
+                    g.online.submit(Profile.BOARD_ENDLESS, score)
+                }
             }
             Mode.DAILY -> {
                 if (rankedDaily) {
@@ -963,6 +984,7 @@ class BattleScreen(
         c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
         val won = battle.winner == 0
         val title = when {
+            cfg.weekly >= 0L -> L["weekly_over"]
             cfg.mode == Mode.ENDLESS -> L["siege_over"]
             won -> L["victory"]
             else -> L["defeat"]
@@ -1004,6 +1026,7 @@ class BattleScreen(
         if (cfg.mode == Mode.ENDLESS) {
             row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
             row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
+            if (cfg.weekly >= 0L) row(Icons.MEDAL, L["weekly_tiers"], weeklyResultLabel, Ui.GOLD)
         }
         if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
         row(Icons.MEDAL, L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
