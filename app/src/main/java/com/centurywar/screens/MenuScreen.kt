@@ -147,10 +147,10 @@ class MenuScreen(g: Game) : Screen(g) {
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
         // Podpisy budujemy tylko po zmianie wartości (bez nowych Stringów w każdej klatce).
-        val key = (pr.medals.toLong() shl 32) xor (pr.totalStars().toLong() shl 20) xor pr.bestWave.toLong() xor (if (L.polish) 1L shl 62 else 0L)
+        val key = (pr.medals.toLong() shl 32) xor (pr.totalStars().toLong() shl 20) xor pr.bestWave.toLong() xor (L.lang.toLong() shl 56)
         if (key != subKey || research.sub.isEmpty()) {
             subKey = key
-            research.sub = "${pr.medals} ${L["medals"]}"
+            research.sub = L.plural("medals_n", pr.medals.toLong())
             campaign.sub = "${pr.totalStars()}/${pr.stars.size * 3}"
             endless.sub = if (pr.bestWave > 0) "${L["best"]}: ${pr.bestWave}" else ""
         }

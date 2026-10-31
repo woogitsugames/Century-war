@@ -79,7 +79,8 @@ class MissionsScreen(g: Game) : Screen(g) {
             claimButtons[i].highlight = item.completed && !item.claimed
         }
         streakText = L.f("ms_login_day", missions.state.loginStreak)
-        loginText = L.f("ms_login_paid", missions.state.loginRewardToday)
+        loginText = L.f("ms_login_paid",
+            L.plural("medals_n", missions.state.loginRewardToday.toLong()))
         place()
     }
 
