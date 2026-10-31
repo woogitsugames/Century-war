@@ -1,5 +1,7 @@
 # Przekazanie pracy: Century War (stan na 31.10.2026)
 
+> **Aktualne przekazanie: [docs/Century-war.md](Century-war.md)** (31.10.2026, wieczór). Poniższa treść jest historyczna.
+
 ## Prompt dla nowej sesji (skopiuj w całości)
 
 > Przejmujesz rolę koordynatora projektu **Century War**, oryginalnej strategii na Androida (Kotlin, SDK 36, minSdk 26, bez bibliotek, grafika rysowana kodem na Canvas). Repo: `woogitsugames/century-war`. Główna gałąź robocza: **`claude/bold-sagan-vwz5gm`**: na niej pracujesz i do niej scalasz. Push na inne gałęzie tylko za zgodą użytkownika.
