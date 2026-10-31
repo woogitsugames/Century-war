@@ -8,14 +8,15 @@ import com.centurywar.game.Defs
 import com.centurywar.game.EraArt
 import com.centurywar.game.FxBuffer
 import com.centurywar.game.Proj
+import com.centurywar.game.Role
 import kotlin.math.min
 
 /** Wspólne mapowanie zdarzeń bitwy na dźwięki epok dla rozgrywki i powtórki. */
 object BattleSfx {
     /** Ładowanie odpowiednich wariantów wyłącznie w wątku Sound, bez I/O gry. */
-    fun prepareEra(g: Game, era: Int) {
+    fun prepareEra(g: Game, era: Int, variant: Int = -1) {
         val sound = g.sound ?: return
-        val style = Defs.specs[era].art
+        val style = Defs.sideArt(era, variant)
         sound.prewarm(hitSound(style))
         sound.prewarm(barrageSound(style))
         sound.prewarm(evolveSound(style))
@@ -25,10 +26,11 @@ object BattleSfx {
         sound.prewarm(Sound.EXPLOSION)
         sound.prewarm(Sound.THUMP)
         sound.prewarm(Sound.BOSS)
-        for (unit in Defs.eras[era].units) {
+        for (role in Role.entries) {
+            val unit = Defs.unit(era, role, variant)
             if (unit.projectile != Proj.NONE) sound.prewarm(shotSound(unit.projectile, style, false))
         }
-        sound.prewarm(shotSound(Defs.eras[era].turret.projectile, style, true))
+        sound.prewarm(shotSound(Defs.turret(era, variant).projectile, style, true))
     }
 
     /** Styl bierze się z definicji epoki, a nie z numeru tekstury lub muzyki. */

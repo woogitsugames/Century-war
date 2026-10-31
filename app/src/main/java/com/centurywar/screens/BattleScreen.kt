@@ -78,6 +78,8 @@ class BattleScreen(
     private var aimMoved = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
+    private var preparedPlayerVariant = -2
+    private var preparedEnemyVariant = -2
     private var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
@@ -171,6 +173,13 @@ class BattleScreen(
     private var topH = 0f
 
     init {
+        // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.
+        BattleSfx.prepareEra(g, battle.player.era, battle.player.eraVariant)
+        BattleSfx.prepareEra(g, battle.enemy.era, battle.enemy.eraVariant)
+        preparedPlayerEra = battle.player.era
+        preparedEnemyEra = battle.enemy.era
+        preparedPlayerVariant = battle.player.eraVariant
+        preparedEnemyVariant = battle.enemy.eraVariant
         for (i in 0..3) {
             val role = roles[i]
             unitBtn[i].icon = { c, rr ->
@@ -349,13 +358,15 @@ class BattleScreen(
         }
         if (paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
         // Przy zmianie epoki zamawiamy nowe próbki przed pierwszym ostrzałem.
-        if (preparedPlayerEra != battle.player.era) {
-            BattleSfx.prepareEra(g, battle.player.era)
+        if (preparedPlayerEra != battle.player.era || preparedPlayerVariant != battle.player.eraVariant) {
+            BattleSfx.prepareEra(g, battle.player.era, battle.player.eraVariant)
             preparedPlayerEra = battle.player.era
+            preparedPlayerVariant = battle.player.eraVariant
         }
-        if (preparedEnemyEra != battle.enemy.era) {
-            BattleSfx.prepareEra(g, battle.enemy.era)
+        if (preparedEnemyEra != battle.enemy.era || preparedEnemyVariant != battle.enemy.eraVariant) {
+            BattleSfx.prepareEra(g, battle.enemy.era, battle.enemy.eraVariant)
             preparedEnemyEra = battle.enemy.era
+            preparedEnemyVariant = battle.enemy.eraVariant
         }
         // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
         val music = g.music
@@ -613,7 +624,12 @@ class BattleScreen(
                     g.sfx(id, 0.48f, 0)
                 } else commands.doctrine(b.id - DOCTRINE0)
             }
-            in VARIANT0..VARIANT0 + 1 -> if (commands.variant(b.id - VARIANT0)) g.haptic(40)
+            in VARIANT0..VARIANT0 + 1 -> if (commands.variant(b.id - VARIANT0)) {
+                g.haptic(40)
+                BattleSfx.prepareEra(g, p.era, p.eraVariant)
+                preparedPlayerEra = p.era
+                preparedPlayerVariant = p.eraVariant
+            }
             in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
                 val i = b.id - SLOT_BUY0
                 if (p.turretEra[i] < 0) commands.buyTurret(i) else commands.upgradeTurret(i)
