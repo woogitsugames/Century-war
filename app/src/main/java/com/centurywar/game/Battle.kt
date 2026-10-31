@@ -582,17 +582,17 @@ class Battle(val cfg: BattleConfig) {
                 if (def.projectile == Proj.NONE) {
                     if (def.splash > 0f) {
                         val cx = if (target != null) target.x else e.baseFront
-                        splashDamage(u.side, cx, def.splash, u.dmg, def.siegeMul, def.era)
+                        splashDamage(u.side, cx, def.splash, u.dmg, def.siegeMul * s.siegeMul, def.era)
                     } else if (target != null) {
                         damageUnit(target, u.dmg, u.side)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx)
                     } else {
-                        damageBase(e, u.dmg * def.siegeMul, u.side)
+                        damageBase(e, u.dmg * def.siegeMul * s.siegeMul, u.side)
                     }
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul, def.era)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul * s.siegeMul, def.era)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
                 }
             }
