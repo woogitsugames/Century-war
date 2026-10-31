@@ -2,6 +2,8 @@ package com.centurywar.game.art
 
 import android.graphics.Canvas
 import com.centurywar.game.Weapon
+import com.centurywar.game.Defs
+import com.centurywar.game.EraArt
 import com.centurywar.game.art.Pen.Companion.dark
 import com.centurywar.game.art.Pen.Companion.light
 import kotlin.math.cos
@@ -9,7 +11,7 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * Piechota wszystkich 8 epok: anatomia (uda, golenie, buty, zwężony tułów, ręce z dłońmi,
+ * Piechota we wszystkich epokach: anatomia (uda, golenie, buty, zwężony tułów, ręce z dłońmi,
  * głowa z okiem, brwią, ustami i uchem), dwutonowe cieniowanie oraz nakrycia głowy,
  * pancerze i broń charakterystyczne dla epoki. Barwa drużyny zawsze dominuje (tunika/płaszcz).
  *
@@ -18,6 +20,7 @@ import kotlin.math.sin
 class Soldiers(private val p: Pen) {
 
     private val cv: Canvas get() = p.cv
+    private var ironStyle = false
 
     // Paleta epok
     private val skin = intArrayOf(0xFFC48A5E.toInt(), 0xFFD49C6C.toInt(), 0xFFE8B990.toInt(), 0xFFEBC09A.toInt(), 0xFFE2B088.toInt(), 0xFFE0AE84.toInt(), 0xFFDCA67C.toInt(), 0xFFE0B088.toInt())
@@ -67,7 +70,10 @@ class Soldiers(private val p: Pen) {
      * @param walk faza chodu (0 = stoi), @param atk 1..0 animacja ataku,
      * @param mounted jeździec (nogi zgięte w siodle), @param heavy osiłek epoki plemion.
      */
-    fun draw(era: Int, ranged: Boolean, weapon: Int, team: Int, walk: Float, atk: Float, mounted: Boolean, heavy: Boolean) {
+    fun draw(epoch: Int, ranged: Boolean, weapon: Int, team: Int, walk: Float, atk: Float, mounted: Boolean, heavy: Boolean) {
+        // Styl postaci jest niezależny od miejsca epoki na osi historii.
+        val era = Defs.artPreset(epoch)
+        ironStyle = Defs.spec(epoch).art == EraArt.IRON
         val sk = skin[era]
         val teamD = dark(team, 0.28f)
         val sleeve = when (era) { 0, 1 -> sk; 2 -> MAIL; 7 -> ARMOR; else -> team }
@@ -116,13 +122,16 @@ class Soldiers(private val p: Pen) {
 
         // ---- tułów
         torso(era, team, teamD, heavy)
+        if (ironStyle) ironArmor(team, teamD)
 
         // ---- głowa
         head(era, ranged, heavy, sk)
+        if (ironStyle) ironHelmet(team)
 
         // ---- tarcza (przed tułowiem, za przednią ręką)
         if (!ranged && !mounted && weapon == Weapon.SPEAR && era == 1) aspis(team)
-        if (!ranged && !mounted && weapon == Weapon.SWORD && era == 2) kite(team)
+        if (!ranged && !mounted && weapon == Weapon.SWORD && era == 2 && !ironStyle) kite(team)
+        if (!ranged && !mounted && ironStyle) ironShield(team)
 
         // ---- przednia ręka z bronią
         cv.save()
@@ -144,6 +153,30 @@ class Soldiers(private val p: Pen) {
             p.circle(hx, hy, if (heavy) 2.9f else 2.4f, hand)
         }
         cv.restore()
+    }
+
+    /** Drobne detale pancerza i prostokątna tarcza Epoki żelaza. */
+    private fun ironArmor(team: Int, teamD: Int) {
+        p.rect(-7f, -48f, 7f, -33f, 0xFF90969A.toInt())
+        if (p.hi) for (i in 0..3) p.segF(-6f, -46f + i * 3.5f, 6f, -46f + i * 3.5f, 0.75f, 0xFF545C62.toInt())
+        p.rect(-7f, -49f, 7f, -45f, team)
+        p.rect(-7f, -34f, 7f, -30f, teamD)
+        if (p.hi) p.circle(1f, -31f, 2f, 0xFFDBD2AA.toInt())
+    }
+
+    private fun ironHelmet(team: Int) {
+        p.rr(-7.5f, -69f, 9.5f, -58f, 3f, 0xFF959DA2.toInt())
+        p.seg(-9f, -61f, 11f, -61f, 2.2f, 0xFF545B60.toInt())
+        p.seg(8.5f, -61f, 9f, -55f, 1.6f, 0xFFDCE1E2.toInt())
+        if (p.hi) { p.segF(-4f, -68f, 6f, -68f, 1.3f, 0xFFE7E7D8.toInt()); p.rectF(-5f, -70f, 6f, -68f, team) }
+    }
+
+    private fun ironShield(team: Int) {
+        p.rr(-19f, -53f, -8f, -19f, 3f, team)
+        p.rr(-16.5f, -50f, -10.5f, -22f, 1.8f, dark(team, 0.15f))
+        p.seg(-18f, -50f, -18f, -22f, 1.4f, 0xFFD4D4C8.toInt())
+        p.seg(-10f, -50f, -10f, -22f, 1.4f, 0xFFD4D4C8.toInt())
+        p.circle(-13.5f, -36f, 3.6f, 0xFFCDD2D2.toInt())
     }
 
     private fun deg(rad: Float) = rad * 57.29578f
