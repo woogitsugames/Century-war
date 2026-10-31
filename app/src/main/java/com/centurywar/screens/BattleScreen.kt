@@ -673,7 +673,7 @@ class BattleScreen(
                 ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
             } else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         }
-        if (battle.endless) {
+        if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
             val boss = battle.currentBoss()
             if (boss != null) {
                 val bw = min(260 * dp, w - g.insetL - g.insetR - 30 * dp)
