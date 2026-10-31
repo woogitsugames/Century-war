@@ -181,8 +181,8 @@ class BalanceReport {
         for (r in stats) {
             val s = r.stage
             val mods = s.modifiers.joinToString("+") { it.name }
-            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower)},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)}\n")
-            md.append("| ${s.index + 1} | ${r.profile} | ${fmt(s.aiPower)} | ${s.startEra}–${s.maxEra} | ${fmt(r.winPct)}% | ${fmt(r.medianMinutes)} | ${fmt(r.timeoutPct)}% | ${fmt(r.avgEra)} |\n")
+            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower.toDouble())},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)}\n")
+            md.append("| ${s.index + 1} | ${r.profile} | ${fmt(s.aiPower.toDouble())} | ${s.startEra}–${s.maxEra} | ${fmt(r.winPct)}% | ${fmt(r.medianMinutes)} | ${fmt(r.timeoutPct)}% | ${fmt(r.avgEra)} |\n")
         }
         File(dir, "report.csv").writeText(csv.toString())
         File(dir, "report.md").writeText(md.toString())
