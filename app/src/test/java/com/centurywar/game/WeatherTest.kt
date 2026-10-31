@@ -88,16 +88,16 @@ class WeatherTest {
     }
 
     @Test fun historicalDailyDrawsAreUnchanged() {
-        for (day in longArrayOf(19000L, 20000L, 20757L, Daily.WEATHER_DAY - 2, Daily.WEATHER_DAY - 1)) {
+        for (day in longArrayOf(19000L, 20000L, 20757L, Daily.RELEASE_DAY - 2, Daily.RELEASE_DAY - 1)) {
             val rng = Rng(day * 7919L + 17L)
             val mods = HashSet<Modifier>()
             val values = Modifier.values()
             val count = 2 + rng.nextInt(2)
             while (mods.size < count) mods.add(values[rng.nextInt(values.size)])
-            val rolledStart = if (day < Daily.ERA_EXPANSION_DAY) rng.nextInt(3) else rng.nextInt(6)
-            val start = if (day < Daily.ERA_EXPANSION_DAY && rolledStart >= 2) rolledStart + 1 else rolledStart
-            val rolledMax = if (day < Daily.ERA_EXPANSION_DAY) minOf(7, rolledStart + 3) else minOf(Defs.ERA_COUNT - 1, rolledStart + 3)
-            val maxEra = if (day < Daily.ERA_EXPANSION_DAY && rolledMax >= 2) rolledMax + 1 else rolledMax
+            val rolledStart = if (day < Daily.RELEASE_DAY) rng.nextInt(3) else rng.nextInt(6)
+            val start = if (day < Daily.RELEASE_DAY && rolledStart >= 2) rolledStart + 1 else rolledStart
+            val rolledMax = if (day < Daily.RELEASE_DAY) minOf(7, rolledStart + 3) else minOf(Defs.ERA_COUNT - 1, rolledStart + 3)
+            val maxEra = if (day < Daily.RELEASE_DAY && rolledMax >= 2) rolledMax + 1 else rolledMax
             val aiPower = 1.1f + rng.nextFloat() * 0.25f
             val actual = Daily.config(day, Bonuses())
             assertEquals(Weather.CLEAR, actual.weather)
@@ -106,8 +106,8 @@ class WeatherTest {
             assertEquals(maxEra, actual.maxEra)
             assertEquals(aiPower, actual.aiPower, 0f)
         }
-        val future = Daily.config(Daily.WEATHER_DAY + 3, Bonuses())
-        assertEquals(future.weather, Daily.config(Daily.WEATHER_DAY + 3, Bonuses()).weather)
+        val future = Daily.config(Daily.RELEASE_DAY + 3, Bonuses())
+        assertEquals(future.weather, Daily.config(Daily.RELEASE_DAY + 3, Bonuses()).weather)
     }
 
     @Test fun clearDefaultHasIdenticalStateToExplicitClear() {
