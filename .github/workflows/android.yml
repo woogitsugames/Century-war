@@ -72,6 +72,7 @@ jobs:
             --tests '*ScoreClientTest*' \
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
+            --tests '*CrashReportsTest*' \
             --tests '*SoundSynthTest*' \
             --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \
