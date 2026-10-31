@@ -103,6 +103,93 @@ class ArtGalleryTest {
         save(bmp, "gallery_animation")
     }
 
+
+    /** Przegląd wszystkich 11 typów pocisków, dwóch znaczników i czterech faz eksplozji. */
+    @Test
+    fun projectilesAndExplosions() {
+        val labels = arrayOf(
+            "STONE", "JAVELIN", "ARROW", "BOLT", "BALL", "BULLET",
+            "SHELL", "ROCKET", "PLASMA", "BEAM", "BOULDER",
+        )
+        for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {
+            val g = game(1800, 1100, q)
+            g.profile.screenShake = 0
+            val b = Battle(BattleConfig(Mode.SKIRMISH, 101L, 1f, startEra = 6))
+            val r = BattleRenderer(g, b)
+            r.layout(1800f, 1100f, 0f, 85f)
+            r.camX = 0f
+            for (type in 1..11) {
+                val p = b.projs[type - 1]
+                p.active = true
+                p.type = type
+                p.side = 0
+                p.era = if (type >= Proj.PLASMA && type <= Proj.BEAM) 8 else 6
+                p.x = 130f + (type - 1) % 4 * 260f
+                p.h = 120f + (type - 1) / 4 * 130f
+                p.vx = 580f
+                p.vh = -140f
+                p.g = 400f
+                p.t = 0.28f
+                p.dur = 1.2f
+                p.delay = 0f
+                p.siegeMul = 1f
+                p.splash = 0f
+            }
+            for (j in 0..1) {
+                val p = b.projs[11 + j]
+                p.active = true
+                p.type = Proj.SHELL
+                p.side = 0
+                p.era = 6
+                p.x = 140f + j * 260f
+                p.h = 450f
+                p.vx = 310f
+                p.vh = -950f
+                p.g = 0f
+                p.t = if (j == 0) 0.55f else 0f
+                p.dur = 0.85f
+                p.delay = if (j == 0) 0f else 0.15f
+                p.tx = 360f + j * 260f
+                p.siegeMul = 0.25f
+                p.splash = 60f
+            }
+            val image = Bitmap.createBitmap(1800, 1480, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(image)
+            r.render(canvas, 1f / 60f, 1800f, 1100f)
+            val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 23f
+                isFakeBoldText = true
+            }
+            for (i in labels.indices) {
+                val p = b.projs[i]
+                val x = (p.x - r.camX) * r.k
+                val y = r.groundY - p.h * r.k
+                canvas.drawText(labels[i], x - 45f, y + 43f, label)
+            }
+            canvas.drawText("BARRAGE: ACTIVE / DELAYED", 650f, r.groundY - 32f, label)
+            val frames = intArrayOf(1, 6, 14, 24)
+            for (i in frames.indices) {
+                val small = game(450, 380, q)
+                small.profile.screenShake = 0
+                val explosion = Battle(BattleConfig(Mode.SKIRMISH, 200L + i, 1f, startEra = 6))
+                val er = BattleRenderer(small, explosion)
+                er.layout(450f, 380f, 0f, 45f)
+                er.camX = 0f
+                val part = Bitmap.createBitmap(450, 380, Bitmap.Config.ARGB_8888)
+                val partCanvas = Canvas(part)
+                explosion.fx.add(FxBuffer.EXPLOSION, 435f, 20f, 0, 1.5f)
+                repeat(frames[i]) { er.render(partCanvas, Battle.STEP, 450f, 380f) }
+                canvas.drawBitmap(part, i * 450f, 1100f, null)
+                canvas.drawText("EXPLOSION " + (i + 1), i * 450f + 25f, 1150f, label)
+                part.recycle()
+            }
+            save(image, if (q == Quality.HIGH) "gallery_projectiles_high" else "gallery_projectiles_low")
+            if (q == Quality.HIGH) save(image, "gallery_projectiles")
+            image.recycle()
+        }
+    }
+
     @Test
     fun bases() {
         for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {
