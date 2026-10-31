@@ -347,6 +347,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         simulatedSteps = 0
         discardedSteps = 0
         val updateStart = System.nanoTime()
+        screen?.advanceTouch(dt)
         screen?.update(dt)
         refreshBackHandling()
         val renderStart = System.nanoTime()
