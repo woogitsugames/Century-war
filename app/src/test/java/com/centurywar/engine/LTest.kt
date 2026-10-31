@@ -32,6 +32,17 @@ class LTest {
         assertTrue("Brak przekładów: $missing", missing.isEmpty())
     }
 
+    /** hashMapOf po cichu nadpisuje powtórzony klucz (np. po scaleniu), więc sprawdzamy źródło. */
+    @Test
+    fun noDuplicateKeysInSource() {
+        val src = listOf("src/main/java/com/centurywar/engine/L.kt", "app/src/main/java/com/centurywar/engine/L.kt")
+            .map { java.io.File(it) }.firstOrNull { it.exists() } ?: return
+        val keys = Regex("^\\s*\"(\\w+)\" to t\\(", RegexOption.MULTILINE).findAll(src.readText()).map { it.groupValues[1] }.toList()
+        val dups = keys.groupingBy { it }.eachCount().filter { it.value > 1 }.keys
+        assertTrue("Powtórzone klucze w L.kt: $dups", dups.isEmpty())
+        assertEquals(keys.size, L.keys.size)
+    }
+
     @Test
     fun placeholdersMatchEnglish() {
         val bad = mutableListOf<String>()
