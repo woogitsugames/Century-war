@@ -9,19 +9,17 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v4
       - name: SDK 36
         run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          yes | "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" --licenses >/dev/null || true
-          "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+          echo "sdk.dir=${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > local.properties
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Kompilacja debug
         run: ./gradlew :app:assembleDebug --console=plain
       - name: Testy symulacji i odporności
