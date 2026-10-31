@@ -127,6 +127,44 @@ class MusicSynthTest {
         assertTrue(synth.duckGain > 0.80f)
     }
 
+
+    @Test fun weakerDuckNeverShortensOrReplacesActiveStrongerDuck() {
+        val duck = DuckPriority()
+        assertTrue(duck.request(0.35f, 1.5f, 1_000L))
+        assertFalse(duck.request(0.60f, 0.3f, 1_200L))
+        assertEquals(0.35f, duck.amount, 0f)
+        assertEquals(1.3f, duck.remainingSeconds(1_200L), 0.001f)
+        assertFalse(duck.request(0.80f, 3f, 1_300L))
+        assertEquals(0.35f, duck.amount, 0f)
+        assertEquals(1.2f, duck.remainingSeconds(1_300L), 0.001f)
+    }
+
+    @Test fun equalOrStrongerDucksKeepLongerHold() {
+        val duck = DuckPriority()
+        assertTrue(duck.request(0.5f, 1f, 100L))
+        assertFalse(duck.request(0.5f, 0.2f, 200L))
+        assertTrue(duck.request(0.5f, 2f, 300L))
+        assertEquals(2f, duck.remainingSeconds(300L), 0.001f)
+        assertTrue(duck.request(0.24f, 0.1f, 400L))
+        assertEquals(0.24f, duck.amount, 0f)
+        assertEquals(1.9f, duck.remainingSeconds(400L), 0.001f)
+        assertTrue(duck.request(0.65f, 0.4f, 2_300L))
+        assertEquals(0.65f, duck.amount, 0f)
+        assertEquals(0.4f, duck.remainingSeconds(2_300L), 0.001f)
+    }
+
+    @Test fun invalidAndExpiredDucksAreHandledSafely() {
+        val duck = DuckPriority()
+        assertFalse(duck.request(Float.NaN, 1f, 100L))
+        assertFalse(duck.request(0.2f, Float.POSITIVE_INFINITY, 100L))
+        assertTrue(duck.request(-5f, 30f, 100L))
+        assertEquals(0.12f, duck.amount, 0f)
+        assertEquals(12f, duck.remainingSeconds(100L), 0f)
+        assertEquals(0f, duck.remainingSeconds(12_100L), 0f)
+        assertTrue(duck.request(0.8f, 0.5f, 12_101L))
+        assertEquals(0.8f, duck.amount, 0f)
+    }
+
     @Test fun skipFadeJumpsStraightToTargetEra() {
         val synth = MusicSynth(7)
         synth.setEra(5)

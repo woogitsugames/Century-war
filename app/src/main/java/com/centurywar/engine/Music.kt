@@ -4,6 +4,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Process
+import android.os.SystemClock
 
 /**
  * Strumieniowa muzyka proceduralna; cała synteza i AudioTrack działają na własnym wątku
@@ -22,8 +23,7 @@ class Music {
     @Volatile private var era = MENU
     @Volatile private var intensity = 0f
     @Volatile private var volume = 0.5f
-    @Volatile private var duckAmount = 1f
-    @Volatile private var duckSeconds = 0f
+    private val duckPriority = DuckPriority()
     @Volatile private var duckSerial = 0
     private var foreground = false
     private var released = false
@@ -67,11 +67,10 @@ class Music {
         sync()
     }
 
-    /** Sterowanie nie dotyka AudioTrack; polecenie odbiera wątek syntezatora. */
+    /** Słabsze zdarzenie nie skraca silniejszego wyciszenia; wątek audio odbiera tylko zmianę. */
+    @Synchronized
     fun duck(amount: Float, seconds: Float) {
-        duckAmount = if (amount.isFinite()) amount.coerceIn(0.12f, 1f) else 1f
-        duckSeconds = if (seconds.isFinite()) seconds.coerceIn(0f, 12f) else 0f
-        duckSerial++
+        if (duckPriority.request(amount, seconds, SystemClock.uptimeMillis())) duckSerial++
     }
 
     val isPlaying: Boolean get() = worker != null
@@ -121,10 +120,13 @@ class Music {
             track.play()
             var seenDuckSerial = -1
             while (worker === me) {
-                val serial = duckSerial
-                if (serial != seenDuckSerial) {
-                    seenDuckSerial = serial
-                    synth.duck(duckAmount, duckSeconds)
+                if (duckSerial != seenDuckSerial) synchronized(this) {
+                    val serial = duckSerial
+                    if (serial != seenDuckSerial) {
+                        seenDuckSerial = serial
+                        val remaining = duckPriority.remainingSeconds(SystemClock.uptimeMillis())
+                        if (remaining > 0f) synth.duck(duckPriority.amount, remaining)
+                    }
                 }
                 synth.setEra(era)
                 synth.setIntensity(intensity)
