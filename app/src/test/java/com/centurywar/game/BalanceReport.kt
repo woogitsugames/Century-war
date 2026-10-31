@@ -92,7 +92,7 @@ class BalanceReport {
     private fun run(stage: Stage, bonus: Bonuses, seed: Long): Result {
         val base = Campaign.config(stage, bonus, seed)
         val battle = Battle(if (powerScale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * powerScale,
-            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality))
+            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.weather))
         battle.playerAi = Ai(battle, 0)
         val maxSteps = (30f * 60f / Battle.STEP).toInt()
         var steps = 0
