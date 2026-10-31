@@ -884,31 +884,99 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- tryb bez końca
 
     private fun director(dt: Float) {
+        val p = player
+        if (p.autoBarrageInterval > 0f) {
+            p.autoBarrageTimer -= dt
+            if (p.autoBarrageTimer <= 0f) {
+                p.autoBarrageTimer += p.autoBarrageInterval
+                fireBarrage(p)
+            }
+        }
+        spawnFreeElites()
+        if (bossPendingWave > 0) spawnPendingBoss()
+
         waveTimer -= dt
         if (waveTimer > 0f) return
         wave++
         waveTimer = max(16f, 28f - wave * 0.25f)
+        currentWaveTheme = nextWaveTheme
+        nextWaveTheme = EndlessCards.nextTheme(rng)
+
         val e = enemy
         e.era = min(cfg.maxEra, cfg.startEra + wave / 6)
         val inEra = wave % 6
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
-        e.dmgMul = 1f + inEra * 0.03f
+        e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f)
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f)
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
-            val r = rng.nextInt(100)
-            val role = when {
-                wave >= 4 && r < 10 -> Role.ELITE
-                r < 30 -> Role.HEAVY
-                r < 60 -> Role.RANGED
-                else -> Role.MELEE
-            }
+            val role = waveRole(rng.nextInt(100))
             val def = Defs.unit(e.era, role)
             e.queue[e.queueSize++] = def.id
             budget -= def.cost
             n++
         }
-        if (wave % ENDLESS_CHOICE_EVERY == 0) offerDoctrines(player)
+        if (p.repairPerWave > 0f) {
+            p.baseHp = min(p.baseMaxHp, p.baseHp + p.baseMaxHp * p.repairPerWave)
+        }
+        if (p.freeElitesPerWave > 0) {
+            p.freeEliteCredits = min(8, p.freeEliteCredits + p.freeElitesPerWave)
+            spawnFreeElites()
+        }
+        if (wave % 10 == 0) {
+            bossPendingWave = wave
+            spawnPendingBoss()
+        }
+        if (wave % ENDLESS_CHOICE_EVERY == 0) offerEndlessCards()
+
+        // Narastająca presja po bardzo długim oblężeniu uniemożliwia wieczny pat.
+        if (wave >= 85) {
+            damageBase(p, p.baseMaxHp * (wave - 84) * 0.025f, 1)
+        }
+    }
+
+    private fun waveRole(roll: Int): Role = when (currentWaveTheme) {
+        EndlessWaveTheme.MIXED -> when {
+            wave >= 4 && roll < 10 -> Role.ELITE
+            roll < 30 -> Role.HEAVY
+            roll < 60 -> Role.RANGED
+            else -> Role.MELEE
+        }
+        EndlessWaveTheme.RANGED_SWARM -> if (roll < 75) Role.RANGED else Role.MELEE
+        EndlessWaveTheme.ARMORED_COLUMN -> when {
+            wave >= 4 && roll < 20 -> Role.ELITE
+            roll < 85 -> Role.HEAVY
+            else -> Role.MELEE
+        }
+        EndlessWaveTheme.FAST_RUSH -> if (roll < 85) Role.MELEE else Role.RANGED
+        EndlessWaveTheme.ELITE_GUARD -> if (wave >= 4 && roll < 55) Role.ELITE else Role.HEAVY
+        EndlessWaveTheme.ARTILLERY -> when {
+            wave >= 4 && roll < 35 -> Role.ELITE
+            roll < 85 -> Role.RANGED
+            else -> Role.HEAVY
+        }
+    }
+
+    private fun spawnFreeElites() {
+        val p = player
+        while (p.freeEliteCredits > 0 && p.aliveCount < p.cap) {
+            if (!spawn(p, Defs.unit(p.era, Role.ELITE))) break
+            p.freeEliteCredits--
+        }
+    }
+
+    private fun spawnPendingBoss() {
+        val bossWave = bossPendingWave
+        if (bossWave == 0) return
+        val e = enemy
+        val f = spawnFighter(e, Defs.unit(e.era, Role.ELITE), 3f + bossWave / 10f * 0.45f)
+            ?: return
+        f.bossKind = if ((bossWave / 10) % 2 == 0) 2 else 1
+        f.dmg *= 1.4f + bossWave / 10f * 0.1f
+        f.bossCd = 1.5f
+        bossesSpawned++
+        bossPendingWave = 0
+        fx.add(FxBuffer.EVOLVE, f.x, 0f, e.index, 2f)
     }
 
     // ---------------------------------------------------------------- wynik
@@ -925,7 +993,7 @@ class Battle(val cfg: BattleConfig) {
 
     /** Wynik do rankingów. Liczony wyłącznie z przebiegu symulacji. */
     fun score(): Long = when (cfg.mode) {
-        Mode.ENDLESS -> wave * 250L + player.kills * 12L + (time / 2f).toLong()
+        Mode.ENDLESS -> wave * 250L + player.kills * 12L + (time / 2f).toLong() + bossesDefeated * 1500L
         else -> {
             if (winner != 0) player.killValue.toLong() / 4
             else {
