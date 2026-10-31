@@ -66,6 +66,8 @@ class MainActivity : Activity(), Host {
         game.snapshots = snapshots
         game.resumeOffer = snapshots.loadBattle()
         view = GameView(this, game)
+        if (!pendingRenderScale.isNaN()) view.setRenderScale(pendingRenderScale)
+        if (pendingFrameRate >= 0) view.setFrameRate(pendingFrameRate)
         setContentView(view)
 
         vibrator = if (Build.VERSION.SDK_INT >= 31) {
@@ -236,12 +238,17 @@ class MainActivity : Activity(), Host {
         }
     }
 
+    // Game() woła applyRenderScale w konstruktorze, zanim powstanie GameView: wtedy tylko
+    // zapamiętujemy wartość (dawniej: UninitializedPropertyAccessException i crash przy starcie).
+    private var pendingRenderScale = Float.NaN
+    private var pendingFrameRate = -1
+
     override fun applyRenderScale(scale: Float) {
-        runOnUiThread { view.setRenderScale(scale) }
+        runOnUiThread { if (::view.isInitialized) view.setRenderScale(scale) else pendingRenderScale = scale }
     }
 
     override fun applyFrameRate(fps: Int) {
-        runOnUiThread { view.setFrameRate(fps) }
+        runOnUiThread { if (::view.isInitialized) view.setFrameRate(fps) else pendingFrameRate = fps }
     }
 
     override fun exit() {
