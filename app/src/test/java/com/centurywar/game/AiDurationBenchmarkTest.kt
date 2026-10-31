@@ -8,17 +8,23 @@ class AiDurationBenchmarkTest {
     fun fixedBattleSample() {
         val configs = arrayOf(
             BattleConfig(Mode.SKIRMISH, 301L, 1.0f, 0, 0,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
             BattleConfig(Mode.SKIRMISH, 302L, 1.0f, 1, 1,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
             BattleConfig(Mode.SKIRMISH, 303L, 1.0f, 2, 2,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
             BattleConfig(Mode.SKIRMISH, 304L, 1.0f, 3, 3,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
             BattleConfig(Mode.SKIRMISH, 305L, 1.0f, 3, 4,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
             BattleConfig(Mode.SKIRMISH, 306L, 1.0f, 5, 5,
-                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START)),
+                setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.6f, unitHpMul = 0.8f)),
         )
         val maxSteps = (15f * 60f / Battle.STEP).toInt()
         for (cfg in configs) {
