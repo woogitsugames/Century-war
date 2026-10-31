@@ -31,19 +31,20 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val notifications = btn(9)
     private val notifyHour = btn(10)
     private val playGames = btn(11)
-    private val localRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, reset)
+    private val hintSettings = btn(13)
+    private val localRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, hintSettings, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, hintSettings, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = if (g.online.available) onlineRows else localRows
     private fun iconOf(b: Button) = when (b) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
-        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; else -> Icons.RESTART
+        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; hintSettings -> Icons.BOOK; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
-        else -> "play_games"
+        hintSettings -> "hint_settings"; else -> "play_games"
     }
     private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
     private var rowsPerColumn = 10
@@ -230,6 +231,7 @@ class SettingsScreen(g: Game) : Screen(g) {
                 g.host.onNotificationSettingsChanged()
             }
             11 -> { g.push(PlayGamesScreen(g)); return }
+            13 -> { g.push(HintSettingsScreen(g)); return }
         }
         p.save()
     }
