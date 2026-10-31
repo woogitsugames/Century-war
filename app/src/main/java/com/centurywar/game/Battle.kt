@@ -10,6 +10,7 @@ class Fighter {
     var active = false
     var side = 0
     var def: UnitDef = Defs.allUnits[0]
+    var tier = 1
     var x = 0f
     var hp = 0f
     var maxHp = 0f
@@ -49,6 +50,8 @@ class Side(val index: Int) {
     val dir = if (index == 0) 1f else -1f
     val baseFront = if (index == 0) Defs.BASE_FRONT else Defs.LANE - Defs.BASE_FRONT
     var era = 0
+    /** Zakupiony stopień jednostek aktualnej epoki, według ordinal Role. */
+    val unitTier = IntArray(4) { 1 }
     var gold = 0f
     var xp = 0f
     var baseHp = 0f
@@ -235,6 +238,26 @@ class Battle(val cfg: BattleConfig) {
         return true
     }
 
+    /** -1, gdy kolejny stopień nie istnieje albo rola nie jest odblokowana. */
+    fun unitUpgradeCost(side: Side, role: Role): Int {
+        if (side.unitTier[role.ordinal] >= Defs.MAX_UNIT_TIER ||
+            (role == Role.ELITE && !side.eliteUnlocked)) return -1
+        return Defs.unitUpgradeCost(side.era, role, side.unitTier[role.ordinal] + 1)
+    }
+
+    fun canUpgradeUnit(side: Side, role: Role): Boolean {
+        val cost = unitUpgradeCost(side, role)
+        return !over && cost >= 0 && side.gold >= cost
+    }
+
+    /** Zakup działa wyłącznie na jednostki szkolone od tej chwili. */
+    fun upgradeUnit(side: Side, role: Role): Boolean {
+        if (!canUpgradeUnit(side, role)) return false
+        side.gold -= unitUpgradeCost(side, role)
+        side.unitTier[role.ordinal]++
+        return true
+    }
+
     /** Anuluje ostatnią jednostkę w kolejce i zwraca całe złoto. */
     fun cancelLast(side: Side): Boolean {
         if (side.queueSize == 0) return false
@@ -252,6 +275,7 @@ class Battle(val cfg: BattleConfig) {
         side.xp -= Defs.evolveXp[side.era]
         val ratio = side.baseHp / side.baseMaxHp
         side.era++
+        side.unitTier.fill(1) // Nowa epoka wymaga nowych inwestycji; weterani pozostają na polu.
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
@@ -490,7 +514,8 @@ class Battle(val cfg: BattleConfig) {
         if (s.queueSize == 0) return
         if (s.aliveCount >= s.cap) return
         val def = Defs.allUnits[s.queue[0]]
-        s.trainT += dt * s.trainMul
+        val tier = if (def.era == s.era) s.unitTier[def.role.ordinal] else 1
+        s.trainT += dt * s.trainMul * Defs.unitTrainRate(def, tier)
         if (s.trainT >= def.trainTime) {
             if (spawn(s, def)) {
                 s.trainT = 0f
@@ -507,10 +532,11 @@ class Battle(val cfg: BattleConfig) {
         f.active = true
         f.side = s.index
         f.def = def
+        f.tier = if (def.era == s.era) s.unitTier[def.role.ordinal] else 1
         f.x = s.baseFront - s.dir * 30f
-        f.maxHp = def.hp * s.hpMul * extraHpMul
+        f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier)
         f.hp = f.maxHp
-        f.dmg = def.dmg * s.dmgMul
+        f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier)
         f.cd = 0.3f
         f.anim = rng.nextFloat() * 6f
         f.attackAnim = 0f
@@ -568,15 +594,15 @@ class Battle(val cfg: BattleConfig) {
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
 
-        if (gap <= def.range) {
+        if (gap <= Defs.unitRange(def, u.tier)) {
             u.moving = false
             if (u.cd <= 0f) {
                 u.cd = def.cooldown
                 u.attackAnim = 0.25f
                 if (def.projectile == Proj.NONE) {
-                    if (def.splash > 0f) {
+                    if (Defs.unitSplash(def, u.tier) > 0f) {
                         val cx = if (target != null) target.x else e.baseFront
-                        splashDamage(u.side, cx, def.splash, u.dmg, def.siegeMul, def.era)
+                        splashDamage(u.side, cx, Defs.unitSplash(def, u.tier), u.dmg, def.siegeMul, def.era)
                     } else if (target != null) {
                         damageUnit(target, u.dmg, u.side)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx)
@@ -586,7 +612,7 @@ class Battle(val cfg: BattleConfig) {
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul, def.era)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
                 }
             }
@@ -605,7 +631,7 @@ class Battle(val cfg: BattleConfig) {
             if ((u.x - holdX) * s.dir >= 0f) blocked = true
         }
         if (!blocked) {
-            val v = def.speed * s.speedMul * rally
+            val v = Defs.unitSpeed(def, u.tier) * s.speedMul * rally
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
             u.moving = true
@@ -723,7 +749,8 @@ class Battle(val cfg: BattleConfig) {
         wave++
         waveTimer = max(16f, 28f - wave * 0.25f)
         val e = enemy
-        e.era = min(cfg.maxEra, cfg.startEra + wave / 6)
+        val nextEra = min(cfg.maxEra, cfg.startEra + wave / 6)
+        if (nextEra != e.era) { e.era = nextEra; e.unitTier.fill(1) }
         val inEra = wave % 6
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
         e.dmgMul = 1f + inEra * 0.03f
