@@ -222,8 +222,8 @@ class CampaignScreen(g: Game) : Screen(g) {
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]]), x + isz + 8 * dp, y, 14f, Ui.TEXT)
         y += 28 * dp
-        Icons.draw(c, Icons.SKULL, x + isz / 2, y - 5 * dp, isz, dp = dp)
         val pw = s.aiPower
+        Icons.draw(c, if (pw > 1f) Icons.SKULL else Icons.CHECK, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, L.f("ai_power", (pw * 100).toInt()), x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
         y += 28 * dp
