@@ -665,6 +665,9 @@ class BattleScreen(
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
         r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
+        val regularTextScale = ui.textScale
+        ui.textScale = min(regularTextScale, 1.15f)
         drawTop(c)
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
@@ -685,6 +688,7 @@ class BattleScreen(
             for (b in pauseMenu) ui.button(c, b, 18f)
         }
         if (finished) drawResults(c)
+        ui.textScale = regularTextScale
     }
 
     private fun drawTop(c: Canvas) {
