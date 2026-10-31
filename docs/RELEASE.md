@@ -39,8 +39,13 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
 - Release: `isMinifyEnabled` + `isShrinkResources`; AGP 8.x domyślnie używa R8 full mode.
   Gra nie używa refleksji (profil i zrzut bitwy to ręczny JSON / ręczny format binarny,
   jedyna Activity jest w manifeście), więc `proguard-rules.pro` nie potrzebuje reguł keep.
-- `app/src/main/baseline-prof.txt` zawiera ręcznie wybrane metody startu, pętli
-  renderowania i symulacji. AGP kompiluje go do `assets/dexopt/baseline.prof` (APK)
+- `app/src/main/baseline-prof.txt` zawiera ręcznie prześledzone ścieżki
+  startu (`CenturyWarApp`, `MainActivity`, `Profile`), menu
+  (`GameView`, `Game`, `MenuScreen`, `MenuBg`), wyboru trybu
+  i bitwy (`BattleScreen`, `BattleRenderer`, `Battle`, `Ai`, `Rng`).
+  Lista została przygotowana na podstawie bieżących wywołań w kodzie,
+  **nie** z pomiaru Macrobenchmark na urządzeniu; realny zysk w czasie startu
+  wymaga odrębnego pomiaru na telefonie. AGP kompiluje go do `assets/dexopt/baseline.prof` (APK)
   i `BUNDLE-METADATA` (AAB) oraz przepisuje deskryptory po R8. Instalacje z Google Play
   (Android 9+) korzystają z niego przy instalacji.
 - Nie dodano `androidx.profileinstaller` (gra nie ma zależności bibliotecznych). Bez niego
@@ -57,6 +62,49 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
   przerwanej bitwy) jest przejściowy i celowo pominięty — w kopii w chmurze i przy
   przenoszeniu na nowe urządzenie. Pliki `.tmp` i `.corrupt` również.
 
+## Pomiar wydania i R8 (zlecenie 66)
+
+- `.github/workflows/release-check.yml` działa dla PR do `main` i `claude/**`
+  oraz uruchomienia ręcznego. Buduje **APK i AAB z R8 i shrinkResources**,
+  z pominięciem wyłącznie kontrolek publikacji przez `-PskipCheck=...`
+  i z domyślnym **kluczem debug**. To nie jest wydanie do sklepu.
+- Przy PR workflow kompiluje również commit wspólny z gałęzią docelową
+  (`git merge-base`) na tym samym runnerze i SDK. Skrypt
+  `scripts/release_size_report.py` porównuje wielkość plików APK/AAB
+  **przed / po**, podaje największe spakowane składniki i grupy:
+  DEX, zasoby, profil ART, assets i metadane. Są to rozmiary paczek,
+  a nie prognoza transferu przy instalacji z Google Play.
+- Raport `build/release-metrics/rozmiary.md` jest dostępny w Job Summary
+  i artefakcie `release-walidacja`. Bez PR (uruchomienie ręczne)
+  wartości **przed** są oznaczone jako `n/d`; nie są zgadywane.
+- `mapping.txt`, `usage.txt` i `configuration.txt` są zachowywane
+  jako artefakt `release-r8-mapping`; produkcyjny workflow z taga
+  `v*` również archiwizuje `mapping.txt` (`century-war-release-mapping`).
+  Skrypt blokuje job, gdy w mapowaniu brakuje klas krytycznych startu
+  i bitwy. Zawartość `usage.txt` jest raportowana do ręcznej analizy.
+- Przegląd produkcyjnych źródeł `:app`/`:sim`: nie stwierdzono
+  refleksyjnego ładowania klas/metod/pól, ani serializacji przez refleksję.
+  Komponenty manifestu mają reguły generowane przez AGP, dlatego
+  **nie dodano szerokiego `-keep`**. Jeśli pojawią się później
+  refleksyjne wywołania, trzeba dopisać precyzyjne reguły i test.
+- `shrinkResources = true` jest włączone. Zasoby statyczne to głównie
+  ikona, konfiguracja, manifest, kopia zapasowa i tekst licencji Apache
+  odczytywany przez `MainActivity`; brak zasobów z pewnością zbędnych
+  do bezpiecznego ręcznego usunięcia. Rzeczywiste składniki i udział
+  zasobów pokazuje raport CI.
+- Release APK jest także instalowany i uruchamiany na emulatorze w tym
+  workflow. Test Robolectric zwykle korzysta z klas JVM bez obfuskacji,
+  dlatego **nie jest dowodem zgodności po R8**. Niezależny smoke-test
+  release sprawdza manifest, start Activity, istnienie procesu i brak
+  `AndroidRuntime FATAL EXCEPTION`; nie zastępuje testów wszystkich
+  scenariuszy na urządzeniach.
+
+Test skryptu bez Android SDK:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
+```
+
 ## Walidacja
 
 Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):
@@ -68,7 +116,7 @@ Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):
 ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
 ```
 
-Workflow `.github/workflows/release-check.yml` (PR do `main` i ręcznie) buduje release,
+Workflow `.github/workflows/release-check.yml` (PR do `main` lub `claude/**`, i ręcznie) buduje release,
 sprawdza obecność `baseline.prof` w APK/AAB, manifest przez `aapt`, raportuje rozmiary
 w Job Summary i uruchamia aplikację na emulatorze API 35
 (`com.centurywar.game/com.centurywar.MainActivity`, kontrola procesu i `AndroidRuntime`).
