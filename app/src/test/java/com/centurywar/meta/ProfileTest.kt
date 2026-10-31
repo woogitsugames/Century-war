@@ -137,10 +137,12 @@ class ProfileTest {
         assertFalse(p.markHintSeen(Profile.HINT_COUNT))
         p.hintsEnabled = false
         p.save()
+        Profile.awaitHintWrites()
         val loaded = Profile(f).also { it.load() }
         assertFalse(loaded.hintsEnabled)
         assertEquals(1L or (1L shl (Profile.HINT_COUNT - 1)), loaded.hintsSeen)
         loaded.replayHints()
+        Profile.awaitHintWrites()
         assertEquals(0L, Profile(f).also { it.load() }.hintsSeen)
 
         f.writeText("""{"hintsSeen":-9,"hintsEnabled":false}""")
@@ -154,6 +156,7 @@ class ProfileTest {
         assertEquals(0L, old.hintsSeen)
         assertTrue(old.hintsEnabled)
         old.markHintSeen(2)
+        Profile.awaitHintWrites()
         old.reset()
         assertEquals(0L, old.hintsSeen)
         assertTrue(old.hintsEnabled)

@@ -28,6 +28,8 @@ class Profile(private val file: File) {
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
             Thread(task, "cw-hints").apply { isDaemon = true }
         }
+        /** Bariera testowa; produkcyjny wątek gry nie czeka na operacje zapisu. */
+        internal fun awaitHintWrites() { hintWriter.submit {}.get() }
         /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
         const val IRON_FIRST_STAGE = 8
         const val INSERTED_STAGE_COUNT = 4
