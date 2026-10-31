@@ -38,6 +38,7 @@ class AiPersonalityProfileTest {
                 startEra = startEra, maxEra = if (startEra == 0) 3 else 2,
                 aiPersonality = name))
             b.playerAi = Ai(b, 0, AiPersonality.BALANCED)
+            BattleController(b) // Rozkazy gracza są zapisywane w powtórce.
             var firstEvolve = -1f
             var early = 0
             var steps = 0
