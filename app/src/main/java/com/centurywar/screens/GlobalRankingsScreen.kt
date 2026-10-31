@@ -11,6 +11,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.meta.GlobalEntry
+import com.centurywar.meta.ScoreSendStatus
 import kotlin.math.min
 
 /** Własne rankingi serwera, niezależne od Google Play Games. */
@@ -125,8 +126,18 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
             else -> null
         }
         if (status != null && list.isNotEmpty())
-            ui.text(c, L[status], panel.centerX(), panel.bottom - 16 * dp,
+            ui.text(c, L[status], panel.centerX(), panel.bottom - 26 * dp,
                 11f, Ui.DIM, Paint.Align.CENTER)
+        val sendStatus = when (g.scores?.status) {
+            ScoreSendStatus.QUEUED, ScoreSendStatus.OFFLINE -> "global_queued"
+            ScoreSendStatus.SENDING -> "global_sending"
+            ScoreSendStatus.SENT -> "global_sent"
+            ScoreSendStatus.REJECTED -> "global_rejected"
+            ScoreSendStatus.INVALID_NICK -> "global_nick_error"
+            else -> null
+        }
+        if (sendStatus != null) ui.text(c, L[sendStatus],
+            panel.centerX(), panel.bottom - 12 * dp, 11f, Ui.DIM, Paint.Align.CENTER)
     }
 
     private fun drawEntry(c: Canvas, entry: GlobalEntry, left: Float, right: Float, y: Float, index: Int) {
