@@ -43,5 +43,8 @@ class MotionTest {
         assertEquals(1f, Motion.recoil(0.86f), 0.0001f)
         assertTrue(Motion.recoil(0.65f) > Motion.recoil(0.2f))
         assertEquals(0f, Motion.recoil(0f), 0f)
+        assertTrue(Motion.hullTilt(0.86f) > 2f)
+        assertTrue(Motion.hullTilt(0.2f) < 0f)
+        assertEquals(0f, Motion.hullTilt(0f), 0f)
     }
 }
