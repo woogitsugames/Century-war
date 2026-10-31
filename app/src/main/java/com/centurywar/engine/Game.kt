@@ -81,6 +81,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var replays: ReplayStore? = null
     /** Plik historii jest lokalny i nigdy nie jest synchronizowany z chmurą. */
     var history: BattleHistory? = null
+    /** Ustawiane na wątku gry po zakończeniu odczytu historii w tle. */
+    var historyLoaded = false
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
 

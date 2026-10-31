@@ -4,6 +4,7 @@ import com.centurywar.game.AiPersonality
 import com.centurywar.game.Battle
 import com.centurywar.game.Doctrine
 import com.centurywar.game.EndlessCard
+import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import org.json.JSONArray
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Ostatnie bitwy są lokalne i nigdy nie są dołączane do profilu Play Games.
- * Odczyt wykonujemy przed uruchomieniem pętli gry, zapis tylko w jednym wątku I/O.
+ * Odczyt i zapis wykonuje jeden wątek I/O; ekran dostaje wynik przez Game.post.
  */
 class BattleHistory(private val file: File) {
     companion object {
@@ -203,13 +204,15 @@ class BattleHistory(private val file: File) {
 
     private val entries = ArrayList<Record>(LIMIT)
     private val writer = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "century-history").apply { isDaemon = true }
+        Thread(task, "century-history").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
     }
+    @Volatile var loaded = false
+        private set
+    private var clearedBeforeLoad = false
 
-    /** Wywołanie tylko przy starcie aplikacji (nigdy z wątku renderowania). */
-    @Synchronized
-    fun load() {
-        entries.clear()
+    /** Parsowanie nie trzyma zamka historii podczas operacji dyskowych. */
+    private fun readEntries(): List<Record> {
+        GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
         for (candidate in listOf(file, tmp)) {
             if (!candidate.exists() || candidate.length() > 1_000_000L) continue
@@ -217,20 +220,50 @@ class BattleHistory(private val file: File) {
                 val root = JSONObject(candidate.readText(Charsets.UTF_8))
                 if (root.optInt("v") != VERSION) continue
                 val array = root.optJSONArray("entries") ?: continue
+                val result = ArrayList<Record>(LIMIT)
                 for (i in 0 until array.length()) {
                     val o = array.optJSONObject(i) ?: continue
                     try {
                         val record = parse(o) ?: continue
-                        if (entries.size < LIMIT) entries.add(record)
+                        if (result.size < LIMIT) result.add(record)
                     } catch (_: Exception) {
-                        // Jeden uszkodzony wpis nie blokuje pozostałych.
+                        // Uszkodzony wpis nie blokuje reszty historii.
                     }
                 }
-                return
+                return result
             } catch (_: Exception) {
-                // Uszkodzony główny plik: próbujemy ostatni plik tymczasowy.
-                entries.clear()
+                // Uszkodzony plik główny: spróbuj odzyskać tymczasowy.
             }
+        }
+        return emptyList()
+    }
+
+    /** Synchroniczny odczyt tylko dla narzędzi i testów, nigdy dla UI. */
+    fun load() {
+        val fromDisk = readEntries()
+        synchronized(this) {
+            entries.clear()
+            entries.addAll(fromDisk)
+            loaded = true
+        }
+    }
+
+    /** Zapis rozpoczęty podczas odczytu nie może zniknąć po wczytaniu historii. */
+    fun loadAsync(onComplete: () -> Unit) {
+        writer.execute {
+            val fromDisk = readEntries()
+            synchronized(this) {
+                if (!loaded) {
+                    if (!clearedBeforeLoad) {
+                        for (entry in fromDisk) {
+                            if (entries.size >= LIMIT) break
+                            entries.add(entry)
+                        }
+                    }
+                    loaded = true
+                }
+            }
+            onComplete()
         }
     }
 
@@ -249,12 +282,14 @@ class BattleHistory(private val file: File) {
     @Synchronized
     fun clear() {
         entries.clear()
+        if (!loaded) clearedBeforeLoad = true
         writer.execute { persist() }
     }
 
     private fun persist() {
         val content = synchronized(this) { toJson() }
         try {
+            GameIoCounter.diskAccess()
             file.parentFile?.mkdirs()
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use {
@@ -273,6 +308,18 @@ class BattleHistory(private val file: File) {
 
     /** Używane w testach, nigdy w wątku gry. */
     fun awaitWrites() { writer.submit { }.get(10, TimeUnit.SECONDS) }
+
+    /** Ograniczona bariera dla onPause, bez wykonywania I/O na UI. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            writer.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) { false }
+    }
 
     @Synchronized
     fun toJson(): String {

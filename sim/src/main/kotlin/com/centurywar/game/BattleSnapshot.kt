@@ -7,6 +7,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 
 /** Bitwa odtworzona ze zrzutu razem z danymi ekranu, które nie należą do symulacji. */
@@ -418,33 +419,65 @@ class SnapshotStore(private val file: File) {
         Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
     }
 
-    /** Zapis w tle. Bajty muszą być już gotowe (wyprodukowane na wątku gry). */
+    /** Zapis w tle. Zamek chroni wyłącznie numerację, nigdy fsync. */
     fun saveAsync(bytes: ByteArray) {
         val my = synchronized(lock) { ++seq }
         io.execute {
-            synchronized(lock) {
-                if (my > written) { writeAtomic(bytes); written = my }
-            }
+            if (synchronized(lock) { my != seq || my <= written }) return@execute
+            if (writeAtomic(bytes)) synchronized(lock) { written = my }
         }
     }
 
-    /** Zapis synchroniczny (przy pauzie aplikacji). */
-    fun saveNow(bytes: ByteArray): Boolean = synchronized(lock) {
-        val my = ++seq
-        val ok = writeAtomic(bytes)
-        written = my
-        ok
+    /** Do narzędzi i testów; gra używa wyłącznie saveAsync. */
+    fun saveNow(bytes: ByteArray): Boolean {
+        val my = synchronized(lock) { ++seq }
+        return try {
+            io.submit<Boolean> {
+                if (synchronized(lock) { my != seq || my <= written }) false
+                else writeAtomic(bytes).also { if (it) synchronized(lock) { written = my } }
+            }.get(10, TimeUnit.SECONDS)
+        } catch (_: Exception) { false }
     }
 
-    fun delete() {
-        synchronized(lock) {
-            written = ++seq
+    /** Usunięcie z wątku gry odbywa się także poza nim. */
+    fun deleteAsync() {
+        val my = synchronized(lock) { ++seq }
+        io.execute {
+            if (synchronized(lock) { my != seq }) return@execute
+            GameIoCounter.diskAccess()
             file.delete()
             tmp.delete()
+            synchronized(lock) { written = my }
         }
+    }
+
+    /** Ograniczona czasowo bariera używana przy przechodzeniu aplikacji w tło. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            io.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) { false }
+    }
+
+    /** Synchroniczne usunięcie tylko dla narzędzi i odczytu przy starcie. */
+    fun delete() {
+        val my = synchronized(lock) { ++seq }
+        try {
+            io.submit {
+                GameIoCounter.diskAccess()
+                file.delete()
+                tmp.delete()
+                synchronized(lock) { written = my }
+            }.get(10, TimeUnit.SECONDS)
+        } catch (_: Exception) { }
     }
 
     fun load(): ByteArray? = synchronized(lock) {
+        GameIoCounter.diskAccess()
         try {
             if (!file.isFile || file.length() > (1 shl 20)) null else file.readBytes()
         } catch (_: Exception) {
@@ -452,23 +485,48 @@ class SnapshotStore(private val file: File) {
         }
     }
 
-    /** Wczytuje i dekoduje zrzut; uszkodzony albo niezgodny plik jest usuwany. */
+    /** Poprawny .tmp po przerwanym rename jest odzyskiwany bez utraty starego pliku. */
     fun loadBattle(): RestoredBattle? {
-        val bytes = load() ?: return null
-        val r = BattleSnapshot.decode(bytes)
-        if (r == null || r.battle.over) delete()
-        return r?.takeIf { !it.battle.over }
+        GameIoCounter.diskAccess()
+        val candidates = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
+            else arrayOf(file, tmp)
+        var found = false
+        for (candidate in candidates) {
+            val bytes = try {
+                if (!candidate.isFile || candidate.length() > (1 shl 20)) null
+                else candidate.readBytes()
+            } catch (_: Exception) { null }
+            if (bytes == null) continue
+            found = true
+            val restored = BattleSnapshot.decode(bytes)
+            if (restored != null && !restored.battle.over) {
+                if (candidate == tmp) {
+                    try {
+                        java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    } catch (_: Exception) { }
+                }
+                return restored
+            }
+        }
+        if (found) delete()
+        return null
     }
 
     private fun writeAtomic(bytes: ByteArray): Boolean = try {
+        GameIoCounter.diskAccess()
         file.parentFile?.mkdirs()
         FileOutputStream(tmp).use { it.write(bytes); it.flush(); it.fd.sync() }
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            tmp.renameTo(file)
-        } else true
+        if (tmp.renameTo(file)) true
+        else try {
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            true
+        } catch (_: Exception) { false }
     } catch (_: Exception) {
-        tmp.delete()
+        // Niedokończony .tmp może być odzyskany przy następnym starcie.
         false
     }
 }

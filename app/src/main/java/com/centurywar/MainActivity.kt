@@ -11,10 +11,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.StrictMode
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.text.InputFilter
+import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -22,6 +24,7 @@ import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
+import android.graphics.Color
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
@@ -31,6 +34,7 @@ import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
 import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
+import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
@@ -39,6 +43,7 @@ import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
 import com.centurywar.engine.SecureLinks
 import com.centurywar.notifications.DailyReminders
+import com.centurywar.notifications.DailyReminderProfile
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
 import java.net.URI
@@ -64,14 +69,40 @@ class MainActivity : Activity(), Host {
     private var playGames: PlayGamesLeaderboards? = null
     private val gameBackCallback by lazy { OnBackInvokedCallback { game.requestBack() } }
     private var gameBackRegistered = false
+    private var resumed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
+        }
         applyOrientation(resources.configuration)
-        val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
-        profile.pruneDailyBoards(Daily.dayNumber())
+        setContentView(TextView(this).apply {
+            text = L["bh_loading"]
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.BLACK)
+        })
+        // Profil i zrzut są potrzebne przed pierwszą klatką, ale nigdy nie czytamy ich na UI.
+        val app = applicationContext
+        Thread({
+            val root = app.filesDir
+            val profile = Profile(File(root, "profile.json")).also { it.load() }
+            profile.pruneDailyBoards(Daily.dayNumber())
+            val snapshots = SnapshotStore(File(root, "battle.snap"))
+            val restored = snapshots.loadBattle()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) finishStartup(root, profile, snapshots, restored)
+            }
+        }, "startup-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    private fun finishStartup(root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?) {
         game = Game(this, profile, Quality.detect(this))
-        game.history = BattleHistory(File(filesDir, "history.json")).also { it.load() }
+        game.history = BattleHistory(File(root, "history.json")).also { history ->
+            history.loadAsync { game.post { game.historyLoaded = true } }
+        }
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
         // Nie wystawiamy zgody bez skonfigurowanego HTTPS i polityki prywatności.
@@ -80,7 +111,7 @@ class MainActivity : Activity(), Host {
             policy.scheme == "https" && !policy.host.isNullOrEmpty()
         }.getOrDefault(false)
         if (privacyOk && ScoreClient.configured(BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY)) {
-            game.scores = ScoreClient(File(filesDir, "score-queue.json"),
+            game.scores = ScoreClient(File(root, "score-queue.json"),
                 BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY, profile)
         }
         game.applySfxVolume()
@@ -94,16 +125,15 @@ class MainActivity : Activity(), Host {
         }
         game.music = Music().also { it.setVolume(profile.musicVolume) }
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
-        val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
-        game.replays = ReplayStore(File(filesDir, "replays")).also { store ->
+        game.replays = ReplayStore(File(root, "replays")).also { store ->
             store.onRemoved = { ids ->
                 game.post {
                     if (profile.clearReplayReferences(ids)) profile.saveAsync()
                 }
             }
         }
-        game.resumeOffer = snapshots.loadBattle()
+        game.resumeOffer = restored
         view = GameView(this, game)
         if (!pendingRenderScale.isNaN()) view.setRenderScale(pendingRenderScale)
         if (pendingFrameRate >= 0) view.setFrameRate(pendingFrameRate)
@@ -128,6 +158,7 @@ class MainActivity : Activity(), Host {
         }
         applyFrameRate(profile.fpsCap)
         hideSystemBars()
+        if (resumed) resumeGame()
     }
 
     private fun safeInsets(insets: WindowInsets): IntArray {
@@ -165,6 +196,11 @@ class MainActivity : Activity(), Host {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
+        if (::game.isInitialized) resumeGame()
+    }
+
+    private fun resumeGame() {
         view.onResume()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
@@ -173,11 +209,17 @@ class MainActivity : Activity(), Host {
         game.music?.resume()
     }
 
+    private fun remainingSaveMs(deadline: Long): Long =
+        ((deadline - System.nanoTime()).coerceAtLeast(0L) + 999_999L) / 1_000_000L
+
     override fun onPause() {
-        // Muzyka milknie od razu, zanim gra przejdzie w tło (wątek kończy się sam, bez join na UI).
+        resumed = false
+        if (!::game.isInitialized) {
+            super.onPause()
+            return
+        }
         game.music?.pause()
-        // Zrzut bitwy musi powstać, zanim wątek gry stanie: BattleScreen.onPause zapisuje go
-        // synchronicznie na wątku gry, a my czekamy na to (najwyżej ~300 ms).
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(300)
         val done = CountDownLatch(1)
         val ran = AtomicBoolean(false)
         val task = Runnable {
@@ -187,12 +229,17 @@ class MainActivity : Activity(), Host {
         }
         if (view.loopActive) {
             game.post(task)
-            try { done.await(300, TimeUnit.MILLISECONDS) } catch (_: InterruptedException) { }
+            try { done.await(remainingSaveMs(deadline), TimeUnit.MILLISECONDS) }
+            catch (_: InterruptedException) { Thread.currentThread().interrupt() }
         }
         view.onPause()
-        // Pętla już nie działa (albo nie zdążyła odebrać zadania): wykonaj je tutaj.
+        // Gdy pętla nie pracuje, możemy bezpiecznie wykonać migawkę w pamięci na UI.
         if (!view.loopActive) task.run()
-        game.profile.save()
+        // Tylko oczekiwanie jest synchroniczne; fsync i odczyt plików pracują poza UI.
+        game.profile.awaitWrites(remainingSaveMs(deadline))
+        game.snapshots?.awaitWrites(remainingSaveMs(deadline))
+        game.history?.awaitWrites(remainingSaveMs(deadline))
+        game.replays?.awaitWrites(remainingSaveMs(deadline))
         super.onPause()
     }
 
@@ -212,6 +259,10 @@ class MainActivity : Activity(), Host {
     }
 
     override fun onDestroy() {
+        if (!::game.isInitialized) {
+            super.onDestroy()
+            return
+        }
         if (Build.VERSION.SDK_INT >= 33 && gameBackRegistered) {
             onBackInvokedDispatcher.unregisterOnBackInvokedCallback(gameBackCallback)
             gameBackRegistered = false
@@ -240,15 +291,22 @@ class MainActivity : Activity(), Host {
 
     // ---------------------------------------------------------------- Host
 
+    private fun reminderSnapshot(): DailyReminderProfile {
+        val p = game.profile
+        return DailyReminderProfile(p.notifications, p.notifyHour, p.wins, p.lastRankedDaily, p.lang)
+    }
+
     override fun onBattleWon() {
+        val snapshot = reminderSnapshot()
         runOnUiThread {
-            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this, snapshot)
         }
     }
 
     override fun onNotificationSettingsChanged() {
+        val snapshot = reminderSnapshot()
         runOnUiThread {
-            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this, snapshot)
         }
     }
 

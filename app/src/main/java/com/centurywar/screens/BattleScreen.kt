@@ -668,7 +668,7 @@ class BattleScreen(
             RESUME -> paused = false
             RESTART, RESTART + 100 -> {
                 closed = true
-                g.snapshots?.delete()
+                g.snapshots?.deleteAsync()
                 g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
             }
             QUIT -> { paused = false; surrendered = commands.surrender() }
@@ -777,15 +777,12 @@ class BattleScreen(
         return true
     }
 
-    /**
-     * Pauza aplikacji (albo zmiana ekranu). Zrzut zapisujemy synchronicznie: MainActivity
-     * czeka na to, zanim zatrzyma wątek gry, bo proces może zaraz zostać zabity.
-     */
+    /** Przy pauzie serializujemy stan na wątku gry, a fsync wykonuje wątek I/O. */
     override fun onPause() {
         aimingBarrage = false
         if (finished || closed || battle.over) return
         paused = true
-        g.snapshots?.saveNow(snapshotBytes())
+        g.snapshots?.saveAsync(snapshotBytes())
     }
 
     private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX)
@@ -795,8 +792,8 @@ class BattleScreen(
     private fun onFinished() {
         aimingBarrage = false
         finished = true
-        // Najpierw usuń zrzut, potem przyznaj nagrody: wznowienie nie może dać ich drugi raz.
-        g.snapshots?.delete()
+        // Kolejka I/O usuwa zrzut w tej samej kolejności co wcześniejsze zapisy.
+        g.snapshots?.deleteAsync()
         val pr = g.profile
         val won = battle.winner == 0
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.

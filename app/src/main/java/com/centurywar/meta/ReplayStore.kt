@@ -4,6 +4,7 @@ import com.centurywar.game.ReplayRecord
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -128,6 +129,18 @@ class ReplayStore(private val directory: File) {
     } catch (_: Exception) {
         File(directory, file.name + ".tmp").delete()
         false
+    }
+
+    /** Bariera dla onPause, bez przeprowadzania zapisu w wątku UI. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            io.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) { false }
     }
 
     companion object {
