@@ -180,6 +180,43 @@ class ScreenshotTest {
         }
     }
 
+    /** Mapa kampanii: cztery proporcje, cofanie po osi i szczegóły etapu. */
+    @Test
+    fun campaignJourneyMap() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            for (i in 0 until 12) g.profile.stars[i] = (i % 3) + 1
+            val screen = CampaignScreen(g)
+            g.setScreen(screen)
+            val pictures = field(screen, "regionPictures").get(screen) as Array<*>
+            assertTrue("Dziewięć buforowanych regionów", pictures.size == Defs.ERA_COUNT)
+            assertTrue("Każde tło nagrane", pictures.all { it != null })
+            assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.id >= 0 } == 36)
+            assertTrue("Orientacja mapy", field(screen, "portraitMap").getBoolean(screen) == (g.height > g.width))
+            shot(g, tag + "_campaign_journey", 90)
+
+            // Przesunięcie palcem ma działać na właściwej osi.
+            val before = field(screen, "scroll").getFloat(screen)
+            if (g.height > g.width) screen.onDrag(0f, -150 * g.ui.dp)
+            else screen.onDrag(-150 * g.ui.dp, 0f)
+            val after = field(screen, "scroll").getFloat(screen)
+            assertTrue("Przewijanie mapy", after > before)
+            shot(g, tag + "_campaign_journey_drag", 4)
+
+            field(screen, "selected").set(screen, Campaign.stages[12])
+            shot(g, tag + "_campaign_journey_info")
+            field(screen, "selected").set(screen, null)
+            field(screen, "scroll").setFloat(screen, field(screen, "maxScroll").getFloat(screen))
+            shot(g, tag + "_campaign_journey_final", 1)
+        }
+    }
+
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
