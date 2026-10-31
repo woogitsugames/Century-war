@@ -13,6 +13,14 @@ class Ai(private val b: Battle, sideIndex: Int) {
     private var think = 0.4f
     private var plannedRole: Role? = null
 
+    /** Stan automatu decyzji przywracany razem z bitwą. */
+    var thinkTimer: Float
+        get() = think
+        set(v) { think = v }
+    var plannedRoleState: Role?
+        get() = plannedRole
+        set(v) { plannedRole = v }
+
     // Komendy gracza przechodzą przez rejestrator, przeciwnik działa bezpośrednio.
     private val commands: BattleController? get() = if (me.index == 0) b.commandController else null
 
