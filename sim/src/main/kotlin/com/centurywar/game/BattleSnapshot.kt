@@ -7,6 +7,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 
 /** Bitwa odtworzona ze zrzutu razem z danymi ekranu, które nie należą do symulacji. */
@@ -415,22 +416,47 @@ class SnapshotStore(private val file: File) {
         Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
     }
 
-    /** Zapis w tle. Bajty muszą być już gotowe (wyprodukowane na wątku gry). */
+    /** Zapis w tle. Zamek chroni wyłącznie numerację, nigdy fsync. */
     fun saveAsync(bytes: ByteArray) {
         val my = synchronized(lock) { ++seq }
         io.execute {
-            synchronized(lock) {
-                if (my > written) { writeAtomic(bytes); written = my }
-            }
+            if (synchronized(lock) { my != seq || my <= written }) return@execute
+            if (writeAtomic(bytes)) synchronized(lock) { written = my }
         }
     }
 
-    /** Zapis synchroniczny (przy pauzie aplikacji). */
-    fun saveNow(bytes: ByteArray): Boolean = synchronized(lock) {
-        val my = ++seq
-        val ok = writeAtomic(bytes)
-        written = my
-        ok
+    /** Do narzędzi i testów; gra używa wyłącznie saveAsync. */
+    fun saveNow(bytes: ByteArray): Boolean {
+        val my = synchronized(lock) { ++seq }
+        return try {
+            io.submit<Boolean> {
+                if (synchronized(lock) { my != seq || my <= written }) false
+                else writeAtomic(bytes).also { if (it) synchronized(lock) { written = my } }
+            }.get(10, TimeUnit.SECONDS)
+        } catch (_: Exception) { false }
+    }
+
+    /** Usunięcie z wątku gry odbywa się także poza nim. */
+    fun deleteAsync() {
+        val my = synchronized(lock) { ++seq }
+        io.execute {
+            if (synchronized(lock) { my != seq }) return@execute
+            file.delete()
+            tmp.delete()
+            synchronized(lock) { written = my }
+        }
+    }
+
+    /** Ograniczona czasowo bariera używana przy przechodzeniu aplikacji w tło. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            io.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) { false }
     }
 
     fun delete() {
