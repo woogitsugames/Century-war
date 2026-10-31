@@ -334,11 +334,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     }
 
     fun vehicle(epoch: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
-        val era = Defs.artPreset(epoch)
-        when {
-            era == 4 -> ironclad(team, walk, atk)
-            era == 5 && !elite -> halftrack(team, walk, atk)
-            era == 5 -> heavyTank(team, walk, atk)
+        when (Defs.spec(epoch).art) {
+            EraArt.STEAM -> ironclad(team, walk, atk)
+            EraArt.STEEL -> if (elite) heavyTank(team, walk, atk) else halftrack(team, walk, atk)
             else -> apc(team, walk, atk)
         }
     }
@@ -491,10 +489,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     // ================================================================== mechy
 
     fun mech(epoch: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
-        val era = Defs.artPreset(epoch)
-        when (era) {
-            4 -> steamWalker(team, walk, atk)
-            7 -> titan(team, walk, atk)
+        when (Defs.spec(epoch).art) {
+            EraArt.STEAM -> steamWalker(team, walk, atk)
+            EraArt.ORBITAL -> titan(team, walk, atk)
             else -> battleMech(team, walk, atk)
         }
     }
