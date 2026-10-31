@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 2
+    const val VERSION = 3
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -115,6 +115,7 @@ object BattleSnapshot {
         o.writeBoolean(b.eliteUnlocked); o.writeBoolean(b.rallyUnlocked)
         o.writeInt(c.stageIndex)
         o.writeBoolean(c.tutorial)
+        o.writeByte(c.aiPersonality?.ordinal ?: -1)
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
@@ -134,6 +135,7 @@ object BattleSnapshot {
         for (d in s.doctrines) o.writeByte(d.ordinal)
         o.writeShort(s.rank); o.writeShort(s.armory)
         o.writeInt(s.kills); o.writeInt(s.killValue); o.writeInt(s.spawned); o.writeFloat(s.goldEarned)
+        for (v in s.spawnedByRole) o.writeInt(v)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -141,6 +143,12 @@ object BattleSnapshot {
         if (ai == null) return
         o.writeFloat(ai.thinkTimer)
         o.writeByte(ai.plannedRoleState?.ordinal ?: -1)
+        o.writeByte(ai.personality.ordinal)
+        o.writeInt(ai.saveEraState)
+        o.writeFloat(ai.saveUntilState)
+        o.writeFloat(ai.evolveReadyAtState)
+        o.writeFloat(ai.holdUntilState)
+        o.writeFloat(ai.nextHoldAtState)
     }
 
     // ------------------------------------------------------------------ odczyt
@@ -180,9 +188,7 @@ object BattleSnapshot {
         if (!readAi(i, b.ai)) return null
         if (i.readBoolean()) {
             val pa = Ai(b, 0)
-            pa.thinkTimer = i.readFloat()
-            val r = i.readByte().toInt()
-            pa.plannedRoleState = if (r < 0) null else enumAt(Role.values(), r)
+            readAiState(i, pa)
             b.playerAi = pa
         }
 
@@ -228,8 +234,10 @@ object BattleSnapshot {
         )
         val stageIndex = i.readInt()
         val tutorial = i.readBoolean()
+        val p = i.readByte().toInt()
+        val personality = if (p < 0) null else enumAt(AiPersonality.values(), p)
         if (startEra > maxEra) return null
-        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial)
+        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial, personality)
     }
 
     private fun readSide(i: DataInputStream, s: Side) {
@@ -255,6 +263,7 @@ object BattleSnapshot {
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         s.kills = i.readInt(); s.killValue = i.readInt(); s.spawned = i.readInt(); s.goldEarned = i.readFloat()
+        for (k in s.spawnedByRole.indices) s.spawnedByRole[k] = i.readInt().also { require(it >= 0) }
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */
@@ -262,10 +271,20 @@ object BattleSnapshot {
         val present = i.readBoolean()
         if (present != (ai != null)) return false
         if (ai == null) return true
+        readAiState(i, ai)
+        return true
+    }
+
+    private fun readAiState(i: DataInputStream, ai: Ai) {
         ai.thinkTimer = i.readFloat()
         val r = i.readByte().toInt()
         ai.plannedRoleState = if (r < 0) null else enumAt(Role.values(), r)
-        return true
+        ai.personality = enumAt(AiPersonality.values(), i.readByte().toInt())
+        ai.saveEraState = i.readInt().also { require(it in -1 until Defs.ERA_COUNT) }
+        ai.saveUntilState = i.readFloat()
+        ai.evolveReadyAtState = i.readFloat()
+        ai.holdUntilState = i.readFloat()
+        ai.nextHoldAtState = i.readFloat()
     }
 
     private fun <T> enumAt(values: Array<T>, ordinal: Int): T {

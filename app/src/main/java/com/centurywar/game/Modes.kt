@@ -61,6 +61,8 @@ class BattleConfig(
     val stageIndex: Int = -1,
     /** Samouczek (pierwszy etap kampanii): AI rusza później i ma mniej złota na start. */
     val tutorial: Boolean = false,
+    /** Brak wyboru: osobowość deterministyczna z seeda. */
+    val aiPersonality: AiPersonality? = null,
 )
 
 class Stage(

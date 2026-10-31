@@ -93,6 +93,33 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun personalityAndTacticalTimersSurviveSave() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 245L, 1f, startEra = 2, maxEra = 3,
+            aiPersonality = AiPersonality.ENGINEER)
+        val original = Battle(cfg)
+        original.playerAi = Ai(original, 0, AiPersonality.ASSAULT)
+        steps(original, 120)
+        val enemyAi = original.ai!!
+        enemyAi.saveEraState = 2
+        enemyAi.saveUntilState = 3.5f
+        enemyAi.evolveReadyAtState = 8f
+        enemyAi.holdUntilState = 9f
+        enemyAi.nextHoldAtState = 23f
+        original.enemy.spawnedByRole[Role.ELITE.ordinal] = 3
+
+        val restored = roundTrip(original)
+        assertEquals(AiPersonality.ENGINEER, restored.ai!!.personality)
+        assertEquals(AiPersonality.ASSAULT, restored.playerAi!!.personality)
+        assertEquals(3, restored.enemy.spawnedByRole[Role.ELITE.ordinal])
+        assertEquals(2, restored.ai!!.saveEraState)
+        assertEquals(3.5f, restored.ai!!.saveUntilState)
+        assertEquals(8f, restored.ai!!.evolveReadyAtState)
+        steps(original, 180)
+        steps(restored, 180)
+        assertSame(original, restored)
+    }
+
+    @Test
     fun skirmishResumesExactly() {
         val (a, _) = check(BattleConfig(Mode.SKIRMISH, 42L, 1.05f), 60 * 150, 60 * 240)
         assertTrue(a.player.spawned > 0 && a.enemy.spawned > 0)
