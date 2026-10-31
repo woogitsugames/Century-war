@@ -49,6 +49,13 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val textP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
     private val path = Path()
     private val rect = RectF()
+    private val aimRect = RectF()
+    private val aimFill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val aimLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
     private var skyEra = -1
     private var skyH = 0f
     private var alpha = 1f
@@ -119,7 +126,52 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     private fun sx(x: Float) = (x - camX) * k + shakeX
+    /** Współrzędna świata pod palcem, z uwzględnieniem aktualnego wstrząsu kamery. */
+    fun worldX(screenX: Float): Float = camX + (screenX - shakeX) / k
+    /** Projekcja świata na ekran; ta sama transformacja co dla jednostek. */
+    fun screenX(worldX: Float): Float = sx(worldX)
     private fun sy(h: Float) = groundY - h * k
+
+    /** Zakres ostrzału i rzeczywisty rozrzut celu, przycięty jak w symulacji. */
+    fun drawBarrageAim(c: Canvas, worldTargetX: Float, field: RectF) {
+        val near = b.player.baseFront + 220f
+        val far = b.player.baseFront + 1370f
+        val left = sx(near)
+        val right = sx(far)
+        val center = sx(worldTargetX.coerceIn(near, far))
+        val scatterL = sx((worldTargetX - 120f).coerceIn(near, far))
+        val scatterR = sx((worldTargetX + 120f).coerceIn(near, far))
+        val d = g.ui.dp
+        val top = max(field.top, groundY - 48f * d)
+        val bottom = min(field.bottom, groundY + 28f * d)
+        if (bottom <= top) return
+
+        c.save()
+        c.clipRect(field)
+        aimFill.color = Color.argb(48, 64, 140, 235)
+        aimRect.set(left, top, right, bottom)
+        c.drawRoundRect(aimRect, 7f * d, 7f * d, aimFill)
+        aimFill.color = Color.argb(110, 64, 140, 235)
+        aimRect.set(scatterL, top, scatterR, bottom)
+        c.drawRect(aimRect, aimFill)
+
+        aimLine.color = Color.argb(175, 64, 140, 235)
+        aimLine.strokeWidth = 2f * d
+        c.drawLine(left, top, left, bottom, aimLine)
+        c.drawLine(right, top, right, bottom, aimLine)
+        val cy = (groundY - 12f * d).coerceIn(top + 6f * d, bottom - 6f * d)
+        aimLine.color = Ui.OUTLINE
+        aimLine.strokeWidth = 5f * d
+        c.drawCircle(center, cy, 18f * d, aimLine)
+        c.drawLine(center - 25f * d, cy, center + 25f * d, cy, aimLine)
+        c.drawLine(center, cy - 25f * d, center, cy + 25f * d, aimLine)
+        aimLine.color = Ui.PLAYER
+        aimLine.strokeWidth = 2.5f * d
+        c.drawCircle(center, cy, 18f * d, aimLine)
+        c.drawLine(center - 25f * d, cy, center + 25f * d, cy, aimLine)
+        c.drawLine(center, cy - 25f * d, center, cy + 25f * d, aimLine)
+        c.restore()
+    }
 
     private fun col(c: Int): Int =
         if (alpha >= 1f) c else Color.argb((Color.alpha(c) * alpha).toInt(), Color.red(c), Color.green(c), Color.blue(c))
