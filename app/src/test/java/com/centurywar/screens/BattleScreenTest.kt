@@ -64,6 +64,92 @@ class BattleScreenTest {
         g.frame(canvas, 1f / 60f)
     }
 
+    /** Dymek nie wywołuje komendy, a zwykły tap nadal zmienia prędkość. */
+    @Test
+    fun longPressDoesNotClickAndShortTapStillWorks() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 530L, 1f))
+        g.setScreen(bs)
+        g.frame(canvas, 1f / 60f)
+        val speed = field(bs, "speedBtn").get(bs) as Button
+        val x = speed.r.centerX()
+        val y = speed.r.centerY()
+        val controller = field(bs, "commands").get(bs) as BattleController
+        g.pushTouch(TouchEvent.DOWN, x, y, 0)
+        repeat(30) { g.frame(canvas, 1f / 60f) }
+        assertEquals(com.centurywar.engine.L["tip53_speed_title"], speed.tooltipTitle)
+        assertEquals(1, field(bs, "speed").getInt(bs))
+        g.pushTouch(TouchEvent.UP, x, y, 0)
+        g.frame(canvas, 1f / 60f)
+        assertEquals(1, field(bs, "speed").getInt(bs))
+        assertTrue(controller.log().commands.isEmpty())
+        tap(g, x, y)
+        assertEquals(3, field(bs, "speed").getInt(bs))
+    }
+
+    /** Wyłączony przycisk wciąż wyświetla cenę, ale nie wykonuje zakupu. */
+    @Test
+    fun disabledArmoryShowsTooltipWithoutPurchasing() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 531L, 1f))
+        g.setScreen(bs)
+        val battle = field(bs, "battle").get(bs) as Battle
+        battle.player.gold = 0f
+        g.frame(canvas, 1f / 60f)
+        val armory = field(bs, "armoryBtn").get(bs) as Button
+        assertFalse(armory.enabled)
+        val x = armory.r.centerX(); val y = armory.r.centerY()
+        g.pushTouch(TouchEvent.DOWN, x, y, 0)
+        repeat(29) { g.frame(canvas, 1f / 60f) }
+        assertEquals(com.centurywar.engine.L["armory"], armory.tooltipTitle)
+        assertTrue(armory.tooltipBody.contains("0/15"))
+        g.pushTouch(TouchEvent.UP, x, y, 0)
+        g.frame(canvas, 1f / 60f)
+        assertEquals(0, battle.player.armory)
+        assertTrue((field(bs, "commands").get(bs) as BattleController).log().commands.isEmpty())
+    }
+
+    /** Przesunięcie ponad 10dp lub CANCEL przerywa rozpoznawanie gestu. */
+    @Test
+    fun movementAndCancelPreventTooltip() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 532L, 1f))
+        g.setScreen(bs)
+        g.frame(canvas, 1f / 60f)
+        val btn = field(bs, "speedBtn").get(bs) as Button
+        val x = btn.r.centerX(); val y = btn.r.centerY()
+        g.pushTouch(TouchEvent.DOWN, x, y, 0)
+        g.frame(canvas, 1f / 60f)
+        g.pushTouch(TouchEvent.MOVE, x + 11f * g.ui.dp, y, 0)
+        repeat(31) { g.frame(canvas, 1f / 60f) }
+        assertEquals("", btn.tooltipTitle)
+        g.pushTouch(TouchEvent.CANCEL, x, y, 0)
+        g.frame(canvas, 1f / 60f)
+        g.pushTouch(TouchEvent.DOWN, x, y, 0)
+        g.frame(canvas, 1f / 60f)
+        g.pushTouch(TouchEvent.CANCEL, x, y, 0)
+        repeat(31) { g.frame(canvas, 1f / 60f) }
+        assertEquals("", btn.tooltipTitle)
+    }
+
+    /** Instrukcja pojawia się tylko raz i używa osobnego bitu profilu. */
+    @Test
+    fun firstBattleLongPressHintUsesCompatibleProfileBit() {
+        val g = game()
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 533L, 1f))
+        g.setScreen(bs)
+        repeat(90) { g.frame(canvas, 1f / 60f) }
+        val bit = 1L shl Profile.HINT_LONG_PRESS
+        assertEquals(bit, g.profile.hintsSeen and bit)
+        val other = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 534L, 1f))
+        g.setScreen(other)
+        repeat(90) { g.frame(canvas, 1f / 60f) }
+        assertEquals(0f, field(other, "introRemaining").getFloat(other), 0.0001f)
+    }
+
     @Test
     fun tappingFieldAimsBarrageWithCameraCoordinates() {
         val g = game()
