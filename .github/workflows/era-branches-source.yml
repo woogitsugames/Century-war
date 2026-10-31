@@ -1,0 +1,22 @@
+name: Eksport kodu do strojenia balansu
+on:
+  push:
+    branches: [gpt/18-era-branches]
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          tar -czf era-branches-sources.tar.gz \
+            app/src/main/java/com/centurywar/game/Battle.kt \
+            app/src/main/java/com/centurywar/game/Ai.kt \
+            app/src/main/java/com/centurywar/game/Defs.kt \
+            app/src/main/java/com/centurywar/game/Modes.kt \
+            app/src/main/java/com/centurywar/game/EraBranches.kt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: era-branches-sources
+          path: era-branches-sources.tar.gz
