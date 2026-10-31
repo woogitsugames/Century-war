@@ -88,12 +88,15 @@ class ScoreClient(
 
     /** Zmiana identyfikatora usuwa niewysłane zgłoszenia starego konta. */
     fun clearQueue() {
+        // Natychmiast blokujemy kolejne zgłoszenia starego identyfikatora.
+        enabled = false
         worker.execute {
             generation++
             sending = false
             queue.clear()
             persistQueue()
-            status = if (enabled) ScoreSendStatus.SENT else ScoreSendStatus.DISABLED
+            enabled = profile.globalRanking
+            status = if (enabled) ScoreSendStatus.QUEUED else ScoreSendStatus.DISABLED
         }
     }
 
