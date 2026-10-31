@@ -113,7 +113,7 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         }
     }
 
-    /** Usuwa rekordy i pseudonim gracza; brak gracza nie jest błędem. */
+    /** Usuwa rekordy i pseudonim gracza (blokada zostaje); brak gracza nie jest błędem. */
     fun deletePlayer(player: String) = synchronized(lock) {
         connection.autoCommit = false
         try {
@@ -125,10 +125,8 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                 it.setString(1, player)
                 it.executeUpdate()
             }
-            connection.prepareStatement("DELETE FROM blocked_players WHERE player_id = ?").use {
-                it.setString(1, player)
-                it.executeUpdate()
-            }
+            // Blokady nie kasujemy: klucz HMAC jest w APK, więc usunięcie konta nie może
+            // posłużyć zablokowanemu graczowi do zdjęcia blokady. Zdejmuje ją tylko moderator.
             connection.commit()
         } catch (e: Exception) {
             connection.rollback()

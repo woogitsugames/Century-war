@@ -68,6 +68,31 @@ class PlayerDeletionTest {
         }
     }
 
+    @Test fun deleteKeepsBlockSoBlockedPlayerCannotUnblockThemselves() = testApplication {
+        SqliteStore("jdbc:sqlite::memory:").use { store ->
+            val blocked = input()
+            store.save(blocked, VerifiedReplay("endless", 100L, 900), now, "hash-a")
+            assertTrue(store.blockPlayer(blocked.player))
+            application { leaderboardModule(store, secret, { now }) }
+
+            val body = "{\"player\":\"" + blocked.player + "\"}"
+            val nonce = UUID.randomUUID().toString()
+            val status = client.post("/v1/player/delete") {
+                header("X-CW-Timestamp", (now / 1000).toString())
+                header("X-CW-Nonce", nonce)
+                header("X-CW-Signature", sign(body, nonce))
+                setBody(body)
+            }.status
+            assertEquals(HttpStatusCode.OK, status)
+            assertTrue(store.top("endless", "all", now).isEmpty())
+            assertTrue(store.isBlocked(blocked.player))
+            // Nowy wynik po usunięciu nadal jest odrzucany.
+            assertTrue(runCatching {
+                store.save(blocked, VerifiedReplay("endless", 120L, 900), now, "hash-b")
+            }.exceptionOrNull() is BlockedPlayerException)
+        }
+    }
+
     @Test fun migratesLegacyBoardsOnceWithoutCollisions() {
         val db = Files.createTempFile("cw-migration-", ".db").toFile()
         val jdbc = "jdbc:sqlite:" + db.absolutePath
