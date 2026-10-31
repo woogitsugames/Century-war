@@ -8,6 +8,7 @@ import com.centurywar.game.RestoredBattle
 import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
+import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -42,6 +43,17 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
+    /** Muzyka działa niezależnie od efektów SoundPool. */
+    var music: Music? = null
+
+    fun applyMusicVolume() { music?.setVolume(profile.musicVolume) }
+
+    private fun syncMusicScreen(s: Screen) {
+        if (s !is BattleScreen) {
+            music?.setEra(Music.MENU)
+            music?.setIntensity(0f)
+        }
+    }
     /** Zrzut przerwanej bitwy (filesDir/battle.snap). Null w testach. */
     var snapshots: SnapshotStore? = null
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
@@ -129,19 +141,21 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen?.onPause()
         stack.clear()
         screen = s
+        syncMusicScreen(s)
         s.layout()
     }
 
     fun push(s: Screen) {
         screen?.let { stack.add(it) }
         screen = s
+        syncMusicScreen(s)
         s.layout()
     }
 
     fun pop() {
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
         screen = stack.removeAt(stack.size - 1)
-        screen?.layout()
+        screen?.let { syncMusicScreen(it); it.layout() }
     }
 
     val current get() = screen

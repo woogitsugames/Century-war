@@ -56,6 +56,8 @@ class Profile(private val file: File) {
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
     var vibration = true
     var sound = true
+    var musicVolume = 0.5f
+        set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.5f }
     var showFps = false
     var lang = ""            // "" = systemowy, inaczej kod z L.CODES ("pl", "en", "de"...)
     var skirmishDiff = 1
@@ -146,6 +148,7 @@ class Profile(private val file: File) {
             o.put("fpsCap", fpsCap)
             o.put("vibration", vibration)
             o.put("sound", sound)
+            o.put("musicVolume", musicVolume.toDouble())
             o.put("showFps", showFps)
             o.put("lang", lang)
             o.put("skirmishDiff", skirmishDiff)
@@ -195,6 +198,7 @@ class Profile(private val file: File) {
             fpsCap = o.optInt("fpsCap", 0)
             vibration = o.optBoolean("vibration", true)
             sound = o.optBoolean("sound", true)
+            musicVolume = o.optDouble("musicVolume", 0.5).toFloat()
             showFps = o.optBoolean("showFps", false)
             lang = o.optString("lang", "")
             skirmishDiff = o.optInt("skirmishDiff", 1)

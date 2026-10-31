@@ -221,6 +221,20 @@ class BattleScreen(
                 g.snapshots?.saveAsync(snapshotBytes())
             }
         }
+        // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
+        val music = g.music
+        if (music != null) {
+            music.setEra(battle.player.era)
+            var threat = 0f
+            if (!paused && !finished && battle.pendingChoice == null) {
+                for (u in battle.units) {
+                    if (!u.alive || u.side != 1) continue
+                    val near = (1f - (u.x - battle.player.baseFront) / (Defs.LANE * 0.35f)).coerceIn(0f, 1f)
+                    if (near > threat) threat = near
+                }
+            }
+            music.setIntensity(threat)
+        }
         playSounds()
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)

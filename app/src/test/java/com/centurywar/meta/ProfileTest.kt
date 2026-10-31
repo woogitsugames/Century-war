@@ -62,4 +62,22 @@ class ProfileTest {
         val p = Profile(f).also { it.load() }
         assertEquals(321, p.medals)
     }
+
+    @Test
+    fun musicVolumeDefaultsPersistsAndClamps() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(0.5f, p.musicVolume, 0.0001f)
+        p.musicVolume = 0.73f
+        p.save()
+        assertEquals(0.73f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
+        f.writeText("""{"musicVolume":5}""")
+        assertEquals(1f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
+        f.writeText("""{"musicVolume":-2}""")
+        assertEquals(0f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
+        f.writeText("""{"musicVolume":"NaN"}""")
+        assertEquals(0.5f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
+        f.writeText("""{"name":"Stary profil"}""")
+        assertEquals(0.5f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
+    }
 }

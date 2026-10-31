@@ -20,6 +20,7 @@ import com.centurywar.engine.GameView
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
+import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
@@ -46,6 +47,7 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        game.music = Music().also { it.setVolume(profile.musicVolume) }
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
@@ -115,9 +117,12 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         view.onResume()
+        game.music?.resume()
     }
 
     override fun onPause() {
+        // Muzyka milknie od razu, zanim gra przejdzie w tło (wątek kończy się sam, bez join na UI).
+        game.music?.pause()
         // Zrzut bitwy musi powstać, zanim wątek gry stanie: BattleScreen.onPause zapisuje go
         // synchronicznie na wątku gry, a my czekamy na to (najwyżej ~300 ms).
         val done = CountDownLatch(1)
@@ -140,6 +145,7 @@ class MainActivity : Activity(), Host {
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
     override fun onDestroy() {
+        game.music?.release()
         game.sound?.release()
         super.onDestroy()
     }
