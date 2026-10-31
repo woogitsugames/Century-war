@@ -23,7 +23,8 @@ Jeden schemat dla CI i lokalnie (szczegóły i generowanie klucza: [`docs/CI.md`
 | `RELEASE_KEY_PASSWORD` | hasło klucza |
 
 - Wszystkie cztery ustawione → release podpisany kluczem upload.
-- Żadna nieustawiona → release podpisany **kluczem debug** (lokalne testy, jak dotąd).
+- Żadna nieustawiona → lokalny release zostanie podpisany **kluczem debug**,
+  ale bez spełnionej listy kontrolnej kompilacja release zostanie zablokowana.
   Takich plików **nie wolno publikować**.
 - Część ustawiona → błąd konfiguracji Gradle (zamiast cichego użycia klucza debug).
 
@@ -58,10 +59,12 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
 
 ## Walidacja
 
-Lokalnie:
+Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
+./gradlew -p buildSrc test --console=plain
+./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --tests '*DailyTest*' --console=plain
+./gradlew :app:releaseChecklist --console=plain
 ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
 ```
 
@@ -73,3 +76,89 @@ Logi trafiają do artefaktu `release-walidacja`.
 
 Po podpisaniu upload key pozostają kroki w Play Console: polityka prywatności,
 Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
+
+
+## Lista kontrolna dnia wydania — dla właściciela
+
+Przed pierwszą publikacją i przed **każdą kolejną** aktualizacją przejdź kroki w podanej kolejności.
+
+1. **Ustal dzień pierwszej publicznej publikacji w UTC.** W
+   `sim/src/main/kotlin/com/centurywar/game/Modes.kt` ustaw jedną stałą
+   `Daily.RELEASE_DAY`: liczbę dni od 1970-01-01 00:00 UTC. Obecne **21153**
+   (2027-12-01) jest wyłącznie wartością zastępczą, **nie jest zatwierdzoną datą**.
+   Po pierwszym wydaniu **nigdy jej nie zmieniaj**: dotyczy jednocześnie Epoki żelaza,
+   wariantów epok i pogody w wyzwaniu dnia. Starsze dni korzystają z `legacyConfig`
+   i muszą odtwarzać się identycznie. Datę w UTC przelicz np.:
+   `python3 -c "from datetime import date; print((date.fromisoformat('RRRR-MM-DD')-date(1970,1,1)).days)"`
+   (zastąp `RRRR-MM-DD` prawdziwą datą).
+2. **Zweryfikuj Play Console.** Utwórz aplikację `com.centurywar.game`,
+   uzupełnij stronę sklepu i wymagane deklaracje, upewnij się, że dostępne są
+   właściwe konta właścicielskie i dostęp do torów testowania.
+3. **Podpis produkcyjny.** Włącz Play App Signing, przygotuj klucz upload,
+   kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
+   [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
+   Nie publikuj APK/AAB podpisanych kluczem debug.
+4. **Play Games i rankingi.** W Play Console utwórz usługę gier, OAuth i cztery
+   tablice (endless, daily, campaign, skirmish). Zastąp wszystkie `REPLACE_ME`
+   w `app/src/main/res/values/games_ids.xml`. Skonfiguruj testerów i Saved
+   Games; przeprowadź rzeczywiste logowanie, zapis w chmurze i publikację wyników.
+   Szczegóły: [PLAY_GAMES_SETUP.md](PLAY_GAMES_SETUP.md).
+5. **Backend rankingu i podpis wyników.** Uruchom serwer z HTTPS, sprawdź
+   `/health`, dostępną wersję protokołu i wysyłkę zweryfikowanej powtórki.
+   Ustaw `CW_SERVER_URL`, `CW_HMAC_KEY` i `CW_PRIVACY_URL` w
+   `local.properties` albo zmiennych środowiskowych na etapie kompilacji.
+   Adres serwera oraz adres opublikowanej polityki prywatności muszą być HTTPS.
+   Nie wprowadzaj wartości produkcyjnych ani sekretów do repozytorium.
+6. **Polityka prywatności i Data safety.** Opublikuj aktualną politykę pod
+   `CW_PRIVACY_URL`, uzupełnij deklaracje w Play Console, uwzględniając dane
+   konta Play Games, rankingi, chmurę i serwer; przetestuj publiczny adres.
+7. **Materiały sklepu.** Sprawdź nazwy, opisy i tłumaczenia, ikonę, grafikę
+   promocyjną i prawdziwe zrzuty z telefonu 720p oraz dużego ekranu/Folda.
+   Zrzuty aktualnej wersji i zawartość sklepu muszą być zgodne z grą.
+8. **Numer wersji.** Podnieś `releaseVersionCode` w `gradle.properties`
+   ponad liczbę w `release/last_version_code.txt` (początkowo `0`).
+   Sprawdź `releaseVersionName` lub tag SemVer; nie używaj ponownie kodu
+   już opublikowanego w Google Play.
+9. **Testy przed publikacją.** Uruchom `./gradlew -p buildSrc test`,
+   `./gradlew :app:assembleDebug`, testy `Daily*`, `Replay*`,
+   `BattleSimTest*`, `LTest*` oraz `./gradlew :server:test -PserverOnly=true`.
+   Przetestuj debug i AAB na rzeczywistym tanim telefonie oraz Foldzie,
+   online i offline; sprawdź wyzwanie UTC po obu stronach północy.
+10. **Zbuduj release bez pominięć.** Uruchom
+    `./gradlew :app:releaseChecklist :app:bundleRelease --console=plain`.
+    `assembleRelease` uruchamia tę samą checklistę; **debug jej nie uruchamia**.
+    Zbadaj podpis i przeskanuj artefakt; nie ignoruj czerwonej checklisty.
+11. **Wdrożenie i kontrola.** Wgraj AAB na tor *internal testing*,
+    sprawdź instalację z Google Play, logowanie, rankingi, chmurę i crash logi.
+    Dopiero po zatwierdzeniu wyników przejdź do docelowego toru publikacji.
+    Po **faktycznym opublikowaniu** wpisz użyty kod do
+    `release/last_version_code.txt` i zatwierdź zmianę — kolejny release
+    będzie wymagał większego kodu.
+
+### Automatyczna blokada Gradle i świadome wyjątki
+
+Zadanie `:app:releaseChecklist` odczytuje `Daily.RELEASE_DAY` bezpośrednio
+z `Modes.kt` oraz dzisiejszy dzień **UTC**. Zgłasza wszystkie problemy
+jednym polskim komunikatem i blokuje `:app:assembleRelease` oraz
+`:app:bundleRelease`, jeśli:
+
+- `RELEASE_DAY` jest dawniej niż 30 dni temu lub dalej niż 60 dni w przyszłości;
+- manifest deklaruje Play Games, a `games_ids.xml` nadal ma `REPLACE_ME`;
+- `CW_SERVER_URL` lub `CW_PRIVACY_URL` nie jest poprawnym adresem HTTPS;
+- `CW_HMAC_KEY` jest pusty;
+- `releaseVersionCode` nie przewyższa `release/last_version_code.txt`
+  albo ten plik ma niepoprawną zawartość.
+
+Przy **świadomej decyzji** można pominąć pojedyncze kontrole przez
+`-PskipCheck=releaseDay`, `playGames`, `serverUrl`, `privacyUrl`,
+`hmacKey` lub `versionCode`; wiele wartości oddziel przecinkami, np.:
+
+```bash
+./gradlew :app:assembleRelease -PskipCheck=playGames,releaseDay
+```
+
+Wyjątek **nie konfiguruje** brakującej usługi ani nie naprawia podpisu.
+Przeznaczony jest do lokalnych testów i świadomych decyzji właściciela,
+nie do obejścia wymogów sklepu. Workflow `release-check.yml` pomija
+kontrole zewnętrznej konfiguracji **wyłącznie** podczas smoke-testu
+podpisanego kluczem debug. Produkcyjny workflow z taga nie pomija niczego.
