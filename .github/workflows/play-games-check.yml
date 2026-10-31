@@ -1,0 +1,31 @@
+name: PGS — Android build i testy
+
+on:
+  push:
+    branches:
+      - gpt/01-play-games
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Android 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Budowanie APK debug
+        run: ./gradlew :app:assembleDebug --console=plain
+      - name: Test deterministycznej symulacji
+        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
+      - name: Test zapisu i konfliktów PGS
+        run: ./gradlew :app:testDebugUnitTest --tests '*ProfileCloudTest*' --console=plain
