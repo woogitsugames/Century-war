@@ -102,6 +102,23 @@ object Defs {
     const val BASE_FRONT = 190f
     const val MAX_TURRET_SLOTS = 4
 
+    /** Wiersz: rola atakująca; kolumna: rola obrońcy. Kolejność jak w [Role]. */
+    private val roleMultipliers = arrayOf(
+        floatArrayOf(1f, 1.35f, 1f, 1f), // wręcz kontruje dystans
+        floatArrayOf(1f, 1f, 1.30f, 1f), // dystans kontruje ciężkich
+        floatArrayOf(1.35f, 1f, 1f, 1f), // ciężcy kontrują wręcz
+        floatArrayOf(1f, 1f, 1f, 1f), // elita specjalizuje się w oblężeniu
+    )
+    const val TURRET_VS_LATE_HEAVY = 1.15f
+
+    fun counterMultiplier(attacker: Role, defender: Role): Float =
+        roleMultipliers[attacker.ordinal][defender.ordinal]
+
+    /** Premia późnych wież przeciw ciężkim jednostkom od epoki pary. */
+    fun turretCounterMultiplier(turretEra: Int, defender: UnitDef): Float =
+        if (turretEra >= 4 && defender.era >= 4 && defender.role == Role.HEAVY)
+            TURRET_VS_LATE_HEAVY else 1f
+
     private const val STAT_GROWTH = 2.05f
     private const val COST_GROWTH = 1.9f
 
