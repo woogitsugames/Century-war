@@ -17,6 +17,7 @@ import com.centurywar.game.Mode
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
+import com.centurywar.meta.ScoreClient
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,6 +88,29 @@ class ScreenshotTest {
             shot(g, "${tag}_pgs_settings")
             g.setScreen(PlayGamesScreen(g))
             shot(g, "${tag}_pgs_signin")
+        }
+    }
+
+    /** Zrzuty ustawień i rankingu serwera: tryb bez zgody, bez żadnych zapytań HTTP. */
+    @Test
+    fun globalRankingMenus() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val queue = File.createTempFile("score", ".json").apply { delete() }
+            val scores = ScoreClient(queue, "https://scores.example.invalid",
+                "testing-key-at-least-32-characters-long", g.profile)
+            g.scores = scores // Domyślnie wyłączony: nie wysyła żadnego żądania.
+            g.setScreen(SettingsScreen(g))
+            shot(g, "${tag}_global_settings")
+            g.setScreen(RankingsScreen(g))
+            shot(g, "${tag}_global_rankings_local")
+            g.setScreen(GlobalRankingsScreen(g))
+            shot(g, "${tag}_global_rankings")
+            scores.close()
         }
     }
 
