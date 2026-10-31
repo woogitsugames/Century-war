@@ -274,6 +274,19 @@ object Defs {
     val eraKeys: Array<String> = Array(ERA_COUNT) { specs[it].nameKey }
     val evolveXp: IntArray = IntArray(ERA_COUNT) { specs[it].evolveXp }
 
+    /**
+     * Potęgi wzrostu liczone raz przez StrictMath (bit w bit te same wartości co przy liczeniu na bieżąco).
+     * StrictMath.pow w JDK alokuje tablicę przy każdym wywołaniu, a przychód i XP są liczone w każdym kroku.
+     */
+    private fun powTable(growth: Float): FloatArray =
+        FloatArray(ERA_COUNT) { StrictMath.pow(growth.toDouble(), it.toDouble()).toFloat() }
+    private val statPow: FloatArray = powTable(STAT_GROWTH)
+    private val costPow: FloatArray = powTable(COST_GROWTH)
+    private val basePow: FloatArray = powTable(BASE_GROWTH)
+    private val incomePow: FloatArray = powTable(INCOME_GROWTH)
+    private fun growthPow(table: FloatArray, growth: Float, era: Int): Float =
+        if (era >= 0 && era < table.size) table[era] else StrictMath.pow(growth.toDouble(), era.toDouble()).toFloat()
+
     fun spec(era: Int): EraSpec = specs[era]
 
     /** Indeks gotowego stylu postaci i machin; nie jest numerem epoki. */
@@ -288,8 +301,8 @@ object Defs {
         EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH -> 6
         EraArt.ORBITAL -> 7
     }
-    fun statScale(era: Int): Float = StrictMath.pow(STAT_GROWTH.toDouble(), era.toDouble()).toFloat()
-    fun costScale(era: Int): Float = StrictMath.pow(COST_GROWTH.toDouble(), era.toDouble()).toFloat()
+    fun statScale(era: Int): Float = growthPow(statPow, STAT_GROWTH, era)
+    fun costScale(era: Int): Float = growthPow(costPow, COST_GROWTH, era)
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
     /** Warianty leżą za bazowymi jednostkami, bez zmiany dawnych identyfikatorów. */
@@ -389,10 +402,10 @@ object Defs {
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami (StrictMath: identycznie na każdym urządzeniu). */
-    fun baseHp(era: Int): Float = 1600f * StrictMath.pow(BASE_GROWTH.toDouble(), era.toDouble()).toFloat()
+    fun baseHp(era: Int): Float = 1600f * growthPow(basePow, BASE_GROWTH, era)
 
     /** Pasywny przychód złota na sekundę w danej epoce. */
-    fun income(era: Int): Float = 2.6f * StrictMath.pow(INCOME_GROWTH.toDouble(), era.toDouble()).toFloat()
+    fun income(era: Int): Float = 2.6f * growthPow(incomePow, INCOME_GROWTH, era)
 
     /** Obrażenia jednego pocisku zdolności specjalnej. */
     fun abilityDmg(era: Int): Float = 46f * statScale(era)
