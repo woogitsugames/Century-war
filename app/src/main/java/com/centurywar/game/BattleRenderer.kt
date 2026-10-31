@@ -39,9 +39,15 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     var k = 1f
     var groundY = 0f
     var viewW = 0f
-    private var shake = 0f
+    private var trauma = 0f
     private var shakeX = 0f
+    private var shakeY = 0f
     private var time = 0f
+    /** Przesunięcia świata, bez wpływu na HUD i sterowanie. */
+    internal val shakeOffsetX get() = shakeX
+    internal val shakeOffsetY get() = shakeY
+    fun worldX(screenX: Float): Float = camX + (screenX - shakeX) / k
+
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
@@ -63,8 +69,24 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val pmax = FloatArray(PMAX)
     private val psize = FloatArray(PMAX)
     private val pcol = IntArray(PMAX)
-    private val ptype = IntArray(PMAX) // 0 kropka, 1 pierścień, 2 błysk, 3 dym
+    private val ptype = IntArray(PMAX) // 0 odłamek, 1 pierścień, 2 błysk, 3 dym, 4 fala przy ziemi
+    private val pprio = IntArray(PMAX)
     private var pcount = 0
+    internal val activeParticleCount get() = pcount
+
+    // Emisja po czasie, nie po klatkach. Indeksy są indeksami pul symulacji.
+    private val puffNext = FloatArray(Battle.MAX_PROJ) { 0.08f }
+    private val puffLastTime = FloatArray(Battle.MAX_PROJ)
+    private val motorSmoke = FloatArray(Battle.MAX_UNITS)
+    private val baseSmoke = FloatArray(2)
+    private val turretFirePrev = FloatArray(Defs.MAX_TURRET_SLOTS * 2)
+
+    // Ślady na ziemi nie zajmują puli cząsteczek.
+    private val SCARS = 16
+    private val scarX = FloatArray(SCARS)
+    private val scarSize = FloatArray(SCARS)
+    private val scarLife = FloatArray(SCARS)
+    private var nextScar = 0
 
     // pływające napisy
     private val TMAX = 24
@@ -118,7 +140,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         clampCam()
     }
 
-    private fun sx(x: Float) = (x - camX) * k + shakeX
+    private fun sx(x: Float) = (x - camX) * k
     private fun sy(h: Float) = groundY - h * k
 
     private fun col(c: Int): Int =
@@ -130,7 +152,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     // ---------------------------------------------------------------- główny rysunek
 
     fun render(c: Canvas, dt: Float, w: Float, h: Float) {
-        time += dt
+        time += dt.coerceAtLeast(0f)
         val q = g.quality
         fill.isAntiAlias = q.antialias
         line.isAntiAlias = q.antialias
@@ -139,24 +161,39 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.detail = q.level
         pen.alpha = 1f; pen.flash = false
         mach.time = time; bases.time = time
-        if (shake > 0f) {
-            shake = max(0f, shake - dt * 3f)
-            shakeX = sin(time * 70f) * shake * 6f * g.ui.dp
-        } else shakeX = 0f
-
         consumeFx()
+        trauma = max(0f, trauma - dt.coerceAtLeast(0f) * 1.5f)
+        val strength = if (g.profile.screenShake == 0) 0f
+            else trauma * trauma * if (g.profile.screenShake == 1) 0.42f else 1f
+        // Iloczyny sinusów zapewniają ciągłość i twardy limit 7/4 dp.
+        shakeX = sin(time * 16.3f) * cos(time * 9.7f) * strength * 7f * g.ui.dp
+        shakeY = sin(time * 13.1f + 1.4f) * cos(time * 7.7f) * strength * 4f * g.ui.dp
+
         drawSky(c, w, h)
+        c.save()
+        c.translate(shakeX, shakeY)
         drawBackdrop(c, w, h)
         drawGround(c, w, h)
+        drawScars(c, dt)
+        drawBarrageMarkers(c)
+        emitAmbient(dt)
+        detectTurretFire()
         drawBase(c, b.sides[0])
         drawBase(c, b.sides[1])
         for (u in b.units) if (u.active && u.side == 1) drawUnit(c, u)
         for (u in b.units) if (u.active && u.side == 0) drawUnit(c, u)
         alpha = 1f
-        for (p in b.projs) if (p.active && p.delay <= 0f) drawProj(c, p)
+        for (i in b.projs.indices) {
+            val p = b.projs[i]
+            if (p.active && p.delay <= 0f) {
+                drawProj(c, p)
+                emitProjectilePuffs(i, p)
+            }
+        }
         updateParticles(c, dt)
         drawTexts(c, dt)
         if (b.fog) drawFog(c, w, h)
+        c.restore()
     }
 
     // ---------------------------------------------------------------- tło
@@ -171,7 +208,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             skyEra = e; skyH = groundY
             sky.shader = LinearGradient(0f, 0f, 0f, groundY, Defs.spec(e).palette[0], Defs.spec(e).palette[1], Shader.TileMode.CLAMP)
         }
-        c.drawRect(0f, 0f, w, groundY + 2f, sky)
+        c.drawRect(0f, 0f, w, h, sky)
         if (Defs.spec(e).art == EraArt.ORBITAL) { // gwiazdy
             fill.color = Color.argb(200, 255, 255, 255)
             for (i in 0 until 60) {
@@ -302,7 +339,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawGround(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
-        c.drawRect(0f, groundY, w, h, f(Defs.spec(e).palette[5]))
+        c.drawRect(-8f * g.ui.dp, groundY, w + 8f * g.ui.dp, h + 8f * g.ui.dp, f(Defs.spec(e).palette[5]))
         c.drawRect(0f, groundY, w, groundY + 5f * k, f(Ui.blend(Defs.spec(e).palette[5], Color.WHITE, 0.15f)))
         // kamyki / kępki trawy przewijane z polem
         val step = 90f
@@ -370,7 +407,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         } else c.drawPicture(pic)
         c.restore()
         bases.live(e, team)
-        if (Defs.spec(e).art == EraArt.STEAM && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
 
         // flaga drużyny
         val fx0 = bases.flagX(e)
@@ -526,9 +562,13 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawProj(c: Canvas, p: Projectile) {
         val fresh = p.prevX.isNaN()
-        val x = sx(if (fresh) p.x else mix(p.prevX, p.x))
-        if (x < -60f || x > viewW + 60f) return
-        val y = sy(if (fresh) p.h else mix(p.prevH, p.h))
+        val wx = if (fresh) p.x else mix(p.prevX, p.x)
+        val wh = if (fresh) p.h else mix(p.prevH, p.h)
+        val x = sx(wx)
+        if (x < -120f || x > viewW + 120f) return
+        val y = sy(wh)
+        val flightT = if (fresh) p.t else max(0f, p.t - (1f - lerp) * Battle.STEP)
+        drawTrail(c, p, wx, wh, flightT)
         val ang = atan2(-p.vh, p.vx)
         c.save()
         c.translate(x, y)
@@ -561,6 +601,173 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             Proj.BEAM -> { c.drawLine(-52f, 0f, 0f, 0f, l(0x6090F8FF, 8f)); c.drawLine(-50f, 0f, 0f, 0f, l(0xFFE0FFFF.toInt(), 2.6f)) }
         }
         c.restore()
+    }
+
+
+    /** Smuga odtwarzana analitycznie z prędkości i grawitacji, bez bufora historii. */
+    private fun drawTrail(c: Canvas, p: Projectile, x: Float, h: Float, elapsed: Float) {
+        if (elapsed <= 0f) return
+        val span = when (p.type) {
+            Proj.STONE, Proj.BOULDER, Proj.BALL -> 0.055f
+            Proj.JAVELIN, Proj.ARROW, Proj.BOLT -> 0.085f
+            Proj.BULLET -> 0.13f
+            Proj.SHELL -> 0.22f
+            Proj.ROCKET -> 0.29f
+            Proj.PLASMA, Proj.BEAM -> 0.19f
+            else -> 0f
+        }.coerceAtMost(elapsed)
+        if (span <= 0f) return
+        val steps = if (g.quality.level == 1) 1 else if (g.quality.level == 2) 3 else 6
+        val rgb = when (p.type) {
+            Proj.BULLET -> 0xFFFFE070.toInt()
+            Proj.PLASMA, Proj.BEAM -> 0xFF6FEFFF.toInt()
+            Proj.ROCKET -> 0xFFFFBC67.toInt()
+            Proj.JAVELIN, Proj.ARROW, Proj.BOLT -> 0xFFE8E4CA.toInt()
+            else -> 0xFFC0C0B9.toInt()
+        }
+        val vh = p.vh + if (p.prevX.isNaN()) 0f else p.g * (1f - lerp) * Battle.STEP
+        var ox = x
+        var oh = h
+        for (j in 1..steps) {
+            val tau = span * j / steps
+            val nx = x - p.vx * tau
+            val nh = h - vh * tau - 0.5f * p.g * tau * tau
+            val fade = (steps - j + 1f) / steps
+            val a = ((if (g.quality.level == 1) 115f else 180f) * fade).toInt()
+            val color = Color.argb(a, Color.red(rgb), Color.green(rgb), Color.blue(rgb))
+            val width = k * (if (p.type == Proj.BEAM || p.type == Proj.PLASMA) 6f else if (p.type == Proj.ROCKET) 4.5f else 2.5f) * fade
+            c.drawLine(sx(ox), sy(oh), sx(nx), sy(nh), l(color, width.coerceAtLeast(0.6f)))
+            ox = nx; oh = nh
+        }
+    }
+
+    private fun isBarrage(p: Projectile): Boolean =
+        p.splash >= 50f && p.siegeMul <= 0.26f && p.dur >= 0.8f && p.dur <= 0.9f
+
+    /** Cel zapowiedziany przed nalotem; nie wyświetlamy pełnego ostrzeżenia przez cały delay. */
+    private fun drawBarrageMarkers(c: Canvas) {
+        for (p in b.projs) {
+            if (!p.active || !isBarrage(p)) continue
+            if (p.delay > 0.3f) continue
+            val progress = if (p.delay > 0f) (0.3f - p.delay) / 0.3f * 0.12f
+                else (0.12f + 0.88f * (p.t / p.dur).coerceIn(0f, 1f))
+            val x = sx(p.tx)
+            if (x < -80f || x > viewW + 80f) continue
+            val radius = (18f + progress * 23f) * k
+            fill.color = Color.argb((25f + 110f * progress).toInt(), 30, 22, 17)
+            rect.set(x - radius, groundY - radius * 0.2f, x + radius, groundY + radius * 0.2f)
+            c.drawOval(rect, fill)
+            line.color = Color.argb((45f + 165f * progress).toInt(),
+                if (Defs.spec(p.era).art == EraArt.ORBITAL) 105 else 245,
+                if (Defs.spec(p.era).art == EraArt.ORBITAL) 230 else 165,
+                if (Defs.spec(p.era).art == EraArt.ORBITAL) 255 else 85)
+            line.strokeWidth = (1.2f + progress * 2.2f) * k
+            c.drawOval(rect, line)
+            if (p.delay <= 0f && p.t >= p.dur * 0.55f) {
+                val a = ((p.t / p.dur - 0.55f) * 300f).toInt().coerceIn(0, 135)
+                val orbital = Defs.spec(p.era).art == EraArt.ORBITAL
+                line.color = Color.argb(a, if (orbital) 130 else 255, if (orbital) 235 else 220, if (orbital) 255 else 170)
+                line.strokeWidth = if (orbital) 8f * k else 3f * k
+                val beamTop = if (orbital) 0f else max(0f, sy(p.h))
+                c.drawLine(if (orbital) x else sx(p.x), beamTop, x, groundY - 8f * k, line)
+            }
+        }
+    }
+
+    /** Kłęby lecące za ciężkimi pociskami. Próbkowanie czasu lotu nie zależy od FPS. */
+    private fun emitProjectilePuffs(i: Int, p: Projectile) {
+        if (p.t < puffLastTime[i]) puffNext[i] = 0.08f
+        puffLastTime[i] = p.t
+        if (g.quality.level == 1) return
+        val interval = when (p.type) {
+            Proj.ROCKET -> 0.055f
+            Proj.SHELL -> 0.09f
+            Proj.STONE, Proj.BOULDER, Proj.BALL -> 0.13f
+            else -> return
+        } * if (g.quality.level == 2) 1.6f else 1f
+        if (p.t - puffNext[i] > 0.35f) puffNext[i] = p.t - 0.15f
+        var emitted = 0
+        while (p.t >= puffNext[i] && emitted < 4) {
+            val tau = p.t - puffNext[i]
+            val x = p.x - p.vx * tau
+            val h = p.h - p.vh * tau - 0.5f * p.g * tau * tau
+            val sz = if (p.type == Proj.ROCKET) 12f else if (p.type == Proj.SHELL) 10f else 6f
+            val shade = if (p.type == Proj.ROCKET) 0x806B655E.toInt() else 0x707E7D7B
+            spawnParticle(x, h, rnd(-7f, 7f), rnd(2f, 22f), 0.42f, sz, shade, 3)
+            puffNext[i] += interval
+            emitted++
+        }
+    }
+
+    /** Kominy i wydechy: akumulatory czasu (ten sam przepływ przy 30/60/120 FPS). */
+    private fun emitAmbient(dt: Float) {
+        val step = dt.coerceIn(0f, 0.12f)
+        for (s in b.sides) {
+            if (Defs.spec(s.era).art != EraArt.STEAM) { baseSmoke[s.index] = 0f; continue }
+            val interval = if (g.quality.level == 1) 0.7f else 0.22f
+            baseSmoke[s.index] = min(1f, baseSmoke[s.index] + step)
+            while (baseSmoke[s.index] >= interval) {
+                baseSmoke[s.index] -= interval
+                spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f + rnd(-10f, 10f),
+                    32f + rnd(0f, 18f), 1.8f, 22f, 0x80716C67.toInt(), 3)
+            }
+        }
+        for (i in b.units.indices) {
+            val u = b.units[i]
+            if (!u.active || u.dying >= 0f ||
+                (u.def.body != Body.VEHICLE && u.def.body != Body.MECH)) {
+                motorSmoke[i] = 0f; continue
+            }
+            val art = Defs.spec(u.def.era).art
+            if (art == EraArt.ORBITAL || art == EraArt.BRONZE) continue
+            val interval = (if (u.moving) 0.12f else 0.28f) * if (g.quality.level == 1) 2.5f else 1f
+            motorSmoke[i] = min(1f, motorSmoke[i] + step)
+            val size = u.def.size
+            while (motorSmoke[i] >= interval) {
+                motorSmoke[i] -= interval
+                if (sx(u.x) < -60f || sx(u.x) > viewW + 60f) continue
+                val dir = b.sides[u.side].dir
+                spawnParticle(u.x - dir * 32f * size,
+                    (if (u.def.body == Body.MECH) 92f else 62f) * size,
+                    -dir * (14f + if (u.moving) 20f else 0f), 20f + rnd(0f, 22f),
+                    0.72f, (if (art == EraArt.STEAM) 14f else 9f) * size,
+                    if (art == EraArt.STEAM) 0x807E7772.toInt() else 0x706E737C, 3)
+            }
+        }
+    }
+
+    /** Sygnał ognia wieżyczki pochodzi z już istniejącego licznika animacji. */
+    private fun detectTurretFire() {
+        for (s in b.sides) for (i in s.turretFire.indices) {
+            val slot = s.index * Defs.MAX_TURRET_SLOTS + i
+            val current = s.turretFire[i]
+            if (i < s.slots && s.turretEra[i] >= 0 && current > turretFirePrev[slot] + 0.04f) {
+                emitMuzzle(s.baseFront - s.dir * 40f, b.turretHeight(i),
+                    s.dir, Defs.spec(s.turretEra[i]).turret.projectile)
+            }
+            turretFirePrev[slot] = current
+        }
+    }
+
+    private fun drawScars(c: Canvas, dt: Float) {
+        if (g.quality.level == 1) return
+        for (i in 0 until SCARS) {
+            if (scarLife[i] <= 0f) continue
+            scarLife[i] = max(0f, scarLife[i] - dt)
+            val a = (75f * (scarLife[i] / 3f)).toInt().coerceIn(0, 75)
+            val x = sx(scarX[i]); val r = scarSize[i] * k
+            rect.set(x - r, groundY - r * 0.19f, x + r, groundY + r * 0.19f)
+            fill.color = Color.argb(a, 25, 22, 22)
+            c.drawOval(rect, fill)
+        }
+    }
+
+    private fun addScar(x: Float, size: Float) {
+        if (g.quality.level == 1) return
+        scarX[nextScar] = x
+        scarSize[nextScar] = size
+        scarLife[nextScar] = 3f
+        nextScar = (nextScar + 1) % SCARS
     }
 
     // ---------------------------------------------------------------- efekty
