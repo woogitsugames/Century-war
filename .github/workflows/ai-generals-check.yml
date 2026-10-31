@@ -29,6 +29,7 @@ jobs:
           find app/build/test-results/testDebugUnitTest -name 'TEST-*Test.xml' -exec sh -c 'echo ==== "$1"; head -c 6000 "$1"; echo' _ '{}' \;
 
       - name: Porównaj czas bitew z gałęzią bazową
+        if: always()
         run: |
           ./gradlew :app:testDebugUnitTest --tests '*AiDurationBenchmarkTest*' --console=plain
           git fetch origin claude/bold-sagan-vwz5gm
