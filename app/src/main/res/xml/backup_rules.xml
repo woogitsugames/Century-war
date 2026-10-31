@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 i starsze. Kopia obejmuje wyłącznie profil gracza. battle.snap (zrzut przerwanej
+     bitwy) jest przejściowy i celowo NIE jest dołączany, tak samo jak pliki .tmp / .corrupt.
+     (Jawny <exclude> nie jest potrzebny: przy <include> wszystko inne jest pominięte.) -->
+<full-backup-content>
+    <include domain="file" path="profile.json" />
+</full-backup-content>

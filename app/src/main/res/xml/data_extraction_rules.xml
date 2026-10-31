@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. Kopia w chmurze i przeniesienie na nowe urządzenie: tylko profil gracza.
+     battle.snap (zrzut przerwanej bitwy) jest przejściowy i celowo pominięty. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="profile.json" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="profile.json" />
+    </device-transfer>
+</data-extraction-rules>

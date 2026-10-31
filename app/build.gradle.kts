@@ -5,7 +5,32 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Brak zmiennych oznacza lokalne podpisywanie debug; konfiguracja czesciowa jest bledem.
+// ---- Wersjonowanie -------------------------------------------------------------------------
+// versionCode: releaseVersionCode z gradle.properties (zwiększ przed każdym wydaniem w Google Play).
+val releaseVersionCode = providers.gradleProperty("releaseVersionCode").getOrElse("1").toIntOrNull()
+    ?: error("releaseVersionCode musi być liczbą całkowitą")
+require(releaseVersionCode in 1..2_100_000_000) { "releaseVersionCode poza zakresem Google Play" }
+
+// versionName: tag SemVer bieżącego commita (v1.2.3 -> 1.2.3), inaczej releaseVersionName.
+// Brak gita (np. build ze źródeł bez .git) nie psuje builda.
+val releaseTagPattern = Regex("""v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?""")
+val releaseTag = runCatching {
+    providers.exec {
+        workingDir = rootProject.projectDir
+        commandLine("git", "tag", "--points-at", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get()
+}.getOrDefault("").lineSequence()
+    .map { it.trim() }
+    .filter { releaseTagPattern.matches(it) }
+    .sorted()
+    .lastOrNull()
+val releaseVersionName = releaseTag?.removePrefix("v")
+    ?: providers.gradleProperty("releaseVersionName").getOrElse("0.1.0-dev")
+
+// ---- Podpis release ------------------------------------------------------------------------
+// Klucz upload wyłącznie ze środowiska (CI: sekrety GitHub, patrz docs/CI.md). Brak wszystkich
+// zmiennych oznacza lokalny podpis kluczem debug (jak dotąd); konfiguracja częściowa jest błędem.
 val releaseStoreFile = providers.environmentVariable("RELEASE_KEYSTORE_FILE").orNull
 val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
@@ -24,8 +49,8 @@ android {
         applicationId = "com.centurywar.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
     }
 
     signingConfigs {
@@ -44,7 +69,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Bez sekretow lokalne kompilacje release uzywaja klucza debug.
+            // Bez sekretów lokalne kompilacje release używają klucza debug (nie do publikacji).
             signingConfig = signingConfigs.getByName(if (hasReleaseSigning) "release" else "debug")
         }
     }

@@ -45,6 +45,7 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*LTest*' \
+            --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz debug APK
         if: ${{ always() }}
@@ -160,6 +161,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # tag v* -> versionName (app/build.gradle.kts)
       - name: JDK 17
         uses: actions/setup-java@v4
         with:
