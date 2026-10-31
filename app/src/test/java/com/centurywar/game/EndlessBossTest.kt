@@ -156,6 +156,67 @@ class EndlessBossTest {
         assertTrue(u.alive)
     }
 
+    @Test fun rageBoostsDamageAndAttackRateWithoutChangingMovementSpeed() {
+        val b = bossAt(50)
+        b.chooseEndlessCard(0)
+        b.enemy.queueSize = 0
+        val boss = b.currentBoss()!!
+        boss.x = b.player.baseFront + boss.radius
+        boss.prevX = Float.NaN
+        boss.bossRageActive = true
+        boss.hp = boss.maxHp * 0.4f
+        boss.cd = 0f
+        b.player.baseMaxHp = 100_000_000f
+        b.player.baseHp = b.player.baseMaxHp
+        b.waveTimer = 800f
+        val plain = BattleSnapshot.decode(BattleSnapshot.encode(b))!!.battle
+        val regular = plain.currentBoss()!!
+        regular.bossRageActive = false
+        b.step()
+        plain.step()
+        if (boss.def.projectile == Proj.NONE) {
+            val ragingDmg = 100_000_000f - b.player.baseHp
+            val normalDmg = 100_000_000f - plain.player.baseHp
+            assertEquals(normalDmg * 1.5f, ragingDmg, normalDmg * 0.01f)
+        } else {
+            val ragingShot = b.projs.first { it.active && it.side == 1 }
+            val normalShot = plain.projs.first { it.active && it.side == 1 }
+            assertEquals(normalShot.dmg * 1.5f, ragingShot.dmg, 0.01f)
+        }
+        // Osobny krok z długim cooldownem: dotyczy tempa ataku, a nie marszu.
+        boss.cd = 100f
+        regular.cd = 100f
+        boss.x = b.player.baseFront + 200f
+        regular.x = plain.player.baseFront + 200f
+        boss.prevX = Float.NaN
+        regular.prevX = Float.NaN
+        b.step()
+        plain.step()
+        assertTrue(boss.cd < regular.cd)
+        assertEquals(boss.x, regular.x, 0.01f)
+    }
+
+    @Test fun secondaryRecruiterAndRageAreEffective() {
+        val recruits = bossAt(80)
+        recruits.chooseEndlessCard(0)
+        val carrier = recruits.currentBoss()!!
+        assertTrue(carrier.hasBossAbility(EndlessBosses.RECRUITER))
+        carrier.bossSummonCd = 0f
+        recruits.enemy.queueSize = 0
+        recruits.waveTimer = 800f
+        val initial = recruits.enemy.aliveCount
+        recruits.step()
+        assertEquals(initial + 2, recruits.enemy.aliveCount)
+
+        val fury = bossAt(90)
+        fury.chooseEndlessCard(0)
+        val leader = fury.currentBoss()!!
+        assertTrue(leader.hasBossAbility(EndlessBosses.RAGE))
+        leader.hp = leader.maxHp * 0.51f
+        hit(fury, leader, leader.maxHp * 0.1f)
+        assertTrue(leader.bossRageActive)
+    }
+
     @Test fun secondAbilityWorksAndBossDefeatStillGivesCard() {
         val b = bossAt(60)
         val u = b.currentBoss()!!
