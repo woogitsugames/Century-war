@@ -1,5 +1,6 @@
 package com.centurywar.meta
 
+import com.centurywar.game.BattleConfig
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import org.json.JSONArray
@@ -13,6 +14,12 @@ class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: 
 }
 
 class ScoreEntry(val name: String, val score: Long, val day: Long)
+
+/** Historia niezależna od tablic rankingowych; obejmuje również bitwy własne. */
+data class SkirmishResult(
+    val score: Long, val day: Long, val won: Boolean, val ranked: Boolean,
+    val setup: SkirmishSetup,
+)
 
 /**
  * Trwały postęp gracza: medale, badania, gwiazdki kampanii, rekordy i ustawienia.
@@ -143,6 +150,7 @@ class Profile(private val file: File) {
 
     val missionState = MissionState()
     val boards = HashMap<String, MutableList<ScoreEntry>>()
+    val skirmishHistory = ArrayList<SkirmishResult>()
     // Pliku utworzonego przez nowszą wersję gry nie wolno nadpisać.
     private var newerProfileVersion = false
 
@@ -205,6 +213,13 @@ class Profile(private val file: File) {
 
     fun top(board: String): List<ScoreEntry> = boards[board] ?: emptyList()
 
+    /** Ostatnie 20 potyczek, także niestandardowe. Brak wpisu do rankingu dla bitwy własnej. */
+    fun recordSkirmish(cfg: BattleConfig, score: Long, day: Long, won: Boolean) {
+        skirmishHistory.add(0, SkirmishResult(score.coerceAtLeast(0L), day.coerceAtLeast(0L),
+            won, SkirmishSetup.isRanked(cfg), SkirmishSetup.fromConfig(cfg)))
+        if (skirmishHistory.size > 20) skirmishHistory.removeAt(skirmishHistory.lastIndex)
+    }
+
     // ---------------------------------------------------------------- zapis
 
     /** Wywoływane wyłącznie po udanym zapisie lokalnym; callback nie blokuje gry. */
@@ -235,6 +250,13 @@ class Profile(private val file: File) {
             .put("startEra", setup.startEra).put("maxEra", setup.maxEra)
             .put("personality", setup.personality).put("powerPercent", setup.powerPercent)
             .put("modifierMask", setup.modifierMask))
+        o.put("skirmishHistory", JSONArray().apply {
+            for (r in skirmishHistory.take(20)) put(JSONObject()
+                .put("score", r.score).put("day", r.day).put("won", r.won).put("ranked", r.ranked)
+                .put("startEra", r.setup.startEra).put("maxEra", r.setup.maxEra)
+                .put("personality", r.setup.personality).put("powerPercent", r.setup.powerPercent)
+                .put("modifierMask", r.setup.modifierMask))
+        })
         o.put("notifications", notifications)
         o.put("notifyHour", notifyHour.coerceIn(0, 23))
         o.put("battles", battles)
@@ -405,6 +427,23 @@ class Profile(private val file: File) {
         }
         val missions = obj("missions")
         val savedSkirmish = obj("skirmishSetup")
+        val newHistory = ArrayList<SkirmishResult>()
+        arr("skirmishHistory")?.let { list ->
+            for (i in 0 until minOf(20, list.length())) {
+                val entry = list.optJSONObject(i) ?: continue
+                val settings = SkirmishSetup(
+                    entry.optInt("startEra", 0), entry.optInt("maxEra", com.centurywar.game.Defs.ERA_COUNT - 1),
+                    entry.optInt("personality", -1), entry.optInt("powerPercent", 105),
+                    entry.optInt("modifierMask", 0),
+                ).sanitized()
+                newHistory.add(SkirmishResult(
+                    entry.optLong("score", 0L).coerceAtLeast(0L),
+                    entry.optLong("day", 0L).coerceAtLeast(0L),
+                    entry.optBoolean("won", false),
+                    entry.optBoolean("ranked", false), settings,
+                ))
+            }
+        }
 
         // Zmieniamy aktualny stan dopiero po pomyślnym przetworzeniu całego dokumentu.
         name = json.optString("name", "")
@@ -446,6 +485,7 @@ class Profile(private val file: File) {
             ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
         missionState.fromJson(missions)
         boards.clear(); boards.putAll(newBoards)
+        skirmishHistory.clear(); skirmishHistory.addAll(newHistory)
     }
 
     private fun clearInMemory() {
@@ -458,7 +498,7 @@ class Profile(private val file: File) {
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()
-        boards.clear()
+        boards.clear(); skirmishHistory.clear()
     }
 
     /** Nigdy nie nadpisujemy poprzedniej kopii uszkodzonego profilu. */
@@ -542,6 +582,7 @@ class Profile(private val file: File) {
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()
+        skirmishHistory.clear()
         name = keepName
         save()
     }
