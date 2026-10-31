@@ -183,6 +183,18 @@ object Defs {
     val evolveXp: IntArray = IntArray(ERA_COUNT) { specs[it].evolveXp }
 
     fun spec(era: Int): EraSpec = specs[era]
+
+    /** Indeks gotowego stylu postaci i machin; nie jest numerem epoki. */
+    fun artPreset(era: Int): Int = when (specs[era].art) {
+        EraArt.TRIBAL -> 0
+        EraArt.BRONZE -> 1
+        EraArt.IRON, EraArt.FEUDAL -> 2
+        EraArt.POWDER -> 3
+        EraArt.STEAM -> 4
+        EraArt.STEEL -> 5
+        EraArt.SILICON -> 6
+        EraArt.ORBITAL -> 7
+    }
     fun statScale(era: Int): Float = STAT_GROWTH.pow(era)
     fun costScale(era: Int): Float = COST_GROWTH.pow(era)
 
