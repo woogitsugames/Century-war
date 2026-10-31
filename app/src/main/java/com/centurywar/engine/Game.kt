@@ -11,6 +11,7 @@ import com.centurywar.meta.AchievementDef
 import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
+import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Missions
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
@@ -64,6 +65,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
     /** Zrzut przerwanej bitwy (filesDir/battle.snap). Null w testach. */
     var snapshots: SnapshotStore? = null
+    /** Plik historii jest lokalny i nigdy nie jest synchronizowany z chmurą. */
+    var history: BattleHistory? = null
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
 
