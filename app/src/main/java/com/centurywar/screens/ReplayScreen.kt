@@ -14,6 +14,7 @@ import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.Defs
+import com.centurywar.game.EndlessCard
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.ReplayPlayer
@@ -59,6 +60,9 @@ class ReplayScreen(
     private var timeText = ""
     private var statusKey = -1
     private var statusText = ""
+    private var doctrineState = ""
+    private var doctrineHash = -1
+    private val cardDefs = EndlessCard.values()
     private var lastProgress = -1
     private var loadingText = ""
 
@@ -184,6 +188,19 @@ class ReplayScreen(
                 "${L[Defs.eras[b.enemy.era].nameKey]} ${b.enemy.gold.toInt()}  " +
                 "HP ${b.player.baseHp.toInt()}/${b.enemy.baseHp.toInt()}" + wave
         }
+        var dh = 13
+        for (d in b.player.doctrines) dh = dh * 31 + d.ordinal
+        for (i in b.player.cardStacks.indices) dh = dh * 31 + b.player.cardStacks[i]
+        if (dh != doctrineHash) {
+            doctrineHash = dh
+            val parts = ArrayList<String>()
+            for (d in b.player.doctrines) parts.add(L[d.key])
+            for (i in b.player.cardStacks.indices) if (b.player.cardStacks[i] > 0) {
+                parts.add(L[cardDefs[i].textKey] + " ×" + b.player.cardStacks[i])
+            }
+            doctrineState = if (parts.isEmpty()) "" else
+                L["replay_doctrines"] + ": " + parts.joinToString(", ")
+        }
         pause.label = if (paused) L["replay_play"] else L["replay_pause"]
         pause.iconId = if (paused) Icons.PLAY else Icons.PAUSE
         slower.label = when (speed) { 1 -> "×1"; 3 -> "×3"; else -> "×8" }
@@ -228,12 +245,10 @@ class ReplayScreen(
         ui.text(c, timeText, footer.centerX(), footer.top + 13 * dp, 11f, Ui.TEXT, Paint.Align.CENTER)
         if (p.seeking) ui.textO(c, loadingText, footer.centerX(), footer.top - 12 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
         drawMini(c, p, r)
-        val doctr = p.battle.player.doctrines.size
-        val cards = p.battle.player.cardStacks.sum()
-        // Stan doktryn i kart jest wyłącznie odczytywany, nigdy modyfikowany przez ekran.
-        if (doctr > 0 || cards > 0) {
-            ui.text(c, L["replay_doctrines"], g.insetL + 14 * dp,
-                footer.top - 12 * dp, 11f, Ui.GOLD)
+        // Lista doktryn i kart jest buforowana przy zmianie stanu, a nie składana na klatkę.
+        if (doctrineState.isNotEmpty()) {
+            ui.text(c, doctrineState, g.insetL + 14 * dp, footer.top - 12 * dp,
+                ui.fit(doctrineState, 11f, w - g.insetL - g.insetR - 28 * dp), Ui.GOLD)
         }
     }
 
