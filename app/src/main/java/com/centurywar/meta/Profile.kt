@@ -50,6 +50,9 @@ class Profile(private val file: File) {
     var bestWave = 0
     var lastRankedDaily = -1L
     var tutorialDone = false
+    /** Ostatnie wybory gracza: starszy profil bez pól zachowuje wariant 0. */
+    var steamPreference = 0
+    var siliconPreference = 0
 
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
@@ -67,6 +70,22 @@ class Profile(private val file: File) {
     var playSeconds = 0L
 
     val boards = HashMap<String, MutableList<ScoreEntry>>()
+
+    fun preferredVariant(era: Int): Int = when (era) {
+        4 -> steamPreference
+        6 -> siliconPreference
+        else -> 0
+    }
+
+    fun rememberVariant(era: Int, variant: Int) {
+        if (variant !in 0..1) return
+        when (era) {
+            4 -> steamPreference = variant
+            6 -> siliconPreference = variant
+            else -> return
+        }
+        save()
+    }
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
     fun replayTutorial() { tutorialDone = false; save() }
@@ -134,7 +153,7 @@ class Profile(private val file: File) {
     fun save() {
         try {
             val o = JSONObject()
-            o.put("v", 1)
+            o.put("v", 2)
             o.put("name", name)
             o.put("medals", medals)
             o.put("levels", JSONObject(levels as Map<*, *>))
@@ -142,6 +161,8 @@ class Profile(private val file: File) {
             o.put("bestWave", bestWave)
             o.put("lastRankedDaily", lastRankedDaily)
             o.put("tutorialDone", tutorialDone)
+            o.put("steamPreference", steamPreference)
+            o.put("siliconPreference", siliconPreference)
             o.put("quality", quality)
             o.put("fpsCap", fpsCap)
             o.put("vibration", vibration)
@@ -191,6 +212,8 @@ class Profile(private val file: File) {
             bestWave = o.optInt("bestWave", 0)
             lastRankedDaily = o.optLong("lastRankedDaily", -1L)
             tutorialDone = o.optBoolean("tutorialDone", false)
+            steamPreference = o.optInt("steamPreference", 0).coerceIn(0, 1)
+            siliconPreference = o.optInt("siliconPreference", 0).coerceIn(0, 1)
             quality = o.optInt("quality", 0)
             fpsCap = o.optInt("fpsCap", 0)
             vibration = o.optBoolean("vibration", true)
@@ -236,7 +259,8 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
-        tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        tutorialDone = false; steamPreference = 0; siliconPreference = 0
+        battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         name = keepName
         save()
     }
