@@ -47,6 +47,25 @@ class CampaignScreen(g: Game) : Screen(g) {
     private val cx = FloatArray(Campaign.stages.size)
     private val cy = FloatArray(Campaign.stages.size)
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val eraNumbers = Array(Defs.ERA_COUNT) { (it + 1).toString() }
+    private val stageNumbers = Array(Campaign.stages.size) { (it + 1).toString() }
+    private val starLabels = Array(13) { "$it/12" }
+    private var infoIndex = -1
+    private var infoLanguage = -1
+    private var infoTitle = ""
+    private var infoRange = ""
+    private var infoPower = ""
+    private var infoModifiers = ""
+
+    private fun refreshInfo(s: Stage) {
+        if (infoIndex == s.index && infoLanguage == L.lang) return
+        infoIndex = s.index
+        infoLanguage = L.lang
+        infoTitle = L.f("stage_n", s.index + 1)
+        infoRange = L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]])
+        infoPower = L.f("ai_power", (s.aiPower * 100).toInt())
+        infoModifiers = "${L["modifiers"]}:"
+    }
 
     override fun isDragScreen() = selected == null
 
@@ -139,7 +158,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         val mx = band.left + mr + 14 * dp
         val my = band.top + band.height() * 0.42f
         ui.medallion(c, mx, my, mr, col, -1)
-        ui.textO(c, (e + 1).toString(), mx, my + 8 * dp, 22f, Ui.TEXT, Paint.Align.CENTER)
+        ui.textO(c, eraNumbers[e], mx, my + 8 * dp, 22f, Ui.TEXT, Paint.Align.CENTER)
         val tx = mx + mr + 10 * dp
         val avail = pathL - tx - 12 * dp
         val name = L[Defs.eraKeys[e]]
@@ -147,7 +166,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         var es = 0
         for (i in e * 4 until e * 4 + 4) es += g.profile.stars[i]
         Icons.draw(c, Icons.STAR, tx + 8 * dp, my + 16 * dp, 16 * dp, dp = dp)
-        ui.textO(c, "$es/12", tx + 19 * dp, my + 21 * dp, 13f, if (es == 12) Ui.GOLD else Ui.TEXT)
+        ui.textO(c, starLabels[es.coerceIn(0, 12)], tx + 19 * dp, my + 21 * dp, 13f, if (es == 12) Ui.GOLD else Ui.TEXT)
     }
 
     private fun dots(c: Canvas, x0: Float, y0: Float, x1: Float, y1: Float, done: Boolean) {
@@ -202,16 +221,17 @@ class CampaignScreen(g: Game) : Screen(g) {
         if (locked) {
             Icons.draw(c, Icons.LOCK, x, y - 2 * dp, r * 0.95f, dp = dp)
         } else {
-            ui.textO(c, (i + 1).toString(), x, y + 6.5f * dp, if (big) 21f else 19f, Ui.TEXT, Paint.Align.CENTER)
+            ui.textO(c, stageNumbers[i], x, y + 6.5f * dp, if (big) 21f else 19f, Ui.TEXT, Paint.Align.CENTER)
         }
         if (big) Icons.draw(c, Icons.FLAG, x + r * 0.78f, y - r * 0.8f, r * 0.75f, Ui.RIBBON, dp = dp)
         if (!locked) ui.stars(c, x, y + r + 4 * dp, r * 0.62f, st, 3, 0.95f)
     }
 
     private fun drawInfo(c: Canvas, s: Stage) {
+        refreshInfo(s)
         c.drawColor(Color.argb(150, 0, 0, 0))
         ui.panel(c, info)
-        ui.ribbon(c, info.centerX(), info.top + 4 * dp, L.f("stage_n", s.index + 1), 20f, Ui.ERA[s.index / 4].let { Ui.blend(it, Ui.RIBBON, 0.35f) }, info.width() * 0.55f)
+        ui.ribbon(c, info.centerX(), info.top + 4 * dp, infoTitle, 20f, Ui.ERA[s.index / 4].let { Ui.blend(it, Ui.RIBBON, 0.35f) }, info.width() * 0.55f)
         var y = info.top + 48 * dp
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
@@ -220,15 +240,15 @@ class CampaignScreen(g: Game) : Screen(g) {
         y += 34 * dp
         val isz = 20 * dp
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]]), x + isz + 8 * dp, y, 14f, Ui.TEXT)
+        ui.textO(c, infoRange, x + isz + 8 * dp, y, 14f, Ui.TEXT)
         y += 28 * dp
         Icons.draw(c, Icons.SKULL, x + isz / 2, y - 5 * dp, isz, dp = dp)
         val pw = s.aiPower
-        ui.textO(c, L.f("ai_power", (pw * 100).toInt()), x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
+        ui.textO(c, infoPower, x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
         y += 28 * dp
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, "${L["modifiers"]}:", x + isz + 8 * dp, y, 14f, Ui.GOLD)
+        ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
         y += 10 * dp
         if (s.modifiers.isEmpty()) {
             ui.text(c, L["none"], x + isz + 8 * dp, y + 16 * dp, 13f, Ui.DIM)

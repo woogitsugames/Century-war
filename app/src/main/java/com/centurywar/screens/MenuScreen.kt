@@ -157,6 +157,10 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     private var subKey = Long.MIN_VALUE
+    private var shownMedals = Int.MIN_VALUE
+    private var shownStars = Int.MIN_VALUE
+    private var medalsText = ""
+    private var starsText = ""
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
@@ -222,9 +226,10 @@ class MenuScreen(g: Game) : Screen(g) {
         val t = g.insetT + 10 * dp
         val ph = 48 * dp
         val nameW = ui.measure(pr.name, 15f, true)
-        val medals = pr.medals.toString()
-        val stars = pr.totalStars().toString()
-        val statsW = ui.measure(medals, 13f, true) + ui.measure(stars, 13f, true) + 52 * dp
+        val stars = pr.totalStars()
+        if (shownMedals != pr.medals) { shownMedals = pr.medals; medalsText = pr.medals.toString() }
+        if (shownStars != stars) { shownStars = stars; starsText = stars.toString() }
+        val statsW = ui.measure(medalsText, 13f, true) + ui.measure(starsText, 13f, true) + 52 * dp
         val pw = ph + max(nameW, statsW) + 22 * dp
         plate.set(l + ph * 0.4f, t + 3 * dp, l + pw, t + ph - 3 * dp)
         ui.card(c, plate, Color.argb(235, 34, 42, 62), 14f)
@@ -233,10 +238,10 @@ class MenuScreen(g: Game) : Screen(g) {
         ui.textO(c, pr.name, tx, t + 21 * dp, 15f, Ui.TEXT)
         val iy = t + 33 * dp
         Icons.draw(c, Icons.MEDAL, tx + 7 * dp, iy, 15 * dp, dp = dp)
-        ui.textO(c, medals, tx + 17 * dp, iy + 4.5f * dp, 13f, Ui.GOLD)
-        val sx = tx + 26 * dp + ui.measure(medals, 13f, true)
+        ui.textO(c, medalsText, tx + 17 * dp, iy + 4.5f * dp, 13f, Ui.GOLD)
+        val sx = tx + 26 * dp + ui.measure(medalsText, 13f, true)
         Icons.draw(c, Icons.STAR, sx + 7 * dp, iy, 15 * dp, dp = dp)
-        ui.textO(c, stars, sx + 17 * dp, iy + 4.5f * dp, 13f, Ui.GOLD)
+        ui.textO(c, starsText, sx + 17 * dp, iy + 4.5f * dp, 13f, Ui.GOLD)
         plateRight = plate.right
     }
 
