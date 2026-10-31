@@ -66,6 +66,41 @@ class EndlessCardsTest {
     }
 
     @Test
+    fun burningTurretAppliesDamageOverTime() {
+        val b = newBattle()
+        val p = b.player
+        b.applyEndlessCard(p, EndlessCard.BURNING_TOWERS)
+        assertTrue(b.buyTurret(p, 0))
+        b.spawn(b.enemy, Defs.unit(b.enemy.era, Role.HEAVY))
+        val foe = b.units.first { it.alive && it.side == 1 }
+        foe.x = p.baseFront + 170f
+        foe.hp = foe.maxHp
+        b.waveTimer = 900f
+        var ignited = false
+        repeat(110) {
+            b.step()
+            if (foe.burnLeft > 0f) ignited = true
+        }
+        assertTrue("Pocisk wieży powinien podpalić przeciwnika", ignited)
+        assertTrue("Cel powinien stracić HP", foe.hp < foe.maxHp)
+    }
+
+    @Test
+    fun autoBarrageDoesNotBlockManualBarrage() {
+        val b = newBattle()
+        val p = b.player
+        b.applyEndlessCard(p, EndlessCard.AUTO_BARRAGE)
+        b.waveTimer = 900f
+        p.autoBarrageTimer = Battle.STEP / 2f
+        val before = p.abilityCd[0]
+        b.step()
+        assertEquals(before, p.abilityCd[0], 0.001f)
+        assertTrue("Automatyczny ostrzał musi użyć puli pocisków",
+            b.projs.any { it.active && it.side == 0 })
+        assertTrue(b.castBarrage(p))
+    }
+
+    @Test
     fun everyFifthWaveOffersThreeDistinctCards() {
         val b = newBattle()
         repeat(5) {
