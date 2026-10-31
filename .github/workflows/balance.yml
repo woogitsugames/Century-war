@@ -30,7 +30,7 @@ jobs:
       BALANCE_STAGE_FROM: ${{ matrix.from }}
       BALANCE_STAGE_TO: ${{ matrix.to }}
       BALANCE_RUNS: '20'
-      BALANCE_BASELINE: 'true'
+      BALANCE_BASELINE: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -48,6 +48,9 @@ jobs:
         run: |
           ./gradlew :app:assembleDebug --console=plain
           ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
+      - name: Kontrola lustrzanych bitew
+        if: matrix.from == 1
+        run: ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.mirrorReport' --console=plain
       - name: Pomiar kampanii
         run: ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignReport' --console=plain
       - name: Wynik CSV
