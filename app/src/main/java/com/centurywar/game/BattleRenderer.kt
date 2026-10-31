@@ -87,11 +87,14 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         viewW = w
         groundY = h - bottomReserve
         val visibleH = groundY - topReserve
-        // Na prawie kwadratowych ekranach (rozłożony Fold, tablet) przybliżamy pole,
-        // żeby jednostki nie ginęły pod ogromnym niebem.
+        // Na prawie kwadratowych ekranach (rozłożony Fold, tablet) widok jest węższy niż
+        // na telefonie, ale wciąż pokazuje sporą część pola. Nadmiar wysokości oddajemy
+        // ziemi (pas przedpola pod jednostkami) zamiast pustemu niebu.
         val aspect = w / h
-        val worldW = if (aspect < 1.5f) 630f else 1100f
+        val worldW = if (aspect < 1.5f) 880f else 1100f
         k = min(visibleH / 360f, w / worldW).coerceAtLeast(0.1f)
+        val excess = visibleH - 360f * k
+        if (excess > 0f) groundY -= excess * 0.4f
         skyEra = -1
         clampCam()
     }
