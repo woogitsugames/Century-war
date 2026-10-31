@@ -53,6 +53,8 @@ enum class EndlessWaveTheme {
     FAST_RUSH,
     ELITE_GUARD,
     ARTILLERY,
+    SIEGE_TRAIN,
+    SKIRMISHERS,
     ;
     val textKey: String = "ew_${name.lowercase()}"
 }
@@ -88,4 +90,28 @@ object EndlessCards {
         for (i in 0 until count) if (picks[i] == card) return false
         return true
     }
+}
+
+/** Typy i stała rotacja bossów; zero losowań i alokacji w kroku symulacji. */
+object EndlessBosses {
+    const val NONE = 0
+    const val KNOCKBACK = 1
+    const val AURA = 2
+    const val SHIELD = 3
+    const val RECRUITER = 4
+    const val RAGE = 5
+    const val MAX_KIND = RAGE
+
+    const val AURA_RANGE = 380f
+    const val SHIELD_HP = 0.5f
+    const val RECRUIT_INTERVAL = 10f
+
+    val nameKeys = arrayOf("", "eb_knockback", "eb_aura", "eb_shield", "eb_recruiter", "eb_rage")
+    val descriptionKeys = arrayOf("", "eb_knockback_d", "eb_aura_d", "eb_shield_d", "eb_recruiter_d", "eb_rage_d")
+
+    fun kindAtWave(wave: Int): Int =
+        if (wave < 10 || wave % 10 != 0) NONE else (wave / 10 - 1) % MAX_KIND + 1
+
+    fun secondaryAtWave(wave: Int): Int =
+        if (wave < 60 || wave % 10 != 0) NONE else kindAtWave(wave) % MAX_KIND + 1
 }

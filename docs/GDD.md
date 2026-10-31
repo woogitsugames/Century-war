@@ -40,7 +40,7 @@
 ### Oblężenie bez końca
 - Fale co ~16–28 s. Co 6 fal wróg wchodzi w nową epokę, a od fali 48 jednostki wroga stają się coraz silniejsze.
 - Co 5 fal gracz wybiera jedną z trzech kart (30 rodzajów, cztery rzadkości); przy awansie epoki nie ma już osobnego wyboru doktryny.
-- Fale tematyczne (strzelcy, ciężkie oddziały, elita, szturm) są zapowiadane przed pojawieniem się. Co 10 fal przychodzi boss z odrzutem lub aurą szybkości.
+- Fale tematyczne są zapowiadane przed pojawieniem się; wśród ośmiu tematów są tabor oblężniczy (+15% budżetu, wolniejszy) i harcownicy (+30% budżetu, -20% HP). Co 10 fal przychodzi boss z pięciu typów (odrzut, aura tempa, tarczownik, werbownik, szał) w stałej rotacji; od fali 60 zyskuje drugą zdolność.
 - Pokonanie bossa zapewnia dodatkową kartę.
 - Wynik = fale × 250 + zabici × 12 + czas / 2 + pokonani bossowie × 1500.
 - Po bardzo długim oblężeniu narasta presja niszcząca bazę, żeby pojedynek nie trwał bez końca.

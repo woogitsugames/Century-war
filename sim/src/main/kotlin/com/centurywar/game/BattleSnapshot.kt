@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 9
+    const val VERSION = 10
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -110,7 +110,9 @@ object BattleSnapshot {
             o.writeFloat(u.x); o.writeFloat(u.hp); o.writeFloat(u.maxHp); o.writeFloat(u.dmg); o.writeFloat(u.cd)
             o.writeFloat(u.anim); o.writeFloat(u.attackAnim); o.writeFloat(u.flash)
             o.writeBoolean(u.moving); o.writeFloat(u.dying); o.writeInt(u.serial)
-            o.writeByte(u.bossKind); o.writeFloat(u.bossCd); o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft)
+            o.writeByte(u.bossKind); o.writeByte(u.bossSecondaryKind)
+            o.writeFloat(u.bossCd); o.writeFloat(u.bossSummonCd); o.writeBoolean(u.bossRageActive)
+            o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft)
         }
         o.writeShort(b.projs.count { it.active })
         for ((i, p) in b.projs.withIndex()) {
@@ -267,8 +269,12 @@ object BattleSnapshot {
             u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.cd = i.readFloat()
             u.anim = i.readFloat(); u.attackAnim = i.readFloat(); u.flash = i.readFloat()
             u.moving = i.readBoolean(); u.dying = i.readFloat(); u.serial = i.readInt()
-            u.bossKind = i.readByte().toInt().also { require(it in 0..2) }
-            u.bossCd = i.readFloat(); u.burnDps = i.readFloat(); u.burnLeft = i.readFloat()
+            u.bossKind = i.readByte().toInt().also { require(it in 0..EndlessBosses.MAX_KIND) }
+            u.bossSecondaryKind = i.readByte().toInt().also { require(it in 0..EndlessBosses.MAX_KIND) }
+            require(u.bossKind != EndlessBosses.NONE || u.bossSecondaryKind == EndlessBosses.NONE)
+            u.bossCd = i.readFloat(); u.bossSummonCd = i.readFloat()
+            u.bossRageActive = i.readBoolean()
+            u.burnDps = i.readFloat(); u.burnLeft = i.readFloat()
         }
         val pn = i.readShort().toInt()
         require(pn in 0..Battle.MAX_PROJ)

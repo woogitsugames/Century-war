@@ -17,6 +17,8 @@ import com.centurywar.game.BattleRenderer
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Defs
 import com.centurywar.game.Weather
+import com.centurywar.game.EndlessBosses
+import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import java.util.Locale
@@ -54,6 +56,16 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val toggle = btn(-2)
     private val variantBtn = Array(2) { btn(-3 - it) }
     private val tabs = Array(Defs.ERA_COUNT) { btn(100 + it) }
+    private val endlessWaveThemes = EndlessWaveTheme.values()
+    private val endlessBossNames = arrayOfNulls<String>(EndlessBosses.MAX_KIND)
+    private val endlessBossDetails = arrayOfNulls<String>(EndlessBosses.MAX_KIND)
+    private val endlessWaveNames = arrayOfNulls<String>(endlessWaveThemes.size)
+    private val endlessWaveDetails = arrayOfNulls<String>(endlessWaveThemes.size)
+    private var bossSectionTitle = ""
+    private var waveSectionTitle = ""
+    private val bossIcons = intArrayOf(Icons.ADVANCE, Icons.SPEED, Icons.SHIELD, Icons.HELMET, Icons.FLAME)
+    private val waveIcons = intArrayOf(Icons.CROSSED_SWORDS, Icons.CROSSHAIR, Icons.SHIELD,
+        Icons.SPEED, Icons.CROWN, Icons.BOMB, Icons.TOWER, Icons.HELMET)
 
     /** Atrapa bitwy tylko po to, by użyć proceduralnych sylwetek jednostek z renderera. */
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
@@ -78,6 +90,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val gap get() = 12 * dp
     private val headerH get() = 174 * dp
     private val rowH get() = (if (ui.textScale > 1.15f) 26f else 21f) * dp
+    private val endlessRowH get() = 52 * dp
+    private val endlessHeaderH get() = 34 * dp
 
     // dane kart (przeliczane w rebuild)
     private val titles = arrayOfNulls<String>(CARDS)
@@ -143,7 +157,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val unitRows = (MAX_STATS + statCols - 1) / statCols
         ch = 10 * dp + previewH + 36 * dp + unitRows * rowH + 12 * dp
         val gridRows = (CARDS + cols - 1) / cols
-        val contentH = headerH + gridRows * (ch + gap)
+        val contentH = headerH + gridRows * (ch + gap) + 12 * dp +
+            2 * endlessHeaderH + (endlessBossNames.size + endlessWaveNames.size) * endlessRowH
         maxScroll = max(0f, contentH - (h - g.insetB - viewTop) + 8 * dp)
         scroll = scroll.coerceIn(0f, maxScroll)
         rebuild()
@@ -233,6 +248,17 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             vb.selected = i == selectedVariant
             vb.highlight = vb.selected
         }
+        bossSectionTitle = L["cx_endless_bosses"]
+        waveSectionTitle = L["cx_endless_waves"]
+        for (i in endlessBossNames.indices) {
+            endlessBossNames[i] = L[EndlessBosses.nameKeys[i + 1]]
+            endlessBossDetails[i] = L[EndlessBosses.descriptionKeys[i + 1]]
+        }
+        for (i in endlessWaveThemes.indices) {
+            val key = endlessWaveThemes[i].textKey
+            endlessWaveNames[i] = L[key]
+            endlessWaveDetails[i] = L[key + "_d"]
+        }
     }
 
     private fun stat(card: Int, n: Int, icon: Int, key: String, value: String, up: Boolean): Int {
@@ -299,11 +325,38 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             card.set(x, y, x + cw, y + ch)
             drawCard(c, i)
         }
+        val sectionY = gridTop + ((CARDS + cols - 1) / cols) * (ch + gap) + 12 * dp
+        drawEndlessSection(c, sectionY, bossSectionTitle, endlessBossNames, endlessBossDetails, bossIcons)
+        drawEndlessSection(c, sectionY + endlessHeaderH + endlessBossNames.size * endlessRowH,
+            waveSectionTitle, endlessWaveNames, endlessWaveDetails, waveIcons)
         c.restore()
 
         ui.button(c, back, 16f)
         ui.button(c, toggle, 15f)
         chrome.title(c, L["codex"])
+    }
+
+    /** Stała wysokość wierszy: na telefonie i Foldzie sekcje są przewijane razem z epoką. */
+    private fun drawEndlessSection(c: Canvas, y: Float, title: String,
+                                   names: Array<String?>, details: Array<String?>, icons: IntArray) {
+        if (y < h && y + endlessHeaderH > viewTop) {
+            ui.textO(c, title, left + 8 * dp, y + 24 * dp, 18f, Ui.GOLD)
+        }
+        for (i in names.indices) {
+            val top = y + endlessHeaderH + i * endlessRowH
+            if (top > h || top + endlessRowH < viewTop) continue
+            box.set(left, top, left + contentW, top + endlessRowH - 3 * dp)
+            ui.card(c, box, CARD_BODY, 8f, Ui.OUTLINE)
+            Icons.draw(c, icons[i], left + 22 * dp, top + 20 * dp, 23 * dp, dp = dp)
+            val name = names[i] ?: ""
+            val desc = details[i] ?: ""
+            val textLeft = left + 43 * dp
+            val textWidth = contentW - 58 * dp
+            ui.textO(c, name, textLeft, top + 19 * dp,
+                ui.fit(name, 13f, textWidth, 9f), Ui.TEXT)
+            ui.text(c, desc, textLeft, top + 37 * dp,
+                ui.fit(desc, 11.5f, textWidth, 7f), Ui.DIM)
+        }
     }
 
     private fun drawEraHeader(c: Canvas, y: Float) {

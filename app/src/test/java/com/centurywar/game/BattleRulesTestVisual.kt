@@ -16,17 +16,17 @@ class BattleRulesTestVisual {
 
         val damage = Battle::class.java.getDeclaredMethod(
             "damageUnit", Fighter::class.java, java.lang.Float.TYPE, Integer.TYPE,
-            Role::class.java, Integer.TYPE, java.lang.Boolean.TYPE,
+            Role::class.java, Integer.TYPE, java.lang.Boolean.TYPE, java.lang.Boolean.TYPE,
         )
         damage.isAccessible = true
 
-        damage.invoke(b, u, 3f, 1, null, -1, false)
+        damage.invoke(b, u, 3f, 1, null, -1, false, false)
         assertTrue(u.hp < u.maxHp)
         assertEquals(0.12f, u.flash, 0f)
         assertEquals(-1, u.hitStep)
         assertEquals(0f, u.hitPow, 0f)
 
-        damage.invoke(b, u, 7f, 1, Role.MELEE, -1, true)
+        damage.invoke(b, u, 7f, 1, Role.MELEE, -1, true, false)
         assertEquals(b.stepCount, u.hitStep)
         assertTrue(u.hitPow > 0f && u.hitPow <= 1f)
     }
