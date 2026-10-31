@@ -237,7 +237,7 @@ class Ai(
         // Nie dodajemy złota: dowódca czeka na standardowy koszt szkolenia.
         if (b.time > 175f && me.era == b.cfg.maxEra && danger < 2 &&
             me.eliteUnlocked && heavy < 3 &&
-            r < if (personality == AiPersonality.SIEGER) 70 else 45
+            r < (if (personality == AiPersonality.SIEGER) 70 else 45)
         ) return Role.ELITE
         val eliteCost = Defs.unit(me.era, Role.ELITE).cost
         val eliteChance = when (personality) {
