@@ -64,7 +64,12 @@ class MissionsScreen(g: Game) : Screen(g) {
         items.addAll(missions.state.daily)
         items.addAll(missions.state.weekly)
         for (i in 0 until 6) {
-            val item = items[i]
+            val item = items.getOrNull(i)
+            if (item == null) {
+                titles[i] = ""; progress[i] = ""; rewards[i] = ""
+                claimButtons[i].visible = false
+                continue
+            }
             titles[i] = MissionTexts.label(item)
             progress[i] = "${item.progress}/${item.target}"
             rewards[i] = "+${item.reward}"
@@ -105,7 +110,7 @@ class MissionsScreen(g: Game) : Screen(g) {
             r.set(left, y, left + cardWidth, y + rowH)
             val bw = min(120 * dp, cardWidth * 0.26f)
             claimButtons[i].set(r.right - bw - 10 * dp, y + 17 * dp, bw, 42 * dp)
-            claimButtons[i].visible = r.bottom > contentTop && r.top < bottom
+            claimButtons[i].visible = i < items.size && r.bottom > contentTop && r.top < bottom
         }
     }
 
@@ -142,7 +147,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         ui.textO(c, "UTC", left + cardWidth - 12 * dp, dailyY + 22 * dp, 12f, Ui.DIM, Paint.Align.RIGHT)
         ui.textO(c, L["ms_weekly"], left + 10 * dp, weeklyY + 22 * dp, 19f, Ui.GOLD)
         ui.textO(c, "UTC", left + cardWidth - 12 * dp, weeklyY + 22 * dp, 12f, Ui.DIM, Paint.Align.RIGHT)
-        for (i in 0 until 6) {
+        for (i in items.indices) {
             val r = rects[i]
             if (r.bottom < contentTop || r.top > bottom) continue
             ui.panel(c, r, Color.argb(240, 33, 42, 61), 11f)
