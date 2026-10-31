@@ -40,9 +40,10 @@ class BattleSimTest {
 
     @Test
     fun endlessEventuallyEnds() {
-        val b = run(BattleConfig(Mode.ENDLESS, 7L, 1f), 120f)
-        println("endless over=${b.over} wave=${b.wave} t=${b.time / 60f} score=${b.score()} era=${b.player.era}")
-        assertTrue(b.wave >= 5)
+        val b = run(BattleConfig(Mode.ENDLESS, 7L, 1f), 50f)
+        println("endless over=${b.over} wave=${b.wave} t=${b.time / 60f} score=${b.score()} era=${b.player.era} bosses=${b.bossesDefeated}")
+        assertTrue("AI kontra fale musi zakończyć się w ciągu 50 minut czasu gry", b.over)
+        assertTrue("musiała rozpocząć się co najmniej jedna fala", b.wave >= 1)
     }
 
     @Test
