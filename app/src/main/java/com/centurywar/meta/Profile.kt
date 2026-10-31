@@ -478,7 +478,7 @@ class Profile(private val file: File) {
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         weeklyWeek = loadedWeek
-        weeklyClaimed = loadedClaimed
+        weeklyClaimed = if (loadedWeek >= 0L) loadedClaimed else 0
         weeklyClaimHistory.clear(); weeklyClaimHistory.putAll(loadedClaims)
         tutorialDone = json.optBoolean("tutorialDone", false)
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }

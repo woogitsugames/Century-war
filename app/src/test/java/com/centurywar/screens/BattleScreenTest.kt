@@ -10,6 +10,9 @@ import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
+import com.centurywar.game.Weekly
+import com.centurywar.game.Daily
+import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -54,6 +57,38 @@ class BattleScreenTest {
             seen.add(speedBtn.label)
         }
         assertEquals(setOf("×1", "×3", "×5"), seen)
+    }
+
+    @Test
+    fun weeklyResultsNeverAlterEndlessRecordsAndClaimsAreOnceOnly() {
+        val g = game()
+        val p = g.profile
+        p.bestWave = 9
+        p.submit(Profile.BOARD_ENDLESS, 30000L, 1L)
+        Achievements.all.forEach { p.unlockedAchievements.add(it.id) }
+        val week = Weekly.weekNumber(Daily.dayNumber())
+
+        fun finish(waves: Int) {
+            val bs = BattleScreen(g, Weekly.config(week))
+            g.setScreen(bs)
+            g.frame(canvas, 1f / 60f)
+            val battle = field(bs, "battle").get(bs) as Battle
+            battle.wave = waves
+            battle.surrender()
+            g.frame(canvas, 1f / 60f)
+        }
+
+        finish(20)
+        assertEquals(9, p.bestWave)
+        assertEquals(30000L, p.top(Profile.BOARD_ENDLESS).first().score)
+        assertEquals(3, p.weeklyClaimedFor(week))
+        assertEquals(1, p.top(Profile.weeklyBoard(week)).size)
+        val first = p.medals
+        finish(20)
+        assertEquals(first + 30, p.medals)
+        assertEquals(3, p.weeklyClaimedFor(week))
+        assertEquals(9, p.bestWave)
+        assertEquals(30000L, p.top(Profile.BOARD_ENDLESS).first().score)
     }
 
     @Test

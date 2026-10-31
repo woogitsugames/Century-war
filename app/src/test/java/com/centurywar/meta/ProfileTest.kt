@@ -69,6 +69,31 @@ class ProfileTest {
     }
 
     @Test
+    fun weeklyStateDefaultsAndMasksAreClamped() {
+        val f = tmpFile()
+        f.writeText("""{"weeklyWeek":-99,"weeklyClaimed":255,"weeklyClaims":{"3":255,"-9":7}}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(-1L, old.weeklyWeek)
+        assertEquals(0, old.weeklyClaimed)
+        assertEquals(7, old.weeklyClaimedFor(3L))
+        assertEquals(0, old.weeklyClaimedFor(-9L))
+
+        f.writeText("""{"weeklyWeek":999,"weeklyClaimed":255}""")
+        val loaded = Profile(f).also { it.load() }
+        assertEquals(999L, loaded.weeklyWeek)
+        assertEquals(7, loaded.weeklyClaimed)
+        loaded.syncWeekly(1000L)
+        assertEquals(0, loaded.weeklyClaimed)
+        assertEquals(7, loaded.weeklyClaimedFor(999L))
+
+        f.writeText("""{"medals":7}""")
+        val legacy = Profile(f).also { it.load() }
+        assertEquals(-1L, legacy.weeklyWeek)
+        assertEquals(0, legacy.weeklyClaimed)
+        assertEquals(7, legacy.medals)
+    }
+
+    @Test
     fun concurrentSavesLeaveValidFile() {
         val f = tmpFile()
         val p = Profile(f).apply { medals = 777; name = "x".repeat(16) }
