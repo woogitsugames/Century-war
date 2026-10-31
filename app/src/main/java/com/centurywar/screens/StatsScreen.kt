@@ -101,7 +101,11 @@ class StatsScreen(g: Game) : Screen(g) {
         extraTexts[0] = p.winStreak.toString()
         extraTexts[1] = p.bestWinStreak.toString()
         extraTexts[2] = clock(max(p.playSeconds, totalModeTime))
-        extraTexts[3] = if (metrics.favoriteRole >= 0) L[roleKeys[metrics.favoriteRole]] else L["none"]
+        val trainedTotal = metrics.roles.fold(0L) { total, n -> total + n }
+        extraTexts[3] = if (metrics.favoriteRole >= 0 && trainedTotal > 0L) {
+            val share = metrics.roles[metrics.favoriteRole].toLong() * 100L / trainedTotal
+            L[roleKeys[metrics.favoriteRole]] + " · " + share + "%"
+        } else L["none"]
         extraTexts[4] = if (metrics.favoriteDoctrine >= 0) L[Doctrine.entries[metrics.favoriteDoctrine].key] else L["none"]
         val boardIds = arrayOf(Profile.BOARD_CAMPAIGN, Profile.BOARD_SKIRMISH,
             Profile.BOARD_ENDLESS, Profile.dailyBoard(Daily.dayNumber(now)))
