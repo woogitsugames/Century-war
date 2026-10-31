@@ -22,7 +22,7 @@ Kolejność języków to `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. 
 | Feudalizm (`era_feudal`) | Feudalizm | Feudal Age | Feudalzeit | Era feudal | Âge féodal | Età feudale | Era feudal | Феодальна доба | Feodale tijd | Feodal Çağ |
 | Epoka prochu (`era_powder`) | Epoka prochu | Gunpowder Age | Pulverzeit | Era de la pólvora | Âge de la poudre | Età della polvere | Era da pólvora | Доба пороху | Buskruittijd | Barut Çağı |
 | Epoka pary (`era_steam`) | Epoka pary | Steam Age | Dampfzeit | Era del vapor | Âge de la vapeur | Età del vapore | Era do vapor | Доба пари | Stoomtijd | Buhar Çağı |
-| Epoka stali (`era_steel`) | Epoka stali | Steel Age | Stahlzeit | Era del acero | Âge de l'acier | Età dell'acciaio | Era do aço | Доба сталі | Staaltijd | Çelik Çağı |
+| Epoka stali (`era_steel`) | Epoka stali | Steel Age | Stahlzeit | Era del acero | Âge de l’acier | Età dell'acciaio | Era do aço | Доба сталі | Staaltijd | Çelik Çağı |
 | Epoka krzemu (`era_silicon`) | Epoka krzemu | Silicon Age | Siliziumzeit | Era del silicio | Âge du silicium | Età del silicio | Era do silício | Доба кремнію | Siliciumtijd | Silisyum Çağı |
 | Era orbitalna (`era_orbital`) | Era orbitalna | Orbital Era | Orbitalzeit | Era orbital | Ère orbitale | Era orbitale | Era orbital | Орбітальна ера | Orbitaal tijdperk | Yörünge Çağı |
 
@@ -91,7 +91,7 @@ Kolejność języków to `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. 
 | Lanca orbitalna (`ab_orbital`) | Lanca orbitalna | Orbital Lance | Orbitallanze | Lanza orbital | Lance orbitale | Lancia orbitale | Lança orbital | Орбітальний спис | Orbitale lans | Yörünge Mızrağı |
 | Ostrzał spalinowy (`ab_combustion`) | Ostrzał spalinowy | Combustion barrage | Verbrennungs-Sperrfeuer | Bombardeo de combustión | Barrage à combustion | Sbarramento a combustione | Barragem de combustão | Паливний обстріл | Verbrandingsspervuur | Yanmalı bombardıman |
 | Ostrzał galwaniczny (`ab_galvanic`) | Ostrzał galwaniczny | Galvanic barrage | Galvanischer Beschuss | Bombardeo galvánico | Barrage galvanique | Sbarramento galvanico | Barragem galvânica | Гальванічний обстріл | Galvanisch spervuur | Galvanik bombardıman |
-| Ostrzał roju (`ab_swarm`) | Ostrzał roju | Swarm barrage | Schwarmbeschuss | Bombardeo del enjambre | Barrage de l'essaim | Sbarramento dello sciame | Barragem do enxame | Ройовий обстріл | Zwermspervuur | Sürü bombardımanı |
+| Ostrzał roju (`ab_swarm`) | Ostrzał roju | Swarm barrage | Schwarmbeschuss | Bombardeo del enjambre | Barrage de l’essaim | Sbarramento dello sciame | Barragem do enxame | Ройовий обстріл | Zwermspervuur | Sürü bombardımanı |
 | Ostrzał biotechniczny (`ab_biotech`) | Ostrzał biotechniczny | Biotech barrage | Biotechnischer Beschuss | Bombardeo biotécnico | Barrage biotechnique | Sbarramento biotecnico | Barragem biotécnica | Біотехнічний обстріл | Biotechnisch spervuur | Biyoteknik bombardıman |
 
 ## Doktryny
@@ -148,7 +148,7 @@ Kolejność języków to `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. 
 | Rankingi (`rankings`) | Rankingi | Rankings | Ranglisten | Clasificación | Classements | Classifiche | Classificações | Рейтинги | Ranglijsten | Sıralamalar |
 | Ranking globalny (`global_ranking`) | Ranking globalny | Global ranking | Weltrangliste | Clasificación mundial | Classement mondial | Classifica globale | Ranking mundial | Світовий рейтинг | Wereldranglijst | Küresel sıralama |
 | Oblężenie — fale (`board_endless`) | Oblężenie — fale | Siege — waves | Belagerung — Wellen | Asedio — oleadas | Siège — vagues | Assedio — ondate | Cerco — ondas | Облога — хвилі | Beleg — golven | Kuşatma — dalgalar |
-| Wyzwanie dnia (dziś) (`board_daily`) | Wyzwanie dnia (dziś) | Daily challenge (today) | Tageschallenge (heute) | Desafío diario (hoy) | Défi du jour (aujourd'hui) | Sfida del giorno (oggi) | Desafio diário (hoje) | Виклик дня (сьогодні) | Daguitdaging (vandaag) | Günlük Mücadele (bugün) |
+| Wyzwanie dnia (dziś) (`board_daily`) | Wyzwanie dnia (dziś) | Daily challenge (today) | Tageschallenge (heute) | Desafío diario (hoy) | Défi du jour (aujourd’hui) | Sfida del giorno (oggi) | Desafio diário (hoje) | Виклик дня (сьогодні) | Daguitdaging (vandaag) | Günlük Mücadele (bugün) |
 | Kampania — gwiazdki (`board_campaign`) | Kampania — gwiazdki | Campaign — stars | Kampagne — Sterne | Campaña — estrellas | Campagne — étoiles | Campagna — stelle | Campanha — estrelas | Кампанія — зірки | Campagne — sterren | Sefer — yıldızlar |
 | Potyczka — wynik (`board_skirmish`) | Potyczka — wynik | Skirmish — score | Gefecht — Punkte | Escaramuza — puntos | Escarmouche — score | Schermaglia — punteggio | Escaramuça — pontos | Сутичка — очки | Schermutseling — score | Çatışma — puan |
 | Tydzień (`board_weekly`) | Tydzień | Weekly | Woche | Semana | Semaine | Settimana | Semana | Тиждень | Week | Haftalık |
