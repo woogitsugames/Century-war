@@ -19,6 +19,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val rename = btn(-2)
+    private val achievementsButton = btn(101)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
     private val panel = RectF()
@@ -52,6 +53,10 @@ class RankingsScreen(g: Game) : Screen(g) {
             tabs[i].set(l + i * (tw + gap), chrome.top + 4 * dp, tw, 42 * dp)
         }
         panel.set(l, chrome.top + 56 * dp, l + pw, h - g.insetB - 12 * dp)
+        achievementsButton.label = L["achievements"]
+        achievementsButton.iconId = Icons.MEDAL
+        val aw = min(178 * dp, pw * 0.48f)
+        achievementsButton.set(panel.right - aw - 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
     }
 
     override fun update(dt: Float) {
@@ -65,12 +70,13 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.panel(c, panel)
         for (b in tabs) ui.button(c, b, 13f)
         ui.button(c, back, 16f); ui.button(c, rename, 14f)
+        ui.button(c, achievementsButton, 13f)
         chrome.title(c, L["rankings"])
         val list = g.profile.top(board(tab))
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
-        var y = panel.top + inner
+        var y = panel.top + 54 * dp
         val bottomLimit = panel.bottom - 52 * dp
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
@@ -114,6 +120,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()
+            101 -> g.push(AchievementsScreen(g))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
             in 0..3 -> tab = b.id
         }

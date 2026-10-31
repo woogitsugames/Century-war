@@ -23,6 +23,7 @@ import com.centurywar.game.Defs
 import com.centurywar.game.Doctrine
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
@@ -453,10 +454,7 @@ class BattleScreen(
         g.snapshots?.delete()
         val pr = g.profile
         val won = battle.winner == 0
-        pr.battles++
-        if (won) pr.wins++
-        pr.totalKills += battle.player.kills
-        pr.playSeconds += battle.time.toLong()
+        // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
         // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
@@ -493,13 +491,15 @@ class BattleScreen(
                 } else reward = (5 * effort).toInt()
             }
         }
-        pr.medals += reward
+        pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
         tipKey = if (won) "" else when {
             battle.enemy.era > battle.player.era -> "tip_era"
             battle.enemy.goldEarned > battle.player.goldEarned * 1.25f -> "tip_eco"
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
             else -> "tip_ability"
         }
+        // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         g.haptic(if (won) 80 else 160)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 1f, 0)

@@ -66,6 +66,12 @@ class Profile(private val file: File) {
     var totalKills = 0L
     var playSeconds = 0L
 
+    // Trwały postęp osiągnięć; brak tych pól w starym JSON oznacza zero.
+    val achievementCounters = HashMap<String, Long>()
+    val unlockedAchievements = HashSet<String>()
+    val achievementDailySeeds = HashSet<Long>()
+    var achievementDoctrineMask = 0
+
     val boards = HashMap<String, MutableList<ScoreEntry>>()
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
@@ -153,6 +159,10 @@ class Profile(private val file: File) {
             o.put("wins", wins)
             o.put("totalKills", totalKills)
             o.put("playSeconds", playSeconds)
+            o.put("achievementCounters", JSONObject(achievementCounters as Map<*, *>))
+            o.put("unlockedAchievements", JSONArray().apply { unlockedAchievements.sorted().forEach { put(it) } })
+            o.put("achievementDailySeeds", JSONArray().apply { achievementDailySeeds.sorted().forEach { put(it) } })
+            o.put("achievementDoctrineMask", achievementDoctrineMask)
             val b = JSONObject()
             for ((k, list) in boards) {
                 // Stare tablice dzienne (starsze niż tydzień) nie są potrzebne.
@@ -201,7 +211,34 @@ class Profile(private val file: File) {
             battles = o.optInt("battles", 0)
             wins = o.optInt("wins", 0)
             totalKills = o.optLong("totalKills", 0L)
-            playSeconds = o.optLong("playSeconds", 0L)
+            playSeconds = o.optLong("playSeconds", 0L).coerceAtLeast(0L)
+            battles = battles.coerceAtLeast(0)
+            wins = wins.coerceIn(0, battles)
+            totalKills = totalKills.coerceAtLeast(0L)
+            achievementCounters.clear()
+            o.optJSONObject("achievementCounters")?.let { c ->
+                val keys = AchievementMetric.values().map { it.name }.toSet()
+                val it = c.keys()
+                while (it.hasNext()) {
+                    val key = it.next()
+                    if (key in keys) achievementCounters[key] = c.optLong(key, 0L).coerceAtLeast(0L)
+                }
+            }
+            unlockedAchievements.clear()
+            o.optJSONArray("unlockedAchievements")?.let { ids ->
+                for (i in 0 until minOf(ids.length(), 128)) {
+                    val id = ids.optString(i)
+                    if (Achievements.byId(id) != null) unlockedAchievements.add(id)
+                }
+            }
+            achievementDailySeeds.clear()
+            o.optJSONArray("achievementDailySeeds")?.let { days ->
+                for (i in 0 until minOf(days.length(), 4096)) {
+                    val day = days.optLong(i, -1L)
+                    if (day >= 0L) achievementDailySeeds.add(day)
+                }
+            }
+            achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0) and ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
             // Wartości spoza zakresu (ręczna edycja, stara wersja) wywracały np. ModeScreen.aiPower().
             medals = medals.coerceAtLeast(0)
             for (i in stars.indices) stars[i] = stars[i].coerceIn(0, 3)
@@ -237,6 +274,8 @@ class Profile(private val file: File) {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
         tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        achievementCounters.clear(); unlockedAchievements.clear()
+        achievementDailySeeds.clear(); achievementDoctrineMask = 0
         name = keepName
         save()
     }

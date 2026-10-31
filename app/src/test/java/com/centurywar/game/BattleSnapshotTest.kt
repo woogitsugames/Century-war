@@ -56,6 +56,7 @@ class BattleSnapshotTest {
         assertEquals(a.winner, b.winner)
         assertEquals(a.wave, b.wave)
         assertEquals(a.serialCounter, b.serialCounter)
+        assertEquals(a.achievementsRecorded, b.achievementsRecorded)
         for (k in 0..1) {
             val x = a.sides[k]; val y = b.sides[k]
             assertEquals(x.baseHp, y.baseHp)
@@ -64,6 +65,12 @@ class BattleSnapshotTest {
             assertEquals(x.era, y.era)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
+            assertEquals(x.elitesTrained, y.elitesTrained)
+            assertEquals(x.elitesLost, y.elitesLost)
+            assertEquals(x.turretsBuilt, y.turretsBuilt)
+            assertEquals(x.barragesCast, y.barragesCast)
+            assertEquals(x.erasAdvanced, y.erasAdvanced)
+            assertEquals(x.baseDamageTaken, y.baseDamageTaken)
             assertEquals(x.doctrines, y.doctrines)
         }
         for (k in a.units.indices) {
@@ -182,6 +189,34 @@ class BattleSnapshotTest {
     fun tutorialBattleResume() {
         // Samouczek zmienia AI (opóźniony start), więc flaga musi przetrwać zapis.
         check(Campaign.config(Campaign.stages[0], Bonuses(), 77L, tutorial = true), 60 * 10, 60 * 60)
+    }
+
+    @Test
+    fun achievementCountersSurviveSnapshotAndFurtherSimulation() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 91L, 1f, playerBonuses = Bonuses(eliteUnlocked = true))
+        val a = Battle(cfg)
+        val p = a.player
+        p.gold = 200000f
+        assertTrue(a.buyTurret(p, 0))
+        assertTrue(a.castBarrage(p))
+        assertTrue(a.spawn(p, Defs.unit(0, Role.ELITE)))
+        p.xp = Defs.evolveXp[0].toFloat()
+        assertTrue(a.evolve(p))
+        a.chooseDoctrine(0)
+        p.elitesLost = 1
+        p.baseDamageTaken = 36f
+        a.achievementsRecorded = true
+        val b = roundTrip(a)
+        assertEquals(1, b.player.turretsBuilt)
+        assertEquals(1, b.player.barragesCast)
+        assertEquals(1, b.player.elitesTrained)
+        assertEquals(1, b.player.elitesLost)
+        assertEquals(1, b.player.erasAdvanced)
+        assertEquals(36f, b.player.baseDamageTaken)
+        assertTrue(b.achievementsRecorded)
+        steps(a, 60 * 60, true)
+        steps(b, 60 * 60, true)
+        assertSame(a, b)
     }
 
     @Test
