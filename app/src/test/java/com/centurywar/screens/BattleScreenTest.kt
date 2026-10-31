@@ -86,6 +86,18 @@ class BattleScreenTest {
         assertTrue(controller.log().commands.isEmpty())
         tap(g, x, y)
         assertEquals(3, field(bs, "speed").getInt(bs))
+
+        // Kontrola rzeczywistej komendy logowanej w powtórce: szkolenie jednostki.
+        val unitButtons = field(bs, "unitBtn").get(bs) as Array<*>
+        val melee = unitButtons[0] as Button
+        assertTrue(melee.enabled)
+        g.pushTouch(TouchEvent.DOWN, melee.r.centerX(), melee.r.centerY(), 0)
+        repeat(30) { g.frame(canvas, 1f / 60f) }
+        g.pushTouch(TouchEvent.UP, melee.r.centerX(), melee.r.centerY(), 0)
+        g.frame(canvas, 1f / 60f)
+        assertTrue(controller.log().commands.isEmpty())
+        tap(g, melee.r.centerX(), melee.r.centerY())
+        assertEquals(1, controller.log().commands.size)
     }
 
     /** Wyłączony przycisk wciąż wyświetla cenę, ale nie wykonuje zakupu. */
