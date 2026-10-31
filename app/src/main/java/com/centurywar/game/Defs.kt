@@ -125,7 +125,7 @@ object Defs {
     const val BASE_FRONT = 190f
     const val MAX_TURRET_SLOTS = 4
 
-    // Dziewięć przejść przy końcowych statystykach zbliżonych do dawnych ośmiu.
+    // Osiem przejść przy końcowych statystykach zbliżonych do dawnych siedmiu.
     private const val STAT_GROWTH = 1.8740649f
     private const val COST_GROWTH = 1.7535147f
     private const val BASE_GROWTH = 1.7130706f
@@ -218,7 +218,7 @@ object Defs {
             UnitDef(e * 4 + 3, e, Role.ELITE, n[3], (165 * c).toInt(), 540 * s, 58 * s, if (spec.eliteProj == Proj.NONE) 44f else 340f, 2.1f, 40 * sp, 6f, 1.75f, if (spec.eliteProj == Proj.NONE) 40f else 85f, spec.eliteProj, w[3], spec.eliteBody, 1.6f),
         )
         val turret = TurretDef(e, spec.turretName, (110 * c).toInt(),
-            20 * s * if (spec.fastTurret) 0.4f else 1f, 540f + e * 13.125f,
+            20 * s * (if (spec.fastTurret) 0.4f else 1f), 540f + e * 13.125f,
             if (spec.fastTurret) 0.45f else 1.25f,
             if (spec.turretProj == Proj.SHELL || spec.turretProj == Proj.BALL || spec.turretProj == Proj.ROCKET) 60f else 0f,
             spec.turretProj)
