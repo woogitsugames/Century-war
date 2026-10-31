@@ -80,6 +80,7 @@ class MainActivity : Activity(), Host {
             game.scores = ScoreClient(File(filesDir, "score-queue.json"),
                 BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY, profile)
         }
+        game.applySfxVolume()
         if ((application as? CenturyWarApp)?.playGamesReady == true) {
             try {
                 playGames = PlayGamesLeaderboards(this, game)

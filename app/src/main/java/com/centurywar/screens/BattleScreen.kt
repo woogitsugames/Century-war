@@ -12,6 +12,8 @@ import com.centurywar.engine.Screen
 import com.centurywar.engine.Sound
 import com.centurywar.engine.TouchEvent
 import com.centurywar.game.FxBuffer
+import com.centurywar.game.Body
+import com.centurywar.game.EraArt
 import com.centurywar.game.Proj
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
@@ -66,6 +68,8 @@ class BattleScreen(
     private var aimDownY = 0f
     private var aimStartedInField = false
     private var aimMoved = false
+    private var preparedPlayerEra = -1
+    private var preparedEnemyEra = -1
     private var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
@@ -317,6 +321,15 @@ class BattleScreen(
                 g.snapshots?.saveAsync(snapshotBytes())
             }
         }
+        // Przy zmianie epoki zamawiamy nowe próbki przed pierwszym ostrzałem.
+        if (preparedPlayerEra != battle.player.era) {
+            BattleSfx.prepareEra(g, battle.player.era)
+            preparedPlayerEra = battle.player.era
+        }
+        if (preparedEnemyEra != battle.enemy.era) {
+            BattleSfx.prepareEra(g, battle.enemy.era)
+            preparedEnemyEra = battle.enemy.era
+        }
         // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
         val music = g.music
         if (music != null) {
@@ -331,7 +344,7 @@ class BattleScreen(
             }
             music.setIntensity(threat)
         }
-        BattleSfx.play(g, battle.fx, r.camX, r.worldVisible)
+        BattleSfx.play(g, battle, r.camX, r.worldVisible)
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
@@ -532,8 +545,18 @@ class BattleScreen(
             CONTINUE -> g.setScreen(nextScreen())
             WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, it)) }
             in DOCTRINE0..DOCTRINE0 + 2 -> {
-                if (battle.pendingCards != null) commands.card(b.id - DOCTRINE0)
-                else commands.doctrine(b.id - DOCTRINE0)
+                val cards = battle.pendingCards
+                if (cards != null) {
+                    val rarity = cards[b.id - DOCTRINE0].rarity.ordinal
+                    val id = when (rarity) {
+                        0 -> Sound.CARD_COMMON
+                        1 -> Sound.CARD_RARE
+                        2 -> Sound.CARD_EPIC
+                        else -> Sound.CARD_LEGENDARY
+                    }
+                    commands.card(b.id - DOCTRINE0)
+                    g.sfx(id, 0.48f, 0)
+                } else commands.doctrine(b.id - DOCTRINE0)
             }
             in VARIANT0..VARIANT0 + 1 -> if (commands.variant(b.id - VARIANT0)) g.haptic(40)
             in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
@@ -735,7 +758,10 @@ class BattleScreen(
         pr.save()
         if (won) g.host.onBattleWon()
         g.haptic(if (won) 80 else 160)
-        g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 1f, 0)
+        g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
+        g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
+        if (reward > 0) g.sfx(Sound.MEDALS, 0.4f, 0)
+        if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
     }
 
     /** Rozpoznaj kontrę wobec najczęściej szkolonej roli; tylko liczniki z bitwy. */

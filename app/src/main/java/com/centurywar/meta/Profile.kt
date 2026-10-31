@@ -154,6 +154,8 @@ class Profile(private val file: File) {
     var reduceShake = false
     var reduceFlash = false
     var sound = true
+    var sfxVolume = 0.8f
+        set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.8f }
     var musicVolume = 0.5f
         set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.5f }
     var showFps = false
@@ -297,6 +299,7 @@ class Profile(private val file: File) {
         o.put("reduceShake", reduceShake)
         o.put("reduceFlash", reduceFlash)
         o.put("sound", sound)
+        o.put("sfxVolume", sfxVolume.toDouble())
         o.put("musicVolume", musicVolume.toDouble())
         o.put("showFps", showFps)
         o.put("lang", lang)
@@ -543,6 +546,8 @@ class Profile(private val file: File) {
         reduceShake = json.optBoolean("reduceShake", false)
         reduceFlash = json.optBoolean("reduceFlash", false)
         sound = json.optBoolean("sound", true)
+        // Stare profile (także z sound=false) zachowują domyślne 80% efektów.
+        sfxVolume = json.optDouble("sfxVolume", 0.8).toFloat()
         showFps = json.optBoolean("showFps", false)
         lang = json.optString("lang", "")
         skirmishDiff = json.optInt("skirmishDiff", 1).coerceIn(0, 3)
@@ -583,7 +588,7 @@ class Profile(private val file: File) {
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
         winStreak = 0; bestWinStreak = 0
-        musicVolume = 0.5f; notifications = true; notifyHour = 18
+        musicVolume = 0.5f; sfxVolume = 0.8f; notifications = true; notifyHour = 18
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()

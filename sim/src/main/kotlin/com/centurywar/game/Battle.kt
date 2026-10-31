@@ -174,11 +174,19 @@ class FxBuffer {
     val h = FloatArray(CAP)
     val side = IntArray(CAP)
     val value = FloatArray(CAP)
+    /** Dane wyłącznie do renderowania i dźwięku; nie należą do stanu bitwy ani powtórki. */
+    val era = IntArray(CAP) { -1 }
+    val body = IntArray(CAP) { -1 }
+    val turret = BooleanArray(CAP)
     var count = 0
 
-    fun add(t: Int, px: Float, ph: Float, s: Int, v: Float = 0f) {
+    fun add(
+        t: Int, px: Float, ph: Float, s: Int, v: Float = 0f,
+        eraId: Int = -1, bodyId: Int = -1, isTurret: Boolean = false,
+    ) {
         if (count >= CAP) return
         type[count] = t; x[count] = px; h[count] = ph; side[count] = s; value[count] = v
+        era[count] = eraId; body[count] = bodyId; turret[count] = isTurret
         count++
     }
 }
@@ -398,7 +406,7 @@ class Battle(val cfg: BattleConfig) {
         side.unitTier.fill(1) // Nowa epoka wymaga nowych inwestycji; weterani pozostają na polu.
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
-        fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
+        fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index, eraId = side.era)
         if (cfg.variantsEnabled && Defs.spec(side.era).variants.isNotEmpty()) offerVariant(side)
         else if (!endless) offerDoctrines(side)
         return true
@@ -656,7 +664,7 @@ class Battle(val cfg: BattleConfig) {
             fired++
         }
         if (fired == 0) return false
-        fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
+        fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index, eraId = side.era)
         return true
     }
 
@@ -740,7 +748,7 @@ class Battle(val cfg: BattleConfig) {
         s.dmgMul *= 1.06f
         s.hpMul *= 1.06f
         s.turretDmgMul *= 1.06f
-        fx.add(FxBuffer.EVOLVE, s.baseFront, 0f, s.index, 1f)
+        fx.add(FxBuffer.EVOLVE, s.baseFront, 0f, s.index, 1f, eraId = s.era)
     }
 
     /**
@@ -767,7 +775,7 @@ class Battle(val cfg: BattleConfig) {
         winner = w
         val loser = sides[1 - w]
         loser.baseHp = 0f
-        fx.add(FxBuffer.EXPLOSION, loser.baseFront - loser.dir * 80f, 120f, loser.index, 3f)
+        fx.add(FxBuffer.EXPLOSION, loser.baseFront - loser.dir * 80f, 120f, loser.index, 3f, eraId = loser.era)
     }
 
     private fun updateFronts() {
@@ -875,6 +883,9 @@ class Battle(val cfg: BattleConfig) {
             launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile,
                 turretDmg, td.splash, 0f, te, null, turretDmg * s.turretBurnRatio / 4f,
                 s.turretVariant[i])
+            // Tylko wizualizacja: ostrzał wieży otrzymuje własny bank audio.
+            fx.add(FxBuffer.MUZZLE, s.baseFront - s.dir * 40f, h, s.index,
+                td.projectile.toFloat(), te, isTurret = true)
         }
     }
 
@@ -931,7 +942,8 @@ class Battle(val cfg: BattleConfig) {
                         splashDamage(u.side, cx, Defs.unitSplash(def, u.tier), attackDmg, def.siegeMul, def.role, -1)
                     } else if (target != null) {
                         damageUnit(target, attackDmg, u.side, def.role, -1)
-                        fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx)
+                        fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx,
+                            eraId = target.def.era, bodyId = target.def.body)
                     } else {
                         damageBase(e, attackDmg * def.siegeMul, u.side)
                     }
@@ -939,7 +951,8 @@ class Battle(val cfg: BattleConfig) {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
                     launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, attackDmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era, def.role, variant = def.variant)
-                    fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
+                    fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side,
+                        def.projectile.toFloat(), def.era, def.body)
                 }
             }
             return
@@ -1026,7 +1039,8 @@ class Battle(val cfg: BattleConfig) {
                 chainDamage(p, best)
             }
             ignite(best, p.burnDps)
-            fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side)
+            fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side,
+                eraId = best.def.era, bodyId = best.def.body)
         } else if ((p.tx - e.baseFront) * -e.dir >= -50f) {
             damageBase(e, p.dmg * p.siegeMul, p.side)
         }
@@ -1057,7 +1071,8 @@ class Battle(val cfg: BattleConfig) {
         }
         val e = sides[1 - attacker]
         if ((cx - e.baseFront) * -e.dir >= -radius) damageBase(e, dmg * siegeMul, attacker)
-        fx.add(FxBuffer.EXPLOSION, cx, 20f, attacker, 0.6f + radius / 100f)
+        fx.add(FxBuffer.EXPLOSION, cx, 20f, attacker, 0.6f + radius / 100f,
+            eraId = sides[attacker].era)
     }
 
     private fun ignite(u: Fighter, dps: Float) {
@@ -1099,7 +1114,8 @@ class Battle(val cfg: BattleConfig) {
             }
             v.aliveCount--
             if (u.def.role == Role.ELITE) v.elitesLost++
-            fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size)
+            fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size,
+                eraId = u.def.era, bodyId = u.def.body)
         }
     }
 
@@ -1113,7 +1129,7 @@ class Battle(val cfg: BattleConfig) {
         if (damage > 0f) s.baseDamageTaken += damage
         s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
-        fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index)
+        fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index, eraId = s.era)
     }
 
     // ---------------------------------------------------------------- tryb bez końca
@@ -1212,7 +1228,7 @@ class Battle(val cfg: BattleConfig) {
         f.bossCd = 1.5f
         bossesSpawned++
         nextBossToSpawn += 10
-        fx.add(FxBuffer.EVOLVE, f.x, 0f, e.index, 2f)
+        fx.add(FxBuffer.EVOLVE, f.x, 0f, e.index, 2f, eraId = f.def.era, bodyId = f.def.body)
     }
 
     // ---------------------------------------------------------------- wynik

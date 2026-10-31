@@ -22,6 +22,9 @@ class Music {
     @Volatile private var era = MENU
     @Volatile private var intensity = 0f
     @Volatile private var volume = 0.5f
+    @Volatile private var duckAmount = 1f
+    @Volatile private var duckSeconds = 0f
+    @Volatile private var duckSerial = 0
     private var foreground = false
     private var released = false
     /** Bieżący wątek; stary wątek kończy pracę, gdy przestaje być bieżącym. */
@@ -62,6 +65,13 @@ class Music {
     fun setVolume(value: Float) {
         volume = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
         sync()
+    }
+
+    /** Sterowanie nie dotyka AudioTrack; polecenie odbiera wątek syntezatora. */
+    fun duck(amount: Float, seconds: Float) {
+        duckAmount = if (amount.isFinite()) amount.coerceIn(0.12f, 1f) else 1f
+        duckSeconds = if (seconds.isFinite()) seconds.coerceIn(0f, 12f) else 0f
+        duckSerial++
     }
 
     val isPlaying: Boolean get() = worker != null
@@ -109,7 +119,13 @@ class Music {
                 .build()
             if (track.state != AudioTrack.STATE_INITIALIZED) return
             track.play()
+            var seenDuckSerial = -1
             while (worker === me) {
+                val serial = duckSerial
+                if (serial != seenDuckSerial) {
+                    seenDuckSerial = serial
+                    synth.duck(duckAmount, duckSeconds)
+                }
                 synth.setEra(era)
                 synth.setIntensity(intensity)
                 synth.renderPcm(pcm, pcm.size, volume)

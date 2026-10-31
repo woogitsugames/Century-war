@@ -53,12 +53,22 @@ jobs:
             --tests '*ScoreClientTest*' \
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
+            --tests '*SoundSynthTest*' \
+            --tests '*MusicSynthTest*' \
             --tests '*Replay*' \
             --tests '*Counter*' \
             --tests '*Endless*' \
             --tests '*AiPersonality*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
+      - name: Zapisz podglądy WAV
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: era-sfx-preview
+          path: app/build/sfx-preview/*.wav
+          if-no-files-found: warn
+          retention-days: 14
       - name: Zapisz debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

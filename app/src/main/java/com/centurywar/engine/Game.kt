@@ -62,6 +62,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var music: Music? = null
 
     fun applyMusicVolume() { music?.setVolume(profile.musicVolume) }
+    fun applySfxVolume() {
+        sound?.volume = profile.sfxVolume
+        sound?.enabled = profile.sound
+    }
 
     private fun syncMusicScreen(s: Screen) {
         if (s !is BattleScreen && s !is ReplayScreen) {
@@ -78,8 +82,11 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
 
-    fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
-        if (profile.sound) sound?.play(id, vol, gap, pitch)
+    fun sfx(
+        id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f,
+        pan: Float = 0f, priority: Int = 1,
+    ) {
+        if (profile.sound && profile.sfxVolume > 0f) sound?.play(id, vol, gap, pitch, pan, priority)
     }
 
     private var screen: Screen? = null
@@ -118,6 +125,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     /** Kolejka powiadomień; tekst jest przygotowany przy odblokowaniu, nie w renderze. */
     fun showAchievements(unlocked: List<AchievementDef>) {
+        if (unlocked.isNotEmpty()) sfx(Sound.ACHIEVEMENT, 0.5f, 120L)
         for (a in unlocked) showNotice(L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")", Icons.CROWN)
     }
 

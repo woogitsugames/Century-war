@@ -167,7 +167,7 @@ class ReplayScreen(
         g.music?.setEra(p.battle.player.era)
         g.music?.setIntensity(0f)
         if (follow) r.follow(dt)
-        if (!p.seeking && !paused && speed == 1) BattleSfx.play(g, p.battle.fx, r.camX, r.worldVisible)
+        if (!p.seeking && !paused && speed == 1) BattleSfx.play(g, p.battle, r.camX, r.worldVisible)
         else p.battle.fx.count = 0
         refreshLabels(p)
     }

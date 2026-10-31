@@ -84,6 +84,49 @@ class MusicSynthTest {
         assertFalse(first.contentEquals(second))
     }
 
+    @Test fun duckingFadesSmoothlyAndRestoresLevel() {
+        val normal = MusicSynth(912)
+        val quiet = MusicSynth(912)
+        normal.setEra(2); quiet.setEra(2)
+        normal.skipFade(); quiet.skipFade()
+        val a = FloatArray(1024)
+        val b = FloatArray(1024)
+        repeat(12) { normal.render(a); quiet.render(b) }
+        quiet.duck(0.24f, 0.4f)
+        var normalPower = 0.0
+        var quietPower = 0.0
+        repeat(7) {
+            normal.render(a); quiet.render(b)
+            for (i in a.indices) {
+                normalPower += a[i] * a[i]
+                quietPower += b[i] * b[i]
+            }
+        }
+        assertTrue("Ducking nie zmniejszył energii", quietPower < normalPower * 0.25)
+        assertTrue("Brak ataku", quiet.duckGain < 0.3f)
+        repeat(40) { normal.render(a); quiet.render(b) }
+        assertTrue("Brak płynnego powrotu", quiet.duckGain > 0.98f)
+        assertTrue(quiet.duckGain <= 1f)
+    }
+
+    @Test fun duckingDoesNotIntroduceClickAtTransition() {
+        val synth = MusicSynth(113)
+        synth.setEra(2); synth.skipFade()
+        val frame = FloatArray(1)
+        repeat(500) { synth.render(frame) }
+        synth.duck(0.18f, 0.02f)
+        var prev = 0f
+        var maxJump = 0f
+        repeat(8_000) {
+            synth.render(frame)
+            val jump = kotlin.math.abs(frame[0] - prev)
+            if (jump > maxJump) maxJump = jump
+            prev = frame[0]
+        }
+        assertTrue("Trzask w obwiedni: $maxJump", maxJump < 0.6f)
+        assertTrue(synth.duckGain > 0.80f)
+    }
+
     @Test fun skipFadeJumpsStraightToTargetEra() {
         val synth = MusicSynth(7)
         synth.setEra(5)

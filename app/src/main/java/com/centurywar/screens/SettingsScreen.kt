@@ -27,6 +27,8 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val showFps = btn(5)
     private val snd = btn(8)
     private val music = btn(12)
+    private val sfxLevel = btn(18)
+    private val volumeSliders = arrayOf(music, sfxLevel)
     private val name = btn(6)
     private val reset = btn(7)
     private val notifications = btn(9)
@@ -36,10 +38,10 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val hintSettings = btn(15)
     private val globalRank = btn(16)
     private val newIdentity = btn(17)
-    private val localRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, hintSettings, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, hintSettings, reset)
-    private val globalRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, globalRank, newIdentity, access, hintSettings, reset)
-    private val bothRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, access, hintSettings, reset)
+    private val localRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, hintSettings, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, hintSettings, reset)
+    private val globalRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, globalRank, newIdentity, access, hintSettings, reset)
+    private val bothRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, access, hintSettings, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = when {
         g.scores != null && g.online.available -> bothRows
@@ -48,13 +50,13 @@ class SettingsScreen(g: Game) : Screen(g) {
         else -> localRows
     }
     private fun iconOf(b: Button) = when (b) {
-        quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
+        quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; sfxLevel -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; access -> Icons.PERSON; hintSettings -> Icons.BOOK
         globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
-        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
+        quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; sfxLevel -> "sfx_volume"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
         access -> "accessibility"; hintSettings -> "hint_settings"
         globalRank -> "global_ranking"; newIdentity -> "global_identity"
@@ -69,13 +71,16 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var resetArmed = 0f
     private var identityArmed = 0f
     private var dt = 0f
-    private var musicPointer = -1
     private var scroll = 0f
     private var maxScroll = 0f
     private var contentTop = 0f
     private var contentBottom = 0f
+    private var sliderPointer = -1
+    private var activeSlider: Button? = null
     private var shownMusicPercent = -1
     private var musicPercentLabel = ""
+    private var shownSfxPercent = -1
+    private var sfxPercentLabel = ""
 
     override fun isDragScreen() = true
 
@@ -110,7 +115,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             val left = panel.left + 12 * dp + col * columnWidth
             val y = panel.top + 24 * dp + line * step
             if (b === reset) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
-            else if (b === music) {
+            else if (b === music || b === sfxLevel) {
                 // Suwak potrzebuje więcej miejsca niż przycisk, inaczej na 720p ma kilka dp.
                 val sw = max(bw, columnWidth * 0.52f)
                 b.set(left + columnWidth - 10 * dp - sw, y + 4 * dp, sw, step - 10 * dp)
@@ -134,6 +139,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         snd.label = if (p.sound) L["on"] else L["off"]
         snd.color = if (p.sound) Ui.BTN_GREEN else Ui.BTN
         music.visible = false // miejsce na ręcznie rysowany suwak, nie na przycisk
+        sfxLevel.visible = false
         vib.label = if (p.vibration) L["on"] else L["off"]
         vib.color = if (p.vibration) Ui.BTN_GREEN else Ui.BTN
         shakeBtn.label = L[when (p.screenShake) { 0 -> "shake_off"; 1 -> "shake_low"; else -> "shake_full" }]
@@ -183,8 +189,8 @@ class SettingsScreen(g: Game) : Screen(g) {
                 ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp,
                     ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
             }
-            if (b === music) {
-                if (b.r.bottom > contentTop && b.r.top < contentBottom) drawMusicSlider(c)
+            if (b === music || b === sfxLevel) {
+                if (b.r.bottom > contentTop && b.r.top < contentBottom) drawVolumeSlider(c, b)
             } else ui.button(c, b, 15f)
         }
         c.restore()
@@ -193,11 +199,11 @@ class SettingsScreen(g: Game) : Screen(g) {
     }
 
 
-    private fun drawMusicSlider(c: Canvas) {
-        val left = music.r.left + 14 * dp
-        val right = music.r.right - 55 * dp
-        val y = music.r.centerY()
-        val fraction = g.profile.musicVolume
+    private fun drawVolumeSlider(c: Canvas, b: Button) {
+        val left = b.r.left + 14 * dp
+        val right = b.r.right - 55 * dp
+        val y = b.r.centerY()
+        val fraction = if (b === music) g.profile.musicVolume else g.profile.sfxVolume
         ui.fill.color = Ui.OUTLINE
         c.drawRoundRect(left, y - 6 * dp, right, y + 6 * dp, 6 * dp, 6 * dp, ui.fill)
         ui.fill.color = Ui.DIM
@@ -208,46 +214,68 @@ class SettingsScreen(g: Game) : Screen(g) {
         ui.fill.color = Ui.TEXT
         c.drawCircle(x, y, 8 * dp, ui.fill)
         val percent = (fraction * 100f + 0.5f).toInt()
-        if (percent != shownMusicPercent) {
-            shownMusicPercent = percent
-            musicPercentLabel = percent.toString() + "%"
+        val text = if (b === music) {
+            if (percent != shownMusicPercent) {
+                shownMusicPercent = percent
+                musicPercentLabel = percent.toString() + "%"
+            }
+            musicPercentLabel
+        } else {
+            if (percent != shownSfxPercent) {
+                shownSfxPercent = percent
+                sfxPercentLabel = percent.toString() + "%"
+            }
+            sfxPercentLabel
         }
-        ui.textO(c, musicPercentLabel, music.r.right - 5 * dp, y + 5 * dp, 13f,
-            Ui.TEXT, Paint.Align.RIGHT)
+        ui.textO(c, text, b.r.right - 5 * dp, y + 5 * dp, 13f, Ui.TEXT, Paint.Align.RIGHT)
     }
 
-    private fun setMusicFromX(x: Float) {
-        val left = music.r.left + 14 * dp
-        val right = music.r.right - 55 * dp
+    private fun setVolumeFromX(b: Button, x: Float) {
+        val left = b.r.left + 14 * dp
+        val right = b.r.right - 55 * dp
         val portion = ((x - left) / (right - left).coerceAtLeast(1f)).coerceIn(0f, 1f)
-        g.profile.musicVolume = (portion * 100f + 0.5f).toInt() / 100f
-        g.applyMusicVolume()
+        val value = (portion * 100f + 0.5f).toInt() / 100f
+        if (b === music) {
+            g.profile.musicVolume = value
+            g.applyMusicVolume()
+        } else {
+            g.profile.sfxVolume = value
+            g.applySfxVolume()
+        }
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
-        if (musicPointer >= 0) {
+        if (sliderPointer >= 0) {
             if (e.action == TouchEvent.CANCEL) {
-                musicPointer = -1
+                sliderPointer = -1
+                activeSlider = null
                 g.profile.save()
                 return true
             }
-            if (e.pointer != musicPointer) return true
+            if (e.pointer != sliderPointer) return true
+            val b = activeSlider ?: return true
             when (e.action) {
-                TouchEvent.MOVE -> setMusicFromX(e.x)
+                TouchEvent.MOVE -> setVolumeFromX(b, e.x)
                 TouchEvent.UP -> {
-                    setMusicFromX(e.x)
-                    musicPointer = -1
+                    setVolumeFromX(b, e.x)
+                    sliderPointer = -1
+                    activeSlider = null
                     g.profile.save()
                 }
             }
             return true
         }
         // Strefa dotyku suwaka obejmuje cały pas wiersza w pionie (niski wiersz na 720p).
-        if (e.action == TouchEvent.DOWN && e.x >= music.r.left && e.x <= music.r.right &&
-            e.y >= max(contentTop, music.r.top - 5 * dp) && e.y <= min(contentBottom, music.r.bottom + 5 * dp)) {
-            musicPointer = e.pointer
-            setMusicFromX(e.x)
-            return true
+        if (e.action == TouchEvent.DOWN) {
+            for (b in volumeSliders) {
+                if (e.x >= b.r.left && e.x <= b.r.right &&
+                    e.y >= max(contentTop, b.r.top - 5 * dp) && e.y <= min(contentBottom, b.r.bottom + 5 * dp)) {
+                    sliderPointer = e.pointer
+                    activeSlider = b
+                    setVolumeFromX(b, e.x)
+                    return true
+                }
+            }
         }
         return false
     }
@@ -261,7 +289,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             3 -> { val i = L.indexOf(p.lang); p.lang = if (p.lang.isEmpty()) L.CODES[0] else if (i in 0 until L.CODES.size - 1) L.CODES[i + 1] else ""; g.onLanguageChanged() }
             4 -> p.vibration = !p.vibration
             13 -> p.screenShake = (p.screenShake + 1) % 3
-            8 -> p.sound = !p.sound
+            8 -> { p.sound = !p.sound; g.applySfxVolume() }
             5 -> p.showFps = !p.showFps
             6 -> g.host.requestText(L["name"], p.name) { n -> p.name = n; p.save() }
             7 -> if (resetArmed > 0f) { p.reset(); g.history?.clear(); resetArmed = 0f } else resetArmed = 3f

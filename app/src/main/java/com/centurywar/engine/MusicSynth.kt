@@ -206,6 +206,27 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
     private var intensity = 0f
     private var desiredIntensity = 0f
     private var volume = 0f
+    private var duckLevel = 1f
+    private var duckTarget = 1f
+    private var duckHoldSamples = 0
+
+    /** Obwiednia na wątku audio: łagodny atak i powrót po zadanym czasie. */
+    fun duck(amount: Float, seconds: Float) {
+        duckTarget = if (amount.isFinite()) amount.coerceIn(0.12f, 1f) else 1f
+        duckHoldSamples = if (seconds.isFinite()) (seconds.coerceIn(0f, 12f) * SAMPLE_RATE).toInt() else 0
+    }
+
+    val duckGain: Float get() = duckLevel
+
+    private fun nextDuckGain(): Float {
+        if (duckHoldSamples > 0) {
+            duckHoldSamples--
+            duckLevel += (duckTarget - duckLevel) * 0.0017f
+        } else {
+            duckLevel += (1f - duckLevel) * 0.00024f
+        }
+        return duckLevel
+    }
 
     /** W trakcie poprzedniego crossfade kolejna zmiana czeka na jego zakończenie. */
     fun setEra(era: Int) {
@@ -253,7 +274,7 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         val gain = if (targetVolume.isFinite()) targetVolume.coerceIn(0f, 1f) else 0f
         for (i in 0 until count) {
             volume += (gain - volume) * 0.002f
-            out[i] = sample() * volume
+            out[i] = sample() * volume * nextDuckGain()
         }
     }
 
@@ -263,7 +284,7 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         val gain = if (targetVolume.isFinite()) targetVolume.coerceIn(0f, 1f) else 0f
         for (i in 0 until count) {
             volume += (gain - volume) * 0.002f
-            out[i] = ((sample() * volume).coerceIn(-1f, 1f) * 32767f).toInt().toShort()
+            out[i] = ((sample() * volume * nextDuckGain()).coerceIn(-1f, 1f) * 32767f).toInt().toShort()
         }
     }
 }

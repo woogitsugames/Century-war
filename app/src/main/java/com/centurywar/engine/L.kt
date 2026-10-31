@@ -217,6 +217,7 @@ object L {
         "vibration" to t("Wibracje", "Vibration", "Vibration", "Vibración", "Vibrations", "Vibrazione", "Vibração", "Вібрація", "Trillen", "Titreşim"),
         "sound" to t("Dźwięk", "Sound", "Ton", "Sonido", "Son", "Audio", "Som", "Звук", "Geluid", "Ses"),
         "music_volume" to t("Muzyka", "Music", "Musik", "Música", "Musique", "Musica", "Música", "Музика", "Muziek", "Müzik"),
+        "sfx_volume" to t("Efekty", "Effects", "Effekte", "Efectos", "Effets", "Effetti", "Efeitos", "Ефекти", "Effecten", "Efektler"),
         "on" to t("Wł.", "On", "An", "Sí", "Oui", "Sì", "Lig.", "Увімк.", "Aan", "Açık"),
         "off" to t("Wył.", "Off", "Aus", "No", "Non", "No", "Desl.", "Вимк.", "Uit", "Kapalı"),
         "show_fps" to t("Pokaż FPS", "Show FPS", "FPS anzeigen", "Mostrar FPS", "Afficher FPS", "Mostra FPS", "Mostrar FPS", "Показувати FPS", "FPS tonen", "FPS göster"),
