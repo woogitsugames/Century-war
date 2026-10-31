@@ -34,6 +34,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private var previousWeek = false
     private var periodLabelWeek = Long.MIN_VALUE
     private var periodLabel = ""
+    private var periodBoard = ""
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS, Icons.MEDAL)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
 
@@ -42,7 +43,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         1 -> Profile.dailyBoard(day)
         2 -> Profile.BOARD_CAMPAIGN
         3 -> Profile.BOARD_SKIRMISH
-        else -> Profile.weeklyBoard(if (previousWeek) week - 1L else week)
+        else -> periodBoard
     }
 
     override fun layout() {
@@ -94,6 +95,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         if (periodLabelWeek != selectedWeek) {
             periodLabelWeek = selectedWeek
             periodLabel = L.f("weekly_week_number", selectedWeek)
+            periodBoard = Profile.weeklyBoard(selectedWeek)
         }
         for (i in 0..4) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }

@@ -54,6 +54,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var weeklyMods = ""
     private var weeklyCard = ""
     private var weeklyBest = ""
+    private var weeklyClaimMask = 0
     private var weeklyCountdown = ""
     private val tierNames = Array(3) { "" }
     private val tierColors = intArrayOf(
@@ -192,6 +193,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyLang = L.lang
         weeklySecond = -1L
         g.profile.syncWeekly(week)
+        weeklyClaimMask = g.profile.weeklyClaimedFor(week)
         val cfg = Weekly.config(week)
         weeklyCfg = cfg
         weeklyInfo = L["weekly_info"]
@@ -244,7 +246,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         ui.textO(c, weeklyBest, rightX + 23 * dp, ry, ui.fit(weeklyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
 
         val medalY = start.r.top - 42 * dp
-        val mask = pr.weeklyClaimedFor(week)
+        val mask = weeklyClaimMask
         for (i in 0 until Weekly.TIER_COUNT) {
             val centerX = x + (i + 0.5f) * full / Weekly.TIER_COUNT
             val claimed = mask and (1 shl i) != 0
