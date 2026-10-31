@@ -8,7 +8,7 @@ import android.content.Context
  * (sprzętowy skaler ekranu powiększa obraz za darmo), z mniejszą liczbą cząsteczek
  * i bez drobnych detali (faktury, nity, cieniowanie). Na flagowcach i Foldach w pełnej rozdzielczości.
  */
-class Quality(val level: Int, val reduction: Int = 0) {
+class Quality(val level: Int, val reduction: Int = 0, val gpuReduction: Int = 0) {
     companion object {
         const val LOW = 1
         const val MED = 2
@@ -31,23 +31,26 @@ class Quality(val level: Int, val reduction: Int = 0) {
         }
     }
 
+    private val cpuReduction = (reduction - gpuReduction).coerceAtLeast(0)
     private val normalScale = when (level) { LOW -> 0.75f; MED -> 0.9f; else -> 1f }
     /** Pierwsze cztery stopnie oszczędzają efekty; kolejne obniżają bufor po 0,05. */
     val maxReductionSteps = 4 + ((normalScale - 0.6f + 0.001f) / 0.05f).toInt()
-    val baseScale = (normalScale - (reduction - 4).coerceAtLeast(0) * 0.05f).coerceAtLeast(0.6f)
+    // Przy ograniczeniu GPU skala spada od pierwszego stopnia, bez czekania na efekty.
+    val baseScale = (normalScale -
+        ((cpuReduction - 4).coerceAtLeast(0) + gpuReduction) * 0.05f).coerceAtLeast(0.6f)
     private val particleBase = when (level) { LOW -> 70; MED -> 160; else -> 320 }
     val maxParticles = when {
-        reduction <= 0 -> particleBase
-        reduction == 1 -> particleBase * 3 / 4
-        reduction == 2 -> particleBase / 2
+        cpuReduction <= 0 -> particleBase
+        cpuReduction == 1 -> particleBase * 3 / 4
+        cpuReduction == 2 -> particleBase / 2
         else -> particleBase / 3
     }
     /** Kontury postaci zachowują AA także przy obniżonej jakości. */
     val antialias = true
     val parallaxLayers = (when (level) { LOW -> 1; MED -> 2; else -> 3 } -
-        if (reduction >= 3) 1 else 0).coerceAtLeast(1)
-    val clouds = level >= MED && reduction < 2
-    val shadows = level >= HIGH && reduction < 4
+        if (cpuReduction >= 3) 1 else 0).coerceAtLeast(1)
+    val clouds = level >= MED && cpuReduction < 2
+    val shadows = level >= HIGH && cpuReduction < 4 && gpuReduction == 0
 
     fun renderScale(viewW: Int, viewH: Int): Float {
         val px = viewW.toFloat().coerceAtLeast(1f) * viewH.coerceAtLeast(1)
