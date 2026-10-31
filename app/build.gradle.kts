@@ -1,3 +1,7 @@
+import com.centurywar.build.ReleaseChecklist
+import com.centurywar.build.ReleaseChecklistInput
+import java.time.LocalDate
+import java.time.ZoneOffset
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
@@ -120,4 +124,63 @@ dependencies {
 // Raport przepustowosci i alokacji tylko przy jawnym PERF_REPORT=true.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
+}
+
+
+// ---- Kontrola przed publikacją ---------------------------------------------------------------
+// Nie podpinaj do zadań debug. Każdy release (APK i AAB) wymaga tej samej kontroli.
+val dailySourceFile = rootProject.file("sim/src/main/kotlin/com/centurywar/game/Modes.kt")
+val gamesIdsFile = file("src/main/res/values/games_ids.xml")
+val gamesManifestFile = file("src/main/AndroidManifest.xml")
+val lastVersionCodeFile = rootProject.file("release/last_version_code.txt")
+val skippedReleaseChecks = providers.gradleProperty("skipCheck").getOrElse("")
+val releaseHasHmacKey = scoreHmacKey.isNotBlank()
+
+val releaseChecklist = tasks.register("releaseChecklist") {
+    group = "verification"
+    description = "Sprawdza konfigurację, datę i numer publikacji przed release."
+    inputs.files(dailySourceFile, gamesIdsFile, gamesManifestFile, lastVersionCodeFile)
+    inputs.property("releaseVersionCode", releaseVersionCode)
+    inputs.property("scoreServerUrl", scoreServerUrl)
+    inputs.property("scorePrivacyUrl", scorePrivacyUrl)
+    inputs.property("hasHmacKey", releaseHasHmacKey)
+    inputs.property("skipCheck", skippedReleaseChecks)
+
+    doLast {
+        val checks = ReleaseChecklistInput(
+            releaseDay = ReleaseChecklist.releaseDayFromSource(
+                dailySourceFile.takeIf { it.isFile }?.readText().orEmpty(),
+            ),
+            todayUtcDay = LocalDate.now(ZoneOffset.UTC).toEpochDay(),
+            playGamesEnabled = gamesManifestFile.takeIf { it.isFile }?.readText()
+                ?.contains("com.google.android.gms.games.APP_ID") == true,
+            gamesIdsXml = gamesIdsFile.takeIf { it.isFile }?.readText() ?: "REPLACE_ME",
+            serverUrl = scoreServerUrl,
+            privacyUrl = scorePrivacyUrl,
+            hasHmacKey = releaseHasHmacKey,
+            versionCode = releaseVersionCode,
+            lastVersionCode = lastVersionCodeFile.takeIf { it.isFile }
+                ?.readText()?.trim()?.toIntOrNull(),
+            skipChecks = ReleaseChecklist.parseSkips(skippedReleaseChecks),
+        )
+        val problems = ReleaseChecklist.problems(checks)
+        if (problems.isNotEmpty()) {
+            throw GradleException(
+                "LISTA KONTROLNA WYDANIA NIEZALICZONA:\\n" +
+                    problems.joinToString("\\n") { " - $it" } +
+                    "\\nWyjątek tylko po świadomej decyzji: " +
+                    "-PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode " +
+                    "(wybierz wyłącznie potrzebne flagi; patrz docs/RELEASE.md).",
+            )
+        }
+        logger.lifecycle("Lista kontrolna wydania: OK (pominięte: " +
+            (checks.skipChecks.sorted().joinToString(", ").ifEmpty { "brak" }) + ")")
+    }
+}
+
+// preReleaseBuild jest poprzednikiem kompilacji release, więc checklista kończy się przed nią.
+tasks.matching {
+    it.name == "preReleaseBuild" || it.name == "assembleRelease" || it.name == "bundleRelease"
+}.configureEach {
+    dependsOn(releaseChecklist)
 }
