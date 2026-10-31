@@ -15,6 +15,8 @@ interface Host {
     fun applyRenderScale(scale: Float)
     fun applyFrameRate(fps: Int)
     fun exit()
+    fun onBattleWon() {}
+    fun onNotificationSettingsChanged() {}
 }
 
 /**
@@ -52,6 +54,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private val inputLock = Any()
     private val tasks = ArrayList<Runnable>()
     private val frameEvents = ArrayList<TouchEvent>()
+    private var lastObservedWins = profile.wins
 
     // monitor wydajności
     private var frameAvg = 16f
@@ -170,6 +173,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (s0 !== screen) screen?.layout()
 
         screen?.update(dt)
+        // Zmianę licznika wykrywamy bez alokacji; UI jest powiadamiane wyłącznie po zwycięstwie.
+        if (profile.wins != lastObservedWins) {
+            val won = profile.wins > lastObservedWins
+            lastObservedWins = profile.wins
+            if (won) host.onBattleWon()
+        }
         screen?.render(c)
 
         monitor(dt)

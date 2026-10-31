@@ -3,6 +3,7 @@ package com.centurywar
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -21,6 +22,7 @@ import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
 import com.centurywar.meta.Profile
+import com.centurywar.notifications.DailyReminders
 import java.io.File
 
 /**
@@ -67,6 +69,7 @@ class MainActivity : Activity(), Host {
         }
         applyFrameRate(profile.fpsCap)
         hideSystemBars()
+        DailyReminders.refresh(this)
     }
 
     private fun safeInsets(insets: WindowInsets): IntArray {
@@ -105,6 +108,7 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         view.onResume()
+        DailyReminders.refresh(this)
     }
 
     override fun onPause() {
@@ -126,7 +130,26 @@ class MainActivity : Activity(), Host {
         game.requestBack()
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == DailyReminders.PERMISSION_REQUEST_CODE) {
+            DailyReminders.permissionResult(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+        }
+    }
+
     // ---------------------------------------------------------------- Host
+
+    override fun onBattleWon() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
+
+    override fun onNotificationSettingsChanged() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
 
     override fun vibrate(ms: Long) {
         val v = vibrator ?: return

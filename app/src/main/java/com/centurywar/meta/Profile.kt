@@ -58,6 +58,8 @@ class Profile(private val file: File) {
     var showFps = false
     var lang = ""            // "" = systemowy, "pl", "en"
     var skirmishDiff = 1
+    var notifications = true // przypomnienie po pierwszym zwycięstwie
+    var notifyHour = 18     // godzina lokalna (0–23)
 
     // statystyki
     var battles = 0
@@ -135,6 +137,8 @@ class Profile(private val file: File) {
             o.put("showFps", showFps)
             o.put("lang", lang)
             o.put("skirmishDiff", skirmishDiff)
+            o.put("notifications", notifications)
+            o.put("notifyHour", notifyHour.coerceIn(0, 23))
             o.put("battles", battles)
             o.put("wins", wins)
             o.put("totalKills", totalKills)
@@ -176,6 +180,8 @@ class Profile(private val file: File) {
             showFps = o.optBoolean("showFps", false)
             lang = o.optString("lang", "")
             skirmishDiff = o.optInt("skirmishDiff", 1)
+            notifications = o.optBoolean("notifications", true)
+            notifyHour = o.optInt("notifyHour", 18).coerceIn(0, 23)
             battles = o.optInt("battles", 0)
             wins = o.optInt("wins", 0)
             totalKills = o.optLong("totalKills", 0L)
