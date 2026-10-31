@@ -290,6 +290,8 @@ class Battle(val cfg: BattleConfig) {
             s.baseHp = s.baseMaxHp
             s.front = s.baseFront
         }
+        // Karta startowa nie zużywa RNG bitwy i jest częścią zapisanej konfiguracji.
+        if (cfg.weekly >= 0L) cfg.weeklyCard?.let { applyEndlessCard(player, it) }
     }
 
     val player get() = sides[0]
