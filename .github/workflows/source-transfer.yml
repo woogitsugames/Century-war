@@ -1,0 +1,20 @@
+name: Migawka źródeł do pomiarów
+
+on:
+  pull_request:
+    branches: [claude/bold-sagan-vwz5gm]
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archiwum źródeł
+        run: tar --exclude=.git -czf source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: century-war-source
+          path: source.tar.gz
+          if-no-files-found: error
