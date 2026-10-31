@@ -34,7 +34,7 @@ Wyłącznie do testu urządzeniowego lub w CI:
 ```bash
 ./gradlew :app:assembleRelease :app:bundleRelease -PreleaseTestSigning=true
 adb install -r app/build/outputs/apk/release/app-release.apk
-adb shell am start -W -n com.centurywar.game/.MainActivity
+adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity
 adb shell pidof com.centurywar.game
 ```
 
@@ -76,14 +76,16 @@ ze świadomie włączonym podpisem testowym, uruchamia:
 
 ```bash
 ./gradlew :app:assembleDebug --console=plain
-./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
-./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
+./gradlew :app:testDebugUnitTest \
+  --tests '*BattleSimTest*' --tests '*BattleRulesTest*' \
+  --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' \
+  --console=plain
 ./gradlew :app:assembleRelease :app:bundleRelease -PreleaseTestSigning=true --console=plain
 ```
 
 Workflow sprawdza obecność `baseline.prof` w APK/AAB, zawartość manifestu
 przez `aapt`, raportuje dokładne rozmiary bajtowe APK i AAB w GitHub Actions
-Job Summary i uruchamia aplikację na emulatorze API 35 (kontrola procesu
+Job Summary i uruchamia aplikację na emulatorze API 35 (sprawdzenie właściwej klasy Activity, kontrola procesu
 i `AndroidRuntime`). Logi i tabela rozmiarów trafiają do artefaktu
 `release-walidacja`. Porównywane APK/AAB są podpisane debug key w obu wariantach
 — to miarodajne porównanie rozmiarów, **nie** pliki do publikacji.
@@ -91,3 +93,20 @@ i `AndroidRuntime`). Logi i tabela rozmiarów trafiają do artefaktu
 Po podpisaniu upload key i testach release pozostają jeszcze kroki w Play Console:
 konfiguracja pakietu/aplikacji, polityki prywatności, deklaracje Data safety,
 listing i wdrożenie w torze testowym.
+
+## Weryfikacja wcześniejszego uruchomienia CI
+
+Workflow z 31.10.2026 (run 41201586618) zbudował debug i release (APK oraz AAB),
+przeprowadził test symulacji i test konfiguracji, a następnie potwierdził obecność
+`assets/dexopt/baseline.prof` i `BUNDLE-METADATA/.../baseline.prof`.
+Emulator zainstalował APK, ale nie uruchomił aplikacji, ponieważ test wskazywał
+`com.centurywar.game/.MainActivity` zamiast `com.centurywar.MainActivity`.
+Błąd dotyczył polecenia uruchamiającego w CI; poprawka wymaga ponownego testu.
+
+| Artefakt | Przed (bajty) | Po (bajty) | Różnica |
+| --- | ---: | ---: | ---: |
+| APK | 106860 | 108723 | +1863 |
+| AAB | 190382 | 192670 | +2288 |
+
+Te liczby odnoszą się do gałęzi bazowej sprzed synchronizacji z bieżącym
+`claude/bold-sagan-vwz5gm`. Workflow liczy aktualne porównanie przy każdym pushu.

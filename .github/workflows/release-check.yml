@@ -53,8 +53,7 @@ jobs:
         shell: bash
         run: |
           ./gradlew :app:assembleDebug --console=plain --no-daemon 2>&1 | tee build/release-metrics/debug.log
-          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/battle-tests.log
-          ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/release-tests.log
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/required-tests.log
 
       - name: Zbuduj APK i AAB release z podpisem testowym
         shell: bash
@@ -74,6 +73,7 @@ jobs:
           unzip -Z -1 "$after_aab" | grep -E 'baseline\.prof(m)?$'
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$after_apk" | tee build/release-metrics/manifest.txt
           grep -q "package: name='com.centurywar.game'" build/release-metrics/manifest.txt
+          grep -q "launchable-activity: name='com.centurywar.MainActivity'" build/release-metrics/manifest.txt
           {
             echo '| Artefakt | Przed (B) | Po (B) | Różnica (B) |'
             echo '| --- | ---: | ---: | ---: |'
@@ -83,7 +83,7 @@ jobs:
               new_size=$(stat -c%s "$new")
               printf '| %s | %s | %s | %+d |\n' "$kind" "$old_size" "$new_size" "$((new_size - old_size))"
             done
-          } | tee build/release-metrics/rozmiary.md >> "$GITHUB_STEP_SUMMARY"
+          } | tee build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Uruchom wydanie release na emulatorze
         uses: reactivecircus/android-emulator-runner@v2
@@ -96,7 +96,8 @@ jobs:
           script: |
             adb install -r app/build/outputs/apk/release/app-release.apk
             adb logcat -c
-            adb shell am start -W -n com.centurywar.game/.MainActivity | tee build/release-metrics/start.txt
+            adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity | tee build/release-metrics/start.txt
+            grep -q '^Status: ok' build/release-metrics/start.txt
             sleep 8
             adb shell pidof com.centurywar.game
             adb logcat -d -s AndroidRuntime:E > build/release-metrics/androidruntime.log
