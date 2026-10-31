@@ -96,6 +96,26 @@ class BattleScreen(
     private var tipText = ""
     private var tipIcon = Icons.BOLT
     private var weeklyResultLabel = ""
+    private var weeklyResultKey = ""
+    private var resultTitle = ""
+    private var resultTimeText = ""
+    private var resultKillsText = ""
+    private var resultWaveLabel = ""
+    private var resultWaveText = ""
+    private var resultBossesText = ""
+    private var resultScoreText = ""
+    private var resultUnrankedText = ""
+    private var resultTimeLabel = ""
+    private var resultKillsLabel = ""
+    private var resultBossesLabel = ""
+    private var resultWeeklyTiersLabel = ""
+    private var resultScoreLabel = ""
+    private var resultRewardLabel = ""
+    private var resultNewRecordLabel = ""
+    private var resultStars = 0
+    private var resultCustomSkirmish = false
+    private val resultTipLines = arrayOfNulls<String>(16)
+    private var resultTipCount = 0
 
     private companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
@@ -167,6 +187,18 @@ class BattleScreen(
     private var upgradeRoleShown = -1
     private var upgradeTierShown = -1
     private var upgradeTierText = ""
+    private val variantDescLines = Array(2) { arrayOfNulls<String>(16) }
+    private val variantDescCount = IntArray(2)
+    private val variantDescKey = IntArray(2) { -1 }
+    private var variantDescWidth = -1f
+    private var variantDescScale = -1f
+    private var variantDescLanguage = -1
+    private val choiceDescLines = Array(3) { arrayOfNulls<String>(16) }
+    private val choiceDescCount = IntArray(3)
+    private val choiceDescKey = IntArray(3) { -1 }
+    private var choiceDescWidth = -1f
+    private var choiceDescScale = -1f
+    private var choiceDescLanguage = -1
     private var hudH = 0f
     private var topH = 0f
 
@@ -254,6 +286,9 @@ class BattleScreen(
             (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
         layoutTurretPanel()
         layoutUpgradePanel()
+        // Szerokość paneli zmienia łamanie opisów wariantów i kart.
+        variantDescWidth = -1f
+        choiceDescWidth = -1f
     }
 
     private fun layoutResults() {
@@ -265,6 +300,7 @@ class BattleScreen(
         restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
         replayEnd.set(restartEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
         continueBtn.set(replayEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
+        if (finished) prepareResultTipLines()
     }
 
     private fun layoutUpgradePanel() {
@@ -296,13 +332,21 @@ class BattleScreen(
     // ---------------------------------------------------------------- logika
 
     override fun onLanguageChanged() {
-        // Napisy bitwy są buforowane według wartości, nie języka.
+        // Reset cache'u napisów zależnych od języka (w tym otwartych paneli).
         waveShown = -1
         nextThemeShown = -1
+        bossShownKind = -1
         siegeKey = -1
         upgradeRoleShown = -1
+        upgradeTierLanguage = -1
+        turretHeadingEra = -1
+        slotLabelLanguage = -1
+        pauseLanguage = -1
+        variantDescLanguage = -1
+        choiceDescLanguage = -1
         tut?.onLanguageChanged()
         super.onLanguageChanged()
+        if (finished) refreshResultTexts()
     }
 
     private var frameDt = 0f
@@ -391,6 +435,14 @@ class BattleScreen(
     private fun refreshButtons() {
         val p = battle.player
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
+        if (p.era != turretHeadingEra || p.eraVariant != turretHeadingVariant || turretHeadingLanguage != L.lang) {
+            turretHeadingEra = p.era
+            turretHeadingVariant = p.eraVariant
+            turretHeadingLanguage = L.lang
+            turretHeading = "${L["turrets"]} — ${L[Defs.turret(p.era, p.eraVariant).nameKey]}"
+            // Nie zmieniamy dotychczasowego układu podpisów slotów.
+        }
+        refreshPauseTexts()
         val modal = paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
         for (i in 0..3) {
             val role = roles[i]
@@ -414,9 +466,10 @@ class BattleScreen(
         if (showUpgrade >= 0) {
             val role = roles[showUpgrade]
             val tier = p.unitTier[role.ordinal]
-            if (showUpgrade != upgradeRoleShown || tier != upgradeTierShown) {
+            if (showUpgrade != upgradeRoleShown || tier != upgradeTierShown || upgradeTierLanguage != L.lang) {
                 upgradeRoleShown = showUpgrade
                 upgradeTierShown = tier
+                upgradeTierLanguage = L.lang
                 upgradeTierText = L.f("unit_upgrade_tier", tier, min(Defs.MAX_UNIT_TIER, tier + 1))
             }
             val cost = battle.unitUpgradeCost(p, role)
@@ -473,7 +526,7 @@ class BattleScreen(
         pauseBtn.iconId = Icons.PAUSE
         pauseBtn.label = ""
 
-        for (b in pauseMenu) b.visible = paused && !finished
+        for (i in pauseMenu.indices) pauseMenu[i].visible = paused && !finished
         pauseMenu[0].label = L["resume"]; pauseMenu[1].label = L["restart"]; pauseMenu[2].label = L["quit"]
         pauseMenu[0].iconId = Icons.PLAY; pauseMenu[1].iconId = Icons.RESTART; pauseMenu[2].iconId = Icons.WHITE_FLAG
         pauseMenu[0].highlight = true; pauseMenu[2].color = Ui.BTN_RED
@@ -525,7 +578,11 @@ class BattleScreen(
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
                 slotBuy[i].highlight = slotBuy[i].enabled
             }
-            slotSell[i].label = "${L["sell"]} ${if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0}"
+            val sell = if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0
+            if (slotSellKey[i] != sell || slotLabelLanguage != L.lang) {
+                slotSellKey[i] = sell
+                slotSell[i].label = "${L["sell"]} $sell"
+            }
             slotSell[i].iconId = Icons.COIN
             slotSell[i].color = Ui.BTN_RED
         }
@@ -538,11 +595,13 @@ class BattleScreen(
     private val costText = Array(6) { "" }
     private var armoryLv = -1
     private var turretHeadingEra = -1
+    private var turretHeadingVariant = -1
     private var turretHeadingLanguage = -1
     private var turretHeading = ""
     private val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
     private val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
     private var lastSfxRank = battle.player.rank
+    private var upgradeTierLanguage = -1
     private var shownRank = -1
     private var shownRankLanguage = -1
     private var shownRankText = ""
@@ -775,12 +834,12 @@ class BattleScreen(
                     reward = (battle.wave * 3 + battle.player.kills / 10) / 2 + bonus
                     newRecord = pr.submit(Profile.weeklyBoard(cfg.weekly), score, day, replayId)
                     pr.syncWeekly(currentWeek)
-                    weeklyResultLabel = L[when {
+                    weeklyResultKey = when {
                         battle.wave >= Weekly.threshold(2) -> "weekly_gold"
                         battle.wave >= Weekly.threshold(1) -> "weekly_silver"
                         battle.wave >= Weekly.threshold(0) -> "weekly_bronze"
                         else -> "weekly_no_tier"
-                    }]
+                    }
                 } else {
                     reward = battle.wave * 3 + battle.player.kills / 10
                     if (battle.wave > pr.bestWave) pr.bestWave = battle.wave
@@ -796,7 +855,6 @@ class BattleScreen(
                 } else reward = (5 * effort).toInt()
             }
         }
-        rewardText = "+" + L.plural("medals_n", reward.toLong())
         // Przypinamy tylko wynik, który pozostał w lokalnym TOP 20.
         replayId?.let { id ->
             if (pr.boards.values.any { list -> list.any { it.replay == id } }) g.replays?.pinAsync(id)
@@ -828,7 +886,6 @@ class BattleScreen(
             "tip_turret" -> Icons.TOWER
             else -> Icons.BOLT
         }
-        tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         // Sam zapis powtórki i HTTPS wykonuje osobny wątek, nigdy pętla gry.
         // Wyniki z podejść treningowych daily i wczesne kapitulacje pomijamy.
         // Potyczka własna (zlecenie 35) nie trafia do rankingu; poziom trudności wynika z konfiguracji bitwy.
@@ -845,6 +902,7 @@ class BattleScreen(
         g.haptic(if (won) 80 else 160)
         g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
+        refreshResultTexts()
         if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
         if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
     }
@@ -863,16 +921,21 @@ class BattleScreen(
 
     // ---------------------------------------------------------------- rysowanie
 
-    private val pausePersonText = if (cfg.mode == Mode.SKIRMISH) {
+    private var pausePersonText = ""
+    private var pauseModifierText = ""
+    private var pausePowerText = ""
+    private var pauseLanguage = -1
+
+    private fun refreshPauseTexts() {
+        if (cfg.mode != Mode.SKIRMISH || pauseLanguage == L.lang) return
+        pauseLanguage = L.lang
         val personality = battle.ai?.personality
-        L["sk_opponent"] + ": " + if (personality == null) L["sk_random"]
+        pausePersonText = L["sk_opponent"] + ": " + if (personality == null) L["sk_random"]
             else L["sk_person_" + personality.ordinal]
-    } else ""
-    private val pauseModifierText = if (cfg.mode == Mode.SKIRMISH) {
-        L["modifiers"] + ": " + if (cfg.modifiers.isEmpty()) L["sk_none"]
+        pauseModifierText = L["modifiers"] + ": " + if (cfg.modifiers.isEmpty()) L["sk_none"]
             else cfg.modifiers.sortedBy { it.ordinal }.joinToString(", ") { L[it.key] }
-    } else ""
-    private val pausePowerText = if (cfg.mode == Mode.SKIRMISH) L.f("ai_power", (cfg.aiPower * 100f + 0.5f).toInt()) else ""
+        pausePowerText = L.f("ai_power", (cfg.aiPower * 100f + 0.5f).toInt())
+    }
     private val pausePanel = RectF()
     private val resultPanel = RectF()
     private val tmpR = RectF()
@@ -967,7 +1030,7 @@ class BattleScreen(
                 ui.textO(c, pausePowerText, center, pausePanel.top + 92 * dp,
                     ui.fit(pausePowerText, 12f, textW), Ui.DIM, Paint.Align.CENTER)
             }
-            for (b in pauseMenu) ui.button(c, b, 18f)
+            for (i in pauseMenu.indices) ui.button(c, pauseMenu[i], 18f)
         }
         if (finished) drawResults(c)
         ui.textScale = regularTextScale
@@ -1143,10 +1206,12 @@ class BattleScreen(
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
             var x = ex - isz / 2
-            for (i in p.doctrines.indices.reversed()) {
+            var i = p.doctrines.size - 1
+            while (i >= 0) {
                 if (x < (if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp)) break
                 Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)
                 x -= isz + 3 * dp
+                i--
             }
         }
     }
@@ -1249,7 +1314,7 @@ class BattleScreen(
     private fun drawTurretPanel(c: Canvas) {
         val p = battle.player
         ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, "${L["turrets"]} — ${L[Defs.turret(p.era, p.eraVariant).nameKey]}", 16f,
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, turretHeading, 16f,
             Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
         for (i in 0 until p.slots) {
             val b = slotBuy[i]
@@ -1289,8 +1354,16 @@ class BattleScreen(
             val name = L[v.nameKey]
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
-            ui.wrap(c, L[v.descKey], tmpR.centerX(), tmpR.top + 58 * dp,
-                tmpR.width() - 18 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
+            val wrapWidth = tmpR.width() - 18 * dp
+            val key = era * 2 + i
+            if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
+                variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
+                variantDescKey[i] = key
+                variantDescCount[i] = HintFrame.wrapInto(ui, L[v.descKey],
+                    wrapWidth, 12.5f, variantDescLines[i])
+            }
+            drawWrappedLines(c, variantDescLines[i], variantDescCount[i],
+                tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
             val imgH = min(72 * dp, tmpR.height() * 0.32f)
             val iy = tmpR.bottom - 28 * dp
             for (role in 0..3) {
@@ -1299,6 +1372,9 @@ class BattleScreen(
                 r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
             }
         }
+        variantDescLanguage = L.lang
+        variantDescWidth = variantBtn[0].r.width() - 18 * dp
+        variantDescScale = ui.textScale
     }
 
     private fun drawChoices(c: Canvas) {
@@ -1331,8 +1407,78 @@ class BattleScreen(
             }
             val descKey = if (cards == null) doctrineDescKeys[doctrines!![i].ordinal]
                 else cardDescKeys[cards[i].ordinal]
-            ui.wrap(c, L[descKey], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
-                tmpR.width() - 22 * dp, 12f, Ui.TEXT, Paint.Align.CENTER)
+            val wrapWidth = tmpR.width() - 22 * dp
+            val choiceKey = if (cards == null) doctrines!![i].ordinal else 100 + cards[i].ordinal
+            if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
+                choiceDescWidth != wrapWidth || choiceDescScale != ui.textScale) {
+                choiceDescKey[i] = choiceKey
+                choiceDescCount[i] = HintFrame.wrapInto(ui, L[descKey],
+                    wrapWidth, 12f, choiceDescLines[i])
+            }
+            drawWrappedLines(c, choiceDescLines[i], choiceDescCount[i],
+                tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
+                12f, Ui.TEXT, Paint.Align.CENTER)
+        }
+        choiceDescLanguage = L.lang
+        choiceDescWidth = doctrineBtn[0].r.width() - 22 * dp
+        choiceDescScale = ui.textScale
+    }
+
+    /** Wynik i tłumaczenia wyliczamy przy końcu bitwy, nie w każdej klatce. */
+    private fun refreshResultTexts() {
+        if (!finished) return
+        val won = battle.winner == 0
+        resultTitle = when {
+            cfg.weekly >= 0L -> L["weekly_over"]
+            cfg.mode == Mode.ENDLESS -> L["siege_over"]
+            won -> L["victory"]
+            else -> L["defeat"]
+        }
+        val seconds = battle.time.toInt()
+        resultTimeText = "%d:%02d".format(seconds / 60, seconds % 60)
+        resultKillsText = battle.player.kills.toString()
+        resultWaveText = battle.wave.toString()
+        resultWaveLabel = L.f("wave", battle.wave).substringBefore(' ')
+        resultBossesText = battle.bossesDefeated.toString()
+        resultScoreText = battle.score().toString()
+        resultStars = if (cfg.mode == Mode.CAMPAIGN && won) battle.stars() else 0
+        resultCustomSkirmish = cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)
+        resultUnrankedText = L["sk_unranked"]
+        resultTimeLabel = L["time"]
+        resultKillsLabel = L["kills"]
+        resultBossesLabel = L["bosses_defeated"]
+        resultWeeklyTiersLabel = L["weekly_tiers"]
+        resultScoreLabel = L["score"]
+        resultRewardLabel = L["reward"]
+        resultNewRecordLabel = L["new_record"]
+        weeklyResultLabel = if (weeklyResultKey.isEmpty()) "" else L[weeklyResultKey]
+        rewardText = "+" + L.plural("medals_n", reward.toLong())
+        tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        prepareResultTipLines()
+    }
+
+    /** Zawijanie tylko przy rozliczeniu, zmianie języka lub wymiarów ekranu. */
+    private fun prepareResultTipLines() {
+        if (tipKey.isEmpty()) { resultTipCount = 0; return }
+        val scale = ui.textScale
+        ui.textScale = min(scale, 1.15f)
+        try {
+            resultTipCount = HintFrame.wrapInto(ui, tipText,
+                resultPanel.width() - 79 * dp, 13f, resultTipLines)
+        } finally {
+            ui.textScale = scale
+        }
+    }
+
+    /** Rysowanie wcześniej złamanych wierszy nie tworzy nowych ciągów znaków. */
+    private fun drawWrappedLines(c: Canvas, lines: Array<String?>, count: Int,
+                                 x: Float, y: Float, sizeDp: Float, color: Int, align: Paint.Align) {
+        var yy = y
+        val lineH = sizeDp * dp * ui.textScale * 1.3f
+        for (i in 0 until count) {
+            val line = lines[i] ?: continue
+            ui.text(c, line, x, yy, sizeDp, color, align)
+            yy += lineH
         }
     }
 
@@ -1355,71 +1501,53 @@ class BattleScreen(
         val a = min(1f, resultTime * 2f)
         c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
         val won = battle.winner == 0
-        val title = when {
-            cfg.weekly >= 0L -> L["weekly_over"]
-            cfg.mode == Mode.ENDLESS -> L["siege_over"]
-            won -> L["victory"]
-            else -> L["defeat"]
-        }
         val rp = resultPanel
-        // wjazd panelu od dołu
+        // Wjazd panelu od dołu.
         val slide = (1f - a) * 60 * dp
         c.save()
         c.translate(0f, slide)
         ui.panel(c, rp)
         val good = won || cfg.mode == Mode.ENDLESS
-        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, title, 26f, if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
+        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, resultTitle, 26f,
+            if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
             rp.width() * 0.7f, if (good) Color.rgb(255, 246, 200) else Ui.TEXT, rp.width() + 40 * dp)
         var y = rp.top + 44 * dp
         if (cfg.mode == Mode.CAMPAIGN && won) {
-            val st = battle.stars()
-            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, st, 3, 1.05f)
+            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, resultStars, 3, 1.05f)
             y += 54 * dp
         } else {
             Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
             y += 48 * dp
         }
-        if (cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)) {
-            val info = L["sk_unranked"]
-            ui.textO(c, info, rp.centerX(), y + 7 * dp, ui.fit(info, 14f, rp.width() - 32 * dp),
-                Ui.GOLD, Paint.Align.CENTER)
+        if (resultCustomSkirmish) {
+            ui.textO(c, resultUnrankedText, rp.centerX(), y + 7 * dp,
+                ui.fit(resultUnrankedText, 14f, rp.width() - 32 * dp), Ui.GOLD, Paint.Align.CENTER)
             y += 28 * dp
         }
-        val lx = rp.left + 30 * dp
-        val rx = rp.right - 30 * dp
-        val lh = 28 * dp
-        fun row(icon: Int, k: String, v: String, col: Int = Ui.TEXT) {
-            if (y + lh > restartEnd.r.top - 8 * dp) return
-            tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
-            ui.fill.color = Color.argb(30, 255, 255, 255)
-            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-            val cy = tmpR.centerY()
-            Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-            ui.textO(c, k, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
-            ui.textO(c, v, rx, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
-            y += lh
-        }
-        row(Icons.STOPWATCH, L["time"], timeStr(battle.time))
-        row(Icons.SKULL, L["kills"], battle.player.kills.toString())
+        y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
+        y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
         if (cfg.mode == Mode.ENDLESS) {
-            row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
-            row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
-            if (cfg.weekly >= 0L) row(Icons.MEDAL, L["weekly_tiers"], weeklyResultLabel, Ui.GOLD)
+            y = drawResultRow(c, y, Icons.TOWER, resultWaveLabel, resultWaveText)
+            y = drawResultRow(c, y, Icons.CROWN, resultBossesLabel, resultBossesText)
+            if (cfg.weekly >= 0L)
+                y = drawResultRow(c, y, Icons.MEDAL, resultWeeklyTiersLabel, weeklyResultLabel, Ui.GOLD)
         }
-        if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
-        row(Icons.MEDAL, L["reward"], rewardText, Ui.GOLD)
+        if (cfg.mode != Mode.CAMPAIGN)
+            y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
+        y = drawResultRow(c, y, Icons.MEDAL, resultRewardLabel, rewardText, Ui.GOLD)
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
-            ui.textO(c, L["new_record"], rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
+            ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
         if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
             Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            ui.wrap(c, tipText, rp.left + 53 * dp, y + 18 * dp,
-                rp.width() - 79 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
+            drawWrappedLines(c, resultTipLines, resultTipCount,
+                rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
         }
         c.restore()
         ui.button(c, continueBtn, 17f)
         ui.button(c, restartEnd, 17f)
         if (replayEnd.visible) ui.button(c, replayEnd, 15f)
     }
+
 }
