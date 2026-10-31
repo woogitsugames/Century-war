@@ -327,6 +327,7 @@ object BattleSnapshot {
         val dn = i.readShort().toInt()
         require(dn in 0..1000)
         s.doctrines.clear()
+        s.doctrines.clear() // karta startowa została już zastosowana w konstruktorze
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         for (k in s.unitTier.indices) s.unitTier[k] = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }

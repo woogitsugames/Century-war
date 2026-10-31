@@ -55,9 +55,10 @@ private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")
 
 internal fun validBoard(board: String): Boolean =
     board in setOf("daily", "endless", "skirmish") ||
-        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$"))
+        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$")) ||
+        board.matches(Regex("^weekly_[0-9]{1,7}$"))
 
-internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
+internal fun submittedBoard(board: String, stage: Int?, week: Long? = null): String = when (board) {
     "campaign" -> {
         require(stage != null && stage in 0 until com.centurywar.game.Campaign.stages.size) { "invalid_stage" }
         "campaign_" + stage
@@ -65,6 +66,12 @@ internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
     "daily", "endless", "skirmish" -> {
         require(stage == null) { "invalid_stage" }
         board
+    }
+    "weekly" -> {
+        require(stage == null) { "invalid_stage" }
+        val w = requireNotNull(week) { "invalid_week" }
+        require(w in 0L..9_999_999L) { "invalid_week" }
+        "weekly_$w"
     }
     else -> throw IllegalArgumentException("invalid_board")
 }
