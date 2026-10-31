@@ -43,6 +43,23 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         const val MAX_LINES = 3
         const val TURRET = 4
         const val BARRAGE = 5
+        const val PAGE_ERAS = 0
+        const val PAGE_UNITS = 1
+        const val PAGE_VARIANTS = 2
+        const val PAGE_TOWERS = 3
+        const val PAGE_ABILITIES = 4
+        const val PAGE_DOCTRINES = 5
+        const val PAGE_WEATHER = 6
+        const val PAGE_MODIFIERS = 7
+        const val PAGE_CARDS = 8
+        const val PAGE_BOSSES = 9
+        const val MAX_GUIDE = 40
+        const val MAX_GUIDE_LINES = 8
+        val CATEGORY_KEYS = arrayOf(
+            "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
+            "cx62_abilities", "cx62_doctrines", "cx62_weather",
+            "cx62_modifiers", "cx62_cards", "cx62_bosses",
+        )
         val ROLE_COL = intArrayOf(
             Color.rgb(170, 60, 50), Color.rgb(54, 128, 84), Color.rgb(60, 104, 170), Color.rgb(110, 76, 170),
             Color.rgb(170, 122, 36), Color.rgb(196, 84, 40),
@@ -56,6 +73,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val toggle = btn(-2)
     private val variantBtn = Array(2) { btn(-3 - it) }
     private val tabs = Array(Defs.ERA_COUNT) { btn(100 + it) }
+    private val categories = Array(CATEGORY_KEYS.size) { btn(200 + it) }
     private val endlessWaveThemes = EndlessWaveTheme.values()
     private val endlessBossNames = arrayOfNulls<String>(EndlessBosses.MAX_KIND)
     private val endlessBossDetails = arrayOfNulls<String>(EndlessBosses.MAX_KIND)
@@ -73,6 +91,11 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var era = startEra.coerceIn(0, Defs.ERA_COUNT - 1)
     private var selectedVariant = if (Defs.spec(era).variants.isNotEmpty()) 0 else -1
     private var withResearch = false
+    private var page = PAGE_ERAS
+    private var activeCards = CARDS
+    private var variantTitle = ""
+    private val variantLines = arrayOfNulls<String>(MAX_GUIDE_LINES)
+    private var variantLineCount = 0
     private var dt = 0f
 
     // układ
@@ -88,7 +111,9 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var scroll = 0f
     private var maxScroll = 0f
     private val gap get() = 12 * dp
-    private val headerH get() = 174 * dp
+    private val headerH get() =
+        (if (page == PAGE_VARIANTS) 97f + variantLineCount * guideLineDp else 75f) * dp
+    private val guideLineDp get() = if (ui.textScale > 1.15f) 20f else 17f
     private val rowH get() = (if (ui.textScale > 1.15f) 26f else 21f) * dp
     private val endlessRowH get() = 52 * dp
     private val endlessHeaderH get() = 34 * dp
@@ -112,57 +137,105 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val weatherDescriptions = Array(Weather.entries.size) { "" }
     private var eliteLocked = false
 
+    // Wiersze informacyjne mają obliczone pozycje i zawinięte teksty; render nie tworzy obiektów.
+    private val guideNames = arrayOfNulls<String>(MAX_GUIDE)
+    private val guideBadges = arrayOfNulls<String>(MAX_GUIDE)
+    private val guideIcons = IntArray(MAX_GUIDE)
+    private val guideLines = Array(MAX_GUIDE) { arrayOfNulls<String>(MAX_GUIDE_LINES) }
+    private val guideLineCounts = IntArray(MAX_GUIDE)
+    private val guideTops = FloatArray(MAX_GUIDE)
+    private val guideHeights = FloatArray(MAX_GUIDE)
+    private var guideCount = 0
+    private var guideHeight = 0f
+    private var guideTitle = ""
+
     private val card = RectF()
     private val box = RectF()
     private val pf = Paint(Paint.ANTI_ALIAS_FLAG)
 
     override fun isDragScreen() = true
 
+    /** Dla testów zrzutów oraz nawigacji: jeden punkt wejścia dla wszystkich zakładek. */
+    internal fun showCategory(index: Int) {
+        if (index !in CATEGORY_KEYS.indices) return
+        page = index
+        scroll = 0f
+        layout()
+    }
+
     override fun layout() {
         chrome.layoutBack(back)
+        left = g.insetL + 16 * dp
+        contentW = w - g.insetL - g.insetR - 32 * dp
+
+        val tabGap = 7 * dp
+        val topicW = (contentW - 4 * tabGap) / 5f
+        val topicH = (if (ui.textScale > 1.15f) 44f else 40f) * dp
+        val tabTop = chrome.top + 2 * dp
+        for (i in categories.indices) {
+            val b = categories[i]
+            b.label = L[CATEGORY_KEYS[i]]
+            b.selected = i == page
+            b.highlight = b.selected
+            b.set(left + (i % 5) * (topicW + tabGap),
+                tabTop + (i / 5) * (topicH + tabGap), topicW, topicH)
+        }
+        viewTop = tabTop + 2 * topicH + tabGap + 12 * dp
+
+        val hasEra = page <= PAGE_ABILITIES
+        toggle.visible = hasEra
         toggle.iconId = Icons.FLASK
         val compact = w - g.insetL - g.insetR < 700 * dp
         val tw = if (compact) 44 * dp else min(210 * dp, w * 0.24f)
         toggle.set(w - g.insetR - 12 * dp - tw, g.insetT + 10 * dp, tw, 44 * dp)
 
-        left = g.insetL + 16 * dp
-        contentW = w - g.insetL - g.insetR - 32 * dp
-
-        // zakładki epok: jeden rząd, a gdy za wąsko, dwa rzędy po 4
-        val tabGap = 8 * dp
-        val perRow = if ((contentW - (Defs.ERA_COUNT - 1) * tabGap) / Defs.ERA_COUNT < 66 * dp) 5 else Defs.ERA_COUNT
-        val tabW = (contentW - (perRow - 1) * tabGap) / perRow
-        val tabH = 40 * dp
-        val tabTop = chrome.top + 2 * dp
+        // Wybór epoki pozostaje dostępny na stronach związanych z konkretną epoką.
+        val eraGap = 8 * dp
+        val perRow = if ((contentW - (Defs.ERA_COUNT - 1) * eraGap) /
+            Defs.ERA_COUNT < 66 * dp) 5 else Defs.ERA_COUNT
+        val eraW = (contentW - (perRow - 1) * eraGap) / perRow
+        val eraH = 40 * dp
         for (i in tabs.indices) {
             val b = tabs[i]
+            b.visible = hasEra
             b.label = L[Defs.eraKeys[i]]
-            b.set(left + (i % perRow) * (tabW + tabGap), tabTop + (i / perRow) * (tabH + tabGap), tabW, tabH)
+            if (hasEra) b.set(left + (i % perRow) * (eraW + eraGap),
+                viewTop + (i / perRow) * (eraH + eraGap), eraW, eraH)
         }
-        val rows = (tabs.size + perRow - 1) / perRow
-        viewTop = tabTop + rows * tabH + (rows - 1) * tabGap + 10 * dp
+        if (hasEra) {
+            val rows = (tabs.size + perRow - 1) / perRow
+            viewTop += rows * eraH + (rows - 1) * eraGap + 10 * dp
+        }
+
         val variants = Defs.spec(era).variants
         val vbW = (contentW - 10 * dp) / 2f
         for (i in variantBtn.indices) {
             val b = variantBtn[i]
-            b.visible = i in variants.indices
+            b.visible = page == PAGE_VARIANTS && i in variants.indices
             if (b.visible) b.set(left + i * (vbW + 10 * dp), viewTop, vbW, 40 * dp)
         }
-        if (variants.isNotEmpty()) viewTop += 50 * dp
+        if (page == PAGE_VARIANTS && variants.isNotEmpty()) viewTop += 50 * dp
 
-        cols = (contentW / ((if (ui.textScale > 1.15f) 340f else 280f) * dp)).toInt().coerceIn(1, 3)
+        cols = (contentW / ((if (ui.textScale > 1.15f) 340f else 280f) * dp))
+            .toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
         statCols = if (cw >= 340 * dp) 3 else 2
         previewW = min(128 * dp, cw * 0.34f)
         previewH = 112 * dp
         val unitRows = (MAX_STATS + statCols - 1) / statCols
         ch = 10 * dp + previewH + 36 * dp + unitRows * rowH + 12 * dp
-        val gridRows = (CARDS + cols - 1) / cols
-        val contentH = headerH + gridRows * (ch + gap) + 12 * dp +
-            2 * endlessHeaderH + (endlessBossNames.size + endlessWaveNames.size) * endlessRowH
-        maxScroll = max(0f, contentH - (h - g.insetB - viewTop) + 8 * dp)
-        scroll = scroll.coerceIn(0f, maxScroll)
+        activeCards = when (page) {
+            PAGE_ERAS, PAGE_VARIANTS -> if (page == PAGE_VARIANTS && variants.isEmpty()) 0 else CARDS
+            PAGE_UNITS -> 4
+            PAGE_TOWERS, PAGE_ABILITIES -> 1
+            else -> 0
+        }
         rebuild()
+        val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
+        val contentH = if (hasEra) headerH + gridH + 12 * dp else 0f
+        val allH = contentH + guideHeight
+        maxScroll = max(0f, allH - (h - g.insetB - viewTop) + 8 * dp)
+        scroll = scroll.coerceIn(0f, maxScroll)
     }
 
     /** Przelicza wszystkie teksty i wartości (bez tego render nie alokuje). */
@@ -173,7 +246,11 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         val b = if (withResearch) g.profile.bonuses() else Bonuses()
         val e = Defs.eras[era]
-        val variant = Defs.spec(era).variants.getOrNull(selectedVariant)
+        val variantIndex = if (page == PAGE_VARIANTS) selectedVariant else -1
+        val variant = Defs.spec(era).variants.getOrNull(variantIndex)
+        variantTitle = if (variant == null) L["cx62_no_variants"] else L[variant.nameKey]
+        variantLineCount = if (variant == null) 0 else wrapWords(
+            L[variant.descKey], contentW - 20 * dp, 12.5f, variantLines)
         eraName = L[e.nameKey]
         eraNum = L.f("cx_era_n", era + 1, Defs.ERA_COUNT)
         evolveText = if (e.evolveXp == Int.MAX_VALUE) L["cx_final"] else L.f("cx_evolve", num(e.evolveXp.toFloat()))
@@ -182,7 +259,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         val textW = cw - previewW - 3 * 12 * dp
         for (i in 0 until 4) {
-            val u = Defs.unit(era, Role.entries[i], selectedVariant)
+            val u = Defs.unit(era, Role.entries[i], variantIndex)
             titles[i] = L[u.nameKey]
             roles[i] = L[when (u.role) { Role.MELEE -> "cx_melee"; Role.RANGED -> "cx_ranged"; Role.HEAVY -> "cx_heavy"; Role.ELITE -> "cx_elite" }]
             counterHints[i] = L[when (u.role) {
@@ -207,7 +284,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             statN[i] = n
         }
 
-        val t = Defs.turret(era, selectedVariant)
+        val t = Defs.turret(era, variantIndex)
         titles[TURRET] = L[t.nameKey]
         roles[TURRET] = L["cx_turret"]
         counterHints[TURRET] = if (era >= 4) L["cx_counter_turret"] else null
@@ -230,7 +307,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         n = 0
         n = stat(BARRAGE, n, Icons.METEOR, "cx_hit", num(Defs.abilityDmg(era) * b.unitDmgMul), b.unitDmgMul != 1f)
         n = stat(BARRAGE, n, Icons.HOURGLASS, "cx_cd", sec(Battle.BARRAGE_CD * b.abilityCdMul), b.abilityCdMul != 1f)
-        val volley = Defs.barrage(era, selectedVariant)
+        val volley = Defs.barrage(era, variantIndex)
         n = stat(BARRAGE, n, Icons.METEOR, "cx_count", volley.count.toString(), false)
         n = stat(BARRAGE, n, Icons.BOMB, "cx_splash", num(volley.splash), false)
         statN[BARRAGE] = n
@@ -260,6 +337,135 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             val key = endlessWaveThemes[i].textKey
             endlessWaveNames[i] = L[key]
             endlessWaveDetails[i] = L[key + "_d"]
+        }
+        buildGuide()
+    }
+
+    private fun percentDown(multiplier: Float): Int = ((1f - multiplier) * 100f).roundToInt()
+    private fun percentUp(multiplier: Float): Int = ((multiplier - 1f) * 100f).roundToInt()
+
+    /** Słownik jest tylko widokiem: wszystkie kolekcje pochodzą z definicji symulacji. */
+    private fun buildGuide() {
+        guideCount = 0
+        guideHeight = 40 * dp
+        guideTitle = L[CATEGORY_KEYS[page]]
+        when (page) {
+            PAGE_VARIANTS -> {
+                if (Defs.spec(era).variants.isEmpty()) {
+                    addGuide(Icons.CODEX, L["cx62_no_variants"], L["cx62_no_variants_d"])
+                }
+                // Zbiorczy spis wszystkich ścieżek, także gdy bieżąca epoka ich nie ma.
+                for (e in Defs.specs.indices) for (variant in Defs.spec(e).variants) {
+                    addGuide(Icons.CODEX, L[variant.nameKey], L[variant.descKey],
+                        L[Defs.eraKeys[e]])
+                }
+            }
+            PAGE_ABILITIES -> {
+                addGuide(Icons.FLASK, L["armory"], L.f("cx62_armory_d",
+                    percentUp(Battle.ARMORY_BONUS), Battle.ARMORY_MAX_LEVEL))
+                addGuide(Icons.FLAG, L["rally"], L.f("cx62_rally_d",
+                    percentUp(Battle.RALLY_SPEED_BONUS), Battle.RALLY_TIME.roundToInt(),
+                    Battle.RALLY_CD.roundToInt()))
+            }
+            PAGE_DOCTRINES -> for (d in com.centurywar.game.Doctrine.entries) {
+                addGuide(Icons.CROWN, L[d.key], L[d.key + "_d"])
+            }
+            PAGE_WEATHER -> for (type in Weather.entries) {
+                val detail = when (type) {
+                    Weather.CLEAR -> L[type.key + "_d"]
+                    Weather.RAIN -> L.f("cx62_rain_d",
+                        percentDown(type.projectileRange),
+                        percentDown(type.moveSpeed), percentDown(type.burnDamage))
+                    Weather.WIND -> L.f("cx62_wind_d",
+                        percentUp(Weather.WIND_WITH),
+                        percentDown(Weather.WIND_AGAINST), Weather.WIND_SHIFT_SECONDS)
+                    Weather.NIGHT -> L.f("cx62_night_d",
+                        percentDown(type.projectileRange), percentDown(type.turretRange))
+                }
+                addGuide(Icons.weatherIcon(type), L[type.key], detail)
+            }
+            PAGE_MODIFIERS -> for (mod in com.centurywar.game.Modifier.entries) {
+                addGuide(Icons.CROSSED_SWORDS, L[mod.key], L["sk_moddesc_" + mod.ordinal])
+            }
+            PAGE_CARDS -> for (entry in com.centurywar.game.EndlessCard.entries) {
+                val rarity = L["er_" + entry.rarity.name.lowercase(Locale.ROOT)]
+                addGuide(Icons.CODEX, L[entry.textKey], L[entry.textKey + "_d"], rarity)
+            }
+            PAGE_BOSSES -> {
+                guideTitle = L["cx_endless_bosses"]
+                for (i in endlessBossNames.indices) {
+                    addGuide(bossIcons[i], endlessBossNames[i] ?: "",
+                        endlessBossDetails[i] ?: "")
+                }
+                addGuide(Icons.CROSSED_SWORDS, L["cx_endless_waves"], L["cx62_waves_d"])
+                for (i in endlessWaveThemes.indices) {
+                    addGuide(waveIcons[i], endlessWaveNames[i] ?: "",
+                        endlessWaveDetails[i] ?: "")
+                }
+            }
+        }
+        if (guideCount == 0) guideHeight = 0f
+        else guideHeight += 10 * dp
+    }
+
+    /** Tekst i pozycje wiersza obliczane przy zmianie danych, nigdy na klatkę. */
+    private fun addGuide(icon: Int, title: String, description: String, badge: String? = null) {
+        check(guideCount < MAX_GUIDE)
+        val i = guideCount++
+        guideNames[i] = title
+        guideBadges[i] = badge
+        guideIcons[i] = icon
+        guideLineCounts[i] = wrapWords(description, contentW - 68 * dp, 12f, guideLines[i])
+        guideTops[i] = guideHeight
+        guideHeights[i] = (if (badge == null) 45f else 62f) * dp +
+            guideLineCounts[i] * guideLineDp * dp + 10 * dp
+        guideHeight += guideHeights[i] + 6 * dp
+    }
+
+    /** Łamanie wyrazów tylko podczas przebudowania ekranu, także przy skali 130%. */
+    private fun wrapWords(value: String, width: Float, font: Float, target: Array<String?>): Int {
+        target.fill(null)
+        val words = value.split(' ')
+        val buffer = StringBuilder()
+        var n = 0
+        for (word in words) {
+            val attempt = if (buffer.isEmpty()) word else "$buffer $word"
+            if (buffer.isNotEmpty() && ui.measure(attempt, font) > width &&
+                n < target.size - 1) {
+                target[n++] = buffer.toString()
+                buffer.setLength(0)
+                buffer.append(word)
+            } else {
+                buffer.setLength(0)
+                buffer.append(attempt)
+            }
+        }
+        if (buffer.isNotEmpty()) target[n++] = buffer.toString()
+        return n
+    }
+
+    private fun drawGuide(c: Canvas, y0: Float) {
+        if (guideHeight <= 0f) return
+        if (y0 + 40 * dp >= viewTop && y0 < h - g.insetB)
+            ui.textO(c, guideTitle, left + 8 * dp, y0 + 26 * dp, 18f, Ui.GOLD)
+        for (i in 0 until guideCount) {
+            val y = y0 + guideTops[i]
+            val rh = guideHeights[i]
+            if (y >= h - g.insetB || y + rh < viewTop) continue
+            box.set(left, y, left + contentW, y + rh)
+            ui.card(c, box, CARD_BODY, 10f, Ui.OUTLINE)
+            Icons.draw(c, guideIcons[i], left + 24 * dp, y + 25 * dp, 22 * dp, dp = dp)
+            val name = guideNames[i] ?: ""
+            val tx = left + 49 * dp
+            val avail = contentW - 66 * dp
+            ui.textO(c, name, tx, y + 25 * dp, ui.fit(name, 15f, avail, 10f), Ui.TEXT)
+            val badge = guideBadges[i]
+            val descTop = if (badge == null) 45f else 62f
+            if (badge != null) ui.text(c, badge, tx, y + 45 * dp, 11f, Ui.GOLD)
+            for (line in 0 until guideLineCounts[i]) {
+                val body = guideLines[i][line] ?: ""
+                ui.text(c, body, tx, y + (descTop + line * guideLineDp) * dp, 12f, Ui.DIM)
+            }
         }
     }
 
@@ -312,29 +518,35 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
         chrome.dim(c, 130)
-        for (i in tabs.indices) ui.button(c, tabs[i], 14f)
+        for (b in categories) ui.button(c, b, 12.5f)
+        for (b in tabs) if (b.visible) ui.button(c, b, 13.5f)
         for (b in variantBtn) if (b.visible) ui.button(c, b, 13f)
 
         c.save()
-        c.clipRect(0f, viewTop - 4 * dp, w, h)
+        c.clipRect(0f, viewTop - 4 * dp, w, h - g.insetB)
         val y0 = viewTop - scroll
-        drawEraHeader(c, y0)
-        val gridTop = y0 + headerH
-        for (i in 0 until CARDS) {
-            val x = left + (i % cols) * (cw + gap)
-            val y = gridTop + (i / cols) * (ch + gap)
-            if (y > h || y + ch < viewTop - 10 * dp) continue
+        val hasEra = page <= PAGE_ABILITIES
+        if (hasEra) drawEraHeader(c, y0)
+        val gridTop = y0 + (if (hasEra) headerH else 0f)
+        for (slot in 0 until activeCards) {
+            val i = when (page) {
+                PAGE_TOWERS -> TURRET
+                PAGE_ABILITIES -> BARRAGE
+                else -> slot
+            }
+            val x = left + (slot % cols) * (cw + gap)
+            val y = gridTop + (slot / cols) * (ch + gap)
+            if (y > h - g.insetB || y + ch < viewTop - 10 * dp) continue
             card.set(x, y, x + cw, y + ch)
             drawCard(c, i)
         }
-        val sectionY = gridTop + ((CARDS + cols - 1) / cols) * (ch + gap) + 12 * dp
-        drawEndlessSection(c, sectionY, bossSectionTitle, endlessBossNames, endlessBossDetails, bossIcons)
-        drawEndlessSection(c, sectionY + endlessHeaderH + endlessBossNames.size * endlessRowH,
-            waveSectionTitle, endlessWaveNames, endlessWaveDetails, waveIcons)
+        val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
+        val guideY = if (hasEra) gridTop + gridH + 12 * dp else y0
+        drawGuide(c, guideY)
         c.restore()
 
         ui.button(c, back, 16f)
-        ui.button(c, toggle, 15f)
+        if (toggle.visible) ui.button(c, toggle, 15f)
         chrome.title(c, L["codex"])
     }
 
@@ -366,21 +578,15 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val col = Ui.ERA[era]
         ui.medallion(c, left + 18 * dp, cy, 18 * dp, col, Icons.CODEX)
         val tx = left + 44 * dp
-        ui.textO(c, eraName, tx, cy + 2 * dp, 22f, Ui.GOLD)
-        ui.textO(c, eraNum, tx + ui.measure(eraName, 22f, true) + 10 * dp, cy + 1 * dp, 13f, Ui.DIM)
-        val right = left + contentW
-        ui.badge(c, right, cy, Icons.XP, evolveText, 15f, Ui.XP, alignRight = true)
-        ui.textO(c, L["w_codex"], left + 2 * dp, y + 54 * dp, 14f, Ui.GOLD)
-        for (type in Weather.entries) {
-            val i = type.ordinal
-            val yy = y + (77 + i * 23) * dp
-            Icons.draw(c, Icons.weatherIcon(type), left + 12 * dp, yy - 5 * dp, 18 * dp, dp = dp)
-            ui.textO(c, weatherNames[i], left + 27 * dp, yy, 12f, Ui.TEXT)
-            val x = left + 128 * dp
-            val available = contentW - 131 * dp
-            if (available > 40 * dp) {
-                val desc = weatherDescriptions[i]
-                ui.textO(c, desc, x, yy, ui.fit(desc, 12f, available, 8.5f), Ui.DIM)
+        val nameSize = ui.fit(eraName, 21f, contentW - 240 * dp, 12f)
+        ui.textO(c, eraName, tx, cy + 2 * dp, nameSize, Ui.GOLD)
+        ui.badge(c, left + contentW, cy, Icons.XP, evolveText, 14f, Ui.XP, alignRight = true)
+        ui.text(c, eraNum, left + 8 * dp, y + 58 * dp, 12f, Ui.DIM)
+        if (page == PAGE_VARIANTS) {
+            ui.textO(c, variantTitle, left + 8 * dp, y + 85 * dp, 15f, Ui.GOLD)
+            for (i in 0 until variantLineCount) {
+                ui.text(c, variantLines[i] ?: "", left + 10 * dp,
+                    y + (103 + i * guideLineDp) * dp, 12.5f, Ui.DIM)
             }
         }
     }
@@ -477,7 +683,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             TURRET -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, col, Icons.TOWER)
             BARRAGE -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, ROLE_COL[BARRAGE], Icons.METEOR)
             else -> {
-                val def = Defs.unit(era, Role.entries[i], selectedVariant)
+                val def = Defs.unit(era, Role.entries[i], if (page == PAGE_VARIANTS) selectedVariant else -1)
                 val k = when (def.body) {
                     Body.HUMAN -> 0.8f
                     Body.MECH -> 0.7f
@@ -495,13 +701,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     override fun onClick(b: Button) {
         when {
             b.id == -1 -> g.pop()
-            b.id == -2 -> { withResearch = !withResearch; rebuild() }
+            b.id == -2 -> { withResearch = !withResearch; layout() }
             b.id == -3 || b.id == -4 -> {
                 selectedVariant = -3 - b.id
                 scroll = 0f
-                rebuild()
+                layout()
             }
-            b.id >= 100 -> {
+            b.id in 200 until 200 + CATEGORY_KEYS.size -> showCategory(b.id - 200)
+            b.id in 100 until 100 + Defs.ERA_COUNT -> {
                 val e = b.id - 100
                 if (e != era) {
                     era = e
@@ -512,4 +719,5 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             }
         }
     }
+
 }

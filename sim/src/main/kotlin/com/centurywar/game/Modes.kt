@@ -31,11 +31,23 @@ enum class Modifier(val key: String) {
 }
 
 /** Warunki atmosferyczne mają osobny model, aby nie zmieniać losowania modyfikatorów dnia. */
-enum class Weather(val key: String) {
-    CLEAR("w_clear"),
-    RAIN("w_rain"),
-    WIND("w_wind"),
-    NIGHT("w_night"),
+enum class Weather(
+    val key: String,
+    val projectileRange: Float,
+    val turretRange: Float,
+    val moveSpeed: Float,
+    val burnDamage: Float,
+) {
+    CLEAR("w_clear", 1f, 1f, 1f, 1f),
+    RAIN("w_rain", 0.9f, 0.9f, 0.92f, 0.5f),
+    WIND("w_wind", 1f, 1f, 1f, 1f),
+    NIGHT("w_night", 0.95f, 0.85f, 1f, 1f);
+
+    companion object {
+        const val WIND_WITH = 1.1f
+        const val WIND_AGAINST = 0.9f
+        const val WIND_SHIFT_SECONDS = 75
+    }
 }
 
 enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
