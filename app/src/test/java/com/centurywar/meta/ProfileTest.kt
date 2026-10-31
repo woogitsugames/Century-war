@@ -1,5 +1,7 @@
 package com.centurywar.meta
 
+import com.centurywar.engine.Palette
+import com.centurywar.engine.Ui
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -106,6 +108,26 @@ class ProfileTest {
         assertTrue(f.renameTo(File(f.parentFile, f.name + ".tmp")))
         val p = Profile(f).also { it.load() }
         assertEquals(321, p.medals)
+    }
+
+    @Test
+    fun standardPalettePreservesLegacyColors() {
+        Palette.select(Palette.STANDARD)
+        assertEquals(0xFF408CEB.toInt(), Ui.PLAYER)
+        assertEquals(0xFFDC463C.toInt(), Ui.ENEMY)
+        assertEquals(0xFF76E278.toInt(), Ui.GOOD)
+        assertEquals(0xFFF05C50.toInt(), Ui.BAD)
+        assertEquals(0xEE1A2030.toInt(), Ui.PANEL)
+        assertEquals(0xFF1A1620.toInt(), Ui.OUTLINE)
+        assertEquals(0xFF409646.toInt(), Ui.BTN_GREEN)
+        Palette.select(Palette.DEUTAN_PROTAN)
+        assertTrue(Ui.PLAYER != Ui.ENEMY)
+        assertTrue(Ui.GOOD != Ui.BAD)
+        Palette.select(Palette.TRITAN)
+        assertTrue(Ui.PLAYER != Ui.ENEMY)
+        Palette.select(Palette.HIGH_CONTRAST)
+        assertEquals(0xFA080C16.toInt(), Ui.PANEL)
+        Palette.select(Palette.STANDARD)
     }
 
     @Test
