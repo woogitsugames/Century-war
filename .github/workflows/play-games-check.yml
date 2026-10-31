@@ -32,3 +32,12 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --console=plain
       - name: Testy tłumaczeń, profilu i chmury
         run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --tests '*ProfileTest*' --tests '*ProfileCloudTest*' --no-configuration-cache --console=plain
+      - name: Zrzuty nowych ekranów Play Games
+        run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.playGamesMenus*' --no-configuration-cache --console=plain
+      - name: Dołącz zrzuty interfejsu
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-games-screenshots
+          path: app/build/screenshots/*_pgs_*.png
+          if-no-files-found: ignore
