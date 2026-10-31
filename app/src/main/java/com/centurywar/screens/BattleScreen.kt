@@ -35,6 +35,7 @@ import com.centurywar.game.Role
 import com.centurywar.game.Skirmish
 import com.centurywar.game.Weather
 import com.centurywar.meta.Achievements
+import com.centurywar.meta.AchievementBattleTracker
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Profile
 import com.centurywar.meta.SkirmishSetup
@@ -54,6 +55,7 @@ class BattleScreen(
 ) : Screen(g) {
 
     private val battle = restored?.battle ?: Battle(cfg)
+    private val achievementEvents = AchievementBattleTracker(battle)
     private val commands = battle.commandController ?: BattleController(battle)
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
@@ -380,7 +382,12 @@ class BattleScreen(
                 acc += dt * effectiveSpeed * tutScale
                 var steps = 0
                 val startedNs = System.nanoTime()
-                while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
+                while (acc >= Battle.STEP && steps < 20) {
+                    battle.step()
+                    achievementEvents.afterStep()
+                    acc -= Battle.STEP
+                    steps++
+                }
                 if (steps > 0) {
                     val sample = (System.nanoTime() - startedNs).toFloat() / steps
                     avgStepNs = if (sampledStepFrames == 0) sample else avgStepNs * 0.9f + sample * 0.1f
@@ -673,7 +680,7 @@ class BattleScreen(
             }
             QUIT -> { paused = false; surrendered = commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
-            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, it)) }
+            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, replayId, it)) }
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 val cards = battle.pendingCards
                 if (cards != null) {
@@ -750,7 +757,8 @@ class BattleScreen(
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
                 fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
-                commands.barrage(r.worldX(x))
+                achievementEvents.beforeAimedBarrage()
+                achievementEvents.afterAimedBarrage(commands.barrage(r.worldX(x)))
             }
             aimingBarrage = false // Dotknięcie poza polem walki anuluje.
             return
@@ -875,7 +883,7 @@ class BattleScreen(
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val finishedAt = System.currentTimeMillis()
         Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars)
-        g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
+        g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))
         tipKey = if (won) "" else when {
             !battle.endless && battle.time >= Battle.SIEGE_START + 35f -> "tip_siege"
             battle.player.aliveCount >= battle.player.cap &&
