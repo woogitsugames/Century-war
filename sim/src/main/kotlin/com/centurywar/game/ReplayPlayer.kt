@@ -12,6 +12,11 @@ class ReplayPlayer(val cfg: BattleConfig, val log: Replay.Log) {
     private var controller = BattleController(battle)
     private val keyframes = ArrayList<Keyframe>()
     private var commandIndex = 0
+    private val bossMarkers = IntArray(4096)
+    var bossMarkerCount = 0
+        private set
+
+    fun bossMarkerStep(index: Int): Int = bossMarkers[index]
     private var target = -1
     var broken = false
         private set
@@ -53,7 +58,13 @@ class ReplayPlayer(val cfg: BattleConfig, val log: Replay.Log) {
                     broken = true
                     break
                 }
+                val oldBosses = battle.bossesSpawned
                 battle.step()
+                if (battle.bossesSpawned > oldBosses) {
+                    var known = false
+                    for (i in 0 until bossMarkerCount) if (bossMarkers[i] == battle.stepCount) { known = true; break }
+                    if (!known && bossMarkerCount < bossMarkers.size) bossMarkers[bossMarkerCount++] = battle.stepCount
+                }
                 if (battle.stepCount != now + 1) {
                     broken = true
                     break
