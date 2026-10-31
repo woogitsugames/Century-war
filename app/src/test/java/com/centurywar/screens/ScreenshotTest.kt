@@ -259,6 +259,11 @@ class ScreenshotTest {
                 shot(g, "${tag}_sfx_settings")
             }
             shot(g, "${tag}_settings")
+            if (tag == "phone720" || tag == "foldPortrait") {
+                field(settings, "scroll").setFloat(settings, field(settings, "maxScroll").getFloat(settings))
+                settings.layout()
+                shot(g, "${tag}_settings_bottom")
+            }
             g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_codex_era0")
             g.profile.levels["r_unitDmg"] = 5; g.profile.levels["r_unitHp"] = 4; g.profile.levels["r_train"] = 3
             val cx = CodexScreen(g, 6)
