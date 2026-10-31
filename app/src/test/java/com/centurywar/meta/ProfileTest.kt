@@ -125,4 +125,38 @@ class ProfileTest {
         f.writeText("""{"name":"Stary profil"}""")
         assertEquals(0.5f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
     }
+    @Test
+    fun hintsPersistClampAndResetWithOldProfileDefaults() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertTrue(p.hintsEnabled)
+        assertEquals(0L, p.hintsSeen)
+        assertTrue(p.markHintSeen(0))
+        assertTrue(p.markHintSeen(Profile.HINT_COUNT - 1))
+        assertFalse(p.markHintSeen(0))
+        assertFalse(p.markHintSeen(Profile.HINT_COUNT))
+        p.hintsEnabled = false
+        p.save()
+        val loaded = Profile(f).also { it.load() }
+        assertFalse(loaded.hintsEnabled)
+        assertEquals(1L or (1L shl (Profile.HINT_COUNT - 1)), loaded.hintsSeen)
+        loaded.replayHints()
+        assertEquals(0L, Profile(f).also { it.load() }.hintsSeen)
+
+        f.writeText("""{"hintsSeen":-9,"hintsEnabled":false}""")
+        val negative = Profile(f).also { it.load() }
+        assertEquals(0L, negative.hintsSeen)
+        assertFalse(negative.hintsEnabled)
+        f.writeText("""{"hintsSeen":9223372036854775807}""")
+        assertEquals(Profile.HINT_VALID_MASK, Profile(f).also { it.load() }.hintsSeen)
+        f.writeText("""{"tutorialDone":true}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(0L, old.hintsSeen)
+        assertTrue(old.hintsEnabled)
+        old.markHintSeen(2)
+        old.reset()
+        assertEquals(0L, old.hintsSeen)
+        assertTrue(old.hintsEnabled)
+    }
+
 }
