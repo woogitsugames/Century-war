@@ -1,6 +1,6 @@
 # Century War — plan monetyzacji przyjaznej graczom
 
-**Status:** plan na przyszłą wersję, **nic z poniższych mechanizmów nie jest wdrożone w v1**. Obecna aplikacja jest darmową grą offline bez reklam, IAP i integracji sieciowych. Stan przeglądu wymagań: 31.10.2026.
+**Status:** plan na przyszłą wersję, **nic z poniższych mechanizmów nie jest wdrożone w v1**. Obecna aplikacja jest darmowa, bez reklam i IAP; cała podstawowa rozgrywka działa offline. Gra zawiera jednak opcjonalną integrację Google Play Games (po konfiguracji wydania) oraz klienta własnego rankingu globalnego, domyślnie wyłączonego, wymagającego zgody gracza i skonfigurowanego serwera HTTPS. Stan przeglądu wymagań: 31.10.2026.
 
 ## Założenia produktu
 
@@ -18,7 +18,7 @@
 | Komunikat | PL: „Obejrzyj reklamę i odbierz 2× medale”; EN: „Watch an ad to earn 2× medals”. |
 | Mechanika | Podstawowe medale naliczają się normalnie. Po zdarzeniu potwierdzającym obejrzenie reklamy dopisz **tylko różnicę** do 2× nagrody bazowej. |
 | Limit | Maksymalnie **jedna** nagroda reklamowa na identyfikator zakończonej bitwy; dodatkowy limit dzienny dopiero po analizie nadużyć. |
-| Błąd/brak internetu | Nie zabieraj podstawowej nagrody; przy niedostępności reklamy nie obiecuj bonusu. Gra pozostaje offline-first. |
+| Błąd/brak internetu | Nie zabieraj podstawowej nagrody; przy niedostępności reklamy nie obiecuj bonusu. Podstawowa rozgrywka pozostaje dostępna offline, ale obejrzenie reklamy z nagrodą wymagałoby internetu. |
 | UI | Przycisk można pominąć bez opóźnienia, karania gracza ani blokowania następnej bitwy. |
 
 Żadnych reklam w środku bitwy, reklam „za życie”, ograniczania energii ani wymuszania filmu po porażce. Użytkownik ma świadomie wybrać reklamę.
@@ -79,7 +79,7 @@ Wyłącznie jednoznaczne, stałe ceny w walucie lokalnej Google Play. Bez loot b
 1. **Etap A:** bezpłatna v1, pomiar jakości i retencji bez inwazyjnej analityki; bez reklam/IAP.
 2. **Etap B:** kosmetyka i test procesu zakupowego, ale dopiero z poprawną deklaracją danych i regulaminem zwrotów.
 3. **Etap C:** znormalizowane tryby rankingowe, testy anty-cheat i dopiero potem reklamy z nagrodą / pakiet medali.
-4. **Etap D:** ewentualny własny serwer wyników z identyfikatorem UUID i jawnie opisaną retencją.
+4. **Etap D:** uruchomienie istniejącego opcjonalnego klienta rankingu globalnego i serwera wyników (HTTPS, osobna zgoda w Ustawieniach i jawnie opisana retencja). Obecność kodu nie oznacza uruchomienia usługi produkcyjnej.
 
 **Kryteria akceptacji:** brak reklam podczas bitwy; brak blokad offline; brak podwójnych grantów; zakup da się przywrócić; wszystkie rankingi rywalizacyjne pozostają niezależne od zakupów; zgody i deklaracje odpowiadają finalnemu AAB.
 

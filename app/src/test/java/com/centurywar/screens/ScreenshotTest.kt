@@ -255,6 +255,10 @@ class ScreenshotTest {
                 shot(g, "${tag}_sfx_settings")
             }
             shot(g, "${tag}_settings")
+            val about = AboutScreen(g)
+            g.setScreen(about); shot(g, "${tag}_about")
+            about.onDrag(0f, -100000f)
+            shot(g, "${tag}_about_end")
             g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_codex_era0")
             g.profile.levels["r_unitDmg"] = 5; g.profile.levels["r_unitHp"] = 4; g.profile.levels["r_train"] = 3
             val cx = CodexScreen(g, 6)

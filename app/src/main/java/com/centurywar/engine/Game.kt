@@ -31,6 +31,8 @@ interface Host {
     fun onNotificationSettingsChanged() {}
     fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {}
     fun requestGlobalRankingConsent(onAccepted: () -> Unit) {}
+    fun openExternalUrl(url: String) {}
+    fun showApacheLicense() {}
 }
 
 /**

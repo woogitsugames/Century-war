@@ -20,6 +20,8 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.EditText
+import android.widget.ScrollView
+import android.widget.TextView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
@@ -35,6 +37,7 @@ import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
+import com.centurywar.engine.SecureLinks
 import com.centurywar.notifications.DailyReminders
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
@@ -269,6 +272,39 @@ class MainActivity : Activity(), Host {
                 .setOnDismissListener { hideSystemBars() }
                 .show()
         }
+    }
+
+    override fun openExternalUrl(url: String) {
+        if (!SecureLinks.isHttps(url)) return
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+        }
+    }
+
+    override fun showApacheLicense() {
+        // Zasób tekstowy odczytujemy raz po kliknięciu, poza wątkiem gry i UI.
+        Thread({
+            val content = runCatching {
+                resources.openRawResource(R.raw.apache_2_0).bufferedReader().use { it.readText() }
+            }.getOrNull() ?: return@Thread
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                val body = TextView(this).apply {
+                    text = content
+                    textSize = 12f
+                    setTextIsSelectable(true)
+                    setPadding(24, 16, 24, 16)
+                }
+                val scroll = ScrollView(this).apply { addView(body) }
+                AlertDialog.Builder(this)
+                    .setTitle(L["about_apache_full"])
+                    .setView(scroll)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .setOnDismissListener { hideSystemBars() }
+                    .show()
+            }
+        }, "licenses-reader").start()
     }
 
     override fun vibrate(ms: Long) {

@@ -46,6 +46,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
+          ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'
@@ -94,7 +95,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-runtime-dependencies
-          path: release-runtime-dependencies.txt
+          path: |
+            release-runtime-dependencies.txt
+            server-runtime-dependencies.txt
           if-no-files-found: warn
           retention-days: 14
       - name: Zapisz raporty testow
