@@ -52,6 +52,10 @@ class TutorialOverlay(
         val area: RectF,
         val turretsOpen: () -> Boolean,
         val closeTurrets: () -> Unit,
+        val barrageAiming: () -> Boolean,
+        val screenX: (Float) -> Float,
+        val groundY: () -> Float,
+        val worldScale: () -> Float,
     )
 
     companion object {
@@ -104,6 +108,7 @@ class TutorialOverlay(
     private val path = Path().apply { fillType = Path.FillType.EVEN_ODD }
     private val handPath = Path()
     private val tmp = RectF()
+    private val barrageBins = IntArray(10)
 
     private val lines = Array(SIZES.size) { arrayOfNulls<String>(MAX_LINES) }
     private val lineCount = IntArray(SIZES.size)
@@ -313,12 +318,39 @@ class TutorialOverlay(
         S_EVOLVE -> if (battle.canEvolve(p)) "tut_evolve" else "tut_evolve_wait"
         S_DOCTRINE -> "tut_doctrine"
         S_TURRET -> if (t.turretsOpen()) "tut_turret_buy" else "tut_turret_open"
-        S_BARRAGE -> "tut_barrage"
+        S_BARRAGE -> if (t.barrageAiming()) "tut_barrage_aim" else "tut_barrage"
         S_CAMERA -> "tut_camera"
         else -> "tut_done"
     }
 
     private fun hasNext() = step == S_INCOME || step == S_KILL || step == S_CAMERA || step == S_DONE
+
+    /** Obejmuje najliczniejsze widoczne skupisko przeciwników w zasięgu ostrzału. */
+    private fun barrageTargetHole() {
+        val near = p.baseFront + 220f
+        val far = p.baseFront + 1370f
+        barrageBins.fill(0)
+        for (u in battle.units) {
+            if (!u.alive || u.side != 1 || u.x < near || u.x > far) continue
+            val x = t.screenX(u.x)
+            if (x < t.area.left + 12f * dp || x > t.area.right - 12f * dp) continue
+            val bin = ((u.x - near) / 115f).toInt().coerceIn(0, barrageBins.lastIndex)
+            barrageBins[bin]++
+        }
+        var best = -1
+        var count = 0
+        for (i in barrageBins.indices) {
+            if (barrageBins[i] > count) { count = barrageBins[i]; best = i }
+        }
+        val focusWorld = if (best >= 0) near + (best + 0.5f) * 115f else near + 575f
+        val halfW = min(110f * dp, max(40f * dp, 120f * t.worldScale()))
+        val l = t.area.left + halfW + 8f * dp
+        val rr = t.area.right - halfW - 8f * dp
+        val x = if (l <= rr) t.screenX(focusWorld).coerceIn(l, rr) else t.area.centerX()
+        val ground = t.groundY()
+        hole.set(x - halfW, max(t.area.top + 12f * dp, ground - 82f * dp),
+            x + halfW, min(t.area.bottom - 8f * dp, ground + 10f * dp))
+    }
 
     /** Ustawia [hole] na bieżący cel; false = brak celu (panel na środku). */
     private fun target(): Boolean {
@@ -337,7 +369,7 @@ class TutorialOverlay(
                 val s = battle.freeSlot(p)
                 hole.set(t.slotBuy[if (s >= 0) s else 0].r)
             } else hole.set(t.turretBtn.r)
-            S_BARRAGE -> hole.set(t.barrageBtn.r)
+            S_BARRAGE -> if (t.barrageAiming()) barrageTargetHole() else hole.set(t.barrageBtn.r)
             S_CAMERA -> { if (t.minimap.width() <= 0f) return false; hole.set(t.minimap) }
             else -> return false
         }

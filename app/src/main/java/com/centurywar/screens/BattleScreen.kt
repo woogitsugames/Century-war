@@ -163,6 +163,7 @@ class BattleScreen(
             unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
+            { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
         )) else null
 
     init {
