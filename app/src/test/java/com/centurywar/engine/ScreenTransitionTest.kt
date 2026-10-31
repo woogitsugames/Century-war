@@ -18,7 +18,7 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
-class ScreenTransitionTest {
+class ScreenTransitionScreenshotTest {
     private val host = object : Host {
         override fun vibrate(ms: Long) {}
         override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
