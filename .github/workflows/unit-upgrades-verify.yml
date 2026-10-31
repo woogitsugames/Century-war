@@ -27,7 +27,8 @@ jobs:
       - name: Akceptuj licencje Android SDK
         run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - name: Platforma Android 36
-        run: "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Zbuduj APK debug
         run: bash ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
       - name: Testy bitwy, zapisu i lokalizacji
