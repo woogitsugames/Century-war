@@ -523,7 +523,10 @@ class Battle(val cfg: BattleConfig) {
     private fun turrets(s: Side, dt: Float) {
         val enemyIdx = 1 - s.index
         val target = frontUnit(enemyIdx) ?: run {
-            for (i in 0 until s.slots) if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+            for (i in 0 until s.slots) {
+                if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+                if (s.turretFire[i] > 0f) s.turretFire[i] -= dt
+            }
             return
         }
         for (i in 0 until s.slots) {
@@ -701,9 +704,10 @@ class Battle(val cfg: BattleConfig) {
 
     private fun damageBase(s: Side, d: Float, attacker: Int) {
         if (endless && s.index == 1) return
-        s.baseHp -= d * siegePressure()
-        s.baseFlash = 0.15f
         val k = sides[attacker]
+        // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
+        s.baseHp -= d * k.siegeMul * siegePressure()
+        s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
         fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index)
     }

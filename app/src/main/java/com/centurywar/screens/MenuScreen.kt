@@ -89,13 +89,20 @@ class MenuScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         val pr = g.profile
-        research.sub = "${pr.medals} ${L["medals"]}"
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber()
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
-        campaign.sub = "${pr.totalStars()}/${pr.stars.size * 3}"
-        endless.sub = if (pr.bestWave > 0) "${L["best"]}: ${pr.bestWave}" else ""
+        // Podpisy budujemy tylko po zmianie wartości (bez nowych Stringów w każdej klatce).
+        val key = (pr.medals.toLong() shl 32) xor (pr.totalStars().toLong() shl 20) xor pr.bestWave.toLong() xor (if (L.polish) 1L shl 62 else 0L)
+        if (key != subKey || research.sub.isEmpty()) {
+            subKey = key
+            research.sub = "${pr.medals} ${L["medals"]}"
+            campaign.sub = "${pr.totalStars()}/${pr.stars.size * 3}"
+            endless.sub = if (pr.bestWave > 0) "${L["best"]}: ${pr.bestWave}" else ""
+        }
     }
+
+    private var subKey = Long.MIN_VALUE
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)

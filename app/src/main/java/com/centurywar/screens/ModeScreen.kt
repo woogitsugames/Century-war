@@ -28,7 +28,10 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private val panel = RectF()
     private val row = RectF()
     private var dt = 0f
-    private val day = Daily.dayNumber()
+    /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
+    private var day = Daily.dayNumber()
+    private var dailyCfg: BattleConfig? = null
+    private var dailyMods = ""
 
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
@@ -55,6 +58,8 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        val today = Daily.dayNumber()
+        if (today != day) { day = today; dailyCfg = null }
         start.label = L["play"]
         for (i in 0..3) diff[i].selected = g.profile.skirmishDiff == i
     }
@@ -91,14 +96,18 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 if (top != null) line(c, Icons.STAR, "${L["score"]}: ${top.score}", x, y)
             }
             Mode.DAILY -> {
-                val cfg = Daily.config(day, pr.bonuses())
+                // Konfiguracja i tekst modyfikatorów raz na dzień, nie w każdej klatce.
+                val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also { dc ->
+                    dailyCfg = dc
+                    dailyMods = L["modifiers"] + ": " + dc.modifiers.joinToString(", ") { L[it.key] }
+                }
                 y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
                 y += 8 * dp
                 y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
                 y += line(c, Icons.SKULL, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, Ui.BAD, 14f)
                 val isz = 22 * dp
                 Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
-                y += ui.wrap(c, "${L["modifiers"]}: " + cfg.modifiers.joinToString(", ") { L[it.key] }, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
+                y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
                 y += 4 * dp
                 val ranked = pr.lastRankedDaily != day
                 if (y < lowLimit) y += line(c, if (ranked) Icons.CHECK else Icons.LOCK, L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"]), x, y, if (ranked) Ui.GOOD else Ui.DIM, 14f)
@@ -120,7 +129,11 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         ui.button(c, start, 20f)
     }
 
-    private fun aiPower() = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)[g.profile.skirmishDiff]
+    private fun aiPower() = SKIRMISH_POWER[g.profile.skirmishDiff.coerceIn(0, 3)]
+
+    private companion object {
+        val SKIRMISH_POWER = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)
+    }
 
     override fun onClick(b: Button) {
         val pr = g.profile

@@ -20,6 +20,7 @@ import com.centurywar.engine.GameView
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
+import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
 import java.io.File
 
@@ -37,6 +38,7 @@ class MainActivity : Activity(), Host {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
+        profile.pruneDailyBoards(Daily.dayNumber())
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
@@ -137,6 +139,8 @@ class MainActivity : Activity(), Host {
 
     override fun requestText(title: String, current: String, onResult: (String) -> Unit) {
         runOnUiThread {
+            // Wynik wywołania z wątku gry może przyjść, gdy Activity już się zamyka (BadTokenException).
+            if (isFinishing || isDestroyed) return@runOnUiThread
             val edit = EditText(this).apply {
                 setText(current)
                 filters = arrayOf(InputFilter.LengthFilter(16))

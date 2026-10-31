@@ -63,6 +63,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         const val CLOSE = 60
     }
 
+    /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
+    private val roles = Role.values()
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
     private val turretBtn = btn(TURRET)
     private val armoryBtn = btn(ARMORY)
@@ -88,7 +90,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     init {
         for (i in 0..3) {
-            val role = Role.values()[i]
+            val role = roles[i]
             unitBtn[i].icon = { c, rr ->
                 val def = Defs.unit(battle.player.era, role)
                 r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp, Ui.PLAYER)
@@ -218,7 +220,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
         val modal = paused || finished || battle.pendingChoice != null
         for (i in 0..3) {
-            val role = Role.values()[i]
+            val role = roles[i]
             val def = Defs.unit(p.era, role)
             val b = unitBtn[i]
             b.visible = !modal
@@ -315,7 +317,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     private val costCache = IntArray(5) { -1 }
     private val costText = Array(5) { "" }
     private var armoryLv = -1
-    private val speedLabels = arrayOf("", "×1", "×2", "×3")
+    /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
+    private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
 
     private fun costStr(slot: Int, v: Int): String {
         if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
@@ -326,7 +329,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     override fun onClick(b: Button) {
         val p = battle.player
         when (b.id) {
-            in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, Role.values()[b.id - UNIT0])
+            in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, roles[b.id - UNIT0])
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> battle.buyArmory(p)
@@ -396,12 +399,15 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         pr.playSeconds += battle.time.toLong()
         val day = Daily.dayNumber()
         val score = battle.score()
+        // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
+        // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
+        val effort = (battle.time / 240f).coerceIn(0f, 1f)
         when (cfg.mode) {
             Mode.CAMPAIGN -> {
                 val stage = cfg.stageIndex
                 val old = pr.stars[stage]
                 val st = battle.stars()
-                reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else 5 + stage * 2 + min(20, battle.player.kills / 8)
+                reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
                 if (st > old) {
                     pr.stars[stage] = st
                     newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day)
@@ -410,7 +416,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                 if (won) pr.tutorialDone = true
             }
             Mode.SKIRMISH -> {
-                reward = if (won) 15 + pr.skirmishDiff * 14 else 4 + battle.player.kills / 12
+                reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
                 if (won) newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
             }
             Mode.ENDLESS -> {
@@ -424,7 +430,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                     reward = min(90, (score / 350).toInt()) + 10
                     newRecord = pr.submit(Profile.dailyBoard(cfg.seed), score, day)
                     g.online.submit("daily", score)
-                } else reward = 5
+                } else reward = (5 * effort).toInt()
             }
         }
         pr.medals += reward
@@ -561,15 +567,21 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             val pi = p.baseHp.toInt()
             if (pi != hpP) { hpP = pi; hpPText = pi.toString() }
             ui.textO(c, hpPText, mini.left, mini.bottom + 14 * dp, 11f, Ui.PLAYER, Paint.Align.LEFT, 1.8f)
-            val rightLabel = if (battle.endless) L.f("wave", battle.wave) else {
+            val rightLabel = if (battle.endless) {
+                if (battle.wave != waveShown) { waveShown = battle.wave; waveText = L.f("wave", battle.wave) }
+                waveText
+            } else {
                 val ei = e.baseHp.toInt()
                 if (ei != hpE) { hpE = ei; hpEText = ei.toString() }
                 hpEText
             }
             ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp, 11f, if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
             val sp = battle.siegePressure()
-            if (sp > 1f) ui.textO(c, L.f("siege_pressure", sp), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
-            else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
+            if (sp > 1f) {
+                val k = kotlin.math.round(sp * 10f).toInt()
+                if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
+                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
+            } else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         }
         // przeciwnik (epoka) + doktryny gracza jako ikony
         val ex = pauseBtn.r.left - 10 * dp
@@ -585,9 +597,18 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         }
     }
 
+    private var timeSec = -1
+    private var timeText = ""
+    private var siegeKey = -1
+    private var siegeText = ""
+    private var waveShown = -1
+    private var waveText = ""
+
+    /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
     private fun timeStr(t: Float): String {
         val s = t.toInt()
-        return "%d:%02d".format(s / 60, s % 60)
+        if (s != timeSec) { timeSec = s; timeText = "%d:%02d".format(s / 60, s % 60) }
+        return timeText
     }
 
     private fun drawHudBack(c: Canvas) {

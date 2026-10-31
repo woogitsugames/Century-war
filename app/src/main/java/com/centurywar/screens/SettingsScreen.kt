@@ -25,7 +25,8 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val name = btn(6)
     private val reset = btn(7)
     private val rows = listOf(quality, fps, lang, snd, vib, showFps, name, reset)
-    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.RESTART)
+    // Kolejność jak w [rows] (bez przycisku resetu): grafika, FPS, język, dźwięk, wibracje, licznik FPS, nazwa.
+    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.SPEAKER, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL)
     private val labelKeys = arrayOf("quality", "fps", "language", "sound", "vibration", "show_fps", "name")
     private val panel = RectF()
     private val rowR = RectF()

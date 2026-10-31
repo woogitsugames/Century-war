@@ -68,6 +68,7 @@ object Icons {
     const val VIBRATE = 47
     const val MONITOR = 48
     const val PERSON = 49
+    const val SPEAKER = 50
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -164,6 +165,7 @@ object Icons {
             VIBRATE -> vibrate(c)
             MONITOR -> monitor(c)
             PERSON -> person(c)
+            SPEAKER -> speaker(c)
         }
         c.restoreToCount(save)
     }
@@ -807,6 +809,15 @@ object Icons {
         r.set(-0.4f, -0.86f, 0.4f, 0.86f); c.drawOval(r, line)
         c.drawLine(-0.86f, 0f, 0.86f, 0f, line)
         line.strokeWidth = ow; c.drawCircle(0f, 0f, 0.86f, line)
+    }
+
+    private fun speaker(c: Canvas) {
+        p.reset()
+        p.moveTo(-0.8f, -0.28f); p.lineTo(-0.4f, -0.28f); p.lineTo(0.08f, -0.72f)
+        p.lineTo(0.08f, 0.72f); p.lineTo(-0.4f, 0.28f); p.lineTo(-0.8f, 0.28f); p.close()
+        shape(c, STEEL)
+        stroke(c, 0.36f, -0.26f, 0.36f, 0.26f, ow * 1.1f, WHITE)
+        stroke(c, 0.62f, -0.46f, 0.62f, 0.46f, ow * 1.1f, WHITE)
     }
 
     private fun vibrate(c: Canvas) {
