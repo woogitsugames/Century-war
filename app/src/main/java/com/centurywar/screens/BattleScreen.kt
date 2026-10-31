@@ -436,7 +436,7 @@ class BattleScreen(
             turretHeadingVariant = p.eraVariant
             turretHeadingLanguage = L.lang
             turretHeading = "${L["turrets"]} — ${L[Defs.turret(p.era, p.eraVariant).nameKey]}"
-            for (i in slotLabels.indices) slotLabels[i] = L.f("slot", i + 1)
+            // Nie zmieniamy dotychczasowego układu podpisów slotów.
         }
         refreshPauseTexts()
         val modal = paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
