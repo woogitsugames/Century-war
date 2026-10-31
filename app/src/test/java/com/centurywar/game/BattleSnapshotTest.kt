@@ -21,7 +21,7 @@ class BattleSnapshotTest {
     /** Prosty, deterministyczny "gracz" bez AI (żeby wybór doktryny czekał na gracza). */
     private fun scripted(b: Battle) {
         val p = b.player
-        if (b.pendingChoice != null) return
+        if (b.pendingChoice != null || b.pendingVariantEra != EraBranches.NONE) return
         if (b.canEvolve(p)) b.evolve(p)
         val role = Role.values()[(b.serialCounter + p.queueSize) % 3]
         b.queueUnit(p, role)
@@ -34,6 +34,7 @@ class BattleSnapshotTest {
         var i = 0
         while (i < n && !b.over) {
             if (script) scripted(b)
+            if (b.pendingVariantEra != EraBranches.NONE) b.chooseEraVariant((b.wave + b.player.era) % 2)
             if (b.pendingChoice != null) b.chooseDoctrine((b.wave + b.player.era) % 3)
             b.step(); b.fx.count = 0; i++
         }
@@ -62,6 +63,8 @@ class BattleSnapshotTest {
             assertEquals(x.gold, y.gold)
             assertEquals(x.xp, y.xp)
             assertEquals(x.era, y.era)
+            assertEquals(x.eraVariant, y.eraVariant)
+            assertArrayEquals(x.turretVariant, y.turretVariant)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
             assertEquals(x.doctrines, y.doctrines)
@@ -74,7 +77,10 @@ class BattleSnapshotTest {
         }
         for (k in a.projs.indices) {
             assertEquals(a.projs[k].active, b.projs[k].active)
-            if (a.projs[k].active) assertEquals(a.projs[k].x, b.projs[k].x)
+            if (a.projs[k].active) {
+                assertEquals(a.projs[k].x, b.projs[k].x)
+                assertEquals(a.projs[k].chain, b.projs[k].chain)
+            }
         }
         assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
     }
@@ -182,6 +188,49 @@ class BattleSnapshotTest {
     fun tutorialBattleResume() {
         // Samouczek zmienia AI (opóźniony start), więc flaga musi przetrwać zapis.
         check(Campaign.config(Campaign.stages[0], Bonuses(), 77L, tutorial = true), 60 * 10, 60 * 60)
+    }
+
+    @Test
+    fun variantModalAndTurretSurviveSnapshot() {
+        val a = Battle(BattleConfig(Mode.SKIRMISH, 17L, 0.9f, 4, 6))
+        a.ai = null
+        assertEquals(4, a.pendingVariantEra)
+        val b = roundTrip(a)
+        assertEquals(a.pendingVariantEra, b.pendingVariantEra)
+        assertEquals(a.pendingVariantOffersDoctrine, b.pendingVariantOffersDoctrine)
+        assertTrue(a.chooseEraVariant(1))
+        assertTrue(b.chooseEraVariant(1))
+        a.player.gold = 100_000f
+        b.player.gold = 100_000f
+        assertTrue(a.buyTurret(a.player, 0))
+        assertTrue(b.buyTurret(b.player, 0))
+        assertEquals(1, a.player.turretVariant[0])
+        val c = roundTrip(a)
+        assertSame(a, c)
+        steps(a, 60 * 30, true); steps(c, 60 * 30, true)
+        assertSame(a, c)
+    }
+
+    @Test
+    fun teslaChainProjectileResumesAtSameFrame() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 18L, 1f, 4, 4, setOf(Modifier.FORCE_TESLA))
+        val a = Battle(cfg)
+        a.ai = null
+        a.enemy.dmgMul = 0f
+        a.enemy.hold = true
+        a.spawn(a.player, a.player.unit(Role.RANGED))
+        val s = a.units.first { it.alive && it.side == 0 }
+        s.x = 520f
+        for (n in 0..2) {
+            a.spawn(a.enemy, Defs.unit(4, Role.HEAVY, 0))
+            a.units.first { it.alive && it.side == 1 && it.x == a.enemy.baseFront - a.enemy.dir * 30f }
+                .x = 680f + n * 30f
+        }
+        steps(a, 22)
+        assertTrue(a.projs.any { it.active && it.chain > 0f })
+        val b = roundTrip(a)
+        steps(a, 120); steps(b, 120)
+        assertSame(a, b)
     }
 
     @Test
