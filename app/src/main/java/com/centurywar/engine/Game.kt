@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.SystemClock
+import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import com.centurywar.screens.MenuScreen
@@ -38,6 +39,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var quality = Quality(Quality.HIGH)
         private set
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
+    var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
 
