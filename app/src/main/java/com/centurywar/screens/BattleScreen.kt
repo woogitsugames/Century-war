@@ -662,6 +662,8 @@ class BattleScreen(
     }]
 
     override fun render(c: Canvas) {
+        // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
+        r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
         r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)

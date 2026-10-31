@@ -72,6 +72,37 @@ class ArtGalleryTest {
         unitGrid(Quality.LOW, 110, "gallery_units_low_small", Ui.PLAYER)
     }
 
+    /**
+     * Klatki cyklu: marsz z zatrzymaniem (krok wygasa), potem odnowienie (napinanie/zamach)
+     * i atak (puszczenie/cios). Sąsiednie klatki mają się różnić niewiele: bez skoków pozy.
+     */
+    @Test
+    fun animationStrips() {
+        val g = game(1600, 900, Quality.HIGH)
+        val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
+        val frames = 16
+        val cell = 180
+        val rows = listOf(Defs.unit(2, Role.RANGED), Defs.unit(3, Role.MELEE), Defs.unit(4, Role.RANGED), Defs.unit(1, Role.MELEE))
+        val bmp = Bitmap.createBitmap(frames * cell, rows.size * cell, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(Color.rgb(196, 214, 228))
+        val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
+        for ((row, def) in rows.withIndex()) {
+            val y = row * cell.toFloat()
+            c.drawRect(0f, y + cell * 0.86f, frames * cell.toFloat(), y + cell, ground)
+            for (f in 0 until frames) {
+                // 0-5: marsz i wygaszanie kroku, 6-11: odnowienie, 12-15: atak.
+                val walk = f * 0.55f
+                val stride = when { f < 3 -> 1f; f < 6 -> 1f - (f - 2) / 3f; else -> 0f }
+                val windup = if (f in 6..11) (f - 6) / 5f else if (f >= 12) 0f else -1f
+                val atk = if (f >= 12) 1f - (f - 12) / 4f else 0f
+                r.drawUnitPose(c, def, f * cell + cell / 2f, y + cell * 0.86f, cell * 0.78f, Ui.PLAYER,
+                    if (stride > 0f) walk else 0f, stride, atk, windup)
+            }
+        }
+        save(bmp, "gallery_animation")
+    }
+
     @Test
     fun bases() {
         for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {

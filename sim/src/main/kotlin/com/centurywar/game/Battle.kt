@@ -22,6 +22,15 @@ class Fighter {
     /** < 0 znaczy, że żyje; >= 0 to czas od śmierci (animacja znikania). */
     var dying = -1f
     var serial = 0
+    // Tylko dla renderera: stan z poprzedniego kroku (interpolacja między krokami
+    // symulacji na ekranach 90/120 Hz) i płynne ruszanie/zatrzymywanie. Nie wpływa
+    // na logikę bitwy, nie trafia do zapisu. NaN = brak poprzedniego kroku.
+    var prevX = Float.NaN
+    var prevAnim = 0f
+    var prevAttack = 0f
+    /** 0 = stoi, 1 = pełny krok marszu; dochodzi płynnie w ok. 0,15 s. */
+    var stride = 0f
+    var prevStride = 0f
     /** 0: zwykła jednostka, 1: boss z odrzutem, 2: boss z aurą. */
     var bossKind = 0
     var bossCd = 0f
@@ -52,6 +61,9 @@ class Projectile {
     var shooterRole: Role? = null
     var turretEra = -1
     var burnDps = 0f
+    // Tylko dla renderera (interpolacja), NaN = pocisk z bieżącego kroku.
+    var prevX = Float.NaN
+    var prevH = 0f
 }
 
 class Side(val index: Int) {
@@ -171,6 +183,8 @@ class FxBuffer {
 class Battle(val cfg: BattleConfig) {
     companion object {
         const val STEP = 1f / 60f
+        /** Tempo narastania/wygaszania kroku marszu (czysto wizualne). */
+        const val STRIDE_RATE = 7f
         // Strojenie balansu (docs/BALANCE.md, BalanceReport).
         /** HP baz poza Endless względem Defs.baseHp: bitwa trwa minuty, nie jedną. */
         const val BALANCE_BASE_HP_MUL = 3f
@@ -594,6 +608,11 @@ class Battle(val cfg: BattleConfig) {
         if (controller != null) playerAi?.update(dt)
         if (pendingChoice != null || pendingCards != null) return
         stepCount++
+        // Stan sprzed kroku dla interpolacji renderera (bez alokacji, bez wpływu na logikę).
+        for (u in units) if (u.active) {
+            u.prevX = u.x; u.prevAnim = u.anim; u.prevAttack = u.attackAnim; u.prevStride = u.stride
+        }
+        for (p in projs) if (p.active) { p.prevX = p.x; p.prevH = p.h }
         // Czas wynika z numeru kroku, nie z wielokrotnego dodawania Float.
         time = stepCount * STEP
         updateFronts()
@@ -728,6 +747,8 @@ class Battle(val cfg: BattleConfig) {
         f.def = def
         f.tier = if (def.era == s.era) s.unitTier[def.role.ordinal] else 1
         f.x = s.baseFront - s.dir * 30f
+        f.prevX = Float.NaN
+        f.stride = 0f; f.prevStride = 0f
         f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier)
         f.hp = f.maxHp
         f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier) * when (def.role) {
@@ -855,13 +876,15 @@ class Battle(val cfg: BattleConfig) {
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
             u.moving = true
+            u.stride = min(1f, u.stride + dt * STRIDE_RATE)
         } else {
             u.moving = false
+            u.stride = max(0f, u.stride - dt * STRIDE_RATE)
         }
     }
 
     private fun allocProj(): Projectile? {
-        for (p in projs) if (!p.active) { p.active = true; return p }
+        for (p in projs) if (!p.active) { p.active = true; p.prevX = Float.NaN; return p }
         return null
     }
 

@@ -21,6 +21,15 @@ class Soldiers(private val p: Pen) {
 
     private val cv: Canvas get() = p.cv
     private var ironStyle = false
+    /** 0..1: jak bardzo postać idzie (płynne ruszanie i zatrzymywanie, bez skoku nóg). */
+    var stride = 1f
+    /**
+     * 0..1: przygotowanie do kolejnego ataku w trakcie odnowienia (napinanie łuku,
+     * zamach). -1 poza walką. Dzięki temu animacja ataku to ciągły cykl, bez skoków.
+     */
+    var windup = -1f
+
+    private fun smooth(t: Float) = t * t * (3f - 2f * t)
 
     // Paleta epok
     private val skin = intArrayOf(0xFFC48A5E.toInt(), 0xFFD49C6C.toInt(), 0xFFE8B990.toInt(), 0xFFEBC09A.toInt(), 0xFFE2B088.toInt(), 0xFFE0AE84.toInt(), 0xFFDCA67C.toInt(), 0xFFE0B088.toInt())
@@ -90,8 +99,11 @@ class Soldiers(private val p: Pen) {
             spear -> -0.05f
             weapon == Weapon.BOW -> 0f
             weapon == Weapon.SLING -> if (atk > 0f) -2.6f + (1f - atk) * 3.2f else 0.5f
-            atk > 0f -> -atk * 1.6f + 0.7f
-            else -> 0.2f + sin(walk) * 0.08f
+            // Cykl walki: cios przyspiesza z uniesienia (-0.9) w dół (0.7), a w trakcie
+            // odnowienia broń wraca płynnie nad głowę. Poza walką (windup < 0) zwykła postawa.
+            atk > 0f -> { val e = 1f - atk; -0.9f + 1.6f * e * e }
+            windup >= 0f -> 0.7f - 1.6f * smooth(windup)
+            else -> 0.2f + sin(walk) * 0.08f * stride
         }
         val thrust = if (spear && atk > 0f) sin(atk * 3.1416f) * 9f else 0f
         val recoil = if (gun) atk * atk * 2.5f else 0f
@@ -139,7 +151,8 @@ class Soldiers(private val p: Pen) {
         if (weapon != Weapon.BOW) cv.rotate(deg(swing))
         if (weapon == Weapon.BOW) {
             // łuk w tylnej ręce, cięciwa ciągnięta przednią
-            val pull = if (atk > 0f) 0.35f + (1f - atk) * 0.6f else 0.25f
+            // Po strzale cięciwa luźnieje, potem łucznik napina ją przez całe odnowienie.
+            val pull = if (atk > 0f) 0.12f + 0.13f * smooth(1f - atk) else 0.25f + 0.7f * smooth(max(0f, windup))
             bow(14.5f, 0f, pull)
             val hx = 14.5f - 6f - pull * 10f
             p.poly2(0f, 0f, (hx - 1f) * 0.5f - 3f, 2.5f, hx, 0f); p.limb(4.6f, sleeve); p.circle(hx, 0f, 2.4f, hand)
@@ -202,11 +215,14 @@ class Soldiers(private val p: Pen) {
     private fun leg(phase: Float, era: Int, back: Boolean, moving: Boolean) {
         val th: Float
         val lift: Float
+        val stand = if (back) -0.2f else 0.2f
         if (moving) {
-            th = sin(phase) * 0.5f
-            lift = max(0f, cos(phase))
+            // Krok wygasza się do postawy stojącej zamiast skakać do niej w jednej klatce.
+            val st = stride
+            th = sin(phase) * 0.5f * st + stand * (1f - st)
+            lift = max(0f, cos(phase)) * st
         } else {
-            th = if (back) -0.2f else 0.2f; lift = 0f
+            th = stand; lift = 0f
         }
         val hx = if (back) -1.5f else 1.5f
         val hy = -27f

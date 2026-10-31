@@ -31,6 +31,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // kamera
     var camX = 0f
+    /**
+     * 0..1: ułamek kroku symulacji, który upłynął od ostatniego Battle.step(). Renderer rysuje
+     * stan pośredni między krokami, więc ruch jest płynny także przy 90/120 Hz i ×3/×5.
+     */
+    var lerp = 1f
     var k = 1f
     var groundY = 0f
     var viewW = 0f
@@ -398,8 +403,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- jednostki
 
+    private fun mix(a: Float, b: Float) = a + (b - a) * lerp
+
     private fun drawUnit(c: Canvas, u: Fighter) {
-        val x = sx(u.x)
+        val fresh = u.prevX.isNaN()
+        val x = sx(if (fresh) u.x else mix(u.prevX, u.x))
         val margin = 130f * k * u.def.size
         if (x < -margin || x > viewW + margin) return
         if (b.fog && u.side == 1 && u.x - b.player.front > 650f) return
@@ -418,8 +426,15 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.scale(sc * s.dir, sc)
         if (u.dying >= 0f) c.rotate(-min(80f, u.dying * 200f))
         val team = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
-        val walk = if (u.moving) u.anim else 0f
-        val atk = if (u.attackAnim > 0f) u.attackAnim / 0.25f else 0f
+        val stride = if (fresh) u.stride else mix(u.prevStride, u.stride)
+        val walk = if (stride > 0.01f) (if (fresh) u.anim else mix(u.prevAnim, u.anim)) else 0f
+        val attack = if (fresh) u.attackAnim else mix(u.prevAttack, u.attackAnim)
+        val atk = if (attack > 0f) attack / 0.25f else 0f
+        men.stride = stride
+        // Przygotowanie ataku w trakcie odnowienia (tylko w walce: stoi i ma odnowienie).
+        val cool = def.cooldown
+        men.windup = if (!u.moving && u.cd > 0f && cool > 0.3f)
+            ((cool - u.cd - 0.25f) / (cool - 0.25f)).coerceIn(0f, 1f) else -1f
         pen.alpha = alpha
         pen.flash = u.flash > 0f
         drawBody(def, team, walk, atk, u.tier)
@@ -462,7 +477,18 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     /** Podgląd jednostki na przycisku HUD (ten sam kod rysujący co na polu bitwy). */
-    fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1) {
+    /** Poza w dowolnej fazie chodu i ataku (galeria animacji w testach). */
+    fun drawUnitPose(
+        c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int,
+        walk: Float, stride: Float, atk: Float, windup: Float,
+    ) {
+        men.stride = stride; men.windup = windup
+        drawUnitIcon(c, def, cx, bottom, height, team, 1, walk, atk)
+        men.stride = 1f; men.windup = -1f
+    }
+
+    fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1,
+                     walk: Float = 0f, atk: Float = 0f) {
         val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
         val save = alpha
         alpha = 1f
@@ -474,7 +500,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.save()
         c.translate(cx - iconShift(def) * sc * def.size, bottom)
         c.scale(sc * def.size, sc * def.size)
-        drawBody(def, team, 0f, 0f, tier)
+        drawBody(def, team, walk, atk, tier)
         c.restore()
         pen.setAntiAlias(g.quality.antialias)
         if (savedCv != null) pen.cv = savedCv
@@ -499,9 +525,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     // ---------------------------------------------------------------- pociski
 
     private fun drawProj(c: Canvas, p: Projectile) {
-        val x = sx(p.x)
+        val fresh = p.prevX.isNaN()
+        val x = sx(if (fresh) p.x else mix(p.prevX, p.x))
         if (x < -60f || x > viewW + 60f) return
-        val y = sy(p.h)
+        val y = sy(if (fresh) p.h else mix(p.prevH, p.h))
         val ang = atan2(-p.vh, p.vx)
         c.save()
         c.translate(x, y)
