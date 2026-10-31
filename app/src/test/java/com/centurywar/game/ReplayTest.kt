@@ -6,6 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.roundToInt
 
 class ReplayTest {
     private fun mustReject(block: () -> Unit) {
@@ -37,6 +38,32 @@ class ReplayTest {
         assertEquals(battle.score(), result.score)
         assertEquals(battle.wave, result.wave)
         assertEquals(battle.stepCount, result.steps)
+    }
+
+    @Test
+    fun playerAimedBarrageRoundsClampsAndReplays() {
+        val targets = floatArrayOf(-370.6f, 387.4f, 811.7f, Defs.LANE + 0.6f, Defs.LANE + 400f)
+        for ((index, target) in targets.withIndex()) {
+            val cfg = BattleConfig(Mode.SKIRMISH, 8800L + index, 1f)
+            val battle = Battle(cfg)
+            val controller = BattleController(battle)
+            assertTrue("Cel $target", controller.barrage(target))
+            assertEquals(1, battle.player.barragesUsed)
+            assertTrue(controller.surrender())
+
+            val log = controller.log()
+            assertEquals(listOf(Replay.Kind.BARRAGE_AT, Replay.Kind.SURRENDER),
+                log.commands.map { it.kind })
+            assertEquals(target.roundToInt().coerceIn(0, Defs.LANE.toInt()),
+                log.commands[0].argument)
+            assertEquals(0, log.commands[0].step)
+            val encoded = Replay.encode(log)
+            assertEquals(log, Replay.decode(encoded))
+            val verified = Replay.verify(cfg, encoded)
+            assertEquals(battle.score(), verified.score)
+            assertEquals(battle.winner, verified.winner)
+            assertEquals(battle.stepCount, verified.steps)
+        }
     }
 
     @Test
