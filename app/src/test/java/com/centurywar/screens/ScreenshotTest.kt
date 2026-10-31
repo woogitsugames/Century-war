@@ -1,10 +1,13 @@
 package com.centurywar.screens
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Canvas
 import com.centurywar.engine.Game
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
+import com.centurywar.engine.Palette
 import com.centurywar.engine.TouchEvent
 import com.centurywar.game.Ai
 import com.centurywar.game.Battle
@@ -188,6 +191,100 @@ class ScreenshotTest {
             shot(g, "${tag}_endless_boss_with_cards")
             endless.chooseEndlessCard(0)
             shot(g, "${tag}_endless_boss")
+        }
+    }
+
+    /**
+     * Zrzuty czterech palet i powiększonego tekstu w czterech rozdzielczościach.
+     * Matryce transformacji barw wzorowane na symulacji Machado (pełne zaburzenie).
+     */
+    @Test
+    fun accessibility() {
+        val vision = arrayOf(
+            "protan" to floatArrayOf(
+                0.152286f, 1.052583f, -0.204868f,
+                0.114503f, 0.786281f, 0.099216f,
+                -0.003882f, -0.048116f, 1.051998f,
+            ),
+            "deutan" to floatArrayOf(
+                0.367322f, 0.860646f, -0.227968f,
+                0.280085f, 0.672501f, 0.047413f,
+                -0.011820f, 0.042940f, 0.968881f,
+            ),
+            "tritan" to floatArrayOf(
+                1.255528f, -0.076749f, -0.178779f,
+                -0.078411f, 0.930809f, 0.147602f,
+                0.004733f, 0.691367f, 0.303900f,
+            ),
+        )
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.profile.textScale = 130
+            g.profile.teamMarkers = true
+            g.applyAccessibility()
+            g.setScreen(MenuScreen(g)); shot(g, "${tag}_access_text130_menu", 8)
+            g.setScreen(SettingsScreen(g)); shot(g, "${tag}_access_text130_settings")
+            g.setScreen(ResearchScreen(g)); shot(g, "${tag}_access_text130_research")
+            g.setScreen(MissionsScreen(g)); shot(g, "${tag}_access_text130_missions")
+            g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_access_text130_codex")
+            for (pal in 0 until Palette.COUNT) {
+                g.profile.palette = pal
+                g.applyAccessibility()
+                val a = AccessibilityScreen(g)
+                g.setScreen(a)
+                shot(g, "${tag}_access_palette${pal}_options")
+                field(a, "scroll").setFloat(a, field(a, "maxScroll").getFloat(a))
+                a.layout()
+                shot(g, "${tag}_access_palette${pal}_options_bottom")
+
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 131L, 1f, startEra = 2, maxEra = 7))
+                g.setScreen(bs)
+                val battle = field(bs, "battle").get(bs) as Battle
+                battle.spawn(battle.player, Defs.unit(2, Role.MELEE))
+                battle.spawn(battle.enemy, Defs.unit(2, Role.MELEE))
+                val center = Defs.LANE / 2f
+                for (u in battle.units) if (u.active) {
+                    u.x = center + if (u.side == 0) -65f else 65f
+                    u.hp = u.maxHp * 0.64f
+                    u.prevX = Float.NaN
+                }
+                val r = field(bs, "r").get(bs) as com.centurywar.game.BattleRenderer
+                r.camX = center - r.worldVisible / 2f
+                r.clampCam()
+                val name = "${tag}_access_palette${pal}_battle"
+                shot(g, name, 2)
+                if (tag == "phone720") {
+                    val raw = BitmapFactory.decodeFile(File(out, "${name}.png").path)
+                    assertTrue(raw != null)
+                    for ((visionName, matrix) in vision) {
+                        val pixels = IntArray(raw.width * raw.height)
+                        raw.getPixels(pixels, 0, raw.width, 0, 0, raw.width, raw.height)
+                        for (i in pixels.indices) {
+                            val color = pixels[i]
+                            val red = Color.red(color).toFloat()
+                            val green = Color.green(color).toFloat()
+                            val blue = Color.blue(color).toFloat()
+                            val nr = (matrix[0] * red + matrix[1] * green + matrix[2] * blue).toInt().coerceIn(0, 255)
+                            val ng = (matrix[3] * red + matrix[4] * green + matrix[5] * blue).toInt().coerceIn(0, 255)
+                            val nb = (matrix[6] * red + matrix[7] * green + matrix[8] * blue).toInt().coerceIn(0, 255)
+                            pixels[i] = Color.argb(Color.alpha(color), nr, ng, nb)
+                        }
+                        val bmp = Bitmap.createBitmap(raw.width, raw.height, Bitmap.Config.ARGB_8888)
+                        bmp.setPixels(pixels, 0, raw.width, 0, 0, raw.width, raw.height)
+                        File(out, "${name}_vision_${visionName}.png").outputStream().use {
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+                        }
+                        bmp.recycle()
+                    }
+                    raw.recycle()
+                }
+            }
         }
     }
 
