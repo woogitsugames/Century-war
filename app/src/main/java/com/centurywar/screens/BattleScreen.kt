@@ -1013,11 +1013,12 @@ class BattleScreen(
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
-        // Wynik oraz log kodujemy tylko raz, po zakończeniu bitwy (także wznowionej).
+        // Ten sam log służy do zapisu powtórki i zliczania zaakceptowanych rozkazów.
+        val missionLog = commands.log()
         try {
             val id = g.replays?.newId()
             val now = System.currentTimeMillis()
-            val bytes = ReplayRecord.encode(battle.cfg, commands.log(),
+            val bytes = ReplayRecord.encode(battle.cfg, missionLog,
                 ReplayRecord.Meta(battle.cfg.mode, battle.cfg.stageIndex, battle.winner,
                     score, battle.time, battle.wave, now, pr.name.take(32)))
             replayBytes = bytes
@@ -1088,7 +1089,7 @@ class BattleScreen(
         }
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val finishedAt = System.currentTimeMillis()
-        Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars)
+        Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars, playerCommands = missionLog)
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))
         tipKey = if (won) "" else when {
             !battle.endless && battle.time >= Battle.SIEGE_START + 35f -> "tip_siege"

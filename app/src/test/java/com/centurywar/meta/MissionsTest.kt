@@ -4,6 +4,10 @@ import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.game.Weather
+import com.centurywar.game.Replay
+import com.centurywar.engine.L
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -244,5 +248,172 @@ class MissionsTest {
         assertEquals(Long.MIN_VALUE, restored.missionState.loginDay)
         assertEquals(0, restored.missionState.loginStreak)
         assertEquals(0, restored.missionState.loginRewardToday)
+    }
+
+    @Test
+    fun lockedGoalsAreOmittedAndNewGoalsKeepLowerWeight() {
+        val start = day("2026-09-01")
+        val beginner = profile()
+        val first = Missions(beginner)
+        repeat(40) { i ->
+            val state = first.refresh(start + i * Missions.DAY_MILLIS)
+            val types = (state.daily + state.weekly).map { it.type }
+            assertFalse(MissionType.WEATHER_WINS in types)
+            assertFalse(MissionType.REPLAYS_WATCHED in types)
+            assertFalse(MissionType.ELITES in types)
+            assertFalse(MissionType.RALLIES in types)
+        }
+
+        val advanced = profile()
+        for (i in 0..3) advanced.stars[i] = 1
+        advanced.battles = 1
+        val m = Missions(advanced)
+        val rare = setOf(
+            MissionType.WEATHER_WINS, MissionType.WEEKLY_WAVES,
+            MissionType.CUSTOM_SKIRMISH, MissionType.ENDLESS_BOSSES,
+            MissionType.UNIT_UPGRADES, MissionType.REPLAYS_WATCHED,
+            MissionType.ENDLESS_CARDS,
+        )
+        val seen = mutableSetOf<MissionType>()
+        var commonCount = 0
+        var newCount = 0
+        repeat(140) { i ->
+            val state = m.refresh(start + i * Missions.DAY_MILLIS)
+            val items = state.daily + state.weekly
+            assertEquals(6, items.map { it.type }.distinct().size)
+            for (item in items) {
+                seen.add(item.type)
+                if (item.type in rare) newCount++ else commonCount++
+            }
+        }
+        assertTrue("Każdy nowy typ powinien być losowalny: $seen", seen.containsAll(rare))
+        assertTrue("Podstawowe misje muszą dominować", commonCount > newCount * 3)
+    }
+
+    @Test
+    fun weatherCustomSkirmishAndUnitUpgradesCountOnlyMatchingEvents() {
+        val now = day("2026-10-31")
+        val m = Missions(profile())
+        m.refresh(now)
+        val weather = MissionItem("weather", MissionType.WEATHER_WINS, 2, 10)
+        val custom = MissionItem("custom", MissionType.CUSTOM_SKIRMISH, 2, 10)
+        val upgrades = MissionItem("upgrades", MissionType.UNIT_UPGRADES, 4, 10)
+        m.state.daily.clear()
+        m.state.daily.addAll(listOf(weather, custom, upgrades))
+
+        val clear = Battle(BattleConfig(Mode.CAMPAIGN, 1L, 1f))
+        clear.winner = 0
+        m.onBattleEnd(clear, now, persist = false)
+        assertEquals(0, weather.progress)
+        val rain = Battle(BattleConfig(Mode.CAMPAIGN, 2L, 1f, weather = Weather.RAIN))
+        rain.winner = 0
+        m.onBattleEnd(rain, now, persist = false)
+        assertEquals(1, weather.progress)
+        val loss = Battle(BattleConfig(Mode.CAMPAIGN, 3L, 1f, weather = Weather.NIGHT))
+        m.onBattleEnd(loss, now, persist = false)
+        assertEquals(1, weather.progress)
+
+        val preset = Battle(BattleConfig(Mode.SKIRMISH, 4L, 1.3f))
+        m.onBattleEnd(preset, now, persist = false)
+        assertEquals(0, custom.progress)
+        val own = Battle(BattleConfig(Mode.SKIRMISH, 5L, 1.3f, startEra = 1, maxEra = 3))
+        m.onBattleEnd(own, now, persist = false)
+        assertEquals(1, custom.progress)
+
+        val actions = Replay.Log(0, listOf(
+            Replay.Command(0, Replay.Kind.UNIT_UPGRADE, 0),
+            Replay.Command(0, Replay.Kind.UNIT_UPGRADE, 1),
+            Replay.Command(0, Replay.Kind.BARRAGE),
+        ))
+        m.onBattleEnd(clear, now, persist = false, playerCommands = actions)
+        assertEquals(2, upgrades.progress)
+        m.onBattleEnd(clear, now, persist = false, playerCommands = actions)
+        assertEquals(4, upgrades.progress)
+    }
+
+    @Test
+    fun weeklyWaveBossAndCardProgressDoesNotMixModesOrOldWeeks() {
+        val now = day("2026-10-31")
+        val m = Missions(profile())
+        m.refresh(now)
+        val waves = MissionItem("waves", MissionType.WEEKLY_WAVES, 20, 30)
+        val bosses = MissionItem("bosses", MissionType.ENDLESS_BOSSES, 3, 30)
+        val cards = MissionItem("cards", MissionType.ENDLESS_CARDS, 4, 30)
+        m.state.weekly.clear()
+        m.state.weekly.addAll(listOf(waves, bosses, cards))
+        val week = Missions.utcWeek(now)
+        val previous = Battle(BattleConfig(Mode.ENDLESS, 1L, 1f, weekly = week - 1))
+        previous.wave = 27
+        m.onBattleEnd(previous, now, persist = false)
+        assertEquals(0, waves.progress)
+        val regular = Battle(BattleConfig(Mode.ENDLESS, 2L, 1f))
+        regular.wave = 40
+        m.onBattleEnd(regular, now, persist = false)
+        assertEquals(0, waves.progress)
+
+        val current = Battle(BattleConfig(Mode.ENDLESS, 3L, 1f, weekly = week))
+        current.wave = 12
+        current.bossesDefeated = 2
+        val log = Replay.Log(0, listOf(
+            Replay.Command(0, Replay.Kind.CARD, 0),
+            Replay.Command(0, Replay.Kind.CARD, 1),
+            Replay.Command(0, Replay.Kind.UNIT_UPGRADE, 0),
+        ))
+        m.onBattleEnd(current, now, persist = false, playerCommands = log)
+        assertEquals(12, waves.progress)
+        assertEquals(2, bosses.progress)
+        assertEquals(2, cards.progress)
+        current.wave = 9
+        m.onBattleEnd(current, now, persist = false)
+        assertEquals(12, waves.progress)
+        assertEquals(3, bosses.progress) // Licznik nie może przekroczyć celu.
+    }
+
+    @Test
+    fun replayViewAndUnknownSavedTypePreserveExistingProgress() {
+        val now = day("2026-10-31")
+        val p = profile()
+        val m = Missions(p)
+        m.refresh(now)
+        val watched = MissionItem("replay", MissionType.REPLAYS_WATCHED, 2, 12)
+        m.state.daily[0] = watched
+        m.onReplayWatched(now, persist = false)
+        assertEquals(1, watched.progress)
+        m.onReplayWatched(now, persist = false)
+        m.onReplayWatched(now, persist = false)
+        assertEquals(2, watched.progress)
+
+        val known = m.state.daily[1]
+        known.progress = 1.coerceAtMost(known.target)
+        val json = m.state.toJson()
+        json.put("daily", JSONArray()
+            .put(known.toJson())
+            .put(JSONObject().put("id", "future").put("type", "UNKNOWN_FUTURE")
+                .put("goal", 2).put("reward", 10))
+            .put(m.state.daily[2].toJson()))
+        val restored = profile()
+        restored.missionState.fromJson(json)
+        assertEquals(2, restored.missionState.daily.size)
+        assertEquals(known.id, restored.missionState.daily[0].id)
+        assertEquals(known.progress, restored.missionState.daily[0].progress)
+        val after = Missions(restored).refresh(now)
+        assertEquals(3, after.daily.size)
+        assertTrue(after.daily.any { it.id == known.id && it.progress == known.progress })
+    }
+
+    @Test
+    fun newMissionNamesUsePolishPluralAndWaveNumber() {
+        val previous = L.lang
+        try {
+            L.lang = L.PL
+            assertEquals("Obejrzyj 2 powtórki",
+                MissionTexts.label(MissionItem("replay", MissionType.REPLAYS_WATCHED, 2, 10)))
+            assertEquals("Obejrzyj 5 powtórek",
+                MissionTexts.label(MissionItem("replay", MissionType.REPLAYS_WATCHED, 5, 10)))
+            assertEquals("Dotrzyj do fali 20 w oblężeniu tygodnia",
+                MissionTexts.label(MissionItem("waves", MissionType.WEEKLY_WAVES, 20, 10)))
+        } finally {
+            L.lang = previous
+        }
     }
 }

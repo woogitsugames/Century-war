@@ -20,6 +20,7 @@ import com.centurywar.game.Replay
 import com.centurywar.game.ReplayPlayer
 import com.centurywar.game.ReplayRecord
 import com.centurywar.meta.Achievements
+import com.centurywar.meta.Missions
 
 /** Odtwarzacz bez komend gracza; całe sterowanie dotyczy wyłącznie osi czasu i kamery. */
 class ReplayScreen(
@@ -45,6 +46,8 @@ class ReplayScreen(
     private var watchedSeconds = 0f
     private var replayAchievementChecked = false
     private var draggingTime = false
+    private var watchedSeconds = 0f
+    private var watchedClaimed = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
     private var preparedPlayerVariant = -2
@@ -202,10 +205,15 @@ class ReplayScreen(
             if (n == 20) acc = 0f
         }
         if (p.broken) { state = BROKEN; return }
-        // Samo otwarcie ani przewinięcie osi czasu nie oznacza obejrzenia rekordu.
-        if (!replayAchievementChecked && !paused && !p.seeking && !p.finished && p.step > 0) {
+        // Samo otwarcie ani przewinięcie osi czasu nie oznacza obejrzenia (misja po 5 s, osiągnięcie po 10 s).
+        if ((!watchedClaimed || !replayAchievementChecked) && !paused && !p.seeking && !draggingTime &&
+            !p.finished && p.step > 0) {
             watchedSeconds += dt.coerceIn(0f, 0.1f)
-            if (watchedSeconds >= 10f) {
+            if (!watchedClaimed && watchedSeconds >= 5f) {
+                watchedClaimed = true
+                Missions(g.profile).onReplayWatched()
+            }
+            if (!replayAchievementChecked && watchedSeconds >= 10f) {
                 replayAchievementChecked = true
                 g.showAchievements(Achievements.onReplayWatched(g.profile, replayId, g.onlineAchievements))
             }

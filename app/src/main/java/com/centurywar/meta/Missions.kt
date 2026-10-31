@@ -5,12 +5,14 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import com.centurywar.game.Rng
+import com.centurywar.game.Replay
+import com.centurywar.game.Weather
 import com.centurywar.game.Role
 import org.json.JSONArray
 import org.json.JSONObject
 
 /** Zadania rozliczane po bitwie lub po udanym zakupie badania. */
-enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int = 0) {
+enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int = 0, val weight: Int = 3) {
     BATTLES(2, 12),
     WINS(1, 6, 2),
     KILLS(45, 300),
@@ -40,6 +42,14 @@ enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int =
     GOLD(2_000, 20_000),
     KILL_VALUE(500, 8_000),
     HARD_WINS(1, 4, 3),
+    // Nowe misje pojawiają się rzadziej niż podstawowe.
+    WEATHER_WINS(1, 3, 2, 2),
+    WEEKLY_WAVES(10, 20, 3, 2),
+    CUSTOM_SKIRMISH(1, 3, 2, 2),
+    ENDLESS_BOSSES(1, 3, 3, 2),
+    UNIT_UPGRADES(2, 12, 2, 2),
+    REPLAYS_WATCHED(1, 3, 1, 2),
+    ENDLESS_CARDS(2, 10, 2, 2),
 }
 
 /** Stałe nagrody i cele pozostają niezmienione do końca okresu. */
@@ -127,7 +137,9 @@ class MissionState {
 
     private fun readItems(json: JSONArray?, output: MutableList<MissionItem>) {
         if (json == null) return
-        for (i in 0 until minOf(json.length(), 3)) {
+        // Pomiń nieznany typ i sprawdź również kolejne poprawne wpisy.
+        for (i in 0 until minOf(json.length(), 64)) {
+            if (output.size == 3) break
             json.optJSONObject(i)?.let { MissionItem.fromJson(it)?.let(output::add) }
         }
     }
@@ -170,34 +182,56 @@ class Missions(private val profile: Profile) {
             changed = true
         }
         if (state.weeklyWeek != week || state.weekly.size != 3) {
+            val preserve = state.weeklyWeek == week
             state.weeklyWeek = week
-            select(state.weekly, "w_$week", week * 7L - 3L, true, emptySet())
+            select(state.weekly, "w_$week", week * 7L - 3L, true, emptySet(), preserve)
             changed = true
         }
         if (state.dailyDay != day || state.daily.size != 3) {
+            val preserve = state.dailyDay == day
             state.dailyDay = day
-            select(state.daily, "d_$day", day, false, state.weekly.mapTo(HashSet()) { it.type })
+            select(state.daily, "d_$day", day, false, state.weekly.mapTo(HashSet()) { it.type }, preserve)
             changed = true
         }
         if (changed && persist) profile.save()
         return true
     }
 
-    /** Rng używa numeru dnia UTC; numer poniedziałku zapewnia stały zestaw przez tydzień. */
+    /** Sprawdzaj dostępność celu w aktualnym profilu. Wszystkie tryby są w menu od początku. */
+    private fun unlocked(type: MissionType): Boolean = when (type) {
+        MissionType.ELITES -> profile.level("r_elite") > 0
+        MissionType.RALLIES -> profile.level("r_rally") > 0
+        MissionType.WEATHER_WINS -> profile.unlockedStage() >= 4
+        MissionType.REPLAYS_WATCHED -> profile.battles > 0
+        MissionType.STARS -> profile.totalStars() < Campaign.stages.size * 3
+        else -> true
+    }
+
+    /** Stały seed UTC, porządek enum i losowanie ważone bez powtórzeń. */
     private fun select(
         output: MutableList<MissionItem>, prefix: String, seed: Long,
-        weekly: Boolean, excluded: Set<MissionType>,
+        weekly: Boolean, excluded: Set<MissionType>, preserve: Boolean,
     ) {
+        // Po pominięciu nieznanego typu zachowaj postęp innych misji z tego okresu.
+        val retained = if (preserve) output.filter {
+            it.id.startsWith(prefix + "_") && it.type !in excluded && unlocked(it.type)
+        }.distinctBy { it.type }.take(3) else emptyList()
         output.clear()
+        output.addAll(retained)
         val rng = Rng(seed)
-        val available = MissionType.values().filter { type ->
-            type !in excluded &&
-                (type != MissionType.ELITES || profile.level("r_elite") > 0) &&
-                (type != MissionType.RALLIES || profile.level("r_rally") > 0)
+        val used = retained.mapTo(HashSet()) { it.type }
+        val available = MissionType.values().filter {
+            it !in excluded && it !in used && unlocked(it)
         }.toMutableList()
         val stars = profile.totalStars().coerceIn(0, Campaign.stages.size * 3)
-        repeat(3) {
-            val type = available.removeAt(rng.nextInt(available.size))
+        repeat(3 - output.size) {
+            var roll = rng.nextInt(available.sumOf { it.weight })
+            var selected = 0
+            for (i in available.indices) {
+                roll -= available[i].weight
+                if (roll < 0) { selected = i; break }
+            }
+            val type = available.removeAt(selected)
             val modifier = if (type == MissionType.MODIFIER_WINS) {
                 val values = Modifier.values()
                 values[rng.nextInt(values.size)]
@@ -208,15 +242,20 @@ class Missions(private val profile: Profile) {
         }
     }
 
-    /** Wynik przekazujemy dokładnie raz dla każdej zakończonej bitwy. */
-    fun onBattleEnd(battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true, newStars: Int = 0) {
+    /** Wynik i zaakceptowane komendy gracza rozliczamy po zakończeniu bitwy. */
+    fun onBattleEnd(
+        battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true,
+        newStars: Int = 0, playerCommands: Replay.Log? = null,
+    ) {
         if (!refreshInternal(nowMillis, false)) return
-        for (item in state.daily) updateBattle(item, battle, newStars)
-        for (item in state.weekly) updateBattle(item, battle, newStars)
+        val upgrades = playerCommands?.commands?.count { it.kind == Replay.Kind.UNIT_UPGRADE } ?: 0
+        val cards = playerCommands?.commands?.count { it.kind == Replay.Kind.CARD } ?: 0
+        for (item in state.daily) updateBattle(item, battle, newStars, upgrades, cards)
+        for (item in state.weekly) updateBattle(item, battle, newStars, upgrades, cards)
         if (persist) profile.save()
     }
 
-    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int) {
+    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int, upgrades: Int, cards: Int) {
         val player = battle.player
         val won = battle.winner == 0
         val campaign = battle.cfg.mode == Mode.CAMPAIGN
@@ -252,7 +291,22 @@ class Missions(private val profile: Profile) {
             MissionType.GOLD -> item.add(player.goldEarned.toInt().coerceAtLeast(0))
             MissionType.KILL_VALUE -> item.add(player.killValue)
             MissionType.HARD_WINS -> if (won && battle.cfg.aiPower >= 1.2f && Modifier.FOG_OF_WAR !in battle.cfg.modifiers) item.add(1)
+            MissionType.WEATHER_WINS -> if (won && !endless && battle.weather != Weather.CLEAR) item.add(1)
+            MissionType.WEEKLY_WAVES -> if (endless && battle.cfg.weekly == state.weeklyWeek) item.reach(battle.wave)
+            MissionType.CUSTOM_SKIRMISH -> if (skirmish && !SkirmishSetup.isRanked(battle.cfg)) item.add(1)
+            MissionType.ENDLESS_BOSSES -> if (endless) item.add(battle.bossesDefeated)
+            MissionType.UNIT_UPGRADES -> item.add(upgrades)
+            MissionType.REPLAYS_WATCHED -> Unit // Rozlicza odtwarzacz.
+            MissionType.ENDLESS_CARDS -> if (endless) item.add(cards)
         }
+    }
+
+    /** Licz odtworzenie dopiero po rzeczywistym oglądaniu powtórki. */
+    fun onReplayWatched(nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true) {
+        if (!refreshInternal(nowMillis, false)) return
+        for (item in state.daily) if (item.type == MissionType.REPLAYS_WATCHED) item.add(1)
+        for (item in state.weekly) if (item.type == MissionType.REPLAYS_WATCHED) item.add(1)
+        if (persist) profile.save()
     }
 
     /** Wywoływane przez Profile.buy wyłącznie po udanym zakupie. */

@@ -11,7 +11,7 @@ object MissionTexts {
             MissionType.MODIFIER_WINS ->
                 L.plural(key, item.target.toLong(), L[item.modifier?.key ?: ""], item.target)
             // Numer fali i wartość pokonanych wrogów nie są liczebnikami rzeczownika.
-            MissionType.WAVES, MissionType.KILL_VALUE -> L.f(key, item.target)
+            MissionType.WAVES, MissionType.WEEKLY_WAVES, MissionType.KILL_VALUE -> L.f(key, item.target)
             else -> L.plural(key, item.target.toLong())
         }
     }
