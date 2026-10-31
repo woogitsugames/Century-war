@@ -491,6 +491,7 @@ class Battle(val cfg: BattleConfig) {
             p.dmg = dmg
             p.splash = 60f
             p.siegeMul = 0.25f
+            p.burnDps = 0f
         }
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
     }
