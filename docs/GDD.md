@@ -18,18 +18,18 @@
 
 | Element | Ilość |
 |---|---|
-| Epoki | **8**: Plemiona, Epoka brązu, Feudalizm, Epoka prochu, Epoka pary, Epoka stali, Epoka krzemu, Era orbitalna |
-| Jednostki | **32** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
-| Wieże | **8** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
-| Ostrzały specjalne | **8** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
+| Epoki | **9**: Plemiona, Epoka brązu, Epoka żelaza, Feudalizm, Epoka prochu, Epoka pary, Epoka stali, Epoka krzemu, Era orbitalna |
+| Jednostki | **36** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
+| Wieże | **9** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
+| Ostrzały specjalne | **9** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
 | Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki |
 | Modyfikatory bitew | **10**, np. Mgła wojny, Kruche bazy, Horda strzelców |
-| Etapy kampanii | **32** (4 na epokę), po 3 gwiazdki = **96 gwiazdek** |
+| Etapy kampanii | **36** (4 na epokę), po 3 gwiazdki = **108 gwiazdek** |
 | Badania | **13** drzew, łącznie **110 poziomów** |
 | Tryby | Kampania, Oblężenie bez końca, Wyzwanie dnia, Potyczka (4 poziomy trudności) |
 | Rankingi | 4 tablice: fale oblężenia, wyzwanie dnia, gwiazdki kampanii, potyczka |
 
-### Kampania (32 etapy)
+### Kampania (36 etapów)
 - Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Feudalizm), więc bitwa trwa kilka minut.
 - Co 4. etap to „wielki” etap przez 2–3 epoki.
 - Siła wroga rośnie od 72% do ok. 170% (jawny mnożnik złota i XP AI, widoczny przed bitwą).
@@ -83,7 +83,7 @@ Koszty rosną wykładniczo (×1,33–1,6 na poziom), więc pełne drzewko to wie
 - **Kotlin, Android SDK 36** (targetSdk/compileSdk 36, minSdk 26 = Android 8.0+). Bez bibliotek: brak AndroidX i silników, więc szybki start i mały APK.
 - **Własna pętla gry** na `SurfaceView` z `lockHardwareCanvas()` (rysowanie przez GPU), tempo zgodne z ekranem (60/90/120 Hz) i opcjonalny limit 30/60 FPS.
 - **Stały krok symulacji 60 Hz**, deterministyczny (seed). Ta sama bitwa wychodzi identycznie na każdym telefonie, co jest podstawą pod anty-cheat rankingu.
-- **Symulacja w czystym Kotlinie** (bez Androida) jest testowana w JUnit: AI kontra AI przez wszystkie 32 etapy.
+- **Symulacja w czystym Kotlinie** (bez Androida) jest testowana w JUnit: AI kontra AI przez wszystkie 36 etapów.
 - **Optymalizacja na tanie telefony:** auto-wykrywanie klasy urządzenia (RAM, rdzenie). Na słabych telefonach bufor renderowany w 60–80% rozdzielczości (skalowanie sprzętowe), mniej cząsteczek, bez antyaliasingu i paralaksy. Dynamiczne obniżanie jakości przy spadkach FPS. Zero alokacji w pętli (pule obiektów).
 - **Flagowce i Foldy:** pełna rozdzielczość (limit ~3,9 MPx bufora). `configChanges` obsługuje składanie i rozkładanie bez restartu gry. Układ HUD i kamera dopasowują się do proporcji 4:3…21:9. Obsługiwane wycięcia ekranu, `appCategory="game"` (Android 16 nie wymusza wtedy obrotu na dużych ekranach) oraz predictive back.
 - **Zapis:** JSON w pamięci aplikacji, zapis atomowy.
@@ -103,7 +103,7 @@ Koszty rosną wykładniczo (×1,33–1,6 na poziom), więc pełne drzewko to wie
 ## 7. Rozwój zawartości w czasie (aktualizacje)
 
 1. **Ulepszenia jednostek w epoce:** każda jednostka ma 2–3 stopnie ulepszenia kupowane w bitwie (statystyki i detale wyglądu). Decyzja: awansować epokę czy wzmocnić obecną armię.
-2. **Nowe epoki pomiędzy istniejącymi** (jedna na aktualizację): Epoka żelaza (między brązem a feudalizmem), Renesans (między feudalizmem a prochem), Epoka atomowa (między stalą a krzemem), Era galaktyczna (po orbitalnej). Docelowo 12 epok i 48 etapów kampanii.
-   - Technicznie: `Defs` jest sterowane danymi (tablice na epokę). Trzeba dopisać jednostki, wieżę, ostrzał, grafikę (`game/art/*`), etapy kampanii i przestroić balans testem `BattleSimTest`/`BalanceReport`.
+2. **Nowe epoki pomiędzy istniejącymi** (jedna na aktualizację): Renesans (między feudalizmem a prochem), Epoka atomowa (między stalą a krzemem), Era galaktyczna (po orbitalnej). Docelowo 12 epok i 48 etapów kampanii.
+   - Technicznie: `Defs` jest sterowane danymi (tablice na epokę). Trzeba dopisać jednostki, wieżę, ostrzał, grafikę (`game/art/*`), etapy kampanii i przestroić balans testem `BattleSimTest`/`BalanceReport`. Instrukcja: `docs/ADDING_ERA.md`.
    - Zapis gracza: `Profile.stars` dopasowuje się do liczby etapów. Przy wstawianiu epok w środek trzeba zmapować stare gwiazdki na nowe numery etapów (migracja profilu).
 3. **Rozgałęzienia epok:** przy awansie wybór jednej z dwóch wersji następnej epoki (np. Para: Diesel / Tesla).
