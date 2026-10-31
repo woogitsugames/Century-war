@@ -31,11 +31,12 @@ jobs:
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Zainstaluj Android SDK 36
-        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+        shell: bash
+        run: |
+          sdkmanager_bin=$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' -type f | sort -V | tail -n 1)
+          test -x "$sdkmanager_bin"
+          "$sdkmanager_bin" --install "platforms;android-36" "build-tools;36.0.0"
 
       - name: Zbuduj APK i AAB przed zmianami
         shell: bash
