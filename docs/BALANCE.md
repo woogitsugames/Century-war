@@ -276,3 +276,47 @@ i badania). Nie korzysta ze stałego commita. Obecny próg regresji to ±15%
 **Uwagi:** zmiana kolejności lub efektów fal modyfikuje symulację i
 historyczne powtórki. Zgodnie ze zleceniem wersji rankingu nie zmieniono
 — wymaga to działania koordynatora.
+
+
+## Pomiar po zleceniu 42 (1.11.2026, 20 seedów, koordynator)
+
+Zlecenie 42 nie zawierało pomiaru; ten przebieg go uzupełnia (profil docelowy, 20 seedów na etap). 0 patów. Koniec kampanii jest teraz wygrywalny (etapy 34–36: 50% / 55% / 35%, wcześniej 25% / 12,5% / 0%). Do poprawy w przyszłości: etap 29 (90%, mediana 2,6 min — za łatwy i za krótki) i etap 11 (35%, nieco poniżej celu 45%).
+
+| Etap | Profil | AI | Epoki | Wygrane | Mediana [min] | Timeout | Śr. epoka |
+|---:|---|---:|---|---:|---:|---:|---:|
+| 1 | nowy | 0.72 | 0–0 | 100.00% | 13.92 | 0.00% | 0.00 |
+| 2 | nowy | 0.77 | 0–0 | 80.00% | 13.82 | 0.00% | 0.00 |
+| 3 | nowy | 0.83 | 0–1 | 90.00% | 13.73 | 0.00% | 1.00 |
+| 4 | nowy | 0.88 | 0–1 | 90.00% | 13.49 | 0.00% | 1.00 |
+| 5 | nowy | 0.82 | 1–1 | 95.00% | 13.14 | 0.00% | 1.00 |
+| 6 | nowy | 0.87 | 1–1 | 90.00% | 13.59 | 0.00% | 1.00 |
+| 7 | poczatkujacy | 0.93 | 1–2 | 60.00% | 10.65 | 0.00% | 2.00 |
+| 8 | poczatkujacy | 0.98 | 0–2 | 85.00% | 12.21 | 0.00% | 2.00 |
+| 9 | poczatkujacy | 0.92 | 2–2 | 65.00% | 11.61 | 0.00% | 2.00 |
+| 10 | poczatkujacy | 0.97 | 2–2 | 60.00% | 11.63 | 0.00% | 2.00 |
+| 11 | poczatkujacy | 1.06 | 2–3 | 35.00% | 10.29 | 0.00% | 3.00 |
+| 12 | poczatkujacy | 1.04 | 1–3 | 65.00% | 10.24 | 0.00% | 3.00 |
+| 13 | poczatkujacy | 1.02 | 3–3 | 70.00% | 8.20 | 0.00% | 3.00 |
+| 14 | poczatkujacy | 1.07 | 3–3 | 55.00% | 11.00 | 0.00% | 3.00 |
+| 15 | poczatkujacy | 1.13 | 3–4 | 60.00% | 11.41 | 0.00% | 3.93 |
+| 16 | poczatkujacy | 1.15 | 2–4 | 50.00% | 12.66 | 0.00% | 4.00 |
+| 17 | poczatkujacy | 1.12 | 4–4 | 65.00% | 11.37 | 0.00% | 4.00 |
+| 18 | poczatkujacy | 1.17 | 4–4 | 55.00% | 9.10 | 0.00% | 4.00 |
+| 19 | sredni | 1.27 | 4–5 | 85.00% | 8.28 | 0.00% | 4.82 |
+| 20 | sredni | 1.38 | 2–5 | 75.00% | 12.12 | 0.00% | 5.00 |
+| 21 | sredni | 1.47 | 5–5 | 70.00% | 9.19 | 0.00% | 5.00 |
+| 22 | sredni | 1.66 | 5–5 | 70.00% | 9.43 | 0.00% | 5.00 |
+| 23 | sredni | 1.46 | 5–6 | 70.00% | 12.09 | 0.00% | 5.90 |
+| 24 | sredni | 1.70 | 3–6 | 55.00% | 10.80 | 0.00% | 6.00 |
+| 25 | sredni | 1.67 | 6–6 | 60.00% | 7.63 | 0.00% | 6.00 |
+| 26 | sredni | 1.80 | 6–6 | 65.00% | 6.85 | 0.00% | 6.00 |
+| 27 | sredni | 1.92 | 6–7 | 55.00% | 10.24 | 0.00% | 6.95 |
+| 28 | weteran | 2.14 | 4–7 | 60.00% | 11.05 | 0.00% | 6.40 |
+| 29 | weteran | 2.24 | 7–7 | 90.00% | 2.57 | 0.00% | 7.00 |
+| 30 | weteran | 2.45 | 7–7 | 65.00% | 4.72 | 0.00% | 7.00 |
+| 31 | weteran | 2.55 | 7–8 | 55.00% | 8.78 | 0.00% | 7.75 |
+| 32 | weteran | 2.88 | 5–8 | 60.00% | 9.93 | 0.00% | 7.40 |
+| 33 | weteran | 2.90 | 8–8 | 55.00% | 7.45 | 0.00% | 8.00 |
+| 34 | weteran | 3.00 | 8–8 | 50.00% | 9.05 | 0.00% | 8.00 |
+| 35 | weteran | 3.01 | 8–8 | 55.00% | 9.01 | 0.00% | 8.00 |
+| 36 | weteran | 2.99 | 6–8 | 35.00% | 12.97 | 0.00% | 7.75 |
