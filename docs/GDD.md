@@ -33,7 +33,7 @@
 ### Kampania (36 etapów)
 - Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Epoka żelaza), więc bitwa trwa kilka minut.
 - Co 4. etap to „wielki” etap przez 2–3 epoki.
-- Siła wroga to jawny mnożnik złota i XP AI, widoczny przed bitwą: od 72% na początku do ok. 370% w ostatnich etapach. Druga połowa kampanii zakłada rozwinięte badania (strojenie w `docs/BALANCE.md`).
+- Siła wroga to jawny mnożnik złota i XP AI, widoczny przed bitwą: od 72% na początku do ok. 300% w ostatnich etapach. Druga połowa kampanii zakłada rozwinięte badania (strojenie w `docs/BALANCE.md`).
 - Gwiazdki zależą od HP bazy po zwycięstwie: ≥75% = ★★★, ≥40% = ★★.
 - Od etapu 3 bitwy dostają modyfikatory, więc każdy etap gra się inaczej.
 

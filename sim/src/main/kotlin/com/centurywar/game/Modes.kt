@@ -111,7 +111,8 @@ object Campaign {
         for (i in 0 until Defs.ERA_COUNT * 4) {
             val era = i / 4
             val sub = i % 4
-            val start = if (sub == 3) maxOf(0, era - 2) else era
+            // Etapy 12 i 16 zaczynają epokę później; skracamy skok o cztery epoki.
+            val start = if (sub == 3) maxOf(0, era - if (i == 11 || i == 15) 1 else 2) else era
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
             val power = (0.72f + i * (0.868f / (Defs.ERA_COUNT * 4 - 1)) + sub * 0.03f) * stageRamp(i)
             val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
@@ -134,11 +135,28 @@ object Campaign {
         val n = Defs.ERA_COUNT * 4
         val midStart = n / 2          // etap 19
         val lateStart = n * 3 / 4     // etap 28
-        return when {
+        val ramp = when {
             i < midStart -> 1f
             i < lateStart -> 1f + 0.35f * (i - midStart + 1) / (lateStart - midStart)
             else -> 1.35f + 0.85f * (i - lateStart + 1) / (n - lateStart)
         }
+        // Korekty trudności pojedynczych etapów, bez wpływu na jednostki ani AI.
+        val correction = when (i + 1) {
+            11 -> 1.03f
+            12 -> 0.96f
+            16 -> 0.97f
+            21 -> 1.08f
+            22 -> 1.13f
+            23 -> 0.92f
+            29 -> 1.03f
+            30 -> 1.02f
+            31 -> 0.97f
+            34 -> 0.95f
+            35 -> 0.88f
+            36 -> 0.81f
+            else -> 1f
+        }
+        return ramp * correction
     }
 
     /**

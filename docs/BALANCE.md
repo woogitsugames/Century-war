@@ -191,3 +191,45 @@ Wnioski:
 | 34 | weteran | 3.15 | 8–8 | 25.00% | 8.39 | 0.00% | 8.00 |
 | 35 | weteran | 3.42 | 8–8 | 12.50% | 8.53 | 0.00% | 8.00 |
 | 36 | weteran | 3.69 | 6–8 | 0.00% | 11.46 | 0.00% | 8.00 |
+
+## Zlecenie 42 — wyrównanie końca kampanii (31.10.2026)
+
+Korekty dotyczą wyłącznie danych etapów w `Campaign.stageRamp` i zakresu epok
+etapów 12 i 16. Nie zmieniono statystyk jednostek, algorytmu AI, mechaniki
+bitwy, rankingu ani zapisanych gwiazdek gracza.
+
+**Pomiar bazowy i pomiar po zmianach na 20 seedach:** oba uruchomiono jako
+oddzielne przebiegi `Balans kampanii (20 seedow)` na GitHub Actions
+(6 grup po 6 etapów; `BALANCE_PROFILE=target`, `BALANCE_RUNS=20`).
+Przebieg bazowy: [41241002877](https://github.com/woogitsugames/Century-war/actions/runs/41241002877).
+Przebieg po korekcie parametrów:
+[41241102953](https://github.com/woogitsugames/Century-war/actions/runs/41241102953).
+**W chwili sporządzenia tej sekcji oba przebiegi były w kolejce GitHub Actions,
+więc brak zweryfikowanych wyników na 20 seedach i tabeli wygranych przed/po.**
+Poniżej zapisano rzeczywiście zmienione parametry, nie symulowane wyniki.
+
+| Etap | AI przed | AI po | Epoki przed → po | Wygrane przed (historyczne 8 seedów) |
+|---:|---:|---:|---|---:|
+| 11 | 1,03 | 1,06 | 2–3 → 2–3 | 87,5% |
+| 12 | 1,08 | 1,04 | 0–3 → 1–3 | 25,0% |
+| 16 | 1,18 | 1,15 | 1–4 → 2–4 | 25,0% |
+| 21 | 1,36 | 1,47 | 5–5 → 5–5 | 87,5% |
+| 22 | 1,47 | 1,66 | 5–5 → 5–5 | 100,0% |
+| 23 | 1,58 | 1,46 | 5–6 → 5–6 | 37,5% |
+| 29 | 2,18 | 2,24 | 7–7 → 7–7 | 75,0% |
+| 30 | 2,40 | 2,45 | 7–7 → 7–7 | 75,0% |
+| 31 | 2,63 | 2,55 | 7–8 → 7–8 | 37,5% |
+| 34 | 3,15 | 3,00 | 8–8 → 8–8 | 25,0% |
+| 35 | 3,42 | 3,01 | 8–8 → 8–8 | 12,5% |
+| 36 | 3,69 | 2,99 | 6–8 → 6–8 | 0,0% |
+
+Pozostałe 24 etapy mają niezmienioną siłę AI i zakres epok. Wyniki historyczne
+przed zmianą pochodzą wyłącznie z tabeli w poprzedniej sekcji i **nie zastępują**
+wymaganego pomiaru 20-seedowego.
+
+**Wymagane sprawdzenie wyników po zakończeniu przebiegów:** etapy 1–6
+≥85% zwycięstw; 7–27: 45–85%; 28–33: 40–75%; 34–36: 25–55%.
+Odchylenie wewnętrznego etapu od średniej dwóch sąsiadów ≤25 p.p.,
+0 timeoutów i mediana czasu ≥4 min od etapu 7. Jeśli którykolwiek warunek
+nie będzie spełniony, należy jeszcze dostroić wskazane etapy i powtórzyć pomiar
+na tych samych seedach. Nie oznaczać zlecenia jako zakończonego bez tych danych.
