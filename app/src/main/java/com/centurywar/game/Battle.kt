@@ -22,6 +22,12 @@ class Fighter {
     /** < 0 znaczy, że żyje; >= 0 to czas od śmierci (animacja znikania). */
     var dying = -1f
     var serial = 0
+    /** 0 = zwykła, 1 = odrzut, 2 = aura przyspieszenia. */
+    var bossKind = 0
+    var bossCd = 0f
+    var burnDps = 0f
+    var burnLeft = 0f
+    val isBoss get() = bossKind != 0
     val radius get() = 16f * def.size
     val alive get() = active && dying < 0f
 }
@@ -43,6 +49,7 @@ class Projectile {
     var splash = 0f
     var siegeMul = 1f
     var era = 0
+    var burnDps = 0f
 }
 
 class Side(val index: Int) {
@@ -80,6 +87,19 @@ class Side(val index: Int) {
     var killGoldMul = 1f
     var speedMul = 1f
     var turretCostMul = 1f
+    var turretRateMul = 1f
+    var turretBurnRatio = 0f
+    var rangedDmgMul = 1f
+    var eliteDmgMul = 1f
+    var lastStandMul = 1f
+    var cloneChance = 0f
+    var repairPerWave = 0f
+    var freeElitesPerWave = 0
+    var freeEliteCredits = 0
+    var autoBarrageInterval = 0f
+    var autoBarrageTimer = 0f
+    /** Liczba kopii każdej wybranej karty; brak alokacji podczas fal. */
+    val cardStacks = IntArray(EndlessCard.values().size)
     var cap = 12
     var eliteUnlocked = true
     var rallyUnlocked = true
@@ -158,8 +178,28 @@ class Battle(val cfg: BattleConfig) {
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
 
-    /** Gdy nie jest null, gracz wybiera doktrynę, a symulacja stoi. */
+    /** Dla starych ekranów: przy wyborze karty sygnalizuje otwarty modal. */
     var pendingChoice: Array<Doctrine>? = null
+    /** Właściwe opcje kart. Ekran powinien używać tej tablicy przed pendingChoice. */
+    var pendingCards: Array<EndlessCard>? = null
+        private set
+    private val cardOffer = Array(3) { EndlessCard.ECONOMY }
+    private val legacyCardModal = arrayOf(Doctrine.ECONOMY, Doctrine.SIEGE, Doctrine.FURY)
+    var currentWaveTheme = EndlessWaveTheme.MIXED
+        private set
+    var nextWaveTheme = if (endless) EndlessCards.nextTheme(rng) else EndlessWaveTheme.MIXED
+        private set
+    val nextWaveNamePl get() = if ((wave + 1) % 10 == 0) EndlessTexts.bossIncoming(true)
+        else EndlessTexts.wave(nextWaveTheme, true)
+    val nextWaveNameEn get() = if ((wave + 1) % 10 == 0) EndlessTexts.bossIncoming(false)
+        else EndlessTexts.wave(nextWaveTheme, false)
+    val nextWaveName get() = nextWaveNamePl
+    var bossesSpawned = 0
+        private set
+    var bossesDefeated = 0
+        private set
+    private var bossPendingWave = 0
+    private var bossRewardsPending = 0
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
@@ -273,9 +313,79 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun chooseDoctrine(index: Int) {
+        val cards = pendingCards
+        if (cards != null) {
+            pendingCards = null
+            pendingChoice = null
+            applyEndlessCard(player, cards[index.coerceIn(0, cards.size - 1)])
+            return
+        }
         val c = pendingChoice ?: return
         pendingChoice = null
         applyDoctrine(player, c[index.coerceIn(0, c.size - 1)])
+    }
+
+    /** Docelowe API dla kart HUD; chooseDoctrine zachowuje obsługę dotyku starego ekranu. */
+    fun chooseEndlessCard(index: Int): Boolean {
+        if (pendingCards == null) return false
+        chooseDoctrine(index)
+        return true
+    }
+
+    fun applyEndlessCard(side: Side, card: EndlessCard) {
+        if (!endless || over) return
+        side.cardStacks[card.ordinal]++
+        val doctrine = card.doctrine
+        if (doctrine != null) {
+            applyDoctrine(side, doctrine)
+            return
+        }
+        when (card) {
+            EndlessCard.TOWER_SLOT -> side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
+            EndlessCard.FREE_ELITE -> side.freeElitesPerWave = min(4, side.freeElitesPerWave + 1)
+            EndlessCard.BURNING_TOWERS -> side.turretBurnRatio += 0.25f
+            EndlessCard.AUTO_BARRAGE -> {
+                side.autoBarrageInterval = if (side.autoBarrageInterval <= 0f) 30f
+                    else max(15f, side.autoBarrageInterval - 5f)
+                side.autoBarrageTimer = side.autoBarrageInterval
+            }
+            EndlessCard.BLOOD_GOLD -> {
+                side.incomeMul *= 1.5f
+                side.killGoldMul *= 1.5f
+                side.baseMaxHp *= 0.8f
+                side.baseHp *= 0.8f
+            }
+            EndlessCard.CLONING -> side.cloneChance = min(0.6f, side.cloneChance + 0.1f)
+            EndlessCard.FRONTLINE_PLATE -> side.hpMul *= 1.2f
+            EndlessCard.DRILL_SERGEANT -> side.trainMul *= 1.2f
+            EndlessCard.RAPID_TOWERS -> side.turretRateMul *= 1.25f
+            EndlessCard.MEDIC -> side.baseHp = min(side.baseMaxHp, side.baseHp + side.baseMaxHp * 0.25f)
+            EndlessCard.EXTRA_GOLD -> side.gold += 500f * Defs.costScale(side.era)
+            EndlessCard.MOBILIZATION -> side.cap = min(MAX_UNITS, side.cap + 3)
+            EndlessCard.FORTRESS -> {
+                side.baseMaxHp *= 1.25f
+                side.baseHp *= 1.25f
+            }
+            EndlessCard.SHARPSHOOTERS -> side.rangedDmgMul *= 1.25f
+            EndlessCard.BERSERK -> { side.dmgMul *= 1.3f; side.hpMul *= 0.9f }
+            EndlessCard.SCAVENGER -> side.killGoldMul *= 1.25f
+            EndlessCard.MARCH -> side.speedMul *= 1.2f
+            EndlessCard.RALLY_MASTER -> side.abilityCdMul *= 0.8f
+            EndlessCard.ELITE_SCHOOL -> side.eliteDmgMul *= 1.3f
+            EndlessCard.LAST_STAND -> side.lastStandMul *= 1.35f
+            EndlessCard.REPAIR_CREW -> side.repairPerWave = min(0.3f, side.repairPerWave + 0.06f)
+            else -> Unit // Doktryny obsłużono powyżej.
+        }
+    }
+
+    private fun offerEndlessCards() {
+        EndlessCards.draw(rng, player, cardOffer)
+        if (playerAi != null) {
+            applyEndlessCard(player, cardOffer[rng.nextInt(cardOffer.size)])
+        } else {
+            pendingCards = cardOffer
+            pendingChoice = legacyCardModal
+        }
     }
 
     fun applyDoctrine(side: Side, d: Doctrine) {
