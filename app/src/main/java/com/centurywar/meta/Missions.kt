@@ -88,18 +88,20 @@ class MissionState {
     var loginDay = Long.MIN_VALUE
     var loginClaimedDay = Long.MIN_VALUE
     var loginStreak = 0
+    var loginRewardToday = 0
     val daily = ArrayList<MissionItem>(3)
     val weekly = ArrayList<MissionItem>(3)
 
     fun reset() {
         dailyDay = Long.MIN_VALUE; weeklyWeek = Long.MIN_VALUE; lastSeenDay = Long.MIN_VALUE
-        loginDay = Long.MIN_VALUE; loginClaimedDay = Long.MIN_VALUE; loginStreak = 0
+        loginDay = Long.MIN_VALUE; loginClaimedDay = Long.MIN_VALUE; loginStreak = 0; loginRewardToday = 0
         daily.clear(); weekly.clear()
     }
 
     fun toJson(): JSONObject = JSONObject()
         .put("day", dailyDay).put("week", weeklyWeek).put("seen", lastSeenDay)
         .put("loginDay", loginDay).put("loginClaimed", loginClaimedDay).put("streak", loginStreak)
+        .put("loginRewardToday", loginRewardToday)
         .put("daily", JSONArray().apply { daily.forEach { put(it.toJson()) } })
         .put("weekly", JSONArray().apply { weekly.forEach { put(it.toJson()) } })
 
@@ -112,6 +114,7 @@ class MissionState {
         loginDay = json.optLong("loginDay", Long.MIN_VALUE)
         loginClaimedDay = json.optLong("loginClaimed", Long.MIN_VALUE)
         loginStreak = json.optInt("streak", 0).coerceIn(0, 7)
+        loginRewardToday = json.optInt("loginRewardToday", 0).coerceIn(0, 10_000)
         readItems(json.optJSONArray("daily"), daily)
         readItems(json.optJSONArray("weekly"), weekly)
     }
@@ -156,6 +159,7 @@ class Missions(private val profile: Profile) {
                 else -> (state.loginStreak - 2).coerceAtLeast(1)
             }
             state.loginDay = day
+            state.loginRewardToday = 0
             state.lastSeenDay = day
             changed = true
         }
@@ -270,6 +274,7 @@ class Missions(private val profile: Profile) {
         if (state.loginDay != utcDay(nowMillis) || state.loginClaimedDay == state.loginDay) return 0
         val reward = LOGIN_REWARDS[state.loginStreak.coerceIn(1, 7) - 1] + profile.totalStars() / 16
         state.loginClaimedDay = state.loginDay
+        state.loginRewardToday = reward
         profile.medals = (profile.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         profile.save()
         return reward

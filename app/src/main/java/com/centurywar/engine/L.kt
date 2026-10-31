@@ -452,5 +452,16 @@ object L {
         "resume_yes" to t("Wznów", "Resume", "Fortsetzen", "Reanudar", "Reprendre", "Riprendi", "Retomar", "Продовжити", "Hervatten", "Devam"),
         "resume_no" to t("Porzuć", "Discard", "Verwerfen", "Descartar", "Abandonner", "Scarta", "Descartar", "Скасувати", "Weggooien", "İptal"),
         // --- koniec bloku wznawiania bitwy -----------------------------------------
+
+        // --- misje i seria logowań (10 języków)
+        "ms_missions" to t("Misje", "Missions", "Missionen", "Misiones", "Missions", "Missioni", "Missões", "Місії", "Missies", "Görevler"),
+        "ms_daily" to t("Misje dzienne", "Daily missions", "Tagesmissionen", "Misiones diarias", "Missions quotidiennes", "Missioni giornaliere", "Missões diárias", "Щоденні місії", "Dagelijkse missies", "Günlük görevler"),
+        "ms_weekly" to t("Misje tygodniowe", "Weekly missions", "Wochenmissionen", "Misiones semanales", "Missions hebdomadaires", "Missioni settimanali", "Missões semanais", "Щотижневі місії", "Wekelijkse missies", "Haftalık görevler"),
+        "ms_streak" to t("Seria logowań", "Login streak", "Login-Serie", "Racha de acceso", "Série de connexions", "Serie di accessi", "Sequência de acessos", "Серія входів", "Inlogreeks", "Giriş serisi"),
+        "ms_login_day" to t("Dzień %d/7", "Day %d/7", "Tag %d/7", "Día %d/7", "Jour %d/7", "Giorno %d/7", "Dia %d/7", "День %d/7", "Dag %d/7", "Gün %d/7"),
+        "ms_login_paid" to t("Dziś: +%d medali", "Today: +%d medals", "Heute: +%d Medaillen", "Hoy: +%d medallas", "Aujourd'hui : +%d médailles", "Oggi: +%d medaglie", "Hoje: +%d medalhas", "Сьогодні: +%d медалей", "Vandaag: +%d medailles", "Bugün: +%d madalya"),
+        "ms_streak_info" to t("Po przerwie seria spada tylko o 2 dni.", "A missed day lowers the streak by just 2.", "Eine Pause senkt die Serie nur um 2 Tage.", "Una pausa reduce la racha solo en 2 días.", "Une pause ne réduit la série que de 2 jours.", "Una pausa riduce la serie di soli 2 giorni.", "Uma pausa reduz a série em apenas 2 dias.", "Пауза скорочує серію лише на 2 дні.", "Een pauze verlaagt de reeks met slechts 2 dagen.", "Ara vermek seriyi yalnızca 2 gün azaltır."),
+        "ms_claim" to t("Odbierz", "Claim", "Abholen", "Cobrar", "Réclamer", "Riscatta", "Resgatar", "Забрати", "Ophalen", "Al"),
+        "ms_claimed" to t("Odebrano", "Claimed", "Abgeholt", "Cobrado", "Récupérée", "Riscattato", "Resgatado", "Отримано", "Opgehaald", "Alındı"),
     )
 }
