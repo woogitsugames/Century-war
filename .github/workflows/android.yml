@@ -72,6 +72,8 @@ jobs:
             --tests '*ScoreClientTest*' \
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
+            --tests '*AchievementsTest*' \
+            --tests '*Achievement60Test*' \
             --tests '*SoundSynthTest*' \
             --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \
@@ -151,6 +153,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:testDebugUnitTest \
             --tests '*ProfileTest*' \
+            --tests '*AchievementPersistenceTest*' \
             --tests '*ProfileCloudTest*' \
             --tests '*BattleHistoryTest*' \
             --tests '*StartupTest*' \
