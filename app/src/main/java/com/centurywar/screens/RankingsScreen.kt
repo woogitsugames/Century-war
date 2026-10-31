@@ -28,9 +28,17 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val panel = RectF()
     private val row = RectF()
     private var dt = 0f
+    private var existingReplayIds: Set<String> = emptySet()
     private val day = Daily.dayNumber()
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
+
+    init {
+        g.replays?.listAsync { records ->
+            val ids = records.mapTo(HashSet()) { it.id }
+            g.post { existingReplayIds = ids }
+        }
+    }
 
     private fun board(i: Int) = when (i) {
         0 -> Profile.BOARD_ENDLESS
@@ -122,8 +130,9 @@ class RankingsScreen(g: Game) : Screen(g) {
             val col = if (i == 0) Ui.GOLD else if (me) Ui.XP else Ui.TEXT
             if (me) Icons.draw(c, Icons.HELMET, l + 52 * dp, cy, 20 * dp, dp = dp)
             ui.textO(c, e.name, l + (if (me) 68 else 48) * dp, cy + 5 * dp, 15f, col, Paint.Align.LEFT, 1.8f)
-            if (e.replay != null) Icons.draw(c, Icons.PLAY, r - 15 * dp, cy, 17 * dp, Ui.GOLD, dp = dp)
-            ui.textO(c, e.score.toString(), r - (if (e.replay != null) 33 else 12) * dp,
+            val hasReplay = e.replay in existingReplayIds
+            if (hasReplay) Icons.draw(c, Icons.PLAY, r - 15 * dp, cy, 17 * dp, Ui.GOLD, dp = dp)
+            ui.textO(c, e.score.toString(), r - (if (hasReplay) 33 else 12) * dp,
                 cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
@@ -148,8 +157,10 @@ class RankingsScreen(g: Game) : Screen(g) {
         if (x < panel.left || x > panel.right) return
         val index = ((y - (panel.top + 54 * dp)) / (34 * dp)).toInt()
         if (y < panel.top + 54 * dp || y >= panel.top + 54 * dp + 34 * dp * (index + 1)) return
+        val bottomLimit = panel.bottom - (if (global.visible) 102 * dp else 52 * dp)
+        if (y + 34 * dp > bottomLimit) return
         val id = g.profile.top(board(tab)).getOrNull(index)?.replay ?: return
-        g.push(ReplayScreen(g, id))
+        if (id in existingReplayIds) g.push(ReplayScreen(g, id))
     }
 
     override fun onClick(b: Button) {
