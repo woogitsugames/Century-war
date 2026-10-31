@@ -49,3 +49,9 @@ object Research {
         )
     }
 }
+
+/** Te same mnożniki potyczki na Androidzie i na serwerze. */
+object Skirmish {
+    private val powers = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)
+    fun power(difficulty: Int): Float = powers[difficulty.coerceIn(0, 3)]
+}
