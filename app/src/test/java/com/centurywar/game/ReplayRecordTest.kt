@@ -3,6 +3,7 @@ package com.centurywar.game
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -61,7 +62,7 @@ class ReplayRecordTest {
         rejected(bytes.copyOf().also { it[7] = (ReplayRecord.VERSION + 1).toByte() })
         rejected(bytes.copyOf().also { it[bytes.size - 1] = (it.last() + 1).toByte() })
         rejected(bytes.copyOf().also { it[19] = -1 }) // nieprawidłowa długość
-        rejected(bytes.copyOf().also { it[23] = 0 }) // CRC32
+        rejected(bytes.copyOf().also { it[23] = (it[23].toInt() xor 1).toByte() }) // CRC32
     }
 
     @Test fun incompatibleBalanceAndReplayVersionRemainListable() {
@@ -75,7 +76,7 @@ class ReplayRecordTest {
         val otherReplay = bytes.copyOf().also { it[11] = (Replay.VERSION + 1).toByte() }
         val future = ReplayRecord.decode(otherReplay)
         assertFalse(future.playable)
-        assertEquals(null, future.log)
+        assertNull(future.log)
         assertEquals(meta, future.meta)
     }
 
