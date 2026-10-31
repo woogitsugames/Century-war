@@ -49,6 +49,8 @@ class BattleScreen(
     private var closed = false
     private var manualCam = 0f
     private var showTurrets = false
+    /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
+    private var showUpgrade = -1
     private var finished = false
     private var resultTime = 0f
 
@@ -76,6 +78,9 @@ class BattleScreen(
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
         const val CLOSE = 60
+        const val UNIT_UPGRADE0 = 70 // 70..73
+        const val UNIT_UPGRADE_BUY = 74
+        const val UNIT_UPGRADE_CLOSE = 75
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
     }
@@ -83,6 +88,9 @@ class BattleScreen(
     /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
     private val roles = Role.values()
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
+    private val unitUpgrade = Array(4) { i -> btn(UNIT_UPGRADE0 + i) }
+    private val upgradeBuy = btn(UNIT_UPGRADE_BUY)
+    private val upgradeClose = btn(UNIT_UPGRADE_CLOSE)
     private val turretBtn = btn(TURRET)
     private val armoryBtn = btn(ARMORY)
     private val barrageBtn = btn(BARRAGE)
@@ -105,6 +113,11 @@ class BattleScreen(
     private val xpRect = RectF()
     private val fieldRect = RectF()
     private val panel = RectF()
+    private val upgradePanel = RectF()
+    private val upgradeRoleKeys = arrayOf("unit_upgrade_melee", "unit_upgrade_ranged", "unit_upgrade_heavy", "unit_upgrade_elite")
+    private var upgradeRoleShown = -1
+    private var upgradeTierShown = -1
+    private var upgradeTierText = ""
     private var hudH = 0f
     private var topH = 0f
 
@@ -113,8 +126,14 @@ class BattleScreen(
             val role = roles[i]
             unitBtn[i].icon = { c, rr ->
                 val def = Defs.unit(battle.player.era, role)
-                r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp, Ui.PLAYER)
+                r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp,
+                    Ui.PLAYER, battle.player.unitTier[role.ordinal])
             }
+        }
+        // Strzałka ma pierwszeństwo przed większym przyciskiem jednostki pod spodem.
+        for (i in 3 downTo 0) {
+            buttons.remove(unitUpgrade[i])
+            buttons.add(0, unitUpgrade[i])
         }
         r.camX = restored?.camX ?: -120f
     }
@@ -145,6 +164,8 @@ class BattleScreen(
         val y = h - g.insetB - pad - size
         var x = l
         for (b in unitBtn) { b.set(x, y, size, size); x += size + gap }
+        val arrow = min(24 * dp, size * 0.36f)
+        for (i in 0..3) unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
         x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
@@ -170,6 +191,7 @@ class BattleScreen(
         val chH = min(168 * dp, h * 0.5f)
         for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
         layoutTurretPanel()
+        layoutUpgradePanel()
     }
 
     private fun layoutResults() {
@@ -180,6 +202,15 @@ class BattleScreen(
         val bh = 50 * dp
         restartEnd.set(resultPanel.left + 24 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
         continueBtn.set(resultPanel.right - 24 * dp - bw, resultPanel.bottom - bh - 22 * dp, bw, bh)
+    }
+
+    private fun layoutUpgradePanel() {
+        val pw = min(425 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val ph = min(260 * dp, h - g.insetT - g.insetB - 20 * dp)
+        val cy = (g.insetT + h - g.insetB) / 2f
+        upgradePanel.set(w / 2 - pw / 2, cy - ph / 2, w / 2 + pw / 2, cy + ph / 2)
+        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 54 * dp, pw - 50 * dp, 40 * dp)
+        upgradeClose.set(upgradePanel.right - 28 * dp, upgradePanel.top - 12 * dp, 38 * dp, 38 * dp)
     }
 
     private fun layoutTurretPanel() {
@@ -260,7 +291,7 @@ class BattleScreen(
     private fun refreshButtons() {
         val p = battle.player
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
-        val modal = paused || finished || battle.pendingChoice != null
+        val modal = paused || finished || battle.pendingChoice != null || showUpgrade >= 0
         for (i in 0..3) {
             val role = roles[i]
             val def = Defs.unit(p.era, role)
@@ -271,6 +302,29 @@ class BattleScreen(
             b.sub = if (locked) "" else costStr(i, def.cost)
             b.subIcon = if (locked) Icons.LOCK else Icons.COIN
             b.progress = if (p.queueSize > 0 && p.queue[0] == def.id) p.trainT / def.trainTime else -1f
+            val up = unitUpgrade[i]
+            up.visible = !modal && !locked && tut == null && p.unitTier[i] < Defs.MAX_UNIT_TIER
+            up.enabled = true // Dostęp do opisu także wtedy, gdy brakuje złota.
+            up.iconId = Icons.CHEVRONS
+            up.iconTint = Ui.GOLD
+            up.highlight = battle.canUpgradeUnit(p, role)
+        }
+        upgradeBuy.visible = showUpgrade >= 0 && !paused && !finished && battle.pendingChoice == null
+        upgradeClose.visible = upgradeBuy.visible
+        if (showUpgrade >= 0) {
+            val role = roles[showUpgrade]
+            val tier = p.unitTier[role.ordinal]
+            if (showUpgrade != upgradeRoleShown || tier != upgradeTierShown) {
+                upgradeRoleShown = showUpgrade
+                upgradeTierShown = tier
+                upgradeTierText = L.f("unit_upgrade_tier", tier, min(Defs.MAX_UNIT_TIER, tier + 1))
+            }
+            val cost = battle.unitUpgradeCost(p, role)
+            upgradeBuy.label = if (cost < 0) L["unit_upgrade_max"] else L["upgrade"]
+            upgradeBuy.sub = if (cost < 0) "" else costStr(5, cost)
+            upgradeBuy.subIcon = if (cost < 0) -1 else Icons.COIN
+            upgradeBuy.enabled = battle.canUpgradeUnit(p, role)
+            upgradeBuy.highlight = upgradeBuy.enabled
         }
         turretBtn.visible = !modal; turretBtn.label = L["turrets"]; turretBtn.enabled = p.slots > 0
         turretBtn.iconId = Icons.TOWER; turretBtn.iconTint = Ui.PLAYER
@@ -356,8 +410,8 @@ class BattleScreen(
     }
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
-    private val costCache = IntArray(5) { -1 }
-    private val costText = Array(5) { "" }
+    private val costCache = IntArray(6) { -1 }
+    private val costText = Array(6) { "" }
     private var armoryLv = -1
     /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
     private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
@@ -374,6 +428,12 @@ class BattleScreen(
         if (t != null && (t.onClick(b) || !t.allows(b))) return
         when (b.id) {
             in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, roles[b.id - UNIT0])
+            in UNIT_UPGRADE0..UNIT_UPGRADE0 + 3 -> {
+                showTurrets = false
+                showUpgrade = b.id - UNIT_UPGRADE0
+            }
+            UNIT_UPGRADE_BUY -> if (showUpgrade in 0..3 && battle.upgradeUnit(p, roles[showUpgrade])) g.haptic(35)
+            UNIT_UPGRADE_CLOSE -> showUpgrade = -1
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> battle.buyArmory(p)
@@ -417,6 +477,10 @@ class BattleScreen(
     }
 
     override fun onTap(x: Float, y: Float) {
+        if (showUpgrade >= 0) {
+            if (!upgradePanel.contains(x, y)) showUpgrade = -1
+            return
+        }
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
             r.camX = (x - mini.left) / mini.width() * Defs.LANE - r.worldVisible / 2
             r.clampCam(); manualCam = 5f
@@ -428,6 +492,7 @@ class BattleScreen(
 
     override fun onBack(): Boolean {
         if (finished) { g.setScreen(nextScreen()); return true }
+        if (showUpgrade >= 0) { showUpgrade = -1; return true }
         if (showTurrets) { showTurrets = false; return true }
         paused = !paused
         return true
@@ -539,10 +604,13 @@ class BattleScreen(
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
         for (b in unitBtn) ui.button(c, b, 13f)
+        drawUnitTiers(c)
+        for (b in unitUpgrade) ui.button(c, b, 9f)
         drawQueue(c)
         ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
         if (showTurrets && battle.pendingChoice == null && !paused && !finished) drawTurretPanel(c)
+        if (showUpgrade >= 0 && !paused && !finished) drawUpgradePanel(c)
         if (battle.pendingChoice != null && !finished) drawDoctrines(c)
         if (!finished) tut?.draw(c)
         if (paused && !finished) {
@@ -682,6 +750,53 @@ class BattleScreen(
         val sx = (unitBtn[3].r.right + turretBtn.r.left) / 2
         ui.fill.color = Color.argb(90, 255, 255, 255)
         c.drawRect(sx - 1 * dp, unitBtn[0].r.top + 6 * dp, sx + 1 * dp, unitBtn[0].r.bottom - 6 * dp, ui.fill)
+    }
+
+    /** Trzy belki na przycisku; złote oznaczają już kupione stopnie. */
+    private fun drawUnitTiers(c: Canvas) {
+        val p = battle.player
+        for (i in 0..3) {
+            val b = unitBtn[i]
+            if (!b.visible) continue
+            val bw = min(7 * dp, (b.r.width() - 15 * dp) / 3f)
+            for (t in 0 until Defs.MAX_UNIT_TIER) {
+                val x = b.r.left + 4 * dp + t * (bw + 2 * dp)
+                ui.fill.color = if (t < p.unitTier[i]) Ui.GOLD else Ui.FRAME
+                c.drawRoundRect(x, b.r.top + 4 * dp, x + bw, b.r.top + 7 * dp, 1.5f * dp, 1.5f * dp, ui.fill)
+            }
+        }
+    }
+
+    private fun drawUpgradePanel(c: Canvas) {
+        val idx = showUpgrade
+        if (idx !in 0..3) return
+        val role = roles[idx]
+        val current = battle.player.unitTier[idx]
+        val next = min(Defs.MAX_UNIT_TIER, current + 1)
+        val def = Defs.unit(battle.player.era, role)
+        val pr = upgradePanel
+        c.drawColor(Color.argb(158, 0, 0, 0))
+        ui.panel(c, pr)
+        ui.ribbon(c, pr.centerX(), pr.top + 4 * dp, L["unit_upgrade_title"], 18f,
+            Ui.RIBBON, pr.width() * 0.62f, Ui.GOLD, pr.width() - 30 * dp)
+        val name = L[def.tierNameKeys[next - 1]]
+        ui.textO(c, name, pr.centerX(), pr.top + 66 * dp,
+            ui.fit(name, 17f, pr.width() - 36 * dp), Ui.TEXT, Paint.Align.CENTER)
+        ui.textO(c, upgradeTierText, pr.centerX(), pr.top + 88 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
+        r.drawUnitIcon(c, def, pr.left + 64 * dp, pr.top + 172 * dp, 80 * dp, Ui.PLAYER, next)
+        val tx = pr.left + 122 * dp
+        val tw = pr.right - tx - 12 * dp
+        val stat = L["unit_upgrade_stats"]
+        val trait = L[upgradeRoleKeys[idx]]
+        ui.textO(c, stat, tx, pr.top + 116 * dp, ui.fit(stat, 12f, tw), Ui.TEXT)
+        ui.textO(c, trait, tx, pr.top + 140 * dp, ui.fit(trait, 12f, tw), Ui.GOLD)
+        val note = L["unit_upgrade_future"]
+        ui.textO(c, note, tx, pr.top + 162 * dp, ui.fit(note, 11f, tw), Ui.DIM)
+        val reset = L["unit_upgrade_reset"]
+        ui.textO(c, reset, pr.centerX(), upgradeBuy.r.top - 11 * dp, ui.fit(reset, 10f, pr.width() - 25 * dp),
+            Ui.DIM, Paint.Align.CENTER)
+        ui.button(c, upgradeBuy, 15f)
+        ui.closeButton(c, upgradeClose)
     }
 
     private fun drawQueue(c: Canvas) {
