@@ -16,6 +16,7 @@ import com.centurywar.game.Body
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Defs
+import com.centurywar.game.EraBranches
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import java.util.Locale
@@ -52,11 +53,13 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val back = btn(-1)
     private val toggle = btn(-2)
     private val tabs = Array(Defs.ERA_COUNT) { btn(100 + it) }
+    private val branchTabs = Array(2) { btn(200 + it) }
 
     /** Atrapa bitwy tylko po to, by użyć proceduralnych sylwetek jednostek z renderera. */
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
 
     private var era = startEra.coerceIn(0, Defs.ERA_COUNT - 1)
+    private var branch = 0
     private var withResearch = false
     private var dt = 0f
 
@@ -120,6 +123,16 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         val rows = (tabs.size + perRow - 1) / perRow
         viewTop = tabTop + rows * tabH + (rows - 1) * tabGap + 10 * dp
+        val branchAvailable = EraBranches.available(era)
+        val branchWidth = min(180 * dp, (contentW - 10 * dp) / 2)
+        for (i in 0..1) {
+            val b = branchTabs[i]
+            b.visible = branchAvailable
+            if (branchAvailable) {
+                b.set(left + i * (branchWidth + 10 * dp), viewTop, branchWidth, 38 * dp)
+            }
+        }
+        if (branchAvailable) viewTop += 48 * dp
 
         cols = (contentW / (280 * dp)).toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
@@ -139,7 +152,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private fun rebuild() {
         val b = if (withResearch) g.profile.bonuses() else Bonuses()
         val e = Defs.eras[era]
-        eraName = L[e.nameKey]
+        val v = e.variants.getOrNull(branch)
+        eraName = if (v == null) L[e.nameKey] else L[e.nameKey] + " · " + L[v.nameKey]
         eraNum = L.f("cx_era_n", era + 1, Defs.ERA_COUNT)
         evolveText = if (e.evolveXp == Int.MAX_VALUE) L["cx_final"] else L.f("cx_evolve", num(e.evolveXp.toFloat()))
         eliteLocked = !g.profile.bonuses().eliteUnlocked
@@ -147,7 +161,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         val textW = cw - previewW - 3 * 12 * dp
         for (i in 0 until 4) {
-            val u = e.units[i]
+            val u = v?.units?.get(i) ?: e.units[i]
             titles[i] = L[u.nameKey]
             roles[i] = L[when (u.role) { Role.MELEE -> "cx_melee"; Role.RANGED -> "cx_ranged"; Role.HEAVY -> "cx_heavy"; Role.ELITE -> "cx_elite" }]
             wrapInto(i, L[u.nameKey + "_fl"], textW)
@@ -166,7 +180,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             statN[i] = n
         }
 
-        val t = e.turret
+        val t = v?.turret ?: e.turret
         titles[TURRET] = L[t.nameKey]
         roles[TURRET] = L["cx_turret"]
         wrapInto(TURRET, L["cx_turret_d"], textW)
@@ -181,7 +195,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         n = stat(TURRET, n, Icons.BOMB, "cx_splash", if (t.splash > 0f) num(t.splash) else "—", false)
         statN[TURRET] = n
 
-        titles[BARRAGE] = L[e.abilityKey]
+        titles[BARRAGE] = L[v?.abilityKey ?: e.abilityKey]
         roles[BARRAGE] = L["cx_barrage"]
         wrapInto(BARRAGE, L["cx_barrage_d"], textW)
         n = 0
@@ -189,6 +203,15 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         n = stat(BARRAGE, n, Icons.HOURGLASS, "cx_cd", sec(Battle.BARRAGE_CD * b.abilityCdMul), b.abilityCdMul != 1f)
         statN[BARRAGE] = n
 
+        for (i in branchTabs.indices) {
+            val tb = branchTabs[i]
+            tb.visible = v != null
+            if (v != null) {
+                tb.label = L[e.variants[i].nameKey]
+                tb.selected = i == branch
+                tb.color = if (i == branch) Ui.ERA[era] else Ui.BTN
+            }
+        }
         for (i in tabs.indices) {
             val tb = tabs[i]
             tb.selected = i == era
@@ -249,6 +272,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         bg.draw(c, w, h, dt)
         chrome.dim(c, 130)
         for (i in tabs.indices) ui.button(c, tabs[i], 14f)
+        for (i in branchTabs.indices) if (branchTabs[i].visible) ui.button(c, branchTabs[i], 15f)
 
         c.save()
         c.clipRect(0f, viewTop - 4 * dp, w, h)
@@ -366,7 +390,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             TURRET -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, col, Icons.TOWER)
             BARRAGE -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, ROLE_COL[BARRAGE], Icons.METEOR)
             else -> {
-                val def = Defs.eras[era].units[i]
+                val def = Defs.unit(era, Role.values()[i], if (EraBranches.available(era)) branch else EraBranches.NONE)
                 val k = when (def.body) {
                     Body.HUMAN -> 0.8f
                     Body.MECH -> 0.7f
@@ -385,9 +409,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         when {
             b.id == -1 -> g.pop()
             b.id == -2 -> { withResearch = !withResearch; rebuild() }
-            b.id >= 100 -> {
+            b.id in 200..201 -> {
+                if (EraBranches.available(era) && branch != b.id - 200) {
+                    branch = b.id - 200; scroll = 0f; rebuild()
+                }
+            }
+            b.id in 100 until 100 + Defs.ERA_COUNT -> {
                 val e = b.id - 100
-                if (e != era) { era = e; scroll = 0f; rebuild() }
+                if (e != era) { era = e; branch = 0; scroll = 0f; layout() }
             }
         }
     }
