@@ -4,6 +4,7 @@ import com.centurywar.game.AiPersonality
 import com.centurywar.game.Battle
 import com.centurywar.game.Doctrine
 import com.centurywar.game.EndlessCard
+import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import org.json.JSONArray
@@ -211,6 +212,7 @@ class BattleHistory(private val file: File) {
 
     /** Parsowanie nie trzyma zamka historii podczas operacji dyskowych. */
     private fun readEntries(): List<Record> {
+        GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
         for (candidate in listOf(file, tmp)) {
             if (!candidate.exists() || candidate.length() > 1_000_000L) continue
@@ -287,6 +289,7 @@ class BattleHistory(private val file: File) {
     private fun persist() {
         val content = synchronized(this) { toJson() }
         try {
+            GameIoCounter.diskAccess()
             file.parentFile?.mkdirs()
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use {
