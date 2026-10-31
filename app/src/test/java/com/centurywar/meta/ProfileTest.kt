@@ -1,6 +1,9 @@
 package com.centurywar.meta
 
 import org.junit.Assert.assertEquals
+import com.centurywar.game.Mode
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -125,4 +128,55 @@ class ProfileTest {
         f.writeText("""{"name":"Stary profil"}""")
         assertEquals(0.5f, Profile(f).also { it.load() }.musicVolume, 0.0001f)
     }
+    @Test
+    fun battleModeCountersRoundTripAndTrackStreaks() {
+        val p = Profile(tmpFile())
+        p.recordBattle(Mode.ENDLESS, true, 200)
+        p.recordBattle(Mode.ENDLESS, true, 100)
+        p.recordBattle(Mode.CAMPAIGN, false, 50)
+        p.recordBattle(Mode.DAILY, true, 45)
+        assertEquals(2, p.bestWinStreak)
+        assertEquals(1, p.winStreak)
+        val copy = Profile(tmpFile())
+        copy.fromJson(p.toJson())
+        assertEquals(2, copy.modeBattles[Mode.ENDLESS.ordinal])
+        assertEquals(2, copy.modeWins[Mode.ENDLESS.ordinal])
+        assertEquals(300L, copy.modeSeconds[Mode.ENDLESS.ordinal])
+        assertEquals(1, copy.modeBattles[Mode.CAMPAIGN.ordinal])
+        assertEquals(0, copy.modeWins[Mode.CAMPAIGN.ordinal])
+        assertEquals(2, copy.bestWinStreak)
+        assertEquals(1, copy.winStreak)
+    }
+
+    @Test
+    fun oldProfileDefaultsAndNewCountersAreClamped() {
+        val f = tmpFile()
+        f.writeText("""{"v":1,"wins":2}""")
+        val old = Profile(f).also { it.load() }
+        assertTrue(old.modeBattles.all { it == 0 })
+        assertTrue(old.modeWins.all { it == 0 })
+        assertTrue(old.modeSeconds.all { it == 0L })
+        assertEquals(0, old.winStreak)
+        assertEquals(0, old.bestWinStreak)
+
+        val source = Profile(tmpFile()).toJson()
+        val json = JSONObject(source)
+        json.put("modeBattles", JSONArray().put(3).put(-20).put(99_999_999))
+        json.put("modeWins", JSONArray().put(90).put(5).put(-4))
+        json.put("modeSeconds", JSONArray().put(-1).put(9_999_999_999L))
+        json.put("winStreak", -2)
+        json.put("bestWinStreak", 50)
+        val copy = Profile(tmpFile())
+        copy.fromJson(json.toString())
+        assertEquals(3, copy.modeBattles[0])
+        assertEquals(3, copy.modeWins[0])
+        assertEquals(0, copy.modeBattles[1])
+        assertEquals(10_000_000, copy.modeBattles[2])
+        assertEquals(0, copy.modeWins[2])
+        assertEquals(0L, copy.modeSeconds[0])
+        assertEquals(3_155_760_000L, copy.modeSeconds[1])
+        assertEquals(50, copy.bestWinStreak)
+        assertEquals(0, copy.winStreak)
+    }
+
 }
