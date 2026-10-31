@@ -168,8 +168,10 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.circle(x, y, r, rim)
         p.circle(x, y, r * 0.72f, dark(rim, 0.35f))
         p.circleF(x, y, r * 0.6f, light(rim, 0.15f))
-        if (p.hi) for (i in 0 until spokes) {
-            val a = spin + i * (6.2832f / spokes)
+        val count = if (p.hi) spokes else 2
+        val rotation = Motion.wheelAngle(spin, size, r)
+        for (i in 0 until count) {
+            val a = rotation + i * (Motion.TAU / count)
             cv.drawLine(x, y, x + cos(a) * r * 0.66f, y + sin(a) * r * 0.66f, p.lp(dark(rim, 0.45f), r * 0.14f))
         }
         p.circle(x, y, r * 0.2f, BRONZE)
@@ -368,9 +370,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         val h = bottom - top
         p.rr(x0, top, x1, bottom, h / 2f, TRACK)
         // ogniwa gąsienicy przesuwające się z ruchem
-        if (p.hi) {
-            val step = 5f
-            val off = (walk * 6f) % step
+        run {
+            val step = if (p.hi) 5f else 10f
+            val off = Motion.trackOffset(walk, size, step)
             var x = x0 + h / 2f + off
             p.lp(0xFF4A4A50.toInt(), 1.2f)
             while (x < x1 - h / 2f) { cv.drawLine(x, top + 0.8f, x, top + 2.6f, p.line); cv.drawLine(x, bottom - 2.6f, x, bottom - 0.8f, p.line); x += step }
@@ -379,14 +381,21 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         for (i in 0 until wheels) {
             val wx = x0 + h / 2f + i * ((x1 - x0 - h) / (wheels - 1))
             p.circle(wx, (top + bottom) / 2f, r, WHEEL)
-            if (p.hi) { p.circleF(wx, (top + bottom) / 2f, r * 0.4f, dark(WHEEL, 0.4f)); val a = walk * 2f; cv.drawLine(wx, (top + bottom) / 2f, wx + cos(a) * r * 0.8f, (top + bottom) / 2f + sin(a) * r * 0.8f, p.lp(light(WHEEL, 0.35f), 1.2f)) }
+            if (p.hi) p.circleF(wx, (top + bottom) / 2f, r * 0.4f, dark(WHEEL, 0.4f))
+            val a = Motion.wheelAngle(walk, size, r)
+            cv.drawLine(wx, (top + bottom) / 2f, wx + cos(a) * r * 0.8f, (top + bottom) / 2f + sin(a) * r * 0.8f, p.lp(light(WHEEL, 0.35f), 1.2f))
         }
     }
 
     private fun roadWheel(x: Float, y: Float, r: Float, walk: Float) {
         p.circle(x, y, r, 0xFF26262A.toInt())
         p.circle(x, y, r * 0.6f, 0xFF6A6C72.toInt())
-        if (p.hi) { val a = walk * 2f; for (i in 0..2) { val b = a + i * 2.094f; p.circleF(x + cos(b) * r * 0.35f, y + sin(b) * r * 0.35f, r * 0.1f, 0xFF3A3A40.toInt()) } }
+        val a = Motion.wheelAngle(walk, size, r)
+        cv.drawLine(x, y, x + cos(a) * r * 0.46f, y + sin(a) * r * 0.46f, p.lp(0xFF3A3A40.toInt(), 1.4f))
+        if (p.hi) for (i in 0..2) {
+            val b = a + i * 2.094f
+            p.circleF(x + cos(b) * r * 0.35f, y + sin(b) * r * 0.35f, r * 0.1f, 0xFF3A3A40.toInt())
+        }
     }
 
     fun vehicle(epoch: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
@@ -406,6 +415,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     private fun ironclad(team: Int, walk: Float, atk: Float) {
         val hull = 0xFF5E5A54.toInt()
         val hd = dark(hull, 0.3f)
+        tracks(-48f, 48f, -20f, 0f, walk, 5)
+        cv.save()
+        cv.rotate(-rock(walk, atk), -39f, -18f)
         // komin z dymem
         p.rect(-28f, -76f, -18f, -46f, 0xFF3A3A3E.toInt())
         p.rect(-30f, -80f, -16f, -75f, 0xFF2A2A2E.toInt())
@@ -414,8 +426,6 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             val t = ((time * 0.8f + i * 0.33f) % 1f)
             p.glow(-23f - t * 10f, -84f - t * 26f, 4f + t * 8f, ((0x90 * (1f - t)).toInt() shl 24) or 0x5A5650)
         }
-        // koła z bieżnikiem
-        tracks(-48f, 48f, -20f, 0f, walk, 5)
         // kadłub opancerzony
         val pa = p.path; pa.reset()
         pa.moveTo(-50f, -18f); pa.lineTo(-44f, -48f); pa.lineTo(34f, -48f); pa.lineTo(52f, -26f); pa.lineTo(50f, -18f); pa.close()
@@ -430,7 +440,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.rect(-46f, -38f, 44f, -29f, team)
         if (p.hi) for (i in 0..2) { p.circle(-30f + i * 22f, -33.5f, 3f, 0xFFC8923A.toInt()); p.circleF(-30f + i * 22f, -33.5f, 1.8f, 0xFFFFD27A.toInt()) }
         // wieża z działem
-        val rec = atk * 5f
+        val rec = Motion.recoil(atk) * 5f
         p.seg(8f - rec, -58f, 50f - rec, -60f, 4.4f, IRON)
         p.rect(44f - rec, -62.5f, 50f - rec, -56f, IRON)
         p.rr(-8f, -66f, 22f, -47f, 6f, light(hull, 0.06f))
@@ -439,6 +449,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.seg(-40f, -48f, -40f, -74f, 1.2f, 0xFF2A2A2A.toInt())
         p.quad(-40f, -74f, -28f, -71f + sin(time * 6f) * 1.5f, -40f, -66f, -40f, -66f); p.shape(team)
         muzzle(52f - rec, -60f, atk, 1f)
+        cv.restore()
     }
 
     private fun halftrack(team: Int, walk: Float, atk: Float) {
@@ -461,7 +472,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         // szyba kabiny
         p.quad(15f, -42f, 25f, -42f, 27f, -34f, 15f, -34f); p.shape(GLASS)
         // koło przednie
-        p.circle(32f, -10f, 10f, 0xFF26262A.toInt()); p.circle(32f, -10f, 5.5f, 0xFF6A6C72.toInt())
+        roadWheel(32f, -10f, 10f, walk)
         if (p.hi) p.circleF(32f, -10f, 2f, hd)
         // strzelec z karabinem maszynowym
         cv.save(); cv.translate(-18f, -22f); cv.scale(0.72f, 0.72f)
@@ -477,13 +488,16 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         val hl = light(hull, 0.22f)
         // gąsienice + koła jezdne
         p.rr(-50f, -22f, 50f, 0f, 11f, TRACK)
-        if (p.hi) {
-            val off = (walk * 6f) % 6f
+        run {
+            val step = if (p.hi) 6f else 12f
+            val off = Motion.trackOffset(walk, size, step)
             var x = -44f + off
             p.lp(0xFF4A4A50.toInt(), 1.4f)
-            while (x < 46f) { cv.drawLine(x, -21.5f, x, -19f, p.line); cv.drawLine(x, -2.5f, x, 0f, p.line); x += 6f }
+            while (x < 46f) { cv.drawLine(x, -21.5f, x, -19f, p.line); cv.drawLine(x, -2.5f, x, 0f, p.line); x += step }
         }
         for (i in 0 until 6) roadWheel(-40f + i * 16f, -10f, 7f, walk)
+        cv.save()
+        cv.rotate(-rock(walk, atk), -40f, -22f)
         // osłona gąsienic
         p.quad(-54f, -22f, -48f, -30f, 50f, -30f, 56f, -22f); p.shape(hd)
         // kadłub pochyły
@@ -495,7 +509,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         }
         p.rect(-28f, -44f, 22f, -36f, team) // pas drużyny
         // wieża
-        val rec = atk * 6f
+        val rec = Motion.recoil(atk) * 6f
         p.seg(16f - rec, -55f, 70f - rec, -56f, 5f, hd)
         p.rect(66f - rec, -59.5f, 74f - rec, -51.5f, dark(hull, 0.4f)) // hamulec wylotowy
         val pa = p.path; pa.reset()
@@ -509,12 +523,16 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.rr(-14f, -71f, 2f, -65f, 2f, hd) // właz
         if (p.max) p.seg(-18f, -66f, -26f, -86f, 0.8f, 0xFF2A2A2A.toInt()) // antena
         muzzle(74f - rec, -55.5f, atk, 1.2f)
+        cv.restore()
     }
 
     private fun apc(team: Int, walk: Float, atk: Float) {
         val hull = 0xFF6A7480.toInt()
         val hd = dark(hull, 0.3f)
         val hl = light(hull, 0.25f)
+        // Koła pozostają na ziemi; nadwozie buja się wokół tylnej osi.
+        for (i in 0..3) roadWheel(-32f + i * 22f, -10f, 9.5f, walk)
+        cv.save(); cv.rotate(-rock(walk, atk), -32f, -10f)
         // kadłub z pochyłym przodem
         val pa = p.path; pa.reset()
         pa.moveTo(-46f, -12f); pa.lineTo(-46f, -40f); pa.lineTo(22f, -42f); pa.lineTo(48f, -26f); pa.lineTo(46f, -12f); pa.close()
@@ -527,19 +545,13 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         }
         p.rect(-30f, -34f, 16f, -24f, team) // panel drużyny
         if (p.hi) { p.rr(26f, -36f, 36f, -31f, 1f, 0xFF1C2A34.toInt()); p.glow(44f, -22f, 1.8f, 0xFFFFF0A0.toInt()) }
-        // koła 8x8 (4 widoczne)
-        for (i in 0..3) {
-            val wx = -32f + i * 22f
-            p.circle(wx, -10f, 9.5f, 0xFF26262A.toInt())
-            p.circle(wx, -10f, 5f, 0xFF7A7E86.toInt())
-            if (p.hi) { val a = walk * 2.2f; cv.drawLine(wx, -10f, wx + cos(a) * 4.5f, -10f + sin(a) * 4.5f, p.lp(hd, 1.2f)) }
-        }
         // wieżyczka z działkiem
-        val rec = atk * 4f
+        val rec = Motion.recoil(atk) * 4f
         p.seg(8f - rec, -50f, 46f - rec, -50f, 2.6f, 0xFF2C3036.toInt())
         p.rr(-10f, -56f, 14f, -41f, 4f, light(hull, 0.06f))
         if (p.hi) { p.rect(-6f, -54f, 2f, -48f, 0xFF1C2A34.toInt()); p.seg(-12f, -48f, -20f, -64f, 0.8f, 0xFF2A2A2A.toInt()) }
         muzzle(46f - rec, -50f, atk, 0.8f)
+        cv.restore()
     }
 
     // ================================================================== mechy
