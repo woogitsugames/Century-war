@@ -460,13 +460,17 @@ class SnapshotStore(private val file: File) {
         } catch (_: Exception) { false }
     }
 
+    /** Synchroniczne usunięcie tylko dla narzędzi i odczytu przy starcie. */
     fun delete() {
-        synchronized(lock) {
-            written = ++seq
-            GameIoCounter.diskAccess()
-            file.delete()
-            tmp.delete()
-        }
+        val my = synchronized(lock) { ++seq }
+        try {
+            io.submit {
+                GameIoCounter.diskAccess()
+                file.delete()
+                tmp.delete()
+                synchronized(lock) { written = my }
+            }.get(10, TimeUnit.SECONDS)
+        } catch (_: Exception) { }
     }
 
     fun load(): ByteArray? = synchronized(lock) {
@@ -478,24 +482,48 @@ class SnapshotStore(private val file: File) {
         }
     }
 
-    /** Wczytuje i dekoduje zrzut; uszkodzony albo niezgodny plik jest usuwany. */
+    /** Poprawny .tmp po przerwanym rename jest odzyskiwany bez utraty starego pliku. */
     fun loadBattle(): RestoredBattle? {
-        val bytes = load() ?: return null
-        val r = BattleSnapshot.decode(bytes)
-        if (r == null || r.battle.over) delete()
-        return r?.takeIf { !it.battle.over }
+        GameIoCounter.diskAccess()
+        val candidates = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
+            else arrayOf(file, tmp)
+        var found = false
+        for (candidate in candidates) {
+            val bytes = try {
+                if (!candidate.isFile || candidate.length() > (1 shl 20)) null
+                else candidate.readBytes()
+            } catch (_: Exception) { null }
+            if (bytes == null) continue
+            found = true
+            val restored = BattleSnapshot.decode(bytes)
+            if (restored != null && !restored.battle.over) {
+                if (candidate == tmp) {
+                    try {
+                        java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    } catch (_: Exception) { }
+                }
+                return restored
+            }
+        }
+        if (found) delete()
+        return null
     }
 
     private fun writeAtomic(bytes: ByteArray): Boolean = try {
         GameIoCounter.diskAccess()
         file.parentFile?.mkdirs()
         FileOutputStream(tmp).use { it.write(bytes); it.flush(); it.fd.sync() }
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            tmp.renameTo(file)
-        } else true
+        if (tmp.renameTo(file)) true
+        else try {
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            true
+        } catch (_: Exception) { false }
     } catch (_: Exception) {
-        tmp.delete()
+        // Niedokończony .tmp może być odzyskany przy następnym starcie.
         false
     }
 }
