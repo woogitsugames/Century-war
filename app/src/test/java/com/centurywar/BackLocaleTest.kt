@@ -12,6 +12,7 @@ import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import com.centurywar.game.RestoredBattle
 import com.centurywar.meta.Profile
+import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
 import com.centurywar.screens.SettingsScreen
 import java.io.File
@@ -101,6 +102,19 @@ class BackLocaleTest {
             assertEquals(L.indexOf("en"), L.lang)
             assertEquals("Campaign", campaign.label)
             assertSame(menu, game.current)
+
+            // Także podczas bitwy zmiana locale nie zastępuje ekranu ani stanu gry.
+            game.snapshots = null
+            val battle = BattleScreen(game, BattleConfig(Mode.SKIRMISH, 31L, 1f))
+            game.setScreen(battle)
+            game.profile.lang = ""
+            Locale.setDefault(Locale.ITALIAN)
+            activity.onConfigurationChanged(Configuration(activity.resources.configuration).apply {
+                setLocale(Locale.ITALIAN)
+            })
+            game.frame(canvas, 0f)
+            assertEquals(L.indexOf("it"), L.lang)
+            assertSame(battle, game.current)
         } finally {
             controller.pause().stop().destroy()
             Locale.setDefault(oldLocale)
