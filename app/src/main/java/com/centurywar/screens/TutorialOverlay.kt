@@ -107,6 +107,8 @@ class TutorialOverlay(
     private var baseline = 0
     private var nextPressed = false
     private var cameraMoved = false
+    private var previousHold = battle.player.hold
+    private var stanceUsed = battle.player.hold
 
     private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -164,6 +166,7 @@ class TutorialOverlay(
 
     fun update(dt: Float) {
         clock += dt
+        if (p.hold != previousHold) { previousHold = p.hold; stanceUsed = true }
         if (finished) return
         if (battle.over) { skipBtn.visible = false; nextBtn.visible = false; return }
         phaseT += dt
@@ -182,13 +185,14 @@ class TutorialOverlay(
 
     private fun alreadyDone(): Boolean = when (step) {
         S_MELEE -> p.queueSize > 0 || p.spawned > 0
+        S_RANGED -> countRanged() > 0
         S_EVOLVE -> p.era > battle.cfg.startEra || battle.cfg.maxEra <= battle.cfg.startEra
         S_DOCTRINE -> battle.pendingChoice == null && (p.doctrines.isNotEmpty() || p.era == battle.cfg.startEra)
         S_TURRET -> p.slots == 0 || anyTurret()
-        S_ARMORY -> p.armory > 0 || p.armory >= 15
-        S_STANCE -> p.hold
-        S_RALLY -> !p.rallyUnlocked || p.abilityCd[1] > 0f
-        S_BARRAGE -> p.abilityCd[0] > 0f
+        S_ARMORY -> p.armory > 0
+        S_STANCE -> stanceUsed
+        S_RALLY -> !p.rallyUnlocked || p.ralliesUsed > 0
+        S_BARRAGE -> p.barragesUsed > 0
         else -> false
     }
 
@@ -231,9 +235,9 @@ class TutorialOverlay(
         S_DOCTRINE -> battle.pendingChoice == null
         S_TURRET -> anyTurret()
         S_ARMORY -> p.armory > 0
-        S_STANCE -> p.hold
-        S_RALLY -> p.abilityCd[1] > 0f
-        S_BARRAGE -> p.abilityCd[0] > 0f
+        S_STANCE -> stanceUsed
+        S_RALLY -> p.ralliesUsed > 0
+        S_BARRAGE -> p.barragesUsed > 0
         S_CAMERA -> nextPressed || (cameraMoved && phaseT > 1.2f)
         else -> nextPressed
     }
