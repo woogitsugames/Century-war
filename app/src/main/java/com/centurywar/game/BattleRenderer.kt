@@ -42,6 +42,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private var shake = 0f
     private var shakeX = 0f
     private var time = 0f
+    // Faza wygaszania także przy zatrzymaniu do ataku (symulacja nie zmienia wtedy stride).
+    private val visualStride = FloatArray(b.units.size)
+    private val visualSerial = IntArray(b.units.size) { -1 }
+    private var renderDt = 0f
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
@@ -81,6 +85,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val pen = Pen()
     private val men = Soldiers(pen)
     private val mach = Machines(pen, men)
+    private var poseOverride = false
     private val bases = Bases(pen)
     /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
     private val basePics = arrayOfNulls<Picture>(Defs.ERA_COUNT * 2)
@@ -131,6 +136,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     fun render(c: Canvas, dt: Float, w: Float, h: Float) {
         time += dt
+        renderDt = dt.coerceIn(0f, 0.05f)
         val q = g.quality
         fill.isAntiAlias = q.antialias
         line.isAntiAlias = q.antialias
@@ -150,8 +156,18 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawGround(c, w, h)
         drawBase(c, b.sides[0])
         drawBase(c, b.sides[1])
-        for (u in b.units) if (u.active && u.side == 1) drawUnit(c, u)
-        for (u in b.units) if (u.active && u.side == 0) drawUnit(c, u)
+        var slot = 0
+        while (slot < b.units.size) {
+            val u = b.units[slot]
+            if (u.active && u.side == 1) drawUnit(c, u, slot)
+            slot++
+        }
+        slot = 0
+        while (slot < b.units.size) {
+            val u = b.units[slot]
+            if (u.active && u.side == 0) drawUnit(c, u, slot)
+            slot++
+        }
         alpha = 1f
         for (p in b.projs) if (p.active && p.delay <= 0f) drawProj(c, p)
         updateParticles(c, dt)
@@ -405,7 +421,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun mix(a: Float, b: Float) = a + (b - a) * lerp
 
-    private fun drawUnit(c: Canvas, u: Fighter) {
+    private fun drawUnit(c: Canvas, u: Fighter, slot: Int) {
         val fresh = u.prevX.isNaN()
         val x = sx(if (fresh) u.x else mix(u.prevX, u.x))
         val margin = 130f * k * u.def.size
@@ -426,15 +442,28 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.scale(sc * s.dir, sc)
         if (u.dying >= 0f) c.rotate(-min(80f, u.dying * 200f))
         val team = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
-        val stride = if (fresh) u.stride else mix(u.prevStride, u.stride)
-        val walk = if (stride > 0.01f) (if (fresh) u.anim else mix(u.prevAnim, u.anim)) else 0f
+        if (visualSerial[slot] != u.serial) {
+            visualSerial[slot] = u.serial
+            visualStride[slot] = 0f
+        }
+        val prev = visualStride[slot]
+        val next = if (u.moving) min(1f, prev + renderDt * Battle.STRIDE_RATE)
+                   else max(0f, prev - renderDt * Battle.STRIDE_RATE)
+        visualStride[slot] = next
+        val simStride = if (fresh) u.stride else mix(u.prevStride, u.stride)
+        val stride = min(simStride, next)
+        // Faza toczenia zostaje zachowana po zatrzymaniu; krok wygasza tylko stride.
+        val walk = if (fresh) u.anim else mix(u.prevAnim, u.anim)
         val attack = if (fresh) u.attackAnim else mix(u.prevAttack, u.attackAnim)
         val atk = if (attack > 0f) attack / 0.25f else 0f
-        men.stride = stride
+        men.stride = stride; mach.stride = stride
+        // Stabilna indywidualna faza dla efektów, niezależna od czasu i kolejności renderowania.
+        mach.phase = ((u.serial * 73) % 360) * 0.017453293f
         // Przygotowanie ataku w trakcie odnowienia (tylko w walce: stoi i ma odnowienie).
         val cool = def.cooldown
         men.windup = if (!u.moving && u.cd > 0f && cool > 0.3f)
             ((cool - u.cd - 0.25f) / (cool - 0.25f)).coerceIn(0f, 1f) else -1f
+        mach.windup = men.windup
         pen.alpha = alpha
         pen.flash = u.flash > 0f
         drawBody(def, team, walk, atk, u.tier)
@@ -456,6 +485,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
         pen.ow = 1.5f / def.size
+        mach.size = def.size
         when (def.body) {
             Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
             Body.BEAST -> mach.beast(def.era, def.role == Role.ELITE, team, walk, atk)
@@ -483,12 +513,26 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         walk: Float, stride: Float, atk: Float, windup: Float,
     ) {
         men.stride = stride; men.windup = windup
-        drawUnitIcon(c, def, cx, bottom, height, team, 1, walk, atk)
-        men.stride = 1f; men.windup = -1f
+        mach.stride = stride; mach.windup = windup
+        mach.phase = (def.era * 41 + def.role.ordinal * 67) * 0.017453293f
+        poseOverride = true
+        try {
+            drawUnitIcon(c, def, cx, bottom, height, team, 1, walk, atk)
+        } finally {
+            poseOverride = false
+            men.stride = 1f; men.windup = -1f
+            mach.stride = 1f; mach.windup = -1f
+        }
     }
 
     fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1,
                      walk: Float = 0f, atk: Float = 0f) {
+        if (!poseOverride) {
+            val intensity = if (walk == 0f) 0f else 1f
+            men.stride = intensity; men.windup = -1f
+            mach.stride = intensity; mach.windup = -1f
+            mach.phase = (def.era * 41 + def.role.ordinal * 67) * 0.017453293f
+        }
         val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
         val save = alpha
         alpha = 1f
