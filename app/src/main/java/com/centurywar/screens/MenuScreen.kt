@@ -30,6 +30,7 @@ class MenuScreen(g: Game) : Screen(g) {
     private val settings = btn(7)
     private val codex = btn(8)
     private val achievements = btn(10)
+    private val stats = btn(11)
     // pytanie o wznowienie przerwanej bitwy (g.resumeOffer)
     private val resumeYes = btn(RESUME_YES)
     private val resumeNo = btn(RESUME_NO)
@@ -62,6 +63,7 @@ class MenuScreen(g: Game) : Screen(g) {
         settings.iconId = Icons.GEAR
         codex.label = ""; codex.iconId = Icons.CODEX
         achievements.label = ""; achievements.iconId = Icons.CROWN
+        stats.label = ""; stats.iconId = Icons.CHART
         campaign.subIcon = Icons.STAR
         research.subIcon = Icons.MEDAL
         campaign.highlight = true
@@ -106,6 +108,7 @@ class MenuScreen(g: Game) : Screen(g) {
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         codex.set(settings.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
         achievements.set(codex.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
+        stats.set(achievements.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
         layoutResume(cx)
     }
 
@@ -272,6 +275,7 @@ class MenuScreen(g: Game) : Screen(g) {
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
             10 -> g.push(AchievementsScreen(g))
+            11 -> g.push(StatsScreen(g))
             9 -> g.push(MissionsScreen(g))
         }
     }

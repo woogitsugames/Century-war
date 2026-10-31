@@ -2,6 +2,7 @@ package com.centurywar.meta
 
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Mode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -144,6 +145,26 @@ class Profile(private val file: File) {
     var wins = 0
     var totalKills = 0L
     var playSeconds = 0L
+    // Liczniki całego życia (w tym zapis w chmurze); historia 100 bitew jest tylko lokalna.
+    val modeBattles = IntArray(Mode.entries.size)
+    val modeWins = IntArray(Mode.entries.size)
+    val modeSeconds = LongArray(Mode.entries.size)
+    var winStreak = 0
+    var bestWinStreak = 0
+
+    fun recordBattle(mode: Mode, won: Boolean, seconds: Int) {
+        val i = mode.ordinal
+        modeBattles[i] = (modeBattles[i].toLong() + 1).coerceAtMost(10_000_000L).toInt()
+        if (won) {
+            modeWins[i] = (modeWins[i].toLong() + 1).coerceAtMost(modeBattles[i].toLong()).toInt()
+            winStreak = (winStreak + 1L).coerceAtMost(10_000_000L).toInt()
+            bestWinStreak = maxOf(bestWinStreak, winStreak)
+        } else {
+            winStreak = 0
+        }
+        modeSeconds[i] = (modeSeconds[i] + seconds.coerceAtLeast(0).toLong())
+            .coerceAtMost(3_155_760_000L)
+    }
 
     // Trwały postęp osiągnięć; brak tych pól w starym JSON oznacza zero.
     val achievementCounters = HashMap<String, Long>()
@@ -252,6 +273,11 @@ class Profile(private val file: File) {
         o.put("wins", wins)
         o.put("totalKills", totalKills)
         o.put("playSeconds", playSeconds)
+        o.put("modeBattles", JSONArray().apply { modeBattles.forEach { put(it) } })
+        o.put("modeWins", JSONArray().apply { modeWins.forEach { put(it) } })
+        o.put("modeSeconds", JSONArray().apply { modeSeconds.forEach { put(it) } })
+        o.put("winStreak", winStreak)
+        o.put("bestWinStreak", bestWinStreak)
         o.put("achievementCounters", JSONObject(achievementCounters as Map<*, *>))
         o.put("unlockedAchievements", JSONArray().apply { unlockedAchievements.sorted().forEach { put(it) } })
         o.put("achievementDailySeeds", JSONArray().apply { achievementDailySeeds.sorted().forEach { put(it) } })
@@ -418,6 +444,21 @@ class Profile(private val file: File) {
             }
         }
         val missions = obj("missions")
+        fun modeArray(key: String, upper: Long): LongArray {
+            val a = arr(key) ?: return LongArray(modeBattles.size)
+            return LongArray(modeBattles.size) { i ->
+                if (i >= a.length()) 0L
+                else {
+                    if (a.opt(i) !is Number) error("Niepoprawny licznik: " + key)
+                    a.optLong(i).coerceIn(0L, upper)
+                }
+            }
+        }
+        val newModeBattles = modeArray("modeBattles", 10_000_000L)
+        val newModeWins = modeArray("modeWins", 10_000_000L)
+        val newModeSeconds = modeArray("modeSeconds", 3_155_760_000L)
+        val newWinStreak = json.optInt("winStreak", 0).coerceIn(0, 10_000_000)
+        val newBestStreak = json.optInt("bestWinStreak", 0).coerceIn(0, 10_000_000)
 
         // Zmieniamy aktualny stan dopiero po pomyślnym przetworzeniu całego dokumentu.
         name = json.optString("name", "")
@@ -445,6 +486,13 @@ class Profile(private val file: File) {
         totalKills = json.optLong("totalKills", 0L).coerceAtLeast(0L)
         playSeconds = json.optLong("playSeconds", 0L).coerceAtLeast(0L)
         wins = wins.coerceAtMost(battles)
+        for (i in modeBattles.indices) {
+            modeBattles[i] = newModeBattles[i].toInt()
+            modeWins[i] = newModeWins[i].coerceAtMost(newModeBattles[i]).toInt()
+            modeSeconds[i] = newModeSeconds[i]
+        }
+        winStreak = newWinStreak
+        bestWinStreak = maxOf(newWinStreak, newBestStreak)
         musicVolume = json.optDouble("musicVolume", 0.5).toFloat()
         notifications = json.optBoolean("notifications", true)
         notifyHour = json.optInt("notifyHour", 18).coerceIn(0, 23)
@@ -466,6 +514,8 @@ class Profile(private val file: File) {
         reduceShake = false; reduceFlash = false
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
+        modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
+        winStreak = 0; bestWinStreak = 0
         musicVolume = 0.5f; notifications = true; notifyHour = 18
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
@@ -551,6 +601,8 @@ class Profile(private val file: File) {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
         tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
+        winStreak = 0; bestWinStreak = 0
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()

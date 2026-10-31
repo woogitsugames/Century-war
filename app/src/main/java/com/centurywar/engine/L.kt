@@ -94,7 +94,16 @@ object L {
     private fun t(vararg s: String): Array<out String> = s
 
     // kolejność kolumn: pl, en, de, es, fr, it, pt, uk, nl, tr
-    private val table: HashMap<String, Array<out String>> = hashMapOf(
+    // Tabela podzielona na części: jeden inicjalizator przekraczał limit 64 KB metody JVM.
+    private val table: HashMap<String, Array<out String>> = HashMap<String, Array<out String>>(2048).apply {
+        putAll(part0())
+        putAll(part1())
+        putAll(part2())
+        putAll(part3())
+        putAll(part4())
+    }
+
+    private fun part0(): Array<Pair<String, Array<out String>>> = arrayOf(
         // --- odtwarzacz bitew
         "replay" to t("Powtórka", "Replay", "Wiederholung", "Repetición", "Replay", "Replay", "Repetição", "Повтор", "Herhaling", "Tekrar"),
         "replay_list" to t("Powtórki", "Replays", "Wiederholungen", "Repeticiones", "Replays", "Replay", "Repetições", "Повтори", "Herhalingen", "Tekrarlar"),
@@ -311,6 +320,9 @@ object L {
             "Düşmanlar toplandığında baraj ateşini kullan."),
         "cap" to t("Armia", "Army", "Armee", "Ejército", "Armée", "Esercito", "Exército", "Армія", "Leger", "Ordu"),
 
+    )
+
+    private fun part1(): Array<Pair<String, Array<out String>>> = arrayOf(
         // --- epoki
         "era_tribal" to t("Plemiona", "Tribal", "Stammeszeit", "Era tribal", "Âge tribal", "Età tribale", "Era tribal", "Доба племен", "Stammentijd", "Kabile Çağı"),
         "era_bronze" to t("Epoka brązu", "Bronze Age", "Bronzezeit", "Edad del Bronce", "Âge du bronze", "Età del bronzo", "Idade do Bronze", "Бронзова доба", "Bronstijd", "Tunç Çağı"),
@@ -501,6 +513,9 @@ object L {
         "r_rally" to t("Okrzyk bojowy", "War Cry", "Kriegsschrei", "Grito de guerra", "Cri de guerre", "Grido di battaglia", "Grito de guerra", "Бойовий клич", "Strijdkreet", "Savaş Narası"),
         "r_rally_d" to t("Odblokowuje Zryw (+40% tempa)", "Unlocks Rally (+40% tempo)", "Schaltet Ansturm frei (+40% Tempo)", "Desbloquea Ímpetu (+40% de ritmo)", "Débloque Élan (+40% de cadence)", "Sblocca Slancio (+40% ritmo)", "Desbloqueia Ímpeto (+40% de ritmo)", "Відкриває Ривок (+40% темпу)", "Ontgrendelt Stormloop (+40% tempo)", "Atılım'ı açar (+%40 tempo)"),
 
+    )
+
+    private fun part2(): Array<Pair<String, Array<out String>>> = arrayOf(
         // ===== KODEKS (CodexScreen) — początek bloku; nowe klucze tylko tutaj =====
         "codex" to t("Kodeks", "Codex", "Kodex", "Códice", "Codex", "Codice", "Códice", "Кодекс", "Codex", "Kodeks"),
         "cx_research" to t("Z badaniami", "With research", "Mit Forschung", "Con investigación", "Avec recherche", "Con ricerca", "Com pesquisa", "З дослідженнями", "Met onderzoek", "Araştırmalı"),
@@ -692,6 +707,9 @@ object L {
         "ach_fast_win" to t("Błyskawiczna wygrana", "Lightning Victory", "Blitzsieg", "Victoria relámpago", "Victoire éclair", "Vittoria lampo", "Vitória relâmpago", "Блискавична перемога", "Bliksemsnelle zege", "Yıldırım zaferi"),
         "ach_fast_win_d" to t("Wygraj bitwę w najwyżej 5 minut.", "Win a battle in at most 5 minutes.", "Gewinne eine Schlacht in höchstens fünf Minuten.", "Gana una batalla en cinco minutos como máximo.", "Gagnez une bataille en cinq minutes ou moins.", "Vinci una battaglia in non più di cinque minuti.", "Vença uma batalha em até cinco minutos.", "Виграй битву щонайбільше за п'ять хвилин.", "Win een gevecht binnen vijf minuten.", "Bir savaşı en fazla beş dakikada kazan."),
 
+    )
+
+    private fun part3(): Array<Pair<String, Array<out String>>> = arrayOf(
         // --- wznawianie przerwanej bitwy (BattleSnapshot / MenuScreen) --------------
         "resume_title" to t("Wznowić bitwę?", "Resume battle?", "Schlacht fortsetzen?", "¿Reanudar batalla?", "Reprendre la bataille ?", "Riprendere la battaglia?", "Retomar batalha?", "Продовжити битву?", "Strijd hervatten?", "Savaşa devam?"),
         "resume_desc" to t("Poprzednia bitwa została przerwana. Możesz ją dokończyć albo porzucić.", "Your previous battle was interrupted. You can finish it or discard it.", "Deine letzte Schlacht wurde unterbrochen. Du kannst sie beenden oder verwerfen.", "Tu batalla anterior se interrumpió. Puedes terminarla o descartarla.", "Ta bataille précédente a été interrompue. Tu peux la terminer ou l'abandonner.", "La battaglia precedente è stata interrotta. Puoi finirla o scartarla.", "Sua batalha anterior foi interrompida. Você pode terminá-la ou descartá-la.", "Попередню битву перервано. Можна її завершити або скасувати.", "Je vorige strijd werd onderbroken. Je kunt hem afmaken of weggooien.", "Önceki savaşın yarıda kaldı. Bitirebilir veya iptal edebilirsin."),
@@ -914,5 +932,54 @@ object L {
         "u_bio_leviathan_t2" to t("Weteran: Lewiatan tkankowy", "Veteran Tissue leviathan", "Veteran Gewebeleviathan", "Veterano: Leviatán tisular", "Vétéran : Léviathan tissulaire", "Veterano: Leviatano tissutale", "Veterano: Leviatã de tecido", "Ветеран: Тканинний левіафан", "Veteraan Weefselleviathan", "Kıdemli Doku leviathanı"),
         "u_bio_leviathan_t3" to t("Gwardia: Lewiatan tkankowy", "Elite Tissue leviathan", "Elite-Gewebeleviathan", "Élite: Leviatán tisular", "Élite : Léviathan tissulaire", "Élite: Leviatano tissutale", "Elite: Leviatã de tecido", "Гвардія: Тканинний левіафан", "Elite Weefselleviathan", "Seçkin Doku leviathanı"),
         "u_bio_leviathan_fl" to t("Kosztowne, żywe konstrukcje powoli regenerują uszkodzenia. Elitarna machina oblężnicza.", "Expensive living constructs slowly regenerate damage. Elite siege machine.", "Teure lebende Konstrukte regenerieren langsam Schäden. Elite-Belagerungsmaschine.", "Constructos vivos caros que regeneran daños lentamente. Máquina de asedio de élite.", "Structures vivantes coûteuses qui régénèrent lentement. Machine de siège d'élite.", "Costrutti viventi costosi che rigenerano lentamente. Macchina d'assedio d'élite.", "Estruturas vivas caras que regeneram lentamente. Máquina de cerco de elite.", "Дорогі живі конструкції повільно відновлюють ушкодження. Елітна облогова машина.", "Dure levende constructies herstellen langzaam schade. Elite belegeringsmachine.", "Pahalı canlı yapılar hasarı yavaşça yeniler. Seçkin kuşatma makinesi."),
+    )
+
+    private fun part4(): Array<Pair<String, Array<out String>>> = arrayOf(
+        // --- historia i statystyki bitew
+        "bh_history" to t("Historia", "History", "Verlauf", "Historial", "Historique", "Cronologia", "Histórico", "Історія", "Geschiedenis", "Geçmiş"),
+        "bh_today" to t("dziś", "today", "heute", "hoy", "aujourd’hui", "oggi", "hoje", "сьогодні", "vandaag", "bugün"),
+        "bh_yesterday" to t("wczoraj", "yesterday", "gestern", "ayer", "hier", "ieri", "ontem", "учора", "gisteren", "dün"),
+        "bh_days_ago" to t("%d d temu", "%d days ago", "vor %d Tagen", "hace %d días", "il y a %d jours", "%d giorni fa", "há %d dias", "%d дн. тому", "%d dagen geleden", "%d gün önce"),
+        "bh_empty" to t("Brak bitew — zagraj!", "No battles yet — play!", "Noch keine Schlachten", "Sin batallas", "Aucune bataille", "Nessuna battaglia", "Sem batalhas", "Поки немає битв", "Nog geen gevechten", "Henüz savaş yok"),
+        "bh_details" to t("Szczegóły bitwy", "Battle details", "Schlachtdetails", "Detalles de batalla", "Détails de bataille", "Dettagli battaglia", "Detalhes da batalha", "Деталі битви", "Gevechtsdetails", "Savaş ayrıntıları"),
+        "bh_by_mode" to t("Wyniki w trybach", "Results by mode", "Ergebnisse nach Modus", "Resultados por modo", "Résultats par mode", "Risultati per modalità", "Resultados por modo", "Результати за режимом", "Resultaten per modus", "Modlara göre sonuçlar"),
+        "bh_total" to t("Podsumowanie", "Summary", "Übersicht", "Resumen", "Résumé", "Riepilogo", "Resumo", "Підсумок", "Overzicht", "Özet"),
+        "bh_battles" to t("Bitwy", "Battles", "Schlachten", "Batallas", "Batailles", "Battaglie", "Batalhas", "Битви", "Gevechten", "Savaşlar"),
+        "bh_wins" to t("Wygrane", "Wins", "Siege", "Victorias", "Victoires", "Vittorie", "Vitórias", "Перемоги", "Overwinningen", "Galibiyetler"),
+        "bh_streak" to t("Obecna seria", "Current streak", "Aktuelle Serie", "Racha actual", "Série actuelle", "Serie attuale", "Série atual", "Поточна серія", "Huidige reeks", "Güncel seri"),
+        "bh_best_streak" to t("Najdłuższa seria", "Best streak", "Beste Serie", "Mejor racha", "Meilleure série", "Serie migliore", "Melhor série", "Найкраща серія", "Beste reeks", "En iyi seri"),
+        "bh_total_time" to t("Łączny czas", "Total time", "Gesamtzeit", "Tiempo total", "Temps total", "Tempo totale", "Tempo total", "Загальний час", "Totale tijd", "Toplam süre"),
+        "bh_role" to t("Ulubiona rola", "Favorite role", "Lieblingsrolle", "Rol favorita", "Rôle préféré", "Ruolo preferito", "Papel favorito", "Улюблена роль", "Favoriete rol", "Favori rol"),
+        "bh_doctrine" to t("Najczęstsza doktryna", "Top doctrine", "Häufigste Doktrin", "Doctrina habitual", "Doctrine fréquente", "Dottrina frequente", "Doutrina frequente", "Часта доктрина", "Vaakste doctrine", "Sık doktrin"),
+        "bh_best" to t("Najlepsze wyniki", "Best scores", "Bestwerte", "Mejores puntos", "Meilleurs scores", "Punteggi migliori", "Melhores pontos", "Рекордні бали", "Beste scores", "En iyi skorlar"),
+        "bh_last14" to t("Ostatnie 14 dni", "Last 14 days", "Letzte 14 Tage", "Últimos 14 días", "14 derniers jours", "Ultimi 14 giorni", "Últimos 14 dias", "Останні 14 днів", "Laatste 14 dagen", "Son 14 gün"),
+        "bh_endless20" to t("Ostatnie 20 oblężeń", "Last 20 sieges", "Letzte 20 Belagerungen", "Últimos 20 asedios", "20 derniers sièges", "Ultimi 20 assedi", "Últimos 20 cercos", "Останні 20 облог", "Laatste 20 belegeringen", "Son 20 kuşatma"),
+        "bh_vs_ai" to t("Zwycięstwa z AI", "Wins vs AI", "Siege gegen KI", "Victorias contra IA", "Victoires contre IA", "Vittorie contro IA", "Vitórias contra IA", "Перемоги над ШІ", "Zeges tegen AI", "Yapay zekâya karşı"),
+        "bh_local" to t("Styl gry: 100 ostatnich bitew na tym urządzeniu", "Playstyle: last 100 battles on this device", "Spielstil: letzte 100 lokale Schlachten", "Estilo: últimas 100 batallas locales", "Style : 100 dernières batailles locales", "Stile: ultime 100 battaglie locali", "Estilo: últimas 100 batalhas locais", "Стиль: 100 останніх місцевих битв", "Speelstijl: laatste 100 lokale gevechten", "Tarz: son 100 yerel savaş"),
+        "bh_date" to t("Data", "Date", "Datum", "Fecha", "Date", "Data", "Data", "Дата", "Datum", "Tarih"),
+        "bh_stage" to t("Etap", "Stage", "Etappe", "Etapa", "Étape", "Tappa", "Etapa", "Етап", "Etappe", "Aşama"),
+        "bh_surrendered" to t("PODDANIE", "SURRENDER", "AUFGABE", "RENDICIÓN", "ABANDON", "RESA", "RENDIÇÃO", "ЗДАЧА", "OPGAVE", "TESLİM"),
+        "bh_lost" to t("Stracone jednostki", "Units lost", "Verlorene Einheiten", "Unidades perdidas", "Unités perdues", "Unità perse", "Unidades perdidas", "Втрачено бійців", "Verloren eenheden", "Kaybedilen birimler"),
+        "bh_era" to t("Epoka końcowa", "Final era", "Letzte Epoche", "Era final", "Ère finale", "Era finale", "Era final", "Кінцева епоха", "Eindtijdperk", "Son çağ"),
+        "bh_advanced" to t("Awanse epok", "Era advances", "Epochenaufstiege", "Avances de era", "Passages d’ère", "Avanzamenti d’era", "Avanços de era", "Переходи епох", "Tijdperkwissels", "Çağ atlamaları"),
+        "bh_roles" to t("Wyszkolone role", "Trained roles", "Ausgebildete Rollen", "Roles entrenados", "Rôles entraînés", "Ruoli addestrati", "Papéis treinados", "Навчені ролі", "Getrainde rollen", "Eğitilen roller"),
+        "bh_doctrines" to t("Doktryny", "Doctrines", "Doktrinen", "Doctrinas", "Doctrines", "Dottrine", "Doutrinas", "Доктрини", "Doctrines", "Doktrinler"),
+        "bh_cards" to t("Karty oblężenia", "Siege cards", "Belagerungskarten", "Cartas de asedio", "Cartes de siège", "Carte d’assedio", "Cartas de cerco", "Карти облоги", "Belegeringskaarten", "Kuşatma kartları"),
+        "bh_barrages" to t("Ostrzały", "Barrages", "Sperrfeuer", "Bombardeos", "Barrages", "Bombardamenti", "Bombardeios", "Обстріли", "Spervuur", "Baraj ateşi"),
+        "bh_gold" to t("Zarobione złoto", "Gold earned", "Verdientes Gold", "Oro ganado", "Or gagné", "Oro guadagnato", "Ouro ganho", "Здобуте золото", "Verdiend goud", "Kazanılan altın"),
+        "bh_damage" to t("Obrażenia bazy", "Base damage taken", "Basisschaden", "Daño a la base", "Dégâts à la base", "Danni alla base", "Dano na base", "Шкода базі", "Basisschade", "Üs hasarı"),
+        "bh_wave" to t("Fala", "Wave", "Welle", "Oleada", "Vague", "Ondata", "Onda", "Хвиля", "Golf", "Dalga"),
+        "bh_bosses" to t("Pokonani bossowie", "Bosses defeated", "Besiegte Bosse", "Jefes derrotados", "Boss vaincus", "Boss sconfitti", "Chefes derrotados", "Переможені боси", "Verslagen bazen", "Yenilen patronlar"),
+        "bh_opponent" to t("Osobowość wroga", "Enemy personality", "Feindpersönlichkeit", "Personalidad rival", "Profil adverse", "Personalità avversaria", "Personalidade inimiga", "Тип супротивника", "Vijandtype", "Rakip kişiliği"),
+        "bh_replay" to t("Powtórka", "Replay", "Wiederholung", "Repetición", "Rejouer", "Replay", "Repetição", "Повтор", "Herhaling", "Tekrar"),
+        "bh_role_0" to t("Wręcz", "Melee", "Nahkampf", "Cuerpo a cuerpo", "Mêlée", "Mischia", "Corpo a corpo", "Ближній бій", "Melee", "Yakın dövüş"),
+        "bh_role_1" to t("Dystans", "Ranged", "Fernkampf", "Distancia", "Distance", "Distanza", "Distância", "Дальній бій", "Afstand", "Menzilli"),
+        "bh_role_2" to t("Ciężka", "Heavy", "Schwer", "Pesada", "Lourde", "Pesante", "Pesada", "Важкі", "Zwaar", "Ağır"),
+        "bh_role_3" to t("Elita", "Elite", "Elite", "Élite", "Élite", "Élite", "Elite", "Еліта", "Elite", "Seçkin"),
+        "bh_ai_0" to t("Szturmowiec", "Assault", "Stürmer", "Asalto", "Assaut", "Assalto", "Assalto", "Штурмовик", "Aanval", "Taarruz"),
+        "bh_ai_1" to t("Inżynier", "Engineer", "Ingenieur", "Ingeniero", "Ingénieur", "Ingegnere", "Engenheiro", "Інженер", "Ingenieur", "Mühendis"),
+        "bh_ai_2" to t("Ekonomista", "Economist", "Ökonom", "Economista", "Économiste", "Economista", "Economista", "Економіст", "Econoom", "Ekonomist"),
+        "bh_ai_3" to t("Oblężnik", "Sieger", "Belagerer", "Asediador", "Assiégeant", "Assediante", "Sitiador", "Обложник", "Belegeraar", "Kuşatmacı"),
+        "bh_ai_4" to t("Zrównoważony", "Balanced", "Ausgewogen", "Equilibrado", "Équilibré", "Equilibrato", "Equilibrado", "Збалансований", "Evenwichtig", "Dengeli"),
     )
 }

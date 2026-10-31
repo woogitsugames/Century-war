@@ -28,6 +28,7 @@ import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
+import com.centurywar.meta.BattleHistory
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -523,6 +524,59 @@ class ScreenshotTest {
             }
         } finally {
             com.centurywar.engine.L.lang = priorLang
+        }
+    }
+
+    /** Widok pusty, statystyki, historia i szczegóły na czterech proporcjach ekranu. */
+    @Test
+    fun battleHistoryScreens() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val local = File.createTempFile("cw-history-shot", ".json").apply { delete() }
+            val archive = BattleHistory(local)
+            g.history = archive
+            val empty = StatsScreen(g)
+            g.setScreen(empty)
+            shot(g, tag + "_stats_empty")
+            empty.onClick(empty.buttons.first { it.id == 11 })
+            shot(g, tag + "_history_empty")
+
+            val now = System.currentTimeMillis()
+            archive.add(BattleHistory.Record(
+                date = now - 86_400_000L, mode = Mode.SKIRMISH.ordinal,
+                result = BattleHistory.LOSS, score = 1490, seconds = 230,
+                kills = 24, lost = 31, era = 4, advanced = 3,
+                roles = intArrayOf(12, 10, 5, 4), doctrines = 3, turrets = 2,
+                barrages = 3, rallies = 1, gold = 4500, baseDamage = 350,
+                aiPower = 110, personality = 1, medals = 7, tipKey = "tip_eco",
+            ))
+            archive.add(BattleHistory.Record(
+                date = now, mode = Mode.ENDLESS.ordinal, result = BattleHistory.WIN,
+                score = 9350, seconds = 420, kills = 45, lost = 40,
+                era = 5, advanced = 4, roles = intArrayOf(7, 15, 12, 6),
+                doctrines = 7, cards = IntArray(30) { if (it < 2) it + 1 else 0 },
+                turrets = 4, barrages = 5, rallies = 2, gold = 9000,
+                baseDamage = 600, wave = 17, bosses = 2, medals = 70,
+            ))
+            g.profile.recordBattle(Mode.SKIRMISH, false, 230)
+            g.profile.recordBattle(Mode.ENDLESS, true, 420)
+            g.profile.submit(Profile.BOARD_ENDLESS, 9350, 20_000L)
+            val stats = StatsScreen(g)
+            g.setScreen(stats)
+            shot(g, tag + "_stats")
+            stats.onClick(stats.buttons.first { it.id == 11 })
+            shot(g, tag + "_history")
+            val panel = field(stats, "panel").get(stats) as android.graphics.RectF
+            stats.onTap(panel.centerX(), panel.top + 40 * g.ui.dp)
+            shot(g, tag + "_history_detail")
+            archive.awaitWrites()
+            archive.close()
         }
     }
 }

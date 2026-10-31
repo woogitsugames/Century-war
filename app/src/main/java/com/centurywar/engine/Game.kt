@@ -12,6 +12,7 @@ import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
+import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Missions
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
@@ -69,6 +70,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var snapshots: SnapshotStore? = null
     /** Powtórki i indeks są czytane wyłącznie przez wątek I/O. */
     var replays: ReplayStore? = null
+    /** Plik historii jest lokalny i nigdy nie jest synchronizowany z chmurą. */
+    var history: BattleHistory? = null
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
 

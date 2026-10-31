@@ -107,6 +107,8 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:testDebugUnitTest \
             --tests '*ProfileTest*' \
+            --tests '*ProfileCloudTest*' \
+            --tests '*BattleHistoryTest*' \
             --tests '*BattleScreenTest*' \
             --tests '*BackLocaleTest*' \
             --tests '*ScreenshotTest*' \

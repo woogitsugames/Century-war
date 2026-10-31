@@ -72,6 +72,7 @@ object Icons {
     const val HEART = 51
     const val SPEAKER = 52
     const val NOTE = 53
+    const val CHART = 54
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -172,6 +173,7 @@ object Icons {
             HEART -> heart(c)
             SPEAKER -> speaker(c)
             NOTE -> note(c)
+            CHART -> chart(c)
         }
         c.restoreToCount(save)
     }
@@ -252,6 +254,15 @@ object Icons {
     }
 
     // ------------------------------------------------------------ ikony
+
+    /** Słupki i trend na małym ekranie; kontur zgodny z resztą ikon. */
+    private fun chart(c: Canvas) {
+        rect(c, -0.92f, 0.22f, -0.53f, 0.88f, BLUE, 0.04f)
+        rect(c, -0.34f, -0.16f, 0.05f, 0.88f, GOLD, 0.04f)
+        rect(c, 0.25f, -0.75f, 0.66f, 0.88f, GREEN, 0.04f)
+        stroke(c, -0.94f, 0.98f, 0.93f, 0.98f, 0.09f, STEEL)
+    }
+
 
     private fun sword(c: Canvas, scale: Float) {
         c.save(); c.scale(scale, scale)

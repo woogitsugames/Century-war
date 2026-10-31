@@ -22,6 +22,10 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val rename = btn(-2)
     private val achievementsButton = btn(101)
     private val replayListButton = btn(102)
+    private val statsButton = btn(103)
+    private val rankLabels = Array(20) { (it + 1).toString() + "." }
+    private var cachedEntries: List<com.centurywar.meta.ScoreEntry> = emptyList()
+    private var cachedScores = emptyArray<String>()
     private val global = btn(-3)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
@@ -45,6 +49,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         1 -> Profile.dailyBoard(day)
         2 -> Profile.BOARD_CAMPAIGN
         else -> Profile.BOARD_SKIRMISH
+    }
+
+    private fun cacheRows() {
+        cachedEntries = g.profile.top(board(tab)).toList()
+        cachedScores = Array(cachedEntries.size) { cachedEntries[it].score.toString() }
     }
 
     override fun layout() {
@@ -72,6 +81,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         replayListButton.label = L["replay_list"]
         replayListButton.iconId = Icons.PLAY
         replayListButton.set(panel.left + 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
+        statsButton.label = L["stats"]
+        statsButton.iconId = Icons.CHART
+        val sw = min(200 * dp, pw * 0.48f)
+        statsButton.set(panel.centerX() - sw / 2, panel.bottom - 50 * dp, sw, 31 * dp)
+        cacheRows()
         global.visible = g.online.available
         if (global.visible) {
             global.label = L["global_ranking"]
@@ -96,20 +110,22 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f); ui.button(c, rename, 14f)
         ui.button(c, achievementsButton, 13f)
         ui.button(c, replayListButton, 13f)
+        ui.button(c, statsButton, 12f)
         if (global.visible) ui.button(c, global, 14f)
         chrome.title(c, L["rankings"])
-        val list = g.profile.top(board(tab))
+        val list = cachedEntries
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
         var y = panel.top + 54 * dp
-        val bottomLimit = panel.bottom - (if (global.visible) 102 * dp else 52 * dp)
+        val bottomLimit = panel.bottom - (if (global.visible) 112 * dp else 62 * dp)
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
             ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
         }
         val lh = 34 * dp
-        for ((i, e) in list.withIndex()) {
+        for (i in list.indices) {
+            val e = list[i]
             if (y + lh > bottomLimit) break
             val me = e.name == g.profile.name
             row.set(l, y, r, y + lh - 4 * dp)
@@ -124,25 +140,19 @@ class RankingsScreen(g: Game) : Screen(g) {
                 val rr = 12 * dp
                 ui.fill.color = Ui.OUTLINE; c.drawCircle(l + 22 * dp, cy, rr, ui.fill)
                 ui.fill.color = podium[i]; c.drawCircle(l + 22 * dp, cy, rr - 2 * dp, ui.fill)
-                ui.textO(c, (i + 1).toString(), l + 22 * dp, cy + 5 * dp, 13f, Ui.TEXT, Paint.Align.CENTER, 2f)
+                ui.textO(c, rankLabels[i], l + 22 * dp, cy + 5 * dp, 13f, Ui.TEXT, Paint.Align.CENTER, 2f)
             } else {
-                ui.textO(c, "${i + 1}.", l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+                ui.textO(c, rankLabels[i], l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
             val col = if (i == 0) Ui.GOLD else if (me) Ui.XP else Ui.TEXT
             if (me) Icons.draw(c, Icons.HELMET, l + 52 * dp, cy, 20 * dp, dp = dp)
             ui.textO(c, e.name, l + (if (me) 68 else 48) * dp, cy + 5 * dp, 15f, col, Paint.Align.LEFT, 1.8f)
             val hasReplay = e.replay in existingReplayIds
             if (hasReplay) Icons.draw(c, Icons.PLAY, r - 15 * dp, cy, 17 * dp, Ui.GOLD, dp = dp)
-            ui.textO(c, e.score.toString(), r - (if (hasReplay) 33 else 12) * dp,
+            ui.textO(c, cachedScores[i], r - (if (hasReplay) 33 else 12) * dp,
                 cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
-        val pr = g.profile
-        val hrs = pr.playSeconds / 3600f
-        row.set(l, panel.bottom - 48 * dp, r, panel.bottom - 46 * dp)
-        ui.fill.color = Color.argb(60, 255, 255, 255); c.drawRect(row, ui.fill)
-        ui.textO(c, "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(hrs)} h",
-            panel.centerX(), panel.bottom - 28 * dp, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)
         val onlineStatus = if (!global.visible) "online_note" else when (g.online.state) {
             OnlineState.CONNECTED -> "pgs_connected"
             OnlineState.SYNCING -> "pgs_syncing"
@@ -169,9 +179,10 @@ class RankingsScreen(g: Game) : Screen(g) {
             -1 -> g.pop()
             101 -> g.push(AchievementsScreen(g))
             102 -> g.push(ReplayListScreen(g))
+            103 -> g.push(StatsScreen(g))
             -3 -> if (g.online.available) g.online.showUi(board(tab))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
-            in 0..3 -> tab = b.id
+            in 0..3 -> { tab = b.id; cacheRows() }
         }
     }
 }
