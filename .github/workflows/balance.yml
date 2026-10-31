@@ -33,9 +33,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: SDK 36
-        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Budowanie i testy podstawowe
         run: |
           ./gradlew :app:assembleDebug --console=plain
