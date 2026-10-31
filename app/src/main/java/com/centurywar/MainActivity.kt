@@ -3,7 +3,9 @@ package com.centurywar
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.TimePickerDialog
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -40,6 +42,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class MainActivity : Activity(), Host {
 
+    companion object {
+        /** Od tej najmniejszej szerokości (dp) ekran jest „duży”: rozłożony Fold, tablet. */
+        const val LARGE_SCREEN_DP = 600
+    }
+
     private lateinit var game: Game
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
@@ -47,6 +54,7 @@ class MainActivity : Activity(), Host {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyOrientation(resources.configuration)
         val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
         profile.pruneDailyBoards(Daily.dayNumber())
         game = Game(this, profile, Quality.detect(this))
@@ -242,6 +250,23 @@ class MainActivity : Activity(), Host {
     // zapamiętujemy wartość (dawniej: UninitializedPropertyAccessException i crash przy starcie).
     private var pendingRenderScale = Float.NaN
     private var pendingFrameRate = -1
+
+    /**
+     * Telefony: tylko poziom (manifest: sensorLandscape). Duże, prawie kwadratowe ekrany
+     * (rozłożony Fold, tablet): dowolna orientacja, inaczej system potrafi uznać za „poziom”
+     * inne ułożenie niż to, w którym gracz trzyma urządzenie, i obraz jest obrócony o 90°.
+     */
+    private fun applyOrientation(cfg: Configuration) {
+        val want = if (cfg.smallestScreenWidthDp >= LARGE_SCREEN_DP) ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        if (requestedOrientation != want) requestedOrientation = want
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Złożenie/rozłożenie Folda nie restartuje Activity (configChanges), więc orientację ustawiamy tutaj.
+        applyOrientation(newConfig)
+    }
 
     override fun applyRenderScale(scale: Float) {
         runOnUiThread { if (::view.isInitialized) view.setRenderScale(scale) else pendingRenderScale = scale }

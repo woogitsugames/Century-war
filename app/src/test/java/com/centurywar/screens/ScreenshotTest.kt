@@ -97,6 +97,8 @@ class ScreenshotTest {
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
+            // Rozłożony Fold trzymany pionowo: na dużych ekranach orientacja jest dowolna.
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
         )) {
             val g = game(dims[0], dims[1], dims[2] / 1.0f * 0.9f, if (tag == "phone720") Quality.LOW else Quality.HIGH)
             g.profile.stars[0] = 3; g.profile.stars[1] = 2; g.profile.stars[2] = 1
