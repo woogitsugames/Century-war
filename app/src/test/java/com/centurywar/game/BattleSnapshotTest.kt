@@ -187,7 +187,7 @@ class BattleSnapshotTest {
     @Test
     fun rangedProjectileResumesWithCounterBonus() {
         val battle = Battle(BattleConfig(Mode.SKIRMISH, 454L, 1f, startEra = 4, maxEra = 4))
-        battle.ai = null
+        battle.ai!!.thinkTimer = 1000f
         assertTrue(battle.spawn(battle.player, Defs.unit(4, Role.RANGED)))
         assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
         val shooter = battle.units.first { it.alive && it.side == 0 }
@@ -211,7 +211,7 @@ class BattleSnapshotTest {
     @Test
     fun steamTurretProjectileResumesWithHeavyBonus() {
         val battle = Battle(BattleConfig(Mode.SKIRMISH, 455L, 1f, startEra = 4, maxEra = 4))
-        battle.ai = null
+        battle.ai!!.thinkTimer = 1000f
         battle.player.turretEra[0] = 4
         battle.player.turretCd[0] = 0f
         assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
