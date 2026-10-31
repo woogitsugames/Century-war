@@ -136,7 +136,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                 }
             } catch (e: Exception) {
                 CrashReports.frameError(e)
-                android.util.Log.e("CenturyWar", "frame error", e)
+                android.util.Log.e("CenturyWar", "frame error: " + e.javaClass.name)
             } finally {
                 if (c != null) try {
                     holder.unlockCanvasAndPost(c)
