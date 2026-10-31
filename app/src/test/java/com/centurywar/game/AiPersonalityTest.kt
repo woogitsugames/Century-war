@@ -77,6 +77,39 @@ class AiPersonalityTest {
     }
 
     @Test
+    fun hiddenArmyDoesNotChangeAiOrdersOrTriggerBarrage() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 34L, 1f,
+            modifiers = setOf(Modifier.FOG_OF_WAR),
+            aiPersonality = AiPersonality.BALANCED)
+        val hidden = Battle(cfg)
+        val empty = Battle(cfg)
+        for (i in 0 until 4) {
+            val u = hidden.units[i]
+            u.active = true
+            u.dying = -1f
+            u.side = 0
+            u.def = Defs.unit(0, Role.RANGED)
+            u.x = hidden.enemy.baseFront - 900f
+            u.hp = u.def.hp
+            u.dmg = u.def.dmg
+        }
+        hidden.ai!!.update(1f)
+        empty.ai!!.update(1f)
+        assertEquals(empty.enemy.queueSize, hidden.enemy.queueSize)
+        assertEquals(empty.enemy.queue[0], hidden.enemy.queue[0])
+        assertEquals(0f, hidden.enemy.abilityCd[0], 0f)
+    }
+
+    @Test
+    fun noUndisclosedArmyOrTurretBonuses() {
+        val b = Battle(BattleConfig(Mode.CAMPAIGN, 18L, 1.7f,
+            stageIndex = 24))
+        assertEquals(b.player.cap, b.enemy.cap)
+        assertEquals(b.player.slots, b.enemy.slots)
+        assertTrue("mnożnik dochodów jest jawny", b.enemy.incomeMul == 1.7f)
+    }
+
+    @Test
     fun aimedBarrageHitsOnlyNearTargetAndOldApiStillWorks() {
         val cfg = BattleConfig(Mode.SKIRMISH, 17L, 1f)
         val battle = Battle(cfg)
