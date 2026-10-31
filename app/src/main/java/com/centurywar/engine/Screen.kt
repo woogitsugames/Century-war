@@ -50,7 +50,9 @@ abstract class Screen(val g: Game) {
                 lastX = e.x; lastY = e.y
             }
             TouchEvent.UP, TouchEvent.CANCEL -> {
-                if (e.pointer != activePointer) return
+                // CANCEL anuluje cały gest (niezależnie od id palca), inaczej activePointer mógłby
+                // utknąć i ekran przestałby reagować na dotyk.
+                if (activePointer == -1 || (e.action == TouchEvent.UP && e.pointer != activePointer)) return
                 activePointer = -1
                 if (e.action == TouchEvent.UP && !dragging) {
                     var hit = false
