@@ -700,6 +700,21 @@ class Battle(val cfg: BattleConfig) {
     }
 
     private fun updateFronts() {
+        if (!useIndexedScan) {
+            // Referencyjna wersja sprzed optymalizacji: dwukrotny skan wszystkich slotów.
+            for (s in sides) {
+                var front = s.baseFront
+                var count = 0
+                for (u in units) {
+                    if (!u.alive || u.side != s.index) continue
+                    count++
+                    if ((u.x - front) * s.dir > 0f) front = u.x
+                }
+                s.front = front
+                s.aliveCount = count
+            }
+            return
+        }
         val left = sides[0]
         val right = sides[1]
         var leftFront = left.baseFront
