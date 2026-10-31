@@ -109,6 +109,28 @@ class ProfileTest {
     }
 
     @Test
+    fun sfxVolumeRoundTripLegacyAndInvalidValues() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(0.8f, p.sfxVolume, 0.0001f)
+        p.sfxVolume = 0.63f
+        p.save()
+        assertEquals(0.63f, Profile(f).also { it.load() }.sfxVolume, 0.0001f)
+        f.writeText("""{"sound":false}""")
+        val mutedLegacy = Profile(f).also { it.load() }
+        assertFalse(mutedLegacy.sound)
+        assertEquals(0.8f, mutedLegacy.sfxVolume, 0.0001f)
+        f.writeText("""{"sfxVolume":2}""")
+        assertEquals(1f, Profile(f).also { it.load() }.sfxVolume, 0.0001f)
+        f.writeText("""{"sfxVolume":-3}""")
+        assertEquals(0f, Profile(f).also { it.load() }.sfxVolume, 0.0001f)
+        f.writeText("""{"sfxVolume":"NaN"}""")
+        assertEquals(0.8f, Profile(f).also { it.load() }.sfxVolume, 0.0001f)
+        f.writeText("""{"v":1,"name":"Stary profil"}""")
+        assertEquals(0.8f, Profile(f).also { it.load() }.sfxVolume, 0.0001f)
+    }
+
+    @Test
     fun musicVolumeDefaultsPersistsAndClamps() {
         val f = tmpFile()
         val p = Profile(f)
