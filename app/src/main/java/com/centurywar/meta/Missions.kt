@@ -199,14 +199,14 @@ class Missions(private val profile: Profile) {
     }
 
     /** Wynik przekazujemy dokładnie raz dla każdej zakończonej bitwy. */
-    fun onBattleEnd(battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true) {
+    fun onBattleEnd(battle: Battle, nowMillis: Long = System.currentTimeMillis(), persist: Boolean = true, newStars: Int = 0) {
         if (!refreshInternal(nowMillis, false)) return
-        for (item in state.daily) updateBattle(item, battle)
-        for (item in state.weekly) updateBattle(item, battle)
+        for (item in state.daily) updateBattle(item, battle, newStars)
+        for (item in state.weekly) updateBattle(item, battle, newStars)
         if (persist) profile.save()
     }
 
-    private fun updateBattle(item: MissionItem, battle: Battle) {
+    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int) {
         val player = battle.player
         val won = battle.winner == 0
         val campaign = battle.cfg.mode == Mode.CAMPAIGN
@@ -231,7 +231,7 @@ class Missions(private val profile: Profile) {
             MissionType.DAILY_BATTLES -> if (battle.cfg.mode == Mode.DAILY) item.add(1)
             MissionType.ENDLESS_BATTLES -> if (endless) item.add(1)
             MissionType.HEALTHY_WINS -> if (won && player.baseMaxHp > 0f && player.baseHp / player.baseMaxHp >= 0.75f) item.add(1)
-            MissionType.STARS -> if (won && campaign) item.add(battle.stars())
+            MissionType.STARS -> if (won && campaign) item.add(newStars)
             MissionType.ARMORY -> item.add(player.armory)
             MissionType.TURRETS -> item.add(player.turretsBuilt)
             MissionType.BARRAGES -> item.add(player.barragesUsed)
@@ -259,7 +259,7 @@ class Missions(private val profile: Profile) {
         val item = state.daily.firstOrNull { it.id == id } ?: state.weekly.firstOrNull { it.id == id } ?: return 0
         if (!item.completed || item.claimed) return 0
         item.claimed = true
-        profile.medals += item.reward
+        profile.medals = (profile.medals.toLong() + item.reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         profile.save()
         return item.reward
     }
@@ -270,7 +270,7 @@ class Missions(private val profile: Profile) {
         if (state.loginDay != utcDay(nowMillis) || state.loginClaimedDay == state.loginDay) return 0
         val reward = LOGIN_REWARDS[state.loginStreak.coerceIn(1, 7) - 1] + profile.totalStars() / 16
         state.loginClaimedDay = state.loginDay
-        profile.medals += reward
+        profile.medals = (profile.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         profile.save()
         return reward
     }

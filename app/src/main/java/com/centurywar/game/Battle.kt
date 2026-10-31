@@ -145,6 +145,8 @@ class Battle(val cfg: BattleConfig) {
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
         const val ENDLESS_CHOICE_EVERY = 5
+        /** Samouczek: po tylu sekundach symulacji AI zaczyna grać. */
+        const val TUTORIAL_AI_DELAY = 25f
     }
 
     val rng = Rng(cfg.seed)
@@ -204,6 +206,7 @@ class Battle(val cfg: BattleConfig) {
         if (Modifier.ARMORED_FOE in mods) e.hpMul *= 1.3f
         if (e.slots > 0) e.slots = min(Defs.MAX_TURRET_SLOTS, 2 + max(0, cfg.stageIndex) / 10)
         e.cap = if (cfg.aiPower > 1.2f) 14 else 12
+        if (cfg.tutorial) { e.gold *= 0.5f; p.xpMul *= 1.5f } // samouczek: łagodniejszy start, szybszy awans
         if (endless) {
             e.queueMax = QUEUE_CAP
             e.cap = 30
@@ -423,7 +426,7 @@ class Battle(val cfg: BattleConfig) {
         }
         for (s in sides) promote(s)
         if (endless) director(dt)
-        ai?.update(dt)
+        if (!cfg.tutorial || time >= TUTORIAL_AI_DELAY) ai?.update(dt)
         playerAi?.update(dt)
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
@@ -531,7 +534,10 @@ class Battle(val cfg: BattleConfig) {
     private fun turrets(s: Side, dt: Float) {
         val enemyIdx = 1 - s.index
         val target = frontUnit(enemyIdx) ?: run {
-            for (i in 0 until s.slots) if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+            for (i in 0 until s.slots) {
+                if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+                if (s.turretFire[i] > 0f) s.turretFire[i] -= dt
+            }
             return
         }
         for (i in 0 until s.slots) {
@@ -709,9 +715,10 @@ class Battle(val cfg: BattleConfig) {
 
     private fun damageBase(s: Side, d: Float, attacker: Int) {
         if (endless && s.index == 1) return
-        s.baseHp -= d * siegePressure()
-        s.baseFlash = 0.15f
         val k = sides[attacker]
+        // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
+        s.baseHp -= d * k.siegeMul * siegePressure()
+        s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
         fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index)
     }
