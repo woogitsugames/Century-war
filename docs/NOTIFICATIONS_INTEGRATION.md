@@ -3,7 +3,7 @@
 ## Działanie
 
 - Domyślnie `Profile.notifications = true`, `Profile.notifyHour = 18` (godzina lokalna, 0–23).
-- Dopiero pierwsze **nowe zwycięstwo** wykryte przez `Game` uruchamia zapytanie o `POST_NOTIFICATIONS` (Android 13+). Na starszych wersjach po zwycięstwie zakładany jest alarm bez pytania. Zgoda może być ponownie zaproponowana przy kolejnym zwycięstwie po upływie 14 dni od odmowy.
+- Dopiero **zwycięstwo w bitwie** (po zapisaniu wyniku w `BattleScreen`) uruchamia zapytanie o `POST_NOTIFICATIONS` (Android 13+). Na starszych wersjach po zwycięstwie zakładany jest alarm bez pytania. Zgoda może być ponownie zaproponowana przy kolejnym zwycięstwie po upływie 14 dni od odmowy.
 - Harmonogram opiera się na `AlarmManager.setAndAllowWhileIdle(RTC_WAKEUP)`; nie jest dokładny i może być opóźniony przez Doze. Nie używa `SCHEDULE_EXACT_ALARM` ani AndroidX.
 - Po restarcie, aktualizacji pakietu oraz zmianie czasu/strefy lokalnej alarm jest uzbrajany ponownie. Po każdym alarmie planowany jest kolejny termin.
 - Ustawienia i informacja o podejściu rankingowym są wczytywane strumieniowo z `profile.json` bez tworzenia `Game` i `Profile`. Data wyzwania jest UTC (`Daily.dayNumber`), godzina alarmu — lokalna.
@@ -34,4 +34,4 @@
 ## Ograniczenia
 
 - Dokładna pora dostarczenia nie jest gwarantowana (Doze, ograniczenia baterii producenta, force-stop, brak uruchomienia aplikacji po instalacji). Alarm nie przetrwa ręcznego wymuszenia zatrzymania aplikacji, dopóki użytkownik jej nie uruchomi.
-- Akcja po dotknięciu powiadomienia otwiera `MainActivity`, nie przenosi bezpośrednio na ekran wyzwania (ekrany są zablokowane).
+- Akcja po dotknięciu powiadomienia otwiera `MainActivity`, nie przenosi bezpośrednio na ekran wyzwania.

@@ -12,6 +12,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import com.centurywar.MainActivity
+import com.centurywar.R
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Daily
 
@@ -88,7 +89,7 @@ object DailyReminders {
             context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = Notification.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_daily_notification)
             .setContentTitle(DailyReminderTexts.title(profile.lang))
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
