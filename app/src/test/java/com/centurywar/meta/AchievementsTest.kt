@@ -38,9 +38,9 @@ class AchievementsTest {
 
     @Test
     fun catalogIsCompleteAndLocalized() {
-        assertEquals(40, Achievements.all.size)
-        assertEquals(40, Achievements.all.map { it.id }.toSet().size)
-        assertEquals(40, Achievements.all.map { it.pgsKey }.toSet().size)
+        assertEquals(54, Achievements.all.size)
+        assertEquals(54, Achievements.all.map { it.id }.toSet().size)
+        assertEquals(54, Achievements.all.map { it.pgsKey }.toSet().size)
         for (a in Achievements.all) {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
