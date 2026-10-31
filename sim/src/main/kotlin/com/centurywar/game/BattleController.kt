@@ -25,7 +25,7 @@ class BattleController(
         !record || count <= events.size - needed
 
     private fun canAct(needed: Int = 1): Boolean =
-        !battle.over && battle.pendingChoice == null && battle.pendingCards == null &&
+        !battle.over && battle.pendingVariant == null && battle.pendingChoice == null && battle.pendingCards == null &&
             battle.stepCount < Replay.MAX_STEPS && capacity(needed)
 
     private fun append(kind: Replay.Kind, argument: Int = 0) {
@@ -54,12 +54,18 @@ class BattleController(
     }
 
     fun evolve(): Boolean {
-        // AI wybierze doktrynę natychmiast, dlatego rezerwujemy dwa wpisy.
-        val needed = if (battle.playerAi != null) 2 else 1
+        // AI-gracz zapisuje awans, wariant i doktrynę w tym samym kroku.
+        val next = battle.player.era + 1
+        val hasVariant = next < Defs.ERA_COUNT && battle.cfg.variantsEnabled &&
+            Defs.spec(next).variants.isNotEmpty()
+        val needed = if (battle.playerAi != null) (if (hasVariant) 3 else 2) else 1
         if (!canAct(needed) || !battle.evolve(battle.player)) return false
         append(Replay.Kind.EVOLVE)
-        if (battle.playerAi != null && battle.pendingChoice != null) {
-            check(choosePendingDoctrine()) { "Nie udało się zapisać wyboru doktryny" }
+        if (battle.playerAi != null) {
+            if (battle.pendingVariant != null)
+                check(choosePendingVariant()) { "Nie udało się zapisać wyboru wariantu" }
+            if (battle.pendingChoice != null)
+                check(choosePendingDoctrine()) { "Nie udało się zapisać wyboru doktryny" }
         }
         return true
     }
@@ -123,6 +129,16 @@ class BattleController(
         return true
     }
 
+    /** Wybór jest odtwarzany identycznie na serwerze, także w kroku zerowym. */
+    fun variant(index: Int): Boolean {
+        val era = battle.pendingVariant ?: return false
+        if (battle.over || battle.stepCount >= Replay.MAX_STEPS || !capacity() ||
+            index !in Defs.spec(era).variants.indices) return false
+        if (!battle.chooseVariant(index)) return false
+        append(Replay.Kind.VARIANT, index)
+        return true
+    }
+
     fun doctrine(index: Int): Boolean {
         val options = battle.pendingChoice ?: return false
         if (battle.over || index !in options.indices ||
@@ -164,6 +180,12 @@ class BattleController(
     }
 
     /** Automatyczny wybór po awansie lub nowej fali, bez ingerencji w RNG symulacji. */
+    internal fun choosePendingVariant(): Boolean {
+        val era = battle.pendingVariant ?: return false
+        val brain = battle.playerAi ?: return false
+        return variant(brain.chooseVariant(era))
+    }
+
     internal fun choosePendingDoctrine(): Boolean {
         val options = battle.pendingChoice ?: return false
         val brain = battle.playerAi ?: return false
@@ -221,6 +243,7 @@ class BattleController(
                 Replay.Kind.TUTORIAL_GOLD -> argument in 1..1_000_000
                 Replay.Kind.BARRAGE_AT -> argument in 0..Defs.LANE.toInt()
                 Replay.Kind.CARD -> argument in 0..2
+                Replay.Kind.VARIANT -> argument in 0..1
                 else -> argument == 0
             }
             require(valid)

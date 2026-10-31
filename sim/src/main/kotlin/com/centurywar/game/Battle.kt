@@ -60,6 +60,7 @@ class Projectile {
     var era = 0
     var shooterRole: Role? = null
     var turretEra = -1
+    var variant = -1
     var burnDps = 0f
     // Tylko dla renderera (interpolacja), NaN = pocisk z bieżącego kroku.
     var prevX = Float.NaN
@@ -70,6 +71,7 @@ class Side(val index: Int) {
     val dir = if (index == 0) 1f else -1f
     val baseFront = if (index == 0) Defs.BASE_FRONT else Defs.LANE - Defs.BASE_FRONT
     var era = 0
+    var eraVariant = -1
     /** Zakupiony stopień jednostek aktualnej epoki, według ordinal Role. */
     val unitTier = IntArray(4) { 1 }
     var gold = 0f
@@ -81,6 +83,7 @@ class Side(val index: Int) {
     var queueMax = 5
     var trainT = 0f
     val turretEra = IntArray(Defs.MAX_TURRET_SLOTS) { -1 }
+    val turretVariant = IntArray(Defs.MAX_TURRET_SLOTS) { -1 }
     val turretCd = FloatArray(Defs.MAX_TURRET_SLOTS)
     val turretFire = FloatArray(Defs.MAX_TURRET_SLOTS)
     var slots = 2
@@ -144,7 +147,9 @@ class Side(val index: Int) {
     var erasAdvanced = 0
     var baseDamageTaken = 0f
 
-    fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
+    fun unit(role: Role): UnitDef = Defs.unit(era, role, eraVariant)
+    fun turretCost(era: Int = this.era, variant: Int = if (era == this.era) eraVariant else -1): Int =
+        (Defs.turret(era, variant).cost * turretCostMul).toInt()
 }
 
 /** Kolejka zdarzeń wizualnych dla renderera. Symulacja nie zna Canvas ani Androida. */
@@ -213,6 +218,8 @@ class Battle(val cfg: BattleConfig) {
     /** Liczba zakończonych kroków; następna komenda dotyczy kroku stepCount. */
     var stepCount = 0
     var commandController: BattleController? = null
+    /** Zabezpiecza odczyt AI przed podjęciem decyzji w trakcie deserializacji. */
+    var restoringSnapshot = false
     var over = false
     var winner = -1
     var wave = 0
@@ -226,6 +233,8 @@ class Battle(val cfg: BattleConfig) {
 
     /** Doktryny podczas awansowania epoki poza trybem Endless. */
     var pendingChoice: Array<Doctrine>? = null
+    /** Epoka wymagająca wyboru; wybór jest zapisywany jako komenda VARIANT. */
+    var pendingVariant: Int? = null
     /** Osobna oferta kart dla Endless; ekran obsługuje oba rodzaje wyboru. */
     var pendingCards: Array<EndlessCard>? = null
     private val cardOffer = Array(3) { EndlessCard.ECONOMY }
@@ -241,6 +250,13 @@ class Battle(val cfg: BattleConfig) {
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
     var playerAi: Ai? = null
+        set(value) {
+            field = value
+            // Testy automatyczne bez kontrolera nie tworzą powtórki.
+            if (value != null && !restoringSnapshot && commandController == null && pendingVariant != null) {
+                chooseVariant(value.chooseVariant(player.era))
+            }
+        }
 
     init {
         val mods = cfg.modifiers
@@ -290,6 +306,9 @@ class Battle(val cfg: BattleConfig) {
             s.baseHp = s.baseMaxHp
             s.front = s.baseFront
         }
+        if (cfg.variantsEnabled && Defs.spec(cfg.startEra).variants.isNotEmpty()) {
+            for (s in sides) offerVariant(s)
+        }
     }
 
     val player get() = sides[0]
@@ -298,14 +317,14 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- komendy gracza / AI
 
     fun canQueue(side: Side, role: Role): Boolean {
-        val def = Defs.unit(side.era, role)
+        val def = side.unit(role)
         if (role == Role.ELITE && !side.eliteUnlocked) return false
         return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= def.cost
     }
 
     fun queueUnit(side: Side, role: Role): Boolean {
         if (over || !canQueue(side, role)) return false
-        val def = Defs.unit(side.era, role)
+        val def = side.unit(role)
         side.gold -= def.cost
         side.queue[side.queueSize++] = def.id
         return true
@@ -341,19 +360,47 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun canEvolve(side: Side): Boolean =
-        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && pendingChoice == null && pendingCards == null
+        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && pendingVariant == null && pendingChoice == null && pendingCards == null
 
     fun evolve(side: Side): Boolean {
         if (!canEvolve(side)) return false
         side.xp -= Defs.evolveXp[side.era]
         val ratio = side.baseHp / side.baseMaxHp
         side.era++
+        side.eraVariant = -1
         side.erasAdvanced++
         side.unitTier.fill(1) // Nowa epoka wymaga nowych inwestycji; weterani pozostają na polu.
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
-        if (!endless) offerDoctrines(side)
+        if (cfg.variantsEnabled && Defs.spec(side.era).variants.isNotEmpty()) offerVariant(side)
+        else if (!endless) offerDoctrines(side)
+        return true
+    }
+
+    private fun offerVariant(side: Side) {
+        val variants = Defs.spec(side.era).variants
+        if (variants.isEmpty()) return
+        if (side.index == 0 && (playerAi == null || commandController != null)) {
+            pendingVariant = side.era
+        } else {
+            val brain = if (side.index == 0) playerAi else ai
+            applyVariant(side, brain?.chooseVariant(side.era) ?: 0)
+        }
+    }
+
+    private fun applyVariant(side: Side, index: Int) {
+        require(index in Defs.spec(side.era).variants.indices)
+        side.eraVariant = index
+        if (!endless && side.erasAdvanced > 0) offerDoctrines(side)
+    }
+
+    /** Decyzja gracza dopiero po przyjęciu komendy przez BattleController. */
+    fun chooseVariant(index: Int): Boolean {
+        val era = pendingVariant ?: return false
+        if (era != player.era || index !in Defs.spec(era).variants.indices) return false
+        pendingVariant = null
+        applyVariant(player, index)
         return true
     }
 
@@ -494,6 +541,7 @@ class Battle(val cfg: BattleConfig) {
         if (side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
+        side.turretVariant[slot] = side.eraVariant
         side.turretCd[slot] = 0.5f
         side.turretsBuilt++
         return true
@@ -503,7 +551,7 @@ class Battle(val cfg: BattleConfig) {
         if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return -1
         val te = side.turretEra[slot]
         if (te < 0 || te >= side.era) return -1
-        return max(0, side.turretCost() - side.turretCost(te) / 2)
+        return max(0, side.turretCost() - side.turretCost(te, side.turretVariant[slot]) / 2)
     }
 
     fun upgradeTurret(side: Side, slot: Int): Boolean {
@@ -511,6 +559,7 @@ class Battle(val cfg: BattleConfig) {
         if (over || cost < 0 || side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
+        side.turretVariant[slot] = side.eraVariant
         return true
     }
 
@@ -518,8 +567,9 @@ class Battle(val cfg: BattleConfig) {
         if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return false
         val te = side.turretEra[slot]
         if (over || te < 0) return false
-        side.gold += side.turretCost(te) / 2
+        side.gold += side.turretCost(te, side.turretVariant[slot]) / 2
         side.turretEra[slot] = -1
+        side.turretVariant[slot] = -1
         return true
     }
 
@@ -543,10 +593,11 @@ class Battle(val cfg: BattleConfig) {
      * false = pula pocisków pełna, nic nie wystrzelono (ręczny ostrzał nie zużywa wtedy odnowienia).
      */
     private fun fireBarrage(side: Side, targetX: Float = Float.NaN): Boolean {
-        val count = 16
+        val shot = Defs.barrage(side.era, side.eraVariant)
+        val count = shot.count
         var fired = 0
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
-        val type = barrageProj(side.era)
+        val type = shot.projectile
         val aimed = targetX.isFinite()
         val aimDistance = (targetX - side.baseFront) * side.dir
         for (i in 0 until count) {
@@ -560,6 +611,7 @@ class Battle(val cfg: BattleConfig) {
             p.side = side.index
             p.type = type
             p.era = side.era
+            p.variant = side.eraVariant
             p.x = tx - side.dir * 260f
             p.h = 950f
             p.tx = tx
@@ -570,7 +622,7 @@ class Battle(val cfg: BattleConfig) {
             p.t = 0f
             p.delay = i * 0.11f + rng.nextFloat() * 0.1f
             p.dmg = dmg
-            p.splash = 60f
+            p.splash = shot.splash
             p.siegeMul = 0.25f
             p.shooterRole = null
             p.turretEra = -1
@@ -581,8 +633,6 @@ class Battle(val cfg: BattleConfig) {
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
         return true
     }
-
-    private fun barrageProj(era: Int) = Defs.spec(era).barrageProj
 
     fun castRally(side: Side): Boolean {
         if (!abilityReady(side, 1)) return false
@@ -599,14 +649,15 @@ class Battle(val cfg: BattleConfig) {
         val controller = commandController
         // Doktryna lub karta z poprzedniego kroku (np. co piąta fala) musi trafić do logu.
         if (controller != null && playerAi != null) {
+            if (pendingVariant != null) controller.choosePendingVariant()
             if (pendingChoice != null) controller.choosePendingDoctrine()
             if (pendingCards != null) controller.choosePendingCard()
         }
-        if (pendingChoice != null || pendingCards != null) return
+        if (pendingVariant != null || pendingChoice != null || pendingCards != null) return
         val dt = STEP
         // AI gracza wydaje komendy przed krokiem N, tak samo jak odtwarzacz.
         if (controller != null) playerAi?.update(dt)
-        if (pendingChoice != null || pendingCards != null) return
+        if (pendingVariant != null || pendingChoice != null || pendingCards != null) return
         stepCount++
         // Stan sprzed kroku dla interpolacji renderera (bez alokacji, bez wpływu na logikę).
         for (u in units) if (u.active) {
@@ -683,7 +734,7 @@ class Battle(val cfg: BattleConfig) {
         enemy.baseHp -= enemy.baseMaxHp * rate * control
     }
 
-    fun surrender() { if (!over) { pendingChoice = null; pendingCards = null; finish(1) } }
+    fun surrender() { if (!over) { pendingVariant = null; pendingChoice = null; pendingCards = null; finish(1) } }
 
     private fun finish(w: Int) {
         over = true
@@ -787,7 +838,7 @@ class Battle(val cfg: BattleConfig) {
             val te = s.turretEra[i]
             if (te < 0) continue
             if (s.turretCd[i] > 0f) { s.turretCd[i] -= dt; continue }
-            val td = Defs.eras[te].turret
+            val td = Defs.turret(te, s.turretVariant[i])
             val dist = (target.x - s.baseFront) * s.dir
             if (dist > td.range) continue
             s.turretCd[i] = td.cooldown / s.turretRateMul
@@ -795,7 +846,8 @@ class Battle(val cfg: BattleConfig) {
             val h = turretHeight(i)
             val turretDmg = td.dmg * s.turretDmgMul
             launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile,
-                turretDmg, td.splash, 0f, te, null, turretDmg * s.turretBurnRatio / 4f)
+                turretDmg, td.splash, 0f, te, null, turretDmg * s.turretBurnRatio / 4f,
+                s.turretVariant[i])
         }
     }
 
@@ -813,6 +865,8 @@ class Battle(val cfg: BattleConfig) {
             damageUnit(u, u.burnDps * tick, 1 - u.side)
             if (!u.alive) return
         }
+        if (u.def.art == EraArt.BIOTECH && u.alive && u.hp < u.maxHp)
+            u.hp = min(u.maxHp, u.hp + u.maxHp * 0.008f * dt)
         if (u.bossCd > 0f) u.bossCd -= dt
         val s = sides[u.side]
         val eIdx = 1 - u.side
@@ -853,7 +907,7 @@ class Battle(val cfg: BattleConfig) {
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, attackDmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era, def.role)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, attackDmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era, def.role, variant = def.variant)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
                 }
             }
@@ -888,10 +942,11 @@ class Battle(val cfg: BattleConfig) {
         return null
     }
 
-    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int, shooterRole: Role?, burnDps: Float = 0f) {
+    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int, shooterRole: Role?, burnDps: Float = 0f, variant: Int = -1) {
         val p = allocProj() ?: return
         p.side = side; p.type = type; p.x = x; p.h = h; p.tx = tx; p.era = era
         p.shooterRole = shooterRole
+        p.variant = variant
         p.turretEra = if (shooterRole == null) era else -1
         p.dmg = dmg; p.splash = splash; p.siegeMul = if (siegeMul <= 0f) 0.6f else siegeMul
         p.delay = 0f; p.t = 0f; p.burnDps = burnDps
@@ -935,10 +990,28 @@ class Battle(val cfg: BattleConfig) {
         }
         if (best != null) {
             damageUnit(best, p.dmg, p.side, p.shooterRole, p.turretEra)
+            if (p.variant >= 0 && Defs.sideArt(p.era, p.variant) == EraArt.GALVANIC) {
+                chainDamage(p, best)
+            }
             ignite(best, p.burnDps)
             fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side)
         } else if ((p.tx - e.baseFront) * -e.dir >= -50f) {
             damageBase(e, p.dmg * p.siegeMul, p.side)
+        }
+    }
+
+    /** Jeden dodatkowy cel, wybrany po odległości i kolejności puli; bez losowania i alokacji. */
+    private fun chainDamage(p: Projectile, first: Fighter) {
+        var next: Fighter? = null
+        var distance = 145f
+        for (u in units) {
+            if (!u.alive || u.side == p.side || u === first) continue
+            val d = abs(u.x - first.x)
+            if (d < distance) { distance = d; next = u }
+        }
+        if (next != null) {
+            damageUnit(next, p.dmg * 0.30f, p.side, p.shooterRole, p.turretEra)
+            fx.add(FxBuffer.HIT, next.x, 40f * next.def.size, next.side)
         }
     }
 
@@ -1030,14 +1103,17 @@ class Battle(val cfg: BattleConfig) {
 
         val e = enemy
         val nextEra = min(cfg.maxEra, cfg.startEra + wave / 6)
-        if (nextEra != e.era) { e.era = nextEra; e.unitTier.fill(1) }
+        if (nextEra != e.era) {
+            e.era = nextEra; e.eraVariant = -1; e.unitTier.fill(1)
+            if (cfg.variantsEnabled) offerVariant(e)
+        }
         val inEra = wave % 6
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
         e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f)
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f)
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
-            val def = Defs.unit(e.era, waveRole(rng.nextInt(100)))
+            val def = e.unit(waveRole(rng.nextInt(100)))
             e.queue[e.queueSize++] = def.id
             budget -= def.cost
             n++
@@ -1083,7 +1159,7 @@ class Battle(val cfg: BattleConfig) {
     private fun spawnFreeElites() {
         val p = player
         while (p.freeEliteCredits > 0 && p.aliveCount < p.cap) {
-            if (!spawn(p, Defs.unit(p.era, Role.ELITE))) break
+            if (!spawn(p, p.unit(Role.ELITE))) break
             p.freeEliteCredits--
         }
     }
@@ -1092,7 +1168,7 @@ class Battle(val cfg: BattleConfig) {
         val bossWave = nextBossToSpawn
         if (wave < bossWave) return
         val e = enemy
-        val f = spawnFighter(e, Defs.unit(e.era, Role.ELITE), 3f + bossWave / 10f * 0.45f)
+        val f = spawnFighter(e, e.unit(Role.ELITE), 3f + bossWave / 10f * 0.45f)
             ?: return
         f.bossKind = if ((bossWave / 10) % 2 == 0) 2 else 1
         f.dmg *= 1.4f + bossWave / 10f * 0.1f
