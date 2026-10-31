@@ -55,7 +55,7 @@ When the service is configured and you are authenticated, the app can send score
 
 **Google Play Games achievements:** the current code provides local achievements, but transmitting unlocks to the Google achievements service is not yet connected. Local achievements are nevertheless part of the profile included in cloud saves.
 
-The app does not currently submit this information to a publisher-operated leaderboard server. If such a service is activated, this policy will be updated before launch.
+The game also supports an **optional publisher-operated leaderboard server**, enabled only in releases with a configured HTTPS endpoint, HMAC key and privacy policy URL, and after separate in-game consent. The app then sends a random player UUID, nickname, board, score, timestamp and battle settings, plus replay commands to verify the score. SQLite stores the UUID, nickname, results, verification metadata and a SHA-256 submission hash; **it does not store the full replay or IP addresses in SQLite**. IP addresses may be used temporarily for rate limiting and may appear in infrastructure logs. Without configuration and consent, no scores are sent to the publisher server. The presence of the code alone does not imply a live deployment.
 
 Google states that Play Games data is encrypted in transit using HTTPS. Information about data collection, retention, and profile visibility: https://developer.android.com/games/pgs/data-collection
 
@@ -71,7 +71,7 @@ You can disable reminders in **game Settings** and independently through **Andro
 
 | Permission | Purpose |
 |---|---|
-| INTERNET | Connecting to Play Games when the service is configured; core gameplay still works without a connection |
+| INTERNET | Connecting to Play Games and the optional publisher-hosted HTTPS leaderboard; offline play still works |
 | POST_NOTIFICATIONS | Local Daily Challenge reminders with user permission on Android 13+ |
 | RECEIVE_BOOT_COMPLETED | Rescheduling local reminders following a device restart |
 | VIBRATE | Game haptic feedback, which can be disabled in Settings |
@@ -87,10 +87,11 @@ Android backup is **separate** from Google Play Games Saved Games synchronizatio
 ## 8. Deletion and retention
 
 - **Local data:** the in-game “Reset progress” action clears progress and records but **retains your nickname**. To remove the nickname and remaining local data, clear the app's storage in Android Settings or uninstall the game. Android backup copies may remain available under your account settings.
+- **Publisher-hosted leaderboard data:** select **Settings → New identity → Confirm**. The app persistently queues a request to delete the old UUID's scores from every board and its nickname from the server, then generates a new UUID. Offline requests are retried on later launches, even if uploading new scores is disabled. **A new identifier does not confirm server-side deletion.** The old records may remain visible until the request is delivered; do not uninstall the game or clear app storage before delivery. Contact the publisher using the privacy address in section 1 if necessary. Scores on the publisher's server are kept until deletion is requested or the service ends; they do not automatically expire. Local backups are rotated and deletions after a backup must be re-applied if it is restored.
 - **Google Play Games data:** go to https://play.google.com/games/profile, open your Play Games data settings, and **delete the data for this specific game**. Alternatively: Play Store → profile → Settings → General → Play Games profile → Privacy and settings → Delete profile and game data. Menu names may change. You can also delete your full Play Games profile. Instructions: https://support.google.com/googleplay/answer/9130646?hl=en.
-- **Important:** a local reset does not delete PGS data; later synchronization may restore progress from the cloud. Deleting Play Games data does not automatically delete the local profile or Android system backup.
+- **Important:** publisher leaderboard records, Play Games data, local records and Android system backup are four separate data stores. Local reset does not delete publisher-hosted scores or PGS data; PGS synchronization may restore progress.
 
-Google's retention periods are determined by Google and your account settings. The publisher does not currently maintain a separate player-profile database on its own server.
+Google's retention periods are determined by Google and your account settings. The publisher may hold the pseudonymous leaderboard data described above if its optional server is enabled.
 
 ## 9. Data protection and children
 
@@ -98,6 +99,6 @@ Local records are stored in Android's private app storage. The game has no chat,
 
 ## 10. Policy changes
 
-Before adding new data practices (such as publisher-hosted online leaderboards, advertising, or purchases), we will update this policy and the Google Play disclosures.
+Before activating the publisher-hosted leaderboard in a published release or adding new data practices (such as advertising or purchases), we will verify this policy and the Google Play disclosures.
 
 _Polish version: /store/privacy-policy-pl/._

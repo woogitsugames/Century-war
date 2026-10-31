@@ -55,7 +55,7 @@ Po skonfigurowaniu usługi i uwierzytelnieniu aplikacja może wysyłać do Googl
 
 **Osiągnięcia Google Play Games:** w bieżącym kodzie działa system osiągnięć lokalnych, ale ich przesyłanie do usługi osiągnięć Google nie jest jeszcze podłączone. Osiągnięcia lokalne są jednak częścią profilu objętego kopią w chmurze.
 
-Nie prowadzimy obecnie czynnego własnego serwera rankingowego, do którego aplikacja przesyłałaby te informacje. Jeśli taka funkcja zostanie uruchomiona, polityka zostanie zaktualizowana przed jej udostępnieniem.
+Gra obsługuje również **opcjonalny własny serwer rankingowy** wydawcy. Funkcja działa wyłącznie w wydaniach ze skonfigurowanym adresem HTTPS, kluczem HMAC i adresem tej polityki oraz po osobnej zgodzie w grze. Wtedy aplikacja wysyła losowe UUID gracza, pseudonim, planszę, wynik, datę i parametry bitwy oraz komendy powtórki do weryfikacji wyniku. Serwer zapisuje w SQLite UUID, pseudonim, wyniki, metadane i skrót SHA-256 zgłoszenia, **nie zapisuje pełnej powtórki ani adresu IP w SQLite**. Adres IP może być używany tymczasowo do ograniczania ruchu i występować w logach infrastruktury. Bez konfiguracji i zgody nie są przesyłane wyniki do własnego serwera. Sam kod nie oznacza, że serwer jest już dostępny publicznie.
 
 Google deklaruje szyfrowanie danych Play Games w transmisji (HTTPS). Informacje o zakresie danych, przechowywaniu i ustawieniach widoczności: https://developer.android.com/games/pgs/data-collection
 
@@ -71,7 +71,7 @@ Przypomnienia można wyłączyć w **Ustawieniach gry** oraz niezależnie w **us
 
 | Uprawnienie | Wykorzystanie |
 |---|---|
-| INTERNET | Połączenie z Play Games przy skonfigurowanej usłudze; rozgrywka bez niego nadal działa |
+| INTERNET | Połączenie z Play Games i opcjonalnym własnym rankingiem HTTPS; gra offline nadal działa |
 | POST_NOTIFICATIONS | Lokalne przypomnienie o wyzwaniu dnia, za zgodą użytkownika na Androidzie 13+ |
 | RECEIVE_BOOT_COMPLETED | Ponowne zaplanowanie przypomnienia po restarcie urządzenia |
 | VIBRATE | Wibracje stanowiące efekt gry, które można wyłączyć w ustawieniach |
@@ -87,10 +87,11 @@ Kopia Androida jest **oddzielna** od synchronizacji Saved Games w Google Play Ga
 ## 8. Usuwanie danych i okres przechowywania
 
 - **Dane lokalne:** funkcja „Resetuj postęp” usuwa postęp i rekordy, lecz **zachowuje pseudonim**. Aby usunąć również pseudonim i inne dane lokalne, wyczyść pamięć aplikacji w Androidzie lub odinstaluj grę. Kopia Androida może pozostawać dostępna według ustawień konta.
+- **Dane własnego rankingu:** wybierz **Ustawienia → Nowa tożsamość → Potwierdź**. Aplikacja zapisuje żądanie usunięcia wszystkich wyników starego UUID i pseudonimu na serwerze, a następnie nada nowy identyfikator. Gdy nie ma internetu, ponawia próbę po ponownym uruchomieniu, także po wyłączeniu wysyłania wyników. **Nowe UUID nie oznacza potwierdzonego usunięcia danych na serwerze.** Do czasu dostarczenia żądania wyniki mogą nadal być widoczne; nie odinstalowuj gry ani nie czyść jej pamięci, dopóki żądanie nie zostanie obsłużone. W razie wątpliwości skontaktuj się z wydawcą poprzez kontakt z sekcji 1. Rekordy własnego rankingu pozostają do usunięcia na żądanie lub zamknięcia usługi; nie mają automatycznego terminu ważności. Lokalne kopie bezpieczeństwa są rotowane i po ich odtworzeniu operator musi powtórzyć późniejsze usunięcia.
 - **Dane Google Play Games:** przejdź do https://play.google.com/games/profile, wybierz ustawienia danych Gier Play i **usuń dane tej konkretnej gry**. Alternatywnie skorzystaj z: Sklep Play → profil → Ustawienia → Ogólne → Profil w Grach Play → Prywatność i ustawienia → Usuń profil i dane gier. Nazwy opcji mogą się zmieniać. Możliwe jest też usunięcie całego profilu Gier Play. Szczegóły: https://support.google.com/googleplay/answer/9130646?hl=pl.
-- **Ważne:** reset lokalny nie jest usunięciem danych PGS; ponowna synchronizacja może przywrócić postęp z chmury. Usunięcie danych PGS nie usuwa automatycznie lokalnego profilu ani systemowej kopii Androida.
+- **Ważne:** własny ranking, profil lokalny, systemowa kopia Androida i dane PGS to cztery oddzielne miejsca. Reset lokalny nie usuwa danych własnego serwera ani PGS; synchronizacja PGS może przywrócić postęp.
 
-Okres przechowywania danych przez Google jest określany przez Google i ustawienia konta użytkownika. Wydawca nie przechowuje obecnie osobnej bazy profili na własnym serwerze.
+Okres przechowywania danych przez Google jest określany przez Google i ustawienia konta użytkownika. Wydawca może przechowywać pseudonimowe dane rankingu opisane powyżej, jeśli opcjonalny serwer zostanie uruchomiony.
 
 ## 9. Ochrona danych i dzieci
 
@@ -98,6 +99,6 @@ Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Nie udos
 
 ## 10. Zmiany polityki
 
-Przed wprowadzeniem nowych sposobów przetwarzania danych (np. własnych rankingów sieciowych, reklam lub zakupów) zaktualizujemy politykę i informacje w Google Play.
+Przed aktywacją własnego rankingu w opublikowanym wydaniu lub dodaniem nowych sposobów przetwarzania danych (np. reklam albo zakupów) zweryfikujemy politykę i informacje w Google Play.
 
 _Wersja angielska: /store/privacy-policy-en/._

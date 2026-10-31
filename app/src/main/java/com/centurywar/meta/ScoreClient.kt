@@ -49,6 +49,10 @@ class ScoreClient(
         Thread(task, "score-http").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
     }
     private val queue = ScoreQueue()
+    private val deletions = PendingDeletions(File(queueFile.path + ".deletions"))
+    private var deletionsReady = false
+    private var deleteAttempts = 0
+    @Volatile private var deletingPlayerId: String? = null
     private val cache = ConcurrentHashMap<String, GlobalRankingView>()
     private val refreshing = ConcurrentHashMap.newKeySet<String>()
     @Volatile private var enabled = profile.globalRanking
@@ -60,13 +64,19 @@ class ScoreClient(
     init {
         require(configured(origin, secret)) { "invalid_score_configuration" }
         worker.execute {
-            if (enabled) {
+            deletionsReady = deletions.load()
+            if (!deletionsReady) {
+                status = ScoreSendStatus.OFFLINE
+                return@execute
+            }
+            val scoresReady = if (enabled) {
                 loadQueue()
-                pump()
             } else {
                 queue.clear()
                 persistQueue()
             }
+            if (scoresReady && enabled) pump()
+            if (scoresReady) pumpDeletions()
         }
     }
 
@@ -97,9 +107,40 @@ class ScoreClient(
         }
     }
 
+    /**
+     * callback(true) oznacza zapisanie żądania na dysku, nie potwierdzenie usunięcia
+     * przez serwer. Callback działa na wątku roboczym; zmiany UI przekaż przez Game.post.
+     */
+    fun deletePlayerData(playerId: String, callback: (Boolean) -> Unit) {
+        if (!validPlayerId(playerId)) {
+            callback(false)
+            return
+        }
+        deletingPlayerId = playerId
+        worker.execute {
+            if (!deletionsReady) deletionsReady = deletions.load()
+            if (!deletionsReady || !deletions.add(playerId)) {
+                deletingPlayerId = null
+                callback(false)
+                return@execute
+            }
+            // Nie pozwalamy ponowić wysyłki zapisów ze starego identyfikatora.
+            generation++
+            sending = false
+            queue.clear()
+            // Plik usunięcia jest zapisany niezależnie. Nawet przy błędzie zapisu
+            // starej kolejki wyników odfiltrujemy ten UUID po następnym starcie.
+            persistQueue()
+            cache.clear()
+            callback(true)
+            pumpDeletions()
+        }
+    }
+
     fun submit(cfg: BattleConfig, log: Replay.Log, score: Long, rankedDaily: Boolean, nick: String,
                playerId: String, research: IntArray, difficulty: Int) {
-        if (!enabled || !profile.globalRanking || playerId.isEmpty() || score <= 0L) return
+        if (!enabled || !profile.globalRanking || playerId.isEmpty() || score <= 0L ||
+            playerId == deletingPlayerId) return
         if (cfg.mode == Mode.DAILY && !rankedDaily) return
         if (cfg.tutorial && (cfg.mode != Mode.CAMPAIGN || cfg.stageIndex != 0)) return
         if (!validNick(nick)) {
@@ -171,6 +212,29 @@ class ScoreClient(
     }
 
     fun close() = worker.shutdown()
+
+    /** Ponawianie działa również po wyłączeniu rankingu i po restarcie aplikacji. */
+    private fun pumpDeletions() {
+        if (!deletionsReady) return
+        val player = deletions.first() ?: return
+        val code = try {
+            request("POST", "/v1/player/delete", JSONObject().put("player", player).toString()).first
+        } catch (_: Exception) {
+            -1
+        }
+        if (code in 200..299 && deletions.remove(player)) {
+            deleteAttempts = 0
+            worker.execute { pumpDeletions() }
+        } else {
+            deleteAttempts++
+            val delay = if (code in 400..499 && code != 408 && code != 429) {
+                3_600_000L
+            } else {
+                (2_000L * (1L shl deleteAttempts.coerceIn(0, 11))).coerceAtMost(3_600_000L)
+            }
+            worker.schedule({ pumpDeletions() }, delay, TimeUnit.MILLISECONDS)
+        }
+    }
 
     private fun pump() {
         if (sending || !enabled || !profile.globalRanking) return
@@ -263,31 +327,33 @@ class ScoreClient(
         }
     }
 
-    private fun loadQueue() {
+    private fun loadQueue(): Boolean {
         queue.clear()
         try {
             if (queueFile.exists()) {
                 val array = JSONArray(queueFile.readText(StandardCharsets.UTF_8))
                 for (i in 0 until minOf(array.length(), ScoreQueue.MAX_ENTRIES)) {
                     val entry = array.getJSONObject(i)
-                    queue.add(
-                        ScoreQueue.Entry(entry.getLong("created"), entry.getString("payload"),
-                            entry.optInt("attempts", 0).coerceIn(0, 100_000)),
-                        System.currentTimeMillis(),
-                    )
+                    val payload = entry.getString("payload")
+                    if (!deletions.contains(JSONObject(payload).optString("player"))) {
+                        queue.add(
+                            ScoreQueue.Entry(entry.getLong("created"), payload,
+                                entry.optInt("attempts", 0).coerceIn(0, 100_000)),
+                            System.currentTimeMillis(),
+                        )
+                    }
                 }
             }
         } catch (_: Exception) {
             queue.clear()
         }
-        persistQueue()
+        return persistQueue()
     }
 
-    private fun persistQueue() {
+    private fun persistQueue(): Boolean {
         try {
             if (queue.entries.isEmpty()) {
-                queueFile.delete()
-                return
+                return !queueFile.exists() || queueFile.delete()
             }
             queueFile.parentFile?.mkdirs()
             val json = JSONArray()
@@ -301,8 +367,10 @@ class ScoreClient(
                 queueFile.delete()
                 if (!tmp.renameTo(queueFile)) throw IOException("queue_rename_failed")
             }
+            return true
         } catch (_: IOException) {
             status = ScoreSendStatus.OFFLINE
+            return false
         }
     }
 

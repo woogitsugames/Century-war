@@ -48,6 +48,12 @@ class RateLimiter(private val nowMillis: () -> Long, private val maxEntries: Int
     private class Slot(var first: Long, var count: Int)
     private val slots = LinkedHashMap<String, Slot>(256, 0.75f, true)
 
+    /** Wyzerowanie limitu identyfikatora po skutecznym usunięciu danych. */
+    @Synchronized
+    fun forget(key: String) {
+        slots.remove(key)
+    }
+
     @Synchronized
     fun allow(key: String, perMinute: Int): Boolean {
         val now = Math.floorDiv(nowMillis(), 1000L)
