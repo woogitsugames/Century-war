@@ -4,12 +4,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Shader
 import com.centurywar.engine.Button
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import kotlin.math.max
 
 /**
  * Wspólne elementy ekranów menu: przycisk "Wstecz", wstęga tytułu, przyciemnienie
@@ -48,6 +50,33 @@ class Chrome(private val s: Screen) {
         val maxW = s.w - s.g.insetL - s.g.insetR - 2 * 150 * s.dp - 260 * s.dp
         ui.ribbon(c, cx, s.g.insetT + 32 * s.dp, text, 20f, Ui.RIBBON, 220 * s.dp, Ui.GOLD,
             maxW.coerceAtLeast(160 * s.dp))
+    }
+
+    /** Prostokąt całej wstęgi wraz z końcówkami; ta sama geometria co Ui.ribbon. */
+    fun titleBounds(text: String, out: RectF) {
+        val d = s.dp
+        val ui = s.ui
+        val cx = (s.w + s.g.insetL - s.g.insetR) / 2f
+        val cy = s.g.insetT + 32 * d
+        val maxW = (s.w - s.g.insetL - s.g.insetR - 560 * d).coerceAtLeast(160 * d)
+        val hh = 20f * d * ui.textScale * 1.05f
+        var tw = ui.measure(text, 20f, true)
+        if (tw + hh * 2.4f > maxW && tw > 0f) {
+            val size = max(9f, 20f * (maxW - hh * 2.4f) / tw)
+            tw = ui.measure(text, size, true)
+        }
+        val half = max(110 * d, tw / 2f + hh * 1.1f)
+        val tail = hh * 1.3f
+        out.set(cx - half - tail, cy - hh * 0.75f, cx + half + tail, cy + hh * 0.95f)
+    }
+
+    /** Dopasowuje nazwę zakładki bez ucinania znaków; na Foldzie zostaje ikona. */
+    fun tabLabel(full: String, short: String, width: Float, height: Float, fontDp: Float = 13f): String {
+        val avail = if (width > height * 1.7f) width - height * 0.88f - 16 * s.dp
+            else width - 8 * s.dp
+        if (s.ui.measure(full, fontDp, true) <= avail) return full
+        if (s.ui.measure(short, fontDp * 0.85f, true) <= avail) return short
+        return if (s.ui.measure(short, 9f / s.ui.textScale, true) <= avail) short else ""
     }
 
     /** Plakietki w prawym górnym rogu (od prawej). Zwraca lewą krawędź. */

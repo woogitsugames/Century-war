@@ -121,7 +121,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         toggle.iconId = Icons.FLASK
-        val tw = min(210 * dp, w * 0.24f)
+        val compact = w - g.insetL - g.insetR < 700 * dp
+        val tw = if (compact) 44 * dp else min(210 * dp, w * 0.24f)
         toggle.set(w - g.insetR - 12 * dp - tw, g.insetT + 10 * dp, tw, 44 * dp)
 
         left = g.insetL + 16 * dp
@@ -239,8 +240,9 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             tb.selected = i == era
             tb.color = if (i == era) Ui.ERA[i] else Ui.blend(Ui.ERA[i], Ui.BTN, 0.55f)
         }
-        toggle.label = L["cx_research"]
-        toggle.sub = if (withResearch) L["on"] else L["off"]
+        val compactToggle = w - g.insetL - g.insetR < 700 * dp
+        toggle.label = if (compactToggle) "" else L["cx_research"]
+        toggle.sub = if (compactToggle) "" else if (withResearch) L["on"] else L["off"]
         toggle.highlight = withResearch
         for (i in variantBtn.indices) {
             val vb = variantBtn[i]

@@ -100,8 +100,8 @@ class SettingsScreen(g: Game) : Screen(g) {
         lastAvailable = g.online.available
         playGames.visible = lastAvailable
         val avail = h - chrome.top - g.insetB - 20 * dp
-        // Dwie kolumny na szerokich ekranach; wąski telefon przewija pełne wiersze.
-        val columns = if (pw >= 470 * dp) 2 else 1
+        // Powiększony tekst na wąskim Foldzie potrzebuje miejsca na długie etykiety.
+        val columns = if (pw >= 470 * dp && (ui.textScale <= 1.15f || pw >= 600 * dp)) 2 else 1
         rowsPerColumn = (rows.size + columns - 1) / columns
         columnWidth = (pw - 24 * dp) / columns
         val step = (if (ui.textScale > 1.15f) 58f else 54f) * dp
@@ -126,7 +126,9 @@ class SettingsScreen(g: Game) : Screen(g) {
             }
             else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
         }
-        for (b in rows) if (b !== music) b.visible = b.r.bottom > contentTop && b.r.top < contentBottom
+        // Nie pozostawiaj klikalnych połówek przycisków pod przyciętą krawędzią listy.
+        for (b in rows) b.visible = b !== music && b !== sfxLevel &&
+            b.r.top >= contentTop && b.r.bottom <= contentBottom
         reset.iconId = Icons.RESTART
         access.iconId = Icons.PERSON
     }

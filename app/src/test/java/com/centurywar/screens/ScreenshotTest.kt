@@ -4,7 +4,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Canvas
+import android.graphics.RectF
 import com.centurywar.engine.Game
+import com.centurywar.engine.Button
+import com.centurywar.engine.Screen
 import com.centurywar.engine.L
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
@@ -80,6 +83,7 @@ class ScreenshotTest {
         val c = Canvas(bmp)
         repeat(frames) { g.frame(c, 1f / 60f) }
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bmp.recycle()
     }
 
     private fun tap(g: Game, x: Float, y: Float) {
@@ -255,6 +259,11 @@ class ScreenshotTest {
                 shot(g, "${tag}_sfx_settings")
             }
             shot(g, "${tag}_settings")
+            if (tag == "phone720" || tag == "foldPortrait") {
+                field(settings, "scroll").setFloat(settings, field(settings, "maxScroll").getFloat(settings))
+                settings.layout()
+                shot(g, "${tag}_settings_bottom")
+            }
             val about = AboutScreen(g)
             g.setScreen(about); shot(g, "${tag}_about")
             about.onDrag(0f, -100000f)
@@ -824,6 +833,207 @@ class ScreenshotTest {
             g.setQuality(quality)
             g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 27037L, 1f)))
             shot(g, "${tag}_performance_overlay", 30)
+        }
+    }
+
+    /** Krótka poprawna powtórka do przeglądu odtwarzacza, bez dostępu do dysku. */
+    private val auditReplay by lazy {
+        val cfg = BattleConfig(Mode.SKIRMISH, 299L, 0.65f,
+            startEra = 2, maxEra = 4, playerBonuses = Bonuses(baseHpMul = 15f))
+        val battle = Battle(cfg)
+        val commands = BattleController(battle)
+        repeat(240) { if (!battle.over) battle.step() }
+        if (!battle.over) commands.surrender()
+        ReplayRecord.encode(cfg, commands.log(), ReplayRecord.Meta(
+            cfg.mode, cfg.stageIndex, battle.winner, battle.score(), battle.time,
+            battle.wave, 1793461200000L, "Dowódca",
+        ))
+    }
+
+    /**
+     * Wspólna lista stanów menu: zarówno do kontroli geometrii, jak i opcjonalnych PNG.
+     * Nie otwieramy bitwy (zlecenie 47).
+     */
+    private fun visitAuditScreens(g: Game, visit: (String, Screen, String?) -> Unit) {
+        fun show(name: String, screen: Screen, title: String? = null) {
+            g.setScreen(screen)
+            screen.update(0f)
+            visit(name, screen, title)
+        }
+        show("menu", MenuScreen(g))
+        val campaign = CampaignScreen(g)
+        show("campaign", campaign, "campaign")
+        field(campaign, "selected").set(campaign, Campaign.stages[2])
+        show("campaign_info", campaign, "campaign")
+        show("research", ResearchScreen(g), "research")
+        show("achievements", AchievementsScreen(g), "achievements")
+        show("missions", MissionsScreen(g), "ms_missions")
+        show("mode_endless", ModeScreen(g, Mode.ENDLESS))
+        show("mode_daily", ModeScreen(g, Mode.DAILY))
+        show("mode_weekly", ModeScreen(g, Mode.DAILY, true))
+        show("mode_skirmish", ModeScreen(g, Mode.SKIRMISH))
+        val setup = SkirmishSetupScreen(g)
+        show("skirmish_setup", setup)
+        field(setup, "scroll").setFloat(setup, field(setup, "maxScroll").getFloat(setup))
+        show("skirmish_modifiers", setup)
+        show("rankings", RankingsScreen(g), "rankings")
+        val weekly = RankingsScreen(g)
+        field(weekly, "tab").setInt(weekly, 4)
+        show("rankings_weekly", weekly, "rankings")
+        show("global_rankings", GlobalRankingsScreen(g), "global_ranking")
+        val stats = StatsScreen(g)
+        show("stats", stats, "stats")
+        stats.onClick(stats.buttons.first { it.id == 11 })
+        show("stats_history", stats, "stats")
+        show("replay_list", ReplayListScreen(g), "replay_list")
+        show("replay_viewer", ReplayScreen(g, auditReplay))
+        val settings = SettingsScreen(g)
+        show("settings", settings, "settings")
+        field(settings, "scroll").setFloat(settings, field(settings, "maxScroll").getFloat(settings))
+        show("settings_bottom", settings, "settings")
+        val access = AccessibilityScreen(g)
+        show("accessibility", access, "accessibility")
+        field(access, "scroll").setFloat(access, field(access, "maxScroll").getFloat(access))
+        show("accessibility_bottom", access, "accessibility")
+        show("hints", HintSettingsScreen(g), "hint_settings")
+        show("codex", CodexScreen(g, 0), "codex")
+        show("codex_variants", CodexScreen(g, 4), "codex")
+        show("play_games", PlayGamesScreen(g), "play_games")
+    }
+
+    /** Bezpieczny obszar i rozłączne hitboxy; wstęga też zajmuje miejsce. */
+    private fun assertNoCollisions(g: Game, screen: Screen, name: String, title: String?) {
+        val safe = RectF(g.insetL, g.insetT, g.width - g.insetR, g.height - g.insetB)
+        val label = "$name ${g.width}x${g.height} ${g.profile.lang} ${g.profile.textScale}%"
+        val buttons = screen.buttons.filter { it.visible && it.r.width() > 0f && it.r.height() > 0f }
+        for (b in buttons) {
+            assertTrue("$label: przycisk ${b.id} poza obszarem: ${b.r}",
+                b.r.left >= safe.left && b.r.top >= safe.top &&
+                    b.r.right <= safe.right && b.r.bottom <= safe.bottom)
+        }
+        for (i in buttons.indices) for (j in i + 1 until buttons.size) {
+            val a = buttons[i]
+            val b = buttons[j]
+            assertTrue("$label: kolizja przycisków ${a.id} i ${b.id}",
+                !RectF.intersects(a.r, b.r))
+        }
+        if (title != null) {
+            val bounds = RectF()
+            Chrome(screen).titleBounds(L[title], bounds)
+            assertTrue("$label: wstęga poza obszarem: $bounds",
+                bounds.left >= safe.left && bounds.top >= safe.top &&
+                    bounds.right <= safe.right && bounds.bottom <= safe.bottom)
+            for (b in buttons) assertTrue("$label: wstęga nachodzi na ${b.id}",
+                !RectF.intersects(bounds, b.r))
+        }
+        if (screen is SettingsScreen) {
+            // Suwaki są rysowane ręcznie i mają visible=false; sprawdzamy ich obszary osobno.
+            val top = field(screen, "contentTop").getFloat(screen)
+            val bottom = field(screen, "contentBottom").getFloat(screen)
+            for (key in arrayOf("music", "sfxLevel")) {
+                val b = field(screen, key).get(screen) as Button
+                if (b.r.top >= top && b.r.bottom <= bottom) {
+                    assertTrue("$label: suwak $key poza obszarem", safe.contains(b.r))
+                    for (other in buttons) assertTrue("$label: suwak $key nachodzi na ${other.id}",
+                        !RectF.intersects(b.r, other.r))
+                }
+            }
+            if (name == "settings_bottom") {
+                val reset = field(screen, "reset").get(screen) as Button
+                assertTrue("$label: ostatni wiersz ustawień niewidoczny", reset.visible)
+            }
+        }
+    }
+
+    /** Cztery formaty, wszystkie języki, tekst 130%; bez generowania plików PNG. */
+    @Test
+    fun layoutCollisions() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+                val scoreFile = File.createTempFile("cw-layout-scores", ".json").apply { delete() }
+                val scores = ScoreClient(scoreFile, "https://scores.example.invalid",
+                    "testing-key-at-least-32-characters-long", g.profile)
+                g.scores = scores
+                g.online = object : OnlineLeaderboards {
+                    override val available = true
+                    override val state = OnlineState.SIGNED_OUT
+                    override fun submit(board: String, score: Long) {}
+                }
+                try {
+                    for (lang in L.CODES) {
+                        g.profile.lang = lang
+                        g.onLanguageChanged()
+                        g.profile.textScale = 130
+                        g.applyAccessibility()
+                        visitAuditScreens(g) { name, screen, title ->
+                            assertNoCollisions(g, screen, name, title)
+                        }
+                    }
+                } finally {
+                    scores.close()
+                }
+            }
+        } finally {
+            L.lang = originalLang
+        }
+    }
+
+    /**
+     * Pełna matryca zrzutów tylko na żądanie: LAYOUT_AUDIT=true ./gradlew
+     * :app:testDebugUnitTest --tests '*ScreenshotTest.layoutAudit*'.
+     */
+    @Test
+    fun layoutAudit() {
+        if (!"true".equals(System.getenv("LAYOUT_AUDIT"), ignoreCase = true)) return
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) for (lang in arrayOf("de", "pt", "uk", "tr")) for (scale in intArrayOf(100, 130)) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+                g.profile.lang = lang
+                g.profile.textScale = scale
+                g.profile.hintsEnabled = false
+                g.onLanguageChanged()
+                g.applyAccessibility()
+                val scoreFile = File.createTempFile("cw-layout-audit", ".json").apply { delete() }
+                val scores = ScoreClient(scoreFile, "https://scores.example.invalid",
+                    "testing-key-at-least-32-characters-long", g.profile)
+                g.scores = scores
+                g.online = object : OnlineLeaderboards {
+                    override val available = true
+                    override val state = OnlineState.SIGNED_OUT
+                    override fun submit(board: String, score: Long) {}
+                }
+                try {
+                    // Usunięcie banera logowania z kadrów badanych ekranów.
+                    val bmp = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+                    repeat(210) { g.frame(Canvas(bmp), 1f / 60f) }
+                    bmp.recycle()
+                    visitAuditScreens(g) { name, screen, title ->
+                        assertNoCollisions(g, screen, name, title)
+                        shot(g, "audit_${tag}_${lang}_${scale}_${name}", 1)
+                    }
+                } finally {
+                    scores.close()
+                }
+            }
+        } finally {
+            L.lang = originalLang
         }
     }
 }
