@@ -56,6 +56,12 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         }
     }
 
+    override fun onLanguageChanged() {
+        // Nazwy modyfikatorów wyzwania są zapamiętane razem z konfiguracją dnia.
+        dailyCfg = null
+        super.onLanguageChanged()
+    }
+
     override fun update(dt: Float) {
         this.dt = dt
         val today = Daily.dayNumber()
