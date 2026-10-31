@@ -23,6 +23,7 @@ import com.centurywar.game.Daily
 import com.centurywar.game.Defs
 import com.centurywar.game.Doctrine
 import com.centurywar.game.EndlessCard
+import com.centurywar.game.EndlessBosses
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
@@ -778,20 +779,39 @@ class BattleScreen(
         if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
             val boss = battle.currentBoss()
             if (boss != null) {
-                val bw = min(260 * dp, w - g.insetL - g.insetR - 30 * dp)
+                val bw = min(310 * dp, w - g.insetL - g.insetR - 30 * dp)
                 val bx = (w - bw) * 0.5f
-                ui.textO(c, if (boss.bossKind == 1) L["boss_knockback"] else L["boss_aura"],
-                    w * 0.5f, topBar.bottom + 18 * dp, 12f, Ui.ENEMY, Paint.Align.CENTER, 1.7f)
-                ui.bar(c, bx, topBar.bottom + 23 * dp, bw, 8 * dp,
+                if (boss.bossKind != bossShownKind || boss.bossSecondaryKind != bossShownSecondary) {
+                    bossShownKind = boss.bossKind
+                    bossShownSecondary = boss.bossSecondaryKind
+                    bossTitleText = L["eb_boss"] + " — " + L[EndlessBosses.nameKeys[bossShownKind]]
+                    bossDescText = L[EndlessBosses.descriptionKeys[bossShownKind]]
+                    if (bossShownSecondary != EndlessBosses.NONE) {
+                        bossTitleText += " + " + L[EndlessBosses.nameKeys[bossShownSecondary]]
+                        bossDescText += " / " + L[EndlessBosses.descriptionKeys[bossShownSecondary]]
+                    }
+                }
+                ui.textO(c, bossTitleText, w * 0.5f, topBar.bottom + 16 * dp,
+                    ui.fit(bossTitleText, 12f, bw, 9f), Ui.ENEMY, Paint.Align.CENTER, 1.7f)
+                ui.textO(c, bossDescText, w * 0.5f, topBar.bottom + 32 * dp,
+                    ui.fit(bossDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
+                ui.bar(c, bx, topBar.bottom + 40 * dp, bw, 8 * dp,
                     boss.hp / boss.maxHp, Ui.ENEMY)
             }
             if (battle.wave != nextThemeShown) {
                 nextThemeShown = battle.wave
-                nextThemeText = L["next_wave"] + " " + L[battle.nextWaveKey]
+                val nextKind = battle.nextBossKind
+                nextThemeText = if (nextKind != EndlessBosses.NONE) {
+                    val second = battle.nextBossSecondaryKind
+                    L["next_wave"] + " " + L["eb_boss"] + " — " +
+                        L[EndlessBosses.nameKeys[nextKind]] +
+                        (if (second != EndlessBosses.NONE) " + " + L[EndlessBosses.nameKeys[second]] else "")
+                } else L["next_wave"] + " " + L[battle.nextWaveKey]
             }
             ui.textO(c, nextThemeText, w * 0.5f,
-                topBar.bottom + (if (boss == null) 20f else 47f) * dp,
-                11f, Ui.GOLD, Paint.Align.CENTER, 1.7f)
+                topBar.bottom + (if (boss == null) 20f else 64f) * dp,
+                ui.fit(nextThemeText, 11f, w - g.insetL - g.insetR - 26 * dp, 8f),
+                Ui.GOLD, Paint.Align.CENTER, 1.7f)
         }
         // przeciwnik (epoka) + doktryny gracza jako ikony
         val ex = pauseBtn.r.left - 10 * dp
@@ -815,6 +835,10 @@ class BattleScreen(
     private var waveText = ""
     private var nextThemeShown = -1
     private var nextThemeText = ""
+    private var bossShownKind = -1
+    private var bossShownSecondary = -1
+    private var bossTitleText = ""
+    private var bossDescText = ""
 
     /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
     private fun timeStr(t: Float): String {
