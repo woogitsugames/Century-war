@@ -466,11 +466,12 @@ class Profile(private val file: File) {
     }
 
     /** Numery kolejnych migawek kontroluje zamek profilu, plik zapisuje jeden wykonawca. */
-    private var saveSeq = 0L
+    @Volatile private var saveSeq = 0L
     private var writtenSeq = 0L
 
     private fun writeJson(json: String, seq: Long) {
-        if (newerProfileVersion || seq <= writtenSeq) return
+        // Pomijamy przestarzałe migawki z kolejki, by pauza nie czekała na wiele fsync.
+        if (newerProfileVersion || seq < saveSeq || seq <= writtenSeq) return
         try {
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use { out ->
