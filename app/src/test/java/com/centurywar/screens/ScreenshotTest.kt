@@ -104,7 +104,7 @@ class ScreenshotTest {
             val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 77L, 1f, startEra = 6))
             g.setScreen(bs)
             val battle = field(bs, "battle").get(bs) as Battle
-            assertTrue(battle.castBarrage(battle.sides[0], 560f))
+            assertTrue(battle.commandController!!.barrage(560f))
             assertTrue(battle.castBarrage(battle.sides[1], 560f))
             val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)

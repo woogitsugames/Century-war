@@ -43,6 +43,7 @@ class RendererStressTest {
             val g = game(quality)
             val b = Battle(BattleConfig(Mode.SKIRMISH, 31337L, 1f, startEra = 6))
             val r = BattleRenderer(g, b)
+            val commands = BattleController(b)
             r.layout(960f, 540f, 0f, 55f)
             val bitmap = Bitmap.createBitmap(960, 540, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -51,7 +52,8 @@ class RendererStressTest {
                 if (frame % 110 == 0 && !b.over) {
                     for (side in b.sides) {
                         side.abilityCd[0] = 0f
-                        b.castBarrage(side, 530f)
+                        if (side.index == 0) commands.barrage(530f)
+                        else b.castBarrage(side, 530f)
                     }
                 }
                 b.step()

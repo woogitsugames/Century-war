@@ -154,6 +154,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     fun render(c: Canvas, dt: Float, w: Float, h: Float) {
         time += dt.coerceAtLeast(0f)
         val q = g.quality
+        // Przy zmianie jakości istniejąca pula również musi spełniać nowy limit.
+        if (pcount > q.maxParticles) pcount = q.maxParticles
         fill.isAntiAlias = q.antialias
         line.isAntiAlias = q.antialias
         pen.cv = c
