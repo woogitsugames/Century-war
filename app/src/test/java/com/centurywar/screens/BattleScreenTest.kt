@@ -214,16 +214,6 @@ class BattleScreenTest {
         val controller = field(bs, "commands").get(bs) as BattleController
         tap(g, button.r.centerX(), button.r.centerY())
 
-        val x = rect.centerX()
-        val y = rect.centerY()
-        g.pushTouch(TouchEvent.DOWN, x, y, 0)
-        g.pushTouch(TouchEvent.MOVE, x - 180f, y, 0)
-        g.pushTouch(TouchEvent.UP, x - 180f, y, 0)
-        g.frame(canvas, 1f / 60f)
-        assertEquals(0, battle.player.barragesUsed)
-        assertTrue(controller.log().commands.isEmpty())
-        assertTrue(field(bs, "aimingBarrage").getBoolean(bs))
-
         // Dotknięcie paska górnego poza przyciskami tylko anuluje tryb.
         tap(g, g.width / 2f, 0f)
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
@@ -456,5 +446,31 @@ class BattleScreenTest {
         assertEquals(1, g.profile.skirmishHistory.size)
         assertTrue(g.profile.skirmishHistory.first().won)
         assertTrue(!g.profile.skirmishHistory.first().ranked)
+    }
+
+    @Test
+    fun draggingAimMovesMarkerNotCameraAndReleaseFires() {
+        val g = game()
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 335L, 1f))
+        g.setScreen(bs)
+        g.frame(canvas, 1f / 60f)
+        val button = field(bs, "barrageBtn").get(bs) as Button
+        val rect = field(bs, "fieldRect").get(bs) as RectF
+        val renderer = field(bs, "r").get(bs) as BattleRenderer
+        val battle = field(bs, "battle").get(bs) as Battle
+        val controller = field(bs, "commands").get(bs) as BattleController
+        tap(g, button.r.centerX(), button.r.centerY())
+        val camBefore = renderer.camX
+        val x = rect.right * 0.6f
+        val y = rect.centerY()
+        g.pushTouch(TouchEvent.DOWN, x, y, 0)
+        g.pushTouch(TouchEvent.MOVE, x + 90f, y, 0)
+        g.pushTouch(TouchEvent.MOVE, x + 180f, y, 0)
+        g.pushTouch(TouchEvent.UP, x + 180f, y, 0)
+        g.frame(canvas, 1f / 60f)
+        assertEquals(camBefore, renderer.camX, 0.001f)
+        assertEquals(1, battle.player.barragesUsed)
+        assertEquals(Replay.Kind.BARRAGE_AT, controller.log().commands.last().kind)
+        assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
     }
 }

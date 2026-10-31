@@ -225,6 +225,18 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         aimLine.strokeWidth = 2f * d
         c.drawLine(left, top, left, bottom, aimLine)
         c.drawLine(right, top, right, bottom, aimLine)
+        // Wrogowie w zasięgu rozrzutu: znacznik nad głową, żeby było widać, kogo trafi salwa.
+        val tx = worldTargetX.coerceIn(near, far)
+        for (u in b.units) {
+            if (!u.alive || u.side != 1 || abs(u.x - tx) > 120f) continue
+            if (b.fog && u.x - b.player.front > 650f) continue
+            val ux = sx(u.x)
+            val uy = groundY - unitHeight(u.def) * k * u.def.size - 14f * d
+            aimFill.color = Ui.OUTLINE
+            c.drawCircle(ux, uy, 6.5f * d, aimFill)
+            aimFill.color = Color.rgb(255, 196, 64)
+            c.drawCircle(ux, uy, 4.5f * d, aimFill)
+        }
         val cy = (groundY - 12f * d).coerceIn(top + 6f * d, bottom - 6f * d)
         aimLine.color = Ui.OUTLINE
         aimLine.strokeWidth = 5f * d

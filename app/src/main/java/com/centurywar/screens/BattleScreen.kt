@@ -873,7 +873,7 @@ class BattleScreen(
                     showTurrets = false
                     aimingBarrage = true
                     aimScreenX = w * 0.5f
-                    aimWorldX = r.worldX(aimScreenX)
+                    aimWorldX = snapBarrageTarget(r.worldX(aimScreenX))
                 }
             }
             RALLY -> commands.rally()
@@ -990,17 +990,62 @@ class BattleScreen(
             if ((e.action == TouchEvent.DOWN || e.action == TouchEvent.MOVE) &&
                 aimStartedInField && fieldRect.contains(e.x, e.y)) {
                 aimScreenX = e.x
-                aimWorldX = r.worldX(e.x)
+                aimWorldX = snapBarrageTarget(r.worldX(e.x))
+            }
+            // Przeciągnięcie celownika: ostrzał spada po puszczeniu palca.
+            if (e.action == TouchEvent.UP && aimStartedInField && aimMoved) {
+                fireAimedBarrage(aimWorldX)
+                aimingBarrage = false
+                aimStartedInField = false
+                return true
             }
         }
         return false // Ekran nadal rozpoznaje zwykły tap i przeciąganie.
     }
 
+    private fun fireAimedBarrage(worldX: Float) {
+        if (paused || finished || !battle.abilityReady(battle.player, 0)) return
+        achievementEvents.beforeAimedBarrage()
+        val fired = commands.barrage(worldX)
+        achievementEvents.afterAimedBarrage(fired)
+        if (fired) haptics.onBarrage()
+    }
+
+    /**
+     * Przyciąganie celownika do najbliższego widocznego skupiska wrogów (do 110 j. od palca):
+     * środek grupy w promieniu rozrzutu ostrzału. Bez alokacji; tylko interfejs, nie symulacja.
+     */
+    private fun snapBarrageTarget(x: Float): Float {
+        val p = battle.player
+        val near = p.baseFront + 220f
+        val far = p.baseFront + 1370f
+        var bestCount = 0
+        var bestX = x
+        var bestDist = Float.MAX_VALUE
+        for (u in battle.units) {
+            if (!u.alive || u.side != 1) continue
+            if (battle.fog && u.x - p.front > 650f) continue
+            if (u.x < near || u.x > far || kotlin.math.abs(u.x - x) > 110f) continue
+            var n = 0
+            var sum = 0f
+            for (v in battle.units) {
+                if (!v.alive || v.side != 1 || kotlin.math.abs(v.x - u.x) > 120f) continue
+                n++; sum += v.x
+            }
+            val cx = sum / n
+            val d = kotlin.math.abs(cx - x)
+            if (n > bestCount || (n == bestCount && d < bestDist)) { bestCount = n; bestX = cx; bestDist = d }
+        }
+        return bestX.coerceIn(near, far)
+    }
+
     override fun onDrag(dx: Float, dy: Float) {
         if (finished || paused) return
+        // Podczas celowania palec przesuwa celownik, a nie kamerę.
+        if (aimingBarrage && aimStartedInField) return
         r.camX -= dx / r.k
         r.clampCam()
-        if (aimingBarrage) aimWorldX = r.worldX(aimScreenX)
+        if (aimingBarrage) aimWorldX = snapBarrageTarget(r.worldX(aimScreenX))
         manualCam = 4f
         tut?.onCamera()
     }
@@ -1010,10 +1055,7 @@ class BattleScreen(
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
                 fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
-                achievementEvents.beforeAimedBarrage()
-                val fired = commands.barrage(r.worldX(x))
-                achievementEvents.afterAimedBarrage(fired)
-                if (fired) haptics.onBarrage()
+                fireAimedBarrage(snapBarrageTarget(r.worldX(x)))
             }
             aimingBarrage = false // Dotknięcie poza polem walki anuluje.
             return
