@@ -42,6 +42,12 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Drzewo zaleznosci wydania (audyt licencji)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
+          ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
+          python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'
@@ -83,6 +89,16 @@ jobs:
         with:
           name: century-war-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zapisz drzewo zaleznosci
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-runtime-dependencies
+          path: |
+            release-runtime-dependencies.txt
+            server-runtime-dependencies.txt
           if-no-files-found: warn
           retention-days: 14
       - name: Zapisz raporty testow

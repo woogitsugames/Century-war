@@ -50,3 +50,5 @@ strategia bez internetu; strategia Android; wojna epok; ewolucja armii; bitwy st
 - **Nie obiecuj osiągnięć Google Play Games** przed wdrożeniem adaptera: lokalne osiągnięcia działają, ale wysyłka do Google nie jest podłączona.
 - Przypomnienia są **lokalne**, po pierwszym zwycięstwie i z uprawnieniem systemowym, a nie push.
 - Nie reklamuj niewdrożonych reklam, zakupów, multiplayera ani własnych rankingów serwerowych. Sprawdź opis względem finalnego AAB i polityki prywatności.
+
+**Warunek wydania:** W kodzie istnieje osobny, opcjonalny ranking globalny wydawcy: domyślnie wyłączony, wymagający zgody w Ustawieniach i działającego serwera HTTPS. Nie wymieniaj go jako dostępnej funkcji w publicznej karcie przed wdrożeniem i audytem prywatności.

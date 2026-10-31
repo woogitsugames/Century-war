@@ -38,10 +38,11 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val hintSettings = btn(15)
     private val globalRank = btn(16)
     private val newIdentity = btn(17)
-    private val localRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, hintSettings, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, hintSettings, reset)
-    private val globalRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, globalRank, newIdentity, access, hintSettings, reset)
-    private val bothRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, access, hintSettings, reset)
+    private val about = btn(19)
+    private val localRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, hintSettings, about, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, hintSettings, about, reset)
+    private val globalRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, globalRank, newIdentity, access, hintSettings, about, reset)
+    private val bothRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, access, hintSettings, about, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = when {
         g.scores != null && g.online.available -> bothRows
@@ -53,13 +54,13 @@ class SettingsScreen(g: Game) : Screen(g) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; sfxLevel -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; access -> Icons.PERSON; hintSettings -> Icons.BOOK
-        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; else -> Icons.RESTART
+        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; about -> Icons.BOOK; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; sfxLevel -> "sfx_volume"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
         access -> "accessibility"; hintSettings -> "hint_settings"
-        globalRank -> "global_ranking"; newIdentity -> "global_identity"
+        globalRank -> "global_ranking"; newIdentity -> "global_identity"; about -> "about"
         else -> "play_games"
     }
     private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
@@ -169,6 +170,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
         access.label = L["access_open"]
+        about.label = L["about_link"]
         globalRank.label = if (p.globalRanking) L["on"] else L["off"]
         globalRank.color = if (p.globalRanking) Ui.BTN_GREEN else Ui.BTN
         newIdentity.label = if (identityArmed > 0f) L["reset_confirm"] else L["global_new_id"]
@@ -326,6 +328,7 @@ class SettingsScreen(g: Game) : Screen(g) {
                 }
                 return
             }
+            19 -> { g.push(AboutScreen(g)); return }
             17 -> {
                 if (p.playerId.isNotEmpty()) {
                     if (identityArmed > 0f) {

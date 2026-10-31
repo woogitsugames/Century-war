@@ -102,6 +102,7 @@ object L {
         putAll(part3())
         putAll(part4())
         putAll(part5())
+        putAll(part6())
     }
 
     private fun part0(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1145,5 +1146,16 @@ object L {
         "sk_loss" to t("Porażka", "Loss", "Niederlage", "Derrota", "Défaite", "Sconfitta", "Derrota", "Поразка", "Verlies", "Yenilgi"),
         "sk_classic" to t("Ranking", "Ranked", "Rangliste", "Ranking", "Classé", "Classifica", "Ranking", "Рейтинг", "Ranglijst", "Sıralama"),
         "sk_custom" to t("Własna", "Custom", "Eigene", "Propia", "Libre", "Libera", "Livre", "Власна", "Eigen", "Özel"),
+    )
+    private fun part6(): Array<Pair<String, Array<out String>>> = arrayOf(
+        // --- ekran O grze
+        "about" to t("O grze", "About", "Über das Spiel", "Acerca del juego", "À propos", "Info sul gioco", "Sobre o jogo", "Про гру", "Over het spel", "Oyun hakkında"),
+        "about_version" to t("Wersja", "Version", "Version", "Versión", "Version", "Versione", "Versão", "Версія", "Versie", "Sürüm"),
+        "about_author" to t("Twórca: WooGitsu Games", "Created by WooGitsu Games", "Entwickelt von WooGitsu Games", "Creado por WooGitsu Games", "Créé par WooGitsu Games", "Creato da WooGitsu Games", "Criado por WooGitsu Games", "Автор: WooGitsu Games", "Gemaakt door WooGitsu Games", "Geliştirici: WooGitsu Games"),
+        "about_credits" to t("Grafika, muzyka i dźwięki stworzone na potrzeby gry.", "Art, music and sounds created for this game.", "Grafik, Musik und Klänge eigens für dieses Spiel erstellt.", "Arte, música y sonidos creados para este juego.", "Graphismes, musique et sons créés pour ce jeu.", "Grafica, musica e suoni creati per questo gioco.", "Arte, música e sons criados para este jogo.", "Графіку, музику й звуки створено для цієї гри.", "Beeld, muziek en geluid speciaal voor dit spel gemaakt.", "Görseller, müzik ve sesler bu oyun için üretildi."),
+        "about_privacy" to t("Polityka prywatności", "Privacy policy", "Datenschutz", "Privacidad", "Confidentialité", "Privacy", "Privacidade", "Політика приватності", "Privacybeleid", "Gizlilik politikası"),
+        "about_licenses" to t("Licencje open source", "Open-source licenses", "Open-Source-Lizenzen", "Licencias de código abierto", "Licences open source", "Licenze open source", "Licenças de código aberto", "Ліцензії відкритого коду", "Opensourcelicenties", "Açık kaynak lisansları"),
+        "about_link" to t("Otwórz", "Open", "Öffnen", "Abrir", "Ouvrir", "Apri", "Abrir", "Відкрити", "Openen", "Aç"),
+        "about_apache_full" to t("Tekst licencji Apache 2.0", "Apache 2.0 license text", "Apache-2.0-Lizenztext", "Texto de licencia Apache 2.0", "Texte de licence Apache 2.0", "Testo licenza Apache 2.0", "Texto da licença Apache 2.0", "Текст ліцензії Apache 2.0", "Tekst Apache 2.0-licentie", "Apache 2.0 lisans metni"),
     )
 }

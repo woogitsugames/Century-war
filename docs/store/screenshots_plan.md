@@ -39,7 +39,7 @@ Bez narracji zależnej od dźwięku (Google Play może automatycznie odtwarzać 
 | **12–16 s** | Szybkie przejście z ekranu podsumowania bitwy do badań; zakup ulepszenia. | **Rozwijaj strategię** / **Build your strategy** |
 | **16–20 s** | Ekran kampanii, wybór etapu i gwiazdki. | **32 etapy kampanii** / **32 campaign stages** |
 | **20–24 s** | Intensywne starcie Endless Siege i zbliżenie na wybór wyzwania dnia. | **Oblężenie i wyzwania dnia** / **Endless Siege & Daily Challenges** |
-| **24–27 s** | Kodeks (przewijanie epok) i przełączanie języka w Ustawieniach; szybka klatka z Foldem tylko jeśli realnie nagrana. | **Offline • 10 języków** / **Offline • 10 languages** |
+| **24–27 s** | Kodeks (przewijanie epok) i przełączanie języka w Ustawieniach; szybka klatka z Foldem tylko jeśli realnie nagrana. | **Graj offline • 10 języków** / **Play offline • 10 languages** |
 | **27–30 s** | Tytuł Century War na tle kadru z bitwy, proste wygaszenie. | **Century War — Wojna epok** / **Century War — Era Strategy** |
 
 **Montaż:** krótkie cięcia, bez pseudo-gameplayu; najważniejszy komunikat zrozumiały bez dźwięku. Unikaj elementów interfejsu Google Play, ocen gwiazdkowych, fałszywych opinii, ikon innych gier i materiałów z cudzych marek.
@@ -50,7 +50,7 @@ Bez narracji zależnej od dźwięku (Google Play może automatycznie odtwarzać 
 2. Sprawdź poprawność polskich i angielskich etykiet, kadrowanie oraz brak uciętego HUD na małych i dużych ekranach.
 3. Zweryfikuj formaty i wymiary zasobów; Google Play dopuszcza do 8 screenów na typ urządzenia.
 4. Film umieść na YouTube zgodnie z wymogami Play Console i **wyłącz reklamy na filmie**. Dodaj jego adres w karcie aplikacji; sam plan nie publikuje filmu.
-5. Nie dodawaj zrzutów przedstawiających Play Games, pakiet premium lub reklamy — obecna gra tych funkcji nie posiada.
+5. Podstawowa rozgrywka działa offline, ale aplikacja ma opcjonalne Play Games (jeśli wydanie jest skonfigurowane) i osobny ranking globalny uruchamiany tylko za zgodą i z serwerem HTTPS. Nie reklamuj ich jako dostępnych, dopóki nie działają w finalnym wydaniu. Pakiet premium i reklamy nie zostały wdrożone.
 
 ## Źródła Google Play
 
