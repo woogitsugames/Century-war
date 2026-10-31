@@ -56,7 +56,7 @@ class ResearchSubmissionTest {
             battle.fx.count = 0
         }
         if (!battle.over) assertTrue(commands.surrender())
-        assertTrue("Musi powstać wynik możliwy do zapisania", battle.score() > 0L)
+        assertTrue(battle.score() > 0L, "Musi powstać wynik możliwy do zapisania")
         val log = commands.log()
         assertTrue(log.steps in 60..90_000)
         return ScoreSubmission(
