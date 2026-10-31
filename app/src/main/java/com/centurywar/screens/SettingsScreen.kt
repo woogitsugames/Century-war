@@ -213,7 +213,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             -1 -> { p.save(); g.pop() }
             1 -> { p.quality = (p.quality + 1) % 4; g.setQuality(g.effectiveQualityLevel()) }
             2 -> { p.fpsCap = when (p.fpsCap) { 0 -> 60; 60 -> 30; else -> 0 }; g.applyFrameRate() }
-            3 -> { val i = L.indexOf(p.lang); p.lang = if (p.lang.isEmpty()) L.CODES[0] else if (i in 0 until L.CODES.size - 1) L.CODES[i + 1] else ""; g.applyLanguage() }
+            3 -> { val i = L.indexOf(p.lang); p.lang = if (p.lang.isEmpty()) L.CODES[0] else if (i in 0 until L.CODES.size - 1) L.CODES[i + 1] else ""; g.onLanguageChanged() }
             4 -> p.vibration = !p.vibration
             8 -> p.sound = !p.sound
             5 -> p.showFps = !p.showFps
