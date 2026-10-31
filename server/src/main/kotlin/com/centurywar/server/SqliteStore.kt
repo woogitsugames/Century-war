@@ -8,6 +8,18 @@ import java.time.temporal.TemporalAdjusters
 
 data class SavedScore(val inserted: Boolean, val bestScore: Long)
 
+data class AdminScore(
+    val player: String,
+    val nick: String,
+    val board: String,
+    val day: Long,
+    val score: Long,
+    val verifiedAt: Long,
+    val blocked: Boolean,
+)
+
+internal class BlockedPlayerException : IllegalStateException("blocked_player")
+
 /** Jeden uchwyt JDBC, wszystkie operacje szeregowane; nadaje się dla jednej instancji. */
 class SqliteStore(jdbcUrl: String) : AutoCloseable {
     private val lock = Any()
@@ -29,6 +41,12 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                             player_id TEXT PRIMARY KEY NOT NULL,
                             nick TEXT NOT NULL,
                             updated_at INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS blocked_players (
+                            player_id TEXT PRIMARY KEY NOT NULL,
+                            blocked_at INTEGER NOT NULL
                         )
                     """.trimIndent())
                     s.execute("""
@@ -107,6 +125,10 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                 it.setString(1, player)
                 it.executeUpdate()
             }
+            connection.prepareStatement("DELETE FROM blocked_players WHERE player_id = ?").use {
+                it.setString(1, player)
+                it.executeUpdate()
+            }
             connection.commit()
         } catch (e: Exception) {
             connection.rollback()
@@ -146,13 +168,15 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         val nowSeconds = Math.floorDiv(nowMillis, 1000L)
         connection.autoCommit = false
         try {
+            // Sprawdzamy ponownie po weryfikacji, aby uniknąć wyścigu z CLI.
+            if (isBlockedUnsafe(input.player)) throw BlockedPlayerException()
             connection.prepareStatement("""
                 INSERT INTO players(player_id, nick, updated_at) VALUES (?, ?, ?)
                 ON CONFLICT(player_id) DO UPDATE SET
                     nick=excluded.nick, updated_at=excluded.updated_at
             """.trimIndent()).use {
                 it.setString(1, input.player)
-                it.setString(2, input.nick)
+                it.setString(2, NickModeration.publicNick(input.nick, input.player))
                 it.setLong(3, nowSeconds)
                 it.executeUpdate()
             }
@@ -225,6 +249,7 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                 SELECT player_id, MAX(score) AS score
                 FROM scores
                 WHERE board=? AND verified_at>=?
+                  AND NOT EXISTS (SELECT 1 FROM blocked_players b WHERE b.player_id=scores.player_id)
                 GROUP BY player_id
             ), ranked AS (
                 SELECT ROW_NUMBER() OVER (ORDER BY best.score DESC, best.player_id ASC) AS rank,
@@ -249,7 +274,11 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
             it.executeQuery().use { rs ->
                 val result = ArrayList<RankingEntry>()
                 while (rs.next()) {
-                    result.add(RankingEntry(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getLong(4)))
+                    val playerId = rs.getString(2)
+                    result.add(RankingEntry(
+                        rs.getLong(1), playerId,
+                        NickModeration.publicNick(rs.getString(3), playerId), rs.getLong(4)
+                    ))
                 }
                 result
             }
