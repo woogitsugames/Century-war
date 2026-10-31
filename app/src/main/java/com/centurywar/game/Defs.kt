@@ -181,7 +181,7 @@ object Defs {
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami. */
-    fun baseHp(era: Int): Float = 1600f * 1.85f.pow(era)
+    fun baseHp(era: Int): Float = 6400f * 1.85f.pow(era) * (1f + 2.5f * (era / 7f).pow(3))
 
     /** Pasywny przychód złota na sekundę w danej epoce. */
     fun income(era: Int): Float = 2.6f * 1.8f.pow(era)
