@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 2
+    const val VERSION = 3
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -45,6 +45,9 @@ object BattleSnapshot {
             mix(e.evolveXp); mix(t.cost); mixF(t.dmg); mixF(t.range); mixF(t.cooldown); mixF(t.splash); mix(t.projectile)
             mixF(Defs.baseHp(e.index)); mixF(Defs.income(e.index)); mixF(Defs.abilityDmg(e.index)); mixF(Defs.costScale(e.index))
         }
+        // Zmiana macierzy kontr również unieważnia stare zrzuty bitwy.
+        for (attacker in Role.values()) for (defender in Role.values()) mixF(Defs.counterMultiplier(attacker, defender))
+        mixF(Defs.TURRET_VS_LATE_HEAVY)
         h
     }
 
@@ -58,7 +61,9 @@ object BattleSnapshot {
         o.writeFloat(camX)
         writeConfig(o, b.cfg)
         o.writeLong(b.rng.state)
+        o.writeLong(b.rng.aiState(0)); o.writeLong(b.rng.aiState(1))
         o.writeFloat(b.time)
+        o.writeInt(b.stepCount)
         o.writeBoolean(b.over)
         o.writeInt(b.winner)
         o.writeInt(b.wave)
@@ -67,9 +72,20 @@ object BattleSnapshot {
         val pc = b.pendingChoice
         o.writeByte(pc?.size ?: -1)
         pc?.forEach { o.writeByte(it.ordinal) }
+        val cards = b.pendingCards
+        o.writeByte(cards?.size ?: -1)
+        cards?.forEach { o.writeByte(it.ordinal) }
+        o.writeByte(b.currentWaveTheme.ordinal)
+        o.writeByte(b.nextWaveTheme.ordinal)
+        o.writeInt(b.bossesSpawned)
+        o.writeInt(b.bossesDefeated)
+        o.writeInt(b.nextBossToSpawn)
+        o.writeInt(b.bossRewardsPending)
         for (s in b.sides) writeSide(o, s)
         writeAi(o, b.ai)
         writeAi(o, b.playerAi)
+        o.writeBoolean(b.commandController != null)
+        b.commandController?.writeSnapshot(o)
 
         o.writeShort(b.units.count { it.active })
         for ((i, u) in b.units.withIndex()) {
@@ -79,15 +95,17 @@ object BattleSnapshot {
             o.writeFloat(u.x); o.writeFloat(u.hp); o.writeFloat(u.maxHp); o.writeFloat(u.dmg); o.writeFloat(u.cd)
             o.writeFloat(u.anim); o.writeFloat(u.attackAnim); o.writeFloat(u.flash)
             o.writeBoolean(u.moving); o.writeFloat(u.dying); o.writeInt(u.serial)
+            o.writeByte(u.bossKind); o.writeFloat(u.bossCd); o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft)
         }
         o.writeShort(b.projs.count { it.active })
         for ((i, p) in b.projs.withIndex()) {
             if (!p.active) continue
             o.writeShort(i)
             o.writeByte(p.side); o.writeByte(p.type); o.writeByte(p.era)
+            o.writeByte(p.shooterRole?.ordinal ?: -1); o.writeByte(p.turretEra)
             o.writeFloat(p.x); o.writeFloat(p.h); o.writeFloat(p.vx); o.writeFloat(p.vh); o.writeFloat(p.g)
             o.writeFloat(p.tx); o.writeFloat(p.t); o.writeFloat(p.dur); o.writeFloat(p.delay)
-            o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul)
+            o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul); o.writeFloat(p.burnDps)
         }
         o.flush()
         val payload = bo.toByteArray()
@@ -115,6 +133,7 @@ object BattleSnapshot {
         o.writeBoolean(b.eliteUnlocked); o.writeBoolean(b.rallyUnlocked)
         o.writeInt(c.stageIndex)
         o.writeBoolean(c.tutorial)
+        o.writeByte(c.aiPersonality?.ordinal ?: -1)
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
@@ -129,11 +148,17 @@ object BattleSnapshot {
         o.writeFloat(s.incomeMul); o.writeFloat(s.hpMul); o.writeFloat(s.dmgMul); o.writeFloat(s.baseHpMul)
         o.writeFloat(s.turretDmgMul); o.writeFloat(s.trainMul); o.writeFloat(s.xpMul); o.writeFloat(s.abilityCdMul)
         o.writeFloat(s.siegeMul); o.writeFloat(s.killGoldMul); o.writeFloat(s.speedMul); o.writeFloat(s.turretCostMul)
+        o.writeFloat(s.turretRateMul); o.writeFloat(s.turretBurnRatio); o.writeFloat(s.rangedDmgMul)
+        o.writeFloat(s.eliteDmgMul); o.writeFloat(s.lastStandMul); o.writeFloat(s.cloneChance)
+        o.writeFloat(s.repairPerWave); o.writeInt(s.freeElitesPerWave); o.writeInt(s.freeEliteCredits)
+        o.writeFloat(s.autoBarrageInterval); o.writeFloat(s.autoBarrageTimer)
+        for (v in s.cardStacks) o.writeInt(v)
         o.writeShort(s.cap); o.writeBoolean(s.eliteUnlocked); o.writeBoolean(s.rallyUnlocked)
         o.writeShort(s.doctrines.size)
         for (d in s.doctrines) o.writeByte(d.ordinal)
         o.writeShort(s.rank); o.writeShort(s.armory)
         o.writeInt(s.kills); o.writeInt(s.killValue); o.writeInt(s.spawned); o.writeFloat(s.goldEarned)
+        for (v in s.spawnedByRole) o.writeInt(v)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -141,6 +166,12 @@ object BattleSnapshot {
         if (ai == null) return
         o.writeFloat(ai.thinkTimer)
         o.writeByte(ai.plannedRoleState?.ordinal ?: -1)
+        o.writeByte(ai.personality.ordinal)
+        o.writeInt(ai.saveEraState)
+        o.writeFloat(ai.saveUntilState)
+        o.writeFloat(ai.evolveReadyAtState)
+        o.writeFloat(ai.holdUntilState)
+        o.writeFloat(ai.nextHoldAtState)
     }
 
     // ------------------------------------------------------------------ odczyt
@@ -168,7 +199,10 @@ object BattleSnapshot {
         val cfg = readConfig(i) ?: return null
         val b = Battle(cfg)
         b.rng.state = i.readLong()
+        b.rng.setAiState(0, i.readLong()); b.rng.setAiState(1, i.readLong())
         b.time = i.readFloat()
+        b.stepCount = i.readInt()
+        require(b.stepCount >= 0 && b.time == b.stepCount * Battle.STEP)
         b.over = i.readBoolean()
         b.winner = i.readInt()
         b.wave = i.readInt()
@@ -176,15 +210,25 @@ object BattleSnapshot {
         b.serialCounter = i.readInt()
         val pcn = i.readByte().toInt()
         b.pendingChoice = if (pcn < 0) null else Array(pcn) { enumAt(Doctrine.values(), i.readByte().toInt()) }
+        val cn = i.readByte().toInt()
+        require(cn == -1 || cn == 3)
+        b.pendingCards = if (cn < 0) null else Array(cn) { enumAt(EndlessCard.values(), i.readByte().toInt()) }
+        b.currentWaveTheme = enumAt(EndlessWaveTheme.values(), i.readByte().toInt())
+        b.nextWaveTheme = enumAt(EndlessWaveTheme.values(), i.readByte().toInt())
+        b.bossesSpawned = i.readInt()
+        b.bossesDefeated = i.readInt()
+        b.nextBossToSpawn = i.readInt()
+        b.bossRewardsPending = i.readInt()
+        require(b.bossesSpawned >= 0 && b.bossesDefeated in 0..b.bossesSpawned &&
+            b.nextBossToSpawn >= 10 && b.bossRewardsPending in 0..1000)
         for (s in b.sides) readSide(i, s)
         if (!readAi(i, b.ai)) return null
         if (i.readBoolean()) {
             val pa = Ai(b, 0)
-            pa.thinkTimer = i.readFloat()
-            val r = i.readByte().toInt()
-            pa.plannedRoleState = if (r < 0) null else enumAt(Role.values(), r)
+            readAiState(i, pa)
             b.playerAi = pa
         }
+        if (i.readBoolean()) BattleController(b).readSnapshot(i, b.stepCount)
 
         val un = i.readShort().toInt()
         require(un in 0..Battle.MAX_UNITS)
@@ -197,6 +241,8 @@ object BattleSnapshot {
             u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.cd = i.readFloat()
             u.anim = i.readFloat(); u.attackAnim = i.readFloat(); u.flash = i.readFloat()
             u.moving = i.readBoolean(); u.dying = i.readFloat(); u.serial = i.readInt()
+            u.bossKind = i.readByte().toInt().also { require(it in 0..2) }
+            u.bossCd = i.readFloat(); u.burnDps = i.readFloat(); u.burnLeft = i.readFloat()
         }
         val pn = i.readShort().toInt()
         require(pn in 0..Battle.MAX_PROJ)
@@ -205,9 +251,12 @@ object BattleSnapshot {
             require(!p.active)
             p.active = true
             p.side = side(i.readByte().toInt()); p.type = i.readByte().toInt(); p.era = era(i.readByte().toInt())
+            val role = i.readByte().toInt()
+            p.shooterRole = if (role == -1) null else enumAt(Role.values(), role)
+            p.turretEra = i.readByte().toInt().also { require(it in -1 until Defs.ERA_COUNT) }
             p.x = i.readFloat(); p.h = i.readFloat(); p.vx = i.readFloat(); p.vh = i.readFloat(); p.g = i.readFloat()
             p.tx = i.readFloat(); p.t = i.readFloat(); p.dur = i.readFloat(); p.delay = i.readFloat()
-            p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat()
+            p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat(); p.burnDps = i.readFloat()
         }
         return RestoredBattle(b, ranked, camX)
     }
@@ -228,8 +277,10 @@ object BattleSnapshot {
         )
         val stageIndex = i.readInt()
         val tutorial = i.readBoolean()
+        val p = i.readByte().toInt()
+        val personality = if (p < 0) null else enumAt(AiPersonality.values(), p)
         if (startEra > maxEra) return null
-        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial)
+        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial, personality)
     }
 
     private fun readSide(i: DataInputStream, s: Side) {
@@ -248,6 +299,11 @@ object BattleSnapshot {
         s.incomeMul = i.readFloat(); s.hpMul = i.readFloat(); s.dmgMul = i.readFloat(); s.baseHpMul = i.readFloat()
         s.turretDmgMul = i.readFloat(); s.trainMul = i.readFloat(); s.xpMul = i.readFloat(); s.abilityCdMul = i.readFloat()
         s.siegeMul = i.readFloat(); s.killGoldMul = i.readFloat(); s.speedMul = i.readFloat(); s.turretCostMul = i.readFloat()
+        s.turretRateMul = i.readFloat(); s.turretBurnRatio = i.readFloat(); s.rangedDmgMul = i.readFloat()
+        s.eliteDmgMul = i.readFloat(); s.lastStandMul = i.readFloat(); s.cloneChance = i.readFloat()
+        s.repairPerWave = i.readFloat(); s.freeElitesPerWave = i.readInt(); s.freeEliteCredits = i.readInt()
+        s.autoBarrageInterval = i.readFloat(); s.autoBarrageTimer = i.readFloat()
+        for (k in s.cardStacks.indices) s.cardStacks[k] = i.readInt()
         s.cap = i.readShort().toInt(); s.eliteUnlocked = i.readBoolean(); s.rallyUnlocked = i.readBoolean()
         val dn = i.readShort().toInt()
         require(dn in 0..1000)
@@ -255,6 +311,7 @@ object BattleSnapshot {
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         s.kills = i.readInt(); s.killValue = i.readInt(); s.spawned = i.readInt(); s.goldEarned = i.readFloat()
+        for (k in s.spawnedByRole.indices) s.spawnedByRole[k] = i.readInt().also { require(it >= 0) }
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */
@@ -262,10 +319,20 @@ object BattleSnapshot {
         val present = i.readBoolean()
         if (present != (ai != null)) return false
         if (ai == null) return true
+        readAiState(i, ai)
+        return true
+    }
+
+    private fun readAiState(i: DataInputStream, ai: Ai) {
         ai.thinkTimer = i.readFloat()
         val r = i.readByte().toInt()
         ai.plannedRoleState = if (r < 0) null else enumAt(Role.values(), r)
-        return true
+        ai.personality = enumAt(AiPersonality.values(), i.readByte().toInt())
+        ai.saveEraState = i.readInt().also { require(it in -1 until Defs.ERA_COUNT) }
+        ai.saveUntilState = i.readFloat()
+        ai.evolveReadyAtState = i.readFloat()
+        ai.holdUntilState = i.readFloat()
+        ai.nextHoldAtState = i.readFloat()
     }
 
     private fun <T> enumAt(values: Array<T>, ordinal: Int): T {

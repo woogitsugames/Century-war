@@ -79,6 +79,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     // dane kart (przeliczane w rebuild)
     private val titles = arrayOfNulls<String>(CARDS)
     private val roles = arrayOfNulls<String>(CARDS)
+    private val counterHints = arrayOfNulls<String>(CARDS)
     private val lines = Array(CARDS) { arrayOfNulls<String>(MAX_LINES) }
     private val lineCount = IntArray(CARDS)
     private val statN = IntArray(CARDS)
@@ -127,7 +128,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         previewW = min(128 * dp, cw * 0.34f)
         previewH = 112 * dp
         val unitRows = (MAX_STATS + statCols - 1) / statCols
-        ch = 10 * dp + previewH + 10 * dp + unitRows * rowH + 12 * dp
+        ch = 10 * dp + previewH + 36 * dp + unitRows * rowH + 12 * dp
         val gridRows = (CARDS + cols - 1) / cols
         val contentH = headerH + gridRows * (ch + gap)
         maxScroll = max(0f, contentH - (h - g.insetB - viewTop) + 8 * dp)
@@ -150,6 +151,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             val u = e.units[i]
             titles[i] = L[u.nameKey]
             roles[i] = L[when (u.role) { Role.MELEE -> "cx_melee"; Role.RANGED -> "cx_ranged"; Role.HEAVY -> "cx_heavy"; Role.ELITE -> "cx_elite" }]
+            counterHints[i] = L[when (u.role) {
+                Role.MELEE -> "cx_counter_ranged"
+                Role.RANGED -> "cx_counter_heavy"
+                Role.HEAVY -> "cx_counter_melee"
+                Role.ELITE -> "cx_counter_elite"
+            }]
             wrapInto(i, L[u.nameKey + "_fl"], textW)
             val hp = u.hp * b.unitHpMul
             val dmg = u.dmg * b.unitDmgMul
@@ -169,6 +176,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val t = e.turret
         titles[TURRET] = L[t.nameKey]
         roles[TURRET] = L["cx_turret"]
+        counterHints[TURRET] = if (era >= 4) L["cx_counter_turret"] else null
         wrapInto(TURRET, L["cx_turret_d"], textW)
         val tdmg = t.dmg * b.turretDmgMul
         val tUp = b.turretDmgMul != 1f
@@ -183,6 +191,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         titles[BARRAGE] = L[e.abilityKey]
         roles[BARRAGE] = L["cx_barrage"]
+        counterHints[BARRAGE] = null
         wrapInto(BARRAGE, L["cx_barrage_d"], textW)
         n = 0
         n = stat(BARRAGE, n, Icons.METEOR, "cx_hit", num(Defs.abilityDmg(era) * b.unitDmgMul), b.unitDmgMul != 1f)
@@ -316,7 +325,13 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
 
         // statystyki
-        val st = card.top + pad + previewH + 10 * dp
+        val st = card.top + pad + previewH + 36 * dp
+        val counterHint = counterHints[i]
+        if (counterHint != null) {
+            val available = cw - 2 * pad - 6 * dp
+            ui.text(c, counterHint, card.left + pad + 3 * dp, st - 15 * dp,
+                ui.fit(counterHint, 12f, available, 9f), Ui.GOOD)
+        }
         val n = statN[i]
         val rows = (n + statCols - 1) / statCols
         box.set(card.left + pad, st - 4 * dp, card.right - pad, st + rows * rowH + 2 * dp)

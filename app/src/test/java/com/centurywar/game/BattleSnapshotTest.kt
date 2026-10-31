@@ -21,7 +21,7 @@ class BattleSnapshotTest {
     /** Prosty, deterministyczny "gracz" bez AI (żeby wybór doktryny czekał na gracza). */
     private fun scripted(b: Battle) {
         val p = b.player
-        if (b.pendingChoice != null) return
+        if (b.pendingChoice != null || b.pendingCards != null) return
         if (b.canEvolve(p)) b.evolve(p)
         val role = Role.values()[(b.serialCounter + p.queueSize) % 3]
         b.queueUnit(p, role)
@@ -35,6 +35,7 @@ class BattleSnapshotTest {
         while (i < n && !b.over) {
             if (script) scripted(b)
             if (b.pendingChoice != null) b.chooseDoctrine((b.wave + b.player.era) % 3)
+            if (b.pendingCards != null) b.chooseEndlessCard((b.wave + b.player.era) % 3)
             b.step(); b.fx.count = 0; i++
         }
     }
@@ -93,6 +94,33 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun personalityAndTacticalTimersSurviveSave() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 245L, 1f, startEra = 2, maxEra = 3,
+            aiPersonality = AiPersonality.ENGINEER)
+        val original = Battle(cfg)
+        original.playerAi = Ai(original, 0, AiPersonality.ASSAULT)
+        steps(original, 120)
+        val enemyAi = original.ai!!
+        enemyAi.saveEraState = 2
+        enemyAi.saveUntilState = 3.5f
+        enemyAi.evolveReadyAtState = 8f
+        enemyAi.holdUntilState = 9f
+        enemyAi.nextHoldAtState = 23f
+        original.enemy.spawnedByRole[Role.ELITE.ordinal] = 3
+
+        val restored = roundTrip(original)
+        assertEquals(AiPersonality.ENGINEER, restored.ai!!.personality)
+        assertEquals(AiPersonality.ASSAULT, restored.playerAi!!.personality)
+        assertEquals(3, restored.enemy.spawnedByRole[Role.ELITE.ordinal])
+        assertEquals(2, restored.ai!!.saveEraState)
+        assertEquals(3.5f, restored.ai!!.saveUntilState)
+        assertEquals(8f, restored.ai!!.evolveReadyAtState)
+        steps(original, 180)
+        steps(restored, 180)
+        assertSame(original, restored)
+    }
+
+    @Test
     fun skirmishResumesExactly() {
         val (a, _) = check(BattleConfig(Mode.SKIRMISH, 42L, 1.05f), 60 * 150, 60 * 240)
         assertTrue(a.player.spawned > 0 && a.enemy.spawned > 0)
@@ -116,6 +144,34 @@ class BattleSnapshotTest {
     fun endlessWithPlayerChoices() {
         // bez AI gracza: co 5 fal gra czeka na wybór doktryny
         check(BattleConfig(Mode.ENDLESS, 11L, 1f), 60 * 170, 60 * 200, playerAi = false)
+    }
+
+    @Test
+    fun pendingEndlessCardsAndBossStateSurvive() {
+        val a = Battle(BattleConfig(Mode.ENDLESS, 2026L, 1f))
+        a.applyEndlessCard(a.player, EndlessCard.BURNING_TOWERS)
+        a.applyEndlessCard(a.player, EndlessCard.AUTO_BARRAGE)
+        repeat(5) { a.waveTimer = 0f; a.step() }
+        assertNotNull(a.pendingCards)
+        val b = roundTrip(a)
+        assertArrayEquals(a.pendingCards, b.pendingCards)
+        val at = a.time
+        b.step()
+        assertEquals(at, b.time)
+        a.chooseEndlessCard(2); b.chooseEndlessCard(2)
+        assertSame(a, b)
+        // Fala 10 wystawia bossa; dodatkowy zrzut z aktywnym bossem.
+        repeat(5) { a.waveTimer = 0f; b.waveTimer = 0f; a.step(); b.step() }
+        val bossA = a.currentBoss()
+        assertNotNull("Boss musi się pojawić w fali 10", bossA)
+        assertNotNull(a.pendingCards)
+        assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
+        val c = roundTrip(a)
+        assertNotNull(c.currentBoss())
+        assertEquals(a.currentBoss()!!.bossKind, c.currentBoss()!!.bossKind)
+        a.chooseEndlessCard(0); c.chooseEndlessCard(0)
+        steps(a, 60 * 60, true); steps(c, 60 * 60, true)
+        assertSame(a, c)
     }
 
     @Test
@@ -185,6 +241,52 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun rangedProjectileResumesWithCounterBonus() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 454L, 1f, startEra = 4, maxEra = 4))
+        battle.ai!!.thinkTimer = 1000f
+        assertTrue(battle.spawn(battle.player, Defs.unit(4, Role.RANGED)))
+        assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
+        val shooter = battle.units.first { it.alive && it.side == 0 }
+        val target = battle.units.first { it.alive && it.side == 1 }
+        shooter.x = 1100f
+        shooter.cd = 0f
+        target.x = 1300f
+        target.cd = 1000f
+        battle.step()
+        val projectile = battle.projs.first { it.active }
+        assertEquals(Role.RANGED, projectile.shooterRole)
+        assertEquals(-1, projectile.turretEra)
+        val restored = roundTrip(battle)
+        val hp = target.hp
+        steps(battle, 100)
+        steps(restored, 100)
+        assertTrue(target.hp < hp)
+        assertSame(battle, restored)
+    }
+
+    @Test
+    fun steamTurretProjectileResumesWithHeavyBonus() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 455L, 1f, startEra = 4, maxEra = 4))
+        battle.ai!!.thinkTimer = 1000f
+        battle.player.turretEra[0] = 4
+        battle.player.turretCd[0] = 0f
+        assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
+        val target = battle.units.first { it.alive && it.side == 1 }
+        target.x = battle.player.baseFront + 350f
+        target.cd = 1000f
+        battle.step()
+        val projectile = battle.projs.first { it.active }
+        assertNull(projectile.shooterRole)
+        assertEquals(4, projectile.turretEra)
+        val restored = roundTrip(battle)
+        val hp = target.hp
+        steps(battle, 100)
+        steps(restored, 100)
+        assertTrue(target.hp < hp)
+        assertSame(battle, restored)
+    }
+
+    @Test
     fun rejectsWrongVersionAndCorruption() {
         val a = Battle(BattleConfig(Mode.SKIRMISH, 3L, 1f)); a.playerAi = Ai(a, 0)
         steps(a, 60 * 60)
@@ -238,5 +340,27 @@ class BattleSnapshotTest {
         f.writeBytes(byteArrayOf(1, 2, 3))
         assertNull(store.loadBattle())
         assertFalse(f.exists())
+    }
+    @Test
+    fun snapshotKeepsReplayAndBothAiStreams() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 919191L, 0.95f, maxEra = 2)
+        val a = Battle(cfg)
+        val originalController = BattleController(a)
+        a.playerAi = Ai(a, 0)
+        repeat(60 * 35) { if (!a.over) { a.step(); a.fx.count = 0 } }
+        assertTrue(originalController.log().commands.isNotEmpty())
+        val restored = BattleSnapshot.decode(BattleSnapshot.encode(a))!!
+        val b = restored.battle
+        assertNotNull(b.commandController)
+        assertEquals(a.stepCount, b.stepCount)
+        assertEquals(a.rng.aiState(0), b.rng.aiState(0))
+        assertEquals(a.rng.aiState(1), b.rng.aiState(1))
+        assertEquals(originalController.log(), b.commandController!!.log())
+        repeat(60 * 45) {
+            if (!a.over) { a.step(); a.fx.count = 0 }
+            if (!b.over) { b.step(); b.fx.count = 0 }
+        }
+        assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
+        assertEquals(originalController.log(), b.commandController!!.log())
     }
 }

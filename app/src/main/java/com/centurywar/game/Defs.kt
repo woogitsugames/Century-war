@@ -1,6 +1,5 @@
 package com.centurywar.game
 
-import kotlin.math.pow
 
 /** Role jednostki na pasie. Każda epoka ma po jednej jednostce z każdej roli. */
 enum class Role { MELEE, RANGED, HEAVY, ELITE }
@@ -102,6 +101,23 @@ object Defs {
     const val BASE_FRONT = 190f
     const val MAX_TURRET_SLOTS = 4
 
+    /** Wiersz: rola atakująca; kolumna: rola obrońcy. Kolejność jak w [Role]. */
+    private val roleMultipliers = arrayOf(
+        floatArrayOf(1f, 1.35f, 1f, 1f), // wręcz kontruje dystans
+        floatArrayOf(1f, 1f, 1.30f, 1f), // dystans kontruje ciężkich
+        floatArrayOf(1.35f, 1f, 1f, 1f), // ciężcy kontrują wręcz
+        floatArrayOf(1f, 1f, 1f, 1f), // elita specjalizuje się w oblężeniu
+    )
+    const val TURRET_VS_LATE_HEAVY = 1.15f
+
+    fun counterMultiplier(attacker: Role, defender: Role): Float =
+        roleMultipliers[attacker.ordinal][defender.ordinal]
+
+    /** Premia późnych wież przeciw ciężkim jednostkom od epoki pary. */
+    fun turretCounterMultiplier(turretEra: Int, defender: UnitDef): Float =
+        if (turretEra >= 4 && defender.era >= 4 && defender.role == Role.HEAVY)
+            TURRET_VS_LATE_HEAVY else 1f
+
     private const val STAT_GROWTH = 2.05f
     private const val COST_GROWTH = 1.9f
 
@@ -149,8 +165,8 @@ object Defs {
 
     val evolveXp = intArrayOf(1000, 2600, 6400, 15500, 37000, 88000, 210000, Int.MAX_VALUE)
 
-    fun statScale(era: Int): Float = STAT_GROWTH.pow(era)
-    fun costScale(era: Int): Float = COST_GROWTH.pow(era)
+    fun statScale(era: Int): Float = StrictMath.pow(STAT_GROWTH.toDouble(), era.toDouble()).toFloat()
+    fun costScale(era: Int): Float = StrictMath.pow(COST_GROWTH.toDouble(), era.toDouble()).toFloat()
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
 
@@ -181,10 +197,10 @@ object Defs {
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami. */
-    fun baseHp(era: Int): Float = 1600f * 1.85f.pow(era)
+    fun baseHp(era: Int): Float = 1600f * StrictMath.pow(1.85f.toDouble(), era.toDouble()).toFloat()
 
     /** Pasywny przychód złota na sekundę w danej epoce. */
-    fun income(era: Int): Float = 2.6f * 1.8f.pow(era)
+    fun income(era: Int): Float = 2.6f * StrictMath.pow(1.8f.toDouble(), era.toDouble()).toFloat()
 
     /** Obrażenia jednego pocisku zdolności specjalnej. */
     fun abilityDmg(era: Int): Float = 46f * statScale(era)

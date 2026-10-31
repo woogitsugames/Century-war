@@ -42,6 +42,7 @@ class BattleSimTest {
     fun endlessEventuallyEnds() {
         val b = run(BattleConfig(Mode.ENDLESS, 7L, 1f), 120f)
         println("endless over=${b.over} wave=${b.wave} t=${b.time / 60f} score=${b.score()} era=${b.player.era}")
+        assertTrue("Tryb Endless powinien dobiec końca", b.over)
         assertTrue(b.wave >= 5)
     }
 
