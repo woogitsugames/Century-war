@@ -224,6 +224,10 @@ class Battle(val cfg: BattleConfig) {
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
+        const val ARMORY_BASE_COST = 140f
+        const val ARMORY_COST_GROWTH = 1.45f
+        const val ARMORY_BONUS = 1.08f
+        const val ARMORY_MAX_LEVEL = 15
         const val ENDLESS_CHOICE_EVERY = 5
         /** Samouczek: po tylu sekundach symulacji AI zaczyna grać. */
         const val TUTORIAL_AI_DELAY = 25f
@@ -266,16 +270,15 @@ class Battle(val cfg: BattleConfig) {
 
     /** Kierunek +1 oznacza wiatr w prawo. Zmiana co 75 s bez użycia RNG. */
     fun windDirection(): Int {
-        val phase = (stepCount / (75 * 60)).toLong()
+        val phase = (stepCount / (Weather.WIND_SHIFT_SECONDS * 60)).toLong()
         return if (((cfg.seed xor (cfg.seed ushr 32) xor phase) and 1L) == 0L) 1 else -1
     }
 
     /** Mnożniki identyczne dla obu stron, zależą jedynie od kierunku wystrzału. */
     fun projectileRangeMul(side: Int, turret: Boolean = false): Float = when (weather) {
-        Weather.CLEAR -> 1f
-        Weather.RAIN -> 0.9f
-        Weather.WIND -> if (sides[side].dir == windDirection().toFloat()) 1.1f else 0.9f
-        Weather.NIGHT -> if (turret) 0.85f else 0.95f
+        Weather.WIND -> if (sides[side].dir == windDirection().toFloat())
+            Weather.WIND_WITH else Weather.WIND_AGAINST
+        else -> if (turret) weather.turretRange else weather.projectileRange
     }
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
@@ -576,16 +579,16 @@ class Battle(val cfg: BattleConfig) {
         }
     }
 
-    fun armoryCost(side: Side): Int = (140f * Defs.costScale(side.era) * StrictMath.pow(1.45f.toDouble(), side.armory.toDouble()).toFloat()).toInt()
+    fun armoryCost(side: Side): Int = (ARMORY_BASE_COST * Defs.costScale(side.era) * StrictMath.pow(ARMORY_COST_GROWTH.toDouble(), side.armory.toDouble()).toFloat()).toInt()
 
     fun buyArmory(side: Side): Boolean {
-        if (over || side.armory >= 15) return false
+        if (over || side.armory >= ARMORY_MAX_LEVEL) return false
         val c = armoryCost(side)
         if (side.gold < c) return false
         side.gold -= c
         side.armory++
-        side.dmgMul *= 1.08f
-        side.hpMul *= 1.08f
+        side.dmgMul *= ARMORY_BONUS
+        side.hpMul *= ARMORY_BONUS
         return true
     }
 
@@ -992,7 +995,7 @@ class Battle(val cfg: BattleConfig) {
             val tick = min(dt, u.burnLeft)
             u.burnLeft -= tick
             val burn = u.burnDps * tick
-            damageUnit(u, if (weather == Weather.RAIN) burn * 0.5f else burn, 1 - u.side, direct = false)
+            damageUnit(u, if (weather == Weather.RAIN) burn * Weather.RAIN.burnDamage else burn, 1 - u.side, direct = false)
             if (!u.alive) return
         }
         if (u.def.art == EraArt.BIOTECH && u.alive && u.hp < u.maxHp)
@@ -1095,7 +1098,7 @@ class Battle(val cfg: BattleConfig) {
         }
         if (!blocked) {
             val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally
-            val v = if (weather == Weather.RAIN) normalSpeed * 0.92f else normalSpeed
+            val v = if (weather == Weather.RAIN) normalSpeed * Weather.RAIN.moveSpeed else normalSpeed
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
             u.moving = true
