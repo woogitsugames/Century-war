@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import com.centurywar.engine.Game
 import com.centurywar.engine.L
+import com.centurywar.engine.Palette
 import com.centurywar.engine.Ui
 import com.centurywar.game.art.Bases
 import com.centurywar.game.art.Machines
@@ -41,6 +42,15 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     var viewW = 0f
     private var shake = 0f
     private var shakeX = 0f
+    /** Wspólne przełączniki dla efektów obecnych i przyszłych animacji. */
+    var shakeScale = 1f
+        private set
+    var fxIntensity = 1f
+        private set
+    private var nextParticleFlashAt = 0f
+    private var nextBaseFlashAt = 0f
+    private val lastBaseFlash = FloatArray(2)
+    private val baseFlashUntil = FloatArray(2)
     private var time = 0f
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -85,6 +95,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
     private val basePics = arrayOfNulls<Picture>(Defs.ERA_COUNT * 2)
     private var basePicDetail = -1
+    private var basePicPalette = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
 
@@ -137,11 +148,15 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.cv = c
         pen.setAntiAlias(q.antialias)
         pen.detail = q.level
+        shakeScale = if (g.profile.reduceShake) 0f else 1f
+        fxIntensity = if (g.profile.reduceFlash) 0.22f else 1f
+        pen.flashMix = if (g.profile.reduceFlash) 0.12f else 0.78f
+        pen.outlineScale = if (Palette.highContrast) 1.35f else 1f
         pen.alpha = 1f; pen.flash = false
         mach.time = time; bases.time = time
         if (shake > 0f) {
             shake = max(0f, shake - dt * 3f)
-            shakeX = sin(time * 70f) * shake * 6f * g.ui.dp
+            shakeX = sin(time * 70f) * shake * 6f * g.ui.dp * shakeScale
         } else shakeX = 0f
 
         consumeFx()
@@ -328,7 +343,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
     private fun basePicture(side: Int, era: Int, team: Int): Picture {
-        if (basePicDetail != pen.detail) { for (i in basePics.indices) basePics[i] = null; basePicDetail = pen.detail }
+        if (basePicDetail != pen.detail || basePicPalette != Palette.selected) {
+            for (i in basePics.indices) basePics[i] = null
+            basePicDetail = pen.detail
+            basePicPalette = Palette.selected
+        }
         val idx = side * Defs.ERA_COUNT + era
         basePics[idx]?.let { return it }
         val pic = Picture()
@@ -362,10 +381,19 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             rect.set(-345f, -10f, 10f, 12f); c.drawOval(rect, fill)
         }
         c.save(); c.translate(-PIC_OX, -PIC_OY)
-        if (s.baseFlash > 0f) {
+        val flashAlpha = if (g.profile.reduceFlash) {
+            // Pierwsza klatka kolejnego uderzenia; maks. 1 rozbłysk na 0,34 s.
+            if (s.baseFlash > lastBaseFlash[s.index] + 0.005f && time >= nextBaseFlashAt) {
+                baseFlashUntil[s.index] = time + 0.15f
+                nextBaseFlashAt = time + 0.34f
+            }
+            lastBaseFlash[s.index] = s.baseFlash
+            if (time <= baseFlashUntil[s.index]) (s.baseFlash / 0.15f * 22f).toInt().coerceIn(0, 22) else 0
+        } else (s.baseFlash / 0.15f * 110f).toInt().coerceIn(0, 255)
+        if (flashAlpha > 0) {
             c.saveLayer(0f, 0f, PIC_OX + 40f, PIC_OY + 40f, null)
             c.drawPicture(pic)
-            c.drawColor(Color.argb((s.baseFlash / 0.15f * 110).toInt().coerceIn(0, 255), 255, 255, 255), PorterDuff.Mode.SRC_ATOP)
+            c.drawColor(Color.argb(flashAlpha, 255, 255, 255), PorterDuff.Mode.SRC_ATOP)
             c.restore()
         } else c.drawPicture(pic)
         c.restore()
@@ -440,6 +468,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawBody(def, team, walk, atk, u.tier)
         pen.flash = false
         c.restore()
+        if (u.dying < 0f && g.profile.teamMarkers) {
+            val top = groundY - unitHeight(def) * k * def.size - 27f * k
+            drawTeamMarker(c, x, top, u.side, 12f * k)
+        }
         // pasek HP, gdy ranny
         if (u.dying < 0f && u.hp < u.maxHp) {
             val bw = 36f * k * def.size
@@ -451,7 +483,37 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + bh, fill)
             fill.color = Color.argb(90, 255, 255, 255)
             c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + bh * 0.4f, fill)
+            if (u.side == 1 && g.profile.teamMarkers) {
+                val end = x - bw / 2 + bw * (u.hp / u.maxHp)
+                var xx = x - bw / 2 + 4f * k
+                while (xx < end) {
+                    c.drawLine(xx, top, xx, top + bh, l(Ui.OUTLINE, max(1f * g.ui.dp, k)))
+                    xx += 7f * k
+                }
+            }
         }
+    }
+
+    /** Trójkątny proporzec gracza i wcięty szewron wroga, niezależne od barwy. */
+    fun drawTeamMarker(c: Canvas, x: Float, y: Float, side: Int, size: Float) {
+        if (!g.profile.teamMarkers) return
+        val half = size * 0.5f
+        path.reset()
+        if (side == 0) {
+            path.moveTo(x, y - half)
+            path.lineTo(x + half, y + half)
+            path.lineTo(x - half, y + half)
+        } else {
+            path.moveTo(x - half, y - half)
+            path.lineTo(x, y - half * 0.2f)
+            path.lineTo(x + half, y - half)
+            path.lineTo(x + half, y + half)
+            path.lineTo(x, y + half * 0.3f)
+            path.lineTo(x - half, y + half)
+        }
+        path.close()
+        c.drawPath(path, f(if (side == 0) Ui.PLAYER else Ui.ENEMY))
+        c.drawPath(path, l(Ui.OUTLINE, max(size * 0.15f, 1.5f * g.ui.dp)))
     }
 
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
@@ -496,6 +558,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.cv = c
         pen.alpha = 1f; pen.flash = false
         pen.detail = g.quality.level
+        pen.outlineScale = if (Palette.highContrast) 1.35f else 1f
+        pen.flashMix = if (g.profile.reduceFlash) 0.12f else 0.78f
         pen.setAntiAlias(true)
         c.save()
         c.translate(cx - iconShift(def) * sc * def.size, bottom)
@@ -615,6 +679,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun spawnParticle(x: Float, h: Float, vx: Float, vh: Float, life: Float, size: Float, color: Int, type: Int) {
         val maxP = g.quality.maxParticles
+        if (type == 2 && g.profile.reduceFlash) {
+            if (time < nextParticleFlashAt) return
+            nextParticleFlashAt = time + 0.34f
+        }
         if (pcount >= maxP || pcount >= PMAX) return
         val i = pcount++
         px[i] = x; ph[i] = h; pvx[i] = vx; pvh[i] = vh; plife[i] = life; pmax[i] = life; psize[i] = size; pcol[i] = color; ptype[i] = type
@@ -639,7 +707,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             }
             val x = sx(px[i]); val y = sy(ph[i])
             val a = Color.alpha(pcol[i]) / 255f
-            fill.color = Color.argb((255 * a * min(1f, t * 1.5f)).toInt(), Color.red(pcol[i]), Color.green(pcol[i]), Color.blue(pcol[i]))
+            fill.color = Color.argb((255 * a * min(1f, t * 1.5f) * if (ptype[i] == 2) fxIntensity else 1f).toInt(), Color.red(pcol[i]), Color.green(pcol[i]), Color.blue(pcol[i]))
             when (ptype[i]) {
                 0 -> c.drawRect(x - psize[i] * k / 2, y - psize[i] * k / 2, x + psize[i] * k / 2, y + psize[i] * k / 2, fill)
                 1 -> { line.color = fill.color; line.strokeWidth = 6f * k * t; c.drawCircle(x, y, psize[i] * k * (1.4f - t), line) }
