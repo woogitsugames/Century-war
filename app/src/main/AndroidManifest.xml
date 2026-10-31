@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -17,6 +18,16 @@
         android:resizeableActivity="true"
         android:supportsRtl="false"
         android:theme="@style/Theme.CenturyWar">
+
+        <!-- SDK inicjujemy tylko po uzupełnieniu ID; placeholder nie uruchamia PGS. -->
+        <provider
+            android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
+            android:authorities="${applicationId}.playgamesinitprovider"
+            tools:node="remove" />
+
+        <meta-data
+            android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/game_services_project_id" />
 
         <activity
             android:name=".MainActivity"
