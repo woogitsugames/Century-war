@@ -165,6 +165,8 @@ class AiPersonalityTest {
         }
         b.ai!!.update(1f)
         assertEquals(-1, me.turretEra[0])
-        assertEquals(me.turretCost(0) / 2f, me.gold, 0f)
+        var balance = me.gold
+        for (i in 0 until me.queueSize) balance += Defs.allUnits[me.queue[i]].cost
+        assertEquals(me.turretCost(0) / 2f, balance, 0f)
     }
 }
