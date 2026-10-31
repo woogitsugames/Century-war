@@ -36,6 +36,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var day = Daily.dayNumber()
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
+    private var dailyLang = -1
+    private var dailyInfoLines = emptyArray<String>()
+    private var dailyModsLines = emptyArray<String>()
+    private var dailyEras = ""
+    private var dailyPower = ""
+    private var dailyRanked = ""
+    private var dailyBest = ""
     private var week = -1L
     private var weeklyCfg: BattleConfig? = null
     private var weeklyLang = -1
@@ -76,6 +83,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         dailyTab.visible = mode == Mode.DAILY
         weeklyTab.visible = mode == Mode.DAILY
         weeklyLang = -1 // Po zmianie rozmiaru ekranu przelicz szerokości tekstu.
+        dailyLang = -1
         val gap = 8 * dp
         val dw = (pw - 44 * dp - gap * 3) / 4
         for (i in 0..3) {
@@ -91,6 +99,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val today = Daily.dayNumber()
         if (today != day) { day = today; dailyCfg = null }
         if (mode == Mode.DAILY) {
+            if (dailyCfg == null || dailyLang != L.lang) rebuildDaily()
             if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
             val second = System.currentTimeMillis() / 1000L
             if (second != weeklySecond) {
@@ -121,6 +130,60 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         if (line.isNotEmpty()) lines.add(line)
         return lines.toTypedArray()
+    }
+
+    /** Dzienna karta bez dużego medalionu: obie zakładki mieszczą się na 720p. */
+    private fun rebuildDaily() {
+        dailyLang = L.lang
+        val cfg = Daily.config(day, g.profile.bonuses())
+        dailyCfg = cfg
+        val full = panel.width() - 40 * dp
+        val colWidth = (full - 16 * dp) / 2f
+        dailyInfoLines = cachedWrap(L["daily_info"], full, 13f)
+        dailyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
+        dailyModsLines = cachedWrap(dailyMods, colWidth - 23 * dp, 12f)
+        dailyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
+        dailyPower = L.f("ai_power", (cfg.aiPower * 100).toInt())
+        val ranked = g.profile.lastRankedDaily != day
+        dailyRanked = L.f("daily_ranked", L[if (ranked) "daily_free" else "daily_used"])
+        val score = g.profile.top(Profile.dailyBoard(day)).firstOrNull()?.score
+        dailyBest = if (score == null) "" else L["best"] + ": " + score
+    }
+
+    private fun drawDaily(c: Canvas, pr: Profile) {
+        val x = panel.left + 20 * dp
+        val full = panel.width() - 40 * dp
+        val colWidth = (full - 16 * dp) / 2f
+        var y = panel.top + 81 * dp
+        for (line in dailyInfoLines) {
+            ui.textO(c, line, x, y, 13f)
+            y += 17 * dp
+        }
+        y += 8 * dp
+        val rightX = x + colWidth + 16 * dp
+        Icons.draw(c, Icons.TOWER, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, dailyEras, x + 23 * dp, y,
+            ui.fit(dailyEras, 13f, colWidth - 23 * dp), Ui.TEXT)
+        Icons.draw(c, Icons.FLAG, rightX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        var modsY = y
+        for (line in dailyModsLines) {
+            ui.textO(c, line, rightX + 23 * dp, modsY, 12f, Ui.GOLD)
+            modsY += 16 * dp
+        }
+        y += 29 * dp
+        Icons.draw(c, Icons.SKULL, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, dailyPower, x + 23 * dp, y,
+            ui.fit(dailyPower, 13f, colWidth - 23 * dp), Ui.BAD)
+        if (dailyBest.isNotEmpty()) {
+            Icons.draw(c, Icons.TROPHY, rightX + 9 * dp, modsY + 7 * dp, 18 * dp, dp = dp)
+            ui.textO(c, dailyBest, rightX + 23 * dp, modsY + 11 * dp,
+                ui.fit(dailyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
+        }
+        y += 29 * dp
+        val ranked = pr.lastRankedDaily != day
+        Icons.draw(c, if (ranked) Icons.CHECK else Icons.LOCK, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, dailyRanked, x + 23 * dp, y,
+            ui.fit(dailyRanked, 13f, full - 23 * dp), if (ranked) Ui.GOOD else Ui.DIM)
     }
 
     /** Odświeżenie opisów wyłącznie przy zmianie tygodnia lub języka. */
@@ -211,8 +274,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             ui.button(c, dailyTab, 13f)
             ui.button(c, weeklyTab, 13f)
         }
-        if (mode == Mode.DAILY && weeklySelected) {
-            drawWeekly(c, pr)
+        if (mode == Mode.DAILY) {
+            if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
             for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f)
             ui.button(c, start, 20f)
             return
@@ -234,24 +297,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                 val top = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
                 if (top != null) line(c, Icons.STAR, "${L["score"]}: ${top.score}", x, y)
             }
-            Mode.DAILY -> {
-                // Konfiguracja i tekst modyfikatorów raz na dzień, nie w każdej klatce.
-                val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also { dc ->
-                    dailyCfg = dc
-                    dailyMods = L["modifiers"] + ": " + dc.modifiers.joinToString(", ") { L[it.key] }
-                }
-                y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
-                y += 8 * dp
-                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
-                y += line(c, Icons.SKULL, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, Ui.BAD, 14f)
-                val isz = 22 * dp
-                Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
-                y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
-                y += 4 * dp
-                val ranked = pr.lastRankedDaily != day
-                if (y < lowLimit) y += line(c, if (ranked) Icons.CHECK else Icons.LOCK, L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"]), x, y, if (ranked) Ui.GOOD else Ui.DIM, 14f)
-                if (y < lowLimit) pr.top(Profile.dailyBoard(day)).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
-            }
+            Mode.DAILY -> Unit // Renderowanie dziennej karty jest wyżej.
             else -> {
                 y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]]), x, y)
                 y += line(c, Icons.SKULL, L.f("ai_power", (aiPower() * 100).toInt()), x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
