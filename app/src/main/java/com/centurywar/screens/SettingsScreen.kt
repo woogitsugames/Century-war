@@ -77,6 +77,9 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var contentBottom = 0f
     private var sliderPointer = -1
     private var activeSlider: Button? = null
+    private var shownAutoQuality = -1
+    private var shownAutoLanguage = -1
+    private var autoQualityLabel = ""
     private var shownMusicPercent = -1
     private var musicPercentLabel = ""
     private var shownSfxPercent = -1
@@ -133,7 +136,12 @@ class SettingsScreen(g: Game) : Screen(g) {
         if (identityArmed > 0f) identityArmed -= dt
         val p = g.profile
         back.label = L["back"]
-        quality.label = when (p.quality) { 1 -> L["q_low"]; 2 -> L["q_med"]; 3 -> L["q_high"]; else -> "${L["q_auto"]} (${g.quality.level})" }
+        if (shownAutoQuality != g.quality.level || shownAutoLanguage != L.lang) {
+            shownAutoQuality = g.quality.level
+            shownAutoLanguage = L.lang
+            autoQualityLabel = "${L["q_auto"]} (${g.quality.level})"
+        }
+        quality.label = when (p.quality) { 1 -> L["q_low"]; 2 -> L["q_med"]; 3 -> L["q_high"]; else -> autoQualityLabel }
         fps.label = when (p.fpsCap) { 30 -> "30"; 60 -> "60"; else -> L["fps_max"] }
         lang.label = L.indexOf(p.lang).let { if (it >= 0) L.NAMES[it] else "Auto" }
         snd.label = if (p.sound) L["on"] else L["off"]

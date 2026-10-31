@@ -230,6 +230,12 @@ class Battle(val cfg: BattleConfig) {
     val units = Array(MAX_UNITS) { Fighter() }
     val projs = Array(MAX_PROJ) { Projectile() }
     val fx = FxBuffer()
+    /** Indeksy żywych jednostek w kolejności slotów, odtwarzane po wczytaniu zrzutu. */
+    private val liveSlots = Array(2) { IntArray(MAX_UNITS) }
+    private val liveCounts = IntArray(2)
+    private var liveDirty = true
+    /** Tryb referencyjny do testu zgodności bitowej z dotychczasowym skanowaniem. */
+    var useIndexedScan = true
     var time = 0f
     /** Liczba zakończonych kroków; następna komenda dotyczy kroku stepCount. */
     var stepCount = 0
@@ -792,26 +798,78 @@ class Battle(val cfg: BattleConfig) {
     }
 
     private fun updateFronts() {
-        for (s in sides) {
-            var f = s.baseFront
-            var n = 0
-            for (u in units) {
-                if (!u.alive || u.side != s.index) continue
-                n++
-                if ((u.x - f) * s.dir > 0f) f = u.x
+        if (!useIndexedScan) {
+            // Referencyjna wersja sprzed optymalizacji: dwukrotny skan wszystkich slotów.
+            for (s in sides) {
+                var front = s.baseFront
+                var count = 0
+                for (u in units) {
+                    if (!u.alive || u.side != s.index) continue
+                    count++
+                    if ((u.x - front) * s.dir > 0f) front = u.x
+                }
+                s.front = front
+                s.aliveCount = count
             }
-            s.front = f
-            s.aliveCount = n
+            return
         }
+        val left = sides[0]
+        val right = sides[1]
+        var leftFront = left.baseFront
+        var rightFront = right.baseFront
+        var leftCount = 0
+        var rightCount = 0
+        for (i in units.indices) {
+            val u = units[i]
+            if (!u.alive) continue
+            if (u.side == 0) {
+                liveSlots[0][leftCount++] = i
+                if ((u.x - leftFront) * left.dir > 0f) leftFront = u.x
+            } else {
+                liveSlots[1][rightCount++] = i
+                if ((u.x - rightFront) * right.dir > 0f) rightFront = u.x
+            }
+        }
+        left.front = leftFront
+        left.aliveCount = leftCount
+        right.front = rightFront
+        right.aliveCount = rightCount
+        liveCounts[0] = leftCount
+        liveCounts[1] = rightCount
+        liveDirty = false
     }
 
-    /** Najbardziej wysunięta żywa jednostka strony [sideIdx] (ta, która blokuje przeciwnika). */
+    /** Po spawnie lub śmierci przywracamy porządek slotów; to nie jest stan zapisywany. */
+    private fun ensureLiveSlots() {
+        if (!liveDirty) return
+        liveCounts[0] = 0
+        liveCounts[1] = 0
+        for (i in units.indices) {
+            val u = units[i]
+            if (!u.alive) continue
+            val side = u.side
+            liveSlots[side][liveCounts[side]++] = i
+        }
+        liveDirty = false
+    }
+
+    /** Najbardziej wysunięta żywa jednostka; remis zachowuje dotychczasową kolejność slotów. */
     fun frontUnit(sideIdx: Int): Fighter? {
         val s = sides[sideIdx]
         var best: Fighter? = null
-        for (u in units) {
-            if (!u.alive || u.side != sideIdx) continue
-            if (best == null || (u.x - best.x) * s.dir > 0f) best = u
+        if (useIndexedScan) {
+            ensureLiveSlots()
+            val slots = liveSlots[sideIdx]
+            for (i in 0 until liveCounts[sideIdx]) {
+                val u = units[slots[i]]
+                if (!u.alive) continue
+                if (best == null || (u.x - best.x) * s.dir > 0f) best = u
+            }
+        } else {
+            for (u in units) {
+                if (!u.alive || u.side != sideIdx) continue
+                if (best == null || (u.x - best.x) * s.dir > 0f) best = u
+            }
         }
         return best
     }
@@ -872,6 +930,7 @@ class Battle(val cfg: BattleConfig) {
         s.spawned++
         s.spawnedByRole[def.role.ordinal]++
         s.aliveCount++
+        liveDirty = true
         return f
     }
 
@@ -998,10 +1057,21 @@ class Battle(val cfg: BattleConfig) {
 
         // Ruch: zatrzymaj się za sojusznikiem albo na linii obrony.
         var blocked = false
-        for (a in units) {
-            if (a === u || !a.alive || a.side != u.side) continue
-            val ahead = (a.x - u.x) * s.dir
-            if (ahead > 0f && ahead < (u.radius + a.radius) * 0.9f + 6f) { blocked = true; break }
+        if (useIndexedScan) {
+            ensureLiveSlots()
+            val slots = liveSlots[u.side]
+            for (i in 0 until liveCounts[u.side]) {
+                val a = units[slots[i]]
+                if (a === u || !a.alive) continue
+                val ahead = (a.x - u.x) * s.dir
+                if (ahead > 0f && ahead < (u.radius + a.radius) * 0.9f + 6f) { blocked = true; break }
+            }
+        } else {
+            for (a in units) {
+                if (a === u || !a.alive || a.side != u.side) continue
+                val ahead = (a.x - u.x) * s.dir
+                if (ahead > 0f && ahead < (u.radius + a.radius) * 0.9f + 6f) { blocked = true; break }
+            }
         }
         if (!blocked && s.hold) {
             val holdX = s.baseFront + s.dir * HOLD_DIST
@@ -1160,6 +1230,7 @@ class Battle(val cfg: BattleConfig) {
                 bossRewardsPending++
             }
             v.aliveCount--
+            liveDirty = true
             if (u.def.role == Role.ELITE) v.elitesLost++
             fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size,
                 eraId = u.def.era, bodyId = u.def.body)

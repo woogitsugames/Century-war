@@ -37,6 +37,9 @@ class ResearchScreen(g: Game) : Screen(g) {
     init { buttons.add(0, hints.okBtn) }
     private val costs = arrayOfNulls<String>(cards.size)
     private val costLv = IntArray(cards.size) { -1 }
+    private val levelTexts = Array(cards.size) { "" }
+    private val descKeys = Array(cards.size) { i -> (cards[i].tag as ResearchDef).key + "_d" }
+    private var labelLanguage = -1
 
     private fun iconFor(key: String) = when (key) {
         "r_elite" -> Icons.CROWN
@@ -81,13 +84,19 @@ class ResearchScreen(g: Game) : Screen(g) {
     }
 
     private fun place() {
+        val langChanged = labelLanguage != L.lang
+        labelLanguage = L.lang
         for ((i, b) in cards.withIndex()) {
             val d = b.tag as ResearchDef
             b.set(g.insetL + 16 * dp + (i % cols) * (cw + 12 * dp), top + 6 * dp + (i / cols) * (ch + 12 * dp) - scroll, cw, ch)
             b.enabled = g.profile.canBuy(d)
             b.label = ""
             val lv = g.profile.level(d.key)
-            if (costLv[i] != lv) { costLv[i] = lv; costs[i] = if (lv >= d.max) L["max"] else d.cost(lv).toString() }
+            if (costLv[i] != lv || langChanged) {
+                costLv[i] = lv
+                costs[i] = if (lv >= d.max) L["max"] else d.cost(lv).toString()
+                levelTexts[i] = L.f("level", lv, d.max)
+            }
         }
     }
 
@@ -132,12 +141,12 @@ class ResearchScreen(g: Game) : Screen(g) {
         val tw = r.right - 12 * dp - x
         val name = L[d.key]
         ui.textO(c, name, x, r.top + 26 * dp, ui.fit(name, 16f, tw), Ui.TEXT)
-        val desc = L[d.key + "_d"]
+        val desc = L[descKeys[i]]
         ui.text(c, desc, x, r.top + 46 * dp, ui.fit(desc, 12f, tw).let { min(it, 12f) }, Color.rgb(214, 218, 228))
         // pasek poziomu + liczba
         val by = r.bottom - 36 * dp
         ui.bar(c, r.left + 14 * dp, by, r.width() * 0.5f, 8 * dp, lv / d.max.toFloat(), if (maxed) Ui.GOOD else Ui.XP)
-        ui.textO(c, L.f("level", lv, d.max), r.left + 14 * dp, r.bottom - 13 * dp, 12f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+        ui.textO(c, levelTexts[i], r.left + 14 * dp, r.bottom - 13 * dp, 12f, Ui.DIM, Paint.Align.LEFT, 1.6f)
         // przycisk kosztu
         val cost = costs[i] ?: ""
         val pw = ui.measure(cost, 14f, true) + 40 * dp

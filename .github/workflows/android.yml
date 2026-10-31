@@ -43,6 +43,8 @@ jobs:
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Zbuduj APK i uruchom krytyczne testy
+        env:
+          PERF_REPORT: 'true'
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleDebug :app:testDebugUnitTest \
@@ -60,10 +62,11 @@ jobs:
             --tests '*LTest*' \
             --tests '*SoundSynthTest*' \
             --tests '*MusicSynthTest*' \
-            --tests '*Replay*' \
-            --tests '*Counter*' \
-            --tests '*Endless*' \
-            --tests '*AiPersonality*' \
+            --tests '*AllocationTest*' \
+            --tests '*SimPerformanceTest*' \
+            --tests '*BattleIndexTest*' \
+            --tests '*QualityGovernorTest*' \
+            --tests '*FrameMetricsTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz podglądy WAV

@@ -42,9 +42,9 @@ class RankingsScreen(g: Game) : Screen(g) {
     private var periodLabelWeek = Long.MIN_VALUE
     private var periodLabel = ""
     private var periodBoard = ""
+    private var statsTimer = 0f
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS, Icons.MEDAL)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
-
     private fun refreshReplayIds() {
         g.replays?.listAsync { records ->
             val ids = records.mapTo(HashSet()) { it.id }
@@ -118,6 +118,8 @@ class RankingsScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        statsTimer -= dt
+        if (statsTimer <= 0f) { statsTimer = 1f; cacheRows() }
         // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
         val newDay = Daily.dayNumber()
         if (newDay != day) {
@@ -168,8 +170,8 @@ class RankingsScreen(g: Game) : Screen(g) {
         }
         val lh = 34 * dp
         for (i in list.indices) {
-            val e = list[i]
             if (y + lh > bottomLimit) break
+            val e = list[i]
             val me = e.name == g.profile.name
             row.set(l, y, r, y + lh - 4 * dp)
             ui.fill.color = when {

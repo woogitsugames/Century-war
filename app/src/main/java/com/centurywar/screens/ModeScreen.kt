@@ -66,6 +66,31 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         Color.rgb(191, 117, 62), Color.rgb(184, 194, 211), Color.rgb(236, 193, 62),
     )
 
+    private var labelTimer = 0f
+    private var endlessBest = ""
+    private var endlessScore = ""
+    private var skirmishRange = ""
+    private var skirmishPower = ""
+    private var skirmishScore = ""
+
+    private fun refreshLabels() {
+        val pr = g.profile
+        when (mode) {
+            Mode.ENDLESS -> {
+                endlessBest = "${L["best"]}: ${L.f("wave", pr.bestWave)}"
+                val best = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
+                endlessScore = if (best == null) "" else "${L["score"]}: ${best.score}"
+            }
+            Mode.DAILY -> Unit // Karta dzienna i tygodniowa ma własną pamięć podręczną (rebuildDaily/rebuildWeekly).
+            else -> {
+                skirmishRange = L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]])
+                skirmishPower = L.f("ai_power", (aiPower() * 100).toInt())
+                val best = pr.top(Profile.BOARD_SKIRMISH).firstOrNull()
+                skirmishScore = if (best == null) "" else "${L["best"]}: ${best.score}"
+            }
+        }
+    }
+
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
 
@@ -112,7 +137,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         hints.update(dt)
         this.dt = dt
         val today = Daily.dayNumber()
-        if (today != day) { day = today; dailyCfg = null }
+        if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
+        labelTimer -= dt
+        if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
         if (mode == Mode.DAILY) {
             if (dailyCfg == null || dailyLang != L.lang) rebuildDaily()
             if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
@@ -318,17 +345,16 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             Mode.ENDLESS -> {
                 y += ui.wrap(c, L["endless_info"], x, y, tw, 15f)
                 y += 12 * dp
-                y += line(c, Icons.TROPHY, "${L["best"]}: ${L.f("wave", pr.bestWave)}", x, y, Ui.GOLD, 16f)
-                val top = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
-                if (top != null) line(c, Icons.STAR, "${L["score"]}: ${top.score}", x, y)
+                y += line(c, Icons.TROPHY, endlessBest, x, y, Ui.GOLD, 16f)
+                if (endlessScore.isNotEmpty()) line(c, Icons.STAR, endlessScore, x, y)
             }
             Mode.DAILY -> Unit // Renderowanie dziennej karty jest wyżej.
             else -> {
-                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]]), x, y)
-                y += line(c, if (aiPower() > 1f) Icons.SKULL else Icons.CHECK, L.f("ai_power", (aiPower() * 100).toInt()), x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
+                y += line(c, Icons.TOWER, skirmishRange, x, y)
+                y += line(c, if (aiPower() > 1f) Icons.SKULL else Icons.CHECK, skirmishPower, x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 ui.bar(c, x + 32 * dp, y - 14 * dp, min(tw - 32 * dp, 220 * dp), 9 * dp, aiPower() / 1.8f, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 y += 14 * dp
-                if (y < lowLimit) pr.top(Profile.BOARD_SKIRMISH).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
+                if (y < lowLimit && skirmishScore.isNotEmpty()) line(c, Icons.TROPHY, skirmishScore, x, y, Ui.TEXT, 14f)
                 // separator + etykieta trudności
                 row.set(panel.left + 22 * dp, diff[0].r.top - 30 * dp, panel.right - 22 * dp, diff[0].r.top - 28 * dp)
                 ui.fill.color = Color.argb(70, 255, 255, 255); c.drawRect(row, ui.fill)
@@ -367,7 +393,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                     else -> g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, aiPower(), playerBonuses = pr.bonuses())))
                 }
             }
-            in 0..3 -> { pr.skirmishDiff = b.id; pr.save() }
+            in 0..3 -> { pr.skirmishDiff = b.id; pr.save(); labelTimer = 0f }
             10 -> weeklySelected = false
             11 -> weeklySelected = true
         }

@@ -58,6 +58,10 @@ class BattleScreen(
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
+    /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
+    private var effectiveSpeed = 1f
+    private var avgStepNs = 0f
+    private var sampledStepFrames = 0
     private var paused = restored != null
     /** Czas bitwy ostatniego autozapisu. */
     private var lastAutosave = battle.time
@@ -316,8 +320,19 @@ class BattleScreen(
             if (battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null) {
                 acc += dt * speed * tutScale
                 var steps = 0
+                val startedNs = System.nanoTime()
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
-                if (steps == 20) acc = 0f
+                if (steps > 0) {
+                    val sample = (System.nanoTime() - startedNs).toFloat() / steps
+                    avgStepNs = if (sampledStepFrames == 0) sample else avgStepNs * 0.9f + sample * 0.1f
+                    sampledStepFrames++
+                }
+                var discarded = 0
+                if (acc >= Battle.STEP) {
+                    discarded = (acc / Battle.STEP).toInt()
+                    acc -= discarded * Battle.STEP
+                }
+                g.reportSimSteps(steps, discarded)
             }
             if (battle.over) onFinished()
             else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
@@ -431,13 +446,17 @@ class BattleScreen(
         stanceBtn.highlight = p.hold
         speedBtn.visible = !modal
         speedBtn.iconId = Icons.SPEED
-        speedBtn.label = speedLabels[speed]
+        val shownSpeed = effectiveSpeed.toInt().coerceIn(1, speed)
+        speedBtn.label = if (shownSpeed == speed) speedLabels[speed] else limitedSpeedLabels[speed][shownSpeed]
         evolveBtn.visible = !modal
         val canEvo = battle.canEvolve(p)
         evolveBtn.enabled = canEvo
         evolveBtn.highlight = canEvo
         evolveBtn.iconId = if (p.era >= cfg.maxEra) Icons.CHEVRONS else Icons.EVOLVE
-        evolveBtn.label = if (p.era >= cfg.maxEra) L.f("rank", p.rank) else L["evolve"]
+        if (shownRank != p.rank || shownRankLanguage != L.lang) {
+            shownRank = p.rank; shownRankLanguage = L.lang; shownRankText = L.f("rank", p.rank)
+        }
+        evolveBtn.label = if (p.era >= cfg.maxEra) shownRankText else L["evolve"]
         if (p.era >= cfg.maxEra) evolveBtn.enabled = false
         pauseBtn.visible = !finished
         pauseBtn.iconId = Icons.PAUSE
@@ -475,13 +494,22 @@ class BattleScreen(
             if (!active) continue
             val te = p.turretEra[i]
             if (te < 0) {
-                slotBuy[i].label = "${L["buy"]} ${p.turretCost()}"
+                val price = p.turretCost()
+                val key = price
+                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
+                    slotBuyKey[i] = key
+                    slotBuy[i].label = "${L["buy"]} $price"
+                }
                 slotBuy[i].iconId = Icons.COIN
-                slotBuy[i].enabled = p.gold >= p.turretCost()
+                slotBuy[i].enabled = p.gold >= price
                 slotBuy[i].highlight = slotBuy[i].enabled
             } else {
                 val uc = battle.upgradeCost(p, i)
-                slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                val key = -uc - 2
+                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
+                    slotBuyKey[i] = key
+                    slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                }
                 slotBuy[i].iconId = if (uc < 0) Icons.CHECK else Icons.EVOLVE
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
                 slotBuy[i].highlight = slotBuy[i].enabled
@@ -491,14 +519,29 @@ class BattleScreen(
             slotSell[i].color = Ui.BTN_RED
         }
         closeBtn.visible = tp
+        if (tp) slotLabelLanguage = L.lang
     }
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
     private val costCache = IntArray(6) { -1 }
     private val costText = Array(6) { "" }
     private var armoryLv = -1
+    private var turretHeadingEra = -1
+    private var turretHeadingLanguage = -1
+    private var turretHeading = ""
+    private val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
+    private val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
+    private var shownRank = -1
+    private var shownRankLanguage = -1
+    private var shownRankText = ""
+    private val slotBuyKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    private val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    private var slotLabelLanguage = -1
     /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
     private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
+    private val limitedSpeedLabels = Array(6) { target ->
+        Array(6) { actual -> "×$target → ×$actual" }
+    }
 
     private fun costStr(slot: Int, v: Int): String {
         if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
@@ -1198,11 +1241,11 @@ class BattleScreen(
             val cy = b.r.centerY()
             val mr = b.r.height() * 0.5f
             ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
-            if (te < 0) ui.textO(c, (i + 1).toString(), panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            if (te < 0) ui.textO(c, slotNumbers[i], panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             val tx = panel.left + 28 * dp + mr * 2
             val name = if (te >= 0) L[Defs.turret(te, p.turretVariant[i]).nameKey] else L["empty"]
             val avail = b.r.left - tx - 6 * dp
-            ui.textO(c, L.f("slot", i + 1), tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
+            ui.textO(c, slotLabels[i], tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
             ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
             ui.button(c, slotBuy[i], 13f)
             ui.button(c, slotSell[i], 13f)
@@ -1272,6 +1315,21 @@ class BattleScreen(
             ui.wrap(c, L[descKey], tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
                 tmpR.width() - 22 * dp, 12f, Ui.TEXT, Paint.Align.CENTER)
         }
+    }
+
+    private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
+        val lh = 28 * dp
+        if (y + lh > restartEnd.r.top - 8 * dp) return y
+        val lx = resultPanel.left + 30 * dp
+        val rx = resultPanel.right - 30 * dp
+        tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
+        ui.fill.color = Color.argb(30, 255, 255, 255)
+        c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+        val cy = tmpR.centerY()
+        Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
+        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+        ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
+        return y + lh
     }
 
     private fun drawResults(c: Canvas) {

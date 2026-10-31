@@ -109,12 +109,35 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private val tasks = ArrayList<Runnable>()
     private val frameEvents = ArrayList<TouchEvent>()
 
-    // monitor wydajności
+    // Pomiar CPU nie obejmuje oczekiwania na vsync ani Thread.sleep.
+    val frameMetrics = FrameMetrics()
+    private val governor = QualityGovernor()
     private var frameAvg = 16f
-    private var slowTime = 0f
     var fps = 60f
         private set
+    private var simulatedSteps = 0
+    private var discardedSteps = 0
+    private var overlayTimer = 0f
+    private var overlayTop = ""
+    private var overlayBottom = ""
     private val fpsPaint = Paint().apply { color = Color.YELLOW }
+
+    fun reportSimSteps(steps: Int, discarded: Int) {
+        simulatedSteps = steps
+        discardedSteps = discarded
+    }
+
+    val cpuBudgetMs: Float get() = QualityGovernor.budgetMs(profile.fpsCap)
+
+    private fun refreshOverlay(dt: Float) {
+        overlayTimer -= dt
+        if (overlayTimer > 0f && overlayTop.isNotEmpty()) return
+        overlayTimer = 0.5f
+        val m = frameMetrics
+        fun tenth(v: Float) = (v * 10f).toInt() / 10f
+        overlayTop = "${fps.toInt()} FPS  U ${tenth(m.avgUpdateMs)}  R ${tenth(m.avgRenderMs)}  p95 ${tenth(m.p95Ms())} ms"
+        overlayBottom = "Q${quality.level}-${quality.reduction}  ${(renderScale * 100).toInt()}%  p${quality.maxParticles}  steps ${m.steps}  lost ${m.droppedSteps}"
+    }
     /** Gotowe teksty powiadomień (budowane przy zdarzeniu, nie w renderze) i ich ikony. */
     private val noticeQueue = ArrayDeque<String>()
     private val noticeIcons = ArrayDeque<Int>()
@@ -194,7 +217,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
 
     fun setQuality(level: Int) {
-        quality = Quality(level)
+        if (profile.quality != 0) governor.reset()
+        quality = Quality(level, if (profile.quality == 0) governor.reduction else 0)
         ui.fill.isAntiAlias = quality.antialias
         host.applyRenderScale(quality.renderScale(viewW, viewH))
     }
@@ -312,15 +336,22 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         frameEvents.clear()
         if (s0 !== screen) screen?.layout()
 
+        simulatedSteps = 0
+        discardedSteps = 0
+        val updateStart = System.nanoTime()
         screen?.update(dt)
         refreshBackHandling()
+        val renderStart = System.nanoTime()
         screen?.render(c)
         drawAchievementNotice(c, dt)
-
+        val renderEnd = System.nanoTime()
+        frameMetrics.add(renderStart - updateStart, renderEnd - renderStart, simulatedSteps, discardedSteps)
         monitor(dt)
         if (profile.showFps) {
-            fpsPaint.textSize = 12 * ui.dp
-            c.drawText("${fps.toInt()} fps  q${quality.level}  ${(renderScale * 100).toInt()}%", insetL + 8 * ui.dp, height - 8 * ui.dp, fpsPaint)
+            refreshOverlay(dt)
+            fpsPaint.textSize = 10 * ui.dp
+            c.drawText(overlayTop, insetL + 8 * ui.dp, height - insetB - 22 * ui.dp, fpsPaint)
+            c.drawText(overlayBottom, insetL + 8 * ui.dp, height - insetB - 8 * ui.dp, fpsPaint)
         }
     }
 
@@ -330,13 +361,9 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val ms = dt * 1000f
         frameAvg += (ms - frameAvg) * 0.05f
         fps = 1000f / frameAvg.coerceAtLeast(1f)
-        // Auto-jakość: jeśli przez 4 s średnio < 45 FPS, schodzimy o poziom niżej.
-        if (profile.quality == 0 && quality.level > Quality.LOW && profile.fpsCap != 30) {
-            if (frameAvg > 22f) slowTime += dt else slowTime = 0f
-            if (slowTime > 4f) {
-                slowTime = 0f
-                setQuality(quality.level - 1)
-            }
+        if (governor.record(frameMetrics.avgCpuMs, dt, profile.quality == 0,
+                profile.fpsCap, quality.maxReductionSteps)) {
+            setQuality(effectiveQualityLevel())
         }
     }
 

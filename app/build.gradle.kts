@@ -115,3 +115,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.16")
 }
+
+
+// Raport przepustowosci i alokacji tylko przy jawnym PERF_REPORT=true.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
+}

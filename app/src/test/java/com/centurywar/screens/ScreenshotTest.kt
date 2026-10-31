@@ -805,4 +805,21 @@ class ScreenshotTest {
             shot(g, "${tag}_codex_endless_waves")
         }
     }
+
+    /** Nakładka metryk na tanim telefonie i rozłożonym Foldzie. */
+    @Test
+    fun performanceOverlay() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val quality = if (tag == "phone720") Quality.LOW else Quality.HIGH
+            val g = game(dims[0], dims[1], dims[2] * 0.9f, quality)
+            g.profile.showFps = true
+            g.profile.quality = quality
+            g.setQuality(quality)
+            g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 27037L, 1f)))
+            shot(g, "${tag}_performance_overlay", 30)
+        }
+    }
 }
