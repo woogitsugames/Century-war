@@ -5,35 +5,39 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 class SoundSynthTest {
     @Test fun allSamplesAreBoundedAndCacheFitsBudget() {
         var bytes = 0
         for (id in 0 until SoundSynth.COUNT) {
-            val wave = SoundSynth.render(id)
-            assertEquals((SoundSynth.SAMPLE_RATE * SoundSynth.duration(id)).toInt(), wave.size)
-            assertTrue("Zbyt długi wariant $id", wave.size <= SoundSynth.SAMPLE_RATE)
-            for (v in wave) {
-                assertTrue("Nieprawidłowa próbka $id", v.isFinite())
-                assertTrue("Przesterowanie wariantu $id", v in -1f..1f)
+            val first = SoundSynth.render(id, 0)
+            for (variant in 0 until SoundSynth.VARIANTS) {
+                val wave = if (variant == 0) first else SoundSynth.render(id, variant)
+                assertEquals((SoundSynth.SAMPLE_RATE * SoundSynth.duration(id)).toInt(), wave.size)
+                assertTrue("Zbyt długi efekt $id", wave.size <= SoundSynth.SAMPLE_RATE)
+                var sum = 0.0
+                for (v in wave) {
+                    assertTrue("NaN/Infinity: $id/$variant", v.isFinite())
+                    assertTrue("Przesterowanie $id/$variant", v in -0.761f..0.761f)
+                    sum += v.toDouble() * v
+                }
+                val rms = sqrt(sum / wave.size)
+                assertTrue("Zbyt cicho $id/$variant: $rms", rms >= 0.05 && rms <= 0.18)
+                assertArrayEquals("Brak determinizmu $id/$variant",
+                    wave, SoundSynth.render(id, variant), 0f)
+                bytes += 44 + wave.size * 2
             }
-            bytes += 44 + wave.size * 2
+            assertFalse("Takie same warianty $id", first.contentEquals(SoundSynth.render(id, 1)))
         }
         assertEquals(SoundSynth.totalWavBytes(), bytes)
-        assertTrue("Przekroczony budżet WAV: $bytes", bytes <= SoundSynth.MAX_CACHE_BYTES)
+        assertTrue("Za duży bank WAV: $bytes", bytes <= SoundSynth.MAX_CACHE_BYTES)
     }
 
-    @Test fun everyVariantIsDeterministicAndAudiblyDistinct() {
-        for (id in 0 until SoundSynth.COUNT) {
-            assertArrayEquals("Niedeterministyczny wariant $id",
-                SoundSynth.render(id), SoundSynth.render(id), 0f)
-        }
-        // Różnica średniej energii w paśmie wysokim (różniczka próbki),
-        // a nie tylko inny poziom głośności sygnału.
+    @Test fun epochsHaveDifferentSpectralProfiles() {
         val wood = highBandEnergy(SoundSynth.render(SoundSynth.HIT_WOOD))
         val bronze = highBandEnergy(SoundSynth.render(SoundSynth.HIT_BRONZE))
         val steel = highBandEnergy(SoundSynth.render(SoundSynth.HIT_STEEL))
@@ -54,28 +58,20 @@ class SoundSynthTest {
         return sum / (data.size - 1).coerceAtLeast(1)
     }
 
-    @Test fun wavPreviewsUsePcm16AndHaveValidHeaders() {
-        val dir = File("build/sfx-preview").apply { mkdirs() }
-        val choices = intArrayOf(
-            SoundSynth.HIT_WOOD, SoundSynth.HIT_BRONZE, SoundSynth.HIT_STEEL, SoundSynth.HIT_ENERGY,
-            SoundSynth.SHOT_BOW, SoundSynth.SHOT_CANNON, SoundSynth.SHOT_LASER,
-            SoundSynth.TURRET_POWDER, SoundSynth.BARRAGE_STONE, SoundSynth.BARRAGE_ORBITAL,
-            SoundSynth.EVOLVE_PRIMITIVE, SoundSynth.EVOLVE_FUTURE, SoundSynth.ACHIEVEMENT,
-        )
-        for (id in choices) {
-            val samples = SoundSynth.render(id)
-            val bytes = samples.size * 2
-            val wav = ByteBuffer.allocate(44 + bytes).order(ByteOrder.LITTLE_ENDIAN)
-            wav.put("RIFF".toByteArray()); wav.putInt(36 + bytes)
-            wav.put("WAVEfmt ".toByteArray()); wav.putInt(16)
-            wav.putShort(1); wav.putShort(1)
-            wav.putInt(SoundSynth.SAMPLE_RATE); wav.putInt(SoundSynth.SAMPLE_RATE * 2)
-            wav.putShort(2); wav.putShort(16)
-            wav.put("data".toByteArray()); wav.putInt(bytes)
-            for (sample in samples) wav.putShort((sample * 32767f).toInt().toShort())
-            val path = File(dir, "sample_$id.wav")
-            path.writeBytes(wav.array())
-            assertEquals(SoundSynth.wavBytes(id).toLong(), path.length())
-        }
+    @Test fun wavHeaderMatchesPcm16Data() {
+        val pcm = SoundSynth.render(SoundSynth.EVOLVE_MEDIEVAL, 1)
+        val b = ByteBuffer.allocate(SoundSynth.wavBytes(SoundSynth.EVOLVE_MEDIEVAL))
+            .order(ByteOrder.LITTLE_ENDIAN)
+        b.put("RIFF".toByteArray(Charsets.US_ASCII)); b.putInt(36 + pcm.size * 2)
+        b.put("WAVEfmt ".toByteArray(Charsets.US_ASCII)); b.putInt(16)
+        b.putShort(1); b.putShort(1)
+        b.putInt(SoundSynth.SAMPLE_RATE); b.putInt(SoundSynth.SAMPLE_RATE * 2)
+        b.putShort(2); b.putShort(16)
+        b.put("data".toByteArray(Charsets.US_ASCII)); b.putInt(pcm.size * 2)
+        for (v in pcm) b.putShort((v * 32767f).toInt().toShort())
+        assertEquals(SoundSynth.wavBytes(SoundSynth.EVOLVE_MEDIEVAL), b.position())
+        assertEquals('R'.code.toByte(), b.get(0))
+        assertEquals('I'.code.toByte(), b.get(1))
+        assertEquals(SoundSynth.SAMPLE_RATE, b.getInt(24))
     }
 }
