@@ -289,11 +289,11 @@ class BattleScreen(
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
         // 720p poziomo: dwie kolumny; Fold i telefon pionowo: jedna kolumna.
-        val freeW = w - g.insetL - g.insetR - 24 * dp
-        val freeH = h - g.insetT - g.insetB - 20 * dp
-        pauseWide = freeW >= 650 * dp
-        val pw = min(if (pauseWide) 780 * dp else 520 * dp, freeW)
-        val ph = min(if (pauseWide) 354 * dp else 520 * dp, freeH)
+        val pauseFreeW = w - g.insetL - g.insetR - 24 * dp
+        val pauseFreeH = h - g.insetT - g.insetB - 20 * dp
+        pauseWide = pauseFreeW >= 650 * dp
+        val pw = min(if (pauseWide) 780 * dp else 520 * dp, pauseFreeW)
+        val ph = min(if (pauseWide) 354 * dp else 520 * dp, pauseFreeH)
         val cx = (g.insetL + w - g.insetR) * 0.5f
         val cy = (g.insetT + h - g.insetB) * 0.5f
         pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
@@ -571,6 +571,11 @@ class BattleScreen(
         pauseMenu[0].label = L["resume"]; pauseMenu[1].label = L["restart"]; pauseMenu[2].label = L["quit"]
         pauseMenu[0].iconId = Icons.PLAY; pauseMenu[1].iconId = Icons.RESTART; pauseMenu[2].iconId = Icons.WHITE_FLAG
         pauseMenu[0].highlight = true; pauseMenu[2].color = Ui.BTN_RED
+        pauseVibrationBtn.visible = paused && !finished
+        pauseVibrationBtn.label = if (g.profile.vibration) L["on"] else L["off"]
+        pauseVibrationBtn.color = if (g.profile.vibration) Ui.BTN_GREEN else Ui.BTN
+        pauseSpeedBtn.visible = paused && !finished
+        pauseSpeedBtn.label = speedLabels[speed]
         continueBtn.visible = finished && resultTime > 0.8f
         continueBtn.label = L["continue"]
         continueBtn.iconId = Icons.PLAY
@@ -692,7 +697,8 @@ class BattleScreen(
             }
             RALLY -> commands.rally()
             STANCE -> commands.stance(!p.hold)
-            SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
+            SPEED, PAUSE_SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
+            PAUSE_VIBRATION -> { g.profile.vibration = !g.profile.vibration; g.profile.save() }
             EVOLVE -> if (commands.evolve()) g.haptic(40)
             PAUSE -> paused = true
             RESUME -> paused = false
@@ -964,20 +970,96 @@ class BattleScreen(
 
     // ---------------------------------------------------------------- rysowanie
 
-    private var pausePersonText = ""
-    private var pauseModifierText = ""
-    private var pausePowerText = ""
     private var pauseLanguage = -1
+    private var pauseSeconds = -1
+    private var pauseKills = -1
+    private var pauseGold = -1
+    private var pausePlayerEra = -1
+    private var pauseEnemyEra = -1
+    private var pauseWeather = -1
+    private var pauseTitleText = ""
+    private var pauseSummaryLabel = ""
+    private var pauseQuickLabel = ""
+    private var pauseSfxLabel = ""
+    private var pauseMusicLabel = ""
+    private var pauseVibrationLabel = ""
+    private var pauseSpeedLabel = ""
+    private var pauseTimeText = ""
+    private var pauseKillsText = ""
+    private var pauseGoldText = ""
+    private var pausePlayerEraText = ""
+    private var pauseEnemyEraText = ""
+    private var pauseWeatherText = ""
+    private var pauseOpponentText = ""
+    private var pauseModifierText = ""
+    private val pauseModifierLines = arrayOfNulls<String>(12)
+    private var pauseModifierCount = 0
+    private var pauseModifierWidth = -1f
 
+    /** Aktualizacja rzadkich napisów poza render; liczby tylko, gdy stan się zmieni. */
     private fun refreshPauseTexts() {
-        if (cfg.mode != Mode.SKIRMISH || pauseLanguage == L.lang) return
-        pauseLanguage = L.lang
-        val personality = battle.ai?.personality
-        pausePersonText = L["sk_opponent"] + ": " + if (personality == null) L["sk_random"]
-            else L["sk_person_" + personality.ordinal]
-        pauseModifierText = L["modifiers"] + ": " + if (cfg.modifiers.isEmpty()) L["sk_none"]
-            else cfg.modifiers.sortedBy { it.ordinal }.joinToString(", ") { L[it.key] }
-        pausePowerText = L.f("ai_power", (cfg.aiPower * 100f + 0.5f).toInt())
+        if (!paused || finished) return
+        val changedLanguage = pauseLanguage != L.lang
+        if (changedLanguage) {
+            pauseLanguage = L.lang
+            pauseTitleText = L["paused"]
+            pauseSummaryLabel = L["pause_summary"]
+            pauseQuickLabel = L["pause_quick"]
+            pauseSfxLabel = L["sfx_volume"]
+            pauseMusicLabel = L["music_volume"]
+            pauseVibrationLabel = L["vibration"]
+            pauseSpeedLabel = L["cx_speed"]
+            pauseModifierText = L["modifiers"] + ": " +
+                (if (cfg.modifiers.isEmpty()) L["sk_none"] else
+                    cfg.modifiers.sortedBy { it.ordinal }.joinToString(", ") { L[it.key] })
+            pauseOpponentText = if (cfg.mode == Mode.SKIRMISH) {
+                val personality = battle.ai?.personality
+                val person = L["sk_opponent"] + ": " +
+                    (if (personality == null) L["sk_random"] else L["sk_person_" + personality.ordinal])
+                person + " · " + L.f("ai_power", (cfg.aiPower * 100f + 0.5f).toInt())
+            } else ""
+            pauseSeconds = -1
+            pauseKills = -1
+            pauseGold = -1
+            pausePlayerEra = -1
+            pauseEnemyEra = -1
+            pauseWeather = -1
+            pauseModifierWidth = -1f
+        }
+        val seconds = battle.time.toInt()
+        if (pauseSeconds != seconds) {
+            pauseSeconds = seconds
+            val remainder = seconds % 60
+            pauseTimeText = L["time"] + ": " + (seconds / 60) + ":" +
+                (if (remainder < 10) "0" else "") + remainder
+        }
+        val kills = battle.player.kills
+        if (pauseKills != kills) {
+            pauseKills = kills
+            pauseKillsText = L["kills"] + ": " + kills
+        }
+        val gold = battle.player.goldEarned.toInt()
+        if (pauseGold != gold) {
+            pauseGold = gold
+            pauseGoldText = L["pause_gold_earned"] + ": " + gold
+        }
+        if (pausePlayerEra != battle.player.era) {
+            pausePlayerEra = battle.player.era
+            pausePlayerEraText = L["pause_player_era"] + ": " + L[Defs.eraKeys[pausePlayerEra]]
+        }
+        if (pauseEnemyEra != battle.enemy.era) {
+            pauseEnemyEra = battle.enemy.era
+            pauseEnemyEraText = L["pause_enemy_era"] + ": " + L[Defs.eraKeys[pauseEnemyEra]]
+        }
+        if (pauseWeather != battle.weather.ordinal) {
+            pauseWeather = battle.weather.ordinal
+            pauseWeatherText = L["pause_weather"] + ": " + L[battle.weather.key]
+        }
+        val width = if (pauseWide) pausePanel.width() * 0.53f - 45 * dp else pausePanel.width() - 44 * dp
+        if (width > 0f && pauseModifierWidth != width) {
+            pauseModifierWidth = width
+            pauseModifierCount = HintFrame.wrapInto(ui, pauseModifierText, width, 12f, pauseModifierLines)
+        }
     }
     private val pausePanel = RectF()
     private val resultPanel = RectF()
@@ -1059,24 +1141,64 @@ class BattleScreen(
             tut?.draw(c)
             hints.draw(c)
         }
-        if (paused && !finished) {
-            c.drawColor(Color.argb(150, 0, 0, 0))
-            ui.panel(c, pausePanel)
-            ui.ribbon(c, pausePanel.centerX(), pausePanel.top + 4 * dp, L["paused"], 22f, Ui.RIBBON, pausePanel.width() * 0.6f)
-            if (cfg.mode == Mode.SKIRMISH) {
-                val center = pausePanel.centerX()
-                val textW = pausePanel.width() - 25 * dp
-                ui.textO(c, pausePersonText, center, pausePanel.top + 47 * dp,
-                    ui.fit(pausePersonText, 14f, textW), Ui.GOLD, Paint.Align.CENTER)
-                ui.textO(c, pauseModifierText, center, pausePanel.top + 70 * dp,
-                    ui.fit(pauseModifierText, 12f, textW), Ui.TEXT, Paint.Align.CENTER)
-                ui.textO(c, pausePowerText, center, pausePanel.top + 92 * dp,
-                    ui.fit(pausePowerText, 12f, textW), Ui.DIM, Paint.Align.CENTER)
-            }
-            for (i in pauseMenu.indices) ui.button(c, pauseMenu[i], 18f)
-        }
+        if (paused && !finished) drawPausePanel(c)
         if (finished) drawResults(c)
         ui.textScale = regularTextScale
+    }
+
+    /** Wszystkie widoczne napisy pauzy zostały przygotowane przez update(). */
+    private fun pauseLine(c: Canvas, value: String, x: Float, y: Float, width: Float,
+                          color: Int = Ui.TEXT, size: Float = 13f) {
+        if (value.isNotEmpty()) ui.textO(c, value, x, y, ui.fit(value, size, width, 9f), color)
+    }
+
+    private fun drawPausePanel(c: Canvas) {
+        c.drawColor(Color.argb(150, 0, 0, 0))
+        ui.panel(c, pausePanel)
+        ui.ribbon(c, pausePanel.centerX(), pausePanel.top + 4 * dp, pauseTitleText,
+            21f, Ui.RIBBON, pausePanel.width() * 0.38f, Ui.GOLD, pausePanel.width() - 20 * dp)
+        val x = pausePanel.left + 22 * dp
+        val infoWidth = if (pauseWide) pausePanel.width() * 0.53f - 45 * dp else pausePanel.width() - 44 * dp
+        val top = pausePanel.top
+        pauseLine(c, pauseSummaryLabel, x, top + 62 * dp, infoWidth, Ui.GOLD, 16f)
+        val y0 = if (pauseWide) 87f else 86f
+        val step = if (pauseWide) 24f else 21f
+        pauseLine(c, pauseTimeText, x, top + y0 * dp, infoWidth)
+        pauseLine(c, pauseKillsText, x, top + (y0 + step) * dp, infoWidth)
+        pauseLine(c, pauseGoldText, x, top + (y0 + step * 2) * dp, infoWidth)
+        pauseLine(c, pausePlayerEraText, x, top + (y0 + step * 3) * dp, infoWidth)
+        pauseLine(c, pauseEnemyEraText, x, top + (y0 + step * 4) * dp, infoWidth)
+        pauseLine(c, pauseWeatherText, x, top + (y0 + step * 5) * dp, infoWidth)
+        val modY = if (pauseWide) 233f else 213f
+        for (i in 0 until min(3, pauseModifierCount)) {
+            val line = pauseModifierLines[i] ?: continue
+            pauseLine(c, line, x, top + (modY + i * 15f) * dp, infoWidth, Ui.DIM, 12f)
+        }
+        if (pauseOpponentText.isNotEmpty())
+            pauseLine(c, pauseOpponentText, x,
+                top + (if (pauseWide) 283f else 265f) * dp, infoWidth, Ui.GOLD, 11f)
+
+        if (pauseWide) {
+            ui.fill.color = Ui.FRAME_L
+            val sep = pausePanel.left + pausePanel.width() * 0.53f
+            c.drawRect(sep, top + 51 * dp, sep + 1 * dp, pausePanel.bottom - 66 * dp, ui.fill)
+        }
+        val controlsX = if (pauseWide) pausePanel.left + pausePanel.width() * 0.56f
+            else pausePanel.left + 20 * dp
+        val controlsWidth = if (pauseWide) 85 * dp else 103 * dp
+        pauseLine(c, pauseQuickLabel, controlsX, top + (if (pauseWide) 62f else 287f) * dp,
+            pausePanel.right - controlsX - 20 * dp, Ui.GOLD, 16f)
+        pauseLine(c, pauseSfxLabel, controlsX, pauseSfxRect.centerY() + 5 * dp, controlsWidth)
+        pauseLine(c, pauseMusicLabel, controlsX, pauseMusicRect.centerY() + 5 * dp, controlsWidth)
+        ui.volumeSlider(c, pauseSfxRect, g.profile.sfxVolume)
+        ui.volumeSlider(c, pauseMusicRect, g.profile.musicVolume)
+        pauseLine(c, pauseVibrationLabel, controlsX, pauseVibrationBtn.r.centerY() + 5 * dp,
+            pauseVibrationBtn.r.left - controlsX - 8 * dp)
+        pauseLine(c, pauseSpeedLabel, controlsX, pauseSpeedBtn.r.centerY() + 5 * dp,
+            pauseSpeedBtn.r.left - controlsX - 8 * dp)
+        ui.button(c, pauseVibrationBtn, 14f)
+        ui.button(c, pauseSpeedBtn, 14f)
+        for (b in pauseMenu) ui.button(c, b, 17f)
     }
 
     private fun drawTop(c: Canvas) {
