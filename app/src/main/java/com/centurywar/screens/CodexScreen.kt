@@ -350,8 +350,15 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         guideHeight = 40 * dp
         guideTitle = L[CATEGORY_KEYS[page]]
         when (page) {
-            PAGE_VARIANTS -> if (Defs.spec(era).variants.isEmpty()) {
-                addGuide(Icons.CODEX, L["cx62_no_variants"], L["cx62_no_variants_d"])
+            PAGE_VARIANTS -> {
+                if (Defs.spec(era).variants.isEmpty()) {
+                    addGuide(Icons.CODEX, L["cx62_no_variants"], L["cx62_no_variants_d"])
+                }
+                // Zbiorczy spis wszystkich ścieżek, także gdy bieżąca epoka ich nie ma.
+                for (e in Defs.specs.indices) for (variant in Defs.spec(e).variants) {
+                    addGuide(Icons.CODEX, L[variant.nameKey], L[variant.descKey],
+                        L[Defs.eraKeys[e]])
+                }
             }
             PAGE_ABILITIES -> {
                 guideTitle = L["armory"]
