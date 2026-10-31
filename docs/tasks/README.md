@@ -56,6 +56,21 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 50 | [Grafiki do Google Play generowane z gry](50-store-graphics.md) | `gpt/50-store-graphics` | fala 3 (po 40) |
 | 51 | [Dzień wydania i lista kontrolna przed publikacją](51-release-day.md) | `gpt/51-release-day` | fala 3 (po 42: `Modes.kt`) |
 | 52 | [Lepsze dźwięki: nowa synteza efektów bitwy i interfejsu](52-better-sfx.md) | `gpt/52-better-sfx` | fala 1 |
+| 53 | [Opisy przycisków bitwy po przytrzymaniu](53-hud-tooltips.md) | `gpt/53-hud-tooltips` | tura 4 (równolegle) |
+| 54 | [Samouczek: zbrojownia, warianty, pogoda i celowanie ostrzału](54-tutorial-update.md) | `gpt/54-tutorial-update` | tura 4 (równolegle) |
+| 55 | [Lepsza muzyka proceduralna epok](55-better-music.md) | `gpt/55-better-music` | tura 4 (równolegle) |
+| 56 | [Tła epok na polu bitwy](56-era-backdrops.md) | `gpt/56-era-backdrops` | tura 4 (równolegle) |
+| 57 | [Ożywione menu główne i ekran tytułowy](57-main-menu.md) | `gpt/57-main-menu` | tura 4 (równolegle) |
+| 58 | [Ikona aplikacji i ekran startowy](58-app-icon-splash.md) | `gpt/58-app-icon-splash` | tura 4 (równolegle) |
+| 59 | [Mapa kampanii](59-campaign-map.md) | `gpt/59-campaign-map` | tura 4 (równolegle) |
+| 60 | [Nowe osiągnięcia za nowe tryby i mechaniki](60-new-achievements.md) | `gpt/60-new-achievements` | tura 4 (równolegle) |
+| 61 | [Nowe typy misji dziennych i tygodniowych](61-new-missions.md) | `gpt/61-new-missions` | tura 4 (równolegle) |
+| 62 | [Kodeks: pogoda, warianty epok, bossowie i karty](62-codex-update.md) | `gpt/62-codex-update` | tura 4 (równolegle) |
+| 63 | [Haptyka: czytelne wibracje zdarzeń](63-haptics.md) | `gpt/63-haptics` | tura 4 (równolegle) |
+| 64 | [Serwer rankingu: moderacja nicków i narzędzia administratora](64-server-moderation.md) | `gpt/64-server-moderation` | tura 4 (równolegle) |
+| 65 | [Lokalny dziennik błędów i zgłaszanie problemu](65-error-log.md) | `gpt/65-error-log` | tura 4 (równolegle) |
+| 66 | [Wersja release: R8, rozmiar, profil startowy](66-release-build-check.md) | `gpt/66-release-build-check` | tura 4 (równolegle) |
+| 67 | [Pauza z szybkimi ustawieniami i podsumowaniem bitwy](67-pause-quick-settings.md) | `gpt/67-pause-quick-settings` | tura 4 (równolegle) |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 

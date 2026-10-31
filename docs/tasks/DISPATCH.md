@@ -49,3 +49,16 @@ Stan na 31.10.2026 (noc). Ta sama gałąź bazowa i to samo polecenie startowe c
 | 3 | **44** przegląd tłumaczeń, **50** grafiki do sklepu, **51** dzień wydania | `L.kt` / testy grafik / `Daily` + Gradle |
 
 Po fali 1 (42, 46) koordynator mierzy balans i podbija wersję gry rankingu (`0.4.0`).
+
+---
+
+# Wysyłka zleceń 53–67 (tura 4)
+
+1.11.2026 (noc). Zlecenia 39–52 scalone. Tura 4 jest pomyślana do wysłania **całej naraz** (GPT i tak pracuje równolegle): każde zlecenie ma rozłączny zakres plików, a nowe teksty trafiają do własnej funkcji `partNN()` w `L.kt`.
+
+| Grupa | Paczki |
+|---|---|
+| Wrażenia i nauka gry | 53 opisy przycisków, 54 samouczek nowości, 67 pauza z ustawieniami |
+| Oprawa | 55 muzyka, 56 tła epok, 57 menu główne, 58 ikona i splash, 59 mapa kampanii |
+| Treść i motywacja | 60 osiągnięcia, 61 misje, 62 kodeks |
+| Jakość i wydanie | 63 haptyka, 64 moderacja rankingu, 65 dziennik błędów, 66 wersja release |
