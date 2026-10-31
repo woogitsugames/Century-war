@@ -332,8 +332,15 @@ class SettingsScreen(g: Game) : Screen(g) {
             17 -> {
                 if (p.playerId.isNotEmpty()) {
                     if (identityArmed > 0f) {
-                        g.scores?.clearQueue()
-                        p.renewRankingId()
+                        val oldId = p.playerId
+                        g.scores?.deletePlayerData(oldId) { saved ->
+                            g.post(Runnable {
+                                if (saved && p.playerId == oldId) {
+                                    p.renewRankingId()
+                                }
+                                identityArmed = 0f
+                            })
+                        }
                         identityArmed = 0f
                     } else identityArmed = 3f
                 }

@@ -49,6 +49,12 @@ data class RankingResponse(
 )
 
 @Serializable
+data class DeletePlayerRequest(val player: String)
+
+@Serializable
+data class DeletePlayerReceipt(val deleted: Boolean)
+
+@Serializable
 data class ErrorResponse(val error: String)
 
 internal fun validPlayer(player: String): Boolean {

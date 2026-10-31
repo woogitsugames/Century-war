@@ -4,6 +4,9 @@ COPY . .
 RUN ./gradlew :server:installDist -PserverOnly=true --no-daemon --console=plain
 
 FROM eclipse-temurin:21-jre-noble
+# curl do healthchecka; sqlite3 do spójnego backupu działającej bazy.
+RUN apt-get update && apt-get install -y --no-install-recommends curl sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r century && useradd -r -g century century \
     && mkdir -p /var/lib/cw && chown -R century:century /var/lib/cw
 COPY --from=build /workspace/server/build/install/server /opt/century-war

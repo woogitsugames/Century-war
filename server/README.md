@@ -62,6 +62,32 @@ Elementy oddzielone pojedynczym LF, bez dodatkowego LF na końcu; body jest
 pustym ciągiem dla GET. URI zawiera query string w takiej kolejności, w jakiej
 zostanie wysłany. Metoda to `GET` albo `POST`.
 
+#### POST /v1/player/delete
+
+Ten sam podpis HMAC, znacznik czasu i jednorazowy nonce co przy POST wyniku.
+Podpis obejmuje **dokładny** URI /v1/player/delete i body (UTF-8):
+
+~~~json
+{"player":"a16036d5-800a-4898-aea3-11b6548de7b4"}
+~~~
+
+Odpowiedź HTTP 200: {"deleted":true}, również gdy UUID nie był w bazie.
+Jedna transakcja usuwa wszystkie wyniki (wszystkie plansze i dni) i rekord
+gracza z pseudonimem, a limiter w pamięci zapomina licznik tego UUID.
+Błędny podpis / ponowny nonce: 401; nieprawidłowy UUID v4: 400.
+Nonce i limit IP nie są przypisane do UUID; nonce wygasa po 10 minutach.
+
+Klient może zachować żądanie w lokalnej kolejce podczas braku internetu.
+Callback klienta potwierdza **trwałe zapisanie żądania**, nie usunięcie na serwerze.
+Żądanie zostanie ponowione po uruchomieniu gry, również po wyłączeniu rankingu.
+Przed usunięciem danych na serwerze stare wyniki mogą nadal być publiczne.
+Odinstalowanie gry przed przetworzeniem kolejki może usunąć samo żądanie.
+
+#### GET /healthz
+
+Bez podpisu HMAC; sprawdza dostęp do SQLite. HTTP 200 i tekst ok lub
+HTTP 503 i unavailable, bez informacji o użytkownikach.
+
 #### POST /v1/score
 
 Przykładowy format (wynik poniżej jest **wyłącznie przykładem schematu**,
@@ -197,37 +223,32 @@ Brak wyniku gracza daje pustą listę. JSON:
 - Dane wyników i pseudonimy wymagają polityki retencji, informacji o
   przetwarzaniu i funkcji usunięcia/zmiany identyfikatora przed publikacją.
 
-## Wdrożenie: Docker / VPS
+## Wdrożenie: Docker Compose / VPS
 
-Build z **katalogu głównego repozytorium**:
+**Instrukcja krok po kroku dla właściciela**: [docs/SERVER_DEPLOY.md](../docs/SERVER_DEPLOY.md).
 
-```bash
-docker build -f server/Dockerfile -t century-war-score .
-docker volume create century-war-data
-docker run -d --restart unless-stopped --name century-war-score \
-    -p 127.0.0.1:8080:8080 \
-    -v century-war-data:/var/lib/cw \
-    -e CW_HMAC_KEY="$CW_HMAC_KEY" \
-    -e CW_DATABASE_PATH=/var/lib/cw/leaderboards.db \
-    century-war-score
-```
+Po zainstalowaniu Docker Compose v2, w katalogu głównym projektu:
 
-Postaw Nginx/Caddy z TLS przed portem 8080, ustaw `client_max_body_size 1m`,
-limit zapytań i czas odczytu żądania. Zrób backup SQLite przez
-`sqlite3 /var/lib/cw/leaderboards.db '.backup /.../backup.db'`.
+~~~bash
+cp .env.example .env
+# Zamień CW_HMAC_KEY na losowy wynik: openssl rand -hex 32
+chmod 600 .env
+docker compose up -d --build
+docker compose ps
+curl -f http://127.0.0.1:8080/healthz
+~~~
 
-**Fly.io:** stwórz aplikację Docker, `fly volumes create data --size 1`
-w regionie aplikacji, zamontuj do `/var/lib/cw`, ustaw
-`fly secrets set CW_HMAC_KEY=...` i uruchom jedną maszynę.
-Dane na wolumenie lokalnym nie replikują się automatycznie.
+Przykładowy Caddyfile: server/Caddyfile.example (HTTPS na domenie).
+Kopia bazy: bash server/backup-sqlite.sh (poza wolumenem, domyślnie
+/var/backups/century-war). **Nigdy nie uruchamiaj docker compose down -v**:
+usuwa trwały wolumen z bazą. Wdrażaj tylko jedną instancję serwera.
 
-**Render:** wybierz Docker Web Service i **płatny persistent disk**
-zamontowany pod `/var/lib/cw`, `CW_HMAC_KEY` ustaw jako secret
-environment variable, `PORT=8080`. Na usługach z nietrwałym FS
-rankingi znikną po redeployu.
-
-**VPS:** Docker Compose lub systemd z pojedynczą instancją i
-stałym wolumenem, reverse proxy TLS i backupami.
+Przy pierwszym starcie ze starą bazą migracja tworzy schema_version=1
+i przenosi campaign_8..31 na campaign_12..35. Przenumerowanie jest
+transakcyjne i **nie wykonuje się ponownie** po restarcie. Zrób kopię starej
+bazy przed uruchomieniem i sprawdź, czy używa starych numerów etapów.
+Konflikt z istniejącym rekordem na nowej planszy powoduje wycofanie migracji
+i błąd startu, a nie ciche nadpisanie.
 
 ## Kryteria testowe
 
