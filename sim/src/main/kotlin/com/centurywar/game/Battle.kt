@@ -214,7 +214,7 @@ class Battle(val cfg: BattleConfig) {
     private val liveCounts = IntArray(2)
     private var liveDirty = true
     /** Tryb referencyjny do testu zgodności bitowej z dotychczasowym skanowaniem. */
-    internal var useIndexedScan = true
+    var useIndexedScan = true
     var time = 0f
     /** Liczba zakończonych kroków; następna komenda dotyczy kroku stepCount. */
     var stepCount = 0

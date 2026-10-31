@@ -40,3 +40,10 @@ HPLcom/centurywar/game/BattleRenderer;->render(Landroid/graphics/Canvas;FFF)V
 HPLcom/centurywar/game/Rng;->nextLong()J
 HPLcom/centurywar/game/Rng;->nextInt(I)I
 HPLcom/centurywar/game/Rng;->nextFloat()F
+
+# Gorąca sciezka pomiaru, regulatora i indeksowania jednostek.
+Lcom/centurywar/engine/FrameMetrics;
+Lcom/centurywar/engine/QualityGovernor;
+HPLcom/centurywar/engine/FrameMetrics;->add(JJII)V
+HPLcom/centurywar/engine/QualityGovernor;->record(FFZII)Z
+HPLcom/centurywar/game/Battle;->frontUnit(I)Lcom/centurywar/game/Fighter;
