@@ -112,12 +112,18 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
             val aroundTop = panel.bottom - 115 * dp
             ui.textO(c, L["global_around"], l, aroundTop, 13f, Ui.GOLD)
             var ay = aroundTop + 9 * dp
-            for (e in around) {
-                if (ay + 25 * dp > panel.bottom - 35 * dp) break
-                if (e.player == g.profile.playerId || around.size <= 3) {
-                    drawEntry(c, e, l, r, ay, e.rank.toInt())
-                    ay += 26 * dp
-                }
+            var myIndex = 0
+            for (i in around.indices) if (around[i].player == g.profile.playerId) {
+                myIndex = i
+                break
+            }
+            val from = if (around.size <= 3) 0 else (myIndex - 1).coerceIn(0, around.size - 3)
+            var i = from
+            while (i < min(from + 3, around.size) && ay + 25 * dp <= panel.bottom - 35 * dp) {
+                val e = around[i]
+                drawEntry(c, e, l, r, ay, e.rank.toInt())
+                ay += 26 * dp
+                i++
             }
         }
         val status = when {
