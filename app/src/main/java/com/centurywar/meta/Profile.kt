@@ -67,6 +67,9 @@ class Profile(private val file: File) {
 
     val boards = HashMap<String, MutableList<ScoreEntry>>()
 
+    /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
+    fun replayTutorial() { tutorialDone = false; save() }
+
     fun level(key: String) = levels[key] ?: 0
 
     fun canBuy(def: ResearchDef): Boolean = level(def.key) < def.max && medals >= def.cost(level(def.key))

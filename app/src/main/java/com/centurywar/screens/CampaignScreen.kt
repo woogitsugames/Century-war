@@ -258,7 +258,8 @@ class CampaignScreen(g: Game) : Screen(g) {
         when (b.id) {
             -1 -> g.pop()
             -2 -> selected?.let { s ->
-                g.setScreen(BattleScreen(g, Campaign.config(s, g.profile.bonuses(), System.nanoTime())))
+                g.setScreen(BattleScreen(g, Campaign.config(s, g.profile.bonuses(), System.nanoTime(),
+                    tutorial = s.index == 0 && !g.profile.tutorialDone)))
             }
             -3 -> selected = null
             else -> selected = b.tag as? Stage
