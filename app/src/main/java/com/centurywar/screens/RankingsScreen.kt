@@ -11,6 +11,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Daily
+import com.centurywar.game.Weekly
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import kotlin.math.min
@@ -22,20 +23,24 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val rename = btn(-2)
     private val achievementsButton = btn(101)
     private val global = btn(-3)
-    private val tabs = Array(4) { btn(it) }
+    private val periodToggle = btn(102)
+    private val tabs = Array(5) { btn(it) }
     private var tab = 0
     private val panel = RectF()
     private val row = RectF()
     private var dt = 0f
-    private val day = Daily.dayNumber()
-    private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
+    private var day = Daily.dayNumber()
+    private var week = Weekly.weekNumber(day)
+    private var previousWeek = false
+    private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS, Icons.MEDAL)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
 
     private fun board(i: Int) = when (i) {
         0 -> Profile.BOARD_ENDLESS
         1 -> Profile.dailyBoard(day)
         2 -> Profile.BOARD_CAMPAIGN
-        else -> Profile.BOARD_SKIRMISH
+        3 -> Profile.BOARD_SKIRMISH
+        else -> Profile.weeklyBoard(if (previousWeek) week - 1L else week)
     }
 
     override fun layout() {
@@ -44,12 +49,12 @@ class RankingsScreen(g: Game) : Screen(g) {
         rename.iconId = Icons.PENCIL
         val rw = min(200 * dp, ui.measure(rename.label, 14f, true) + 70 * dp)
         rename.set(w - g.insetR - rw - 12 * dp, g.insetT + 10 * dp, rw, 44 * dp)
-        val keys = arrayOf("board_endless", "board_daily", "board_campaign", "board_skirmish")
+        val keys = arrayOf("board_endless", "board_daily", "board_campaign", "board_skirmish", "board_weekly")
         val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)
         val gap = 6 * dp
-        val tw = (pw - gap * 3) / 4
+        val tw = (pw - gap * 4) / 5
         val l = w / 2 - pw / 2
-        for (i in 0..3) {
+        for (i in 0..4) {
             tabs[i].label = L[keys[i]]
             tabs[i].iconId = tabIcons[i]
             tabs[i].set(l + i * (tw + gap), chrome.top + 4 * dp, tw, 42 * dp)
@@ -59,7 +64,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         achievementsButton.iconId = Icons.MEDAL
         val aw = min(178 * dp, pw * 0.48f)
         achievementsButton.set(panel.right - aw - 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
-        global.visible = g.online.available
+        periodToggle.set(panel.left + 12 * dp, panel.top + 8 * dp, min(160 * dp, pw * 0.43f), 38 * dp)
+        periodToggle.iconId = Icons.CALENDAR
+        periodToggle.visible = tab == 4
+        periodToggle.label = L[if (previousWeek) "weekly_current" else "weekly_previous"]
+        global.visible = g.online.available && tab != 4
         if (global.visible) {
             global.label = L["global_ranking"]
             global.iconId = Icons.GLOBE
@@ -71,8 +80,15 @@ class RankingsScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
-        if (global.visible != g.online.available) layout()
-        for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
+        val newDay = Daily.dayNumber()
+        if (newDay != day) {
+            day = newDay
+            week = Weekly.weekNumber(day)
+            g.profile.syncWeekly(week)
+        }
+        if (global.visible != (g.online.available && tab != 4) || periodToggle.visible != (tab == 4)) layout()
+        periodToggle.label = L[if (previousWeek) "weekly_current" else "weekly_previous"]
+        for (i in 0..4) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }
 
     override fun render(c: Canvas) {
@@ -82,6 +98,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         for (b in tabs) ui.button(c, b, 13f)
         ui.button(c, back, 16f); ui.button(c, rename, 14f)
         ui.button(c, achievementsButton, 13f)
+        if (periodToggle.visible) ui.button(c, periodToggle, 13f)
         if (global.visible) ui.button(c, global, 14f)
         chrome.title(c, L["rankings"])
         val list = g.profile.top(board(tab))
@@ -89,6 +106,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         val l = panel.left + inner
         val r = panel.right - inner
         var y = panel.top + 54 * dp
+        if (tab == 4) {
+            ui.textO(c, L.f("weekly_week_number", if (previousWeek) week - 1L else week),
+                panel.centerX(), y + 2 * dp, 12f, Ui.GOLD, Paint.Align.CENTER)
+            y += 20 * dp
+        }
         val bottomLimit = panel.bottom - (if (global.visible) 102 * dp else 52 * dp)
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
@@ -141,9 +163,10 @@ class RankingsScreen(g: Game) : Screen(g) {
         when (b.id) {
             -1 -> g.pop()
             101 -> g.push(AchievementsScreen(g))
-            -3 -> if (g.online.available) g.online.showUi(board(tab))
+            -3 -> if (g.online.available && tab != 4) g.online.showUi(board(tab))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
-            in 0..3 -> tab = b.id
+            in 0..4 -> tab = b.id
+            102 -> previousWeek = !previousWeek
         }
     }
 }
