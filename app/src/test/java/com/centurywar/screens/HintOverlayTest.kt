@@ -41,6 +41,8 @@ class HintOverlayTest {
             buttons[7], buttons[8], RectF(20f, 20f, 160f, 60f),
             RectF(20f, 65f, 160f, 90f), RectF(350f, 30f, 950f, 55f),
             RectF(0f, 100f, 1600f, 590f),
+            RectF(960f, 20f, 1000f, 64f),
+            Array(2) { Button(80 + it).apply { set(520f + it * 250f, 160f, 210f, 300f) } },
         )
     }
 
@@ -165,6 +167,53 @@ class HintOverlayTest {
         g.profile.tutorialDone = true
         val next = BattleScreen(g, Campaign.config(Campaign.stages[0], g.profile.bonuses(), 5L, false))
         assertNull(field.get(next))
+    }
+
+    @Test
+    fun variantAndWeatherHintsAppearOnceAcrossBattles() {
+        val g = game()
+        val onlyNew = (1L shl HintOverlay.VARIANT) or (1L shl HintOverlay.WEATHER)
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK and onlyNew.inv()
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 54L, 1f,
+            startEra = 5, maxEra = 6, weather = Weather.WIND))
+        assertEquals(5, b.pendingVariant)
+        val h = HintOverlay(g, b, targets())
+        h.update(0.3f)
+        assertEquals(HintOverlay.VARIANT, h.activeId)
+        h.dismiss()
+
+        // Po wybraniu wariantu w tej samej bitwie można poznać pogodę.
+        b.pendingVariant = null
+        b.time = 25f
+        h.update(0.3f)
+        assertEquals(HintOverlay.WEATHER, h.activeId)
+        assertEquals(onlyNew, g.profile.hintsSeen and onlyNew)
+        h.dismiss()
+
+        // Kolejna bitwa, inna pogoda i kolejny wariant nie pokazują dymków ponownie.
+        val next = Battle(BattleConfig(Mode.SKIRMISH, 55L, 1f,
+            startEra = 5, maxEra = 6, weather = Weather.RAIN))
+        next.time = 50f
+        val again = HintOverlay(g, next, targets())
+        again.update(0.3f)
+        assertEquals(-1, again.activeId)
+    }
+
+    @Test
+    fun variantHintInterruptsOtherHintAndIgnoresCooldown() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK and
+            ((1L shl HintOverlay.UPGRADE) or (1L shl HintOverlay.VARIANT)).inv()
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 56L, 1f,
+            startEra = 5, maxEra = 6))
+        b.pendingVariant = null
+        b.player.gold = 99999f
+        val h = HintOverlay(g, b, targets())
+        h.update(0.3f)
+        assertEquals(HintOverlay.UPGRADE, h.activeId)
+        b.pendingVariant = 5
+        h.update(0.3f)
+        assertEquals(HintOverlay.VARIANT, h.activeId)
     }
 
     @Test
