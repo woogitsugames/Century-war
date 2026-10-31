@@ -22,5 +22,13 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 16 | [Ulepszenia jednostek w obrębie epoki](16-unit-upgrades.md) | `gpt/16-unit-upgrades` | — |
 | 17 | [Nowa epoka: Epoka żelaza + szablon kolejnych](17-new-era.md) | `gpt/17-new-era` | po 16 lub równolegle |
 | 18 | [Rozgałęzienia epok (Diesel/Tesla, Cyber/Bio)](18-era-branches.md) | `gpt/18-era-branches` | po 17 |
+| 19 | [Liczba mnoga w tekstach (formy liczebników w 10 językach)](19-plural-forms.md) | `gpt/19-plural-forms` | — (dotyka `L.kt`, scalać przed 21 i 23 albo rozwiązać konflikty w `L.kt`) |
+| 20 | [Aktualizacja materiałów sklepu i prywatności po Play Games i powiadomieniach](20-store-privacy-update.md) | `gpt/20-store-privacy-update` | po scaleniu int-meta (01, 15); ponowić po 23 |
+| 21 | [Celowanie ostrzału dotykiem dla gracza](21-aimed-barrage.md) | `gpt/21-aimed-barrage` | — |
+| 22 | [Wyraźne różnice osobowości AI z miarami](22-ai-personalities.md) | `gpt/22-ai-personalities` | po 16–18 (dotyka `Ai.kt`); przed 04 |
+| 23 | [Integracja klienta z serwerem rankingu globalnego](23-global-ranking-client.md) | `gpt/23-global-ranking-client` | po int-infra (08); najlepiej po 16–18 i 22 (zmiany `:sim` zmieniają powtórki) |
+| 24 | [Poprawki z przeglądu: configChanges locale i predictive back](24-back-locale-fixes.md) | `gpt/24-back-locale-fixes` | — |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
+
+Zlecenia 19, 21, 23 dotykają `engine/L.kt`; 21, 23 dotykają `screens/BattleScreen.kt`; 22 dotyka `sim/.../Ai.kt` (kolejka z 05–18); 23 zmienia `:sim` i `:server` (każda późniejsza zmiana balansu wymaga podbicia `CW_GAME_VERSION`). Niezależne: 20, 24.
