@@ -34,7 +34,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: Instalacja Android SDK 36
-        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
       - uses: gradle/actions/setup-gradle@v4
       - name: Kompilacja aplikacji
         run: ./gradlew :app:assembleDebug --console=plain
