@@ -56,6 +56,54 @@ class ScreenshotTest {
         g.pushTouch(TouchEvent.UP, x, y, 0)
     }
 
+    private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
+
+    /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
+    @Test
+    fun menus() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] / 1.0f * 0.9f, if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.profile.stars[0] = 3; g.profile.stars[1] = 2; g.profile.stars[2] = 1
+            g.profile.submit(Profile.BOARD_ENDLESS, 12345, 1)
+            g.profile.submit(Profile.BOARD_ENDLESS, 8000, 1)
+            shot(g, "${tag}_menu")
+            val cs = CampaignScreen(g)
+            g.setScreen(cs); shot(g, "${tag}_campaign")
+            field(cs, "selected").set(cs, com.centurywar.game.Campaign.stages[2])
+            shot(g, "${tag}_campaign_info")
+            g.setScreen(ResearchScreen(g)); shot(g, "${tag}_research")
+            g.setScreen(ModeScreen(g, Mode.ENDLESS)); shot(g, "${tag}_mode_endless")
+            g.setScreen(ModeScreen(g, Mode.DAILY)); shot(g, "${tag}_mode_daily")
+            g.setScreen(ModeScreen(g, Mode.SKIRMISH)); shot(g, "${tag}_mode_skirmish")
+            g.setScreen(RankingsScreen(g)); shot(g, "${tag}_rankings")
+            g.setScreen(SettingsScreen(g)); shot(g, "${tag}_settings")
+
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7L, 1f, startEra = 2, maxEra = 7))
+            g.setScreen(bs)
+            val b = field(bs, "battle").get(bs) as com.centurywar.game.Battle
+            b.playerAi = Ai(b, 0)
+            b.player.gold = 900f
+            repeat(60 * 20) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
+            b.playerAi = null
+            shot(g, "${tag}_battle_hud")
+            field(bs, "showTurrets").set(bs, true)
+            shot(g, "${tag}_battle_turrets")
+            field(bs, "showTurrets").set(bs, false)
+            b.pendingChoice = arrayOf(com.centurywar.game.Doctrine.ECONOMY, com.centurywar.game.Doctrine.FURY, com.centurywar.game.Doctrine.ARSENAL)
+            shot(g, "${tag}_battle_doctrine")
+            b.pendingChoice = null
+            field(bs, "paused").set(bs, true)
+            shot(g, "${tag}_battle_pause")
+            field(bs, "paused").set(bs, false)
+            b.surrender()
+            shot(g, "${tag}_battle_results", 90)
+        }
+    }
+
     @Test
     fun screens() {
         for ((tag, dims) in mapOf(

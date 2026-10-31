@@ -2,16 +2,19 @@ package com.centurywar.screens
 
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import kotlin.math.max
 import kotlin.math.min
 
 class SettingsScreen(g: Game) : Screen(g) {
     private val bg = MenuBg()
+    private val chrome = Chrome(this)
     private val back = btn(-1)
     private val quality = btn(1)
     private val fps = btn(2)
@@ -21,17 +24,28 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val name = btn(6)
     private val reset = btn(7)
     private val rows = listOf(quality, fps, lang, vib, showFps, name, reset)
+    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.RESTART)
+    private val labelKeys = arrayOf("quality", "fps", "language", "vibration", "show_fps", "name")
+    private val panel = RectF()
+    private val rowR = RectF()
     private var resetArmed = 0f
     private var dt = 0f
 
     override fun layout() {
-        back.set(g.insetL + 12 * dp, g.insetT + 10 * dp, 100 * dp, 38 * dp)
-        val bw = min(260 * dp, w * 0.4f)
-        val bh = 40 * dp
-        val colX = w / 2 + 10 * dp
-        val avail = h - g.insetT - 70 * dp
-        val step = min(bh + 8 * dp, avail / rows.size)
-        for ((i, b) in rows.withIndex()) b.set(colX, g.insetT + 64 * dp + i * step, bw, step - 6 * dp)
+        chrome.layoutBack(back)
+        val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val avail = h - chrome.top - g.insetB - 20 * dp
+        val step = min(54 * dp, (avail - 44 * dp) / rows.size)
+        val ph = step * rows.size + 44 * dp
+        val top = chrome.top + 10 * dp + max(0f, (avail - ph) * 0.35f)
+        panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
+        val bw = min(250 * dp, pw * 0.46f)
+        for ((i, b) in rows.withIndex()) {
+            val y = panel.top + 24 * dp + i * step
+            if (b === reset) b.set(panel.left + 24 * dp, y + 4 * dp, pw - 48 * dp, step - 10 * dp)
+            else b.set(panel.right - 22 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
+        }
+        reset.iconId = Icons.RESTART
     }
 
     override fun update(dt: Float) {
@@ -43,22 +57,33 @@ class SettingsScreen(g: Game) : Screen(g) {
         fps.label = when (p.fpsCap) { 30 -> "30"; 60 -> "60"; else -> L["fps_max"] }
         lang.label = when (p.lang) { "pl" -> "Polski"; "en" -> "English"; else -> "Auto" }
         vib.label = if (p.vibration) L["on"] else L["off"]
+        vib.color = if (p.vibration) Ui.BTN_GREEN else Ui.BTN
         showFps.label = if (p.showFps) L["on"] else L["off"]
+        showFps.color = if (p.showFps) Ui.BTN_GREEN else Ui.BTN
         name.label = p.name
         reset.label = if (resetArmed > 0f) L["reset_confirm"] else L["reset"]
-        reset.color = Color.rgb(120, 50, 45)
+        reset.color = if (resetArmed > 0f) Color.rgb(200, 60, 40) else Ui.BTN_RED
     }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
-        c.drawColor(Color.argb(120, 0, 0, 0))
-        ui.text(c, L["settings"], w / 2, g.insetT + 38 * dp, 24f, Ui.GOLD, Paint.Align.CENTER, true, true)
-        val labels = listOf(L["quality"], L["fps"], L["language"], L["vibration"], L["show_fps"], L["name"], "")
+        chrome.dim(c, 120)
+        ui.panel(c, panel)
+        chrome.title(c, L["settings"])
         for ((i, b) in rows.withIndex()) {
-            ui.text(c, labels[i], w / 2 - 10 * dp, b.r.centerY() + 5 * dp, 15f, Ui.TEXT, Paint.Align.RIGHT, false, true)
-            ui.button(c, b, 14f)
+            if (b !== reset) {
+                rowR.set(panel.left + 16 * dp, b.r.top - 3 * dp, panel.right - 16 * dp, b.r.bottom + 3 * dp)
+                ui.fill.color = if (i % 2 == 0) Color.argb(36, 255, 255, 255) else Color.argb(14, 255, 255, 255)
+                c.drawRoundRect(rowR, 10 * dp, 10 * dp, ui.fill)
+                val isz = min(26 * dp, b.r.height() * 0.7f)
+                Icons.draw(c, icons[i], panel.left + 30 * dp + isz / 2, b.r.centerY(), isz, dp = dp)
+                val tx = panel.left + 42 * dp + isz
+                val label = L[labelKeys[i]]
+                ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp, ui.fit(label, 16f, b.r.left - tx - 8 * dp), Ui.TEXT)
+            }
+            ui.button(c, b, 15f)
         }
-        ui.button(c, back)
+        ui.button(c, back, 16f)
     }
 
     override fun onClick(b: Button) {
