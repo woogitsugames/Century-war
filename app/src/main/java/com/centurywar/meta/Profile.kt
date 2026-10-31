@@ -3,6 +3,7 @@ package com.centurywar.meta
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
 import com.centurywar.game.Research
 import com.centurywar.game.Weekly
@@ -473,6 +474,7 @@ class Profile(private val file: File) {
         // Pomijamy przestarzałe migawki z kolejki, by pauza nie czekała na wiele fsync.
         if (newerProfileVersion || seq < saveSeq || seq <= writtenSeq) return
         try {
+            GameIoCounter.diskAccess()
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use { out ->
                 out.write(json.toByteArray(Charsets.UTF_8))
@@ -757,6 +759,7 @@ class Profile(private val file: File) {
 
     @Synchronized
     fun load() {
+        GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
         if (!file.exists() && !tmp.exists()) return
         // Nawet starsza data pliku z przyszłej wersji jest ważniejsza niż zapis .tmp.
