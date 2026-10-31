@@ -114,7 +114,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         val percent = (fraction * 100f + 0.5f).toInt()
         if (percent != shownMusicPercent) {
             shownMusicPercent = percent
-            musicPercentLabel = "$" + "{percent}%"
+            musicPercentLabel = percent.toString() + "%"
         }
         ui.textO(c, musicPercentLabel, music.r.right - 5 * dp, y + 5 * dp, 13f,
             Ui.TEXT, Paint.Align.RIGHT)
