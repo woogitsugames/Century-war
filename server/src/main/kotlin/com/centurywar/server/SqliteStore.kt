@@ -15,48 +15,110 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
 
     init {
         synchronized(lock) {
+            // PRAGMA journal_mode nie może być zmieniane wewnątrz transakcji.
             connection.createStatement().use { s ->
                 s.execute("PRAGMA busy_timeout=5000")
                 s.execute("PRAGMA foreign_keys=ON")
                 s.execute("PRAGMA journal_mode=WAL")
-                s.execute("""
-                    CREATE TABLE IF NOT EXISTS players (
-                        player_id TEXT PRIMARY KEY NOT NULL,
-                        nick TEXT NOT NULL,
-                        updated_at INTEGER NOT NULL
-                    )
-                """.trimIndent())
-                s.execute("""
-                    CREATE TABLE IF NOT EXISTS scores (
-                        player_id TEXT NOT NULL REFERENCES players(player_id),
-                        board TEXT NOT NULL,
-                        day INTEGER NOT NULL,
-                        score INTEGER NOT NULL CHECK (score >= 0),
-                        seed INTEGER NOT NULL,
-                        game_version TEXT NOT NULL,
-                        ticks INTEGER NOT NULL,
-                        replay_sha256 TEXT NOT NULL,
-                        verified_at INTEGER NOT NULL,
-                        research_sum INTEGER NOT NULL DEFAULT 0,
-                        PRIMARY KEY(player_id, board, day)
-                    )
-                """.trimIndent())
-                // Migracja istniejącej bazy bez usuwania wcześniejszych wyników.
-                val hasResearch = s.executeQuery("PRAGMA table_info(scores)").use { rs ->
-                    var found = false
-                    while (rs.next()) if (rs.getString("name") == "research_sum") found = true
-                    found
-                }
-                if (!hasResearch) s.execute("ALTER TABLE scores ADD COLUMN research_sum INTEGER NOT NULL DEFAULT 0")
-                s.execute("CREATE INDEX IF NOT EXISTS idx_scores_board_time ON scores(board, verified_at, score)")
-                s.execute("""
-                    CREATE TABLE IF NOT EXISTS used_nonces (
-                        nonce TEXT PRIMARY KEY NOT NULL,
-                        expires_at INTEGER NOT NULL
-                    )
-                """.trimIndent())
-                s.execute("CREATE INDEX IF NOT EXISTS idx_nonces_expire ON used_nonces(expires_at)")
             }
+            connection.autoCommit = false
+            try {
+                connection.createStatement().use { s ->
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS players (
+                            player_id TEXT PRIMARY KEY NOT NULL,
+                            nick TEXT NOT NULL,
+                            updated_at INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS scores (
+                            player_id TEXT NOT NULL REFERENCES players(player_id),
+                            board TEXT NOT NULL,
+                            day INTEGER NOT NULL,
+                            score INTEGER NOT NULL CHECK (score >= 0),
+                            seed INTEGER NOT NULL,
+                            game_version TEXT NOT NULL,
+                            ticks INTEGER NOT NULL,
+                            replay_sha256 TEXT NOT NULL,
+                            verified_at INTEGER NOT NULL,
+                            research_sum INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(player_id, board, day)
+                        )
+                    """.trimIndent())
+                    val hasResearch = s.executeQuery("PRAGMA table_info(scores)").use { rs ->
+                        var found = false
+                        while (rs.next()) if (rs.getString("name") == "research_sum") found = true
+                        found
+                    }
+                    if (!hasResearch) s.execute("ALTER TABLE scores ADD COLUMN research_sum INTEGER NOT NULL DEFAULT 0")
+                    s.execute("CREATE INDEX IF NOT EXISTS idx_scores_board_time ON scores(board, verified_at, score)")
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS used_nonces (
+                            nonce TEXT PRIMARY KEY NOT NULL,
+                            expires_at INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("CREATE INDEX IF NOT EXISTS idx_nonces_expire ON used_nonces(expires_at)")
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS schema_version (
+                            id INTEGER PRIMARY KEY CHECK (id = 1),
+                            version INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("INSERT OR IGNORE INTO schema_version(id, version) VALUES (1, 0)")
+                    val version = s.executeQuery("SELECT version FROM schema_version WHERE id = 1").use { rs ->
+                        check(rs.next()) { "missing_schema_version" }
+                        rs.getInt(1)
+                    }
+                    check(version in 0..1) { "unsupported_schema_version" }
+                    if (version == 0) {
+                        // Dwa kroki zapobiegają kolizji klucza 8->12, 12->16 itd.
+                        val oldBoards = (8..31).joinToString(",") { "'campaign_" + it + "'" }
+                        val temporaryBoards = (8..31).joinToString(",") { "'__cw43_campaign_" + it + "'" }
+                        s.execute("UPDATE scores SET board = '__cw43_' || board WHERE board IN (" + oldBoards + ")")
+                        s.execute("""
+                            UPDATE scores
+                            SET board = 'campaign_' || (CAST(substr(board, 17) AS INTEGER) + 4)
+                            WHERE board IN ($temporaryBoards)
+                        """.trimIndent())
+                        s.execute("UPDATE schema_version SET version = 1 WHERE id = 1")
+                    }
+                }
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+    }
+
+    /** Usuwa rekordy i pseudonim gracza; brak gracza nie jest błędem. */
+    fun deletePlayer(player: String) = synchronized(lock) {
+        connection.autoCommit = false
+        try {
+            connection.prepareStatement("DELETE FROM scores WHERE player_id = ?").use {
+                it.setString(1, player)
+                it.executeUpdate()
+            }
+            connection.prepareStatement("DELETE FROM players WHERE player_id = ?").use {
+                it.setString(1, player)
+                it.executeUpdate()
+            }
+            connection.commit()
+        } catch (e: Exception) {
+            connection.rollback()
+            throw e
+        } finally {
+            connection.autoCommit = true
+        }
+    }
+
+    fun healthy(): Boolean = synchronized(lock) {
+        connection.createStatement().use { s ->
+            s.executeQuery("SELECT 1").use { rs -> rs.next() && rs.getInt(1) == 1 }
         }
     }
 
