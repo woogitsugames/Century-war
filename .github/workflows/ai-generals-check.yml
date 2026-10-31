@@ -23,6 +23,10 @@ jobs:
       - name: Symulacje bitwy
         run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*AiPersonalityTest*' --console=plain
 
+      - name: Statystyki składów dowódców
+        run: |
+          sed -n '/<system-out>/,/<\/system-out>/p' app/build/test-results/testDebugUnitTest/TEST-com.centurywar.game.AiPersonalityTest.xml
+
       - name: Diagnostyka nieudanych testów
         if: failure()
         run: |
@@ -47,17 +51,19 @@ jobs:
               output = "\n".join(x.text or "" for x in root.iter("system-out"))
               rows = {int(seed): (float(seconds), ok == "true")
                       for seed, seconds, ok in pattern.findall(output)}
-              if len(rows) != 6 or not all(ok for _, ok in rows.values()):
-                  raise SystemExit("Benchmark zawiera timeout lub brak wyników: " + str(rows))
+              if len(rows) != 6:
+                  raise SystemExit("Benchmark zawiera brak wyników: " + str(rows))
               return rows
 
           new = times(name)
           old = times("/tmp/century-war-base/" + name)
+          print("BAZA", old)
+          print("NOWA", new)
+          if not all(ok for _, ok in old.values()) or not all(ok for _, ok in new.values()):
+              raise SystemExit("Jedna z gałęzi nie zakończyła wszystkich sześciu bitew")
           base_avg = sum(old[s][0] for s in old) / len(old)
           new_avg = sum(new[s][0] for s in old) / len(old)
           ratio = new_avg / base_avg
-          print("BAZA", old)
-          print("NOWA", new)
           print(f"ŚREDNIA: baza={base_avg:.2f}s nowa={new_avg:.2f}s zmiana={(ratio-1)*100:.1f}%")
           if ratio > 1.2:
               raise SystemExit("Średni czas bitew wzrósł o ponad 20%")
