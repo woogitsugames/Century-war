@@ -11,6 +11,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 typealias ResearchDef = com.centurywar.game.ResearchDef
 
@@ -35,7 +36,7 @@ class Profile(private val file: File) {
         const val HINT_COUNT = 17
         const val HINT_VALID_MASK = 131071L
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
-            Thread(task, "cw-hints").apply { isDaemon = true }
+            Thread(task, "cw-profile-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
         }
         /** Bariera testowa; produkcyjny wątek gry nie czeka na operacje zapisu. */
         internal fun awaitHintWrites() { hintWriter.submit {}.get() }
@@ -441,25 +442,35 @@ class Profile(private val file: File) {
         remove("globalRanking")
     }.toString()
 
-    /**
-     * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
-     * równoległe zapisy pisały do tego samego pliku .tmp i mogły zostawić sklejony, uszkodzony JSON.
-     */
+    /** Migawka jest spójna; wątek wywołujący nie dotyka dysku. */
     @Synchronized
     fun save() {
         if (newerProfileVersion) return
         val json = try { toJson() } catch (_: Exception) { return }
-        writeJson(json, ++saveSeq)
+        val seq = ++saveSeq
+        hintWriter.execute { writeJson(json, seq) }
     }
 
-    /** Numer migawki: starsza migawka z wątku w tle nie nadpisze nowszego zapisu. */
+    /** Bariera zapisu przy pauzie; nie trzymamy blokady profilu podczas fsync. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            hintWriter.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Numery kolejnych migawek kontroluje zamek profilu, plik zapisuje jeden wykonawca. */
     private var saveSeq = 0L
     private var writtenSeq = 0L
 
-    @Synchronized
     private fun writeJson(json: String, seq: Long) {
         if (newerProfileVersion || seq <= writtenSeq) return
-        writtenSeq = seq
         try {
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use { out ->
@@ -482,7 +493,10 @@ class Profile(private val file: File) {
                     // Poprzedni zapis zostaje na miejscu, nowy można odzyskać z .tmp.
                 }
             }
-            if (saved) onSaved?.invoke(cloudJson(json))
+            if (saved) {
+                writtenSeq = seq
+                onSaved?.invoke(cloudJson(json))
+            }
         } catch (_: Exception) {
             // Brak miejsca itp. — gra działa dalej, zapis spróbuje ponownie przy kolejnej okazji.
         }
