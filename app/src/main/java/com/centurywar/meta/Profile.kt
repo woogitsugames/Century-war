@@ -35,7 +35,7 @@ class Profile(private val file: File) {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         const val HINT_COUNT = 19
-        const val HINT_VALID_MASK = (1L shl HINT_COUNT) - 1L
+        const val HINT_VALID_MASK = 524287L // 19 bitów; stare 17 pozostaje bez zmian
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
             Thread(task, "cw-profile-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
         }
