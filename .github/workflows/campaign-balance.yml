@@ -1,0 +1,60 @@
+name: Balans kampanii (20 seedow)
+on:
+  push:
+    branches: ['gpt/42-campaign-endgame-balance']
+    paths:
+      - 'sim/src/main/kotlin/com/centurywar/game/Modes.kt'
+      - 'app/src/test/java/com/centurywar/game/BalanceReport.kt'
+      - '.github/workflows/campaign-balance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  stages:
+    name: Etapy ${{ matrix.range }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { range: '01-06', stages: '1,2,3,4,5,6' }
+          - { range: '07-12', stages: '7,8,9,10,11,12' }
+          - { range: '13-18', stages: '13,14,15,16,17,18' }
+          - { range: '19-24', stages: '19,20,21,22,23,24' }
+          - { range: '25-30', stages: '25,26,27,28,29,30' }
+          - { range: '31-36', stages: '31,32,33,34,35,36' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Raport balansu
+        env:
+          BALANCE_RUN: 'true'
+          BALANCE_RUNS: '20'
+          BALANCE_PROFILE: target
+          BALANCE_STAGES: ${{ matrix.stages }}
+          PERF_REPORT: 'true'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest --rerun-tasks \
+            --tests '*BalanceReport.campaignReport*' \
+            --console=plain --no-configuration-cache
+      - name: Zapisz raport i logi testow
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-20-seeds-${{ matrix.range }}
+          path: |
+            app/build/balance/report-*.md
+            app/build/balance/report-*.csv
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
