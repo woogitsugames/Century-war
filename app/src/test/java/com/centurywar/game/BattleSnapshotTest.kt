@@ -212,6 +212,52 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun rangedProjectileResumesWithCounterBonus() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 454L, 1f, startEra = 4, maxEra = 4))
+        battle.ai!!.thinkTimer = 1000f
+        assertTrue(battle.spawn(battle.player, Defs.unit(4, Role.RANGED)))
+        assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
+        val shooter = battle.units.first { it.alive && it.side == 0 }
+        val target = battle.units.first { it.alive && it.side == 1 }
+        shooter.x = 1100f
+        shooter.cd = 0f
+        target.x = 1300f
+        target.cd = 1000f
+        battle.step()
+        val projectile = battle.projs.first { it.active }
+        assertEquals(Role.RANGED, projectile.shooterRole)
+        assertEquals(-1, projectile.turretEra)
+        val restored = roundTrip(battle)
+        val hp = target.hp
+        steps(battle, 100)
+        steps(restored, 100)
+        assertTrue(target.hp < hp)
+        assertSame(battle, restored)
+    }
+
+    @Test
+    fun steamTurretProjectileResumesWithHeavyBonus() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 455L, 1f, startEra = 4, maxEra = 4))
+        battle.ai!!.thinkTimer = 1000f
+        battle.player.turretEra[0] = 4
+        battle.player.turretCd[0] = 0f
+        assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
+        val target = battle.units.first { it.alive && it.side == 1 }
+        target.x = battle.player.baseFront + 350f
+        target.cd = 1000f
+        battle.step()
+        val projectile = battle.projs.first { it.active }
+        assertNull(projectile.shooterRole)
+        assertEquals(4, projectile.turretEra)
+        val restored = roundTrip(battle)
+        val hp = target.hp
+        steps(battle, 100)
+        steps(restored, 100)
+        assertTrue(target.hp < hp)
+        assertSame(battle, restored)
+    }
+
+    @Test
     fun rejectsWrongVersionAndCorruption() {
         val a = Battle(BattleConfig(Mode.SKIRMISH, 3L, 1f)); a.playerAi = Ai(a, 0)
         steps(a, 60 * 60)

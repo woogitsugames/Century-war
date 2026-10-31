@@ -45,6 +45,9 @@ object BattleSnapshot {
             mix(e.evolveXp); mix(t.cost); mixF(t.dmg); mixF(t.range); mixF(t.cooldown); mixF(t.splash); mix(t.projectile)
             mixF(Defs.baseHp(e.index)); mixF(Defs.income(e.index)); mixF(Defs.abilityDmg(e.index)); mixF(Defs.costScale(e.index))
         }
+        // Zmiana macierzy kontr również unieważnia stare zrzuty bitwy.
+        for (attacker in Role.values()) for (defender in Role.values()) mixF(Defs.counterMultiplier(attacker, defender))
+        mixF(Defs.TURRET_VS_LATE_HEAVY)
         h
     }
 
@@ -85,6 +88,7 @@ object BattleSnapshot {
             if (!p.active) continue
             o.writeShort(i)
             o.writeByte(p.side); o.writeByte(p.type); o.writeByte(p.era)
+            o.writeByte(p.shooterRole?.ordinal ?: -1); o.writeByte(p.turretEra)
             o.writeFloat(p.x); o.writeFloat(p.h); o.writeFloat(p.vx); o.writeFloat(p.vh); o.writeFloat(p.g)
             o.writeFloat(p.tx); o.writeFloat(p.t); o.writeFloat(p.dur); o.writeFloat(p.delay)
             o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul)
@@ -211,6 +215,9 @@ object BattleSnapshot {
             require(!p.active)
             p.active = true
             p.side = side(i.readByte().toInt()); p.type = i.readByte().toInt(); p.era = era(i.readByte().toInt())
+            val role = i.readByte().toInt()
+            p.shooterRole = if (role == -1) null else enumAt(Role.values(), role)
+            p.turretEra = i.readByte().toInt().also { require(it in -1 until Defs.ERA_COUNT) }
             p.x = i.readFloat(); p.h = i.readFloat(); p.vx = i.readFloat(); p.vh = i.readFloat(); p.g = i.readFloat()
             p.tx = i.readFloat(); p.t = i.readFloat(); p.dur = i.readFloat(); p.delay = i.readFloat()
             p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat()

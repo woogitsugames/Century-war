@@ -251,12 +251,11 @@ class Ai(
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < eliteChance) return Role.ELITE
         if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
 
-        if (enemyRanged >= 2 && enemyRanged > enemyMelee) {
-            if (r < 35 && me.gold >= Defs.unit(me.era, Role.HEAVY).cost) return Role.HEAVY
-            if (r < 65) return Role.MELEE
-        }
+        // Kontry zgodne z macierzą [Defs.counterMultiplier] i liczone tylko z widocznych
+        // jednostek: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
+        if (enemyRanged >= 2 && enemyRanged > enemyMelee && r < 65) return Role.MELEE
         if (enemyHeavy >= 2 && enemyHeavy > enemyRanged && r < 35) return Role.RANGED
-        if (enemyMelee >= 3 && r < 25) return Role.RANGED
+        if (enemyMelee >= 3 && r < 25 && me.gold >= Defs.unit(me.era, Role.HEAVY).cost) return Role.HEAVY
 
         if (personality == AiPersonality.ASSAULT && b.time < 90f && r in 35..60) return Role.MELEE
         if (personality == AiPersonality.ENGINEER && r in 35..57 &&
