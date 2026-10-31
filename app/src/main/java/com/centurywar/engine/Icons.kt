@@ -68,6 +68,8 @@ object Icons {
     const val VIBRATE = 47
     const val MONITOR = 48
     const val PERSON = 49
+    const val CODEX = 50
+    const val HEART = 51
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -164,6 +166,8 @@ object Icons {
             VIBRATE -> vibrate(c)
             MONITOR -> monitor(c)
             PERSON -> person(c)
+            CODEX -> codex(c)
+            HEART -> heart(c)
         }
         c.restoreToCount(save)
     }
@@ -833,5 +837,43 @@ object Icons {
         p.reset(); p.moveTo(-0.8f, 0.92f); p.quadTo(-0.8f, 0.12f, 0f, 0.12f); p.quadTo(0.8f, 0.12f, 0.8f, 0.92f); p.close()
         shape(c, BLUE)
         circle(c, 0f, -0.38f, 0.42f, Color.rgb(240, 200, 160))
+    }
+
+    /** Gruby tom w skórzanej oprawie z okuciami i klamrą (Kodeks). */
+    private fun codex(c: Canvas) {
+        // strony widoczne od dołu i z prawej
+        rect(c, -0.62f, -0.78f, 0.86f, 0.9f, PAPER, 0.08f)
+        plainLine(c, -0.5f, 0.66f, 0.72f, 0.66f, ow * 0.5f, PAPER_D)
+        plainLine(c, -0.5f, 0.78f, 0.72f, 0.78f, ow * 0.5f, PAPER_D)
+        plainLine(c, 0.74f, -0.62f, 0.74f, 0.6f, ow * 0.5f, PAPER_D)
+        // okładka
+        rect(c, -0.8f, -0.95f, 0.66f, 0.56f, RED_D, 0.1f)
+        rect(c, -0.8f, -0.95f, -0.52f, 0.56f, Color.rgb(120, 28, 30), 0.08f)
+        fill.color = Color.argb(60, 255, 255, 255)
+        r.set(-0.46f, -0.86f, 0.58f, -0.72f); c.drawRoundRect(r, 0.05f, 0.05f, fill)
+        // złote narożniki
+        p.reset(); p.moveTo(0.66f, -0.95f); p.lineTo(0.66f, -0.62f); p.lineTo(0.33f, -0.95f); p.close()
+        shape(c, GOLD)
+        p.reset(); p.moveTo(0.66f, 0.56f); p.lineTo(0.66f, 0.23f); p.lineTo(0.33f, 0.56f); p.close()
+        shape(c, GOLD)
+        // emblemat: romb z gwiazdą
+        p.reset(); p.moveTo(0.07f, -0.62f); p.lineTo(0.42f, -0.2f); p.lineTo(0.07f, 0.22f); p.lineTo(-0.28f, -0.2f); p.close()
+        shape(c, GOLD)
+        star(c, 0.07f, -0.22f, 0.2f, GOLD_L, true)
+        // klamra
+        rect(c, 0.5f, -0.32f, 0.96f, -0.06f, GOLD_D, 0.06f)
+        circle(c, 0.8f, -0.19f, 0.07f, GOLD_L, false)
+    }
+
+    private fun heart(c: Canvas) {
+        p.reset()
+        p.moveTo(0f, 0.86f)
+        p.cubicTo(-0.5f, 0.5f, -0.95f, 0.15f, -0.92f, -0.3f)
+        p.cubicTo(-0.9f, -0.78f, -0.3f, -0.95f, 0f, -0.5f)
+        p.cubicTo(0.3f, -0.95f, 0.9f, -0.78f, 0.92f, -0.3f)
+        p.cubicTo(0.95f, 0.15f, 0.5f, 0.5f, 0f, 0.86f)
+        p.close()
+        shape(c, RED)
+        shine(c, -0.48f, -0.4f, 0.14f)
     }
 }

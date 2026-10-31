@@ -81,6 +81,15 @@ class ScreenshotTest {
             g.setScreen(ModeScreen(g, Mode.SKIRMISH)); shot(g, "${tag}_mode_skirmish")
             g.setScreen(RankingsScreen(g)); shot(g, "${tag}_rankings")
             g.setScreen(SettingsScreen(g)); shot(g, "${tag}_settings")
+            g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_codex_era0")
+            g.profile.levels["r_unitDmg"] = 5; g.profile.levels["r_unitHp"] = 4; g.profile.levels["r_train"] = 3
+            val cx = CodexScreen(g, 6)
+            g.setScreen(cx)
+            cx.onClick(cx.buttons.first { it.id == -2 })
+            shot(g, "${tag}_codex_era6")
+            field(cx, "scroll").set(cx, field(cx, "maxScroll").get(cx))
+            shot(g, "${tag}_codex_era6_end")
+            g.profile.levels.clear()
 
             val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7L, 1f, startEra = 2, maxEra = 7))
             g.setScreen(bs)
