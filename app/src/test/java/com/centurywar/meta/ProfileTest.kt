@@ -443,6 +443,42 @@ class ProfileTest {
     }
 
     @Test
+    fun vibrationLevelMigratesBooleanAndPersistsWeakSetting() {
+        val p = Profile(tmpFile())
+        assertEquals(2, p.vibrationLevel)
+
+        // Poprzednie profile przechowywały wyłącznie flagę logiczną.
+        val old = JSONObject(p.toJson()).apply { remove("vibrationLevel"); put("vibration", false) }
+        p.fromJson(old.toString())
+        assertEquals(0, p.vibrationLevel)
+        old.put("vibration", true)
+        p.fromJson(old.toString())
+        assertEquals(2, p.vibrationLevel)
+
+        p.vibrationLevel = 1
+        val saved = JSONObject(p.toJson())
+        assertEquals(1, saved.getInt("vibrationLevel"))
+        assertTrue(saved.getBoolean("vibration")) // starsza aplikacja nadal odczyta profil
+        assertEquals(1, Profile(tmpFile()).also { it.fromJson(saved.toString()) }.vibrationLevel)
+
+        saved.put("vibrationLevel", -40)
+        p.fromJson(saved.toString())
+        assertEquals(0, p.vibrationLevel)
+        saved.put("vibrationLevel", 70)
+        p.fromJson(saved.toString())
+        assertEquals(2, p.vibrationLevel)
+
+        p.vibrationLevel = -5
+        assertEquals(0, p.vibrationLevel)
+        p.vibrationLevel = 20
+        assertEquals(2, p.vibrationLevel)
+        p.fromJson("""{"v":1,"vibration":false}""")
+        assertEquals(0, p.vibrationLevel)
+        p.fromJson("""{"v":1}""")
+        assertEquals(2, p.vibrationLevel)
+    }
+
+    @Test
     fun screenShakeDefaultsPersistsAndClamps() {
         val f = tmpFile()
         val p = Profile(f)
