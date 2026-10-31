@@ -20,6 +20,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     private val cv: Canvas get() = p.cv
     var time = 0f
+    /** Wizualny odruch zwierzęcia po trafieniu (0..1). */
+    var recoil = 0f
 
     private val WOOD = 0xFF8A6038.toInt()
     private val WOOD_D = 0xFF5E3E22.toInt()
@@ -74,6 +76,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     private fun rider(era: Int, weapon: Int, team: Int, atk: Float) {
         cv.save(); cv.translate(-4f, -26f); cv.scale(0.86f, 0.86f)
+        if (recoil > 0f) cv.rotate(-15f * recoil, 0f, -14f)
         men.draw(era, false, weapon, team, 0f, atk, true, false)
         cv.restore()
     }
@@ -101,6 +104,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         horseLeg(-20f, walk, moving, hd, 0xFF2A2420.toInt())
         // ogon
         p.path.reset(); p.path.moveTo(-25f, -46f); p.path.quadTo(-38f, -40f, -34f, -20f); p.path.quadTo(-30f, -34f, -24f, -40f); p.path.close(); p.shape(mane)
+        // Szyja i łeb szarpią się niezależnie od tułowia.
+        cv.save(); cv.rotate(-9f * recoil, 8f, -47f)
         // szyja i głowa
         p.quad(12f, -50f, 26f, -68f, 34f, -62f, 24f, -38f); p.shape(hide)
         val pa = p.path; pa.reset()
@@ -111,6 +116,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.circleF(32f, -65f, 1.3f, 0xFF1A1418.toInt()) // oko
         // grzywa
         pa.reset(); pa.moveTo(24f, -70f); pa.lineTo(12f, -52f); pa.lineTo(14f, -48f); pa.lineTo(18f, -52f); pa.lineTo(20f, -55f); pa.lineTo(23f, -60f); pa.lineTo(27f, -66f); pa.close(); p.shape(mane)
+        cv.restore()
         // tułów
         p.oval(-28f, -52f, 24f, -28f, hide)
         if (p.hi) {
@@ -202,6 +208,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         if (tusker && p.hi) { // kudły
             for (i in 0..5) { val x = -32f + i * 10f; p.tri(x, -36f, x + 5f, -24f, x + 9f, -35f); p.shapeF(hd) }
         }
+        // Łeb mamuta/słonia odchyla się przy uderzeniu.
+        cv.save(); cv.rotate(-8f * recoil, 8f, -64f)
         // głowa
         p.circle(34f, -66f, 15f, hide)
         if (tusker) { p.circle(30f, -79f, 9f, hide) } // kopuła czaszki mamuta
@@ -221,6 +229,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             p.quad(28f, -80f, 42f, -78f, 46f, -64f, 30f, -66f); p.shape(BRONZE)
             if (p.hi) p.rivets(31f, -72f, 43f, 3, 1f, 0xFF8A5A20.toInt())
         }
+        cv.restore()
         // grzbiet: kosz / wieża w barwach drużyny
         if (tusker) {
             p.quad(-26f, -82f, 16f, -84f, 20f, -60f, -24f, -58f); p.shape(team)
