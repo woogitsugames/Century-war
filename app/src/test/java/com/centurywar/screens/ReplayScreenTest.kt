@@ -91,6 +91,19 @@ class ReplayScreenTest {
         assertEquals(1f, renderer.lerp, 0.0001f)
     }
 
+    @Test fun statusTextRefreshIsLimitedToFourTimesPerSecond() {
+        val (screen, _) = screen()
+        screen.onClick(screen.buttons.first { it.id == 2 })
+        screen.update(0f)
+        val initial = field(screen, "statusText") as String
+        val player = field(screen, "player") as ReplayPlayer
+        player.battle.player.gold += 10f
+        screen.update(0.1f)
+        assertEquals(initial, field(screen, "statusText"))
+        screen.update(0.15f)
+        assertTrue(initial != field(screen, "statusText"))
+    }
+
     @Test fun updateAndRenderDoNotAllocateWithUnchangedReplayState() {
         // android.jar nie eksportuje com.sun.management; identyczny pomiar jak w AllocationTest.
         val mx = Class.forName("java.lang.management.ManagementFactory")
