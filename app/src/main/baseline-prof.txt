@@ -1,49 +1,75 @@
-# Start Activity i pierwszej klatki menu.
+# Reczny profil: startup -> menu -> wybor trybu -> bitwa.
+# Metoda: odtworzenie wywolan z MainActivity/Game/GameView, ekranow i :sim.
+# HSPL = wywolania startowe/hot; HPL = petla klatek i symulacji.
+# Po zmianie kodu sprawdzac profile w APK/AAB po R8 (CI release-check).
+
+# Start aplikacji: inicjalizacja profilu i pierwsza klatka menu.
+Lcom/centurywar/CenturyWarApp;
 Lcom/centurywar/MainActivity;
 Lcom/centurywar/engine/Game;
 Lcom/centurywar/engine/GameView;
 Lcom/centurywar/engine/Screen;
-Lcom/centurywar/engine/Ui;
 Lcom/centurywar/engine/Quality;
+Lcom/centurywar/engine/Ui;
+Lcom/centurywar/engine/Icons;
+Lcom/centurywar/engine/L;
 Lcom/centurywar/engine/Sound;
+Lcom/centurywar/engine/Music;
 Lcom/centurywar/meta/Profile;
 Lcom/centurywar/screens/MenuScreen;
+Lcom/centurywar/screens/MenuBg;
+HSPLcom/centurywar/CenturyWarApp;->onCreate()V
 HSPLcom/centurywar/MainActivity;->onCreate(Landroid/os/Bundle;)V
 HSPLcom/centurywar/MainActivity;->onResume()V
-HSPLcom/centurywar/engine/GameView;->surfaceChanged(Landroid/view/SurfaceHolder;III)V
-HSPLcom/centurywar/engine/GameView;->run()V
-HSPLcom/centurywar/engine/Game;->resize(IIII)V
-HSPLcom/centurywar/engine/Game;->frame(Landroid/graphics/Canvas;F)V
-HSPLcom/centurywar/screens/MenuScreen;->layout()V
-HSPLcom/centurywar/screens/MenuScreen;->render(Landroid/graphics/Canvas;)V
 HSPLcom/centurywar/meta/Profile;->load()V
+HSPLcom/centurywar/engine/GameView;->surfaceChanged(Landroid/view/SurfaceHolder;III)V
+HPLcom/centurywar/engine/GameView;->run()V
+HPLcom/centurywar/engine/GameView;->loop()V
+HSPLcom/centurywar/engine/Game;->resize(IIII)V
+HPLcom/centurywar/engine/Game;->setScreen(Lcom/centurywar/engine/Screen;)V
+HPLcom/centurywar/engine/Game;->frame(Landroid/graphics/Canvas;F)V
+HSPLcom/centurywar/screens/MenuScreen;->layout()V
+HPLcom/centurywar/screens/MenuScreen;->render(Landroid/graphics/Canvas;)V
+HPLcom/centurywar/screens/MenuBg;->draw(Landroid/graphics/Canvas;FFF)V
 
-# Kod wykonywany podczas bitwy.
+# Wejscie do kampanii/potyczki i start bitwy (bez przedwczesnego AOT calej gry).
+Lcom/centurywar/screens/CampaignScreen;
+Lcom/centurywar/screens/ModeScreen;
 Lcom/centurywar/screens/BattleScreen;
-Lcom/centurywar/game/Battle;
+Lcom/centurywar/screens/TutorialOverlay;
+Lcom/centurywar/screens/BattleSfx;
 Lcom/centurywar/game/BattleRenderer;
-Lcom/centurywar/game/Ai;
+Lcom/centurywar/game/art/Pen;
+Lcom/centurywar/game/Battle;
+Lcom/centurywar/game/BattleConfig;
+Lcom/centurywar/game/BattleController;
+Lcom/centurywar/game/BattleSnapshot;
 Lcom/centurywar/game/Defs;
+Lcom/centurywar/game/Ai;
 Lcom/centurywar/game/Fighter;
 Lcom/centurywar/game/Projectile;
 Lcom/centurywar/game/Side;
 Lcom/centurywar/game/FxBuffer;
 Lcom/centurywar/game/Rng;
+HPLcom/centurywar/screens/CampaignScreen;->layout()V
+HPLcom/centurywar/screens/CampaignScreen;->render(Landroid/graphics/Canvas;)V
+HPLcom/centurywar/screens/ModeScreen;->layout()V
+HPLcom/centurywar/screens/ModeScreen;->render(Landroid/graphics/Canvas;)V
 HPLcom/centurywar/engine/GameView;->onTouchEvent(Landroid/view/MotionEvent;)Z
 HPLcom/centurywar/engine/Screen;->handle(Lcom/centurywar/engine/TouchEvent;)V
 HPLcom/centurywar/screens/BattleScreen;->layout()V
 HPLcom/centurywar/screens/BattleScreen;->update(F)V
 HPLcom/centurywar/screens/BattleScreen;->render(Landroid/graphics/Canvas;)V
-HPLcom/centurywar/game/Battle;->step()V
-HPLcom/centurywar/game/Ai;->update(F)V
 HPLcom/centurywar/game/BattleRenderer;->render(Landroid/graphics/Canvas;FFF)V
+HPLcom/centurywar/game/Battle;->step()V
+HPLcom/centurywar/game/Battle;->frontUnit(I)Lcom/centurywar/game/Fighter;
+HPLcom/centurywar/game/Ai;->update(F)V
 HPLcom/centurywar/game/Rng;->nextLong()J
 HPLcom/centurywar/game/Rng;->nextInt(I)I
 HPLcom/centurywar/game/Rng;->nextFloat()F
 
-# Gorąca sciezka pomiaru, regulatora i indeksowania jednostek.
+# Pomiar klatki i adaptacyjna jakosc.
 Lcom/centurywar/engine/FrameMetrics;
 Lcom/centurywar/engine/QualityGovernor;
 HPLcom/centurywar/engine/FrameMetrics;->add(JJII)V
 HPLcom/centurywar/engine/QualityGovernor;->record(FFZII)Z
-HPLcom/centurywar/game/Battle;->frontUnit(I)Lcom/centurywar/game/Fighter;
