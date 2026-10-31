@@ -84,7 +84,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         contentBottom = max(contentTop + 48 * dp, h - g.insetB - 128 * dp)
         panel.set(left, contentTop, left + width, contentBottom)
         footer.set(left, contentBottom + 5 * dp, left + width, h - g.insetB - 7 * dp)
-        twoColumns = width >= 560 * dp && h >= w * 0.68f
+        twoColumns = width >= 500 * dp && h >= w * 0.68f
         colL = left + 16 * dp
         colW = if (twoColumns) (width - 46 * dp) / 2 else width - 32 * dp
         colR = colL + colW + 14 * dp
