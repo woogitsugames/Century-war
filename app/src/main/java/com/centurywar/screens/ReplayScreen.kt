@@ -19,6 +19,7 @@ import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.ReplayPlayer
 import com.centurywar.game.ReplayRecord
+import com.centurywar.meta.Achievements
 
 /** Odtwarzacz bez komend gracza; całe sterowanie dotyczy wyłącznie osi czasu i kamery. */
 class ReplayScreen(
@@ -27,6 +28,9 @@ class ReplayScreen(
     initial: ReplayRecord.Record? = null,
 ) : Screen(g) {
     constructor(g: Game, bytes: ByteArray) : this(g, null,
+        try { ReplayRecord.decode(bytes) } catch (_: Exception) { null })
+
+    constructor(g: Game, id: String?, bytes: ByteArray) : this(g, id,
         try { ReplayRecord.decode(bytes) } catch (_: Exception) { null })
 
     private var player: ReplayPlayer? = null
@@ -38,6 +42,8 @@ class ReplayScreen(
     private var speed = 1
     private var acc = 0f
     private var frameDt = 0f
+    private var watchedSeconds = 0f
+    private var replayAchievementChecked = false
     private var draggingTime = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
@@ -196,6 +202,14 @@ class ReplayScreen(
             if (n == 20) acc = 0f
         }
         if (p.broken) { state = BROKEN; return }
+        // Samo otwarcie ani przewinięcie osi czasu nie oznacza obejrzenia rekordu.
+        if (!replayAchievementChecked && !paused && !p.seeking && !p.finished && p.step > 0) {
+            watchedSeconds += dt.coerceIn(0f, 0.1f)
+            if (watchedSeconds >= 10f) {
+                replayAchievementChecked = true
+                g.showAchievements(Achievements.onReplayWatched(g.profile, replayId, g.onlineAchievements))
+            }
+        }
         if (p.finished) paused = true
         val r = renderer ?: return
         prepareEras(p.battle)

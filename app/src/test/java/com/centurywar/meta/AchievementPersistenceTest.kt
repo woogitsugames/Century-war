@@ -79,6 +79,55 @@ class AchievementPersistenceTest {
     }
 
     @Test
+    fun newAchievementsPersistAfterSaveAndOldProfilesDefaultToZero() {
+        val file = tempProfileFile()
+        val p = Profile(file)
+        p.achievementCounters[AchievementMetric.STEAM_VARIANTS.name] = 3L
+        p.achievementCounters[AchievementMetric.SILICON_VARIANTS.name] = 1L
+        p.achievementCounters[AchievementMetric.BOSS_SHIELD.name] = 1L
+        p.achievementCounters[AchievementMetric.BARRAGE_EIGHT.name] = 1L
+        p.achievementCounters[AchievementMetric.WEEKLY_GOLD.name] = 1L
+        p.achievementCounters[AchievementMetric.REPLAY_RECORD.name] = 1L
+        p.unlockedAchievements.addAll(setOf("steam_twins", "boss_shield",
+            "barrage_eight", "weekly_gold", "replay_record"))
+        p.save()
+        Profile.awaitHintWrites()
+
+        val reloaded = Profile(file)
+        reloaded.load()
+        assertEquals(2L, Achievements.progress(reloaded, Achievements.byId("steam_twins")!!))
+        assertEquals(1L, Achievements.progress(reloaded, Achievements.byId("silicon_twins")!!))
+        for (id in listOf("boss_shield", "barrage_eight", "weekly_gold", "replay_record"))
+            assertEquals(1L, Achievements.progress(reloaded, Achievements.byId(id)!!))
+        assertEquals(p.unlockedAchievements, reloaded.unlockedAchievements)
+
+        val oldFile = tempProfileFile()
+        oldFile.writeText("""{"v":1,"medals":100,"battles":2,"wins":1}""")
+        val old = Profile(oldFile)
+        old.load()
+        assertEquals(0L, Achievements.progress(old, Achievements.byId("steam_twins")!!))
+        assertEquals(0L, Achievements.progress(old, Achievements.byId("weekly_gold")!!))
+        assertFalse(Achievements.isUnlocked(old, "replay_record"))
+    }
+
+    @Test
+    fun newAchievementCountersAreClampedOnLoad() {
+        val file = tempProfileFile()
+        file.writeText("""{"achievementCounters":{
+            "STEAM_VARIANTS":999,"SILICON_VARIANTS":-20,
+            "BOSS_SHIELD":42,"BARRAGE_EIGHT":24,
+            "WEEKLY_GOLD":111,"CUSTOM_THREE":11,"REPLAY_RECORD":33
+        }}""")
+        val p = Profile(file)
+        p.load()
+        assertEquals(3L, p.achievementCounters[AchievementMetric.STEAM_VARIANTS.name])
+        assertEquals(0L, p.achievementCounters[AchievementMetric.SILICON_VARIANTS.name])
+        for (key in listOf("BOSS_SHIELD", "BARRAGE_EIGHT", "WEEKLY_GOLD",
+            "CUSTOM_THREE", "REPLAY_RECORD"))
+            assertEquals(1L, p.achievementCounters[key])
+    }
+
+    @Test
     fun resetClearsUnlocksAndCounters() {
         val file = tempProfileFile()
         val p = Profile(file)

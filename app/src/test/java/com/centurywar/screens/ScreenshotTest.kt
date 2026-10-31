@@ -238,7 +238,11 @@ class ScreenshotTest {
             g.profile.battles = 30; g.profile.wins = 12; g.profile.totalKills = 640
             g.profile.unlockedAchievements.addAll(listOf("win_1", "win_10", "battles_25", "kills_100"))
             g.profile.achievementCounters["TURRETS_BUILT"] = 21L
-            g.setScreen(AchievementsScreen(g)); shot(g, "${tag}_achievements")
+            val achievementScreen = AchievementsScreen(g)
+            g.setScreen(achievementScreen); shot(g, "${tag}_achievements")
+            field(achievementScreen, "scroll").setFloat(achievementScreen,
+                field(achievementScreen, "maxScroll").getFloat(achievementScreen))
+            shot(g, "${tag}_achievements_new")
             g.showAchievements(listOf(com.centurywar.meta.Achievements.all[1]))
             shot(g, "${tag}_achievements_toast", 20)
             repeat(200) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }

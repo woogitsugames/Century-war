@@ -41,9 +41,48 @@ Wstaw ID przydzielone przez Play Console do zasobów app/src/main/res/values/gam
 
 ## 3. Osiągnięcia
 
-W Play Games Services → Setup and management → Achievements utwórz osiągnięcia, ustal opisy, ikony, typ standardowy/inkrementalny, widoczność i progi. Przykładowe osiągnięcia Century War: pierwsze zwycięstwo, pierwsze trzy gwiazdki, 32 ukończone etapy, 100 pokonanych jednostek, pierwsze badanie i 10 wygranych potyczek. Zanotuj wygenerowane przez Google ID.
+Lokalny katalog `meta/Achievements.kt` zawiera **54 osiągnięcia** (40 dotychczasowych + 14 nowych).
+Nazwy i opisy znajdują się w `engine/L.kt` w 10 językach. Nagrody medalowe
+są zapisywane w profilu lokalnie, działają offline i nie zależą od usług Google.
+`AchievementBattleTracker` obserwuje wyniki kroków symulacji, nie wpływając
+na stan gry, seed ani kodowanie powtórek.
 
-**Zakres tego zlecenia:** podłączenie SDK, rankingów i snapshotów. Wywołania AchievementsClient.unlock/increment i ich integracja z logiką gry należą do osobnego zadania osiągnięć; samo ich utworzenie w konsoli nie uruchamia odblokowywania.
+W Play Console → Play Games Services → Setup and management → Achievements utwórz
+odpowiednie osiągnięcia **standardowe, odblokowywane jednorazowo**. Przepisz
+nadane przez Google identyfikatory do `app/src/main/res/values/games_ids.xml`.
+Nowe pola mają nazwy `achievement_<id>` i wartości `REPLACE_ME_<ID>` do zastąpienia.
+Ich logiczny klucz po stronie katalogu to `cw_<id>`.
+
+| ID katalogu / sufiks zasobu | Warunek |
+| --- | --- |
+| `steam_twins` | Wygraj bitwy z obydwoma wariantami epoki pary |
+| `silicon_twins` | Wygraj bitwy z obydwoma wariantami epoki krzemu |
+| `rain_victory` | Wygraj bitwę w deszczu |
+| `wind_victory` | Wygraj bitwę przy wietrze |
+| `night_victory` | Wygraj bitwę nocą |
+| `barrage_eight` | Traf co najmniej 8 różnych przeciwników jednym **celowanym** ostrzałem |
+| `boss_knockback` | Pokonaj bossa Odrzut w Endless |
+| `boss_aura` | Pokonaj bossa Aura tempa w Endless |
+| `boss_shield` | Pokonaj bossa Tarczownik w Endless |
+| `boss_recruiter` | Pokonaj bossa Werbownik w Endless |
+| `boss_rage` | Pokonaj bossa Szał w Endless |
+| `weekly_gold` | Osiągnij złoty próg oblężenia tygodnia |
+| `custom_three` | Wygraj własną potyczkę z trzema modyfikatorami |
+| `replay_record` | Obejrzyj przez co najmniej 10 s powtórkę najlepszego wyniku zachowanego w lokalnym rankingu (bez przewijania) |
+
+Stan trwały: `achievementCounters`, `unlockedAchievements` i istniejące
+metryki profilu. Starsze zapisy nie zawierające nowych liczników zachowują
+wartości domyślne. Jedno osiągnięcie jest nagradzane tylko raz.
+Warianty epok są zliczane po wygranej, bossowie i celowane salwy są
+zbierane podczas bitwy bez alokacji w pętli. Wynik tygodniowy liczy się
+również wtedy, gdy oblężenie kończy się porażką po osiągnięciu progu.
+
+**Integracja online:** `OnlineAchievements` udostępnia logiczne klucze
+`cw_*` i bezpieczny adapter `NoOp`. W obecnej wersji nie ma jeszcze
+konkretnego mapowania `cw_*` na ID `AchievementsClient`; same placeholdery
+nie włączają synchronizacji osiągnięć w Play Games. Skonfigurowanie
+konsoli oraz adaptera jest wymagane przed publikacją funkcji online.
+Osiągnięcia lokalne pozostają w pełni funkcjonalne.
 
 ## 4. Włącz Saved Games
 
