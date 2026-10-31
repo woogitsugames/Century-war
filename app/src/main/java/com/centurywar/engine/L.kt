@@ -586,7 +586,7 @@ object L {
         "r_elite" to t("Doktryna elit", "Elite Doctrine", "Elitedoktrin", "Doctrina de élite", "Doctrine d'élite", "Dottrina d'élite", "Doutrina de elite", "Елітна доктрина", "Elitedoctrine", "Seçkin Doktrini"),
         "r_elite_d" to t("Odblokowuje jednostki elitarne", "Unlocks elite units", "Schaltet Elite-Einheiten frei", "Desbloquea unidades de élite", "Débloque les unités d'élite", "Sblocca le unità d'élite", "Desbloqueia unidades de elite", "Відкриває елітних бійців", "Ontgrendelt elite-eenheden", "Seçkin birlikleri açar"),
         "r_rally" to t("Okrzyk bojowy", "War Cry", "Kriegsschrei", "Grito de guerra", "Cri de guerre", "Grido di battaglia", "Grito de guerra", "Бойовий клич", "Strijdkreet", "Savaş Narası"),
-        "r_rally_d" to t("Odblokowuje Zryw (+40% tempa ataku)", "Unlocks Rally (+40% attack speed)", "Schaltet Ansturm frei (+40% Angriffstempo)", "Desbloquea Ímpetu (+40% de ritmo)", "Débloque Élan (+40% de cadence)", "Sblocca Slancio (+40% ritmo)", "Desbloqueia Ímpeto (+40% de ritmo)", "Відкриває Ривок (+40% темпу)", "Ontgrendelt Stormloop (+40% tempo)", "Atılım'ı açar (+%40 tempo)"),
+        "r_rally_d" to t("Odblokowuje Zryw (+40% tempa)", "Unlocks Rally (+40% tempo)", "Schaltet Ansturm frei (+40% Tempo)", "Desbloquea Ímpetu (+40% de ritmo)", "Débloque Élan (+40% de cadence)", "Sblocca Slancio (+40% ritmo)", "Desbloqueia Ímpeto (+40% de ritmo)", "Відкриває Ривок (+40% темпу)", "Ontgrendelt Stormloop (+40% tempo)", "Atılım'ı açar (+%40 tempo)"),
 
     )
 
@@ -1083,7 +1083,7 @@ object L {
         "hint_replay_label" to t("Samouczek etapu 1", "Stage 1 tutorial", "Tutorial von Stufe 1", "Tutorial de etapa 1", "Tutoriel étape 1", "Tutorial fase 1", "Tutorial etapa 1", "Навчання етапу 1", "Tutorial fase 1", "1. bölüm eğitimi"),
         "hint_reset_label" to t("Pokaż ponownie", "Show again", "Erneut anzeigen", "Mostrar de nuevo", "Afficher à nouveau", "Mostra di nuovo", "Mostrar de novo", "Показати знову", "Opnieuw tonen", "Tekrar göster"),
         "hint_replay" to t("Powtórz samouczek", "Replay tutorial", "Tutorial erneut", "Repetir tutorial", "Revoir le tutoriel", "Ripeti tutorial", "Repetir tutorial", "Повторити навчання", "Tutorial herhalen", "Eğitimi yinele"),
-        "hint_reset" to t("Reset podpowiedzi", "Reset hints", "Tipps zurücksetzen", "Reiniciar consejos", "Réinit. les astuces", "Azzera i consigli", "Repor dicas", "Скинути підказки", "Tips resetten", "İpuçlarını sıfırla"),
+        "hint_reset" to t("Reset podpowiedzi", "Reset hints", "Tipps zurücksetzen", "Reiniciar consejos", "RAZ des astuces", "Azzera i consigli", "Repor dicas", "Скинути підказки", "Tips resetten", "İpuçlarını sıfırla"),
         "hint_confirm" to t("Potwierdź", "Confirm", "Bestätigen", "Confirmar", "Confirmer", "Conferma", "Confirmar", "Підтвердити", "Bevestigen", "Onayla"),
         "hint_tutorial_ready" to t("Samouczek wróci w etapie 1.", "Tutorial will replay in stage 1.", "Tutorial startet in Stufe 1 erneut.", "El tutorial volverá en la etapa 1.", "Le tutoriel reviendra à l'étape 1.", "Il tutorial tornerà nella fase 1.", "O tutorial volta na etapa 1.", "Навчання повториться на етапі 1.", "Tutorial keert terug in fase 1.", "Eğitim 1. bölümde tekrar açılır."),
         "hint_reset_done" to t("Podpowiedzi zresetowane.", "Hints reset.", "Hinweise zurückgesetzt.", "Consejos reiniciados.", "Astuces réinitialisées.", "Suggerimenti azzerati.", "Dicas repostas.", "Підказки скинуто.", "Tips gereset.", "İpuçları sıfırlandı."),
