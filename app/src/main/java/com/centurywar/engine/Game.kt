@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.os.SystemClock
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
+import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -40,6 +41,15 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
+    /** Muzyka proceduralna; na urządzeniu ustawia MainActivity. */
+    var music: Music? = null
+
+    fun applyMusicVolume() = music?.setVolume(profile.musicVolume)
+
+    private fun syncMusicScreen(s: Screen) {
+        music?.setEra(if (s is BattleScreen) 0 else Music.MENU)
+        music?.setIntensity(0f)
+    }
 
     fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
         if (profile.sound) sound?.play(id, vol, gap, pitch)
@@ -107,19 +117,21 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen?.onPause()
         stack.clear()
         screen = s
+        syncMusicScreen(s)
         s.layout()
     }
 
     fun push(s: Screen) {
         screen?.let { stack.add(it) }
         screen = s
+        syncMusicScreen(s)
         s.layout()
     }
 
     fun pop() {
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
         screen = stack.removeAt(stack.size - 1)
-        screen?.layout()
+        screen?.let { syncMusicScreen(it); it.layout() }
     }
 
     val current get() = screen
