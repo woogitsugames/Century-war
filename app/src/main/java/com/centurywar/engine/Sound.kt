@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
  */
 class Sound(private val ctx: Context) {
     companion object {
+        const val VERSION = SoundSynth.VERSION
         const val HIT = SoundSynth.HIT
         const val SHOT = SoundSynth.SHOT
         const val ARROW = SoundSynth.ARROW
@@ -68,7 +69,13 @@ class Sound(private val ctx: Context) {
         const val STAR = SoundSynth.STAR
         const val ERA_UNLOCK = SoundSynth.ERA_UNLOCK
         const val BOSS = SoundSynth.BOSS
+        const val PURCHASE = SoundSynth.PURCHASE
+        const val ERROR = SoundSynth.ERROR
+        const val REWARD = SoundSynth.REWARD
+        const val RANK_UP = SoundSynth.RANK_UP
         private const val COUNT = SoundSynth.COUNT
+        private const val VARIANTS = SoundSynth.VARIANTS
+        private const val SAMPLE_COUNT = COUNT * VARIANTS
         private const val MAX_GENERATION_BURST_MS = 750L
         private const val GENERATION_REST_MS = 120L
     }
@@ -79,10 +86,10 @@ class Sound(private val ctx: Context) {
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
         .build()
-    private val ids = AtomicIntegerArray(COUNT)
-    private val ready = AtomicIntegerArray(COUNT)
+    private val ids = AtomicIntegerArray(SAMPLE_COUNT)
+    private val ready = AtomicIntegerArray(SAMPLE_COUNT)
     /** 0 = niezamówiony, 1 = zamówiony, 2 = obsłużony, 3 = błąd. */
-    private val requested = AtomicIntegerArray(COUNT)
+    private val requested = AtomicIntegerArray(SAMPLE_COUNT)
     private val wake = java.lang.Object()
     private val lastPlay = LongArray(COUNT)
     @Volatile private var released = false
@@ -90,14 +97,16 @@ class Sound(private val ctx: Context) {
     @Volatile var volume = 0.8f
     private var budget = 0f
     private var lastBudgetAt = 0L
-    private var pitchState = 0x41C64E6D
+    private val variantCounter = IntArray(COUNT)
+    private val busyUntil = LongArray(10)
+    private var busyCursor = 0
 
     init {
         pool.setOnLoadCompleteListener { _, sampleId, status ->
             if (status == 0) synchronized(this) {
                 // load() i wpis ID są pod tym samym zamkiem: callback nie wyprzedzi zapisu.
                 if (!released) {
-                    for (i in 0 until COUNT) {
+                    for (i in 0 until SAMPLE_COUNT) {
                         if (ids.get(i) == sampleId) {
                             ready.set(i, 1)
                             break
@@ -115,7 +124,12 @@ class Sound(private val ctx: Context) {
     /** Zamawia próbkę bez blokowania wątku gry syntezą lub plikami. */
     fun prewarm(id: Int) {
         if (released || id !in 0 until COUNT) return
-        if (requested.compareAndSet(id, 0, 1)) synchronized(wake) { wake.notifyAll() }
+        var queued = false
+        val offset = id * VARIANTS
+        for (variant in 0 until VARIANTS) {
+            if (requested.compareAndSet(offset + variant, 0, 1)) queued = true
+        }
+        if (queued) synchronized(wake) { wake.notifyAll() }
     }
 
     /** Głośność i panorama są niezależne; wyższy priorytet chroni wybuchy przed trafieniami. */
@@ -124,28 +138,41 @@ class Sound(private val ctx: Context) {
         pitch: Float = 1f, pan: Float = 0f, priority: Int = 1,
     ) {
         if (released || !enabled || id !in 0 until COUNT || !vol.isFinite() || vol <= 0.02f) return
-        val sid = ids.get(id)
-        if (sid <= 0 || ready.get(id) == 0) {
-            prewarm(id)
-            return
+        val index = id * VARIANTS
+        val first = variantCounter[id] % VARIANTS
+        var sample = index + first
+        var sid = ids.get(sample)
+        if (sid <= 0 || ready.get(sample) == 0) {
+            sample = index + ((first + 1) % VARIANTS)
+            sid = ids.get(sample)
+            if (sid <= 0 || ready.get(sample) == 0) {
+                prewarm(id)
+                return
+            }
         }
         val now = SystemClock.uptimeMillis()
         if (now - lastPlay[id] < minGapMs) return
         lastPlay[id] = now
+        variantCounter[id] = (variantCounter[id] + 1) and Int.MAX_VALUE
 
         // Krótkie okno obciążeń miksu: tłumiemy drobne dźwięki zamiast ścinać wybuchy.
         budget = (budget - (now - lastBudgetAt).coerceIn(0L, 500L) * 0.02f).coerceAtLeast(0f)
         lastBudgetAt = now
         val quiet = if (priority >= 3) 1f else (1f - budget / 3.4f).coerceIn(0.26f, 1f)
-        val gain = (vol * volume * quiet).coerceIn(0f, 0.9f)
+        // Oszacowanie głosów już wybrzmiewających; nowy głos oddaje im zapas miksu.
+        var overlapping = 0
+        for (until in busyUntil) if (until > now) overlapping++
+        val gain = (vol * volume * quiet * 0.42f / (1f + 0.55f * overlapping)).coerceIn(0f, 0.38f)
         if (gain < 0.01f) return
         budget = (budget + gain * (if (priority >= 3) 0.65f else 1f)).coerceAtMost(5f)
-        pitchState = pitchState * 1664525 + 1013904223
-        val jitter = 1f + ((pitchState ushr 24) / 255f - 0.5f) * 0.1f
+        val jitter = 1f + ((variantCounter[id] % 5) - 2) * 0.006f
         val lr = pan.coerceIn(-1f, 1f)
         val left = gain * (1f - lr.coerceAtLeast(0f))
         val right = gain * (1f + lr.coerceAtMost(0f))
-        pool.play(sid, left, right, priority, 0, (pitch * jitter).coerceIn(0.5f, 2f))
+        val speed = (pitch * jitter).coerceIn(0.5f, 2f)
+        busyUntil[busyCursor] = now + (SoundSynth.duration(id) * 1_000f / speed).toLong()
+        busyCursor = (busyCursor + 1) % busyUntil.size
+        pool.play(sid, left, right, priority, 0, speed)
     }
 
     fun release() {
@@ -170,7 +197,7 @@ class Sound(private val ctx: Context) {
             while (!released) {
                 var next = -1
                 synchronized(wake) {
-                    for (i in 0 until COUNT) if (requested.compareAndSet(i, 1, 2)) {
+                    for (i in 0 until SAMPLE_COUNT) if (requested.compareAndSet(i, 1, 2)) {
                         next = i
                         break
                     }
@@ -178,9 +205,11 @@ class Sound(private val ctx: Context) {
                 }
                 if (next < 0) continue
                 try {
-                    val f = File(dir, "s${next}_v${SoundSynth.VERSION}.wav")
-                    if (!f.isFile || f.length() != SoundSynth.wavBytes(next).toLong()) {
-                        writeWav(f, SoundSynth.render(next))
+                    val effect = next / VARIANTS
+                    val variant = next % VARIANTS
+                    val f = File(dir, "s${effect}_${variant}_v${SoundSynth.VERSION}.wav")
+                    if (!f.isFile || f.length() != SoundSynth.wavBytes(effect).toLong()) {
+                        writeWav(f, SoundSynth.render(effect, variant))
                     }
                     synchronized(this) {
                         if (released) return

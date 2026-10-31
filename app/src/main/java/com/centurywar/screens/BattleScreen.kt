@@ -348,6 +348,10 @@ class BattleScreen(
             }
         }
         if (paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
+        // Awans rangi jest zdarzeniem interfejsu, nie modyfikuje bitwy ani powtórki.
+        val newRank = battle.player.rank
+        if (newRank > lastSfxRank) g.sfx(Sound.RANK_UP, 0.62f, 250, priority = 2)
+        lastSfxRank = newRank
         // Przy zmianie epoki zamawiamy nowe próbki przed pierwszym ostrzałem.
         if (preparedPlayerEra != battle.player.era) {
             BattleSfx.prepareEra(g, battle.player.era)
@@ -538,6 +542,7 @@ class BattleScreen(
     private var turretHeading = ""
     private val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
     private val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
+    private var lastSfxRank = battle.player.rank
     private var shownRank = -1
     private var shownRankLanguage = -1
     private var shownRankText = ""
@@ -840,7 +845,7 @@ class BattleScreen(
         g.haptic(if (won) 80 else 160)
         g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
-        if (reward > 0) g.sfx(Sound.MEDALS, 0.4f, 0)
+        if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
         if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
     }
 
