@@ -134,6 +134,23 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun defensiveWaveResumesWithTheSameOrders() {
+        for (personality in arrayOf(AiPersonality.ENGINEER, AiPersonality.SIEGER)) {
+            val a = Battle(BattleConfig(Mode.SKIRMISH, 614L, 1f,
+                startEra = 2, maxEra = 2, aiPersonality = personality))
+            BattleController(a)
+            a.playerAi = Ai(a, 0, AiPersonality.BALANCED)
+            repeat(4) { assertTrue(a.spawn(a.enemy, Defs.unit(2, Role.MELEE))) }
+            a.ai!!.update(1f)
+            assertTrue(personality.name + ": dowódca powinien przygotować obronę", a.enemy.hold)
+            val b = roundTrip(a)
+            steps(a, 60 * 75)
+            steps(b, 60 * 75)
+            assertSame(a, b)
+        }
+    }
+
+    @Test
     fun skirmishResumesExactly() {
         val (a, _) = check(BattleConfig(Mode.SKIRMISH, 42L, 1.05f), 60 * 150, 60 * 240)
         assertTrue(a.player.spawned > 0 && a.enemy.spawned > 0)

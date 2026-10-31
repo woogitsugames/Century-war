@@ -87,8 +87,7 @@ class Ai(
         observe()
         if (b.canEvolveSide(me)) {
             if (evolveReadyAt < 0f) evolveReadyAt = b.time
-            val wait = personality == AiPersonality.ECONOMIST &&
-                danger < 2 && b.time - evolveReadyAt < 7f
+            val wait = danger < 2 && b.time - evolveReadyAt < personality.evolveDelay
             if (!wait && evolve()) {
                 plannedRole = null
                 evolveReadyAt = -1f
@@ -103,11 +102,13 @@ class Ai(
         trainUnits(saving)
     }
 
-    /** Ulepszaj liczne formacje, gdy armia jest pełna lub awans epoki jest odległy. */
+    /** Ulepszenia mają priorytet u obrońcy i gospodarza, a niski u szturmowca. */
     private fun considerUnitUpgrades() {
         val full = me.aliveCount + me.queueSize >= me.cap
-        if (!full && me.era < b.cfg.maxEra && me.xp > Defs.evolveXp[me.era] * 0.55f) return
-        val reserve = Defs.unit(me.era, Role.MELEE).cost * (if (full) 2 else 5)
+        if (!full && me.era < b.cfg.maxEra &&
+            me.xp > Defs.evolveXp[me.era] * personality.upgradeXpLimit) return
+        val meleeCost = Defs.unit(me.era, Role.MELEE).cost
+        val reserve = meleeCost * (if (full) 2f else 5f) * personality.upgradeReserve
         for (role in upgradeOrder) {
             if (role == Role.ELITE && !me.eliteUnlocked) continue
             val cost = b.unitUpgradeCost(me, role)
@@ -152,15 +153,63 @@ class Ai(
         }
     }
 
-    /** Krótka obrona przed przewagą przeciwnika; nie tworzy trwałego impasu. */
+    /** Gromadzenie fali i obrona wież są odrębne od krótkiego odwrotu pozostałych. */
     private fun managePosture() {
+        if (personality == AiPersonality.SIEGER) {
+            val launch = me.aliveCount >= personality.pushArmySize ||
+                (danger >= 3 && me.aliveCount >= personality.pushArmySize - 2 &&
+                    ownPower < enemyPower * 1.1f)
+            if (me.hold) {
+                if (launch) {
+                    stance(false)
+                    nextHoldAt = b.time + 15f
+                }
+            } else if (b.time >= nextHoldAt && !launch && danger < 2) {
+                stance(true)
+            }
+            return
+        }
+        // Gospodarz nie wysyła zebranej w końcowej epoce elity pojedynczo.
+        if (personality == AiPersonality.ECONOMIST && me.era == b.cfg.maxEra &&
+            b.time >= 90f
+        ) {
+            val ready = me.aliveCount >= personality.pushArmySize
+            if (me.hold) {
+                if (ready || danger >= 2) {
+                    stance(false)
+                    nextHoldAt = b.time + 18f
+                }
+            } else if (!ready && danger < 2 && b.time >= nextHoldAt) {
+                stance(true)
+            }
+            return
+        }
+        if (personality == AiPersonality.ENGINEER) {
+            if (me.hold) {
+                if ((me.aliveCount >= personality.pushArmySize &&
+                    ownPower >= enemyPower * personality.holdThreshold) ||
+                    (b.time >= holdUntil && danger == 0 &&
+                        me.aliveCount >= personality.pushArmySize - 2)
+                ) {
+                    stance(false)
+                    nextHoldAt = b.time + 15f
+                }
+            } else if (b.time >= nextHoldAt && danger < 3 &&
+                me.aliveCount < personality.pushArmySize
+            ) {
+                stance(true)
+                holdUntil = b.time + 10f
+            }
+            return
+        }
+        val weaker = ownPower < enemyPower * personality.holdThreshold
         if (me.hold) {
-            if (b.time >= holdUntil || danger <= 1 || ownPower >= enemyPower) {
+            if (b.time >= holdUntil || danger <= 1 || !weaker) {
                 stance(false)
                 nextHoldAt = b.time + 24f
             }
         } else if (b.time >= nextHoldAt && danger >= 3 && ownPower > 0f &&
-            me.baseHp < me.baseMaxHp * 0.7f && ownPower < enemyPower * 0.6f
+            me.baseHp < me.baseMaxHp * 0.7f && weaker
         ) {
             stance(true)
             holdUntil = b.time + 2.5f
@@ -169,15 +218,15 @@ class Ai(
 
     private fun useAbilities() {
         val threatened = danger >= 2 && me.baseHp < me.baseMaxHp * 0.6f
-        val siegeStrike = personality == AiPersonality.SIEGER && danger >= 2
-        // Ostrzał jest narzędziem obrony bazy, nie niszczy wzajemnie obu fal na środku.
-        if (b.abilityReady(me, 0) && (danger >= 4 || threatened || siegeStrike)) {
+        if (b.abilityReady(me, 0) &&
+            (danger >= personality.barrageDanger || threatened ||
+                barrageTargets >= personality.barrageTargets)
+        ) {
             val target = biggestVisibleCluster()
             if (target.isFinite()) barrage(target)
         }
-        val required = if (personality == AiPersonality.ASSAULT) 3 else 5
-        if (b.abilityReady(me, 1) && me.aliveCount >= required &&
-            (danger > 0 || pushing() || closeContact > 0)
+        if (b.abilityReady(me, 1) && me.aliveCount >= personality.rallyMin &&
+            (personality.rallyOnMarch || danger > 0 || pushing() || closeContact > 0)
         ) {
             rally()
         }
@@ -206,11 +255,11 @@ class Ai(
     private fun pushing(): Boolean = abs(me.front - me.baseFront) > Defs.LANE * 0.45f
 
     private fun savingForNextEra(): Boolean {
-        if (me.era >= b.cfg.maxEra || danger > 0 || me.aliveCount < 2) return false
-        if (me.xp < Defs.evolveXp[me.era] * 0.86f) return false
+        if (me.era >= b.cfg.maxEra || danger >= 2 || me.aliveCount < 2) return false
+        if (me.xp < Defs.evolveXp[me.era] * personality.saveForEraBias) return false
         if (saveEra != me.era) {
             saveEra = me.era
-            saveUntil = b.time + 6f
+            saveUntil = b.time + personality.saveDuration
         }
         return b.time < saveUntil
     }
@@ -226,23 +275,26 @@ class Ai(
                 }
             }
         }
-        val delay = if (personality == AiPersonality.ENGINEER) 28f else 35f
-        if (saving || b.time < delay) return
+        if (saving || b.time < personality.turretDelay) return
 
+        val budget = me.gold * personality.turretBudget
         val reserve = Defs.unit(me.era, Role.HEAVY).cost
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
-            if (cost >= 0 && me.gold > cost + reserve * 2) {
+            if (cost >= 0 && cost <= budget && me.gold > cost + reserve * 0.5f) {
                 if (upgrade(i)) return
             }
         }
         val slot = b.freeSlot(me)
-        if (slot >= 0 && me.gold > me.turretCost() + reserve) buyTurret(slot)
+        val price = me.turretCost()
+        if (slot >= 0 && price <= budget && me.gold > price + reserve * 0.4f) {
+            buyTurret(slot)
+        }
     }
 
     private fun trainUnits(saving: Boolean) {
         if (me.aliveCount + me.queueSize >= me.cap) {
-            val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2
+            val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2f * personality.armoryBias
             if (!saving && me.gold > b.armoryCost(me) + reserve) armory()
             return
         }
@@ -267,40 +319,45 @@ class Ai(
         }
     }
 
-    /** Trzon doboru jest oszczędny; dowódcy modyfikują tylko część decyzji. */
+    /** Losowanie ważone kontrami, ekonomią i profilem dowódcy, bez tymczasowych tablic. */
     private fun pickRole(melee: Int, ranged: Int, heavy: Int): Role {
-        val r = b.rng.nextAiInt(me.index, 100)
-        // W ostatniej epoce przełamuj pat inwestycją w ciężkie siły oblężnicze.
-        // Nie dodajemy złota: dowódca czeka na standardowy koszt szkolenia.
-        if (b.time > 175f && me.era == b.cfg.maxEra && danger < 2 &&
-            me.eliteUnlocked && heavy < 3 &&
-            r < (if (personality == AiPersonality.SIEGER) 70 else 45)
-        ) return Role.ELITE
-        val eliteCost = Defs.unit(me.era, Role.ELITE).cost
-        val eliteChance = when (personality) {
-            AiPersonality.SIEGER -> 35
-            AiPersonality.ECONOMIST -> 48
-            AiPersonality.ASSAULT -> 32
-            AiPersonality.ENGINEER -> 32
-            AiPersonality.BALANCED -> 35
+        if (melee == 0 && me.queueSize == 0) return Role.MELEE
+        val profile = personality
+        var wm = profile.meleeWeight
+        var wr = profile.rangedWeight
+        var wh = profile.heavyWeight
+        var we = 0
+
+        // Kontry: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
+        if (enemyRanged >= 2 && enemyRanged > enemyMelee) wm += 35
+        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) wr += 35
+        if (enemyMelee >= 3) wh += 25
+        if (danger >= 3) wm += 15
+        if (melee > ranged + heavy + 3) wm = wm * 2 / 3
+        if (ranged < melee) wr += 10
+        if (heavy * 3 < melee + ranged) wh += 20
+
+        // Nie planuj drogich formacji zbyt wcześnie: oszczędzanie jest świadomą decyzją.
+        if (me.gold < Defs.unit(me.era, Role.HEAVY).cost * 0.65f) wh = 0
+        if (me.eliteUnlocked &&
+            (profile.eliteBeforeLastEra || me.era == b.cfg.maxEra) &&
+            me.gold >= Defs.unit(me.era, Role.ELITE).cost * profile.eliteCommitment
+        ) {
+            we = profile.eliteWeight
+            if (b.time >= 175f && me.era == b.cfg.maxEra && heavy < 3) {
+                we += profile.lateEliteBoost
+            }
         }
-        if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < eliteChance) return Role.ELITE
-        if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
+        if (b.rangedHorde && me.index == 1 &&
+            b.rng.nextAiInt(me.index, 100) < 55) return Role.RANGED
 
-        // Kontry zgodne z macierzą [Defs.counterMultiplier] i liczone tylko z widocznych
-        // jednostek: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
-        if (enemyRanged >= 2 && enemyRanged > enemyMelee && r < 65) return Role.MELEE
-        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged && r < 35) return Role.RANGED
-        if (enemyMelee >= 3 && r < 25 && me.gold >= Defs.unit(me.era, Role.HEAVY).cost) return Role.HEAVY
-
-        if (personality == AiPersonality.ASSAULT && b.time < 90f && r in 35..60) return Role.MELEE
-        if (personality == AiPersonality.ENGINEER && r in 35..57 &&
-            heavy * 3 < melee + ranged && me.gold >= Defs.unit(me.era, Role.HEAVY).cost
-        ) return Role.HEAVY
-
-        if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
-        if (heavy * 3 < melee + ranged && r < 45) return Role.HEAVY
-        return if (ranged < melee) Role.RANGED else Role.MELEE
+        val roll = b.rng.nextAiInt(me.index, wm + wr + wh + we)
+        return when {
+            roll < wm -> Role.MELEE
+            roll < wm + wr -> Role.RANGED
+            roll < wm + wr + wh -> Role.HEAVY
+            else -> Role.ELITE
+        }
     }
 
     /** Wybór karty Oblężenia bez końca (AI gracza w testach); własny strumień RNG. */
