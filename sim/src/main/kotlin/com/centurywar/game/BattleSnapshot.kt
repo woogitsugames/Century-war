@@ -123,7 +123,7 @@ object BattleSnapshot {
         return out.toByteArray()
     }
 
-    private fun writeConfig(o: DataOutputStream, c: BattleConfig) {
+    internal fun writeConfig(o: DataOutputStream, c: BattleConfig) {
         o.writeByte(c.mode.ordinal)
         o.writeLong(c.seed)
         o.writeFloat(c.aiPower)
@@ -273,7 +273,7 @@ object BattleSnapshot {
         return RestoredBattle(b, ranked, camX)
     }
 
-    private fun readConfig(i: DataInputStream): BattleConfig? {
+    internal fun readConfig(i: DataInputStream): BattleConfig? {
         val mode = enumAt(Mode.values(), i.readByte().toInt())
         val seed = i.readLong()
         val aiPower = i.readFloat()
