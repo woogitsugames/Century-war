@@ -56,7 +56,7 @@ object EraBranches {
             val hp = when {
                 isSteam && v == FIRST -> 1.52f
                 isSteam -> 0.73f
-                v == FIRST -> 0.78f
+                v == FIRST -> 0.794976f
                 else -> 1.22f
             }
             val dmg = when {
@@ -67,8 +67,8 @@ object EraBranches {
             }
             val cost = when {
                 isSteam && v == FIRST -> 1.25f
-                isSteam -> 0.94f
-                v == FIRST -> 0.68f
+                isSteam -> 1.034f
+                v == FIRST -> 1.0064f
                 else -> 1.53f
             }
             val speed = when {
@@ -100,7 +100,8 @@ object EraBranches {
                 UnitDef(
                     id = Defs.ERA_COUNT * 4 + (if (isSteam) 0 else 8) + v * 4 + role,
                     era = era, role = u.role, nameKey = names[role],
-                    cost = (u.cost * cost).toInt().coerceAtLeast(1),
+                    cost = (if (isSteam && v == SECOND) ((u.cost * cost).toInt() * 1.006f).toInt()
+                        else (u.cost * cost).toInt()).coerceAtLeast(1),
                     hp = u.hp * hp, dmg = u.dmg * dmg,
                     range = if (role == 0) u.range else u.range,
                     cooldown = u.cooldown,
