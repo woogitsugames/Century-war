@@ -51,19 +51,19 @@ class Ui {
     companion object {
         val BTN = Color.rgb(58, 74, 98)
         val BTN_HI = Color.rgb(226, 162, 44)
-        val BTN_GREEN = Color.rgb(64, 150, 70)
-        val BTN_RED = Color.rgb(176, 56, 46)
-        val PANEL = Color.argb(238, 26, 32, 48)
+        val BTN_GREEN: Int get() = Palette.active.buttonGood
+        val BTN_RED: Int get() = Palette.active.buttonBad
+        val PANEL: Int get() = Palette.active.panel
         val GOLD = Color.rgb(255, 205, 64)
         val XP = Color.rgb(110, 200, 255)
         val TEXT = Color.rgb(244, 242, 236)
         val DIM = Color.rgb(160, 168, 184)
-        val GOOD = Color.rgb(118, 226, 120)
-        val BAD = Color.rgb(240, 92, 80)
-        val PLAYER = Color.rgb(64, 140, 235)
-        val ENEMY = Color.rgb(220, 70, 60)
-        val OUTLINE = Color.rgb(26, 22, 32)
-        val FRAME = Color.rgb(78, 88, 112)
+        val GOOD: Int get() = Palette.active.good
+        val BAD: Int get() = Palette.active.bad
+        val PLAYER: Int get() = Palette.active.player
+        val ENEMY: Int get() = Palette.active.enemy
+        val OUTLINE: Int get() = Palette.active.outline
+        val FRAME: Int get() = Palette.active.frame
         val FRAME_L = Color.rgb(120, 132, 158)
         val TRIM = Color.rgb(222, 170, 70)
         val RIBBON = Color.rgb(196, 54, 46)
@@ -83,6 +83,8 @@ class Ui {
     }
 
     var dp = 1f
+    /** 100%, 115% lub 130% bez dodatkowych alokacji. */
+    var textScale = 1f
     val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = TEXT }
@@ -102,7 +104,7 @@ class Ui {
 
     fun text(c: Canvas, s: String, x: Float, y: Float, sizeDp: Float, color: Int = TEXT,
              align: Paint.Align = Paint.Align.LEFT, isBold: Boolean = false, shadow: Boolean = false) {
-        text.textSize = sizeDp * dp
+        text.textSize = sizeDp * dp * textScale
         text.textAlign = align
         text.typeface = if (isBold) bold else Typeface.DEFAULT
         text.shader = null
@@ -117,7 +119,7 @@ class Ui {
     /** Pogrubiony tekst z ciemnym konturem (styl cartoon) i lekkim cieniem. */
     fun textO(c: Canvas, s: String, x: Float, y: Float, sizeDp: Float, color: Int = TEXT,
               align: Paint.Align = Paint.Align.LEFT, outlineDp: Float = 0f, face: Typeface? = null) {
-        val sz = sizeDp * dp
+        val sz = sizeDp * dp * textScale
         val ow = if (outlineDp > 0f) outlineDp * dp else max(2f * dp, sz * 0.16f)
         val tf = face ?: bold
         textLine.textSize = sz; textLine.textAlign = align; textLine.typeface = tf
@@ -132,7 +134,7 @@ class Ui {
     }
 
     fun measure(s: String, sizeDp: Float, isBold: Boolean = false): Float {
-        text.textSize = sizeDp * dp
+        text.textSize = sizeDp * dp * textScale
         text.typeface = if (isBold) bold else Typeface.DEFAULT
         return text.measureText(s)
     }
@@ -141,7 +143,7 @@ class Ui {
     fun fit(s: String, sizeDp: Float, width: Float, minDp: Float = 8f): Float {
         if (width <= 0f) return sizeDp
         val m = measure(s, sizeDp, true)
-        return if (m <= width) sizeDp else max(minDp, sizeDp * width / m)
+        return if (m <= width) sizeDp else max(minDp / textScale, sizeDp * width / m)
     }
 
     /** Tekst zawijany do szerokości; zwraca wysokość. */
@@ -150,7 +152,7 @@ class Ui {
         val words = s.split(' ')
         var line = StringBuilder()
         var yy = y
-        val lh = sizeDp * dp * 1.3f
+        val lh = sizeDp * dp * textScale * 1.3f
         for (w in words) {
             val trial = if (line.isEmpty()) w else "$line $w"
             if (measure(trial, sizeDp) > width && line.isNotEmpty()) {
@@ -168,7 +170,7 @@ class Ui {
     /** Panel z ramą: cień, ciemny kontur, metalowa rama, złota lamówka, ciemne wnętrze. */
     fun panel(c: Canvas, r: RectF, color: Int = PANEL, radiusDp: Float = 14f) {
         val rad = radiusDp * dp
-        val o = 2.5f * dp
+        val o = (if (Palette.highContrast) 3.4f else 2.5f) * dp
         // cień
         pf.color = Color.argb(110, 0, 0, 0)
         tmp.set(r.left, r.top + 5 * dp, r.right, r.bottom + 6 * dp)
@@ -180,7 +182,7 @@ class Ui {
         pf.color = FRAME
         c.drawRoundRect(tmp, rad - o, rad - o, pf)
         // górna jaśniejsza krawędź ramy
-        ps.color = FRAME_L; ps.strokeWidth = 1.6f * dp
+        ps.color = FRAME_L; ps.strokeWidth = (if (Palette.highContrast) 2.7f else 1.6f) * dp
         tmp.set(r.left + o * 1.6f, r.top + o * 1.6f, r.right - o * 1.6f, r.bottom - o * 1.6f)
         c.save(); c.clipRect(r.left, r.top, r.right, r.top + rad * 1.5f)
         c.drawRoundRect(tmp, rad - o, rad - o, ps); c.restore()
@@ -242,7 +244,7 @@ class Ui {
     fun ribbon(c: Canvas, cx: Float, cy: Float, s: String, sizeDp: Float, color: Int = RIBBON, minW: Float = 0f,
                textColor: Int = GOLD, maxW: Float = 0f) {
         var sz = sizeDp
-        val hh = sz * dp * 1.05f
+        val hh = sz * dp * textScale * 1.05f
         var tw = measure(s, sz, true)
         if (maxW > 0f && tw + hh * 2.4f > maxW) { sz = max(9f, sz * (maxW - hh * 2.4f) / tw); tw = measure(s, sz, true) }
         val half = max(minW / 2, tw / 2 + hh * 1.1f)
@@ -284,13 +286,13 @@ class Ui {
         c.drawRect(tmp.left, tmp.bottom - hh * 0.22f, tmp.right, tmp.bottom, pf)
         ps.color = Color.argb(120, 255, 230, 160); ps.strokeWidth = 1f * dp
         c.drawLine(tmp.left + 4 * dp, tmp.top + 3.5f * dp, tmp.right - 4 * dp, tmp.top + 3.5f * dp, ps)
-        textO(c, s, cx, cy + sz * dp * 0.36f - hh * 0.03f, sz, textColor, Paint.Align.CENTER)
+        textO(c, s, cx, cy + sz * dp * textScale * 0.36f - hh * 0.03f, sz, textColor, Paint.Align.CENTER)
     }
 
     /** Pigułka z ikoną po lewej i wartością (złoto, medale, gwiazdki). Zwraca prawą krawędź. */
     fun badge(c: Canvas, l: Float, cy: Float, iconId: Int, s: String, sizeDp: Float, color: Int = TEXT,
               alignRight: Boolean = false, minTextW: Float = 0f): Float {
-        val h = sizeDp * dp * 1.9f
+        val h = sizeDp * dp * 1.9f * textScale.coerceAtMost(1.15f)
         val tw = max(measure(s, sizeDp, true), minTextW)
         val w = h * 0.55f + tw + h * 0.55f + 6 * dp
         val left = if (alignRight) l - w else l
@@ -309,7 +311,7 @@ class Ui {
     }
 
     fun badgeWidth(s: String, sizeDp: Float, minTextW: Float = 0f): Float {
-        val h = sizeDp * dp * 1.9f
+        val h = sizeDp * dp * 1.9f * textScale.coerceAtMost(1.15f)
         return h * 1.1f + max(measure(s, sizeDp, true), minTextW) + 6 * dp
     }
 
@@ -430,7 +432,7 @@ class Ui {
             val avail = r.right - 8 * dp - tx
             if (b.sub.isEmpty()) {
                 val sz = fit(b.label, labelDp, avail)
-                textO(c, b.label, tx, cy + sz * dp * 0.36f, sz, tc)
+                textO(c, b.label, tx, cy + sz * dp * textScale * 0.36f, sz, tc)
             } else {
                 val sz = fit(b.label, labelDp, avail)
                 textO(c, b.label, tx, cy - 1 * dp, sz, tc)
@@ -508,7 +510,7 @@ class Ui {
         tmp.inset(1.5f * dp, 1.5f * dp)
         pf.color = RIBBON
         c.drawRoundRect(tmp, hh / 2, hh / 2, pf)
-        textO(c, s, tmp.centerX(), tmp.centerY() + sz * dp * 0.36f, sz, TEXT, Paint.Align.CENTER, 1.6f)
+        textO(c, s, tmp.centerX(), tmp.centerY() + sz * dp * textScale * 0.36f, sz, TEXT, Paint.Align.CENTER, 1.6f)
     }
 
     /** Okrągły przycisk zamykania (czerwony z białym krzyżykiem). */
