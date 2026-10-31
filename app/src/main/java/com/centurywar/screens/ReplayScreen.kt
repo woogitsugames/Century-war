@@ -183,7 +183,7 @@ class ReplayScreen(
             b.wave * 17 + b.player.doctrines.size * 53
         if (key != statusKey) {
             statusKey = key
-            val wave = if (b.cfg.mode == Mode.ENDLESS) "  ${L["wave"]}: ${b.wave}" else ""
+            val wave = if (b.cfg.mode == Mode.ENDLESS) "  " + L.f("wave", b.wave) else ""
             statusText = "${L[Defs.eras[b.player.era].nameKey]} ${b.player.gold.toInt()}  " +
                 "${L[Defs.eras[b.enemy.era].nameKey]} ${b.enemy.gold.toInt()}  " +
                 "HP ${b.player.baseHp.toInt()}/${b.enemy.baseHp.toInt()}" + wave
