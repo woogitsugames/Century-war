@@ -27,7 +27,8 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.13.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.3")
 }
 
 application {
