@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Sound
@@ -15,26 +16,42 @@ import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleRenderer
+import com.centurywar.game.BattleSnapshot
+import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
+import com.centurywar.game.Doctrine
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
 
-class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDaily: Boolean = false) : Screen(g) {
+/**
+ * [restored] != null: bitwa wznowiona ze zrzutu (aplikacja została zabita w tle).
+ * Startuje wtedy w pauzie, a [cfg] musi być konfiguracją odtworzonej bitwy.
+ */
+class BattleScreen(
+    g: Game,
+    private val cfg: BattleConfig,
+    private val rankedDaily: Boolean = false,
+    restored: RestoredBattle? = null,
+) : Screen(g) {
 
-    private val battle = Battle(cfg)
+    private val battle = restored?.battle ?: Battle(cfg)
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
-    private var paused = false
+    private var paused = restored != null
+    /** Czas bitwy ostatniego autozapisu. */
+    private var lastAutosave = battle.time
+    /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
+    private var closed = false
     private var manualCam = 0f
     private var showTurrets = false
     private var finished = false
     private var resultTime = 0f
-    private var tutorial = if (!g.profile.tutorialDone && cfg.mode == Mode.CAMPAIGN) 0f else -1f
+
 
     // wynik
     private var reward = 0
@@ -59,8 +76,12 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
         const val CLOSE = 60
+        /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
+        const val AUTOSAVE_EVERY = 30f
     }
 
+    /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
+    private val roles = Role.values()
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
     private val turretBtn = btn(TURRET)
     private val armoryBtn = btn(ARMORY)
@@ -69,79 +90,114 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     private val stanceBtn = btn(STANCE)
     private val speedBtn = btn(SPEED)
     private val evolveBtn = btn(EVOLVE)
-    private val pauseBtn = btn(PAUSE, "II")
+    private val pauseBtn = btn(PAUSE)
     private val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
-    private val closeBtn = btn(CLOSE, "✕")
+    private val closeBtn = btn(CLOSE)
 
     private val topBar = RectF()
     private val mini = RectF()
+    private val goldRect = RectF()
+    private val xpRect = RectF()
+    private val fieldRect = RectF()
     private val panel = RectF()
     private var hudH = 0f
     private var topH = 0f
 
     init {
         for (i in 0..3) {
-            val role = Role.values()[i]
+            val role = roles[i]
             unitBtn[i].icon = { c, rr ->
                 val def = Defs.unit(battle.player.era, role)
                 r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp, Ui.PLAYER)
             }
         }
-        r.camX = -120f
+        r.camX = restored?.camX ?: -120f
+    }
+
+    /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
+    private val tut: TutorialOverlay? =
+        if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, TutorialOverlay.Targets(
+            unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
+            arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
+            goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
+        )) else null
+
+    init {
+        // przyciski samouczka na początku listy: mają pierwszeństwo przed HUD pod spodem
+        tut?.let { buttons.add(0, it.nextBtn); buttons.add(0, it.skipBtn) }
     }
 
     override fun layout() {
         val pad = 6 * dp
-        topH = 46 * dp
+        topH = 52 * dp
         val l = g.insetL + pad
         val rr = w - g.insetR - pad
         val avail = rr - l
         val n = 10
         val gap = 5 * dp
         val size = min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
-        hudH = size + pad * 2 + g.insetB
+        hudH = size + pad * 2 + 4 * dp + g.insetB
         val y = h - g.insetB - pad - size
         var x = l
         for (b in unitBtn) { b.set(x, y, size, size); x += size + gap }
         x += 10 * dp
-        for (b in listOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)) { b.set(x, y, size, size); x += size + gap }
+        for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         topBar.set(0f, 0f, w, topH + g.insetT)
         val t = g.insetT + 6 * dp
-        evolveBtn.set(l + 170 * dp, t, 90 * dp, 34 * dp)
-        pauseBtn.set(rr - 40 * dp, t, 40 * dp, 34 * dp)
-        mini.set(evolveBtn.r.right + 12 * dp, t + 8 * dp, pauseBtn.r.left - 180 * dp, t + 26 * dp)
+        evolveBtn.set(l + 196 * dp, t, 118 * dp, 40 * dp)
+        pauseBtn.set(rr - 46 * dp, t, 46 * dp, 40 * dp)
+        mini.set(evolveBtn.r.right + 16 * dp, t + 13 * dp, pauseBtn.r.left - 112 * dp, t + 29 * dp)
         if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
+        goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
+        xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
+        fieldRect.set(0f, topH + g.insetT, w, h - hudH)
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
-        val bw = min(260 * dp, w * 0.6f)
-        val bh = 46 * dp
-        for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, h * 0.32f + i * (bh + 12 * dp), bw, bh)
-        continueBtn.set(w / 2 + 6 * dp, h * 0.78f, bw * 0.8f, bh)
-        restartEnd.set(w / 2 - 6 * dp - bw * 0.8f, h * 0.78f, bw * 0.8f, bh)
-        val cw = min(220 * dp, (w - 60 * dp) / 3)
-        for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 12 * dp + i * (cw + 12 * dp), h * 0.34f, cw, 130 * dp)
+        val bw = min(270 * dp, w * 0.6f)
+        val bh = 50 * dp
+        val pmH = bh * 3 + 12 * dp * 2 + 96 * dp
+        pausePanel.set(w / 2 - bw / 2 - 28 * dp, h / 2 - pmH / 2, w / 2 + bw / 2 + 28 * dp, h / 2 + pmH / 2)
+        for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, pausePanel.top + 52 * dp + i * (bh + 12 * dp), bw, bh)
+        layoutResults()
+        val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
+        val chH = min(168 * dp, h * 0.5f)
+        for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
         layoutTurretPanel()
     }
 
+    private fun layoutResults() {
+        val rw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
+        val rh = min(h - g.insetT - g.insetB - 40 * dp, 400 * dp)
+        resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp, w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
+        val bw = (rw - 66 * dp) / 2
+        val bh = 50 * dp
+        restartEnd.set(resultPanel.left + 24 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
+        continueBtn.set(resultPanel.right - 24 * dp - bw, resultPanel.bottom - bh - 22 * dp, bw, bh)
+    }
+
     private fun layoutTurretPanel() {
-        val pw = min(420 * dp, w - 40 * dp)
-        val rowH = 42 * dp
-        val ph = 54 * dp + rowH * Defs.MAX_TURRET_SLOTS + 16 * dp
+        val pw = min(480 * dp, w - 40 * dp)
+        val rowH = 46 * dp
+        turretSlotsLaid = battle.player.slots
+        val ph = 62 * dp + rowH * turretSlotsLaid + 10 * dp
         panel.set(w / 2 - pw / 2, (h - hudH - ph) / 2 + topH / 2, w / 2 + pw / 2, (h - hudH - ph) / 2 + topH / 2 + ph)
+        val bw = min(140 * dp, pw * 0.3f)
+        val sw = min(116 * dp, pw * 0.25f)
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
             val y = panel.top + 50 * dp + i * rowH
-            slotBuy[i].set(panel.right - 230 * dp, y, 120 * dp, rowH - 6 * dp)
-            slotSell[i].set(panel.right - 104 * dp, y, 92 * dp, rowH - 6 * dp)
+            slotSell[i].set(panel.right - 20 * dp - sw, y, sw, rowH - 8 * dp)
+            slotBuy[i].set(slotSell[i].r.left - 8 * dp - bw, y, bw, rowH - 8 * dp)
         }
-        closeBtn.set(panel.right - 40 * dp, panel.top + 8 * dp, 32 * dp, 32 * dp)
+        closeBtn.set(panel.right - 30 * dp, panel.top - 12 * dp, 40 * dp, 40 * dp)
     }
+
 
     // ---------------------------------------------------------------- logika
 
@@ -149,15 +205,35 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     override fun update(dt: Float) {
         frameDt = dt
-        if (tutorial >= 0f) tutorial += dt
+        val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
+            tut?.update(dt)
             if (battle.pendingChoice == null) {
-                acc += dt * speed
+                acc += dt * speed * tutScale
                 var steps = 0
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
                 if (steps == 20) acc = 0f
             }
             if (battle.over) onFinished()
+            else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
+                // Bajty powstają tu, na wątku gry (spójny stan); plik zapisuje wątek w tle.
+                lastAutosave = battle.time
+                g.snapshots?.saveAsync(snapshotBytes())
+            }
+        }
+        // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
+        val music = g.music
+        if (music != null) {
+            music.setEra(battle.player.era)
+            var threat = 0f
+            if (!paused && !finished && battle.pendingChoice == null) {
+                for (u in battle.units) {
+                    if (!u.alive || u.side != 1) continue
+                    val near = (1f - (u.x - battle.player.baseFront) / (Defs.LANE * 0.35f)).coerceIn(0f, 1f)
+                    if (near > threat) threat = near
+                }
+            }
+            music.setIntensity(threat)
         }
         playSounds()
         if (finished) resultTime += dt
@@ -193,54 +269,74 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         }
     }
 
+    private var turretSlotsLaid = -1
+
     private fun refreshButtons() {
         val p = battle.player
+        if (p.slots != turretSlotsLaid) layoutTurretPanel()
         val modal = paused || finished || battle.pendingChoice != null
         for (i in 0..3) {
-            val role = Role.values()[i]
+            val role = roles[i]
             val def = Defs.unit(p.era, role)
             val b = unitBtn[i]
             b.visible = !modal
             val locked = role == Role.ELITE && !p.eliteUnlocked
             b.enabled = !locked && battle.canQueue(p, role)
-            b.sub = if (locked) "🔒" else def.cost.toString()
+            b.sub = if (locked) "" else costStr(i, def.cost)
+            b.subIcon = if (locked) Icons.LOCK else Icons.COIN
             b.progress = if (p.queueSize > 0 && p.queue[0] == def.id) p.trainT / def.trainTime else -1f
         }
         turretBtn.visible = !modal; turretBtn.label = L["turrets"]; turretBtn.enabled = p.slots > 0
+        turretBtn.iconId = Icons.TOWER; turretBtn.iconTint = Ui.PLAYER
         turretBtn.selected = showTurrets
         armoryBtn.visible = !modal
-        armoryBtn.label = "⚒${p.armory}"
-        armoryBtn.sub = battle.armoryCost(p).toString()
+        armoryBtn.iconId = Icons.ANVIL
+        if (armoryLv != p.armory) { armoryLv = p.armory; armoryBtn.label = p.armory.toString() }
+        armoryBtn.sub = costStr(4, battle.armoryCost(p))
+        armoryBtn.subIcon = Icons.COIN
         armoryBtn.enabled = p.gold >= battle.armoryCost(p) && p.armory < 15
         barrageBtn.visible = !modal
-        barrageBtn.label = "☄"
+        barrageBtn.label = ""
+        barrageBtn.iconId = Icons.METEOR
         barrageBtn.enabled = battle.abilityReady(p, 0)
         barrageBtn.progress = if (p.abilityCd[0] > 0f) 1f - p.abilityCd[0] / (Battle.BARRAGE_CD * p.abilityCdMul) else -1f
         rallyBtn.visible = !modal && p.rallyUnlocked
-        rallyBtn.label = "⚑"
+        rallyBtn.label = ""
+        rallyBtn.iconId = Icons.FLAG; rallyBtn.iconTint = Ui.PLAYER
         rallyBtn.sub = ""
         rallyBtn.enabled = battle.abilityReady(p, 1)
         rallyBtn.progress = if (p.abilityCd[1] > 0f) 1f - p.abilityCd[1] / (Battle.RALLY_CD * p.abilityCdMul) else -1f
         rallyBtn.highlight = p.rallyT > 0f
         stanceBtn.visible = !modal
         stanceBtn.label = if (p.hold) L["hold"] else L["advance"]
+        stanceBtn.iconId = if (p.hold) Icons.SHIELD else Icons.ADVANCE
+        stanceBtn.iconTint = Ui.PLAYER
         stanceBtn.highlight = p.hold
         speedBtn.visible = !modal
-        speedBtn.label = "×$speed"
+        speedBtn.iconId = Icons.SPEED
+        speedBtn.label = speedLabels[speed]
         evolveBtn.visible = !modal
         val canEvo = battle.canEvolve(p)
         evolveBtn.enabled = canEvo
         evolveBtn.highlight = canEvo
+        evolveBtn.iconId = if (p.era >= cfg.maxEra) Icons.CHEVRONS else Icons.EVOLVE
         evolveBtn.label = if (p.era >= cfg.maxEra) L.f("rank", p.rank) else L["evolve"]
         if (p.era >= cfg.maxEra) evolveBtn.enabled = false
         pauseBtn.visible = !finished
+        pauseBtn.iconId = Icons.PAUSE
+        pauseBtn.label = ""
 
         for (b in pauseMenu) b.visible = paused && !finished
         pauseMenu[0].label = L["resume"]; pauseMenu[1].label = L["restart"]; pauseMenu[2].label = L["quit"]
+        pauseMenu[0].iconId = Icons.PLAY; pauseMenu[1].iconId = Icons.RESTART; pauseMenu[2].iconId = Icons.WHITE_FLAG
+        pauseMenu[0].highlight = true; pauseMenu[2].color = Ui.BTN_RED
         continueBtn.visible = finished && resultTime > 0.8f
         continueBtn.label = L["continue"]
+        continueBtn.iconId = Icons.PLAY
+        continueBtn.highlight = true
         restartEnd.visible = finished && resultTime > 0.8f
         restartEnd.label = L["restart"]
+        restartEnd.iconId = Icons.RESTART
 
         val choice = battle.pendingChoice
         for (i in 0..2) {
@@ -255,23 +351,43 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             if (!active) continue
             val te = p.turretEra[i]
             if (te < 0) {
-                slotBuy[i].label = L["buy"]; slotBuy[i].sub = ""
                 slotBuy[i].label = "${L["buy"]} ${p.turretCost()}"
+                slotBuy[i].iconId = Icons.COIN
                 slotBuy[i].enabled = p.gold >= p.turretCost()
+                slotBuy[i].highlight = slotBuy[i].enabled
             } else {
                 val uc = battle.upgradeCost(p, i)
-                slotBuy[i].label = if (uc < 0) "✓" else "${L["upgrade"]} $uc"
+                slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                slotBuy[i].iconId = if (uc < 0) Icons.CHECK else Icons.EVOLVE
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
+                slotBuy[i].highlight = slotBuy[i].enabled
             }
             slotSell[i].label = "${L["sell"]} ${if (te >= 0) p.turretCost(te) / 2 else 0}"
+            slotSell[i].iconId = Icons.COIN
+            slotSell[i].color = Ui.BTN_RED
         }
         closeBtn.visible = tp
     }
 
+    /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
+    private val costCache = IntArray(5) { -1 }
+    private val costText = Array(5) { "" }
+    private var armoryLv = -1
+    /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
+    private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
+
+    private fun costStr(slot: Int, v: Int): String {
+        if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
+        return costText[slot]
+    }
+
+
     override fun onClick(b: Button) {
         val p = battle.player
+        val t = tut
+        if (t != null && (t.onClick(b) || !t.allows(b))) return
         when (b.id) {
-            in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, Role.values()[b.id - UNIT0])
+            in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, roles[b.id - UNIT0])
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> battle.buyArmory(p)
@@ -282,7 +398,11 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             EVOLVE -> if (battle.evolve(p)) g.haptic(40)
             PAUSE -> paused = true
             RESUME -> paused = false
-            RESTART, RESTART + 100 -> g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
+            RESTART, RESTART + 100 -> {
+                closed = true
+                g.snapshots?.delete()
+                g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
+            }
             QUIT -> { paused = false; battle.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
             in DOCTRINE0..DOCTRINE0 + 2 -> battle.chooseDoctrine(b.id - DOCTRINE0)
@@ -294,7 +414,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         }
     }
 
-    private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex)
+    private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex,
+        tutorial && !g.profile.tutorialDone)
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -306,16 +427,17 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         r.camX -= dx / r.k
         r.clampCam()
         manualCam = 4f
+        tut?.onCamera()
     }
 
     override fun onTap(x: Float, y: Float) {
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
             r.camX = (x - mini.left) / mini.width() * Defs.LANE - r.worldVisible / 2
             r.clampCam(); manualCam = 5f
+            tut?.onCamera()
             return
         }
         if (showTurrets && !panel.contains(x, y)) showTurrets = false
-        if (tutorial in 0f..60f) tutorial = 61f
     }
 
     override fun onBack(): Boolean {
@@ -325,14 +447,24 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         return true
     }
 
+    /**
+     * Pauza aplikacji (albo zmiana ekranu). Zrzut zapisujemy synchronicznie: MainActivity
+     * czeka na to, zanim zatrzyma wątek gry, bo proces może zaraz zostać zabity.
+     */
     override fun onPause() {
-        if (!finished) paused = true
+        if (finished || closed || battle.over) return
+        paused = true
+        g.snapshots?.saveNow(snapshotBytes())
     }
+
+    private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX)
 
     // ---------------------------------------------------------------- koniec bitwy
 
     private fun onFinished() {
         finished = true
+        // Najpierw usuń zrzut, potem przyznaj nagrody: wznowienie nie może dać ich drugi raz.
+        g.snapshots?.delete()
         val pr = g.profile
         val won = battle.winner == 0
         pr.battles++
@@ -341,12 +473,15 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         pr.playSeconds += battle.time.toLong()
         val day = Daily.dayNumber()
         val score = battle.score()
+        // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
+        // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
+        val effort = (battle.time / 240f).coerceIn(0f, 1f)
         when (cfg.mode) {
             Mode.CAMPAIGN -> {
                 val stage = cfg.stageIndex
                 val old = pr.stars[stage]
                 val st = battle.stars()
-                reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else 5 + stage * 2 + min(20, battle.player.kills / 8)
+                reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
                 if (st > old) {
                     pr.stars[stage] = st
                     newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day)
@@ -355,7 +490,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                 if (won) pr.tutorialDone = true
             }
             Mode.SKIRMISH -> {
-                reward = if (won) 15 + pr.skirmishDiff * 14 else 4 + battle.player.kills / 12
+                reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
                 if (won) newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
             }
             Mode.ENDLESS -> {
@@ -369,7 +504,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                     reward = min(90, (score / 350).toInt()) + 10
                     newRecord = pr.submit(Profile.dailyBoard(cfg.seed), score, day)
                     g.online.submit("daily", score)
-                } else reward = 5
+                } else reward = (5 * effort).toInt()
             }
         }
         pr.medals += reward
@@ -386,22 +521,49 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
 
     // ---------------------------------------------------------------- rysowanie
 
+    private val pausePanel = RectF()
+    private val resultPanel = RectF()
+    private val tmpR = RectF()
+    private val actionBtns get() = actionArr
+    private val actionArr = arrayOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)
+    private var goldShown = -1
+    private var goldText = ""
+    private var capKey = -1
+    private var capText = ""
+    private var hpP = -1
+    private var hpPText = ""
+    private var hpE = -1
+    private var hpEText = ""
+
+    private fun doctrineIcon(d: Doctrine) = when (d) {
+        Doctrine.ECONOMY -> Icons.COINS
+        Doctrine.SIEGE -> Icons.BOMB
+        Doctrine.BULWARK -> Icons.SHIELD
+        Doctrine.SWIFT -> Icons.BOLT
+        Doctrine.VETERAN -> Icons.CHEVRONS
+        Doctrine.FURY -> Icons.FLAME
+        Doctrine.ARSENAL -> Icons.TOWER
+        Doctrine.TACTICS -> Icons.HOURGLASS
+        Doctrine.PLUNDER -> Icons.BAG
+    }
+
     override fun render(c: Canvas) {
-        r.render(c, if (paused || battle.pendingChoice != null) 0f else frameDt * speed, w, h)
+        r.render(c, if (paused || battle.pendingChoice != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)
-        for (b in listOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)) ui.button(c, b, 14f)
+        for (b in actionArr) ui.button(c, b, 13f)
         for (b in unitBtn) ui.button(c, b, 13f)
         drawQueue(c)
-        ui.button(c, evolveBtn, 14f)
+        ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
         if (showTurrets && battle.pendingChoice == null && !paused && !finished) drawTurretPanel(c)
-        if (tutorial in 0f..60f) drawTutorial(c)
         if (battle.pendingChoice != null && !finished) drawDoctrines(c)
+        if (!finished) tut?.draw(c)
         if (paused && !finished) {
             c.drawColor(Color.argb(150, 0, 0, 0))
-            ui.text(c, L["paused"], w / 2, h * 0.24f, 30f, Ui.TEXT, Paint.Align.CENTER, true, true)
-            for (b in pauseMenu) ui.button(c, b, 17f)
+            ui.panel(c, pausePanel)
+            ui.ribbon(c, pausePanel.centerX(), pausePanel.top + 4 * dp, L["paused"], 22f, Ui.RIBBON, pausePanel.width() * 0.6f)
+            for (b in pauseMenu) ui.button(c, b, 18f)
         }
         if (finished) drawResults(c)
     }
@@ -409,108 +571,188 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
     private fun drawTop(c: Canvas) {
         val p = battle.player
         val e = battle.enemy
-        ui.fill.color = Color.argb(140, 10, 14, 22)
+        // pasek: ciemne tło, ciemny kontur i złota lamówka na dole
+        ui.fill.color = Color.argb(200, 16, 20, 32)
         c.drawRect(topBar, ui.fill)
+        ui.fill.color = Ui.OUTLINE
+        c.drawRect(0f, topBar.bottom, w, topBar.bottom + 2.5f * dp, ui.fill)
+        ui.fill.color = Color.argb(160, 222, 170, 70)
+        c.drawRect(0f, topBar.bottom - 1.5f * dp, w, topBar.bottom, ui.fill)
         val l = g.insetL + 8 * dp
         val t = g.insetT + 6 * dp
-        // złoto + XP
-        ui.text(c, "● ${p.gold.toInt()}", l, t + 15 * dp, 15f, Ui.GOLD, Paint.Align.LEFT, true, true)
+        // złoto
+        val gi = p.gold.toInt()
+        if (gi != goldShown) { goldShown = gi; goldText = gi.toString() }
+        ui.badge(c, l, t + 11 * dp, Icons.COIN, goldText, 15f, Ui.GOLD, minTextW = ui.measure("0000", 15f, true))
+        // armia
+        val ck = p.aliveCount * 100 + p.cap
+        if (ck != capKey) { capKey = ck; capText = "${p.aliveCount}/${p.cap}" }
+        val ax = l + 118 * dp
+        Icons.draw(c, Icons.HELMET, ax + 8 * dp, t + 10 * dp, 17 * dp, dp = dp)
+        ui.textO(c, capText, ax + 19 * dp, t + 15 * dp, 13f, if (p.aliveCount >= p.cap) Ui.BAD else Ui.TEXT, Paint.Align.LEFT, 1.8f)
+        // XP: klejnot + pasek z nazwą epoki
         val need = if (p.era < cfg.maxEra) Defs.evolveXp[p.era].toFloat() else battle.rankXp(p)
-        ui.text(c, "${L[Defs.eraKeys[p.era]]}", l + 80 * dp, t + 13 * dp, 11f, Ui.TEXT, Paint.Align.LEFT, false, true)
-        ui.bar(c, l, t + 22 * dp, 160 * dp, 8 * dp, p.xp / need, Ui.XP)
-        ui.text(c, "${L["cap"]} ${p.aliveCount}/${p.cap}", l, t + 42 * dp, 10f, Ui.DIM, Paint.Align.LEFT, false, true)
+        val bx = l + 22 * dp
+        val bw = 160 * dp
+        ui.bar(c, bx, t + 28 * dp, bw, 11 * dp, p.xp / need, Ui.XP)
+        Icons.draw(c, Icons.XP, l + 10 * dp, t + 33.5f * dp, 19 * dp, dp = dp)
+        ui.textO(c, L[Defs.eraKeys[p.era]], bx + bw / 2, t + 37 * dp, 10f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
-            ui.bar(c, mini.left, mini.top - 7 * dp, mini.width() * 0.48f, 5 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)
-            if (!battle.endless) ui.bar(c, mini.right - mini.width() * 0.48f, mini.top - 7 * dp, mini.width() * 0.48f, 5 * dp, e.baseHp / e.baseMaxHp, Ui.ENEMY)
-            ui.fill.color = Color.argb(150, 0, 0, 0)
+            val hw = mini.width() * 0.5f - 14 * dp
+            val hy = mini.top - 11 * dp
+            ui.bar(c, mini.left + 12 * dp, hy, hw, 7 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)
+            Icons.draw(c, Icons.TOWER, mini.left + 4 * dp, hy + 3 * dp, 16 * dp, Ui.PLAYER, dp = dp)
+            if (!battle.endless) {
+                ui.bar(c, mini.right - 12 * dp - hw, hy, hw, 7 * dp, e.baseHp / e.baseMaxHp, Ui.ENEMY)
+                Icons.draw(c, Icons.TOWER, mini.right - 4 * dp, hy + 3 * dp, 16 * dp, Ui.ENEMY, dp = dp)
+            }
+            // ramka minimapy
+            tmpR.set(mini.left - 2 * dp, mini.top - 2 * dp, mini.right + 2 * dp, mini.bottom + 2 * dp)
+            ui.fill.color = Ui.OUTLINE
+            c.drawRoundRect(tmpR, 6 * dp, 6 * dp, ui.fill)
+            ui.fill.color = Color.rgb(34, 46, 40)
             c.drawRoundRect(mini, 4 * dp, 4 * dp, ui.fill)
+            ui.fill.color = Color.rgb(54, 72, 50)
+            c.drawRect(mini.left + 2 * dp, mini.centerY() + 2 * dp, mini.right - 2 * dp, mini.bottom - 2 * dp, ui.fill)
+            ui.fill.color = Ui.PLAYER
+            c.drawRect(mini.left + 2 * dp, mini.top + 3 * dp, mini.left + 5 * dp, mini.bottom - 3 * dp, ui.fill)
+            if (!battle.endless) {
+                ui.fill.color = Ui.ENEMY
+                c.drawRect(mini.right - 5 * dp, mini.top + 3 * dp, mini.right - 2 * dp, mini.bottom - 3 * dp, ui.fill)
+            }
             // widoczny obszar
-            ui.stroke.color = Color.argb(160, 255, 255, 255)
-            ui.stroke.strokeWidth = 1.2f * dp
+            ui.stroke.color = Color.argb(220, 255, 236, 170)
+            ui.stroke.strokeWidth = 1.5f * dp
             val vl = mini.left + (r.camX / Defs.LANE) * mini.width()
             val vr = mini.left + ((r.camX + r.worldVisible) / Defs.LANE) * mini.width()
-            c.drawRect(max(mini.left, vl), mini.top, min(mini.right, vr), mini.bottom, ui.stroke)
+            c.drawRoundRect(max(mini.left, vl), mini.top + 1 * dp, min(mini.right, vr), mini.bottom - 1 * dp, 3 * dp, 3 * dp, ui.stroke)
             for (u in battle.units) {
                 if (!u.alive) continue
                 if (battle.fog && u.side == 1 && u.x - p.front > 650f) continue
-                ui.fill.color = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
                 val x = r.worldToMini(u.x, mini.left, mini.width())
-                c.drawCircle(x, mini.centerY(), 2.6f * dp * u.def.size.coerceAtMost(1.4f), ui.fill)
+                val rad = 2.6f * dp * u.def.size.coerceAtMost(1.4f)
+                ui.fill.color = Ui.OUTLINE
+                c.drawCircle(x, mini.centerY(), rad + 1 * dp, ui.fill)
+                ui.fill.color = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
+                c.drawCircle(x, mini.centerY(), rad, ui.fill)
             }
-            ui.text(c, "${p.baseHp.toInt()}", mini.left, mini.bottom + 12 * dp, 10f, Ui.PLAYER, Paint.Align.LEFT, true, true)
-            val rightLabel = when {
-                battle.endless -> L.f("wave", battle.wave)
-                else -> "${e.baseHp.toInt()}"
+            val pi = p.baseHp.toInt()
+            if (pi != hpP) { hpP = pi; hpPText = pi.toString() }
+            ui.textO(c, hpPText, mini.left, mini.bottom + 14 * dp, 11f, Ui.PLAYER, Paint.Align.LEFT, 1.8f)
+            val rightLabel = if (battle.endless) {
+                if (battle.wave != waveShown) { waveShown = battle.wave; waveText = L.f("wave", battle.wave) }
+                waveText
+            } else {
+                val ei = e.baseHp.toInt()
+                if (ei != hpE) { hpE = ei; hpEText = ei.toString() }
+                hpEText
             }
-            ui.text(c, rightLabel, mini.right, mini.bottom + 12 * dp, 10f, Ui.ENEMY, Paint.Align.RIGHT, true, true)
+            ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp, 11f, if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
             val sp = battle.siegePressure()
-            if (sp > 1f) ui.text(c, L.f("siege_pressure", sp), mini.centerX(), mini.bottom + 12 * dp, 10f, Ui.BAD, Paint.Align.CENTER, true, true)
-            else ui.text(c, timeStr(battle.time), mini.centerX(), mini.bottom + 12 * dp, 10f, Ui.DIM, Paint.Align.CENTER, false, true)
+            if (sp > 1f) {
+                val k = kotlin.math.round(sp * 10f).toInt()
+                if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
+                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
+            } else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         }
-        // przeciwnik (epoka + ranga)
-        ui.text(c, L[Defs.eraKeys[e.era]], pauseBtn.r.left - 8 * dp, t + 14 * dp, 11f, Ui.ENEMY, Paint.Align.RIGHT, true, true)
+        // przeciwnik (epoka) + doktryny gracza jako ikony
+        val ex = pauseBtn.r.left - 10 * dp
+        ui.textO(c, L[Defs.eraKeys[e.era]], ex, t + 15 * dp, 12f, Ui.ENEMY, Paint.Align.RIGHT, 2f)
         if (p.doctrines.isNotEmpty()) {
-            val s = p.doctrines.joinToString(" ") { L[it.key].take(3) }
-            ui.text(c, s, pauseBtn.r.left - 8 * dp, t + 30 * dp, 9f, Ui.GOLD, Paint.Align.RIGHT, false, true)
+            val isz = 15 * dp
+            var x = ex - isz / 2
+            for (i in p.doctrines.indices.reversed()) {
+                if (x < (if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp)) break
+                Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)
+                x -= isz + 3 * dp
+            }
         }
     }
 
+    private var timeSec = -1
+    private var timeText = ""
+    private var siegeKey = -1
+    private var siegeText = ""
+    private var waveShown = -1
+    private var waveText = ""
+
+    /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
     private fun timeStr(t: Float): String {
         val s = t.toInt()
-        return "%d:%02d".format(s / 60, s % 60)
+        if (s != timeSec) { timeSec = s; timeText = "%d:%02d".format(s / 60, s % 60) }
+        return timeText
     }
 
     private fun drawHudBack(c: Canvas) {
-        ui.fill.color = Color.argb(120, 10, 14, 22)
-        c.drawRect(0f, h - hudH, w, h, ui.fill)
+        val top = h - hudH
+        ui.fill.color = Color.argb(190, 16, 20, 32)
+        c.drawRect(0f, top, w, h, ui.fill)
+        ui.fill.color = Ui.OUTLINE
+        c.drawRect(0f, top - 2.5f * dp, w, top, ui.fill)
+        ui.fill.color = Color.argb(160, 222, 170, 70)
+        c.drawRect(0f, top, w, top + 1.5f * dp, ui.fill)
+        // separator między jednostkami a akcjami
+        val sx = (unitBtn[3].r.right + turretBtn.r.left) / 2
+        ui.fill.color = Color.argb(90, 255, 255, 255)
+        c.drawRect(sx - 1 * dp, unitBtn[0].r.top + 6 * dp, sx + 1 * dp, unitBtn[0].r.bottom - 6 * dp, ui.fill)
     }
 
     private fun drawQueue(c: Canvas) {
         val p = battle.player
-        if (p.queueSize == 0) return
-        val y = unitBtn[0].r.top - 8 * dp
+        if (p.queueSize == 0 || !unitBtn[0].visible) return
+        val y = unitBtn[0].r.top - 10 * dp
         for (i in 0 until p.queueSize) {
-            ui.fill.color = if (i == 0) Ui.GOLD else Color.argb(200, 230, 230, 230)
-            c.drawCircle(unitBtn[0].r.left + 8 * dp + i * 14 * dp, y, 5 * dp, ui.fill)
+            val x = unitBtn[0].r.left + 9 * dp + i * 16 * dp
+            ui.fill.color = Ui.OUTLINE
+            c.drawCircle(x, y, 6.5f * dp, ui.fill)
+            ui.fill.color = if (i == 0) Ui.GOLD else Color.rgb(220, 224, 232)
+            c.drawCircle(x, y, 4.5f * dp, ui.fill)
         }
     }
 
     private fun drawTurretPanel(c: Canvas) {
         val p = battle.player
         ui.panel(c, panel)
-        ui.text(c, "${L["turrets"]} — ${L[Defs.eras[p.era].turret.nameKey]}", panel.left + 14 * dp, panel.top + 30 * dp, 16f, Ui.TEXT, Paint.Align.LEFT, true)
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, "${L["turrets"]} — ${L[Defs.eras[p.era].turret.nameKey]}", 16f,
+            Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
         for (i in 0 until p.slots) {
-            val y = slotBuy[i].r.centerY() + 5 * dp
+            val b = slotBuy[i]
             val te = p.turretEra[i]
+            tmpR.set(panel.left + 14 * dp, b.r.top - 2 * dp, panel.right - 14 * dp, b.r.bottom + 2 * dp)
+            ui.fill.color = if (i % 2 == 0) Color.argb(34, 255, 255, 255) else Color.argb(14, 255, 255, 255)
+            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+            val cy = b.r.centerY()
+            val mr = b.r.height() * 0.5f
+            ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
+            if (te < 0) ui.textO(c, (i + 1).toString(), panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            val tx = panel.left + 28 * dp + mr * 2
             val name = if (te >= 0) L[Defs.eras[te].turret.nameKey] else L["empty"]
-            ui.text(c, "${L.f("slot", i + 1)}: $name", panel.left + 14 * dp, y, 12f, if (te >= 0) Ui.TEXT else Ui.DIM)
-            ui.button(c, slotBuy[i], 12f)
-            ui.button(c, slotSell[i], 12f)
+            val avail = b.r.left - tx - 6 * dp
+            ui.textO(c, L.f("slot", i + 1), tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
+            ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
+            ui.button(c, slotBuy[i], 13f)
+            ui.button(c, slotSell[i], 13f)
         }
-        ui.button(c, closeBtn, 14f)
+        ui.closeButton(c, closeBtn)
     }
 
     private fun drawDoctrines(c: Canvas) {
         val ch = battle.pendingChoice ?: return
-        c.drawColor(Color.argb(150, 0, 0, 0))
-        ui.text(c, L["choose_doctrine"], w / 2, h * 0.27f, 24f, Ui.GOLD, Paint.Align.CENTER, true, true)
+        c.drawColor(Color.argb(160, 0, 0, 0))
+        ui.ribbon(c, w / 2, doctrineBtn[0].r.top - 34 * dp, L["choose_doctrine"], 22f, Ui.RIBBON, 300 * dp)
         for (i in 0..2) {
             val b = doctrineBtn[i]
-            ui.button(c, b)
-            ui.text(c, L[ch[i].key], b.r.centerX(), b.r.top + 34 * dp, 18f, Ui.GOLD, Paint.Align.CENTER, true, true)
-            ui.wrap(c, L[ch[i].key + "_d"], b.r.centerX(), b.r.top + 64 * dp, b.r.width() - 20 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
+            val off = if (b.pressed) 3 * dp else 0f
+            tmpR.set(b.r.left, b.r.top + off, b.r.right, b.r.bottom + off)
+            ui.panel(c, tmpR, Color.argb(245, 40, 48, 70), 14f)
+            val mr = min(36 * dp, b.r.width() * 0.2f)
+            val my = tmpR.top + 18 * dp + mr
+            ui.medallion(c, tmpR.centerX(), my, mr, Ui.ERA[(i * 3 + ch[i].ordinal) % 8], doctrineIcon(ch[i]))
+            val name = L[ch[i].key]
+            ui.textO(c, name, tmpR.centerX(), my + mr + 26 * dp, ui.fit(name, 19f, tmpR.width() - 24 * dp), Ui.GOLD, Paint.Align.CENTER)
+            ui.wrap(c, L[ch[i].key + "_d"], tmpR.centerX(), my + mr + 48 * dp, tmpR.width() - 28 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
         }
-    }
-
-    private fun drawTutorial(c: Canvas) {
-        val key = when { tutorial < 12f -> "tut_1"; tutorial < 30f -> "tut_2"; else -> "tut_3" }
-        val s = L[key]
-        val tw = ui.measure(s, 15f) + 30 * dp
-        val y = topH + g.insetT + 20 * dp
-        val rr = RectF(w / 2 - tw / 2, y, w / 2 + tw / 2, y + 36 * dp)
-        ui.panel(c, rr, Color.argb(220, 40, 30, 10))
-        ui.text(c, s, w / 2, y + 23 * dp, 15f, Ui.GOLD, Paint.Align.CENTER, true)
     }
 
     private fun drawResults(c: Canvas) {
@@ -522,29 +764,52 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             won -> L["victory"]
             else -> L["defeat"]
         }
-        ui.text(c, title, w / 2, h * 0.2f, 34f, if (won || cfg.mode == Mode.ENDLESS) Ui.GOLD else Ui.BAD, Paint.Align.CENTER, true, true)
+        val rp = resultPanel
+        // wjazd panelu od dołu
+        val slide = (1f - a) * 60 * dp
+        c.save()
+        c.translate(0f, slide)
+        ui.panel(c, rp)
+        val good = won || cfg.mode == Mode.ENDLESS
+        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, title, 26f, if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
+            rp.width() * 0.7f, if (good) Color.rgb(255, 246, 200) else Ui.TEXT, rp.width() + 40 * dp)
+        var y = rp.top + 44 * dp
         if (cfg.mode == Mode.CAMPAIGN && won) {
             val st = battle.stars()
-            ui.text(c, "★".repeat(st) + "☆".repeat(3 - st), w / 2, h * 0.3f, 32f, Ui.GOLD, Paint.Align.CENTER, true, true)
+            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, st, 3, 1.05f)
+            y += 54 * dp
+        } else {
+            Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
+            y += 48 * dp
         }
-        var y = h * 0.4f
-        val lx = w / 2 - 120 * dp
-        val rx = w / 2 + 120 * dp
-        fun row(k: String, v: String, col: Int = Ui.TEXT) {
-            ui.text(c, k, lx, y, 15f, Ui.DIM)
-            ui.text(c, v, rx, y, 15f, col, Paint.Align.RIGHT, true)
-            y += 24 * dp
+        val lx = rp.left + 30 * dp
+        val rx = rp.right - 30 * dp
+        val lh = 28 * dp
+        fun row(icon: Int, k: String, v: String, col: Int = Ui.TEXT) {
+            if (y + lh > restartEnd.r.top - 8 * dp) return
+            tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
+            ui.fill.color = Color.argb(30, 255, 255, 255)
+            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+            val cy = tmpR.centerY()
+            Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
+            ui.textO(c, k, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+            ui.textO(c, v, rx, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
+            y += lh
         }
-        row(L["time"], timeStr(battle.time))
-        row(L["kills"], battle.player.kills.toString())
-        if (cfg.mode == Mode.ENDLESS) row(L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
-        if (cfg.mode != Mode.CAMPAIGN) row(L["score"], battle.score().toString(), Ui.GOLD)
-        row(L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
-        if (newRecord) ui.text(c, L["new_record"], w / 2, y + 8 * dp, 18f, Ui.GOOD, Paint.Align.CENTER, true, true)
-        if (tipKey.isNotEmpty()) {
-            ui.wrap(c, "${L["why_lost"]}: ${L[tipKey]}", w / 2, y + 30 * dp, min(520 * dp, w - 40 * dp), 13f, Ui.TEXT, Paint.Align.CENTER)
+        row(Icons.STOPWATCH, L["time"], timeStr(battle.time))
+        row(Icons.SKULL, L["kills"], battle.player.kills.toString())
+        if (cfg.mode == Mode.ENDLESS) row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
+        if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
+        row(Icons.MEDAL, L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
+        if (newRecord && y + 26 * dp < restartEnd.r.top) {
+            ui.textO(c, L["new_record"], rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
+            y += 28 * dp
         }
-        ui.button(c, continueBtn, 16f)
-        ui.button(c, restartEnd, 16f)
+        if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
+            ui.wrap(c, "${L["why_lost"]}: ${L[tipKey]}", rp.centerX(), y + 18 * dp, rp.width() - 50 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
+        }
+        c.restore()
+        ui.button(c, continueBtn, 17f)
+        ui.button(c, restartEnd, 17f)
     }
 }

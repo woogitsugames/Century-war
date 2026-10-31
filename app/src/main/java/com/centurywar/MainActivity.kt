@@ -17,12 +17,17 @@ import android.widget.EditText
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
-import com.centurywar.engine.Music
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
+import com.centurywar.engine.Music
+import com.centurywar.game.SnapshotStore
+import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Jedyna Activity. Obsługuje zmiany konfiguracji sama (configChanges w manifeście),
@@ -38,10 +43,15 @@ class MainActivity : Activity(), Host {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
+        profile.pruneDailyBoards(Daily.dayNumber())
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
-        game.music = Music().apply { setVolume(profile.musicVolume) }
+        game.music = Music().also { it.setVolume(profile.musicVolume) }
+        // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
+        val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
+        game.snapshots = snapshots
+        game.resumeOffer = snapshots.loadBattle()
         view = GameView(this, game)
         setContentView(view)
 
@@ -106,15 +116,28 @@ class MainActivity : Activity(), Host {
 
     override fun onResume() {
         super.onResume()
-        game.applyMusicVolume()
-        game.music?.start()
         view.onResume()
+        game.music?.start()
     }
 
     override fun onPause() {
-        game.music?.stop()
-        game.post { game.current?.onPause(); game.profile.save() }
+        // Zrzut bitwy musi powstać, zanim wątek gry stanie: BattleScreen.onPause zapisuje go
+        // synchronicznie na wątku gry, a my czekamy na to (najwyżej ~300 ms).
+        val done = CountDownLatch(1)
+        val ran = AtomicBoolean(false)
+        val task = Runnable {
+            if (ran.compareAndSet(false, true)) {
+                try { game.current?.onPause(); game.profile.save() } finally { done.countDown() }
+            }
+        }
+        if (view.loopActive) {
+            game.post(task)
+            try { done.await(300, TimeUnit.MILLISECONDS) } catch (_: InterruptedException) { }
+        }
         view.onPause()
+        game.music?.stop()
+        // Pętla już nie działa (albo nie zdążyła odebrać zadania): wykonaj je tutaj.
+        if (!view.loopActive) task.run()
         game.profile.save()
         super.onPause()
     }
@@ -143,6 +166,8 @@ class MainActivity : Activity(), Host {
 
     override fun requestText(title: String, current: String, onResult: (String) -> Unit) {
         runOnUiThread {
+            // Wynik wywołania z wątku gry może przyjść, gdy Activity już się zamyka (BadTokenException).
+            if (isFinishing || isDestroyed) return@runOnUiThread
             val edit = EditText(this).apply {
                 setText(current)
                 filters = arrayOf(InputFilter.LengthFilter(16))

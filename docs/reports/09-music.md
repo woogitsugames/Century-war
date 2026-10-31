@@ -1,56 +1,21 @@
 # Zlecenie 09 — muzyka proceduralna
 
-## Zmiany
+## Zrealizowany zakres
 
-- Dodano engine/MusicSynth.kt: czysto obliczeniowy, deterministyczny syntezator PCM bez Androida; 8 motywów epok i motyw menu, tablice fal, kroki 1/16 nuty, perkusja, bas, akordy, melodia, regulacja intensywności i głośności, crossfade 2 s.
-- Dodano engine/Music.kt: AudioTrack mono / PCM16 / 22 050 Hz w osobnym wątku o niskim priorytecie; bufor około 250 ms, porcje 1024 próbek, bez alokacji i I/O w pętli generowania.
-- MainActivity.kt: tworzenie muzyki oraz start/stop zgodnie z onResume/onPause/onDestroy.
-- engine/Game.kt: pole music obok sound, wybór motywu menu lub początkowego motywu bitwy przy przejściu między ekranami.
-- meta/Profile.kt: musicVolume, domyślnie 0.5, zapis/odczyt JSON z walidacją wartości.
-- Test engine/MusicSynthTest.kt: 6 testów (skończoność próbek i zakres, powtarzalność seeda, crossfade 2 s, kolejka epok, PCM16 i nieprawidłowe sterowanie, różne seedy).
+- **MusicSynth.kt**: osiem autorskich motywów epok i spokojny motyw menu, krokowy sekwencer, perkusja, bas, akordy, melodia, tablice fal, 2-sekundowe przejścia; czysty Kotlin.
+- **Music.kt**: AudioTrack PCM16, mono, 22 050 Hz, osobny wątek o niskim priorytecie, bufor ~250 ms, ponownie używane tablice próbek.
+- **MainActivity.kt / Game.kt**: start, pauza i zwalnianie strumienia zgodnie z cyklem życia, wybór motywu menu poza bitwą.
+- **BattleScreen.kt**: bieżąca epoka gracza i natężenie zależne od najbliższej żywej jednostki wroga przy bazie; brak ingerencji w symulację i snapshoty.
+- **Profile.kt / SettingsScreen.kt / Screen.kt / L.kt**: zapamiętywana głośność muzyki (domyślnie 50%, zakres 0–100%), suwak dotykowy, lokalizacja etykiety na 10 języków.
+- **MusicSynthTest.kt / ProfileTest.kt**: deterministyczność, zakres i skończoność próbek, przejścia między epokami, PCM i walidacja ustawienia po odczycie.
 
-## Weryfikacja
+## Bazowanie i współpraca
 
-Lokalnie: kompilacja MusicSynth.kt przez kotlinc — OK.
-Kompilacja Music.kt razem z MusicSynth.kt przy użyciu atrap API Android — OK.
-Samodzielny zestaw 6 scenariuszy uruchomiony na JVM — OK; maksymalna amplituda w badanych scenariuszach: 0.47227874 (przed ograniczeniem PCM).
-Wstępny benchmark na JVM: około 15–20 ms CPU na 10,2 s dźwięku (nie jest to pomiar na urządzeniu Android).
+Scalono istniejące commity gałęzi `gpt/09-music` z aktualną gałęzią `claude/bold-sagan-vwz5gm` bez force-push. Zachowano nowe funkcje profilu, UI, snapshotów i lokalizacji z gałęzi bazowej.
 
-NIE wykonano:
-- ./gradlew :app:assembleDebug --console=plain
-- ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
-- ./gradlew :app:testDebugUnitTest --tests '*MusicSynthTest*' --console=plain
+## Weryfikacja i ograniczenia
 
-Przyczyna: środowisko wykonawcze nie ma Android SDK ani działającej instalacji Gradle, a bezpośrednie połączenie do serwerów GitHub jest niedostępne. Zmiany wprowadzono przez integrację repozytorium. Brak wyników tych poleceń nie oznacza ich zaliczenia.
-
-## Zmiana wymagana w zakazanym BattleScreen.kt
-
-Zgodnie z poleceniem NIE modyfikowano app/src/main/java/com/centurywar/screens/BattleScreen.kt.
-Wskazany fragment w metodzie update(dt: Float) należy wstawić tuż przed playSounds() (po aktualizacji battle.step()):
-
-~~~diff
-@@
--        playSounds()
-+        // Odtwarzana epoka wynika z rzeczywistego stanu bitwy.
-+        g.music?.setEra(battle.player.era)
-+        var danger = 0f
-+        for (u in battle.units) {
-+            if (!u.alive || u.side != 1) continue
-+            val proximity = (1f - (u.x - battle.player.baseFront) / (Defs.LANE * 0.35f))
-+                .coerceIn(0f, 1f)
-+            if (proximity > danger) danger = proximity
-+        }
-+        g.music?.setIntensity(if (paused || finished) 0f else danger)
-+        playSounds()
-~~~
-
-BattleScreen.kt już importuje Defs, więc nowe importy nie są potrzebne. Fragment nie alokuje obiektów; iteruje po stałej puli 72 jednostek.
-Do czasu jego zastosowania na wejściu do bitwy wybierany jest motyw epoki 0; gra automatycznie nie przełączy melodii przy późniejszych awansach ani nie zmieni intensywności w zależności od zagrożenia.
-
-## Ustawienia UI i ryzyka
-
-SettingsScreen.kt również objęty jest zakazem edycji. W profilu istnieje pole musicVolume i Game.applyMusicVolume(), ale nie dodano jeszcze kontrolki głośności na ekranie ustawień. Po zmianie profilu można wywołać Game.applyMusicVolume() dla natychmiastowej aktualizacji.
-
-- Android AudioTrack nie został zweryfikowany na fizycznym telefonie; trzeba sprawdzić urządzenia z nietypowymi sterownikami dźwięku i częste przejścia aplikacji w tło.
-- Docelowy limit <3% CPU należy zmierzyć na tanim urządzeniu; benchmark lokalnej JVM tego nie gwarantuje.
-- Gdy zmiana epoki następuje podczas crossfade, kolejna zmiana jest kolejkowana do jego zakończenia: zapobiega to gwałtownym skokom, lecz reakcja może być opóźniona do 2 sekund.
+- W poprzednich commitach: kompilacja samodzielnego MusicSynth przez kotlinc i scenariusze testowe JVM (6 przypadków); dokumentacja szczegółowa w historii PR.
+- W bieżącym środowisku nie ma Android SDK ani działającej instalacji Gradle i dostępu sieciowego do klonowania — nie uruchomiono `./gradlew :app:assembleDebug` ani `./gradlew :app:testDebugUnitTest`.
+- Zmiany w ekranach i integracji nie były renderowane w Robolectric; zalecany screenshot test menu ustawień i test na urządzeniu Android.
+- Limit CPU poniżej 3% jednego rdzenia na tanim telefonie wymaga profilowania na fizycznym urządzeniu. Brak nagrań audio i nowych zależności.

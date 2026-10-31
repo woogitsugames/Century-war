@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.SystemClock
+import com.centurywar.game.RestoredBattle
+import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import com.centurywar.screens.BattleScreen
@@ -41,15 +43,21 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
-    /** Muzyka proceduralna; na urządzeniu ustawia MainActivity. */
+    /** Muzyka działa niezależnie od efektów SoundPool. */
     var music: Music? = null
 
-    fun applyMusicVolume() = music?.setVolume(profile.musicVolume)
+    fun applyMusicVolume() { music?.setVolume(profile.musicVolume) }
 
     private fun syncMusicScreen(s: Screen) {
-        music?.setEra(if (s is BattleScreen) 0 else Music.MENU)
-        music?.setIntensity(0f)
+        if (s !is BattleScreen) {
+            music?.setEra(Music.MENU)
+            music?.setIntensity(0f)
+        }
     }
+    /** Zrzut przerwanej bitwy (filesDir/battle.snap). Null w testach. */
+    var snapshots: SnapshotStore? = null
+    /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
+    var resumeOffer: RestoredBattle? = null
 
     fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
         if (profile.sound) sound?.play(id, vol, gap, pitch)
@@ -72,15 +80,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     init {
         applyLanguage()
+        if (profile.name.isBlank()) profile.name = L["default_name"]
         setQuality(effectiveQualityLevel())
     }
 
     fun applyLanguage() {
-        L.polish = when (profile.lang) {
-            "pl" -> true
-            "en" -> false
-            else -> java.util.Locale.getDefault().language == "pl"
-        }
+        L.setCode(profile.lang)
     }
 
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
@@ -97,6 +102,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun resize(bufW: Int, bufH: Int, vW: Int, vH: Int) {
         width = bufW; height = bufH; viewW = vW; viewH = vH
         renderScale = bufW.toFloat() / vW.coerceAtLeast(1)
+        scaleInsets()
         // Rozmiar UI w dp, ale na bardzo dużych ekranach (rozłożony Fold, tablet)
         // lekko powiększamy, żeby interfejs nie wyglądał na zagubiony.
         val minDp = minOf(vW, vH) / density
@@ -107,10 +113,28 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         for (s in stack) s.layout()
     }
 
+    /** Ostatnie wcięcia w pikselach widoku: przeliczamy je przy każdej zmianie skali bufora. */
+    private val rawInsets = IntArray(4)
+
     fun setInsets(l: Int, t: Int, r: Int, b: Int) {
-        val s = renderScale
-        insetL = l * s; insetT = t * s; insetR = r * s; insetB = b * s
+        rawInsets[0] = l; rawInsets[1] = t; rawInsets[2] = r; rawInsets[3] = b
+        scaleInsets()
         screen?.layout()
+    }
+
+    private fun scaleInsets() {
+        val s = renderScale
+        insetL = rawInsets[0] * s; insetT = rawInsets[1] * s; insetR = rawInsets[2] * s; insetB = rawInsets[3] * s
+    }
+
+    /**
+     * Nowy rozmiar widoku (UI thread przez [post]). Skalę bufora liczymy od razu z nowych
+     * wymiarów; wcześniej setQuality używało starych viewW/viewH i po złożeniu/rozłożeniu
+     * Folda nadpisywało poprawną skalę wartością policzoną dla poprzedniego ekranu.
+     */
+    fun viewResized(vW: Int, vH: Int) {
+        viewW = vW; viewH = vH
+        setQuality(quality.level)
     }
 
     fun setScreen(s: Screen) {

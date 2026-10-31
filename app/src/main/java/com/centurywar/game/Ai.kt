@@ -13,6 +13,14 @@ class Ai(private val b: Battle, sideIndex: Int) {
     private var think = 0.4f
     private var plannedRole: Role? = null
 
+    /** Stan wewnętrzny do zapisu/wczytania bitwy ([BattleSnapshot]). */
+    var thinkTimer: Float
+        get() = think
+        set(v) { think = v }
+    var plannedRoleState: Role?
+        get() = plannedRole
+        set(v) { plannedRole = v }
+
     fun update(dt: Float) {
         think -= dt
         if (think > 0f) return
