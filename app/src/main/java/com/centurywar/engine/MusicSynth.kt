@@ -241,7 +241,7 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         val gain = if (targetVolume.isFinite()) targetVolume.coerceIn(0f, 1f) else 0f
         for (i in 0 until count) {
             volume += (gain - volume) * 0.002f
-            out[i] = (sample() * volume).coerceIn(-1f, 1f)
+            out[i] = sample() * volume
         }
     }
 
