@@ -43,12 +43,15 @@ class Projectile {
     var splash = 0f
     var siegeMul = 1f
     var era = 0
+    var chain = 0f
 }
 
 class Side(val index: Int) {
     val dir = if (index == 0) 1f else -1f
     val baseFront = if (index == 0) Defs.BASE_FRONT else Defs.LANE - Defs.BASE_FRONT
     var era = 0
+    /** Wariant bieżącej epoki: -1 oznacza brak rozgałęzienia. */
+    var eraVariant = EraBranches.NONE
     var gold = 0f
     var xp = 0f
     var baseHp = 0f
@@ -58,6 +61,7 @@ class Side(val index: Int) {
     var queueMax = 5
     var trainT = 0f
     val turretEra = IntArray(Defs.MAX_TURRET_SLOTS) { -1 }
+    val turretVariant = IntArray(Defs.MAX_TURRET_SLOTS) { EraBranches.NONE }
     val turretCd = FloatArray(Defs.MAX_TURRET_SLOTS)
     val turretFire = FloatArray(Defs.MAX_TURRET_SLOTS)
     var slots = 2
@@ -94,7 +98,10 @@ class Side(val index: Int) {
     var spawned = 0
     var goldEarned = 0f
 
-    fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
+    fun unit(role: Role): UnitDef = Defs.unit(era, role, eraVariant)
+
+    fun turretCost(era: Int = this.era, variant: Int = if (era == this.era) eraVariant else EraBranches.NONE): Int =
+        (Defs.turret(era, variant).cost * turretCostMul).toInt()
 }
 
 /** Kolejka zdarzeń wizualnych dla renderera. Symulacja nie zna Canvas ani Androida. */
@@ -162,6 +169,9 @@ class Battle(val cfg: BattleConfig) {
 
     /** Gdy nie jest null, gracz wybiera doktrynę, a symulacja stoi. */
     var pendingChoice: Array<Doctrine>? = null
+    /** Wybór odmiany epoki poprzedza doktrynę; -1 oznacza brak modalu. */
+    var pendingVariantEra = EraBranches.NONE
+    var pendingVariantOffersDoctrine = false
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
@@ -214,6 +224,14 @@ class Battle(val cfg: BattleConfig) {
             s.baseHp = s.baseMaxHp
             s.front = s.baseFront
         }
+        if (EraBranches.available(cfg.startEra)) {
+            for (s in sides) {
+                val forced = EraBranches.forced(s.era, cfg.modifiers)
+                if (forced != EraBranches.NONE) s.eraVariant = forced
+                else if (s.index == 1) s.eraVariant = chooseAiVariant(s)
+                else pendingVariantEra = s.era
+            }
+        }
     }
 
     val player get() = sides[0]
@@ -222,14 +240,14 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- komendy gracza / AI
 
     fun canQueue(side: Side, role: Role): Boolean {
-        val def = Defs.unit(side.era, role)
+        val def = side.unit(role)
         if (role == Role.ELITE && !side.eliteUnlocked) return false
         return side.queueSize < side.queueMax && side.gold >= def.cost
     }
 
     fun queueUnit(side: Side, role: Role): Boolean {
         if (over || !canQueue(side, role)) return false
-        val def = Defs.unit(side.era, role)
+        val def = side.unit(role)
         side.gold -= def.cost
         side.queue[side.queueSize++] = def.id
         return true
@@ -245,17 +263,47 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun canEvolve(side: Side): Boolean =
-        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && pendingChoice == null
+        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] &&
+            (side.index == 1 || (pendingChoice == null && pendingVariantEra == EraBranches.NONE))
 
     fun evolve(side: Side): Boolean {
         if (!canEvolve(side)) return false
         side.xp -= Defs.evolveXp[side.era]
         val ratio = side.baseHp / side.baseMaxHp
         side.era++
+        side.eraVariant = EraBranches.NONE
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
+        if (EraBranches.available(side.era)) {
+            val forced = EraBranches.forced(side.era, cfg.modifiers)
+            if (forced != EraBranches.NONE) side.eraVariant = forced
+            else if (side.index == 0 && playerAi == null) {
+                pendingVariantEra = side.era
+                pendingVariantOffersDoctrine = true
+                return true
+            } else side.eraVariant = chooseAiVariant(side)
+        }
         offerDoctrines(side)
+        return true
+    }
+
+    /** AI bierze pod uwagę nacisk przeciwnika i deterministyczny temperament. */
+    private fun chooseAiVariant(side: Side): Int {
+        val foe = sides[1 - side.index]
+        if (side.era == 4 && foe.aliveCount >= 5) return EraBranches.SECOND
+        if (side.era == 6 && side.baseHp < side.baseMaxHp * 0.55f) return EraBranches.SECOND
+        return rng.nextInt(2)
+    }
+
+    fun chooseEraVariant(choice: Int): Boolean {
+        val era = pendingVariantEra
+        if (era == EraBranches.NONE || choice !in Defs.eras[era].variants.indices || player.era != era) return false
+        player.eraVariant = choice
+        pendingVariantEra = EraBranches.NONE
+        val offer = pendingVariantOffersDoctrine
+        pendingVariantOffersDoctrine = false
+        if (offer) offerDoctrines(player)
         return true
     }
 
@@ -325,6 +373,7 @@ class Battle(val cfg: BattleConfig) {
         if (side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
+        side.turretVariant[slot] = side.eraVariant
         side.turretCd[slot] = 0.5f
         return true
     }
@@ -332,7 +381,7 @@ class Battle(val cfg: BattleConfig) {
     fun upgradeCost(side: Side, slot: Int): Int {
         val te = side.turretEra[slot]
         if (te < 0 || te >= side.era) return -1
-        return max(0, side.turretCost() - side.turretCost(te) / 2)
+        return max(0, side.turretCost() - side.turretCost(te, side.turretVariant[slot]) / 2)
     }
 
     fun upgradeTurret(side: Side, slot: Int): Boolean {
@@ -340,14 +389,16 @@ class Battle(val cfg: BattleConfig) {
         if (over || cost < 0 || side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
+        side.turretVariant[slot] = side.eraVariant
         return true
     }
 
     fun sellTurret(side: Side, slot: Int): Boolean {
         val te = side.turretEra[slot]
         if (over || te < 0) return false
-        side.gold += side.turretCost(te) / 2
+        side.gold += side.turretCost(te, side.turretVariant[slot]) / 2
         side.turretEra[slot] = -1
+        side.turretVariant[slot] = EraBranches.NONE
         return true
     }
 
@@ -357,9 +408,10 @@ class Battle(val cfg: BattleConfig) {
     fun castBarrage(side: Side): Boolean {
         if (!abilityReady(side, 0)) return false
         side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
-        val count = 16
-        val dmg = Defs.abilityDmg(side.era) * side.dmgMul
-        val type = barrageProj(side.era)
+        val v = Defs.eras[side.era].variants.getOrNull(side.eraVariant)
+        val count = v?.abilityCount ?: 16
+        val dmg = Defs.abilityDmg(side.era) * side.dmgMul * (v?.abilityDmgMul ?: 1f)
+        val type = v?.abilityProjectile ?: barrageProj(side.era)
         for (i in 0 until count) {
             val p = allocProj() ?: break
             val tx = side.baseFront + side.dir * (220f + rng.nextFloat() * 1150f)
@@ -376,7 +428,8 @@ class Battle(val cfg: BattleConfig) {
             p.t = 0f
             p.delay = i * 0.11f + rng.nextFloat() * 0.1f
             p.dmg = dmg
-            p.splash = 60f
+            p.splash = v?.abilitySplash ?: 60f
+            p.chain = v?.abilityChain ?: 0f
             p.siegeMul = 0.25f
         }
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
@@ -398,7 +451,10 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- symulacja
 
     fun step() {
-        if (over || pendingChoice != null) return
+        if (pendingVariantEra != EraBranches.NONE && playerAi != null) {
+            chooseEraVariant(chooseAiVariant(player))
+        }
+        if (over || pendingChoice != null || pendingVariantEra != EraBranches.NONE) return
         val dt = STEP
         time += dt
         updateFronts()
@@ -723,7 +779,13 @@ class Battle(val cfg: BattleConfig) {
         wave++
         waveTimer = max(16f, 28f - wave * 0.25f)
         val e = enemy
-        e.era = min(cfg.maxEra, cfg.startEra + wave / 6)
+        val nextEra = min(cfg.maxEra, cfg.startEra + wave / 6)
+        if (nextEra != e.era) {
+            e.era = nextEra
+            val forced = EraBranches.forced(nextEra, cfg.modifiers)
+            e.eraVariant = if (!EraBranches.available(nextEra)) EraBranches.NONE
+                else if (forced != EraBranches.NONE) forced else chooseAiVariant(e)
+        }
         val inEra = wave % 6
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
         e.dmgMul = 1f + inEra * 0.03f
@@ -737,7 +799,7 @@ class Battle(val cfg: BattleConfig) {
                 r < 60 -> Role.RANGED
                 else -> Role.MELEE
             }
-            val def = Defs.unit(e.era, role)
+            val def = e.unit(role)
             e.queue[e.queueSize++] = def.id
             budget -= def.cost
             n++
