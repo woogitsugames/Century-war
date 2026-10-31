@@ -464,6 +464,12 @@ class Battle(val cfg: BattleConfig) {
     fun castBarrage(side: Side): Boolean {
         if (!abilityReady(side, 0)) return false
         side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
+        fireBarrage(side)
+        return true
+    }
+
+    /** Ostrzał automatyczny nie zużywa odnowienia ostrzału ręcznego. */
+    private fun fireBarrage(side: Side) {
         val count = 16
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
         val type = barrageProj(side.era)
@@ -487,7 +493,6 @@ class Battle(val cfg: BattleConfig) {
             p.siegeMul = 0.25f
         }
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
-        return true
     }
 
     private fun barrageProj(era: Int) = when (era) {
@@ -534,6 +539,10 @@ class Battle(val cfg: BattleConfig) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
         }
+        if (endless && !over && pendingChoice == null && bossRewardsPending > 0) {
+            bossRewardsPending--
+            offerEndlessCards()
+        }
     }
 
     /** Koszt XP kolejnej rangi weteranów (gdy nie ma już epoki do awansu). */
@@ -558,7 +567,7 @@ class Battle(val cfg: BattleConfig) {
      */
     fun siegePressure(): Float = if (endless || time < 480f) 1f else 1f + (time - 480f) / 60f * 0.2f
 
-    fun surrender() { if (!over) { pendingChoice = null; finish(1) } }
+    fun surrender() { if (!over) { pendingChoice = null; pendingCards = null; finish(1) } }
 
     private fun finish(w: Int) {
         over = true
@@ -603,21 +612,34 @@ class Battle(val cfg: BattleConfig) {
                 s.trainT = 0f
                 for (i in 1 until s.queueSize) s.queue[i - 1] = s.queue[i]
                 s.queueSize--
+                if (endless && s.index == 0 && s.cloneChance > 0f &&
+                    s.aliveCount < s.cap && rng.nextFloat() < s.cloneChance) spawn(s, def)
             }
         }
     }
 
-    fun spawn(s: Side, def: UnitDef, extraHpMul: Float = 1f): Boolean {
+    fun spawn(s: Side, def: UnitDef, extraHpMul: Float = 1f): Boolean =
+        spawnFighter(s, def, extraHpMul) != null
+
+    private fun spawnFighter(s: Side, def: UnitDef, extraHpMul: Float = 1f): Fighter? {
         var f: Fighter? = null
         for (u in units) if (!u.active) { f = u; break }
-        if (f == null) return false
+        if (f == null) return null
         f.active = true
         f.side = s.index
         f.def = def
         f.x = s.baseFront - s.dir * 30f
         f.maxHp = def.hp * s.hpMul * extraHpMul
         f.hp = f.maxHp
-        f.dmg = def.dmg * s.dmgMul
+        f.dmg = def.dmg * s.dmgMul * when (def.role) {
+            Role.RANGED -> s.rangedDmgMul
+            Role.ELITE -> s.eliteDmgMul
+            else -> 1f
+        }
+        f.bossKind = 0
+        f.bossCd = 0f
+        f.burnDps = 0f
+        f.burnLeft = 0f
         f.cd = 0.3f
         f.anim = rng.nextFloat() * 6f
         f.attackAnim = 0f
@@ -627,7 +649,7 @@ class Battle(val cfg: BattleConfig) {
         f.serial = ++serialCounter
         s.spawned++
         s.aliveCount++
-        return true
+        return f
     }
 
     private fun turrets(s: Side, dt: Float) {
@@ -644,10 +666,12 @@ class Battle(val cfg: BattleConfig) {
             val td = Defs.eras[te].turret
             val dist = (target.x - s.baseFront) * s.dir
             if (dist > td.range) continue
-            s.turretCd[i] = td.cooldown
+            s.turretCd[i] = td.cooldown / s.turretRateMul
             s.turretFire[i] = 0.15f
             val h = turretHeight(i)
-            launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile, td.dmg * s.turretDmgMul, td.splash, 0f, te)
+            val turretDmg = td.dmg * s.turretDmgMul
+            launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile,
+                turretDmg, td.splash, 0f, te, turretDmg * s.turretBurnRatio / 4f)
         }
     }
 
@@ -659,38 +683,60 @@ class Battle(val cfg: BattleConfig) {
             if (u.dying > 0.8f) u.active = false
             return
         }
+        if (u.burnLeft > 0f) {
+            val tick = min(dt, u.burnLeft)
+            u.burnLeft -= tick
+            damageUnit(u, u.burnDps * tick, 1 - u.side)
+            if (!u.alive) return
+        }
+        if (u.bossCd > 0f) u.bossCd -= dt
         val s = sides[u.side]
         val eIdx = 1 - u.side
         val e = sides[eIdx]
         if (u.flash > 0f) u.flash -= dt
         if (u.attackAnim > 0f) u.attackAnim -= dt
-        val rally = if (s.rallyT > 0f) 1.4f else 1f
+        var rally = if (s.rallyT > 0f) 1.4f else 1f
+        if (endless && u.side == 1) {
+            for (a in units) {
+                if (a.alive && a.side == 1 && a.bossKind == 2 && abs(a.x - u.x) < 380f) {
+                    rally *= 1.25f
+                    break
+                }
+            }
+        }
         if (u.cd > 0f) u.cd -= dt * rally
 
         val target = frontUnit(eIdx)
         val gap = if (target != null) (target.x - u.x) * s.dir - u.radius - target.radius
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
+        val attackDmg = if (endless && u.side == 0 &&
+            s.baseHp < s.baseMaxHp * 0.35f) u.dmg * s.lastStandMul else u.dmg
 
         if (gap <= def.range) {
             u.moving = false
+            if (endless && u.bossKind == 1 && u.bossCd <= 0f && target != null && target.alive) {
+                target.x = max(e.baseFront, target.x - target.def.speed * 1.5f)
+                damageUnit(target, attackDmg * 0.2f, u.side)
+                u.bossCd = 6f
+            }
             if (u.cd <= 0f) {
                 u.cd = def.cooldown
                 u.attackAnim = 0.25f
                 if (def.projectile == Proj.NONE) {
                     if (def.splash > 0f) {
                         val cx = if (target != null) target.x else e.baseFront
-                        splashDamage(u.side, cx, def.splash, u.dmg, def.siegeMul, def.era)
+                        splashDamage(u.side, cx, def.splash, attackDmg, def.siegeMul, def.era)
                     } else if (target != null) {
-                        damageUnit(target, u.dmg, u.side)
+                        damageUnit(target, attackDmg, u.side)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx)
                     } else {
-                        damageBase(e, u.dmg * def.siegeMul, u.side)
+                        damageBase(e, attackDmg * def.siegeMul, u.side)
                     }
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul, def.era)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, attackDmg, def.splash, def.siegeMul, def.era)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
                 }
             }
@@ -723,10 +769,12 @@ class Battle(val cfg: BattleConfig) {
         return null
     }
 
-    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int) {
+    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float,
+        splash: Float, siegeMul: Float, era: Int, burnDps: Float = 0f) {
         val p = allocProj() ?: return
         p.side = side; p.type = type; p.x = x; p.h = h; p.tx = tx; p.era = era
         p.dmg = dmg; p.splash = splash; p.siegeMul = if (siegeMul <= 0f) 0.6f else siegeMul
+        p.burnDps = burnDps
         p.delay = 0f; p.t = 0f
         val dist = abs(tx - x)
         val straight = type == Proj.BULLET || type == Proj.BEAM || type == Proj.PLASMA || type == Proj.ROCKET || type == Proj.BOLT
@@ -756,7 +804,7 @@ class Battle(val cfg: BattleConfig) {
         p.active = false
         val e = sides[1 - p.side]
         if (p.splash > 0f) {
-            splashDamage(p.side, p.tx, p.splash, p.dmg, p.siegeMul, p.era)
+            splashDamage(p.side, p.tx, p.splash, p.dmg, p.siegeMul, p.era, p.burnDps)
             return
         }
         var best: Fighter? = null
@@ -768,20 +816,31 @@ class Battle(val cfg: BattleConfig) {
         }
         if (best != null) {
             damageUnit(best, p.dmg, p.side)
+            ignite(best, p.burnDps)
             fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side)
         } else if ((p.tx - e.baseFront) * -e.dir >= -50f) {
             damageBase(e, p.dmg * p.siegeMul, p.side)
         }
     }
 
-    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float, siegeMul: Float, era: Int) {
+    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float,
+        siegeMul: Float, era: Int, burnDps: Float = 0f) {
         for (u in units) {
             if (!u.alive || u.side == attacker) continue
-            if (abs(u.x - cx) <= radius + u.radius) damageUnit(u, dmg, attacker)
+            if (abs(u.x - cx) <= radius + u.radius) {
+                damageUnit(u, dmg, attacker)
+                ignite(u, burnDps)
+            }
         }
         val e = sides[1 - attacker]
         if ((cx - e.baseFront) * -e.dir >= -radius) damageBase(e, dmg * siegeMul, attacker)
         fx.add(FxBuffer.EXPLOSION, cx, 20f, attacker, 0.6f + radius / 100f)
+    }
+
+    private fun ignite(u: Fighter, dps: Float) {
+        if (!u.alive || dps <= 0f) return
+        u.burnDps = max(u.burnDps, dps)
+        u.burnLeft = 4f
     }
 
     private fun damageUnit(u: Fighter, d: Float, attacker: Int) {
@@ -804,6 +863,10 @@ class Battle(val cfg: BattleConfig) {
             v.xp += cost * 0.25f * v.xpMul
             k.kills++
             k.killValue += cost
+            if (endless && u.isBoss && attacker == 0) {
+                bossesDefeated++
+                bossRewardsPending++
+            }
             v.aliveCount--
             fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size)
         }
