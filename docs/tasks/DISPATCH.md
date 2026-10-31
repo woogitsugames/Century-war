@@ -35,3 +35,17 @@ Po fali 4 (28) i po każdej zmianie symulacji (33, 34, 36) koordynator powtarza 
 ## Stan
 
 31.10.2026 (noc): wszystkie paczki 19–38 scalone do `main` przez koordynatora. Szczegóły i poprawki po scaleniu: `docs/Century-war.md`.
+
+---
+
+# Wysyłka zleceń 39–52 (tura 3)
+
+Stan na 31.10.2026 (noc). Ta sama gałąź bazowa i to samo polecenie startowe co wyżej. **Wysyłaj tylko jedną falę naraz.** Następną falę wysyłaj dopiero, gdy koordynator scali poprzednią i wypchnie ją na `claude/bold-sagan-vwz5gm` (w turze 2 wszystkie paczki powstały z tego samego punktu i scalanie trwało wiele godzin).
+
+| Fala | Paczki | Pliki (rozłączne w obrębie fali) |
+|---|---|---|
+| 1 | **39** licencje i „O grze”, **41** auto-jakość GPU, **42** balans końca kampanii, **45** odtwarzacz powtórek, **46** poprawki Endless, **52** lepsze dźwięki | Settings+About+docs/store / engine pętli / `Modes.kt` / `ReplayScreen` / `Battle.kt`+snapshot / `SoundSynth` |
+| 2 | **40** audyt układu ekranów, **43** wdrożenie serwera, **47** HUD bez alokacji, **48** miks dźwięku, **49** stabilność I/O | ekrany menu / `server/` / `BattleScreen` / `Sound`+`Music` / `MainActivity`+`meta` |
+| 3 | **44** przegląd tłumaczeń, **50** grafiki do sklepu, **51** dzień wydania | `L.kt` / testy grafik / `Daily` + Gradle |
+
+Po fali 1 (42, 46) koordynator mierzy balans i podbija wersję gry rankingu (`0.4.0`).

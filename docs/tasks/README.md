@@ -42,6 +42,20 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 36 | [Oblężenie tygodnia z progami nagród](36-weekly-siege.md) | `gpt/36-weekly-siege` | po 33 i 34 (pogoda, bossowie w konfiguracji tygodnia); część serwerowa po 08/23 |
 | 37 | [Wydajność: budżet klatki, auto-jakość, testy kroków/s i alokacji](37-performance-budget.md) | `gpt/37-performance-budget` | na końcu (po 25–36): testy identyczności i wydajności mierzą gotową symulację i renderer |
 | 38 | [Dźwięki epok i miks z muzyką](38-era-sound.md) | `gpt/38-era-sound` | po 26 (`FxBuffer`, `playSounds`), 29 (`BattleSfx`), 31/32 (`SettingsScreen`) |
+| 39 | [Licencje, ekran „O grze” i porządek w dokumentach sklepu](39-licenses-about.md) | `gpt/39-licenses-about` | fala 1 |
+| 40 | [Audyt układu ekranów: Fold w pionie, długie teksty, 130% tekstu](40-layout-audit.md) | `gpt/40-layout-audit` | fala 2 (po 39: nowy ekran „O grze”) |
+| 41 | [Auto-jakość także dla telefonów ograniczonych przez GPU](41-gpu-quality.md) | `gpt/41-gpu-quality` | fala 1 |
+| 42 | [Balans końca kampanii i odstających etapów (20 seedów)](42-campaign-endgame-balance.md) | `gpt/42-campaign-endgame-balance` | fala 1 |
+| 43 | [Serwer rankingu: gotowość do wdrożenia i usuwanie danych gracza](43-server-deploy.md) | `gpt/43-server-deploy` | fala 2 (po 39: wiersz ustawień) |
+| 44 | [Przegląd jakości tłumaczeń w 10 językach](44-translation-review.md) | `gpt/44-translation-review` | fala 3 (cały `L.kt`, na końcu) |
+| 45 | [Odtwarzacz powtórek: płynność i poprawki z przeglądu](45-replay-polish.md) | `gpt/45-replay-polish` | fala 1 |
+| 46 | [Oblężenie bez końca: poprawki bossów, tematów fal i wariantów wroga](46-endless-fixes.md) | `gpt/46-endless-fixes` | fala 1 |
+| 47 | [Ekran bitwy bez alokacji: HUD, panele i wyniki](47-battle-hud-alloc.md) | `gpt/47-battle-hud-alloc` | fala 2 |
+| 48 | [Dźwięk: priorytety wyciszania muzyki i brak gubienia pierwszych dźwięków](48-audio-polish.md) | `gpt/48-audio-polish` | fala 2 (po 52: `Sound.kt`) |
+| 49 | [Stabilność: brak I/O na wątku UI, StrictMode i odporność na przerwanie](49-stability-io.md) | `gpt/49-stability-io` | fala 2 |
+| 50 | [Grafiki do Google Play generowane z gry](50-store-graphics.md) | `gpt/50-store-graphics` | fala 3 (po 40) |
+| 51 | [Dzień wydania i lista kontrolna przed publikacją](51-release-day.md) | `gpt/51-release-day` | fala 3 (po 42: `Modes.kt`) |
+| 52 | [Lepsze dźwięki: nowa synteza efektów bitwy i interfejsu](52-better-sfx.md) | `gpt/52-better-sfx` | fala 1 |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 
@@ -54,3 +68,6 @@ Zlecenie 28 zastępuje 18 i dotyka prawie wszystkiego w `:sim` (`Defs.kt`, `Batt
 Zlecenia 29–38 prawie wszystkie dotykają `engine/L.kt` (poza 37) i `meta/Profile.kt` (29, 30, 31, 32, 35, 36, 38). `screens/BattleScreen.kt`: `onFinished` zmieniają 29, 30, 35, 36; HUD 33, 34, 37; `playSounds` 29 i 38. `game/BattleRenderer.kt`: 31, 33, 34, 37 (oraz 25–27). `sim/.../Battle.kt`: 33, 34, 36, 37 i addytywnie 38 (`FxBuffer`); `BattleSnapshot.kt` podbijają 33, 34, 36 (każde osobno, scalać po kolei i pilnować jednej rosnącej `VERSION`), 29 tylko udostępnia kodek konfiguracji. `sim/.../Modes.kt`: 33, 36, opcjonalnie 35 (oraz 28). `SettingsScreen.kt`: 31, 32, 38. `ModeScreen.kt`: 32, 33, 35, 36. `RankingsScreen.kt`: 29, 30, 36, 37. `CodexScreen.kt`: 33, 34. Zmiany przebiegu symulacji w 33, 34, 36 wymagają podbicia `CW_GAME_VERSION`, jeśli 23 jest już scalone. Najlepsza kolejność: 29 → 30 równolegle z 31 → 32 → 38 i z kolejką symulacji 33 → 34 → 36 → 35; 37 na końcu.
 
 Kolejność wysyłki i polecenia startowe: [DISPATCH.md](DISPATCH.md).
+
+
+Zlecenia 39–52 (tura 3) są pogrupowane w fale o rozłącznych plikach; opis w [DISPATCH.md](DISPATCH.md).
