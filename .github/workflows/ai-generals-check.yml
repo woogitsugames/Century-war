@@ -16,7 +16,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_HOME=${ANDROID_HOME}" >> "${GITHUB_ENV}"
       - name: APK debug
         run: ./gradlew :app:assembleDebug --console=plain
       - name: Symulacje bitwy
