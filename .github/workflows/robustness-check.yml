@@ -1,0 +1,24 @@
+name: Kontrola testów odporności
+
+on:
+  push:
+    branches:
+      - gpt/14-tests-robustness
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Kompilacja debug
+        run: ./gradlew :app:assembleDebug --console=plain
+      - name: Testy symulacji i odporności
+        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*RobustnessTest*' --console=plain
