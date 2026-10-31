@@ -443,26 +443,28 @@ class BattleScreen(
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
-        // Pierwszy dymek wyłącznie po samouczku, raz na profil; zapis poza wątkiem gry.
-        if (introRemaining > 0f) introRemaining = (introRemaining - dt).coerceAtLeast(0f)
-        if (!introChecked && tut == null && !paused && !finished &&
-            battle.pendingVariant == null && battle.pendingChoice == null &&
-            battle.pendingCards == null && showUpgrade < 0 && !showTurrets &&
-            hints.activeId < 0 && g.profile.hintsEnabled) {
-            introDelay += dt
-            if (introDelay >= 1f) {
-                introChecked = true
-                if (g.profile.markHintSeen(Profile.HINT_LONG_PRESS)) {
-                    introTooltip.set(L["hint_title"], L["tip53_intro"])
-                    introRemaining = 6f
-                }
-            }
-        }
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
         hints.update(dt, finished || paused || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
             showTurrets || showUpgrade >= 0 || criticalDaily)
+        // Nie zużywamy czasu ani bitu wskazówki, gdy zasłania ją inna podpowiedź.
+        if (!paused && !finished && hints.activeId < 0 && !isTooltipHeld &&
+            showUpgrade < 0 && !showTurrets &&
+            battle.pendingVariant == null && battle.pendingChoice == null &&
+            battle.pendingCards == null && tut == null && g.profile.hintsEnabled) {
+            if (introRemaining > 0f) introRemaining = (introRemaining - dt).coerceAtLeast(0f)
+            if (!introChecked) {
+                introDelay += dt
+                if (introDelay >= 1f) {
+                    introChecked = true
+                    if (g.profile.markHintSeen(Profile.HINT_LONG_PRESS)) {
+                        introTooltip.set(L["hint_title"], L["tip53_intro"])
+                        introRemaining = 6f
+                    }
+                }
+            }
+        }
     }
 
     private var turretSlotsLaid = -1
