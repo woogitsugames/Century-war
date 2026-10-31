@@ -85,9 +85,9 @@ class MissionsScreen(g: Game) : Screen(g) {
 
     private fun place() {
         val gap = 9 * dp
-        val rowH = 79 * dp
-        val titleH = 29 * dp
-        val loginH = 106 * dp
+        val rowH = (if (ui.textScale > 1.15f) 96f else 79f) * dp
+        val titleH = (if (ui.textScale > 1.15f) 37f else 29f) * dp
+        val loginH = (if (ui.textScale > 1.15f) 124f else 106f) * dp
         val start = contentTop - scroll
         loginRect.set(left, start, left + cardWidth, start + loginH)
         loginBar.set(left + 14 * dp, loginRect.bottom - 26 * dp, left + cardWidth - 14 * dp, loginRect.bottom - 18 * dp)
