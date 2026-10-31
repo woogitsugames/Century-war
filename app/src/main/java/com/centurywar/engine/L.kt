@@ -94,6 +94,13 @@ object L {
         "sk_moddesc_7" to t("Doświadczenie przyrasta wolniej.", "Experience grows more slowly.", "Erfahrung wächst langsamer.", "La experiencia crece más lento.", "L'expérience progresse moins vite.", "Esperienza più lenta.", "Experiência cresce mais devagar.", "Досвід зростає повільніше.", "Ervaring stijgt langzamer.", "Deneyim daha yavaş artar."),
         "sk_moddesc_8" to t("Wróg ma lepszą ochronę.", "Enemy has better armor.", "Gegner hat bessere Rüstung.", "El enemigo tiene más armadura.", "L'ennemi est mieux protégé.", "Il nemico ha più armatura.", "O inimigo tem mais armadura.", "Ворог має кращу броню.", "Vijand heeft meer pantser.", "Düşman daha iyi zırhlıdır."),
         "sk_moddesc_9" to t("Niepełna informacja o wojskach gracza.", "Enemy sees less of your army.", "Gegner sieht weniger deiner Armee.", "El enemigo ve menos de tu ejército.", "L'ennemi voit moins votre armée.", "Il nemico vede meno il tuo esercito.", "O inimigo vê menos do seu exército.", "Ворог гірше бачить вашу армію.", "Vijand ziet minder van je leger.", "Düşman ordunu kısmen görür."),
+        "sk_none" to t("Brak", "None", "Keine", "Ninguno", "Aucun", "Nessuno", "Nenhum", "Немає", "Geen", "Yok"),
+        "sk_history" to t("Ostatnie potyczki", "Recent skirmishes", "Letzte Gefechte", "Escaramuzas recientes", "Escarmouches récentes", "Schermaglie recenti", "Escaramuças recentes", "Останні сутички", "Recente gevechten", "Son çatışmalar"),
+        "sk_history_empty" to t("Brak rozegranych potyczek", "No skirmishes yet", "Noch keine Gefechte", "Aún no hay escaramuzas", "Aucune escarmouche", "Nessuna schermaglia", "Nenhuma escaramuça", "Сутичок ще немає", "Nog geen gevechten", "Henüz çatışma yok"),
+        "sk_win" to t("Wygrana", "Win", "Sieg", "Victoria", "Victoire", "Vittoria", "Vitória", "Перемога", "Winst", "Zafer"),
+        "sk_loss" to t("Porażka", "Loss", "Niederlage", "Derrota", "Défaite", "Sconfitta", "Derrota", "Поразка", "Verlies", "Yenilgi"),
+        "sk_classic" to t("Ranking", "Ranked", "Rangliste", "Ranking", "Classé", "Classifica", "Ranking", "Рейтинг", "Ranglijst", "Sıralama"),
+        "sk_custom" to t("Własna", "Custom", "Eigene", "Propia", "Libre", "Libera", "Livre", "Власна", "Eigen", "Özel"),
         // --- menu
         "title" to t("CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR", "CENTURY WAR"),
         "subtitle" to t("Wojna przez stulecia", "War across the centuries", "Krieg durch die Jahrhunderte", "Guerra a través de los siglos", "La guerre à travers les siècles", "Guerra attraverso i secoli", "Guerra através dos séculos", "Війна крізь століття", "Oorlog door de eeuwen heen", "Yüzyıllar boyu savaş"),
