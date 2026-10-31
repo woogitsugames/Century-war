@@ -378,7 +378,7 @@ class BattleScreen(
                     FxBuffer.MUZZLE -> {
                         if (++shots > 4) continue
                         val id = shotSound(fx.value[i].toInt(), style, fx.turret[i])
-                        g.sfx(id, vol * if (fx.turret[i]) 0.54f else 0.40f,
+                        g.sfx(id, vol * (if (fx.turret[i]) 0.54f else 0.40f),
                             45, pan = pan, priority = if (fx.turret[i]) 2 else 1)
                     }
                     FxBuffer.BASE_HIT -> {
