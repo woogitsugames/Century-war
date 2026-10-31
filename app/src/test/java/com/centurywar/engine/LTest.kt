@@ -156,6 +156,98 @@ class LTest {
         }
     }
 
+
+    /** Krótkie etykiety interakcji; tytuły i dłuższe opisy mogą się zawijać. */
+    @Test
+    fun buttonLabelsFitWithin18Characters() {
+        val buttonKeys = setOf(
+            "back",
+            "play",
+            "start",
+            "campaign",
+            "daily",
+            "weekly",
+            "skirmish",
+            "research",
+            "rankings",
+            "settings",
+            "accessibility",
+            "replay",
+            "replay_list",
+            "replay_pin",
+            "replay_delete",
+            "replay_pause",
+            "replay_play",
+            "replay_follow",
+            "replay_camera",
+            "q_auto",
+            "q_low",
+            "q_med",
+            "q_high",
+            "fps_max",
+            "on",
+            "off",
+            "show_fps",
+            "reset",
+            "global_allow",
+            "global_cancel",
+            "global_new_id",
+            "global_local",
+            "global_period_day",
+            "global_period_week",
+            "global_period_all",
+            "global_top",
+            "global_around",
+            "pgs_sign_in",
+            "pgs_sync",
+            "evolve",
+            "turrets",
+            "armory",
+            "hold",
+            "advance",
+            "rally",
+            "resume",
+            "quit",
+            "restart",
+            "continue",
+            "sell",
+            "upgrade",
+            "choose_card",
+            "tut_skip",
+            "tut_next",
+            "tut_go",
+            "ms_claim",
+            "ms_claimed",
+            "hint_ok",
+            "hint_replay",
+            "hint_reset",
+            "hint_confirm",
+            "sk_defaults",
+            "sk_shuffle",
+            "sk_random",
+            "sk_classic",
+            "sk_custom",
+            "sk_start",
+            "sk_end",
+            "sk_none",
+            "sk_win",
+            "sk_loss",
+            "resume_yes",
+            "resume_no"
+        )
+        for (key in buttonKeys) {
+            val translations = L.raw(key)
+            assertTrue("Brak etykiety przycisku: $key", translations != null)
+            for (lang in L.CODES.indices) {
+                val value = translations!![lang]
+                assertTrue(
+                    "$key/${L.CODES[lang]}: $value (${value.length} > 18)",
+                    value.length <= 18
+                )
+            }
+        }
+    }
+
     @Test
     fun fallbackAndCodes() {
         assertEquals("missing_key", L["missing_key"])
