@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.Sound
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
@@ -263,7 +264,14 @@ class CampaignScreen(g: Game) : Screen(g) {
                     tutorial = s.index == 0 && !g.profile.tutorialDone)))
             }
             -3 -> selected = null
-            else -> selected = b.tag as? Stage
+            else -> {
+                selected = b.tag as? Stage
+                val stage = selected
+                if (stage != null && stage.index > 0 && stage.index % 4 == 0 &&
+                    stage.index == g.profile.unlockedStage()) {
+                    g.sfx(Sound.ERA_UNLOCK, 0.52f, 500)
+                }
+            }
         }
     }
 
