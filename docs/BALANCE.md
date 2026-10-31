@@ -233,3 +233,46 @@ Odchylenie wewnętrznego etapu od średniej dwóch sąsiadów ≤25 p.p.,
 0 timeoutów i mediana czasu ≥4 min od etapu 7. Jeśli którykolwiek warunek
 nie będzie spełniony, należy jeszcze dostroić wskazane etapy i powtórzyć pomiar
 na tych samych seedach. Nie oznaczać zlecenia jako zakończonego bez tych danych.
+
+## Endless — izolacja tematów fal i pomiar weterana (zlecenie 46)
+
+**Weryfikacja wyników:** pomiar automatyczny został zlecony do GitHub Actions,
+ale liczby w poniższej tabeli wymagają zakończenia przebiegu CI. Do tego czasu
+nie traktuj pól „oczekuje na CI” jako wyników testów.
+
+- Profil: 80% z 110 poziomów badań, obliczone tym samym algorytmem co
+  `BalanceReport` (odblokowania jednopoziomowe najpierw, reszta rozdzielona
+  proporcjonalnie). `Research.bonuses` w module `:sim` przelicza poziomy
+  na mnożniki. Gracz jest prowadzony przez `Ai(b, 0)`.
+- Seedy: **1001–1020** (20 bitew), startowe zasady zwykłego `Mode.ENDLESS`,
+  maksymalnie 90 000 kroków na seed lub do fali 60.
+- `ENDLESS_SURVIVE_N` oznacza liczbę bitew, które **dotarły do fali N
+  z żywą bazą gracza**; test zatrzymuje się na początku fali 60.
+  `ENDLESS_FAILURES` to liczba porażek przed falą 60.
+- Wynik i tabela są drukowane przez
+  `server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt`:
+
+```bash
+./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks
+```
+
+| Fala | Dotarło z żywą bazą (20 seedów) |
+|---:|---:|
+| 20 | oczekuje na CI |
+| 30 | oczekuje na CI |
+| 40 | oczekuje na CI |
+| 50 | oczekuje na CI |
+| 60 | oczekuje na CI |
+
+Średnia osiągnięta fala (`ENDLESS_MEAN`): **oczekuje na CI**.
+Liczba porażek i mediana fali porażki:
+**oczekuje na CI** (`ENDLESS_FAILURES`, `ENDLESS_DEFEAT_WAVE_MEDIAN`).
+
+Porównanie na CI wykorzystuje `git merge-base HEAD origin/main` i uruchamia
+ten sam test na bazowej oraz zmienionej symulacji (zachowując jednakowe seedy
+i badania). Nie korzysta ze stałego commita. Obecny próg regresji to ±15%
+średniej osiągniętej fali.
+
+**Uwagi:** zmiana kolejności lub efektów fal modyfikuje symulację i
+historyczne powtórki. Zgodnie ze zleceniem wersji rankingu nie zmieniono
+— wymaga to działania koordynatora.

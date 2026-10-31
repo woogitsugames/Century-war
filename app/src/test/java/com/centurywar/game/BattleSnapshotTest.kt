@@ -70,6 +70,7 @@ class BattleSnapshotTest {
             assertArrayEquals(x.unitTier, y.unitTier)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
+            assertArrayEquals(x.queueWaveTheme.copyOf(x.queueSize), y.queueWaveTheme.copyOf(y.queueSize))
             assertEquals(x.elitesTrained, y.elitesTrained)
             assertEquals(x.elitesLost, y.elitesLost)
             assertEquals(x.turretsBuilt, y.turretsBuilt)
@@ -88,6 +89,7 @@ class BattleSnapshotTest {
             if (!u.active) continue
             assertEquals(u.x, v.x); assertEquals(u.hp, v.hp); assertEquals(u.serial, v.serial); assertEquals(u.def.id, v.def.id)
             assertEquals(u.tier, v.tier); assertEquals(u.maxHp, v.maxHp); assertEquals(u.dmg, v.dmg)
+            assertEquals(u.waveSpeedMul, v.waveSpeedMul)
             assertEquals(u.bossKind, v.bossKind)
             assertEquals(u.bossSecondaryKind, v.bossSecondaryKind)
             assertEquals(u.bossCd, v.bossCd)
@@ -204,6 +206,35 @@ class BattleSnapshotTest {
     fun endlessResumesExactly() {
         val (a, _) = check(BattleConfig(Mode.ENDLESS, 7L, 1f), 60 * 200, 60 * 300)
         assertTrue(a.wave >= 5)
+    }
+
+    @Test
+    fun endlessWaveEffectsAndQueueSurviveSave() {
+        val era = Defs.eraOf(EraArt.STEAM)
+        val a = Battle(BattleConfig(Mode.ENDLESS, 12_345L, 1f, startEra = era, maxEra = era))
+        assertTrue(a.chooseVariant(0))
+        a.nextWaveTheme = EndlessWaveTheme.SIEGE_TRAIN
+        a.waveTimer = 0f
+        a.step()
+        assertTrue(a.enemy.queueSize > 0)
+
+        a.enemy.trainT = 100_000f
+        a.waveTimer = 900f
+        a.step()
+        val slow = a.units.first { it.alive && it.side == 1 }
+        assertEquals(0.85f, slow.waveSpeedMul, 0f)
+        a.nextWaveTheme = EndlessWaveTheme.SKIRMISHERS
+        a.waveTimer = 0f
+        a.step()
+
+        val b = roundTrip(a)
+        assertEquals(a.enemy.eraVariant, b.enemy.eraVariant)
+        assertArrayEquals(a.enemy.queueWaveTheme.copyOf(a.enemy.queueSize),
+            b.enemy.queueWaveTheme.copyOf(b.enemy.queueSize))
+        assertEquals(0.85f, b.units.first { it.alive && it.side == 1 }.waveSpeedMul, 0f)
+        steps(a, 60 * 8)
+        steps(b, 60 * 8)
+        assertSame(a, b)
     }
 
     @Test

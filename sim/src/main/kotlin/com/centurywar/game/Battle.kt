@@ -14,6 +14,8 @@ class Fighter {
     var hp = 0f
     var maxHp = 0f
     var dmg = 0f
+    /** Prędkość przypisana do fali przy spawnie (nie dotyczy bossa). */
+    var waveSpeedMul = 1f
     var cd = 0f
     var anim = 0f
     var attackAnim = 0f
@@ -87,6 +89,8 @@ class Side(val index: Int) {
     var baseHp = 0f
     var baseMaxHp = 0f
     val queue = IntArray(Battle.QUEUE_CAP)
+    /** Temat zapamiętany przy dodaniu jednostki do kolejki fal. */
+    val queueWaveTheme = IntArray(Battle.QUEUE_CAP) { EndlessWaveTheme.MIXED.ordinal }
     var queueSize = 0
     var queueMax = 5
     var trainT = 0f
@@ -297,6 +301,8 @@ class Battle(val cfg: BattleConfig) {
     private var bossAuraCount = 0
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
+    /** W Endless dyrektor szkoli fale; AI wroga służy tylko do wyboru wariantu. */
+    private val endlessVariantAi: Ai? = if (endless) Ai(this, 1) else null
     /** Tylko testy/autoplay: AI sterujące graczem. */
     var playerAi: Ai? = null
         set(value) {
@@ -377,7 +383,9 @@ class Battle(val cfg: BattleConfig) {
         if (over || !canQueue(side, role)) return false
         val def = side.unit(role)
         side.gold -= def.cost
-        side.queue[side.queueSize++] = def.id
+        side.queue[side.queueSize] = def.id
+        side.queueWaveTheme[side.queueSize] = EndlessWaveTheme.MIXED.ordinal
+        side.queueSize++
         return true
     }
 
@@ -435,7 +443,7 @@ class Battle(val cfg: BattleConfig) {
         if (side.index == 0 && (playerAi == null || commandController != null)) {
             pendingVariant = side.era
         } else {
-            val brain = if (side.index == 0) playerAi else ai
+            val brain = if (side.index == 0) playerAi else (ai ?: endlessVariantAi)
             applyVariant(side, brain?.chooseVariant(side.era) ?: 0)
         }
     }
@@ -881,9 +889,14 @@ class Battle(val cfg: BattleConfig) {
         val tier = if (def.era == s.era) s.unitTier[def.role.ordinal] else 1
         s.trainT += dt * s.trainMul * Defs.unitTrainRate(def, tier)
         if (s.trainT >= def.trainTime) {
-            if (spawn(s, def)) {
+            val theme = if (endless && s.index == 1)
+                EndlessWaveTheme.entries[s.queueWaveTheme[0]] else EndlessWaveTheme.MIXED
+            if (spawnFighter(s, def, waveTheme = theme) != null) {
                 s.trainT = 0f
-                for (i in 1 until s.queueSize) s.queue[i - 1] = s.queue[i]
+                for (i in 1 until s.queueSize) {
+                    s.queue[i - 1] = s.queue[i]
+                    s.queueWaveTheme[i - 1] = s.queueWaveTheme[i]
+                }
                 s.queueSize--
                 if (endless && s.index == 0 && s.cloneChance > 0f &&
                     s.aliveCount < s.cap && rng.nextFloat() < s.cloneChance) spawn(s, def)
@@ -894,7 +907,8 @@ class Battle(val cfg: BattleConfig) {
     fun spawn(s: Side, def: UnitDef, extraHpMul: Float = 1f): Boolean =
         spawnFighter(s, def, extraHpMul) != null
 
-    private fun spawnFighter(s: Side, def: UnitDef, extraHpMul: Float = 1f): Fighter? {
+    private fun spawnFighter(s: Side, def: UnitDef, extraHpMul: Float = 1f,
+                             waveTheme: EndlessWaveTheme = EndlessWaveTheme.MIXED): Fighter? {
         var f: Fighter? = null
         for (u in units) if (!u.active) { f = u; break }
         if (f == null) return null
@@ -906,7 +920,9 @@ class Battle(val cfg: BattleConfig) {
         f.prevX = Float.NaN
         f.stride = 0f; f.prevStride = 0f
         f.hitStep = -1; f.hitPow = 0f
-        f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier)
+        f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier) *
+            (if (waveTheme == EndlessWaveTheme.SKIRMISHERS) 0.8f else 1f)
+        f.waveSpeedMul = if (waveTheme == EndlessWaveTheme.SIEGE_TRAIN) 0.85f else 1f
         f.hp = f.maxHp
         f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier) * when (def.role) {
             Role.RANGED -> s.rangedDmgMul
@@ -1078,7 +1094,7 @@ class Battle(val cfg: BattleConfig) {
             if ((u.x - holdX) * s.dir >= 0f) blocked = true
         }
         if (!blocked) {
-            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * rally
+            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally
             val v = if (weather == Weather.RAIN) normalSpeed * 0.92f else normalSpeed
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
@@ -1279,11 +1295,8 @@ class Battle(val cfg: BattleConfig) {
             if (cfg.variantsEnabled) offerVariant(e)
         }
         val inEra = wave % 6
-        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f) *
-            (if (currentWaveTheme == EndlessWaveTheme.SKIRMISHERS) 0.8f else 1f)
+        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
         e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f)
-        e.speedMul = (if (Modifier.FAST_UNITS in cfg.modifiers) 1.5f else 1f) *
-            (if (currentWaveTheme == EndlessWaveTheme.SIEGE_TRAIN) 0.85f else 1f)
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f) *
             when (currentWaveTheme) {
                 EndlessWaveTheme.SIEGE_TRAIN -> 1.15f
@@ -1293,7 +1306,9 @@ class Battle(val cfg: BattleConfig) {
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
             val def = e.unit(waveRole(rng.nextInt(100)))
-            e.queue[e.queueSize++] = def.id
+            e.queue[e.queueSize] = def.id
+            e.queueWaveTheme[e.queueSize] = currentWaveTheme.ordinal
+            e.queueSize++
             budget -= def.cost
             n++
         }

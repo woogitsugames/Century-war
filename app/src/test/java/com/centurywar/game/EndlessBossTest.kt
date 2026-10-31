@@ -243,12 +243,14 @@ class EndlessBossTest {
         siege.nextWaveTheme = EndlessWaveTheme.SIEGE_TRAIN
         siege.waveTimer = 0f
         siege.step()
-        assertEquals(0.85f, siege.enemy.speedMul, 0.0001f)
+        assertEquals(1f, siege.enemy.speedMul, 0.0001f)
+        assertEquals(EndlessWaveTheme.SIEGE_TRAIN.ordinal, siege.enemy.queueWaveTheme[0])
         val swarm = Battle(BattleConfig(Mode.ENDLESS, 81L, 1f))
         swarm.nextWaveTheme = EndlessWaveTheme.SKIRMISHERS
         swarm.waveTimer = 0f
         swarm.step()
-        assertEquals(1.05f * 0.8f, swarm.enemy.hpMul, 0.0001f)
+        assertEquals(1.05f, swarm.enemy.hpMul, 0.0001f)
+        assertEquals(EndlessWaveTheme.SKIRMISHERS.ordinal, swarm.enemy.queueWaveTheme[0])
     }
 
     /** Pomiar 10 seedów: wynik drukowany do raportu CI, bez fikcyjnej bazy odniesienia. */
