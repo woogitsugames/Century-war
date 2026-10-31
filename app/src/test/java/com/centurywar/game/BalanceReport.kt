@@ -155,12 +155,12 @@ class BalanceReport {
         val only = System.getenv("BALANCE_STAGES")?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()
         val out = File(System.getenv("BALANCE_OUT") ?: "build/balance")
         out.mkdirs()
-        val csv = StringBuilder("stage,weather,profile,runs,weather_win_pct,clear_win_pct,delta_pp,prev_win_pct,next_win_pct\\n")
-        val md = StringBuilder("# Wpływ pogody na balans kampanii\\n\\n")
+        val csv = StringBuilder("stage,weather,profile,runs,weather_win_pct,clear_win_pct,delta_pp,prev_win_pct,next_win_pct\n")
+        val md = StringBuilder("# Wpływ pogody na balans kampanii\n\n")
             .append("Te same seedy i profil badań dla pogody, CLEAR i sąsiadów; N=$runs. ")
-            .append("Wyniki są porównywane w punktach procentowych.\\n\\n")
-            .append("| Etap | Pogoda | Profil | N | Wygrane pogoda | CLEAR | Delta [pp] | Poprz. | Nast. |\\n")
-            .append("|---:|---|---|---:|---:|---:|---:|---:|---:|\\n")
+            .append("Wyniki są porównywane w punktach procentowych.\n\n")
+            .append("| Etap | Pogoda | Profil | N | Wygrane pogoda | CLEAR | Delta [pp] | Poprz. | Nast. |\n")
+            .append("|---:|---|---|---:|---:|---:|---:|---:|---:|\n")
         for (stage in Campaign.stages) {
             if (stage.weather == Weather.CLEAR || (only != null && stage.index + 1 !in only)) continue
             val profile = profiles.first { it.name == targetProfile(stage.index) }
@@ -176,8 +176,8 @@ class BalanceReport {
             println("WEATHER_BALANCE stage=${stage.index + 1} weather=${stage.weather} profile=${profile.name}" +
                 " win=${fmt(rainy.winPct)}% clear=${fmt(baseline.winPct)}% delta=${fmt(delta)}pp" +
                 " neighbors=${fmt(previous)}%/${fmt(next)}%")
-            csv.append("${stage.index + 1},${stage.weather},${profile.name},$runs,${fmt(rainy.winPct)},${fmt(baseline.winPct)},${fmt(delta)},${fmt(previous)},${fmt(next)}\\n")
-            md.append("| ${stage.index + 1} | ${stage.weather} | ${profile.name} | $runs | ${fmt(rainy.winPct)}% | ${fmt(baseline.winPct)}% | ${fmt(delta)} | ${fmt(previous)}% | ${fmt(next)}% |\\n")
+            csv.append("${stage.index + 1},${stage.weather},${profile.name},$runs,${fmt(rainy.winPct)},${fmt(baseline.winPct)},${fmt(delta)},${fmt(previous)},${fmt(next)}\n")
+            md.append("| ${stage.index + 1} | ${stage.weather} | ${profile.name} | $runs | ${fmt(rainy.winPct)}% | ${fmt(baseline.winPct)}% | ${fmt(delta)} | ${fmt(previous)}% | ${fmt(next)}% |\n")
         }
         File(out, "weather-impact.csv").writeText(csv.toString())
         File(out, "weather-impact.md").writeText(md.toString())
