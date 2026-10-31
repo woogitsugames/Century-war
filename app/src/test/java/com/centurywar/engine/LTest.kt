@@ -15,7 +15,7 @@ class LTest {
     /** Klucze, które celowo mogą nie mieć przekładu (zastępuje je angielski). */
     private val allowedFallback = emptySet<String>()
 
-    private val spec = Regex("%(\\.\\d+)?[dsf]")
+    private val spec = Regex("%(?:\\d+\\$)?(?:\\.\\d+)?[dsf]")
 
     @Test
     fun everyKeyHasAllLanguages() {
@@ -41,6 +41,15 @@ class LTest {
         val dups = keys.groupingBy { it }.eachCount().filter { it.value > 1 }.keys
         assertTrue("Powtórzone klucze w L.kt: $dups", dups.isEmpty())
         assertEquals(keys.size, L.keys.size)
+    }
+
+    @Test
+    fun placeholderRegexSupportsPositionalArguments() {
+        val samples = "%1\$s %2\$d %.1f %%"
+        assertEquals(
+            listOf("%1\$s", "%2\$d", "%.1f"),
+            spec.findAll(samples.replace("%%", "")).map { it.value }.toList()
+        )
     }
 
     @Test
