@@ -55,6 +55,25 @@ class ProfileTest {
     }
 
     @Test
+    fun legacyProfileMigratesBranchPreferences() {
+        val f = tmpFile()
+        f.writeText("""{"v":1,"medals":100,"stars":[2,1]}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(0, old.preferredVariant(4))
+        assertEquals(0, old.preferredVariant(6))
+        old.rememberVariant(4, 1)
+        old.rememberVariant(6, 1)
+        val fresh = Profile(f).also { it.load() }
+        assertEquals(100, fresh.medals)
+        assertEquals(1, fresh.preferredVariant(4))
+        assertEquals(1, fresh.preferredVariant(6))
+        f.writeText("""{"v":2,"steamPreference":900,"siliconPreference":-20}""")
+        val invalid = Profile(f).also { it.load() }
+        assertEquals(1, invalid.preferredVariant(4))
+        assertEquals(0, invalid.preferredVariant(6))
+    }
+
+    @Test
     fun loadFallsBackToTempFileWhenMainIsMissing() {
         val f = tmpFile()
         Profile(f).apply { medals = 321; save() }
