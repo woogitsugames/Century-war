@@ -51,6 +51,8 @@ class UnitDef(
     val body: Int,
     /** Mnożnik obrażeń zadawanych bazom i wieżom (oblężnicze jednostki mają > 1). */
     val siegeMul: Float,
+    val variant: Int = -1,
+    val art: EraArt = Defs.spec(era).art,
 ) {
     /** Klucze lokalizowanych nazw trzech stopni. */
     val tierNameKeys = arrayOf(nameKey, nameKey + "_t2", nameKey + "_t3")
@@ -65,6 +67,8 @@ class TurretDef(
     val cooldown: Float,
     val splash: Float,
     val projectile: Int,
+    val variant: Int = -1,
+    val art: EraArt = Defs.spec(era).art,
 )
 
 class EraDef(
@@ -94,7 +98,7 @@ object Proj {
 }
 
 /** Identyfikatory stylów, niezależne od miejsca epoki w kampanii. */
-enum class EraArt { TRIBAL, BRONZE, IRON, FEUDAL, POWDER, STEAM, STEEL, SILICON, ORBITAL }
+enum class EraArt { TRIBAL, BRONZE, IRON, FEUDAL, POWDER, STEAM, STEEL, SILICON, ORBITAL, COMBUSTION, GALVANIC, SWARM, BIOTECH }
 
 /** Rodzaj krajobrazu i obiektów tła. */
 enum class Terrain { WOODS, DESERT, PAVED_HILLS, PINES, INDUSTRIAL, CITY, SPACE }
@@ -119,7 +123,38 @@ class EraSpec(
     val palette: IntArray,
     val accent: Int,
     val fastTurret: Boolean,
+    val variants: Array<EraVariant> = emptyArray(),
 )
+
+/** Odmienny skład, wieża i ostrzał w obrębie epoki. Kolejność pól statystyk odpowiada Role. */
+class EraVariant(
+    val key: String,
+    val nameKey: String,
+    val descKey: String,
+    val art: EraArt,
+    val unitNames: Array<String>,
+    val heavyBody: Int,
+    val eliteBody: Int,
+    val heavyProj: Int,
+    val eliteProj: Int,
+    val heavyWeapon: Int,
+    val eliteWeapon: Int,
+    val costMul: FloatArray,
+    val hpMul: FloatArray,
+    val dmgMul: FloatArray,
+    val speedMul: FloatArray,
+    val turretName: String,
+    val turretProj: Int,
+    val turretDmgMul: Float,
+    val turretCooldownMul: Float,
+    val barrageProj: Int,
+    val barrageCount: Int,
+    val barrageSplash: Float,
+    val terrain: Terrain? = null,
+    val palette: IntArray? = null,
+)
+
+class BarrageDef(val projectile: Int, val count: Int, val splash: Float)
 
 /** Dane epok bez równoległych tablic; każda kolejna jest jednym wpisem. */
 object Defs {
@@ -182,7 +217,31 @@ object Defs {
             intArrayOf(Weapon.RIFLE, Weapon.RIFLE, Weapon.MG, Weapon.MG), Body.MECH, Body.VEHICLE,
             Proj.BULLET, Proj.BULLET, Proj.SHELL, "t_gatling", Proj.BULLET, "ab_shells", Proj.SHELL,
             34500, EraArt.STEAM, Terrain.INDUSTRIAL,
-            intArrayOf(0xFF969696.toInt(), 0xFFD2BEA0.toInt(), 0xFF7C7A78.toInt(), 0xFF646458.toInt(), 0xFF4E4E46.toInt(), 0xFF6E5F50.toInt()), 0xFF8C7040.toInt(), true),
+            intArrayOf(0xFF969696.toInt(), 0xFFD2BEA0.toInt(), 0xFF7C7A78.toInt(), 0xFF646458.toInt(), 0xFF4E4E46.toInt(), 0xFF6E5F50.toInt()), 0xFF8C7040.toInt(), true,
+            variants = arrayOf(
+                EraVariant("combustion", "v_combustion", "v_combustion_d", EraArt.COMBUSTION,
+                    arrayOf("u_comb_guard", "u_comb_gunner", "u_comb_carrier", "u_comb_colossus"),
+                    Body.VEHICLE, Body.VEHICLE, Proj.SHELL, Proj.SHELL, Weapon.MG, Weapon.LAUNCHER,
+                    floatArrayOf(1.03f, 1.02f, 1.10f, 1.12f),
+                    floatArrayOf(1.02f, 1.02f, 1.25f, 1.30f),
+                    floatArrayOf(1f, 1f, 1.04f, 1.08f),
+                    floatArrayOf(0.98f, 0.98f, 0.78f, 0.74f),
+                    "t_combustion", Proj.SHELL, 1.13f, 1.08f, Proj.SHELL, 12, 72f,
+                    terrain = Terrain.INDUSTRIAL,
+                    palette = intArrayOf(0xFF77706C.toInt(), 0xFFC3A38A.toInt(),
+                        0xFF736960.toInt(), 0xFF5A534C.toInt(), 0xFF49463E.toInt(), 0xFF73624D.toInt())),
+                EraVariant("galvanic", "v_galvanic", "v_galvanic_d", EraArt.GALVANIC,
+                    arrayOf("u_galv_guard", "u_galv_gunner", "u_galv_coil", "u_galv_arc"),
+                    Body.MECH, Body.HOVER, Proj.BEAM, Proj.PLASMA, Weapon.RAIL, Weapon.BLASTER,
+                    floatArrayOf(1.02f, 1.02f, 1.10f, 1.12f),
+                    floatArrayOf(0.98f, 0.98f, 0.82f, 0.80f),
+                    floatArrayOf(1f, 1f, 1.08f, 1.06f),
+                    floatArrayOf(1.02f, 1.02f, 1.08f, 1.12f),
+                    "t_galvanic", Proj.BEAM, 0.90f, 0.94f, Proj.BEAM, 16, 45f,
+                    terrain = Terrain.CITY,
+                    palette = intArrayOf(0xFF477C8A.toInt(), 0xFFB4D9D1.toInt(),
+                        0xFF578E94.toInt(), 0xFF3B646D.toInt(), 0xFF2B4F5B.toInt(), 0xFF4D6C69.toInt())),
+            )),
         EraSpec("era_steel", arrayOf("u_infantry", "u_gunner", "u_halftrack", "u_heavytank"),
             intArrayOf(Weapon.RIFLE, Weapon.MG, Weapon.MG, Weapon.MG), Body.VEHICLE, Body.VEHICLE,
             Proj.BULLET, Proj.BULLET, Proj.SHELL, "t_flak", Proj.SHELL, "ab_bombers", Proj.SHELL,
@@ -192,7 +251,31 @@ object Defs {
             intArrayOf(Weapon.RIFLE, Weapon.LAUNCHER, Weapon.MG, Weapon.LAUNCHER), Body.VEHICLE, Body.MECH,
             Proj.ROCKET, Proj.BULLET, Proj.ROCKET, "t_missile", Proj.ROCKET, "ab_missiles", Proj.ROCKET,
             194000, EraArt.SILICON, Terrain.CITY,
-            intArrayOf(0xFF3C6EAA.toInt(), 0xFFAAC8E6.toInt(), 0xFF46506E.toInt(), 0xFF3C465A.toInt(), 0xFF2A3246.toInt(), 0xFF5A5A5F.toInt()), 0xFF288CA0.toInt(), false),
+            intArrayOf(0xFF3C6EAA.toInt(), 0xFFAAC8E6.toInt(), 0xFF46506E.toInt(), 0xFF3C465A.toInt(), 0xFF2A3246.toInt(), 0xFF5A5A5F.toInt()), 0xFF288CA0.toInt(), false,
+            variants = arrayOf(
+                EraVariant("swarm", "v_swarm", "v_swarm_d", EraArt.SWARM,
+                    arrayOf("u_swarm_scout", "u_swarm_spitter", "u_swarm_cloud", "u_swarm_carrier"),
+                    Body.HOVER, Body.HOVER, Proj.PLASMA, Proj.ROCKET, Weapon.BLASTER, Weapon.LAUNCHER,
+                    floatArrayOf(0.86f, 0.90f, 0.86f, 0.91f),
+                    floatArrayOf(0.86f, 0.88f, 0.78f, 0.85f),
+                    floatArrayOf(0.95f, 0.96f, 0.90f, 0.94f),
+                    floatArrayOf(1.16f, 1.16f, 1.22f, 1.18f),
+                    "t_swarm", Proj.PLASMA, 0.89f, 0.86f, Proj.PLASMA, 20, 42f,
+                    terrain = Terrain.CITY,
+                    palette = intArrayOf(0xFF3268A6.toInt(), 0xFFB8DDF1.toInt(),
+                        0xFF547DB2.toInt(), 0xFF42718C.toInt(), 0xFF2E5169.toInt(), 0xFF526E76.toInt())),
+                EraVariant("biotech", "v_biotech", "v_biotech_d", EraArt.BIOTECH,
+                    arrayOf("u_bio_guard", "u_bio_spore", "u_bio_golem", "u_bio_leviathan"),
+                    Body.BEAST, Body.MECH, Proj.PLASMA, Proj.BEAM, Weapon.BLASTER, Weapon.RAIL,
+                    floatArrayOf(1.16f, 1.14f, 1.20f, 1.24f),
+                    floatArrayOf(1.12f, 1.08f, 1.20f, 1.25f),
+                    floatArrayOf(0.98f, 0.98f, 1.01f, 1.02f),
+                    floatArrayOf(0.94f, 0.98f, 0.93f, 0.90f),
+                    "t_biotech", Proj.PLASMA, 1.04f, 1.04f, Proj.PLASMA, 12, 72f,
+                    terrain = Terrain.WOODS,
+                    palette = intArrayOf(0xFF447D78.toInt(), 0xFFBAD5B3.toInt(),
+                        0xFF638C78.toInt(), 0xFF426E5A.toInt(), 0xFF305746.toInt(), 0xFF517553.toInt())),
+            )),
         EraSpec("era_orbital", arrayOf("u_plasma", "u_railgunner", "u_hovertank", "u_titan"),
             intArrayOf(Weapon.BLASTER, Weapon.RAIL, Weapon.BLASTER, Weapon.RAIL), Body.HOVER, Body.MECH,
             Proj.BEAM, Proj.PLASMA, Proj.PLASMA, "t_laser", Proj.BEAM, "ab_orbital", Proj.BEAM,
@@ -206,24 +289,78 @@ object Defs {
     fun spec(era: Int): EraSpec = specs[era]
 
     /** Indeks gotowego stylu postaci i machin; nie jest numerem epoki. */
-    fun artPreset(era: Int): Int = when (specs[era].art) {
+    fun artPreset(era: Int): Int = artPreset(specs[era].art)
+    fun artPreset(art: EraArt): Int = when (art) {
         EraArt.TRIBAL -> 0
         EraArt.BRONZE -> 1
         EraArt.IRON, EraArt.FEUDAL -> 2
         EraArt.POWDER -> 3
-        EraArt.STEAM -> 4
+        EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC -> 4
         EraArt.STEEL -> 5
-        EraArt.SILICON -> 6
+        EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH -> 6
         EraArt.ORBITAL -> 7
     }
     fun statScale(era: Int): Float = StrictMath.pow(STAT_GROWTH.toDouble(), era.toDouble()).toFloat()
     fun costScale(era: Int): Float = StrictMath.pow(COST_GROWTH.toDouble(), era.toDouble()).toFloat()
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
-    /** Identyfikator = numer epoki * liczba ról + rola. */
-    val allUnits: Array<UnitDef> = Array(ERA_COUNT * Role.values().size) { eras[it / Role.values().size].units[it % Role.values().size] }
+    /** Warianty leżą za bazowymi jednostkami, bez zmiany dawnych identyfikatorów. */
+    private val variantUnits: Array<Array<Array<UnitDef>>> = Array(ERA_COUNT) { era ->
+        Array(specs[era].variants.size) { index ->
+            val v = specs[era].variants[index]
+            val offset = ERA_COUNT * Role.entries.size +
+                (0 until era).sumOf { specs[it].variants.size } * Role.entries.size +
+                index * Role.entries.size
+            Array(Role.entries.size) { role ->
+                val base = eras[era].units[role]
+                UnitDef(offset + role, era, base.role, v.unitNames[role],
+                    (base.cost * v.costMul[role]).toInt(), base.hp * v.hpMul[role],
+                    base.dmg * v.dmgMul[role], base.range, base.cooldown,
+                    base.speed * v.speedMul[role], base.trainTime, base.size, base.splash,
+                    when (base.role) { Role.HEAVY -> v.heavyProj; Role.ELITE -> v.eliteProj; else -> base.projectile },
+                    when (base.role) { Role.HEAVY -> v.heavyWeapon; Role.ELITE -> v.eliteWeapon; else -> base.weapon },
+                    when (base.role) { Role.HEAVY -> v.heavyBody; Role.ELITE -> v.eliteBody; else -> base.body },
+                    base.siegeMul, index, v.art)
+            }
+        }
+    }
+    val allUnits: Array<UnitDef> = buildList {
+        for (e in eras) addAll(e.units)
+        for (e in variantUnits) for (v in e) addAll(v)
+    }.toTypedArray()
 
-    fun unit(era: Int, role: Role): UnitDef = eras[era].units[role.ordinal]
+    private val variantTurrets: Array<Array<TurretDef>> = Array(ERA_COUNT) { era ->
+        Array(specs[era].variants.size) { index ->
+            val v = specs[era].variants[index]
+            val base = eras[era].turret
+            TurretDef(era, v.turretName, base.cost, base.dmg * v.turretDmgMul,
+                base.range, base.cooldown * v.turretCooldownMul,
+                base.splash, v.turretProj, index, v.art)
+        }
+    }
+    private val baseBarrage = Array(ERA_COUNT) { BarrageDef(specs[it].barrageProj, 16, 60f) }
+    private val variantBarrage = Array(ERA_COUNT) { era ->
+        Array(specs[era].variants.size) { v ->
+            val spec = specs[era].variants[v]
+            BarrageDef(spec.barrageProj, spec.barrageCount, spec.barrageSplash)
+        }
+    }
+
+    fun unit(era: Int, role: Role, variant: Int = -1): UnitDef =
+        if (variant < 0) eras[era].units[role.ordinal] else variantUnits[era][variant][role.ordinal]
+    fun turret(era: Int, variant: Int = -1): TurretDef =
+        if (variant < 0) eras[era].turret else variantTurrets[era][variant]
+    fun barrage(era: Int, variant: Int = -1): BarrageDef =
+        if (variant < 0) baseBarrage[era] else variantBarrage[era][variant]
+    fun eraOf(art: EraArt): Int = specs.indexOfFirst { it.art == art }
+    fun palette(era: Int, variant: Int = -1): IntArray =
+        if (variant < 0) specs[era].palette
+        else specs[era].variants[variant].palette ?: specs[era].palette
+    fun terrain(era: Int, variant: Int = -1): Terrain =
+        if (variant < 0) specs[era].terrain
+        else specs[era].variants[variant].terrain ?: specs[era].terrain
+    fun sideArt(era: Int, variant: Int): EraArt =
+        if (variant < 0) specs[era].art else specs[era].variants[variant].art
 
     /** Koszt zależy od epoki, roli i kupowanego stopnia. */
     fun unitUpgradeCost(era: Int, role: Role, nextTier: Int): Int {

@@ -103,6 +103,72 @@ class ArtGalleryTest {
         save(bmp, "gallery_animation")
     }
 
+    /** Warianty w osobnych planszach galerii; nazwy PNG zawierają gallery_units_*. */
+    @Test
+    fun variantUnits() {
+        val arts = arrayOf(EraArt.STEAM, EraArt.SILICON)
+        for (quality in intArrayOf(Quality.HIGH, Quality.LOW)) {
+            val cell = if (quality == Quality.HIGH) 320 else 110
+            val g = game(1600, 900, quality)
+            val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 8L, 1f)))
+            val bmp = Bitmap.createBitmap(cell * 4, cell * 4, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            c.drawColor(Color.rgb(196, 214, 228))
+            val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
+            for (i in 0 until 4) {
+                val era = Defs.eraOf(arts[i / 2])
+                val variant = i % 2
+                for (role in Role.entries) {
+                    val x = role.ordinal * cell.toFloat()
+                    val y = i * cell.toFloat()
+                    c.drawRect(x, y + cell * 0.86f, x + cell, y + cell, ground)
+                    val def = Defs.unit(era, role, variant)
+                    renderer.drawUnitIcon(c, def, x + cell / 2f, y + cell * 0.86f,
+                        cell * 0.78f, Ui.PLAYER)
+                }
+            }
+            save(bmp, if (quality == Quality.HIGH) "gallery_units_variants_high"
+                else "gallery_units_variants_low")
+        }
+    }
+
+    /** Sylwetki czterech osobnych baz i wieżyczek wariantowych. */
+    @Test
+    fun variantBases() {
+        val pw = 1100
+        val ph = 760
+        for (quality in intArrayOf(Quality.HIGH, Quality.LOW)) {
+            val bmp = Bitmap.createBitmap(pw * 2, ph * 2, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            val g = game(pw, ph, quality)
+            for (idx in 0..3) {
+                val art = if (idx < 2) EraArt.STEAM else EraArt.SILICON
+                val era = Defs.eraOf(art)
+                val variant = idx % 2
+                val battle = Battle(BattleConfig(Mode.SKIRMISH, 77L, 1f,
+                    startEra = era, maxEra = era))
+                check(battle.chooseVariant(variant))
+                val side = battle.player
+                side.slots = 3
+                for (i in 0 until side.slots) {
+                    side.turretEra[i] = era
+                    side.turretVariant[i] = variant
+                }
+                val renderer = BattleRenderer(g, battle)
+                renderer.layout(pw.toFloat(), ph.toFloat(), 0f, 40f)
+                c.save()
+                c.translate((idx % 2) * pw.toFloat(), (idx / 2) * ph.toFloat())
+                c.clipRect(0f, 0f, pw.toFloat(), ph.toFloat())
+                renderer.render(c, 0.016f, pw.toFloat(), ph.toFloat())
+                renderer.camX = Defs.BASE_FRONT - (pw * 0.62f) / renderer.k
+                renderer.render(c, 0.016f, pw.toFloat(), ph.toFloat())
+                c.restore()
+            }
+            save(bmp, if (quality == Quality.HIGH) "gallery_bases_variants_high"
+                else "gallery_bases_variants_low")
+        }
+    }
+
     @Test
     fun bases() {
         for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {

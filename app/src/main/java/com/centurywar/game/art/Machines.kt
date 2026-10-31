@@ -51,6 +51,107 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         }
     }
 
+    /**
+     * Cztery niezależne kontury machin wariantów (ciężka i elita).
+     * Nie są dekoracjami nakładanymi na standardową sylwetkę.
+     */
+    fun variantMachine(art: EraArt, elite: Boolean, team: Int, walk: Float, atk: Float) {
+        val steel = 0xFF505960.toInt()
+        val deep = 0xFF2C343C.toInt()
+        val cyan = 0xFF84F2EF.toInt()
+        val organic = 0xFF426E5A.toInt()
+        when (art) {
+            EraArt.COMBUSTION -> {
+                val wide = if (elite) 66f else 52f
+                tracks(-wide, wide, -20f, 0f, walk, if (elite) 6 else 5)
+                p.quad(-wide, -22f, -wide + 12f, -57f, wide - 15f, -57f, wide, -23f)
+                p.shape(if (elite) deep else steel)
+                p.rect(-wide + 8f, -51f, wide - 8f, -36f, team)
+                p.rr(-30f, if (elite) -82f else -73f, 26f, -48f, 7f, 0xFF6C6C60.toInt())
+                if (elite) {
+                    p.rect(-47f, -94f, -34f, -52f, deep)
+                    p.rect(-23f, -100f, -12f, -53f, deep)
+                    p.seg(5f, -74f, 70f - atk * 5f, -79f, 8f, steel)
+                    p.seg(5f, -60f, 61f - atk * 5f, -59f, 6f, steel)
+                    p.rr(-20f, -76f, 21f, -66f, 3f, team)
+                } else {
+                    p.rect(-34f, -88f, -23f, -50f, deep)
+                    p.seg(18f, -65f, 53f - atk * 4f, -73f, 6f, deep)
+                    p.circle(39f - atk * 4f, -69f, 6f, steel)
+                }
+            }
+            EraArt.GALVANIC -> {
+                val height = if (elite) 112f else 90f
+                for (i in 0..2) {
+                    val xx = (i - 1) * 18f
+                    p.seg(xx - 10f, -10f, xx, -height * 0.5f, 5f, deep)
+                    p.seg(xx, -height * 0.5f, xx - 6f, 0f, 4f, team)
+                }
+                p.rr(-29f, -height + 22f, 29f, -height * 0.42f, 8f, steel)
+                p.rr(-17f, -height + 15f, 18f, -height * 0.65f, 4f, team)
+                p.circle(0f, -height * 0.72f, if (elite) 18f else 12f, cyan)
+                p.circleF(0f, -height * 0.72f, 6f, deep)
+                p.seg(-23f, -height + 12f, -37f, -height - 16f, 6f, deep)
+                p.seg(24f, -height + 12f, 38f, -height - 16f, 6f, deep)
+                p.circle(-38f, -height - 15f, if (elite) 10f else 6f, team)
+                p.circle(38f, -height - 15f, if (elite) 10f else 6f, team)
+                if (elite) {
+                    p.seg(-38f, -height - 15f, 0f, -height - 34f, 2.4f, cyan)
+                    p.seg(0f, -height - 34f, 38f, -height - 15f, 2.4f, cyan)
+                }
+            }
+            EraArt.SWARM -> {
+                val big = if (elite) 48f else 34f
+                p.r.set(-big, -32f, big, -7f)
+                cv.drawOval(p.r, p.glp(0x8879F6FF.toInt(), 5f))
+                p.quad(-big, -22f, -big + 12f, -55f, big - 12f, -55f, big, -22f)
+                p.shape(team)
+                p.rr(-big * 0.6f, -44f, big * 0.6f, -24f, 7f, deep)
+                p.circleF(0f, -35f, 8f, cyan)
+                val count = if (elite) 5 else 3
+                for (i in 0 until count) {
+                    val off = (i - (count - 1) * 0.5f) * 25f
+                    val yy = -68f - (i % 2) * 16f + sin(time * 4f + i) * 2f
+                    p.tri(off - 10f, yy + 3f, off, yy - 9f, off + 10f, yy + 3f)
+                    p.shape(team)
+                    p.circle(off, yy, 3.2f, deep)
+                }
+                if (elite) {
+                    p.seg(-43f, -43f, -65f, -61f, 6f, deep)
+                    p.seg(43f, -43f, 65f, -61f, 6f, deep)
+                }
+            }
+            EraArt.BIOTECH -> {
+                val bodyHeight = if (elite) 98f else 73f
+                val spine = if (elite) 51f else 37f
+                for (i in 0..3) {
+                    val x = (i - 1.5f) * 23f
+                    p.seg(x, -27f, x + (if (i < 2) -9f else 9f), -4f + sin(walk + i) * 5f, 9f, organic)
+                    p.circle(x, -27f, 8f, deep)
+                }
+                p.quad(-spine, -34f, -spine * 0.7f, -bodyHeight, spine * 0.6f, -bodyHeight + 6f, spine, -30f)
+                p.shape(organic)
+                p.quad(-spine + 8f, -38f, -spine * 0.5f, -bodyHeight + 13f,
+                    spine * 0.5f, -bodyHeight + 18f, spine - 8f, -39f)
+                p.shape(team)
+                for (i in 0..2) {
+                    p.tri(-25f + i * 25f, -bodyHeight + 8f, -17f + i * 25f, -bodyHeight - (if (elite) 27f else 17f),
+                        -9f + i * 25f, -bodyHeight + 6f)
+                    p.shape(deep)
+                }
+                p.circle(21f, -bodyHeight * 0.68f, 11f, 0xFF79C9A0.toInt())
+                p.circleF(24f, -bodyHeight * 0.68f, 4f, deep)
+                if (elite) {
+                    p.seg(-32f, -bodyHeight + 12f, -49f, -bodyHeight - 24f, 9f, organic)
+                    p.seg(32f, -bodyHeight + 12f, 51f, -bodyHeight - 23f, 9f, organic)
+                    p.circle(-49f, -bodyHeight - 24f, 10f, team)
+                    p.circle(51f, -bodyHeight - 23f, 10f, team)
+                }
+            }
+            else -> return
+        }
+    }
+
     // ================================================================== zwierzęta
 
     fun beast(era: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {

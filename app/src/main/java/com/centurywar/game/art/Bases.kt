@@ -28,8 +28,22 @@ class Bases(private val p: Pen) {
     private val GLOW = 0xFF7FF4FF.toInt()
 
     /** Pozycja masztu flagi: (x, y szczytu). */
-    fun flagX(e: Int) = if (Defs.spec(e).art == EraArt.IRON) -165f else when (Defs.artPreset(e)) { 0 -> -150f; 1 -> -155f; 2 -> -195f; 3 -> -205f; 4 -> -120f; 5 -> -200f; 6 -> -195f; else -> -180f }
-    fun flagTop(e: Int) = if (Defs.spec(e).art == EraArt.IRON) -365f else when (Defs.artPreset(e)) { 0 -> -330f; 1 -> -360f; 2 -> -470f; 3 -> -370f; 4 -> -270f; 5 -> -270f; 6 -> -470f; else -> -350f }
+    fun flagX(e: Int) = flagX(Defs.spec(e).art)
+    fun flagX(art: EraArt) = if (art == EraArt.IRON) -165f else when (art) {
+        EraArt.COMBUSTION -> -144f
+        EraArt.GALVANIC -> -170f
+        EraArt.SWARM -> -190f
+        EraArt.BIOTECH -> -178f
+        else -> when (Defs.artPreset(art)) { 0 -> -150f; 1 -> -155f; 2 -> -195f; 3 -> -205f; 4 -> -120f; 5 -> -200f; 6 -> -195f; else -> -180f }
+    }
+    fun flagTop(e: Int) = flagTop(Defs.spec(e).art)
+    fun flagTop(art: EraArt) = if (art == EraArt.IRON) -365f else when (art) {
+        EraArt.COMBUSTION -> -365f
+        EraArt.GALVANIC -> -440f
+        EraArt.SWARM -> -350f
+        EraArt.BIOTECH -> -435f
+        else -> when (Defs.artPreset(art)) { 0 -> -330f; 1 -> -360f; 2 -> -470f; 3 -> -370f; 4 -> -270f; 5 -> -270f; 6 -> -470f; else -> -350f }
+    }
 
     // ------------------------------------------------------------------ tekstury
 
@@ -148,10 +162,73 @@ class Bases(private val p: Pen) {
         p.seg(pole, -364f, pole, -253f, 5f, WOOD_D)
     }
 
-    fun body(e: Int, team: Int) {
-        val pole = flagX(e)
-        if (Defs.spec(e).art == EraArt.IRON) { ironFort(team, pole); return }
-        when (Defs.artPreset(e)) {
+    /** Budowle wariantów mają odrębne kontury zamiast znaczników na tej samej bazie. */
+    private fun variantFort(art: EraArt, team: Int) {
+        val dark = 0xFF343C46.toInt()
+        val metal = 0xFF59656C.toInt()
+        when (art) {
+            EraArt.COMBUSTION -> {
+                p.quad(-340f, 0f, -327f, -124f, -43f, -142f, -14f, 0f); p.shape(metal)
+                p.rect(-302f, -140f, -50f, -84f, team)
+                p.rect(-275f, -214f, -215f, -132f, dark)
+                p.rect(-180f, -260f, -125f, -132f, dark)
+                p.rect(-253f, -316f, -238f, -214f, 0xFF72746E.toInt())
+                p.rect(-167f, -338f, -152f, -257f, 0xFF72746E.toInt())
+                p.rr(-108f, -178f, -24f, -115f, 8f, dark)
+                p.seg(-57f, -148f, 16f, -155f, 12f, metal)
+                for (i in 0..3) p.circle(-285f + i * 65f, -38f, 17f, dark)
+            }
+            EraArt.GALVANIC -> {
+                p.rr(-321f, -119f, -20f, 0f, 18f, metal)
+                p.quad(-313f, -111f, -286f, -203f, -66f, -203f, -27f, -111f); p.shape(team)
+                p.rr(-215f, -276f, -105f, -145f, 14f, dark)
+                p.circle(-164f, -217f, 33f, 0xFF70D6D4.toInt())
+                p.circleF(-164f, -217f, 17f, dark)
+                for (i in 0..2) {
+                    val x = -285f + i * 108f
+                    p.seg(x, -155f, x, -390f, 9f, metal)
+                    p.circle(x, -390f, 12f, team)
+                    p.seg(x, -390f, x + 19f, -420f, 5f, 0xFF80DCD8.toInt())
+                }
+            }
+            EraArt.SWARM -> {
+                p.quad(-348f, -50f, -298f, -120f, -49f, -120f, 0f, -50f); p.shape(dark)
+                p.rr(-315f, -169f, -30f, -82f, 12f, team)
+                p.quad(-320f, -167f, -265f, -257f, -70f, -257f, -28f, -167f); p.shape(metal)
+                for (i in 0..3) {
+                    val x = -280f + i * 73f
+                    p.rr(x - 25f, -310f + (i % 2) * 25f, x + 25f, -251f + (i % 2) * 25f, 8f, dark)
+                    p.circle(x, -278f + (i % 2) * 25f, 12f, 0xFF80E5F0.toInt())
+                }
+                p.rr(-202f, -135f, -130f, -20f, 30f, dark)
+                p.circle(-165f, -98f, 15f, team)
+            }
+            EraArt.BIOTECH -> {
+                p.quad(-338f, 0f, -320f, -235f, -187f, -300f, -24f, 0f); p.shape(0xFF3D6450.toInt())
+                p.quad(-315f, -20f, -262f, -197f, -124f, -200f, -36f, -20f); p.shape(team)
+                p.rr(-232f, -191f, -125f, -55f, 27f, 0xFF315445.toInt())
+                p.circle(-179f, -118f, 40f, 0xFF73CDA1.toInt())
+                p.circleF(-179f, -118f, 25f, dark)
+                for (i in 0..4) {
+                    val x = -311f + i * 67f
+                    p.seg(x, -194f, x + (i % 2) * 18f - 9f, -340f - (i % 3) * 22f, 14f, 0xFF476B55.toInt())
+                    p.circle(x + (i % 2) * 18f - 9f, -340f - (i % 3) * 22f, 12f, team)
+                }
+            }
+            else -> return
+        }
+    }
+
+    fun body(e: Int, team: Int) = body(Defs.spec(e).art, team)
+
+    fun body(art: EraArt, team: Int) {
+        val pole = flagX(art)
+        if (art == EraArt.IRON) { ironFort(team, pole); return }
+        if (art == EraArt.COMBUSTION || art == EraArt.GALVANIC ||
+            art == EraArt.SWARM || art == EraArt.BIOTECH) {
+            variantFort(art, team); return
+        }
+        when (Defs.artPreset(art)) {
             0 -> {
                 // namiot ze skór
                 p.tri(-330f, 0f, -285f, -120f, -240f, 0f); p.shape(0xFFB08A5A.toInt())
@@ -400,8 +477,9 @@ class Bases(private val p: Pen) {
 
     // ------------------------------------------------------------------ dynamiczne detale bazy
 
-    fun live(e: Int, team: Int) {
-        when (Defs.artPreset(e)) {
+    fun live(e: Int, team: Int) = live(Defs.spec(e).art, team)
+    fun live(art: EraArt, team: Int) {
+        when (Defs.artPreset(art)) {
             0 -> { // migotanie ogniska
                 val f = 0.6f + 0.4f * sin(time * 17f) * sin(time * 7f)
                 p.glow(-160f, -14f, 16f + f * 8f, ((0x50 * f).toInt() shl 24) or 0xFFB040)
@@ -418,8 +496,9 @@ class Bases(private val p: Pen) {
 
     // ------------------------------------------------------------------ wieża na działka
 
-    fun tower(epoch: Int, team: Int, top: Float) {
-        val e = Defs.artPreset(epoch)
+    fun tower(epoch: Int, team: Int, top: Float) = tower(Defs.spec(epoch).art, team, top)
+    fun tower(art: EraArt, team: Int, top: Float) {
+        val e = Defs.artPreset(art)
         val c = when (e) { 0, 1 -> WOOD; 2 -> 0xFF92928A.toInt(); 3 -> 0xFF9A5238.toInt(); 4 -> 0xFF8A4232.toInt(); 5 -> 0xFF7E8278.toInt(); 6 -> 0xFF6E7A8A.toInt(); else -> 0xFF4A4070.toInt() }
         if (e <= 1) {
             // dwa pnie z poprzeczkami
@@ -442,8 +521,9 @@ class Bases(private val p: Pen) {
         p.rect(-68f, -top + 14f, -16f, -top + 26f, team)
     }
 
-    fun platform(epoch: Int, y: Float) {
-        val e = Defs.artPreset(epoch)
+    fun platform(epoch: Int, y: Float) = platform(Defs.spec(epoch).art, y)
+    fun platform(art: EraArt, y: Float) {
+        val e = Defs.artPreset(art)
         val c = when (e) { 0, 1 -> WOOD_D; 2, 3 -> 0xFF6E6E68.toInt(); else -> 0xFF3A3C42.toInt() }
         p.rect(-84f, y, 0f, y + 10f, c)
         if (p.hi) p.rectF(-82f, y + 1.5f, -2f, y + 3.5f, light(c, 0.25f))
@@ -452,9 +532,12 @@ class Bases(private val p: Pen) {
 
     // ------------------------------------------------------------------ działka (8 typów)
 
-    fun turret(era: Int, x: Float, y: Float, firing: Boolean, team: Int) {
+    fun turret(era: Int, x: Float, y: Float, firing: Boolean, team: Int) =
+        turret(Defs.spec(era).art, x, y, firing, team)
+
+    fun turret(art: EraArt, x: Float, y: Float, firing: Boolean, team: Int) {
         cv.save(); cv.translate(x, y); cv.scale(1.3f, 1.3f); cv.translate(-x, -y)
-        turretModel(era, x, y, firing, team)
+        turretModel(art, x, y, firing, team)
         cv.restore()
     }
 
@@ -477,10 +560,32 @@ class Bases(private val p: Pen) {
         p.rectF(x - 12f, y - 19f, x + 5f, y - 15f, team)
     }
 
-    private fun turretModel(era: Int, x: Float, y: Float, firing: Boolean, team: Int) {
-        if (Defs.spec(era).art == EraArt.IRON) {
+    private fun turretModel(art: EraArt, x: Float, y: Float, firing: Boolean, team: Int) {
+        if (art == EraArt.COMBUSTION) {
+            p.rr(x - 30f, y - 32f, x + 12f, y, 5f, 0xFF575F5D.toInt())
+            p.rect(x - 25f, y - 28f, x + 8f, y - 19f, team)
+            p.seg(x + 2f, y - 25f, x + 56f, y - 30f, 7f, 0xFF34383A.toInt())
+        } else if (art == EraArt.GALVANIC) {
+            p.rr(x - 22f, y - 21f, x + 8f, y, 5f, team)
+            for (i in 0..2) {
+                p.seg(x + i * 9f - 11f, y - 17f, x + i * 14f + 9f, y - 54f, 5f, 0xFF5E8888.toInt())
+                p.circle(x + i * 14f + 9f, y - 54f, 5f, 0xFF8AE8ED.toInt())
+            }
+        } else if (art == EraArt.SWARM) {
+            p.rr(x - 28f, y - 11f, x + 17f, y, 6f, team)
+            for (i in 0..3) {
+                val xx = x + (i - 1.5f) * 19f
+                p.tri(xx - 9f, y - 31f, xx, y - 48f, xx + 9f, y - 31f)
+                p.shape(team)
+            }
+        } else if (art == EraArt.BIOTECH) {
+            p.quad(x - 21f, y, x - 19f, y - 49f, x + 13f, y - 46f, x + 18f, y)
+            p.shape(0xFF47715B.toInt())
+            p.circle(x + 1f, y - 31f, 13f, team)
+            p.seg(x + 11f, y - 34f, x + 48f, y - 58f, 8f, 0xFF47715B.toInt())
+        } else if (art == EraArt.IRON) {
             ironWallBallista(x, y, firing, team)
-        } else when (Defs.artPreset(era)) {
+        } else when (Defs.artPreset(art)) {
             0 -> { // miotacz kamieni
                 p.rect(x - 20f, y - 12f, x + 16f, y, WOOD)
                 p.seg(x - 12f, y - 12f, x - 2f, y - 30f, 3f, WOOD_D); p.seg(x + 8f, y - 12f, x - 2f, y - 30f, 3f, WOOD_D)
@@ -550,6 +655,6 @@ class Bases(private val p: Pen) {
                 p.glow(x + 40f, y - 19f, if (firing) 8f else 4f, GLOW)
             }
         }
-        if (firing && Defs.spec(era).art != EraArt.ORBITAL) { p.glow(x + 40f, y - 22f, 10f, 0xC0FFE080.toInt()); p.glow(x + 40f, y - 22f, 5f, 0xF0FFFFFF.toInt()) }
+        if (firing && art != EraArt.ORBITAL) { p.glow(x + 40f, y - 22f, 10f, 0xC0FFE080.toInt()); p.glow(x + 40f, y - 22f, 5f, 0xF0FFFFFF.toInt()) }
     }
 }

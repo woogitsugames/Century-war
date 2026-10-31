@@ -146,6 +146,13 @@ Brak wyniku gracza daje pustą listę. JSON:
 - Weryfikator jest ściśle związany z wersją symulacji. Podbij
   `CW_GAME_VERSION` (i `Replay.VERSION` w `:sim`) przy zmianach balansu/protokołu.
   Przed wdrożeniem sprawdź **te same** powtórki na Android/JVM (Float).
+- **Warianty epok (format powtórki v4):** komenda `Replay.Kind.VARIANT`
+  jest zapisywana po awansie (przed doktryną) albo w kroku 0 na starcie
+  wariantowej epoki. Przed wdrożeniem tej wersji klienta ustaw nową wartość
+  `CW_GAME_VERSION` na serwerze, uruchom testy `:server:test` i zsynchronizuj
+  kod `:sim` klienta/serwera. Starsze powtórki z wersją 3 nie przejdą
+  dekodera v4. `Daily.config` sprzed `VARIANTS_DAY` działa bez wariantów;
+  nie zmieniaj tej daty wstecz i nie modyfikuj historycznej puli modyfikatorów.
 - Ograniczenia: POST 20/min/IP i 6/min/UUID; GET 120/min/IP,
   maks. 2 równoczesne weryfikacje; nonce POST trwały w SQLite
   (10 minut). Rate limiter IP jest **w pamięci jednej instancji**.

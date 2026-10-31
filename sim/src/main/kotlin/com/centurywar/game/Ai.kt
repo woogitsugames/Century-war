@@ -107,7 +107,7 @@ class Ai(
     private fun considerUnitUpgrades() {
         val full = me.aliveCount + me.queueSize >= me.cap
         if (!full && me.era < b.cfg.maxEra && me.xp > Defs.evolveXp[me.era] * 0.55f) return
-        val reserve = Defs.unit(me.era, Role.MELEE).cost * (if (full) 2 else 5)
+        val reserve = me.unit(Role.MELEE).cost * (if (full) 2 else 5)
         for (role in upgradeOrder) {
             if (role == Role.ELITE && !me.eliteUnlocked) continue
             val cost = b.unitUpgradeCost(me, role)
@@ -217,7 +217,7 @@ class Ai(
 
     private fun manageTurrets(saving: Boolean) {
         if (me.slots == 0) return
-        if (danger >= 2 && me.gold < Defs.unit(me.era, Role.MELEE).cost && me.era >= 2) {
+        if (danger >= 2 && me.gold < me.unit(Role.MELEE).cost && me.era >= 2) {
             for (i in 0 until me.slots) {
                 if (me.turretEra[i] >= 0 && me.turretEra[i] <= me.era - 2 &&
                     b.upgradeCost(me, i) > me.gold
@@ -229,7 +229,7 @@ class Ai(
         val delay = if (personality == AiPersonality.ENGINEER) 28f else 35f
         if (saving || b.time < delay) return
 
-        val reserve = Defs.unit(me.era, Role.HEAVY).cost
+        val reserve = me.unit(Role.HEAVY).cost
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
             if (cost >= 0 && me.gold > cost + reserve * 2) {
@@ -242,7 +242,7 @@ class Ai(
 
     private fun trainUnits(saving: Boolean) {
         if (me.aliveCount + me.queueSize >= me.cap) {
-            val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2
+            val reserve = me.unit(Role.HEAVY).cost * 2
             if (!saving && me.gold > b.armoryCost(me) + reserve) armory()
             return
         }
@@ -262,7 +262,7 @@ class Ai(
             plannedRole = null
         } else if (danger >= 2 && queue(Role.MELEE)) {
             plannedRole = null
-        } else if (me.gold > Defs.unit(me.era, role).cost * 0.5f && b.rng.nextAiInt(me.index, 10) == 0) {
+        } else if (me.gold > me.unit(role).cost * 0.5f && b.rng.nextAiInt(me.index, 10) == 0) {
             plannedRole = null
         }
     }
@@ -276,7 +276,7 @@ class Ai(
             me.eliteUnlocked && heavy < 3 &&
             r < (if (personality == AiPersonality.SIEGER) 70 else 45)
         ) return Role.ELITE
-        val eliteCost = Defs.unit(me.era, Role.ELITE).cost
+        val eliteCost = me.unit(Role.ELITE).cost
         val eliteChance = when (personality) {
             AiPersonality.SIEGER -> 35
             AiPersonality.ECONOMIST -> 48
@@ -291,16 +291,37 @@ class Ai(
         // jednostek: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
         if (enemyRanged >= 2 && enemyRanged > enemyMelee && r < 65) return Role.MELEE
         if (enemyHeavy >= 2 && enemyHeavy > enemyRanged && r < 35) return Role.RANGED
-        if (enemyMelee >= 3 && r < 25 && me.gold >= Defs.unit(me.era, Role.HEAVY).cost) return Role.HEAVY
+        if (enemyMelee >= 3 && r < 25 && me.gold >= me.unit(Role.HEAVY).cost) return Role.HEAVY
 
         if (personality == AiPersonality.ASSAULT && b.time < 90f && r in 35..60) return Role.MELEE
         if (personality == AiPersonality.ENGINEER && r in 35..57 &&
-            heavy * 3 < melee + ranged && me.gold >= Defs.unit(me.era, Role.HEAVY).cost
+            heavy * 3 < melee + ranged && me.gold >= me.unit(Role.HEAVY).cost
         ) return Role.HEAVY
 
         if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
         if (heavy * 3 < melee + ranged && r < 45) return Role.HEAVY
         return if (ranged < melee) Role.RANGED else Role.MELEE
+    }
+
+    /** Warianty nie pobierają losowań z głównego RNG ani nie zmieniają starych epok. */
+    fun chooseVariant(era: Int): Int {
+        val variants = Defs.spec(era).variants
+        if (variants.isEmpty()) return -1
+        val armored = variants.indexOfFirst {
+            it.art == EraArt.COMBUSTION || it.art == EraArt.BIOTECH
+        }.let { if (it < 0) 0 else it }
+        var weight = when (personality) {
+            AiPersonality.SIEGER -> 72
+            AiPersonality.ENGINEER -> 70
+            AiPersonality.ECONOMIST -> 60
+            AiPersonality.ASSAULT -> 35
+            AiPersonality.BALANCED -> 50
+        }
+        val opponent = b.sides[1 - me.index]
+        if (opponent.era == era && opponent.eraVariant >= 0) {
+            if (opponent.eraVariant == armored) weight -= 8 else weight += 8
+        }
+        return if (b.rng.nextAiInt(me.index, 100) < weight) armored else 1 - armored
     }
 
     /** Wybór karty Oblężenia bez końca (AI gracza w testach); własny strumień RNG. */
@@ -343,4 +364,4 @@ class Ai(
 /** AI uwzględnia wyłącznie własny próg XP i stan wyboru doktryny gracza. */
 fun Battle.canEvolveSide(side: Side): Boolean =
     !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] &&
-        (side.index == 1 || pendingChoice == null)
+        (side.index == 1 || (pendingVariant == null && pendingChoice == null))

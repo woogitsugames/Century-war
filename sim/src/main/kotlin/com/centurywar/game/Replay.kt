@@ -8,7 +8,7 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 3
+    const val VERSION = 4
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -17,7 +17,7 @@ object Replay {
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
         ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
-        BARRAGE_AT, CARD, UNIT_UPGRADE,
+        BARRAGE_AT, CARD, UNIT_UPGRADE, VARIANT,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -114,6 +114,7 @@ object Replay {
                     Kind.BARRAGE_AT -> controller.barrage(command.argument.toFloat())
                     Kind.CARD -> controller.card(command.argument)
                     Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
+                    Kind.VARIANT -> controller.variant(command.argument)
                 }
                 require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
@@ -121,7 +122,7 @@ object Replay {
             if (battle.over) break
             require(step < log.steps) { "Bitwa nie zakończyła się w zadanym kroku" }
             battle.step()
-            require(battle.stepCount == step + 1) { "Brak decyzji doktryny w kroku $step" }
+            require(battle.stepCount == step + 1) { "Brak decyzji wariantu, doktryny lub karty w kroku $step" }
             battle.fx.count = 0
         }
         require(index == log.commands.size && battle.over && battle.stepCount == log.steps) {
@@ -140,7 +141,7 @@ object Replay {
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
         Kind.QUEUE, Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET,
-        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD, Kind.UNIT_UPGRADE -> true
+        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD, Kind.UNIT_UPGRADE, Kind.VARIANT -> true
         else -> false
     }
 
@@ -161,6 +162,7 @@ object Replay {
                 Kind.TUTORIAL_GOLD -> arg in 1..1_000_000
                 Kind.BARRAGE_AT -> arg in 0..Defs.LANE.toInt()
                 Kind.CARD -> arg in 0..2
+                Kind.VARIANT -> arg in 0..1
                 else -> arg == 0
             }
             require(correct) { "Niedozwolony argument komendy" }
