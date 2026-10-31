@@ -150,6 +150,25 @@ class EndlessBossTest {
         assertEquals(1.05f * 0.8f, swarm.enemy.hpMul, 0.0001f)
     }
 
+    /** Pomiar 10 seedów: wynik drukowany do raportu CI, bez fikcyjnej bazy odniesienia. */
+    @Test fun tenSeedAiWaveReport() {
+        val waves = IntArray(10)
+        for (i in waves.indices) {
+            val b = Battle(BattleConfig(Mode.ENDLESS, 1001L + i, 1f))
+            b.playerAi = Ai(b, 0)
+            var steps = 0
+            while (!b.over && steps < 60_000) {
+                b.step()
+                b.fx.count = 0
+                steps++
+            }
+            waves[i] = b.wave
+            println("Endless seed=${1001 + i} wave=${b.wave} over=${b.over} steps=$steps")
+            assertTrue("Gracz AI nie doszedł do piątej fali (seed ${1001 + i})", b.wave >= 5)
+        }
+        println("Endless 10 seedów: średnia=${waves.average()}, fale=${waves.joinToString()}")
+    }
+
     @Test fun tenSeedsRemainByteIdenticalAfterIdenticalCommands() {
         for (seed in 1L..10L) {
             fun play(): Battle {
