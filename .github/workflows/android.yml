@@ -72,6 +72,8 @@ jobs:
             --tests '*ScoreClientTest*' \
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
+          --tests '*HapticGateTest*' \
+          --tests '*BattleHapticsTest*' \
             --tests '*SoundSynthTest*' \
             --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \
