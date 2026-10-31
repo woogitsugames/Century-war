@@ -352,6 +352,8 @@ class Battle(val cfg: BattleConfig) {
         if (cfg.variantsEnabled && Defs.spec(cfg.startEra).variants.isNotEmpty()) {
             for (s in sides) offerVariant(s)
         }
+        // Karta startowa nie zużywa RNG bitwy i jest częścią zapisanej konfiguracji.
+        if (cfg.weekly >= 0L) cfg.weeklyCard?.let { applyEndlessCard(player, it) }
     }
 
     val player get() = sides[0]

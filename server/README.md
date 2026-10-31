@@ -80,14 +80,17 @@ nie jest poprawną, zweryfikowaną powtórką):
 }
 ```
 
-Pozostałe pola: `day` (tylko `daily`, dzień UTC od epoki Unix), `stage`
-(tylko `campaign`, indeks 0–31). Gracz to losowy **UUID v4**, utrwalany
+Pozostałe pola: `day` (`daily` — dzień UTC od epoki Unix; `weekly` — numer tygodnia
+z `Weekly.weekNumber(day)`), `stage` (tylko `campaign`, indeks 0–35). Gracz to losowy **UUID v4**, utrwalany
 lokalnie na urządzeniu; `nick` ma 1–24 znaki Unicode: litery, cyfry,
 spację oraz `._-`, bez białych znaków na końcach.
 
 Serwer **nie przyjmuje** modyfikacji rozgrywki od klienta. Konfiguracje:
 - `daily`: `day` = dzisiejszy dzień UTC, `seed=day`, `Daily.config()`
   (badania wyłączone), **pierwszy poprawny wynik dziennie**.
+- `weekly`: `day` oznacza bieżący lub poprzedni numer tygodnia UTC, a `seed` musi
+  odpowiadać `Weekly.config(day).seed`. Serwer odtwarza zamrożone reguły i kartę
+  startową; przyjmuje kolejne próby i zapisuje najlepszy wynik na `weekly_<day>`.
 - `endless`: `BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses=Research.bonuses(research))`.
 - `skirmish`: `BattleConfig(Mode.SKIRMISH, seed, Skirmish.power(difficulty), playerBonuses=Research.bonuses(research))`.
 - `campaign`: `Campaign.config(stages[stage], Research.bonuses(research), seed, tutorial)`;
@@ -104,7 +107,7 @@ zakończona w zadeklarowanym kroku, a `score` musi być równe `Battle.score()`.
 Niepoprawne logi nie zajmują miejsca w rankingu.
 
 Ograniczenia: 1 MiB żądania, limity formatu `Replay` (32 768 komend),
-maks. 90 000 kroków (pozostałe tryby) lub 216 000 (endless). Wynik musi być dodatni. Błędy: `400` (format),
+maks. 90 000 kroków (pozostałe tryby) lub 216 000 (endless i weekly). Wynik musi być dodatni. Błędy: `400` (format),
 `401` (podpis / nonce), `409` (drugie zgłoszenie daily),
 `413` (rozmiar), `422` (niezgodna powtórka), `429` (limit).
 
@@ -122,7 +125,7 @@ ze wszystkich zakwalifikowanych dni. Przesłanie słabszego wyniku daje
 
 `period`: `day` (dzisiaj UTC), `week` (poniedziałek UTC–niedziela),
 `all` (bez daty). `board`: `daily`, `endless`, `skirmish`,
-`campaign_0` ... `campaign_31`. Odpowiedź zawiera pierwsze 50 pozycji.
+`campaign_0` ... `campaign_35`, `weekly_<numer_tygodnia>`. Odpowiedź zawiera pierwsze 50 pozycji.
 Remisy rozstrzyga leksykograficznie UUID (stabilna kolejność).
 
 #### GET /v1/around?board=endless&period=all&player=<uuid>
@@ -169,7 +172,7 @@ Brak wyniku gracza daje pustą listę. JSON:
   per instalacja / sesja, wraz z serwerowym seedem i ograniczeniem prób.
 - Dowolny klient może generować wiele legalnych powtórek offline. Serwer
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
-  Dla daily seed jest stały; dla pozostałych trybów klient deklaruje seed.
+  Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.
 - Weryfikator jest ściśle związany z wersją symulacji. Podbij
   `CW_GAME_VERSION` (i `Replay.VERSION` w `:sim`) przy zmianach balansu/protokołu.
   Przed wdrożeniem sprawdź **te same** powtórki na Android/JVM (Float).

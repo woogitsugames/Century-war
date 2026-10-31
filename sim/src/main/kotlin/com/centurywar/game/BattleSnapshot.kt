@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 10
+    const val VERSION = 11
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -153,6 +153,8 @@ object BattleSnapshot {
         o.writeByte(c.aiPersonality?.ordinal ?: -1)
         o.writeBoolean(c.variantsEnabled)
         o.writeByte(c.weather.ordinal)
+        o.writeLong(c.weekly)
+        o.writeByte(c.weeklyCard?.ordinal ?: -1)
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
@@ -314,8 +316,13 @@ object BattleSnapshot {
         val personality = if (p < 0) null else enumAt(AiPersonality.values(), p)
         val enabled = i.readBoolean()
         val weather = enumAt(Weather.values(), i.readByte().toInt())
-        if (startEra > maxEra) return null
-        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial, personality, enabled, weather)
+        val weekly = i.readLong()
+        val cardId = i.readByte().toInt()
+        if (startEra > maxEra || weekly < -1L ||
+            (weekly >= 0L) != (cardId >= 0) || (weekly >= 0L && mode != Mode.ENDLESS)) return null
+        val weeklyCard = if (cardId < 0) null else enumAt(EndlessCard.values(), cardId)
+        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial,
+            personality, enabled, weather, weekly, weeklyCard)
     }
 
     private fun readSide(i: DataInputStream, s: Side) {
@@ -348,6 +355,7 @@ object BattleSnapshot {
         val dn = i.readShort().toInt()
         require(dn in 0..1000)
         s.doctrines.clear()
+        s.doctrines.clear() // karta startowa została już zastosowana w konstruktorze
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         for (k in s.unitTier.indices) s.unitTier[k] = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }

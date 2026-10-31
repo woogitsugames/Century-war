@@ -6,16 +6,14 @@ internal class ScoreQueue {
     val entries = ArrayDeque<Entry>()
 
     fun add(entry: Entry, nowMillis: Long) {
-        prune(nowMillis)
         entries.addLast(entry)
+        prune(nowMillis)
         while (entries.size > MAX_ENTRIES) entries.removeFirst()
     }
 
     fun prune(nowMillis: Long) {
-        while (entries.isNotEmpty() &&
-            (entries.first().createdAt < nowMillis - MAX_AGE_MS ||
-                entries.first().createdAt > nowMillis + 300_000L)
-        ) entries.removeFirst()
+        // Kolejka nie musi być posortowana po czasie (zmiana zegara), więc sprawdzamy każdy wpis.
+        entries.removeAll { it.createdAt < nowMillis - MAX_AGE_MS || it.createdAt > nowMillis + 300_000L }
     }
 
     fun clear() = entries.clear()

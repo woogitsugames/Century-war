@@ -557,6 +557,24 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun weeklyStartingDoctrineAndConfigSurviveResume() {
+        for (week in listOf(0L, 1000L, 2000L)) {
+            val cfg = Weekly.config(week)
+            val battle = Battle(cfg)
+            val card = cfg.weeklyCard!!
+            assertEquals(1, battle.player.cardStacks[card.ordinal])
+            val saved = roundTrip(battle)
+            assertEquals(week, saved.cfg.weekly)
+            assertEquals(card, saved.cfg.weeklyCard)
+            assertArrayEquals(battle.player.cardStacks, saved.player.cardStacks)
+            assertEquals(battle.player.doctrines, saved.player.doctrines)
+            steps(battle, 60 * 25)
+            steps(saved, 60 * 25)
+            assertSame(battle, saved)
+        }
+    }
+
+    @Test
     fun snapshotKeepsReplayAndBothAiStreams() {
         val cfg = BattleConfig(Mode.SKIRMISH, 919191L, 0.95f, maxEra = 2)
         val a = Battle(cfg)

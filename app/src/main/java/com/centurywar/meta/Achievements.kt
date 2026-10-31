@@ -138,7 +138,7 @@ object Achievements {
         profile.totalKills = if (kills > Long.MAX_VALUE - profile.totalKills) Long.MAX_VALUE else profile.totalKills + kills
         val elapsed = battle.time.toLong().coerceAtLeast(0L)
         profile.playSeconds = if (elapsed > Long.MAX_VALUE - profile.playSeconds) Long.MAX_VALUE else profile.playSeconds + elapsed
-        if (cfg.mode == Mode.ENDLESS && battle.wave > profile.bestWave) profile.bestWave = battle.wave
+        if (cfg.mode == Mode.ENDLESS && cfg.weekly < 0L && battle.wave > profile.bestWave) profile.bestWave = battle.wave
 
         val player = battle.player
         if (cfg.mode == Mode.DAILY && cfg.seed >= 0L && (cfg.seed in profile.achievementDailySeeds || profile.achievementDailySeeds.size < 4096) && profile.achievementDailySeeds.add(cfg.seed)) {

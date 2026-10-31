@@ -74,6 +74,10 @@ class BattleConfig(
     /** Historyczne wyzwania dnia pozostają bez wariantów. */
     val variantsEnabled: Boolean = true,
     val weather: Weather = Weather.CLEAR,
+    /** Numer tygodnia UTC; -1 oznacza zwykłe Endless. */
+    val weekly: Long = -1L,
+    /** Karta przyznawana na starcie tygodniowego oblężenia. */
+    val weeklyCard: EndlessCard? = null,
 )
 
 class Stage(
@@ -151,6 +155,48 @@ object Campaign {
     )
 }
 
+
+/**
+ * Oblężenie tygodnia: poniedziałek 00:00 UTC, jeden zestaw reguł na cały tydzień.
+ * Kolejność i zawartość obu pul są częścią zasad historycznych tygodni.
+ */
+object Weekly {
+    private val MODIFIERS = arrayOf(
+        Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES, Modifier.FAST_UNITS,
+        Modifier.RANGED_HORDE, Modifier.GLASS_CANNON, Modifier.RICH_START,
+        Modifier.SLOW_XP, Modifier.ARMORED_FOE, Modifier.FOG_OF_WAR,
+    )
+    private val START_CARDS = arrayOf(
+        EndlessCard.ECONOMY, EndlessCard.BULWARK, EndlessCard.FURY,
+        EndlessCard.VETERAN, EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
+        EndlessCard.EXTRA_GOLD, EndlessCard.FORTRESS, EndlessCard.SHARPSHOOTERS,
+        EndlessCard.MARCH,
+    )
+    private val WAVE_THRESHOLDS = intArrayOf(10, 20, 30)
+    private val MEDAL_REWARDS = intArrayOf(25, 60, 120)
+
+    fun weekNumber(day: Long): Long = Math.floorDiv(day + 3L, 7L)
+    fun threshold(index: Int): Int = WAVE_THRESHOLDS[index]
+    fun medalReward(index: Int): Int = MEDAL_REWARDS[index]
+    const val TIER_COUNT = 3
+
+    fun config(week: Long): BattleConfig {
+        require(week >= 0L) { "Nieprawidłowy numer tygodnia" }
+        val seed = week * 104_729L + 211L
+        val rng = Rng(seed)
+        val start = rng.nextInt(6)
+        val max = minOf(Defs.ERA_COUNT - 1, start + 2 + rng.nextInt(2))
+        val mods = linkedSetOf<Modifier>()
+        while (mods.size < 2) mods.add(MODIFIERS[rng.nextInt(MODIFIERS.size)])
+        val card = START_CARDS[rng.nextInt(START_CARDS.size)]
+        return BattleConfig(
+            mode = Mode.ENDLESS, seed = seed, aiPower = 1f,
+            startEra = start, maxEra = max, modifiers = mods,
+            playerBonuses = Daily.normalizedBonuses(), weekly = week, weeklyCard = card,
+        )
+    }
+}
+
 object Daily {
     /** Pierwszy dzień UTC, w którym losowanie uwzględnia nową epokę. */
     // Data wydania jeszcze nieznana (31.10.2026): odległa data, do tego dnia wyzwanie dnia
@@ -185,7 +231,7 @@ object Daily {
             start, maxEra, mods, normalizedBonuses(), variantsEnabled = day >= VARIANTS_DAY, weather = weather)
     }
 
-    private fun normalizedBonuses() = Bonuses(
+    internal fun normalizedBonuses() = Bonuses(
         popCap = 14, turretSlots = 3, eliteUnlocked = true, rallyUnlocked = true,
     )
 }

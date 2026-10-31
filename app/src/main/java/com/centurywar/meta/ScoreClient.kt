@@ -107,7 +107,9 @@ class ScoreClient(
             return
         }
         // Snapshot liczb jest mały; zapis pełnej powtórki zlecamy wątkowi roboczemu.
-        val levels = if (cfg.mode == Mode.DAILY) IntArray(Research.defs.size) else research.copyOf()
+        val weekly = cfg.mode == Mode.ENDLESS && cfg.weekly >= 0L
+        // Daily i oblężenie tygodnia mają zamrożone reguły bez bonusów z badań.
+        val levels = if (cfg.mode == Mode.DAILY || weekly) IntArray(Research.defs.size) else research.copyOf()
         status = ScoreSendStatus.QUEUED
         worker.execute {
             if (!enabled || !profile.globalRanking) return@execute
@@ -115,7 +117,7 @@ class ScoreClient(
                 val json = JSONObject()
                     .put("board", when (cfg.mode) {
                         Mode.DAILY -> "daily"
-                        Mode.ENDLESS -> "endless"
+                        Mode.ENDLESS -> if (weekly) "weekly" else "endless"
                         Mode.SKIRMISH -> "skirmish"
                         Mode.CAMPAIGN -> "campaign"
                     })
@@ -124,6 +126,7 @@ class ScoreClient(
                     .put("replay", Replay.encode(log)).put("score", score)
                     .put("research", JSONArray().apply { levels.forEach { put(it) } })
                 if (cfg.mode == Mode.DAILY) json.put("day", cfg.seed)
+                if (weekly) json.put("day", cfg.weekly)
                 if (cfg.mode == Mode.CAMPAIGN) {
                     json.put("stage", cfg.stageIndex)
                     if (cfg.tutorial) json.put("tutorial", true)
@@ -319,6 +322,7 @@ class ScoreClient(
 
         private fun validBoard(board: String): Boolean =
             board in setOf("daily", "endless", "skirmish") ||
+                Regex("^weekly_[0-9]{1,7}$").matches(board) ||
                 Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$").matches(board)
 
         private fun cacheKey(board: String, period: String, player: String) =

@@ -63,9 +63,10 @@ private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")
 
 internal fun validBoard(board: String): Boolean =
     board in setOf("daily", "endless", "skirmish") ||
-        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$"))
+        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$")) ||
+        board.matches(Regex("^weekly_[0-9]{1,7}$"))
 
-internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
+internal fun submittedBoard(board: String, stage: Int?, week: Long? = null): String = when (board) {
     "campaign" -> {
         require(stage != null && stage in Campaign.stages.indices) { "invalid_stage" }
         "campaign_" + stage
@@ -74,17 +75,23 @@ internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
         require(stage == null) { "invalid_stage" }
         board
     }
+    "weekly" -> {
+        require(stage == null) { "invalid_stage" }
+        val w = requireNotNull(week) { "invalid_week" }
+        require(w in 0L..9_999_999L) { "invalid_week" }
+        "weekly_$w"
+    }
     else -> throw IllegalArgumentException("invalid_board")
 }
 
 /** Błędy danych wejściowych -> HTTP 400, przed kosztownym odtwarzaniem bitwy. */
 internal fun validateSubmission(input: ScoreSubmission) {
-    submittedBoard(input.board, input.stage)
+    submittedBoard(input.board, input.stage, input.day)
     require(Research.valid(input.research)) { "invalid_research" }
     require(if (input.board == "skirmish") input.difficulty != null && input.difficulty in 0..3
             else input.difficulty == null) { "invalid_difficulty" }
     require(!input.tutorial || (input.board == "campaign" && input.stage == 0)) { "invalid_tutorial" }
-    require(input.board != "daily" || input.research.all { it == 0 }) { "invalid_research" }
+    require((input.board != "daily" && input.board != "weekly") || input.research.all { it == 0 }) { "invalid_research" }
 }
 
 internal fun todayUtc(nowMillis: Long): Long = Math.floorDiv(nowMillis, 86_400_000L)

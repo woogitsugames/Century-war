@@ -4,6 +4,7 @@ import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.Research
+import com.centurywar.game.Weekly
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -68,6 +69,7 @@ class Profile(private val file: File) {
         const val BOARD_CAMPAIGN = "campaign"
         const val BOARD_SKIRMISH = "skirmish"
         fun dailyBoard(day: Long) = "daily_$day"
+        fun weeklyBoard(week: Long) = "weekly_$week"
 
         /** Wynik postępu używany przy wyborze zapisu z różnych urządzeń. */
         fun progressValue(json: String): Long {
@@ -107,6 +109,12 @@ class Profile(private val file: File) {
     val stars = IntArray(Campaign.stages.size)
     var bestWave = 0
     var lastRankedDaily = -1L
+    /** Maska brąz/srebro/złoto dla bieżącego tygodnia. */
+    var weeklyWeek = -1L
+        private set
+    var weeklyClaimed = 0
+        private set
+    private val weeklyClaimHistory = HashMap<Long, Int>()
     var tutorialDone = false
     /** Jednorazowe podpowiedzi: bit oznacza już pokazany komunikat. */
     var hintsSeen = 0L
@@ -268,6 +276,47 @@ class Profile(private val file: File) {
 
     fun top(board: String): List<ScoreEntry> = boards[board] ?: emptyList()
 
+    /** Zmiana tygodnia i ograniczenie historii do ośmiu zakończonych lub bieżących tygodni. */
+    @Synchronized
+    fun syncWeekly(currentWeek: Long) {
+        if (currentWeek < 0L) return
+        if (weeklyWeek != currentWeek) {
+            if (weeklyWeek >= 0L) weeklyClaimHistory[weeklyWeek] = weeklyClaimed
+            weeklyWeek = currentWeek
+            weeklyClaimed = weeklyClaimHistory[currentWeek] ?: 0
+        }
+        val oldest = currentWeek - 7L
+        boards.keys.filter {
+            it.startsWith("weekly_") &&
+                (it.removePrefix("weekly_").toLongOrNull()?.let { w -> w < oldest || w > currentWeek } ?: true)
+        }.forEach { boards.remove(it) }
+        weeklyClaimHistory.keys.removeAll { it < oldest || it > currentWeek }
+        weeklyClaimHistory[currentWeek] = weeklyClaimed
+    }
+
+    /** Nagrody przyznawane raz na próg; spóźniona bitwa trafia do tygodnia z konfiguracji. */
+    @Synchronized
+    fun claimWeekly(week: Long, wave: Int, currentWeek: Long): Int {
+        syncWeekly(currentWeek)
+        if (week < currentWeek - 7L || week > currentWeek || week < 0L) return 0
+        val old = if (week == weeklyWeek) weeklyClaimed else weeklyClaimHistory[week] ?: 0
+        var mask = old
+        var reward = 0
+        for (i in 0 until Weekly.TIER_COUNT) {
+            val bit = 1 shl i
+            if (wave >= Weekly.threshold(i) && mask and bit == 0) {
+                mask = mask or bit
+                reward += Weekly.medalReward(i)
+            }
+        }
+        weeklyClaimHistory[week] = mask
+        if (week == weeklyWeek) weeklyClaimed = mask
+        return reward
+    }
+
+    fun weeklyClaimedFor(week: Long): Int =
+        if (week == weeklyWeek) weeklyClaimed else weeklyClaimHistory[week] ?: 0
+
     // ---------------------------------------------------------------- zapis
 
     /** Wywoływane wyłącznie po udanym zapisie lokalnym; callback nie blokuje gry. */
@@ -284,6 +333,9 @@ class Profile(private val file: File) {
         o.put("stars", JSONArray().apply { stars.forEach { put(it) } })
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
+        o.put("weeklyWeek", weeklyWeek)
+        o.put("weeklyClaimed", weeklyClaimed)
+        o.put("weeklyClaims", JSONObject(weeklyClaimHistory.mapKeys { it.key.toString() }))
         o.put("tutorialDone", tutorialDone)
         o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
         o.put("hintsEnabled", hintsEnabled)
@@ -483,6 +535,25 @@ class Profile(private val file: File) {
             }
         }
 
+        val loadedWeek = json.optLong("weeklyWeek", -1L).takeIf { it in -1L..1_000_000L } ?: -1L
+        val loadedClaimed = json.optInt("weeklyClaimed", 0) and 7
+        val loadedClaims = HashMap<Long, Int>()
+        obj("weeklyClaims")?.let { claims ->
+            val it = claims.keys()
+            while (it.hasNext()) {
+                val key = it.next()
+                val week = key.toLongOrNull() ?: continue
+                if (week !in 0L..1_000_000L) continue
+                loadedClaims[week] = claims.optInt(key, 0) and 7
+            }
+        }
+        if (loadedWeek >= 0L) loadedClaims[loadedWeek] = loadedClaimed
+        // Uszkodzony plik nie może napełnić pamięci nieograniczoną historią.
+        if (loadedClaims.size > 8) {
+            val keep = loadedClaims.keys.sortedDescending().take(8).toSet()
+            loadedClaims.keys.removeAll { it !in keep }
+        }
+
         val newCounters = HashMap<String, Long>()
         obj("achievementCounters")?.let { c ->
             val known = AchievementMetric.values().map { it.name }.toSet()
@@ -530,6 +601,9 @@ class Profile(private val file: File) {
         newStars.copyInto(stars)
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
+        weeklyWeek = loadedWeek
+        weeklyClaimed = if (loadedWeek >= 0L) loadedClaimed else 0
+        weeklyClaimHistory.clear(); weeklyClaimHistory.putAll(loadedClaims)
         tutorialDone = json.optBoolean("tutorialDone", false)
         hintsSeen = json.optLong("hintsSeen", 0L).coerceIn(0L, HINT_VALID_MASK)
         hintsEnabled = json.optBoolean("hintsEnabled", true)
@@ -581,6 +655,7 @@ class Profile(private val file: File) {
         quality = 0; fpsCap = 0; vibration = true; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         playerId = ""; globalRanking = false
+        weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         quality = 0; fpsCap = 0; vibration = true; sound = true
         palette = 0; teamMarkers = false; textScale = 100
         reduceShake = false; reduceFlash = false
@@ -672,6 +747,7 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
+        weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
         battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)

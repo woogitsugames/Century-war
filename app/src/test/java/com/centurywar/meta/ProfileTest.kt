@@ -120,6 +120,72 @@ class ProfileTest {
     }
 
     @Test
+    fun weeklyTiersAreClaimedOnceAndSurviveSave() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(0, p.claimWeekly(301L, 9, 301L))
+        assertEquals(25, p.claimWeekly(301L, 10, 301L))
+        assertEquals(0, p.claimWeekly(301L, 19, 301L))
+        assertEquals(60, p.claimWeekly(301L, 20, 301L))
+        assertEquals(120, p.claimWeekly(301L, 30, 301L))
+        assertEquals(0, p.claimWeekly(301L, 40, 301L))
+        assertEquals(7, p.weeklyClaimed)
+        p.save()
+        val loaded = Profile(f).also { it.load() }
+        assertEquals(301L, loaded.weeklyWeek)
+        assertEquals(7, loaded.weeklyClaimed)
+        assertEquals(0, loaded.claimWeekly(301L, 35, 301L))
+        // Opóźniona bitwa poprzedniego tygodnia nie daje progów ponownie.
+        loaded.syncWeekly(302L)
+        assertEquals(0, loaded.claimWeekly(301L, 35, 302L))
+        assertEquals(25, loaded.claimWeekly(302L, 10, 302L))
+        loaded.save()
+        val reload = Profile(f).also { it.load() }
+        assertEquals(7, reload.weeklyClaimedFor(301L))
+        assertEquals(1, reload.weeklyClaimedFor(302L))
+    }
+
+    @Test
+    fun weeklyBoardsKeepOnlyLastEightWeeks() {
+        val p = Profile(tmpFile())
+        for (w in 200L..212L) p.submit(Profile.weeklyBoard(w), w * 10L, w * 7L)
+        p.syncWeekly(212L)
+        for (w in 200L..204L) assertTrue(p.top(Profile.weeklyBoard(w)).isEmpty())
+        for (w in 205L..212L) assertEquals(1, p.top(Profile.weeklyBoard(w)).size)
+        p.save()
+        val loaded = Profile(tmpFile())
+        // Załadowanie starego JSON nie może wyzerować starego typu rankingu.
+        loaded.fromJson(p.toJson())
+        assertEquals(8, loaded.boards.keys.count { it.startsWith("weekly_") })
+        assertEquals(0, loaded.claimWeekly(203L, 30, 212L))
+    }
+
+    @Test
+    fun weeklyStateDefaultsAndMasksAreClamped() {
+        val f = tmpFile()
+        f.writeText("""{"weeklyWeek":-99,"weeklyClaimed":255,"weeklyClaims":{"3":255,"-9":7}}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(-1L, old.weeklyWeek)
+        assertEquals(0, old.weeklyClaimed)
+        assertEquals(7, old.weeklyClaimedFor(3L))
+        assertEquals(0, old.weeklyClaimedFor(-9L))
+
+        f.writeText("""{"weeklyWeek":999,"weeklyClaimed":255}""")
+        val loaded = Profile(f).also { it.load() }
+        assertEquals(999L, loaded.weeklyWeek)
+        assertEquals(7, loaded.weeklyClaimed)
+        loaded.syncWeekly(1000L)
+        assertEquals(0, loaded.weeklyClaimed)
+        assertEquals(7, loaded.weeklyClaimedFor(999L))
+
+        f.writeText("""{"medals":7}""")
+        val legacy = Profile(f).also { it.load() }
+        assertEquals(-1L, legacy.weeklyWeek)
+        assertEquals(0, legacy.weeklyClaimed)
+        assertEquals(7, legacy.medals)
+    }
+
+    @Test
     fun concurrentSavesLeaveValidFile() {
         val f = tmpFile()
         val p = Profile(f).apply { medals = 777; name = "x".repeat(16) }
