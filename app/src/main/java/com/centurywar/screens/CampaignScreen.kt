@@ -19,7 +19,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Mapa kampanii: 8 epok × 4 etapy, przewijana pionowo. Każda epoka to pas z
+ * Mapa kampanii: epoki × 4 etapy, przewijana pionowo. Każda epoka to pas z
  * wstęgą i medalionem epoki, a etapy to węzły na krętej ścieżce (wąż: kolejne
  * epoki idą na przemian w prawo i w lewo).
  */
