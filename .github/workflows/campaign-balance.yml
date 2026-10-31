@@ -58,3 +58,25 @@ jobs:
             app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
           retention-days: 14
+
+  criteria:
+    name: Kontrola progow kampanii
+    needs: stages
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: campaign-20-seeds-*
+          path: campaign-artifacts
+      - name: Weryfikacja 36 etapow
+        run: python3 tools/check_campaign_balance.py campaign-artifacts
+      - name: Raport zbiorczy
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-20-seeds-validation
+          path: campaign-20-seeds.md
+          if-no-files-found: warn
+          retention-days: 14
