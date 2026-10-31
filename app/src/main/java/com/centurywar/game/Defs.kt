@@ -181,7 +181,12 @@ object Defs {
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami. */
-    fun baseHp(era: Int): Float = 6400f * 1.85f.pow(era) * (1f + 2.5f * (era / 7f).pow(3))
+    // Wyliczane raz przy inicjalizacji: presja oblężnicza odczytuje HP co tick.
+    private val baseHpByEra = FloatArray(ERA_COUNT) { era ->
+        6400f * 1.85f.pow(era) * (1f + 2.5f * (era / 7f).pow(3))
+    }
+
+    fun baseHp(era: Int): Float = baseHpByEra[era]
 
     /** Pasywny przychód złota na sekundę w danej epoce. */
     fun income(era: Int): Float = 2.6f * 1.8f.pow(era)
