@@ -30,7 +30,7 @@ jobs:
           ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
       - name: Tests symulacji i zrzutow
         run: |
-          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*BattleBranchesTest*' --tests '*VariantBalanceReportTest*' --console=plain --no-configuration-cache
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*BattleBranchesTest*' --tests '*VariantBalanceReportTest*' --tests '*ProfileTest*' --tests '*BattleScreenTest*' --console=plain --no-configuration-cache
       - name: Screenshoty UI
         run: |
           ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.menus*' --tests '*ScreenshotTest.eraBranches*' --console=plain --no-configuration-cache
