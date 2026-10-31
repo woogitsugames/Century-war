@@ -55,6 +55,7 @@ class BattleScreen(
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val commands = battle.commandController ?: BattleController(battle)
+    private val haptics = BattleHaptics(g, battle)
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
@@ -392,6 +393,7 @@ class BattleScreen(
                     acc -= discarded * Battle.STEP
                 }
                 g.reportSimSteps(steps, discarded)
+                if (steps > 0) haptics.onSimulationStep()
             }
             if (battle.over) onFinished()
             else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
@@ -644,14 +646,14 @@ class BattleScreen(
                 showTurrets = false
                 showUpgrade = b.id - UNIT_UPGRADE0
             }
-            UNIT_UPGRADE_BUY -> if (showUpgrade in 0..3 && commands.upgradeUnit(roles[showUpgrade])) g.haptic(35)
+            UNIT_UPGRADE_BUY -> if (showUpgrade in 0..3 && commands.upgradeUnit(roles[showUpgrade])) haptics.onUpgrade()
             UNIT_UPGRADE_CLOSE -> showUpgrade = -1
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> commands.armory()
             BARRAGE -> {
                 if (aimingBarrage) {
-                    commands.barrage() // Drugie dotknięcie: szybki ostrzał bez wyboru celu.
+                    if (commands.barrage()) haptics.onBarrage() // Drugie dotknięcie: szybki ostrzał.
                     aimingBarrage = false
                 } else if (battle.abilityReady(p, 0)) {
                     showTurrets = false
@@ -663,7 +665,7 @@ class BattleScreen(
             RALLY -> commands.rally()
             STANCE -> commands.stance(!p.hold)
             SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
-            EVOLVE -> if (commands.evolve()) g.haptic(40)
+            EVOLVE -> if (commands.evolve()) haptics.onEvolve()
             PAUSE -> paused = true
             RESUME -> paused = false
             RESTART, RESTART + 100 -> {
@@ -689,7 +691,7 @@ class BattleScreen(
                 } else commands.doctrine(b.id - DOCTRINE0)
             }
             in VARIANT0..VARIANT0 + 1 -> if (commands.variant(b.id - VARIANT0)) {
-                g.haptic(40)
+                haptics.onEvolve()
                 BattleSfx.prepareEra(g, p.era, p.eraVariant)
                 preparedPlayerEra = p.era
                 preparedPlayerVariant = p.eraVariant
@@ -750,7 +752,7 @@ class BattleScreen(
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
                 fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
-                commands.barrage(r.worldX(x))
+                if (commands.barrage(r.worldX(x))) haptics.onBarrage()
             }
             aimingBarrage = false // Dotknięcie poza polem walki anuluje.
             return
@@ -912,7 +914,7 @@ class BattleScreen(
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         if (won) g.host.onBattleWon()
-        g.haptic(if (won) 80 else 160)
+        haptics.onEnd(won)
         g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
         refreshResultTexts()
