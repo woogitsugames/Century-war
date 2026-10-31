@@ -31,6 +31,7 @@ class AchievementPersistenceTest {
         p.achievementDailySeeds.addAll(listOf(20000L, 20002L))
         p.achievementDoctrineMask = 0b100101
         p.save()
+        Profile.awaitHintWrites()
 
         val loaded = Profile(file)
         loaded.load()

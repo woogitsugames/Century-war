@@ -111,6 +111,7 @@ class SkirmishSetupTest {
         p.recordSkirmish(cfg, 77777L, 20001, true)
         assertEquals(0, p.top(Profile.BOARD_SKIRMISH).size)
         p.save()
+        Profile.awaitHintWrites()
         val q = Profile(f).also { it.load() }
         assertEquals(p.skirmishSetup, q.skirmishSetup)
         assertEquals(1, q.skirmishHistory.size)

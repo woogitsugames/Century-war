@@ -149,6 +149,7 @@ class MissionsTest {
         Missions.refresh(p, now)
         assertEquals(3, p.missionState.daily.size)
         assertEquals(77, p.medals)
+        Profile.awaitHintWrites()
         val saved = JSONObject(file.readText())
         assertEquals(3, saved.getJSONObject("missions").getJSONArray("daily").length())
     }

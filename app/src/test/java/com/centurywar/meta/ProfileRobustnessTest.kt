@@ -53,6 +53,7 @@ class ProfileRobustnessTest {
         source.boards[Profile.dailyBoard(20123L)] =
             arrayListOf(ScoreEntry("Élise 👩‍🚀", 33L, 20123L))
         source.save()
+        Profile.awaitHintWrites()
 
         assertEquals(Profile.CURRENT_VERSION, JSONObject(file.readText()).getInt("v"))
         val restored = Profile(file).apply { load() }
@@ -108,6 +109,7 @@ class ProfileRobustnessTest {
         assertEquals(Profile.CURRENT_VERSION, migrated.getInt("v"))
         assertEquals(99, migrated.getInt("medals"))
         p.save()
+        Profile.awaitHintWrites()
         assertEquals(Profile.CURRENT_VERSION, JSONObject(file.readText()).getInt("v"))
         assertEquals(99, Profile(file).apply { load() }.medals)
     }
@@ -121,6 +123,7 @@ class ProfileRobustnessTest {
         for (version in intArrayOf(1, 2)) {
             val file = File(folder.newFolder("v$version"), "profile.json")
             Profile(file).apply { stars[0] = 0; save() }
+            Profile.awaitHintWrites()
             val json = JSONObject(file.readText()).put("v", version).put("stars", JSONArray(old.toString()))
             file.writeText(json.toString())
             val p = Profile(file).apply { load() }
@@ -131,6 +134,7 @@ class ProfileRobustnessTest {
             assertEquals(3, p.stars[35])
             // Ponowny zapis i odczyt nie przesuwa gwiazdek drugi raz.
             p.save()
+            Profile.awaitHintWrites()
             val again = Profile(file).apply { load() }
             assertEquals(1, again.stars[12])
             assertEquals(3, again.stars[35])
@@ -165,6 +169,7 @@ class ProfileRobustnessTest {
         assertTrue(File(file.parentFile, file.name + ".corrupt.1").exists())
         p.medals = 15
         p.save()
+        Profile.awaitHintWrites()
         assertEquals(15, Profile(file).apply { load() }.medals)
         assertEquals(damaged, backup.readText())
     }
@@ -189,6 +194,7 @@ class ProfileRobustnessTest {
     fun validTmpWithoutMainFileRecoversAfterInterruption() {
         val file = profileFile()
         Profile(file).apply { name = "Ocalony"; medals = 34567; save() }
+        Profile.awaitHintWrites()
         val tmp = File(file.parentFile, file.name + ".tmp")
         assertTrue(file.renameTo(tmp))
         assertFalse(file.exists())
@@ -207,6 +213,7 @@ class ProfileRobustnessTest {
         val p = Profile(file)
         p.medals = 200
         p.save()
+        Profile.awaitHintWrites()
         val earlier = file.lastModified()
 
         tmp.writeText(JSONObject(file.readText()).put("medals", 300).toString())
@@ -235,6 +242,7 @@ class ProfileRobustnessTest {
         assertEquals(11_999L * 17, p.top(Profile.BOARD_ENDLESS)[0].score)
         assertEquals(11_980L * 17, p.top(Profile.BOARD_ENDLESS)[19].score)
         p.save()
+        Profile.awaitHintWrites()
         val onDisk = JSONObject(file.readText()).getJSONObject("boards").getJSONArray(Profile.BOARD_ENDLESS)
         assertEquals(20, onDisk.length())
     }
@@ -243,6 +251,7 @@ class ProfileRobustnessTest {
     fun malformedScalarInV2IsNotSilentlyConvertedToZero() {
         val file = profileFile()
         val original = Profile(file).apply { medals = 8123; name = "Stary postęp"; save() }
+        Profile.awaitHintWrites()
         assertEquals(8123, original.medals)
         val broken = JSONObject(file.readText()).put("medals", JSONObject().put("złe", 1)).toString()
         file.writeText(broken)
@@ -260,6 +269,7 @@ class ProfileRobustnessTest {
             ScoreEntry("Gracz $it", it.toLong(), 12L)
         }.toMutableList()
         p.save()
+        Profile.awaitHintWrites()
         val a = JSONObject(file.readText()).getJSONObject("boards").getJSONArray(Profile.BOARD_ENDLESS)
         assertEquals(20, a.length())
         assertEquals(299L, a.getJSONObject(0).getLong("s"))
@@ -270,6 +280,7 @@ class ProfileRobustnessTest {
     fun futureMainProfileCannotBeReplacedByNewerTemp() {
         val file = profileFile()
         Profile(file).apply { medals = 120; save() }
+        Profile.awaitHintWrites()
         val backupV2 = file.readText()
         val future = JSONObject().put("v", Profile.CURRENT_VERSION + 1).put("medals", 5000).toString()
         file.writeText(future)
@@ -277,6 +288,7 @@ class ProfileRobustnessTest {
         tmp.writeText(backupV2)
         assertTrue(tmp.setLastModified(file.lastModified() + 10_000L))
         Profile(file).apply { load(); medals = 900; save() }
+        Profile.awaitHintWrites()
         assertEquals(future, file.readText())
     }
 
@@ -287,6 +299,7 @@ class ProfileRobustnessTest {
             .put("medals", 1234).toString()
         file.writeText(future)
         Profile(file).apply { load(); medals = 9000; save() }
+        Profile.awaitHintWrites()
         assertEquals(future, file.readText())
     }
 }

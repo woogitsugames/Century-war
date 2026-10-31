@@ -47,19 +47,19 @@ class ReplaySfxTest {
             profile.sfxVolume = 0.8f
             game.applySfxVolume()
             BattleSfx.play(game, battle, 0f, 600f)
-            assertEquals(0, requests.get(Sound.BARRAGE_ORBITAL))
+            assertEquals(0, requests.get(Sound.BARRAGE_ORBITAL * com.centurywar.engine.SoundSynth.VARIANTS))
 
             profile.sound = true
             profile.sfxVolume = 0f
             game.applySfxVolume()
             BattleSfx.play(game, battle, 0f, 600f)
-            assertEquals(0, requests.get(Sound.BARRAGE_ORBITAL))
+            assertEquals(0, requests.get(Sound.BARRAGE_ORBITAL * com.centurywar.engine.SoundSynth.VARIANTS))
 
             profile.sfxVolume = 0.25f
             game.applySfxVolume()
             BattleSfx.play(game, battle, 0f, 600f)
             assertTrue("Brak odtworzenia przy włączonych efektach",
-                requests.get(Sound.BARRAGE_ORBITAL) > 0)
+                requests.get(Sound.BARRAGE_ORBITAL * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
             assertEquals(0.25f, sound.volume, 0f)
             assertTrue(sound.enabled)
         } finally {
@@ -84,8 +84,8 @@ class ReplaySfxTest {
                 .get(sound) as AtomicIntegerArray
             // Styl galwaniczny i jego uzbrojenie powinny zamówić laser i plazmę.
             BattleSfx.prepareEra(game, 5, 1)
-            assertTrue(requests.get(Sound.SHOT_LASER) > 0)
-            assertTrue(requests.get(Sound.SHOT_PLASMA) > 0)
+            assertTrue(requests.get(Sound.SHOT_LASER * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
+            assertTrue(requests.get(Sound.SHOT_PLASMA * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
         } finally {
             sound.release()
         }

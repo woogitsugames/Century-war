@@ -31,6 +31,7 @@ class ProfileTest {
         assertEquals("", profile.playerId)
         profile.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         assertFalse(Profile(file).also { Profile.awaitHintWrites(); it.load() }.globalRanking)
 
         profile.enableGlobalRanking()
@@ -122,6 +123,7 @@ class ProfileTest {
         assertEquals(0, old.skirmishSetup.startEra)
         old.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val again = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(old.skirmishSetup, again.skirmishSetup)
     }
@@ -149,6 +151,7 @@ class ProfileTest {
         assertEquals(7, p.weeklyClaimed)
         p.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val loaded = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(301L, loaded.weeklyWeek)
         assertEquals(7, loaded.weeklyClaimed)
@@ -158,6 +161,7 @@ class ProfileTest {
         assertEquals(0, loaded.claimWeekly(301L, 35, 302L))
         assertEquals(25, loaded.claimWeekly(302L, 10, 302L))
         loaded.save()
+        Profile.awaitHintWrites()
         Profile.awaitHintWrites()
         val reload = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(7, reload.weeklyClaimedFor(301L))
@@ -172,6 +176,7 @@ class ProfileTest {
         for (w in 200L..204L) assertTrue(p.top(Profile.weeklyBoard(w)).isEmpty())
         for (w in 205L..212L) assertEquals(1, p.top(Profile.weeklyBoard(w)).size)
         p.save()
+        Profile.awaitHintWrites()
         Profile.awaitHintWrites()
         val loaded = Profile(tmpFile())
         // Załadowanie starego JSON nie może wyzerować starego typu rankingu.
@@ -211,6 +216,7 @@ class ProfileTest {
         val p = Profile(f).apply { medals = 777; name = "x".repeat(16) }
         repeat(30) { p.submit(Profile.BOARD_SKIRMISH, it.toLong() * 1000, 1) }
         val threads = List(4) { Thread { repeat(150) { p.save() } } }
+        Profile.awaitHintWrites()
         threads.forEach { it.start() }
         threads.forEach { it.join() }
         val q = Profile(f).also { Profile.awaitHintWrites(); it.load() }
@@ -243,6 +249,7 @@ class ProfileTest {
         invalid.notifyHour = 7
         invalid.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val loaded = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(7, loaded.notifyHour)
         assertFalse(loaded.notifications)
@@ -272,6 +279,7 @@ class ProfileTest {
         assertEquals(1234L, p.top(Profile.BOARD_CAMPAIGN).single().score)
         p.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val reloaded = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(p.stars.toList(), reloaded.stars.toList())
         assertEquals(legacy.sum(), reloaded.totalStars())
@@ -283,6 +291,7 @@ class ProfileTest {
     fun loadFallsBackToTempFileWhenMainIsMissing() {
         val f = tmpFile()
         Profile(f).apply { medals = 321; save() }
+        Profile.awaitHintWrites()
         assertTrue(f.renameTo(File(f.parentFile, f.name + ".tmp")))
         val p = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(321, p.medals)
@@ -296,6 +305,7 @@ class ProfileTest {
         // Pełny profil v3 (ścisły odczyt) z wpisem rankingu sprzed pola "r".
         Profile(f).save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val json = org.json.JSONObject(f.readText())
         json.put("boards", org.json.JSONObject("""{"endless":[{"n":"Stary","s":90,"d":12}]}"""))
         f.writeText(json.toString())
@@ -303,6 +313,7 @@ class ProfileTest {
         assertEquals(null, old.top(board).single().replay)
         assertTrue(old.submit(board, 200L, 13L, "battle_001"))
         old.save()
+        Profile.awaitHintWrites()
         Profile.awaitHintWrites()
         val again = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals("battle_001", again.top(board).first().replay)
@@ -347,6 +358,7 @@ class ProfileTest {
         p.reduceShake = true
         p.reduceFlash = true
         p.save()
+        Profile.awaitHintWrites()
         Profile.awaitHintWrites()
         val restored = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(3, restored.palette)
@@ -394,6 +406,7 @@ class ProfileTest {
         p.sfxVolume = 0.63f
         p.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         assertEquals(0.63f, Profile(f).also { Profile.awaitHintWrites(); it.load() }.sfxVolume, 0.0001f)
         f.writeText("""{"sound":false}""")
         val mutedLegacy = Profile(f).also { Profile.awaitHintWrites(); it.load() }
@@ -417,6 +430,7 @@ class ProfileTest {
         p.musicVolume = 0.73f
         p.save()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         assertEquals(0.73f, Profile(f).also { Profile.awaitHintWrites(); it.load() }.musicVolume, 0.0001f)
         f.writeText("""{"musicVolume":5}""")
         assertEquals(1f, Profile(f).also { Profile.awaitHintWrites(); it.load() }.musicVolume, 0.0001f)
@@ -435,6 +449,7 @@ class ProfileTest {
         assertEquals(2, p.screenShake)
         p.screenShake = 1
         p.save()
+        Profile.awaitHintWrites()
         Profile.awaitHintWrites()
         assertEquals(1, Profile(f).also { Profile.awaitHintWrites(); it.load() }.screenShake)
 
@@ -517,6 +532,7 @@ class ProfileTest {
         p.save()
         Profile.awaitHintWrites()
         Profile.awaitHintWrites()
+        Profile.awaitHintWrites()
         val loaded = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertFalse(loaded.hintsEnabled)
         assertEquals(1L or (1L shl (Profile.HINT_COUNT - 1)), loaded.hintsSeen)
@@ -553,6 +569,7 @@ class ProfileTest {
             repeat(120) { i ->
                 profile.medals = i + 1
                 profile.save()
+                Profile.awaitHintWrites()
             }
         }, "game-loop")
         gameThread.start()

@@ -786,6 +786,8 @@ class Profile(private val file: File) {
 
     @Synchronized
     fun load() {
+        // Odczyt nigdy nie wyprzedza zapisu tego profilu czekającego w kolejce I/O.
+        awaitWrites(2_000L)
         GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
         if (!file.exists() && !tmp.exists()) return
