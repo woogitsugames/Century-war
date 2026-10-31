@@ -32,19 +32,20 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val notifications = btn(9)
     private val notifyHour = btn(10)
     private val playGames = btn(11)
-    private val localRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, reset)
+    private val access = btn(14)
+    private val localRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, reset)
     /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
     private fun rows() = if (g.online.available) onlineRows else localRows
     private fun iconOf(b: Button) = when (b) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
-        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; else -> Icons.RESTART
+        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; access -> Icons.PERSON; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
-        else -> "play_games"
+        access -> "accessibility"; else -> "play_games"
     }
     private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
     private var rowsPerColumn = 10
@@ -55,8 +56,19 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var resetArmed = 0f
     private var dt = 0f
     private var musicPointer = -1
+    private var scroll = 0f
+    private var maxScroll = 0f
+    private var contentTop = 0f
+    private var contentBottom = 0f
     private var shownMusicPercent = -1
     private var musicPercentLabel = ""
+
+    override fun isDragScreen() = true
+
+    override fun onDrag(dx: Float, dy: Float) {
+        scroll = (scroll - dy).coerceIn(0f, maxScroll)
+        layout()
+    }
 
     override fun layout() {
         chrome.layoutBack(back)
@@ -65,13 +77,17 @@ class SettingsScreen(g: Game) : Screen(g) {
         lastAvailable = g.online.available
         playGames.visible = lastAvailable
         val avail = h - chrome.top - g.insetB - 20 * dp
-        // Dwie kolumny na telefonach poziomych; jedna na wąskich ekranach.
+        // Dwie kolumny na szerokich ekranach; wąski telefon przewija pełne wiersze.
         val columns = if (pw >= 470 * dp) 2 else 1
         rowsPerColumn = (rows.size + columns - 1) / columns
         columnWidth = (pw - 24 * dp) / columns
-        val step = min(54 * dp, (avail - 44 * dp) / rowsPerColumn)
+        val step = (if (ui.textScale > 1.15f) 58f else 54f) * dp
         val ph = step * rowsPerColumn + 44 * dp
-        val top = chrome.top + 10 * dp + max(0f, (avail - ph) * 0.35f)
+        contentTop = chrome.top + 10 * dp
+        contentBottom = h - g.insetB - 10 * dp
+        maxScroll = max(0f, ph - (contentBottom - contentTop))
+        scroll = scroll.coerceIn(0f, maxScroll)
+        val top = contentTop + max(0f, (avail - ph) * 0.35f) - scroll
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
         val bw = min(124 * dp, columnWidth * 0.42f)
         for ((i, b) in rows.withIndex()) {
@@ -87,7 +103,9 @@ class SettingsScreen(g: Game) : Screen(g) {
             }
             else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
         }
+        for (b in rows) if (b !== music) b.visible = b.r.bottom > contentTop && b.r.top < contentBottom
         reset.iconId = Icons.RESTART
+        access.iconId = Icons.PERSON
     }
 
     override fun update(dt: Float) {
@@ -121,6 +139,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             else -> "pgs_disabled"
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
+        access.label = L["access_open"]
         reset.label = if (resetArmed > 0f) L["reset_confirm"] else L["reset"]
         reset.color = if (resetArmed > 0f) Color.rgb(200, 60, 40) else Ui.BTN_RED
     }
@@ -128,10 +147,11 @@ class SettingsScreen(g: Game) : Screen(g) {
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
         chrome.dim(c, 120)
+        c.save()
+        c.clipRect(g.insetL, contentTop, w - g.insetR, contentBottom)
         ui.panel(c, panel)
-        chrome.title(c, L["settings"])
         for ((i, b) in rows().withIndex()) {
-            if (b !== reset) {
+            if (b !== reset && b.r.bottom > contentTop && b.r.top < contentBottom) {
                 val col = i / rowsPerColumn
                 val left = panel.left + 12 * dp + col * columnWidth
                 rowR.set(left + 2 * dp, b.r.top - 3 * dp, left + columnWidth - 2 * dp, b.r.bottom + 3 * dp)
@@ -144,8 +164,12 @@ class SettingsScreen(g: Game) : Screen(g) {
                 ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp,
                     ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
             }
-            if (b === music) drawMusicSlider(c) else ui.button(c, b, 15f)
+            if (b === music) {
+                if (b.r.bottom > contentTop && b.r.top < contentBottom) drawMusicSlider(c)
+            } else ui.button(c, b, 15f)
         }
+        c.restore()
+        chrome.title(c, L["settings"])
         ui.button(c, back, 16f)
     }
 
@@ -201,7 +225,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         }
         // Strefa dotyku suwaka obejmuje cały pas wiersza w pionie (niski wiersz na 720p).
         if (e.action == TouchEvent.DOWN && e.x >= music.r.left && e.x <= music.r.right &&
-            e.y >= music.r.top - 5 * dp && e.y <= music.r.bottom + 5 * dp) {
+            e.y >= max(contentTop, music.r.top - 5 * dp) && e.y <= min(contentBottom, music.r.bottom + 5 * dp)) {
             musicPointer = e.pointer
             setMusicFromX(e.x)
             return true
@@ -233,6 +257,7 @@ class SettingsScreen(g: Game) : Screen(g) {
                 g.host.onNotificationSettingsChanged()
             }
             11 -> { g.push(PlayGamesScreen(g)); return }
+            14 -> { g.push(AccessibilityScreen(g)); return }
         }
         p.save()
     }

@@ -121,6 +121,15 @@ class Profile(private val file: File) {
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
     var vibration = true
     var screenShake = 2     // 0 wyłączone, 1 słabe, 2 pełne
+    /** 0 standard, 1 błękit/bursztyn, 2 turkus/koral, 3 wysoki kontrast. */
+    var palette = 0
+        set(value) { field = value.coerceIn(0, 3) }
+    var teamMarkers = false
+    /** Procent wielkości tekstu: 100 / 115 / 130. */
+    var textScale = 100
+        set(value) { field = if (value < 108) 100 else if (value < 123) 115 else 130 }
+    var reduceShake = false
+    var reduceFlash = false
     var sound = true
     var musicVolume = 0.5f
         set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.5f }
@@ -227,6 +236,11 @@ class Profile(private val file: File) {
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
         o.put("screenShake", screenShake.coerceIn(0, 2))
+        o.put("palette", palette)
+        o.put("teamMarkers", teamMarkers)
+        o.put("textScale", textScale)
+        o.put("reduceShake", reduceShake)
+        o.put("reduceFlash", reduceFlash)
         o.put("sound", sound)
         o.put("musicVolume", musicVolume.toDouble())
         o.put("showFps", showFps)
@@ -417,6 +431,11 @@ class Profile(private val file: File) {
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
         screenShake = json.optInt("screenShake", 2).coerceIn(0, 2)
+        palette = json.optInt("palette", 0)
+        teamMarkers = json.optBoolean("teamMarkers", false)
+        textScale = json.optInt("textScale", 100)
+        reduceShake = json.optBoolean("reduceShake", false)
+        reduceFlash = json.optBoolean("reduceFlash", false)
         sound = json.optBoolean("sound", true)
         showFps = json.optBoolean("showFps", false)
         lang = json.optString("lang", "")
@@ -442,6 +461,9 @@ class Profile(private val file: File) {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
         quality = 0; fpsCap = 0; vibration = true; screenShake = 2; sound = true
+        quality = 0; fpsCap = 0; vibration = true; sound = true
+        palette = 0; teamMarkers = false; textScale = 100
+        reduceShake = false; reduceFlash = false
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         musicVolume = 0.5f; notifications = true; notifyHour = 18

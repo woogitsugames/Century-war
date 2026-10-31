@@ -54,6 +54,9 @@ class Pen {
     var tintAmt = 0f
     /** Stopień zwęglenia maszyny, 0..1. */
     var char = 0f
+    /** Siła wybielenia po trafieniu (0.78 standard, 0.12 ograniczenie błysków). */
+    var flashMix = 0.78f
+    var outlineScale = 1f
     /** Grubość konturu w jednostkach lokalnych (canvas jest już przeskalowany). */
     var ow = 1.5f
     /** Poziom szczegółów: 1 = tani telefon, 3 = pełny. */
@@ -74,7 +77,7 @@ class Pen {
 
     fun c(color: Int): Int {
         var col = scorched(color)
-        if (flash) col = mix(col, 0xFFFFFFFF.toInt(), 0.78f)
+        if (flash) col = mix(col, 0xFFFFFFFF.toInt(), flashMix)
         else if (tintAmt > 0f) {
             val mixed = mix(col, tint, tintAmt)
             col = (col and 0xFF000000.toInt()) or (mixed and 0x00FFFFFF)
@@ -91,8 +94,8 @@ class Pen {
 
     fun fp(color: Int): Paint { fill.color = c(color); return fill }
     fun gp(color: Int): Paint { fill.color = raw(color); return fill }
-    fun op(): Paint { stroke.color = raw(OUTLINE); stroke.strokeWidth = ow; return stroke }
-    fun op(w: Float): Paint { stroke.color = raw(OUTLINE); stroke.strokeWidth = w; return stroke }
+    fun op(): Paint { stroke.color = raw(OUTLINE); stroke.strokeWidth = ow * outlineScale; return stroke }
+    fun op(w: Float): Paint { stroke.color = raw(OUTLINE); stroke.strokeWidth = w * outlineScale; return stroke }
     fun lp(color: Int, w: Float): Paint { line.color = c(color); line.strokeWidth = w; return line }
     fun glp(color: Int, w: Float): Paint { line.color = raw(color); line.strokeWidth = w; return line }
 

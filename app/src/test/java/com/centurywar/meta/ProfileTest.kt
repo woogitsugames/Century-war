@@ -1,5 +1,7 @@
 package com.centurywar.meta
 
+import com.centurywar.engine.Palette
+import com.centurywar.engine.Ui
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -124,6 +126,79 @@ class ProfileTest {
         // ID jest wyłącznie nazwą pliku, nie może zawierać ścieżek.
         again.submit(board, 100L, 14L, "../invalid")
         assertEquals(null, again.top(board).first { it.score == 100L }.replay)
+    }
+
+    @Test
+    fun standardPalettePreservesLegacyColors() {
+        Palette.select(Palette.STANDARD)
+        assertEquals(0xFF408CEB.toInt(), Ui.PLAYER)
+        assertEquals(0xFFDC463C.toInt(), Ui.ENEMY)
+        assertEquals(0xFF76E278.toInt(), Ui.GOOD)
+        assertEquals(0xFFF05C50.toInt(), Ui.BAD)
+        assertEquals(0xEE1A2030.toInt(), Ui.PANEL)
+        assertEquals(0xFF1A1620.toInt(), Ui.OUTLINE)
+        assertEquals(0xFF409646.toInt(), Ui.BTN_GREEN)
+        Palette.select(Palette.DEUTAN_PROTAN)
+        assertTrue(Ui.PLAYER != Ui.ENEMY)
+        assertTrue(Ui.GOOD != Ui.BAD)
+        Palette.select(Palette.TRITAN)
+        assertTrue(Ui.PLAYER != Ui.ENEMY)
+        Palette.select(Palette.HIGH_CONTRAST)
+        assertEquals(0xFA080C16.toInt(), Ui.PANEL)
+        Palette.select(Palette.STANDARD)
+    }
+
+    @Test
+    fun accessibilityRoundTripAndLegacyDefaults() {
+        val f = tmpFile()
+        val p = Profile(f)
+        assertEquals(0, p.palette)
+        assertEquals(100, p.textScale)
+        assertFalse(p.teamMarkers)
+        assertFalse(p.reduceShake)
+        assertFalse(p.reduceFlash)
+        p.palette = 3
+        p.textScale = 130
+        p.teamMarkers = true
+        p.reduceShake = true
+        p.reduceFlash = true
+        p.save()
+        val restored = Profile(f).also { it.load() }
+        assertEquals(3, restored.palette)
+        assertEquals(130, restored.textScale)
+        assertTrue(restored.teamMarkers)
+        assertTrue(restored.reduceShake)
+        assertTrue(restored.reduceFlash)
+
+        f.writeText("""{"v":1,"name":"stary profil"}""")
+        val legacy = Profile(f).also { it.load() }
+        assertEquals(0, legacy.palette)
+        assertEquals(100, legacy.textScale)
+        assertFalse(legacy.teamMarkers)
+        assertFalse(legacy.reduceShake)
+        assertFalse(legacy.reduceFlash)
+    }
+
+    @Test
+    fun accessibilityClampsUntrustedSettings() {
+        val f = tmpFile()
+        f.writeText("""{"palette":99,"textScale":999,"teamMarkers":true,"reduceShake":true,"reduceFlash":true}""")
+        val high = Profile(f).also { it.load() }
+        assertEquals(3, high.palette)
+        assertEquals(130, high.textScale)
+        assertTrue(high.teamMarkers)
+        assertTrue(high.reduceShake)
+        assertTrue(high.reduceFlash)
+
+        f.writeText("""{"palette":-8,"textScale":-40}""")
+        val low = Profile(f).also { it.load() }
+        assertEquals(0, low.palette)
+        assertEquals(100, low.textScale)
+        assertFalse(low.teamMarkers)
+        low.textScale = 115
+        assertEquals(115, low.textScale)
+        low.textScale = 999
+        assertEquals(130, low.textScale)
     }
 
     @Test

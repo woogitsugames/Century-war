@@ -74,7 +74,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var maxScroll = 0f
     private val gap get() = 12 * dp
     private val headerH get() = 50 * dp
-    private val rowH get() = 21 * dp
+    private val rowH get() = (if (ui.textScale > 1.15f) 26f else 21f) * dp
 
     // dane kart (przeliczane w rebuild)
     private val titles = arrayOfNulls<String>(CARDS)
@@ -122,7 +122,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val rows = (tabs.size + perRow - 1) / perRow
         viewTop = tabTop + rows * tabH + (rows - 1) * tabGap + 10 * dp
 
-        cols = (contentW / (280 * dp)).toInt().coerceIn(1, 3)
+        cols = (contentW / ((if (ui.textScale > 1.15f) 340f else 280f) * dp)).toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
         statCols = if (cw >= 340 * dp) 3 else 2
         previewW = min(128 * dp, cw * 0.34f)

@@ -63,9 +63,9 @@ class ResearchScreen(g: Game) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         val avail = w - g.insetL - g.insetR - 32 * dp
-        cols = max(2, (avail / (250 * dp)).toInt())
+        cols = max(if (ui.textScale > 1.15f) 1 else 2, (avail / ((if (ui.textScale > 1.15f) 280f else 250f) * dp)).toInt())
         cw = (avail - (cols - 1) * 12 * dp) / cols
-        ch = 108 * dp
+        ch = (if (ui.textScale > 1.15f) 128f else 108f) * dp
         top = chrome.top + 6 * dp
         val rows = (cards.size + cols - 1) / cols
         maxScroll = max(0f, top + rows * (ch + 12 * dp) + 12 * dp - h + g.insetB)
