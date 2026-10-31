@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -28,6 +29,19 @@ val releaseTag = runCatching {
 val releaseVersionName = releaseTag?.removePrefix("v")
     ?: providers.gradleProperty("releaseVersionName").getOrElse("0.1.0-dev")
 
+// Konfiguracja rankingu tylko z lokalnego pliku lub zmiennych CI; bez wartości domyślnych.
+val localSettings = Properties().apply {
+    val settings = rootProject.file("local.properties")
+    if (settings.exists()) settings.inputStream().use { load(it) }
+}
+fun scoreSetting(key: String): String =
+    providers.environmentVariable(key).orNull ?: localSettings.getProperty(key, "")
+fun quotedBuildValue(value: String): String = "\"" +
+    value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\""
+val scoreServerUrl = scoreSetting("CW_SERVER_URL").trim()
+val scoreHmacKey = scoreSetting("CW_HMAC_KEY")
+val scorePrivacyUrl = scoreSetting("CW_PRIVACY_URL").trim()
+
 // ---- Podpis release ------------------------------------------------------------------------
 // Klucz upload wyłącznie ze środowiska (CI: sekrety GitHub, patrz docs/CI.md). Brak wszystkich
 // zmiennych oznacza lokalny podpis kluczem debug (jak dotąd); konfiguracja częściowa jest błędem.
@@ -51,7 +65,12 @@ android {
         targetSdk = 36
         versionCode = releaseVersionCode
         versionName = releaseVersionName
+        buildConfigField("String", "CW_SERVER_URL", quotedBuildValue(scoreServerUrl))
+        buildConfigField("String", "CW_HMAC_KEY", quotedBuildValue(scoreHmacKey))
+        buildConfigField("String", "CW_PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
     }
+
+    buildFeatures { buildConfig = true }
 
     signingConfigs {
         if (hasReleaseSigning) {
