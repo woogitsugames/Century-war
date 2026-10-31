@@ -286,7 +286,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     }
 
     private fun drawEraHeader(c: Canvas, y: Float) {
-        val cy = y + headerH * 0.42f
+        val cy = y + 25 * dp
         val col = Ui.ERA[era]
         ui.medallion(c, left + 18 * dp, cy, 18 * dp, col, Icons.CODEX)
         val tx = left + 44 * dp
