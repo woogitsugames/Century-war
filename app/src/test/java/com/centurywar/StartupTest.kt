@@ -2,6 +2,8 @@ package com.centurywar
 
 import android.content.pm.ActivityInfo
 import org.junit.Assert.assertEquals
+import java.io.File
+import org.robolectric.RuntimeEnvironment
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -27,5 +29,18 @@ class StartupTest {
     fun unfoldedFoldAllowsAnyOrientation() {
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_FULL_USER, activity.requestedOrientation)
+    }
+
+    @Test
+    fun corruptHistoryDoesNotBlockColdStart() {
+        val file = File(RuntimeEnvironment.getApplication().filesDir, "history.json")
+        val backup = if (file.exists()) file.readBytes() else null
+        try {
+            file.writeText("{\"v\":1,\"entries\":[broken")
+            val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+            controller.pause().stop().destroy()
+        } finally {
+            if (backup == null) file.delete() else file.writeBytes(backup)
+        }
     }
 }
