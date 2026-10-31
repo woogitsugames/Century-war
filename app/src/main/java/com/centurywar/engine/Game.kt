@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.os.SystemClock
 import com.centurywar.meta.OnlineLeaderboards
+import com.centurywar.meta.Missions
 import com.centurywar.meta.Profile
 import com.centurywar.screens.MenuScreen
 
@@ -63,6 +64,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     init {
         applyLanguage()
         setQuality(effectiveQualityLevel())
+        Missions.refresh(profile, System.currentTimeMillis())
     }
 
     fun applyLanguage() {
