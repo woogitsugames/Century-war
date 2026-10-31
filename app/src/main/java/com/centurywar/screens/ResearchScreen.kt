@@ -169,9 +169,11 @@ class ResearchScreen(g: Game) : Screen(g) {
         if (b.id == -1) { g.pop(); return }
         val d = b.tag as? ResearchDef ?: return
         if (g.profile.buy(d)) {
-            g.sfx(Sound.RESEARCH, 0.5f, 90)
+            g.sfx(Sound.PURCHASE, 0.5f, 90)
             g.showAchievements(Achievements.onResearchBought(g.profile, d, g.onlineAchievements))
             g.haptic(30)
+        } else {
+            g.sfx(Sound.ERROR, 0.34f, 150)
         }
     }
 }
