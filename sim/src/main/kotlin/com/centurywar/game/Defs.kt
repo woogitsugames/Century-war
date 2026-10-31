@@ -226,7 +226,10 @@ object Defs {
                     floatArrayOf(1.02f, 1.02f, 1.25f, 1.30f),
                     floatArrayOf(1f, 1f, 1.04f, 1.08f),
                     floatArrayOf(0.98f, 0.98f, 0.78f, 0.74f),
-                    "t_combustion", Proj.SHELL, 1.13f, 1.08f, Proj.SHELL, 12, 72f),
+                    "t_combustion", Proj.SHELL, 1.13f, 1.08f, Proj.SHELL, 12, 72f,
+                    terrain = Terrain.INDUSTRIAL,
+                    palette = intArrayOf(0xFF77706C.toInt(), 0xFFC3A38A.toInt(),
+                        0xFF736960.toInt(), 0xFF5A534C.toInt(), 0xFF49463E.toInt(), 0xFF73624D.toInt())),
                 EraVariant("galvanic", "v_galvanic", "v_galvanic_d", EraArt.GALVANIC,
                     arrayOf("u_galv_guard", "u_galv_gunner", "u_galv_coil", "u_galv_arc"),
                     Body.MECH, Body.HOVER, Proj.BEAM, Proj.PLASMA, Weapon.RAIL, Weapon.BLASTER,
@@ -234,7 +237,10 @@ object Defs {
                     floatArrayOf(0.98f, 0.98f, 0.82f, 0.80f),
                     floatArrayOf(1f, 1f, 1.08f, 1.06f),
                     floatArrayOf(1.02f, 1.02f, 1.08f, 1.12f),
-                    "t_galvanic", Proj.BEAM, 0.90f, 0.94f, Proj.BEAM, 16, 45f),
+                    "t_galvanic", Proj.BEAM, 0.90f, 0.94f, Proj.BEAM, 16, 45f,
+                    terrain = Terrain.CITY,
+                    palette = intArrayOf(0xFF477C8A.toInt(), 0xFFB4D9D1.toInt(),
+                        0xFF578E94.toInt(), 0xFF3B646D.toInt(), 0xFF2B4F5B.toInt(), 0xFF4D6C69.toInt())),
             )),
         EraSpec("era_steel", arrayOf("u_infantry", "u_gunner", "u_halftrack", "u_heavytank"),
             intArrayOf(Weapon.RIFLE, Weapon.MG, Weapon.MG, Weapon.MG), Body.VEHICLE, Body.VEHICLE,
@@ -254,7 +260,10 @@ object Defs {
                     floatArrayOf(0.86f, 0.88f, 0.78f, 0.85f),
                     floatArrayOf(0.95f, 0.96f, 0.90f, 0.94f),
                     floatArrayOf(1.16f, 1.16f, 1.22f, 1.18f),
-                    "t_swarm", Proj.PLASMA, 0.89f, 0.86f, Proj.PLASMA, 20, 42f),
+                    "t_swarm", Proj.PLASMA, 0.89f, 0.86f, Proj.PLASMA, 20, 42f,
+                    terrain = Terrain.CITY,
+                    palette = intArrayOf(0xFF3268A6.toInt(), 0xFFB8DDF1.toInt(),
+                        0xFF547DB2.toInt(), 0xFF42718C.toInt(), 0xFF2E5169.toInt(), 0xFF526E76.toInt())),
                 EraVariant("biotech", "v_biotech", "v_biotech_d", EraArt.BIOTECH,
                     arrayOf("u_bio_guard", "u_bio_spore", "u_bio_golem", "u_bio_leviathan"),
                     Body.BEAST, Body.MECH, Proj.PLASMA, Proj.BEAM, Weapon.BLASTER, Weapon.RAIL,
@@ -262,7 +271,10 @@ object Defs {
                     floatArrayOf(1.12f, 1.08f, 1.20f, 1.25f),
                     floatArrayOf(0.98f, 0.98f, 1.01f, 1.02f),
                     floatArrayOf(0.94f, 0.98f, 0.93f, 0.90f),
-                    "t_biotech", Proj.PLASMA, 1.04f, 1.04f, Proj.PLASMA, 12, 72f),
+                    "t_biotech", Proj.PLASMA, 1.04f, 1.04f, Proj.PLASMA, 12, 72f,
+                    terrain = Terrain.WOODS,
+                    palette = intArrayOf(0xFF447D78.toInt(), 0xFFBAD5B3.toInt(),
+                        0xFF638C78.toInt(), 0xFF426E5A.toInt(), 0xFF305746.toInt(), 0xFF517553.toInt())),
             )),
         EraSpec("era_orbital", arrayOf("u_plasma", "u_railgunner", "u_hovertank", "u_titan"),
             intArrayOf(Weapon.BLASTER, Weapon.RAIL, Weapon.BLASTER, Weapon.RAIL), Body.HOVER, Body.MECH,
@@ -341,6 +353,12 @@ object Defs {
     fun barrage(era: Int, variant: Int = -1): BarrageDef =
         if (variant < 0) baseBarrage[era] else variantBarrage[era][variant]
     fun eraOf(art: EraArt): Int = specs.indexOfFirst { it.art == art }
+    fun palette(era: Int, variant: Int = -1): IntArray =
+        if (variant < 0) specs[era].palette
+        else specs[era].variants[variant].palette ?: specs[era].palette
+    fun terrain(era: Int, variant: Int = -1): Terrain =
+        if (variant < 0) specs[era].terrain
+        else specs[era].variants[variant].terrain ?: specs[era].terrain
     fun sideArt(era: Int, variant: Int): EraArt =
         if (variant < 0) specs[era].art else specs[era].variants[variant].art
 
