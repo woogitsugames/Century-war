@@ -59,6 +59,8 @@ class BattleConfig(
     val modifiers: Set<Modifier> = emptySet(),
     val playerBonuses: Bonuses = Bonuses(),
     val stageIndex: Int = -1,
+    /** null: dowódca dobierany deterministycznie z RNG bitwy. */
+    val aiPersonality: AiPersonality? = null,
 )
 
 class Stage(
