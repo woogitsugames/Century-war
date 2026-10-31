@@ -51,6 +51,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val rect = RectF()
     private var skyEra = -1
     private var skyH = 0f
+    private var skyWeather = Weather.CLEAR
+    // Deszcz i pył: stałe współrzędne cząstek, bez alokacji i RNG podczas renderowania.
+    private val rainX = FloatArray(128) { ((it * 73 + 31) % 127) / 127f }
+    private val rainY = FloatArray(128) { ((it * 89 + 17) % 131) / 131f }
     private var alpha = 1f
 
     // cząsteczki (struktura tablic: zero obiektów na cząsteczkę)
@@ -148,11 +152,13 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawSky(c, w, h)
         drawBackdrop(c, w, h)
         drawGround(c, w, h)
+        if (b.weather == Weather.NIGHT) drawNight(c, w)
         drawBase(c, b.sides[0])
         drawBase(c, b.sides[1])
         for (u in b.units) if (u.active && u.side == 1) drawUnit(c, u)
         for (u in b.units) if (u.active && u.side == 0) drawUnit(c, u)
         alpha = 1f
+        drawWeather(c, w)
         for (p in b.projs) if (p.active && p.delay <= 0f) drawProj(c, p)
         updateParticles(c, dt)
         drawTexts(c, dt)
@@ -167,9 +173,21 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawSky(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
-        if (e != skyEra || skyH != groundY) {
-            skyEra = e; skyH = groundY
-            sky.shader = LinearGradient(0f, 0f, 0f, groundY, Defs.spec(e).palette[0], Defs.spec(e).palette[1], Shader.TileMode.CLAMP)
+        val weather = b.weather
+        if (e != skyEra || skyH != groundY || weather != skyWeather) {
+            skyEra = e; skyH = groundY; skyWeather = weather
+            val palette = Defs.spec(e).palette
+            val upper = when (weather) {
+                Weather.NIGHT -> Ui.blend(palette[0], Color.rgb(8, 17, 44), 0.88f)
+                Weather.RAIN -> Ui.blend(palette[0], Color.rgb(65, 82, 105), 0.62f)
+                else -> palette[0]
+            }
+            val lower = when (weather) {
+                Weather.NIGHT -> Ui.blend(palette[1], Color.rgb(17, 32, 60), 0.82f)
+                Weather.RAIN -> Ui.blend(palette[1], Color.rgb(91, 105, 120), 0.58f)
+                else -> palette[1]
+            }
+            sky.shader = LinearGradient(0f, 0f, 0f, groundY, upper, lower, Shader.TileMode.CLAMP)
         }
         c.drawRect(0f, 0f, w, groundY + 2f, sky)
         if (Defs.spec(e).art == EraArt.ORBITAL) { // gwiazdy
@@ -185,7 +203,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val cloud = if (Defs.spec(e).terrain == Terrain.INDUSTRIAL) Color.argb(110, 90, 85, 80) else Color.argb(150, 255, 255, 255)
             for (i in 0 until 5) {
                 val span = w + 400f * g.ui.dp
-                val x = ((i * 397f + time * (8f + i * 3f) * g.ui.dp) % span) - 200f * g.ui.dp
+                val wind = if (b.weather == Weather.WIND) 27f * b.windDirection() else 0f
+                val x = ((i * 397f + time * (8f + i * 3f + wind) * g.ui.dp) % span + span) % span - 200f * g.ui.dp
                 val y = groundY * (0.12f + 0.09f * (i % 3))
                 val s = (40f + 18f * (i % 3)) * g.ui.dp
                 f(cloud)
@@ -377,13 +396,14 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val flagTop = bases.flagTop(e)
         val wave = sin(time * 5f + s.index) * 6f
         val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
+        val flagDir = if (b.weather == Weather.WIND) b.windDirection() * s.dir else 1f
         val fp = pen.path
-        fp.reset(); fp.moveTo(fx0, flagTop); fp.quadTo(fx0 + 34f, flagTop - 4f + wave2, fx0 + 70f, flagTop + 4f + wave)
-        fp.lineTo(fx0 + 70f, flagTop + 40f + wave); fp.quadTo(fx0 + 34f, flagTop + 32f + wave2, fx0, flagTop + 40f); fp.close()
+        fp.reset(); fp.moveTo(fx0, flagTop); fp.quadTo(fx0 + flagDir * 34f, flagTop - 4f + wave2, fx0 + flagDir * 70f, flagTop + 4f + wave)
+        fp.lineTo(fx0 + flagDir * 70f, flagTop + 40f + wave); fp.quadTo(fx0 + flagDir * 34f, flagTop + 32f + wave2, fx0, flagTop + 40f); fp.close()
         pen.shape(team)
         if (g.quality.level >= 2) {
-            pen.circle(fx0 + 34f, flagTop + 18f + (wave + wave2) * 0.4f, 8f, 0xFFF4F0E4.toInt())
-            pen.circleF(fx0 + 34f, flagTop + 18f + (wave + wave2) * 0.4f, 3.5f, team)
+            pen.circle(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 8f, 0xFFF4F0E4.toInt())
+            pen.circleF(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 3.5f, team)
         }
         pen.circle(fx0, flagTop - 3f, 5f, 0xFFE8C04A.toInt())
 
@@ -669,6 +689,47 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             c.drawText(s, sx(tx[i]) + 1.5f * g.ui.dp, sy(th[i]) + 1.5f * g.ui.dp, textP)
             textP.color = Color.argb((255 * a).toInt(), Color.red(tcol[i]), Color.green(tcol[i]), Color.blue(tcol[i]))
             c.drawText(s, sx(tx[i]), sy(th[i]), textP)
+        }
+    }
+
+    /** Przyciemnienie tylko tła; kontury postaci i paski HP pozostają czytelne. */
+    private fun drawNight(c: Canvas, w: Float) {
+        fill.color = Color.argb(155, 8, 13, 31)
+        c.drawRect(0f, 0f, w, groundY + 6f, fill)
+        for (s in b.sides) {
+            val x = sx(s.baseFront)
+            if (x < -220f * k || x > w + 220f * k) continue
+            val cy = groundY - 110f * k
+            fill.color = Color.argb(20, 246, 196, 105)
+            c.drawCircle(x, cy, 170f * k, fill)
+            fill.color = Color.argb(if (s.baseFlash > 0f) 85 else 35, 255, 224, 142)
+            c.drawCircle(x, cy, 92f * k, fill)
+        }
+    }
+
+    /** Nakładka pogody: współrzędne z prealokowanych tablic, limit zależny od jakości. */
+    private fun drawWeather(c: Canvas, w: Float) {
+        val weather = b.weather
+        if (weather != Weather.RAIN && weather != Weather.WIND) return
+        val dp = g.ui.dp
+        val count = min(rainX.size, g.quality.maxParticles / 2)
+        if (weather == Weather.RAIN) {
+            line.color = Color.argb(140, 197, 224, 245)
+            line.strokeWidth = max(1f, 1.1f * dp)
+            for (i in 0 until count) {
+                val x = ((rainX[i] * w - time * 110f * dp) % w + w) % w
+                val y = (rainY[i] * groundY + time * (235f + (i % 7) * 13f) * dp) % groundY
+                c.drawLine(x, y, x - 8f * dp, y + 20f * dp, line)
+            }
+        } else {
+            val dir = b.windDirection().toFloat()
+            line.color = Color.argb(115, 220, 209, 175)
+            line.strokeWidth = max(1f, dp)
+            for (i in 0 until count / 3) {
+                val x = ((rainX[i] * w + dir * time * (85f + i % 5 * 12f) * dp) % w + w) % w
+                val y = groundY - (20f + rainY[i] * 90f) * k
+                c.drawLine(x, y, x + dir * 15f * dp, y - 3f * dp, line)
+            }
         }
     }
 
