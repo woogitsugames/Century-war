@@ -159,4 +159,5 @@ object EndlessTexts {
 
     fun chooseCard(polish: Boolean): String = if (polish) "Wybierz kartę" else "Choose a card"
     fun bossIncoming(polish: Boolean): String = if (polish) "Nadciąga boss" else "Boss incoming"
+    fun bossesDefeated(polish: Boolean): String = if (polish) "Pokonani bossowie" else "Bosses defeated"
 }
