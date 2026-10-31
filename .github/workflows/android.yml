@@ -1,0 +1,215 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+      - 'gpt/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - 'claude/**'
+      - 'gpt/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Debug APK i testy symulacji
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj APK i uruchom krytyczne testy
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*LTest*' \
+            --console=plain --no-configuration-cache
+      - name: Zapisz debug APK
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zapisz raporty testow
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-sim-test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
+  robolectric:
+    name: Testy Robolectric (Profile, BattleScreen, Screenshot, ArtGallery)
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      # Robolectric pobiera android-all (SDK 35, ~150 MB) do ~/.m2 przy pierwszym uruchomieniu.
+      - name: Cache Robolectric
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-sdk35-${{ hashFiles('app/build.gradle.kts') }}
+          restore-keys: |
+            robolectric-${{ runner.os }}-sdk35-
+      - name: Wykonaj testy Robolectric
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*ProfileTest*' \
+            --tests '*BattleScreenTest*' \
+            --tests '*ScreenshotTest*' \
+            --tests '*ArtGalleryTest*' \
+            --console=plain --no-configuration-cache
+      - name: Zapisz zrzuty PNG
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-screenshots
+          path: app/build/screenshots/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zapisz raporty Robolectric
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: robolectric-test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
+  lint:
+    name: Android Lint (nieblokujacy)
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Wykonaj Lint
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:lintDebug --console=plain
+      - name: Zapisz raport Lint
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-report
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  release:
+    name: Podpisany release APK i AAB
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Odtworz keystore z sekretow
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Brak sekretu ${name}; release nie moze byc podpisany kluczem debug."
+              exit 1
+            fi
+          done
+          keystore="$RUNNER_TEMP/century-war-release.jks"
+          (umask 077; printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore")
+          echo "RELEASE_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
+      - name: Zbuduj i podpisz APK i AAB
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
+      - name: Zapisz release APK
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 90
+      - name: Zapisz release AAB
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 90
