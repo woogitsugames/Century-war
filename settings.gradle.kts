@@ -13,4 +13,10 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "CenturyWar"
-include(":app")
+
+val requestedTasks = gradle.startParameter.taskNames
+val onlyServerTasks = requestedTasks.isNotEmpty() &&
+    requestedTasks.all { it.startsWith(":server:") || it.startsWith("server:") }
+val serverOnly = providers.gradleProperty("serverOnly").orNull == "true" || onlyServerTasks
+if (!serverOnly) include(":app")
+include(":sim", ":server")

@@ -32,19 +32,20 @@ class Ai(
     var plannedRoleState: Role?
         get() = plannedRole
         set(v) { plannedRole = v }
-    internal var saveEraState: Int
+    // Publiczne, bo testy zapisu w :app są poza modułem :sim (internal byłoby niewidoczne).
+    var saveEraState: Int
         get() = saveEra
         set(v) { saveEra = v }
-    internal var saveUntilState: Float
+    var saveUntilState: Float
         get() = saveUntil
         set(v) { saveUntil = v }
-    internal var evolveReadyAtState: Float
+    var evolveReadyAtState: Float
         get() = evolveReadyAt
         set(v) { evolveReadyAt = v }
-    internal var holdUntilState: Float
+    var holdUntilState: Float
         get() = holdUntil
         set(v) { holdUntil = v }
-    internal var nextHoldAtState: Float
+    var nextHoldAtState: Float
         get() = nextHoldAt
         set(v) { nextHoldAt = v }
 
@@ -100,7 +101,7 @@ class Ai(
     }
 
     /** Dokładnie ten sam próg mgły, lecz mierzony od frontu sterowanej strony. */
-    internal fun canSeeEnemy(u: Fighter): Boolean =
+    fun canSeeEnemy(u: Fighter): Boolean =
         u.alive && u.side != me.index &&
             (!b.fog || (u.x - me.front) * me.dir <= 650f)
 
