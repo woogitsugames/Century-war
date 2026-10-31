@@ -20,6 +20,9 @@ class Ai(
     private var saveEra = -1
     private var saveUntil = 0f
     private var evolveReadyAt = -1f
+    private var holdUntil = 0f
+    private var nextHoldAt = 0f
+    private var enemyEngaged = 0
     private var enemyNear = 0
     private var enemyRanged = 0
     private var enemyMelee = 0
@@ -62,7 +65,7 @@ class Ai(
             (!b.fog || (u.x - me.front) * me.dir <= 650f)
 
     private fun observeBattlefield() {
-        enemyNear = 0; enemyRanged = 0; enemyMelee = 0
+        enemyNear = 0; enemyEngaged = 0; enemyRanged = 0; enemyMelee = 0
         enemyHeavy = 0; enemyElite = 0
         ownMelee = 0; ownRanged = 0; ownHeavy = 0
         ownPower = 0f; enemyPower = 0f
@@ -83,6 +86,7 @@ class Ai(
             enemyPower += power
             val dist = (u.x - me.baseFront) * me.dir
             if (dist <= 700f) enemyNear++
+            if (abs(u.x - me.front) <= 330f) enemyEngaged++
             when (u.def.role) {
                 Role.MELEE -> enemyMelee++
                 Role.RANGED -> enemyRanged++
@@ -94,15 +98,21 @@ class Ai(
 
     private fun managePosture() {
         if (me.hold) {
-            if (enemyNear == 0 || ownPower > enemyPower * 1.25f) me.hold = false
-        } else if (enemyNear >= 2 && ownPower < enemyPower * 0.8f) {
+            if (b.time >= holdUntil || enemyNear <= 1 || ownPower >= enemyPower) {
+                me.hold = false
+                nextHoldAt = b.time + 22f
+            }
+        } else if (b.time >= nextHoldAt && enemyNear >= 3 &&
+            ownPower > 0f && ownPower < enemyPower * 0.65f
+        ) {
             me.hold = true
+            holdUntil = b.time + 3.5f
         }
     }
 
     private fun useAbilities() {
         if (b.abilityReady(me, 0)) {
-            val minimum = if (personality == AiPersonality.SIEGER) 2 else 3
+            val minimum = if (personality == AiPersonality.SIEGER) 1 else 2
             val threatened = enemyNear >= 2 && me.baseHp < me.baseMaxHp * 0.65f
             val target = biggestVisibleCluster(minimum, threatened)
             if (target.isFinite()) b.castBarrage(me, target)
@@ -110,7 +120,7 @@ class Ai(
 
         val required = if (personality == AiPersonality.ASSAULT) 3 else 5
         if (b.abilityReady(me, 1) && me.aliveCount >= required &&
-            (enemyNear > 0 || pushing())
+            (enemyEngaged > 0 || pushing())
         ) {
             b.castRally(me)
         }
@@ -148,7 +158,7 @@ class Ai(
         if (me.era >= b.cfg.maxEra || me.xp < Defs.evolveXp[me.era] * 0.86f) return false
         if (saveEra != me.era) {
             saveEra = me.era
-            saveUntil = b.time + 12f
+            saveUntil = b.time + 6f
         }
         return b.time < saveUntil && enemyNear == 0 && me.aliveCount >= 2
     }
