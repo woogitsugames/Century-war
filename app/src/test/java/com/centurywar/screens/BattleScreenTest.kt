@@ -16,6 +16,7 @@ import com.centurywar.game.Defs
 import com.centurywar.game.Replay
 import com.centurywar.game.Campaign
 import com.centurywar.game.Modifier
+import com.centurywar.game.Weather
 import com.centurywar.game.AiPersonality
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
@@ -40,7 +41,7 @@ import kotlin.math.roundToInt
 @Config(sdk = [35])
 class BattleScreenTest {
 
-    private fun game(): Game {
+    private fun game(width: Int = 1600, height: Int = 720, density: Float = 2f): Game {
         val host = object : Host {
             override fun vibrate(ms: Long) {}
             override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
@@ -50,8 +51,8 @@ class BattleScreenTest {
         }
         val f = File.createTempFile("profile", ".json").apply { delete() }
         val g = Game(host, Profile(f).apply { tutorialDone = true }, Quality.LOW)
-        g.density = 2f
-        g.resize(1600, 720, 1600, 720)
+        g.density = density
+        g.resize(width, height, width, height)
         return g
     }
 
@@ -173,6 +174,82 @@ class BattleScreenTest {
             seen.add(speedBtn.label)
         }
         assertEquals(setOf("×1", "×3", "×5"), seen)
+    }
+
+    @Test
+    fun pauseQuickSettingsAffectProfileButNotReplayCommands() {
+        val g = game()
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 67L, 1f,
+            modifiers = setOf(Modifier.FOG_OF_WAR), weather = Weather.WIND))
+        g.setScreen(bs)
+        val battle = field(bs, "battle").get(bs) as Battle
+        battle.time = 125f
+        battle.player.kills = 7
+        battle.player.goldEarned = 246f
+        val pause = field(bs, "pauseBtn").get(bs) as Button
+        tap(g, pause.r.centerX(), pause.r.centerY())
+        assertTrue(field(bs, "paused").getBoolean(bs))
+        assertTrue((field(bs, "pauseTimeText").get(bs) as String).contains("2:05"))
+        assertTrue((field(bs, "pauseKillsText").get(bs) as String).endsWith("7"))
+        assertTrue((field(bs, "pauseGoldText").get(bs) as String).endsWith("246"))
+        assertTrue((field(bs, "pauseModifierText").get(bs) as String).isNotBlank())
+        assertTrue((field(bs, "pauseWeatherText").get(bs) as String).isNotBlank())
+
+        val sfx = field(bs, "pauseSfxRect").get(bs) as RectF
+        val trackLeft = sfx.left + 14 * g.ui.dp
+        val trackRight = sfx.right - 55 * g.ui.dp
+        val middle = (trackLeft + trackRight) / 2f
+        g.pushTouch(TouchEvent.DOWN, trackLeft, sfx.centerY(), 0)
+        g.pushTouch(TouchEvent.MOVE, middle, sfx.centerY(), 0)
+        g.pushTouch(TouchEvent.UP, middle, sfx.centerY(), 0)
+        g.frame(canvas, 1f / 60f)
+        assertEquals(0.5f, g.profile.sfxVolume, 0.01f)
+        val music = field(bs, "pauseMusicRect").get(bs) as RectF
+        tap(g, music.left + 14 * g.ui.dp, music.centerY())
+        assertEquals(0f, g.profile.musicVolume, 0.001f)
+
+        val vibration = field(bs, "pauseVibrationBtn").get(bs) as Button
+        val before = g.profile.vibration
+        tap(g, vibration.r.centerX(), vibration.r.centerY())
+        assertEquals(!before, g.profile.vibration)
+        val speed = field(bs, "pauseSpeedBtn").get(bs) as Button
+        tap(g, speed.r.centerX(), speed.r.centerY())
+        assertEquals("×3", speed.label)
+        tap(g, speed.r.centerX(), speed.r.centerY())
+        assertEquals("×5", speed.label)
+        assertTrue((field(bs, "commands").get(bs) as BattleController).log().commands.isEmpty())
+
+        assertTrue(bs.onBack())
+        assertFalse(field(bs, "paused").getBoolean(bs))
+    }
+
+    @Test
+    fun pausePanelFitsPhoneAndFoldWithAccessibleControls() {
+        for ((width, height, density) in listOf(
+            Triple(1600, 720, 1.8f),
+            Triple(2184, 1968, 2.7f),
+            Triple(1968, 2184, 2.7f),
+        )) {
+            val g = game(width, height, density)
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 68L, 1f))
+            g.setScreen(bs)
+            val panel = field(bs, "pausePanel").get(bs) as RectF
+            val sfx = field(bs, "pauseSfxRect").get(bs) as RectF
+            val music = field(bs, "pauseMusicRect").get(bs) as RectF
+            val vibration = (field(bs, "pauseVibrationBtn").get(bs) as Button).r
+            val speed = (field(bs, "pauseSpeedBtn").get(bs) as Button).r
+            val buttons = field(bs, "pauseMenu").get(bs) as List<*>
+            assertTrue(panel.left >= g.insetL)
+            assertTrue(panel.right <= g.width - g.insetR)
+            assertTrue(panel.top >= g.insetT)
+            assertTrue(panel.bottom <= g.height - g.insetB)
+            for (r in listOf(sfx, music, vibration, speed) +
+                buttons.map { (it as Button).r }) {
+                assertTrue("$width x $height: $r", panel.contains(r))
+            }
+            assertTrue(music.bottom < vibration.top)
+            assertTrue(speed.bottom < (buttons[0] as Button).r.top)
+        }
     }
 
     @Test
