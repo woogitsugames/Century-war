@@ -2,15 +2,14 @@ package com.centurywar.meta
 
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Research
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.math.pow
+import java.util.UUID
 
-class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: Float) {
-    fun cost(level: Int): Int = (baseCost * growth.pow(level)).toInt()
-}
+typealias ResearchDef = com.centurywar.game.ResearchDef
 
 class ScoreEntry(val name: String, val score: Long, val day: Long)
 
@@ -55,21 +54,7 @@ class Profile(private val file: File) {
             return json
         }
 
-        val research = listOf(
-            ResearchDef("r_elite", 1, 120, 1f),
-            ResearchDef("r_rally", 1, 90, 1f),
-            ResearchDef("r_income", 12, 40, 1.38f),
-            ResearchDef("r_unitDmg", 15, 45, 1.33f),
-            ResearchDef("r_unitHp", 15, 45, 1.33f),
-            ResearchDef("r_startGold", 10, 30, 1.35f),
-            ResearchDef("r_baseHp", 10, 40, 1.36f),
-            ResearchDef("r_turretDmg", 10, 40, 1.36f),
-            ResearchDef("r_train", 10, 50, 1.38f),
-            ResearchDef("r_xp", 10, 50, 1.4f),
-            ResearchDef("r_cap", 6, 150, 1.6f),
-            ResearchDef("r_cd", 8, 70, 1.42f),
-            ResearchDef("r_slots", 2, 260, 2.5f),
-        )
+        val research = Research.defs
         const val BOARD_ENDLESS = "endless"
         const val BOARD_CAMPAIGN = "campaign"
         const val BOARD_SKIRMISH = "skirmish"
@@ -163,21 +148,11 @@ class Profile(private val file: File) {
         return true
     }
 
-    fun bonuses() = Bonuses(
-        startGold = level("r_startGold") * 20f,
-        incomeMul = 1f + level("r_income") * 0.06f,
-        unitHpMul = 1f + level("r_unitHp") * 0.04f,
-        unitDmgMul = 1f + level("r_unitDmg") * 0.04f,
-        baseHpMul = 1f + level("r_baseHp") * 0.08f,
-        turretDmgMul = 1f + level("r_turretDmg") * 0.06f,
-        trainMul = 1f + level("r_train") * 0.05f,
-        xpMul = 1f + level("r_xp") * 0.05f,
-        popCap = 12 + level("r_cap"),
-        abilityCdMul = 1f - level("r_cd") * 0.05f,
-        turretSlots = 2 + level("r_slots"),
-        eliteUnlocked = level("r_elite") > 0,
-        rallyUnlocked = level("r_rally") > 0,
-    )
+    fun researchLevels(): IntArray = IntArray(research.size) { i ->
+        level(research[i].key).coerceIn(0, research[i].max)
+    }
+
+    fun bonuses() = Research.bonuses(researchLevels())
 
     /** Pierwszy etap bez gwiazdki. Wszystkie wcześniejsze są odblokowane. */
     fun unlockedStage(): Int {
