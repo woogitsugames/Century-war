@@ -22,7 +22,7 @@ class Fighter {
     /** < 0 znaczy, że żyje; >= 0 to czas od śmierci (animacja znikania). */
     var dying = -1f
     var serial = 0
-    /** 0 = zwykła, 1 = odrzut, 2 = aura przyspieszenia. */
+    /** 0: zwykła jednostka, 1: boss z odrzutem, 2: boss z aurą. */
     var bossKind = 0
     var bossCd = 0f
     var burnDps = 0f
@@ -98,7 +98,7 @@ class Side(val index: Int) {
     var freeEliteCredits = 0
     var autoBarrageInterval = 0f
     var autoBarrageTimer = 0f
-    /** Liczba kopii każdej wybranej karty; brak alokacji podczas fal. */
+    /** Liczba użyć poszczególnych kart (bez alokacji w każdej fali). */
     val cardStacks = IntArray(EndlessCard.values().size)
     var cap = 12
     var eliteUnlocked = true
@@ -161,6 +161,8 @@ class Battle(val cfg: BattleConfig) {
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
         const val ENDLESS_CHOICE_EVERY = 5
+        /** Samouczek: po tylu sekundach symulacji AI zaczyna grać. */
+        const val TUTORIAL_AI_DELAY = 25f
     }
 
     val rng = Rng(cfg.seed)
@@ -178,29 +180,19 @@ class Battle(val cfg: BattleConfig) {
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
 
-    /** Dla starych ekranów: przy wyborze karty sygnalizuje otwarty modal. */
+    /** Doktryny podczas awansowania epoki poza trybem Endless. */
     var pendingChoice: Array<Doctrine>? = null
-    /** Właściwe opcje kart. Ekran powinien używać tej tablicy przed pendingChoice. */
+    /** Osobna oferta kart dla Endless; ekran obsługuje oba rodzaje wyboru. */
     var pendingCards: Array<EndlessCard>? = null
-        private set
     private val cardOffer = Array(3) { EndlessCard.ECONOMY }
-    private val legacyCardModal = arrayOf(Doctrine.ECONOMY, Doctrine.SIEGE, Doctrine.FURY)
     var currentWaveTheme = EndlessWaveTheme.MIXED
-        private set
     var nextWaveTheme = if (endless) EndlessCards.nextTheme(rng) else EndlessWaveTheme.MIXED
-        private set
-    val nextWaveNamePl get() = if ((wave + 1) % 10 == 0) EndlessTexts.bossIncoming(true)
-        else EndlessTexts.wave(nextWaveTheme, true)
-    val nextWaveNameEn get() = if ((wave + 1) % 10 == 0) EndlessTexts.bossIncoming(false)
-        else EndlessTexts.wave(nextWaveTheme, false)
-    val nextWaveName get() = nextWaveNamePl
+    val nextWaveKey get() = if ((wave + 1) % 10 == 0) "ew_boss" else nextWaveTheme.textKey
     var bossesSpawned = 0
-        private set
     var bossesDefeated = 0
-        private set
-    /** Najstarsza fala bossa oczekująca na miejsce w puli jednostek. */
-    private var nextBossToSpawn = 10
-    private var bossRewardsPending = 0
+    var nextBossToSpawn = 10
+    var bossRewardsPending = 0
+    private var bossAuraX = -10_000f
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
@@ -241,6 +233,7 @@ class Battle(val cfg: BattleConfig) {
         if (Modifier.ARMORED_FOE in mods) e.hpMul *= 1.3f
         if (e.slots > 0) e.slots = min(Defs.MAX_TURRET_SLOTS, 2 + max(0, cfg.stageIndex) / 10)
         e.cap = if (cfg.aiPower > 1.2f) 14 else 12
+        if (cfg.tutorial) { e.gold *= 0.5f; p.xpMul *= 1.5f } // samouczek: łagodniejszy start, szybszy awans
         if (endless) {
             e.queueMax = QUEUE_CAP
             e.cap = 30
@@ -283,7 +276,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun canEvolve(side: Side): Boolean =
-        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && pendingChoice == null
+        !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && pendingChoice == null && pendingCards == null
 
     fun evolve(side: Side): Boolean {
         if (!canEvolve(side)) return false
@@ -293,7 +286,7 @@ class Battle(val cfg: BattleConfig) {
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
-        offerDoctrines(side)
+        if (!endless) offerDoctrines(side)
         return true
     }
 
@@ -314,40 +307,30 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun chooseDoctrine(index: Int) {
-        val cards = pendingCards
-        if (cards != null) {
-            pendingCards = null
-            pendingChoice = null
-            applyEndlessCard(player, cards[index.coerceIn(0, cards.size - 1)])
-            return
-        }
         val c = pendingChoice ?: return
         pendingChoice = null
         applyDoctrine(player, c[index.coerceIn(0, c.size - 1)])
     }
 
-    /** Docelowe API dla kart HUD; chooseDoctrine zachowuje obsługę dotyku starego ekranu. */
+
+    /** Wybór 1 z 3, zgłoszony przez ekran. */
     fun chooseEndlessCard(index: Int): Boolean {
-        if (pendingCards == null) return false
-        chooseDoctrine(index)
+        val options = pendingCards ?: return false
+        pendingCards = null
+        applyEndlessCard(player, options[index.coerceIn(0, options.size - 1)])
         return true
     }
 
     fun applyEndlessCard(side: Side, card: EndlessCard) {
-        if (!endless || over) return
+        if (!endless || over || side.index != 0) return
         side.cardStacks[card.ordinal]++
-        val doctrine = card.doctrine
-        if (doctrine != null) {
-            applyDoctrine(side, doctrine)
-            return
-        }
+        if (card.doctrine != null) { applyDoctrine(side, card.doctrine); return }
         when (card) {
             EndlessCard.TOWER_SLOT -> side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
             EndlessCard.FREE_ELITE -> side.freeElitesPerWave = min(4, side.freeElitesPerWave + 1)
             EndlessCard.BURNING_TOWERS -> side.turretBurnRatio += 0.25f
             EndlessCard.AUTO_BARRAGE -> {
-                side.autoBarrageInterval = if (side.autoBarrageInterval <= 0f) 30f
-                    else max(15f, side.autoBarrageInterval - 5f)
+                side.autoBarrageInterval = if (side.autoBarrageInterval == 0f) 30f else max(15f, side.autoBarrageInterval - 5f)
                 side.autoBarrageTimer = side.autoBarrageInterval
             }
             EndlessCard.BLOOD_GOLD -> {
@@ -377,18 +360,19 @@ class Battle(val cfg: BattleConfig) {
             EndlessCard.ELITE_SCHOOL -> side.eliteDmgMul *= 1.3f
             EndlessCard.LAST_STAND -> side.lastStandMul *= 1.35f
             EndlessCard.REPAIR_CREW -> side.repairPerWave = min(0.3f, side.repairPerWave + 0.06f)
-            else -> Unit // Doktryny obsłużono powyżej.
+            else -> Unit
         }
     }
 
     private fun offerEndlessCards() {
         EndlessCards.draw(rng, player, cardOffer)
-        if (playerAi != null) {
-            applyEndlessCard(player, cardOffer[rng.nextInt(cardOffer.size)])
-        } else {
-            pendingCards = cardOffer
-            pendingChoice = legacyCardModal
-        }
+        if (playerAi != null) applyEndlessCard(player, cardOffer[rng.nextInt(3)])
+        else pendingCards = cardOffer
+    }
+
+    fun currentBoss(): Fighter? {
+        for (u in units) if (u.alive && u.isBoss) return u
+        return null
     }
 
     fun applyDoctrine(side: Side, d: Doctrine) {
@@ -471,7 +455,7 @@ class Battle(val cfg: BattleConfig) {
         return true
     }
 
-    /** Ostrzał automatyczny nie zużywa odnowienia ostrzału ręcznego. */
+    /** Dodatkowy ostrzał nie blokuje ostrzału ręcznego. */
     private fun fireBarrage(side: Side) {
         val count = 16
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
@@ -514,7 +498,7 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- symulacja
 
     fun step() {
-        if (over || pendingChoice != null) return
+        if (over || pendingChoice != null || pendingCards != null) return
         val dt = STEP
         time += dt
         updateFronts()
@@ -535,15 +519,17 @@ class Battle(val cfg: BattleConfig) {
         }
         for (s in sides) promote(s)
         if (endless) director(dt)
-        ai?.update(dt)
+        if (!cfg.tutorial || time >= TUTORIAL_AI_DELAY) ai?.update(dt)
         playerAi?.update(dt)
+        bossAuraX = -10_000f
+        if (endless) for (u in units) if (u.alive && u.bossKind == 2) { bossAuraX = u.x; break }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
         }
-        if (endless && !over && pendingChoice == null && bossRewardsPending > 0) {
+        if (endless && !over && pendingCards == null && bossRewardsPending > 0) {
             bossRewardsPending--
             offerEndlessCards()
         }
@@ -659,7 +645,10 @@ class Battle(val cfg: BattleConfig) {
     private fun turrets(s: Side, dt: Float) {
         val enemyIdx = 1 - s.index
         val target = frontUnit(enemyIdx) ?: run {
-            for (i in 0 until s.slots) if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+            for (i in 0 until s.slots) {
+                if (s.turretCd[i] > 0f) s.turretCd[i] -= dt
+                if (s.turretFire[i] > 0f) s.turretFire[i] -= dt
+            }
             return
         }
         for (i in 0 until s.slots) {
@@ -700,27 +689,20 @@ class Battle(val cfg: BattleConfig) {
         if (u.flash > 0f) u.flash -= dt
         if (u.attackAnim > 0f) u.attackAnim -= dt
         var rally = if (s.rallyT > 0f) 1.4f else 1f
-        if (endless && u.side == 1) {
-            for (a in units) {
-                if (a.alive && a.side == 1 && a.bossKind == 2 && abs(a.x - u.x) < 380f) {
-                    rally *= 1.25f
-                    break
-                }
-            }
-        }
+        if (endless && u.side == 1 && abs(bossAuraX - u.x) < 380f) rally *= 1.25f
         if (u.cd > 0f) u.cd -= dt * rally
 
         val target = frontUnit(eIdx)
         val gap = if (target != null) (target.x - u.x) * s.dir - u.radius - target.radius
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
-        val attackDmg = if (endless && u.side == 0 &&
-            s.baseHp < s.baseMaxHp * 0.35f) u.dmg * s.lastStandMul else u.dmg
+        val attackDmg = if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.35f)
+            u.dmg * s.lastStandMul else u.dmg
 
         if (gap <= def.range) {
             u.moving = false
             if (endless && u.bossKind == 1 && u.bossCd <= 0f && target != null && target.alive) {
-                target.x = max(e.baseFront - 30f, target.x - target.def.speed * 1.5f)
+                target.x = max(e.baseFront + 16f, target.x - 90f)
                 damageUnit(target, attackDmg * 0.2f, u.side)
                 u.bossCd = 6f
             }
@@ -773,13 +755,11 @@ class Battle(val cfg: BattleConfig) {
         return null
     }
 
-    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float,
-        splash: Float, siegeMul: Float, era: Int, burnDps: Float = 0f) {
+    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int, burnDps: Float = 0f) {
         val p = allocProj() ?: return
         p.side = side; p.type = type; p.x = x; p.h = h; p.tx = tx; p.era = era
         p.dmg = dmg; p.splash = splash; p.siegeMul = if (siegeMul <= 0f) 0.6f else siegeMul
-        p.burnDps = burnDps
-        p.delay = 0f; p.t = 0f
+        p.delay = 0f; p.t = 0f; p.burnDps = burnDps
         val dist = abs(tx - x)
         val straight = type == Proj.BULLET || type == Proj.BEAM || type == Proj.PLASMA || type == Proj.ROCKET || type == Proj.BOLT
         val speed = when (type) {
@@ -827,8 +807,7 @@ class Battle(val cfg: BattleConfig) {
         }
     }
 
-    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float,
-        siegeMul: Float, era: Int, burnDps: Float = 0f) {
+    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float, siegeMul: Float, era: Int, burnDps: Float = 0f) {
         for (u in units) {
             if (!u.alive || u.side == attacker) continue
             if (abs(u.x - cx) <= radius + u.radius) {
@@ -878,14 +857,16 @@ class Battle(val cfg: BattleConfig) {
 
     private fun damageBase(s: Side, d: Float, attacker: Int) {
         if (endless && s.index == 1) return
-        s.baseHp -= d * siegePressure()
-        s.baseFlash = 0.15f
         val k = sides[attacker]
+        // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
+        s.baseHp -= d * k.siegeMul * siegePressure()
+        s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
         fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index)
     }
 
     // ---------------------------------------------------------------- tryb bez końca
+
 
     private fun director(dt: Float) {
         val p = player
@@ -898,7 +879,6 @@ class Battle(val cfg: BattleConfig) {
         }
         spawnFreeElites()
         if (wave >= nextBossToSpawn) spawnPendingBoss()
-
         waveTimer -= dt
         if (waveTimer > 0f) return
         wave++
@@ -914,8 +894,7 @@ class Battle(val cfg: BattleConfig) {
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f)
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
-            val role = waveRole(rng.nextInt(100))
-            val def = Defs.unit(e.era, role)
+            val def = Defs.unit(e.era, waveRole(rng.nextInt(100)))
             e.queue[e.queueSize++] = def.id
             budget -= def.cost
             n++
@@ -930,9 +909,9 @@ class Battle(val cfg: BattleConfig) {
         if (wave % 10 == 0) spawnPendingBoss()
         if (wave % ENDLESS_CHOICE_EVERY == 0) offerEndlessCards()
 
-        // Narastająca presja po bardzo długim oblężeniu uniemożliwia wieczny pat.
-        if (wave >= 85) {
-            damageBase(p, p.baseMaxHp * (wave - 84) * 0.025f, 1)
+        // Stopniowo narastająca presja po bardzo długim oblężeniu usuwa wieczne paty.
+        if (wave >= 120) {
+            damageBase(p, p.baseMaxHp * (wave - 119) * 0.008f, 1)
         }
     }
 

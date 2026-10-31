@@ -41,6 +41,8 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     ELITE_SCHOOL(EndlessRarity.RARE),
     LAST_STAND(EndlessRarity.RARE),
     REPAIR_CREW(EndlessRarity.UNCOMMON),
+    ;
+    val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
 
 /** Temat wpływa na rozkład ról w danej fali. */
@@ -51,6 +53,8 @@ enum class EndlessWaveTheme {
     FAST_RUSH,
     ELITE_GUARD,
     ARTILLERY,
+    ;
+    val textKey: String = "ew_${name.lowercase()}"
 }
 
 /** Losowanie bez powtórzeń w obrębie oferty; brak alokacji podczas symulacji. */
