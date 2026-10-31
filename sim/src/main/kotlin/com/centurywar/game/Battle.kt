@@ -224,6 +224,7 @@ class Battle(val cfg: BattleConfig) {
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
+        const val RALLY_SPEED_BONUS = 1.4f
         const val ARMORY_BASE_COST = 140f
         const val ARMORY_COST_GROWTH = 1.45f
         const val ARMORY_BONUS = 1.08f
@@ -1021,7 +1022,7 @@ class Battle(val cfg: BattleConfig) {
         val e = sides[eIdx]
         if (u.flash > 0f) u.flash -= dt
         if (u.attackAnim > 0f) u.attackAnim -= dt
-        var rally = if (s.rallyT > 0f) 1.4f else 1f
+        var rally = if (s.rallyT > 0f) RALLY_SPEED_BONUS else 1f
         if (endless && u.side == 1) {
             for (i in 0 until bossAuraCount) if (abs(bossAuraXs[i] - u.x) < EndlessBosses.AURA_RANGE) {
                 rally *= 1.25f
