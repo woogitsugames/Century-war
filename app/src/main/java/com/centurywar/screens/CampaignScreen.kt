@@ -109,7 +109,7 @@ class CampaignScreen(g: Game) : Screen(g) {
             // Po wstawieniu epoki weteran może mieć gwiazdki za „dziurą” nowych etapów.
             t.enabled = s.index <= unlocked || g.profile.stars[s.index] > 0
             t.highlight = s.index == unlocked
-            t.visible = selected == null && t.r.bottom > top && t.r.top < h
+            t.visible = selected == null && t.r.top >= top && t.r.bottom <= h - g.insetB
         }
         start.visible = selected != null
         close.visible = selected != null

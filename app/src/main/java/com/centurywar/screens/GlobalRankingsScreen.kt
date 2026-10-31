@@ -23,6 +23,7 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
     private val stageBtn = btn(11)
     private val tabs = Array(4) { btn(it) }
     private val names = arrayOf("board_endless", "board_daily", "board_campaign", "board_skirmish")
+    private val shortNames = arrayOf("endless", "daily", "campaign", "skirmish")
     private val periods = arrayOf("day", "week", "all")
     private val periodNames = arrayOf("global_period_day", "global_period_week", "global_period_all")
     private val icons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
@@ -51,7 +52,7 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         val tw = (pw - 3 * gap) / 4
         val left = (w - pw) / 2f
         for (i in 0..3) {
-            tabs[i].label = L[names[i]]
+            tabs[i].label = chrome.tabLabel(L[names[i]], L[shortNames[i]], tw, 42 * dp)
             tabs[i].iconId = icons[i]
             tabs[i].set(left + i * (tw + gap), chrome.top + 4 * dp, tw, 42 * dp)
         }

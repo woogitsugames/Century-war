@@ -90,6 +90,7 @@ class ResearchScreen(g: Game) : Screen(g) {
             val d = b.tag as ResearchDef
             b.set(g.insetL + 16 * dp + (i % cols) * (cw + 12 * dp), top + 6 * dp + (i / cols) * (ch + 12 * dp) - scroll, cw, ch)
             b.enabled = g.profile.canBuy(d)
+            b.visible = b.r.top >= top && b.r.bottom <= h - g.insetB
             b.label = ""
             val lv = g.profile.level(d.key)
             if (costLv[i] != lv || langChanged) {

@@ -125,7 +125,9 @@ class SettingsScreen(g: Game) : Screen(g) {
             }
             else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
         }
-        for (b in rows) if (b !== music) b.visible = b.r.bottom > contentTop && b.r.top < contentBottom
+        // Nie pozostawiaj klikalnych połówek przycisków pod przyciętą krawędzią listy.
+        for (b in rows) b.visible = b !== music && b !== sfxLevel &&
+            b.r.top >= contentTop && b.r.bottom <= contentBottom
         reset.iconId = Icons.RESTART
         access.iconId = Icons.PERSON
     }
