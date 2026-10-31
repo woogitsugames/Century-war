@@ -47,7 +47,7 @@ jobs:
         if: matrix.from == 1
         run: |
           ./gradlew :app:assembleDebug --console=plain
-          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --console=plain --no-configuration-cache
       - name: Kontrola lustrzanych bitew
         if: matrix.from == 1
         run: ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.mirrorReport' --console=plain

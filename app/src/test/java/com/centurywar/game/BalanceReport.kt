@@ -2,6 +2,7 @@ package com.centurywar.game
 
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.Locale
@@ -187,6 +188,28 @@ class BalanceReport {
         File(dir, "report.csv").writeText(csv.toString())
         File(dir, "report.md").writeText(md.toString())
         println("BALANCE_REPORT ${File(dir, "report.csv").absolutePath}")
+        if (!baseline && runs >= 20) {
+            for (r in stats) {
+                val target = when (r.stage.index + 1) {
+                    in 1..6 -> "nowy"
+                    in 7..20 -> "sredni"
+                    else -> "weteran"
+                }
+                if (r.profile != target) continue
+                val minRate = when (target) {
+                    "nowy" -> 70.0
+                    "sredni" -> 55.0
+                    else -> 50.0
+                }
+                assertTrue("Za mało zwycięstw na etapie ${r.stage.index + 1}: ${r.winPct}%",
+                    r.winPct >= minRate)
+                assertTrue("Nieprawidłowa mediana etapu ${r.stage.index + 1}: ${r.medianMinutes} min",
+                    r.medianMinutes in 4.0..12.0)
+                assertTrue("Pat na etapie ${r.stage.index + 1}", r.timeoutPct < 5.0)
+            }
+            assertTrue("Timeouty w raporcie przekraczają limit 5%",
+                stats.sumOf { it.timeouts } * 20 < stats.sumOf { it.count })
+        }
     }
 
     /** Lustrzane pojedynki bez badań, z tą samą siłą i możliwością elit obu stron. */

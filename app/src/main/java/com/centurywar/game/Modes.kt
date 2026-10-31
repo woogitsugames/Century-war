@@ -59,6 +59,8 @@ class BattleConfig(
     val modifiers: Set<Modifier> = emptySet(),
     val playerBonuses: Bonuses = Bonuses(),
     val stageIndex: Int = -1,
+    /** Samouczek (pierwszy etap kampanii): AI rusza później i ma mniej złota na start. */
+    val tutorial: Boolean = false,
 )
 
 class Stage(
@@ -116,8 +118,16 @@ object Campaign {
         }
     }
 
-    fun config(stage: Stage, bonuses: Bonuses, seed: Long) = BattleConfig(
-        Mode.CAMPAIGN, seed, stage.aiPower, stage.startEra, stage.maxEra, stage.modifiers, bonuses, stage.index,
+    /**
+     * [tutorial]: łagodniejsza wersja etapu do samouczka (słabsze AI, a etap 1 dopuszcza
+     * jeden awans epoki, żeby dało się pokazać Awans i wybór doktryny).
+     */
+    fun config(stage: Stage, bonuses: Bonuses, seed: Long, tutorial: Boolean = false) = BattleConfig(
+        Mode.CAMPAIGN, seed,
+        if (tutorial) stage.aiPower * 0.8f else stage.aiPower,
+        stage.startEra,
+        if (tutorial) maxOf(stage.maxEra, minOf(Defs.ERA_COUNT - 1, stage.startEra + 1)) else stage.maxEra,
+        stage.modifiers, bonuses, stage.index, tutorial,
     )
 }
 
@@ -144,6 +154,11 @@ object Daily {
 /** Mały, deterministyczny generator (xorshift). Ten sam seed daje tę samą bitwę na każdym telefonie. */
 class Rng(seed: Long) {
     private var s: Long = if (seed == 0L) 0x9E3779B97F4A7C15uL.toLong() else seed xor 0x5DEECE66DL
+
+    /** Wewnętrzny stan generatora (zapis/wczytanie bitwy w [BattleSnapshot]). */
+    var state: Long
+        get() = s
+        set(v) { s = v }
 
     fun nextLong(): Long {
         var x = s

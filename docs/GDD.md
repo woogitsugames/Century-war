@@ -99,3 +99,11 @@ Koszty rosną wykładniczo (×1,33–1,6 na poziom), więc pełne drzewko to wie
 6. Kosmetyka bez wpływu na balans (skórki epok, sztandary).
 7. Grafika: ręcznie rysowane sprite'y w obecnym stylu, animacje śmierci i trafień.
 8. Monetyzacja przyjazna graczom: reklamy tylko z nagrodą, jednorazowe „bez reklam”, zero pay-to-win.
+
+## 7. Rozwój zawartości w czasie (aktualizacje)
+
+1. **Ulepszenia jednostek w epoce:** każda jednostka ma 2–3 stopnie ulepszenia kupowane w bitwie (statystyki i detale wyglądu). Decyzja: awansować epokę czy wzmocnić obecną armię.
+2. **Nowe epoki pomiędzy istniejącymi** (jedna na aktualizację): Epoka żelaza (między brązem a feudalizmem), Renesans (między feudalizmem a prochem), Epoka atomowa (między stalą a krzemem), Era galaktyczna (po orbitalnej). Docelowo 12 epok i 48 etapów kampanii.
+   - Technicznie: `Defs` jest sterowane danymi (tablice na epokę). Trzeba dopisać jednostki, wieżę, ostrzał, grafikę (`game/art/*`), etapy kampanii i przestroić balans testem `BattleSimTest`/`BalanceReport`.
+   - Zapis gracza: `Profile.stars` dopasowuje się do liczby etapów. Przy wstawianiu epok w środek trzeba zmapować stare gwiazdki na nowe numery etapów (migracja profilu).
+3. **Rozgałęzienia epok:** przy awansie wybór jednej z dwóch wersji następnej epoki (np. Para: Diesel / Tesla).
