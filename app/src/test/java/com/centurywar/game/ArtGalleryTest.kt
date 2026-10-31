@@ -356,4 +356,48 @@ class ArtGalleryTest {
             save(bmp, if (q == Quality.HIGH) "gallery_bases_high" else "gallery_bases_low")
         }
     }
+    /**
+     * Jedna plansza wszystkich 9 epok i 4 wariantów, z osobnym podglądem LOW.
+     * Obejmuje też niebo i ziemię, więc łatwo porównać czytelność sylwetek.
+     */
+    @Test
+    fun eraBackdropStrips() {
+        val entries = ArrayList<Pair<Int, Int>>()
+        for (era in 0 until Defs.ERA_COUNT) {
+            entries.add(era to -1)
+            for (variant in Defs.spec(era).variants.indices) entries.add(era to variant)
+        }
+        val w = 1200
+        val h = 270
+        val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            isFakeBoldText = true
+            textSize = 21f
+        }
+        for (quality in intArrayOf(Quality.HIGH, Quality.LOW)) {
+            val g = game(w, h, quality)
+            val sheet = Bitmap.createBitmap(w, h * entries.size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(sheet)
+            for ((row, selection) in entries.withIndex()) {
+                val (era, variant) = selection
+                val b = Battle(BattleConfig(Mode.SKIRMISH, 56L + row, 1f,
+                    startEra = era, maxEra = era))
+                if (variant >= 0) check(b.chooseVariant(variant))
+                val renderer = BattleRenderer(g, b)
+                renderer.layout(w.toFloat(), h.toFloat(), 0f, 30f)
+                renderer.camX = 640f
+                canvas.save()
+                canvas.translate(0f, row * h.toFloat())
+                canvas.clipRect(0f, 0f, w.toFloat(), h.toFloat())
+                renderer.render(canvas, 0f, w.toFloat(), h.toFloat())
+                val art = Defs.sideArt(era, variant)
+                canvas.drawText(art.name, 32f, 38f, label)
+                canvas.restore()
+            }
+            save(sheet, if (quality == Quality.LOW) "gallery_era_backdrops_low"
+                else "gallery_era_backdrops_high")
+            sheet.recycle()
+        }
+    }
+
 }
