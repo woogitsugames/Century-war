@@ -91,24 +91,12 @@ jobs:
       - name: Uruchom wydanie release na emulatorze
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            set -eu
-            adb install -r app/build/outputs/apk/release/app-release.apk
-            adb logcat -c
-            adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity | tee build/release-metrics/start.txt
-            grep -q '^Status: ok' build/release-metrics/start.txt
-            sleep 8
-            adb shell pidof com.centurywar.game
-            adb logcat -d -s AndroidRuntime:E > build/release-metrics/androidruntime.log
-            if grep -q "FATAL EXCEPTION" build/release-metrics/androidruntime.log; then
-              cat build/release-metrics/androidruntime.log
-              exit 1
-            fi
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 2048
+          script: bash .github/scripts/smoke-release.sh
 
       - name: Zachowaj raport i logi
         if: always()

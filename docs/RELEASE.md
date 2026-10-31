@@ -85,7 +85,7 @@ ze świadomie włączonym podpisem testowym, uruchamia:
 
 Workflow sprawdza obecność `baseline.prof` w APK/AAB, zawartość manifestu
 przez `aapt`, raportuje dokładne rozmiary bajtowe APK i AAB w GitHub Actions
-Job Summary i uruchamia aplikację na emulatorze API 35 (sprawdzenie właściwej klasy Activity, kontrola procesu
+Job Summary i uruchamia aplikację na emulatorze API 34 (sprawdzenie właściwej klasy Activity, kontrola procesu
 i `AndroidRuntime`). Logi i tabela rozmiarów trafiają do artefaktu
 `release-walidacja`. Porównywane APK/AAB są podpisane debug key w obu wariantach
 — to miarodajne porównanie rozmiarów, **nie** pliki do publikacji.
@@ -110,3 +110,22 @@ Błąd dotyczył polecenia uruchamiającego w CI; poprawka wymaga ponownego test
 
 Te liczby odnoszą się do gałęzi bazowej sprzed synchronizacji z bieżącym
 `claude/bold-sagan-vwz5gm`. Workflow liczy aktualne porównanie przy każdym pushu.
+
+## Diagnozowanie rozruchu release w CI
+
+Smoke-test `.github/scripts/smoke-release.sh` instaluje APK, sprawdza `Status: ok`,
+stan procesu i błędy `AndroidRuntime`. **Zawsze** zapisuje `androidruntime.log`,
+`logcat-last.txt` i `activities.txt`, również gdy aplikacja zniknie po starcie.
+Dla stabilności runner korzysta z emulatora API 34 (Google APIs) z limitem 2 GB RAM.
+
+Na dwóch uruchomieniach API 35 (31.10.2026, runs 41205802076 i 41205798088)
+kompilacja, testy i inspekcja manifestu/profilu przeszły, ale smoke-test
+nie został potwierdzony: jeden emulator nie miał działającej usługi
+`package`, drugi uruchomił Activity z `Status: ok`, po czym proces nie był
+już obecny. Brak logcat z tego drugiego przebiegu uniemożliwia rozróżnienie
+awarii aplikacji i środowiska — nowy skrypt zabezpiecza diagnostykę.
+
+| Artefakt, aktualna baza | Przed (bajty) | Po (bajty) | Różnica |
+| --- | ---: | ---: | ---: |
+| APK | 230772 | 232655 | +1883 |
+| AAB | 400337 | 402654 | +2317 |
