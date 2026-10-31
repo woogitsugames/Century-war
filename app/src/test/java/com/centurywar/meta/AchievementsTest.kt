@@ -43,7 +43,10 @@ class AchievementsTest {
         for (a in Achievements.all) {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
-            assertTrue(AchievementTexts.get(a.id, true).name.isNotBlank())
+            assertTrue(a.pgsKey.isNotBlank())
+            assertTrue(AchievementTexts.get(a.id, true).name != a.id)
+            assertTrue(AchievementTexts.get(a.id, false).name != a.id)
+            assertTrue(AchievementTexts.get(a.id, true).description.isNotBlank())
             assertTrue(AchievementTexts.get(a.id, false).description.isNotBlank())
         }
     }
@@ -189,6 +192,20 @@ class AchievementsTest {
         val cfg = BattleConfig(Mode.SKIRMISH, 60L, 1.6f)
         val earned = ids(Achievements.onBattleEnd(p, finished(cfg, true), cfg, true))
         assertTrue("insane_win" in earned)
+    }
+
+    @Test
+    fun combatEventCountersOnlyTrackSuccessfulActions() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 65L, 1f)
+        val b = Battle(cfg)
+        assertTrue(b.castBarrage(b.player))
+        assertEquals(1, b.player.barragesCast)
+        assertFalse(b.castBarrage(b.player))
+        assertEquals(1, b.player.barragesCast)
+
+        b.player.xp = Defs.evolveXp[0].toFloat()
+        assertTrue(b.evolve(b.player))
+        assertEquals(1, b.player.erasAdvanced)
     }
 
     @Test
