@@ -125,6 +125,7 @@ class Profile(private val file: File) {
     var showFps = false
     var lang = ""            // "" = systemowy, inaczej kod z L.CODES ("pl", "en", "de"...)
     var skirmishDiff = 1
+    var skirmishSetup = SkirmishSetup.defaults(skirmishDiff)
     var notifications = true // przypomnienia po pierwszym zwycięstwie
     var notifyHour = 18     // godzina lokalna 0..23
 
@@ -229,6 +230,11 @@ class Profile(private val file: File) {
         o.put("showFps", showFps)
         o.put("lang", lang)
         o.put("skirmishDiff", skirmishDiff)
+        val setup = skirmishSetup.sanitized()
+        o.put("skirmishSetup", JSONObject()
+            .put("startEra", setup.startEra).put("maxEra", setup.maxEra)
+            .put("personality", setup.personality).put("powerPercent", setup.powerPercent)
+            .put("modifierMask", setup.modifierMask))
         o.put("notifications", notifications)
         o.put("notifyHour", notifyHour.coerceIn(0, 23))
         o.put("battles", battles)
@@ -398,6 +404,7 @@ class Profile(private val file: File) {
             }
         }
         val missions = obj("missions")
+        val savedSkirmish = obj("skirmishSetup")
 
         // Zmieniamy aktualny stan dopiero po pomyślnym przetworzeniu całego dokumentu.
         name = json.optString("name", "")
@@ -414,6 +421,16 @@ class Profile(private val file: File) {
         showFps = json.optBoolean("showFps", false)
         lang = json.optString("lang", "")
         skirmishDiff = json.optInt("skirmishDiff", 1).coerceIn(0, 3)
+        val defaultSetup = SkirmishSetup.defaults(skirmishDiff)
+        skirmishSetup = savedSkirmish?.let {
+            SkirmishSetup(
+                it.optInt("startEra", defaultSetup.startEra),
+                it.optInt("maxEra", defaultSetup.maxEra),
+                it.optInt("personality", defaultSetup.personality),
+                it.optInt("powerPercent", defaultSetup.powerPercent),
+                it.optInt("modifierMask", defaultSetup.modifierMask),
+            ).sanitized()
+        } ?: defaultSetup
         battles = json.optInt("battles", 0).coerceAtLeast(0)
         wins = json.optInt("wins", 0).coerceAtLeast(0)
         totalKills = json.optLong("totalKills", 0L).coerceAtLeast(0L)
@@ -435,7 +452,7 @@ class Profile(private val file: File) {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
         quality = 0; fpsCap = 0; vibration = true; sound = true
-        showFps = false; lang = ""; skirmishDiff = 1
+        showFps = false; lang = ""; skirmishDiff = 1; skirmishSetup = SkirmishSetup.defaults()
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         musicVolume = 0.5f; notifications = true; notifyHour = 18
         achievementCounters.clear(); unlockedAchievements.clear()
