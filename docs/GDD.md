@@ -22,7 +22,8 @@
 | Jednostki | **32** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
 | Wieże | **8** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
 | Ostrzały specjalne | **8** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
-| Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki |
+| Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki poza Endless |
+| Karty Endless | **30**: 9 doktryn i 21 nowych efektów, cztery rzadkości |
 | Modyfikatory bitew | **10**, np. Mgła wojny, Kruche bazy, Horda strzelców |
 | Etapy kampanii | **32** (4 na epokę), po 3 gwiazdki = **96 gwiazdek** |
 | Badania | **13** drzew, łącznie **110 poziomów** |
@@ -38,8 +39,11 @@
 
 ### Oblężenie bez końca
 - Fale co ~16–28 s. Co 6 fal wróg wchodzi w nową epokę, a od fali 48 jednostki wroga stają się coraz silniejsze.
-- Co 5 fal gracz wybiera doktrynę (lekki roguelite).
-- Wynik = fale × 250 + zabici × 12 + czas.
+- Co 5 fal gracz wybiera jedną z trzech kart (30 rodzajów, cztery rzadkości); przy awansie epoki nie ma już osobnego wyboru doktryny.
+- Fale tematyczne (strzelcy, ciężkie oddziały, elita, szturm) są zapowiadane przed pojawieniem się. Co 10 fal przychodzi boss z odrzutem lub aurą szybkości.
+- Pokonanie bossa zapewnia dodatkową kartę.
+- Wynik = fale × 250 + zabici × 12 + czas / 2 + pokonani bossowie × 1500.
+- Po bardzo długim oblężeniu narasta presja niszcząca bazę, żeby pojedynek nie trwał bez końca.
 
 ### Wyzwanie dnia
 - Ten sam seed, epoki i modyfikatory dla każdego gracza na świecie (dzień UTC).

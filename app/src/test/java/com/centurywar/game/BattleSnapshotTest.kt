@@ -21,7 +21,7 @@ class BattleSnapshotTest {
     /** Prosty, deterministyczny "gracz" bez AI (żeby wybór doktryny czekał na gracza). */
     private fun scripted(b: Battle) {
         val p = b.player
-        if (b.pendingChoice != null) return
+        if (b.pendingChoice != null || b.pendingCards != null) return
         if (b.canEvolve(p)) b.evolve(p)
         val role = Role.values()[(b.serialCounter + p.queueSize) % 3]
         b.queueUnit(p, role)
@@ -35,6 +35,7 @@ class BattleSnapshotTest {
         while (i < n && !b.over) {
             if (script) scripted(b)
             if (b.pendingChoice != null) b.chooseDoctrine((b.wave + b.player.era) % 3)
+            if (b.pendingCards != null) b.chooseEndlessCard((b.wave + b.player.era) % 3)
             b.step(); b.fx.count = 0; i++
         }
     }
@@ -143,6 +144,34 @@ class BattleSnapshotTest {
     fun endlessWithPlayerChoices() {
         // bez AI gracza: co 5 fal gra czeka na wybór doktryny
         check(BattleConfig(Mode.ENDLESS, 11L, 1f), 60 * 170, 60 * 200, playerAi = false)
+    }
+
+    @Test
+    fun pendingEndlessCardsAndBossStateSurvive() {
+        val a = Battle(BattleConfig(Mode.ENDLESS, 2026L, 1f))
+        a.applyEndlessCard(a.player, EndlessCard.BURNING_TOWERS)
+        a.applyEndlessCard(a.player, EndlessCard.AUTO_BARRAGE)
+        repeat(5) { a.waveTimer = 0f; a.step() }
+        assertNotNull(a.pendingCards)
+        val b = roundTrip(a)
+        assertArrayEquals(a.pendingCards, b.pendingCards)
+        val at = a.time
+        b.step()
+        assertEquals(at, b.time)
+        a.chooseEndlessCard(2); b.chooseEndlessCard(2)
+        assertSame(a, b)
+        // Fala 10 wystawia bossa; dodatkowy zrzut z aktywnym bossem.
+        repeat(5) { a.waveTimer = 0f; b.waveTimer = 0f; a.step(); b.step() }
+        val bossA = a.currentBoss()
+        assertNotNull("Boss musi się pojawić w fali 10", bossA)
+        assertNotNull(a.pendingCards)
+        assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
+        val c = roundTrip(a)
+        assertNotNull(c.currentBoss())
+        assertEquals(a.currentBoss()!!.bossKind, c.currentBoss()!!.bossKind)
+        a.chooseEndlessCard(0); c.chooseEndlessCard(0)
+        steps(a, 60 * 60, true); steps(c, 60 * 60, true)
+        assertSame(a, c)
     }
 
     @Test

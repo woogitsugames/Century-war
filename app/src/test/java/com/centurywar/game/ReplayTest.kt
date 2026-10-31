@@ -19,6 +19,27 @@ class ReplayTest {
     }
 
     @Test
+    fun endlessCardChoicesAreLoggedAndReplayed() {
+        val cfg = BattleConfig(Mode.ENDLESS, 7L, 1f)
+        val battle = Battle(cfg)
+        val controller = BattleController(battle)
+        battle.playerAi = Ai(battle, 0)
+        var iterations = 0
+        while (!battle.over && iterations < 60 * 60 * 60) {
+            battle.step()
+            battle.fx.count = 0
+            iterations++
+        }
+        assertTrue(battle.over)
+        val log = controller.log()
+        assertTrue("Karty Endless muszą być w dzienniku", log.commands.any { it.kind == Replay.Kind.CARD })
+        val result = Replay.verify(cfg, Replay.encode(log))
+        assertEquals(battle.score(), result.score)
+        assertEquals(battle.wave, result.wave)
+        assertEquals(battle.stepCount, result.steps)
+    }
+
+    @Test
     fun aimedBarrageAndStanceOfPersonalityAiReplayExactly() {
         val cfg = BattleConfig(Mode.SKIRMISH, 4455L, 1.2f, startEra = 1, maxEra = 2)
         val battle = Battle(cfg)

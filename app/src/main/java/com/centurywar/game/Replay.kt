@@ -17,7 +17,7 @@ object Replay {
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
         ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
-        BARRAGE_AT,
+        BARRAGE_AT, CARD,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -112,6 +112,7 @@ object Replay {
                     Kind.SURRENDER -> controller.surrender()
                     Kind.TUTORIAL_GOLD -> controller.tutorialGold(command.argument)
                     Kind.BARRAGE_AT -> controller.barrage(command.argument.toFloat())
+                    Kind.CARD -> controller.card(command.argument)
                 }
                 require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
@@ -138,7 +139,7 @@ object Replay {
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
         Kind.QUEUE, Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET,
-        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT -> true
+        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD -> true
         else -> false
     }
 
@@ -158,6 +159,7 @@ object Replay {
                 Kind.DOCTRINE -> arg in 0..2
                 Kind.TUTORIAL_GOLD -> arg in 1..1_000_000
                 Kind.BARRAGE_AT -> arg in 0..Defs.LANE.toInt()
+                Kind.CARD -> arg in 0..2
                 else -> arg == 0
             }
             require(correct) { "Niedozwolony argument komendy" }

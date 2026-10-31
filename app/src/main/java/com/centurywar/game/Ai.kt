@@ -280,6 +280,9 @@ class Ai(
         return if (ranged < melee) Role.RANGED else Role.MELEE
     }
 
+    /** Wybór karty Oblężenia bez końca (AI gracza w testach); własny strumień RNG. */
+    fun chooseCard(options: Array<EndlessCard>): Int = b.rng.nextAiInt(me.index, options.size)
+
     fun chooseDoctrine(options: Array<Doctrine>): Doctrine {
         var best = options[0]
         var score = Int.MAX_VALUE

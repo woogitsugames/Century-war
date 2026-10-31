@@ -25,7 +25,7 @@ class BattleController(
         !record || count <= events.size - needed
 
     private fun canAct(needed: Int = 1): Boolean =
-        !battle.over && battle.pendingChoice == null &&
+        !battle.over && battle.pendingChoice == null && battle.pendingCards == null &&
             battle.stepCount < Replay.MAX_STEPS && capacity(needed)
 
     private fun append(kind: Replay.Kind, argument: Int = 0) {
@@ -125,6 +125,16 @@ class BattleController(
         return true
     }
 
+    /** Wybór 1 z 3 kart Oblężenia bez końca. */
+    fun card(index: Int): Boolean {
+        val options = battle.pendingCards ?: return false
+        if (battle.over || index !in options.indices ||
+            battle.stepCount >= Replay.MAX_STEPS || !capacity()) return false
+        battle.chooseEndlessCard(index)
+        append(Replay.Kind.CARD, index)
+        return true
+    }
+
     /** Poddanie może zakończyć bitwę przed krokiem N, nawet przy wyborze doktryny. */
     fun surrender(): Boolean {
         if (battle.over || !capacity() || battle.stepCount > Replay.MAX_STEPS) return false
@@ -152,6 +162,12 @@ class BattleController(
         val brain = battle.playerAi ?: return false
         val index = options.indexOf(brain.chooseDoctrine(options))
         return doctrine(index)
+    }
+
+    internal fun choosePendingCard(): Boolean {
+        val options = battle.pendingCards ?: return false
+        val brain = battle.playerAi ?: return false
+        return card(brain.chooseCard(options))
     }
 
     /** Kopia na koniec bitwy; alokacje wyłącznie poza pętlą klatek. */
@@ -197,6 +213,7 @@ class BattleController(
                 Replay.Kind.DOCTRINE -> argument in 0..2
                 Replay.Kind.TUTORIAL_GOLD -> argument in 1..1_000_000
                 Replay.Kind.BARRAGE_AT -> argument in 0..Defs.LANE.toInt()
+                Replay.Kind.CARD -> argument in 0..2
                 else -> argument == 0
             }
             require(valid)
