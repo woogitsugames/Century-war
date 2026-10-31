@@ -285,6 +285,121 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         }
     }
 
+    /** Blokada obejmuje też wcześniejsze wyniki na wszystkich planszach. */
+    fun blockPlayer(player: String): Boolean = synchronized(lock) {
+        connection.prepareStatement(
+            "INSERT OR IGNORE INTO blocked_players(player_id, blocked_at) VALUES (?, ?)"
+        ).use {
+            it.setString(1, player)
+            it.setLong(2, System.currentTimeMillis() / 1000L)
+            it.executeUpdate() > 0
+        }
+    }
+
+    fun unblockPlayer(player: String): Boolean = synchronized(lock) {
+        connection.prepareStatement("DELETE FROM blocked_players WHERE player_id = ?").use {
+            it.setString(1, player)
+            it.executeUpdate() > 0
+        }
+    }
+
+    fun isBlocked(player: String): Boolean = synchronized(lock) { isBlockedUnsafe(player) }
+
+    private fun isBlockedUnsafe(player: String): Boolean =
+        connection.prepareStatement("SELECT 1 FROM blocked_players WHERE player_id = ?").use {
+            it.setString(1, player)
+            it.executeQuery().use { rs -> rs.next() }
+        }
+
+    /** Kasuje dokładnie jeden wynik (UUID, plansza, dzień UTC). */
+    fun deleteScore(player: String, board: String, day: Long): Boolean = synchronized(lock) {
+        connection.autoCommit = false
+        try {
+            val deleted = connection.prepareStatement(
+                "DELETE FROM scores WHERE player_id = ? AND board = ? AND day = ?"
+            ).use {
+                it.setString(1, player)
+                it.setString(2, board)
+                it.setLong(3, day)
+                it.executeUpdate() > 0
+            }
+            // Ostatni wpis usunięty: nick nie powinien pozostać osierocony.
+            if (deleted) {
+                connection.prepareStatement("""
+                    DELETE FROM players WHERE player_id = ?
+                    AND NOT EXISTS (SELECT 1 FROM scores WHERE scores.player_id=players.player_id)
+                """.trimIndent()).use {
+                    it.setString(1, player)
+                    it.executeUpdate()
+                }
+            }
+            connection.commit()
+            deleted
+        } catch (e: Exception) {
+            connection.rollback()
+            throw e
+        } finally {
+            connection.autoCommit = true
+        }
+    }
+
+    /** Ostatnie wyniki, w tym zablokowane, na potrzeby moderacji. */
+    fun recentScores(limit: Int = 20): List<AdminScore> = synchronized(lock) {
+        require(limit in 1..200) { "invalid_limit" }
+        connection.prepareStatement("""
+            SELECT s.player_id, p.nick, s.board, s.day, s.score, s.verified_at,
+                   b.player_id IS NOT NULL AS blocked
+            FROM scores s
+            JOIN players p ON p.player_id=s.player_id
+            LEFT JOIN blocked_players b ON b.player_id=s.player_id
+            ORDER BY s.verified_at DESC, s.player_id ASC, s.board ASC, s.day DESC
+            LIMIT ?
+        """.trimIndent()).use {
+            it.setInt(1, limit)
+            it.executeQuery().use { rs ->
+                val result = ArrayList<AdminScore>()
+                while (rs.next()) {
+                    result.add(AdminScore(
+                        rs.getString(1), rs.getString(2), rs.getString(3),
+                        rs.getLong(4), rs.getLong(5), rs.getLong(6), rs.getInt(7) != 0
+                    ))
+                }
+                result
+            }
+        }
+    }
+
+    /** Eksport wiersz po wierszu, bez buforowania całej bazy. */
+    fun exportCsv(out: Appendable): Int = synchronized(lock) {
+        out.append("player,nick,board,day,score,seed,game_version,ticks,replay_sha256,verified_at,research_sum,blocked\n")
+        var count = 0
+        connection.createStatement().use { st ->
+            st.executeQuery("""
+                SELECT s.player_id, p.nick, s.board, s.day, s.score, s.seed,
+                       s.game_version, s.ticks, s.replay_sha256, s.verified_at, s.research_sum,
+                       b.player_id IS NOT NULL
+                FROM scores s
+                JOIN players p ON p.player_id=s.player_id
+                LEFT JOIN blocked_players b ON b.player_id=s.player_id
+                ORDER BY s.verified_at DESC, s.player_id ASC, s.board ASC, s.day DESC
+            """.trimIndent()).use { rs ->
+                while (rs.next()) {
+                    for (column in 1..12) {
+                        if (column > 1) out.append(',')
+                        val value = if (column == 12) (rs.getInt(column) != 0).toString()
+                                    else rs.getString(column)
+                        // Apostrof zapobiega interpretowaniu wartości jako formuł w arkuszu.
+                        val safe = if (value.firstOrNull() in listOf('=', '+', '-', '@', '\t', '\r', '\n')) "'$value" else value
+                        out.append('"').append(safe.replace("\"", "\"\"")).append('"')
+                    }
+                    out.append('\n')
+                    count++
+                }
+            }
+        }
+        count
+    }
+
     override fun close() = synchronized(lock) { connection.close() }
 
     companion object {
