@@ -45,6 +45,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-games-v2:22.1.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.16")
 }
