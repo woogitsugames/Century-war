@@ -28,6 +28,7 @@ import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
+import com.centurywar.meta.BattleHistory
 import com.centurywar.notifications.DailyReminders
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
@@ -58,6 +59,7 @@ class MainActivity : Activity(), Host {
         val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
         profile.pruneDailyBoards(Daily.dayNumber())
         game = Game(this, profile, Quality.detect(this))
+        game.history = BattleHistory(File(filesDir, "history.json")).also { it.load() }
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
         if ((application as? CenturyWarApp)?.playGamesReady == true) {
@@ -174,6 +176,7 @@ class MainActivity : Activity(), Host {
     override fun onDestroy() {
         playGames?.close()
         game.music?.release()
+        game.history?.close()
         game.sound?.release()
         super.onDestroy()
     }
