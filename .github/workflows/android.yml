@@ -45,6 +45,7 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*LTest*' \
+            --tests '*ReplayTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz debug APK
@@ -98,6 +99,7 @@ jobs:
           ./gradlew :app:testDebugUnitTest \
             --tests '*ProfileTest*' \
             --tests '*BattleScreenTest*' \
+            --tests '*HintOverlayTest*' \
             --tests '*ScreenshotTest*' \
             --tests '*ArtGalleryTest*' \
             --console=plain --no-configuration-cache

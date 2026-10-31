@@ -33,5 +33,4 @@ strzelcy, zabójstwa i XP, Awans, doktryna, wieże, ostrzał, kamera), z podświ
 pauzą/spowolnieniem symulacji, limitem czasu w każdym kroku i przyciskiem „Pomiń samouczek”.
 Bitwa samouczka jest łagodniejsza (`BattleConfig.tutorial`: AI ×0,8, startuje po 25 s, połowa
 złota na start, gracz +50% XP, etap dopuszcza jeden awans epoki).
-Ukończenie lub pominięcie ustawia `Profile.tutorialDone`. Powtórka: `profile.replayTutorial()`
-(zeruje flagę i zapisuje profil), np. pod przyszły przycisk w Ustawieniach.
+Ukończenie lub pominięcie ustawia `Profile.tutorialDone`. Powtórka: **Ustawienia → Podpowiedzi i samouczek → Powtórz samouczek**.\nPo potwierdzeniu samouczek rozpocznie się przy kolejnym uruchomieniu etapu 1 kampanii.\n\nPodpowiedzi kontekstowe: 13 jednorazowych dymków podczas bitew i 4 przy pierwszych\nwejściach do Badań, Misji, Endless i wyzwania dnia. Dymki nie zatrzymują symulacji,\npo 8 s znikają automatycznie, a między wskazówkami bitwy jest 20 s przerwy.\nW tym samym menu można je wyłączyć lub wyświetlić ponownie. Wybory kart,\npauza i samouczek wyłączają kontekstowe wskazówki.
