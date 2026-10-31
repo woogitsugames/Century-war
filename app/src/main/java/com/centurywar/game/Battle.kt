@@ -92,6 +92,10 @@ class Side(val index: Int) {
     var kills = 0
     var killValue = 0
     var spawned = 0
+    val trainedByRole = IntArray(Role.values().size)
+    var turretsBuilt = 0
+    var barragesUsed = 0
+    var ralliesUsed = 0
     var goldEarned = 0f
 
     fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
@@ -323,6 +327,7 @@ class Battle(val cfg: BattleConfig) {
         side.gold -= cost
         side.turretEra[slot] = side.era
         side.turretCd[slot] = 0.5f
+        side.turretsBuilt++
         return true
     }
 
@@ -377,6 +382,7 @@ class Battle(val cfg: BattleConfig) {
             p.siegeMul = 0.25f
         }
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
+        side.barragesUsed++
         return true
     }
 
@@ -389,6 +395,7 @@ class Battle(val cfg: BattleConfig) {
         if (!abilityReady(side, 1)) return false
         side.abilityCd[1] = RALLY_CD * side.abilityCdMul
         side.rallyT = RALLY_TIME
+        side.ralliesUsed++
         return true
     }
 
@@ -516,6 +523,7 @@ class Battle(val cfg: BattleConfig) {
         f.moving = false
         f.serial = ++serialCounter
         s.spawned++
+        s.trainedByRole[def.role.ordinal]++
         s.aliveCount++
         return true
     }
