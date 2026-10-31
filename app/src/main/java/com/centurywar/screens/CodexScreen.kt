@@ -361,9 +361,11 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 }
             }
             PAGE_ABILITIES -> {
-                guideTitle = L["armory"]
                 addGuide(Icons.FLASK, L["armory"], L.f("cx62_armory_d",
                     percentUp(Battle.ARMORY_BONUS), Battle.ARMORY_MAX_LEVEL))
+                addGuide(Icons.FLAG, L["rally"], L.f("cx62_rally_d",
+                    percentUp(Battle.RALLY_SPEED_BONUS), Battle.RALLY_TIME.roundToInt(),
+                    Battle.RALLY_CD.roundToInt()))
             }
             PAGE_DOCTRINES -> for (d in com.centurywar.game.Doctrine.entries) {
                 addGuide(Icons.CROWN, L[d.key], L[d.key + "_d"])
