@@ -200,4 +200,48 @@ class MissionsTest {
         assertEquals(4, item!!.progress)
         assertFalse(item.completed && item.claimed)
     }
+
+    @Test
+    fun onlyNewCampaignStarsAdvanceStarMission() {
+        val p = profile()
+        val m = Missions(p)
+        val start = day("2026-10-01")
+        var current = start
+        var starMission: MissionItem? = null
+        for (i in 0..120) {
+            current = start + i * Missions.DAY_MILLIS
+            m.refresh(current)
+            starMission = (m.state.daily + m.state.weekly).firstOrNull { it.type == MissionType.STARS }
+            if (starMission != null) break
+        }
+        assertTrue("W puli powinna pojawić się misja gwiazdek", starMission != null)
+        val battle = Battle(BattleConfig(Mode.CAMPAIGN, 77L, 1f, stageIndex = 0))
+        battle.winner = 0
+        m.onBattleEnd(battle, current, newStars = 0)
+        assertEquals(0, starMission!!.progress)
+        m.onBattleEnd(battle, current, newStars = 2)
+        assertEquals(2, starMission.progress)
+    }
+
+    @Test
+    fun loginRewardAndMalformedStateSurviveJson() {
+        val f = File.createTempFile("century-login-", ".json").apply { delete() }
+        val p = Profile(f)
+        val m = Missions(p)
+        val today = day("2026-10-31")
+        m.refresh(today)
+        val reward = m.claimLogin(today)
+        assertTrue(reward > 0)
+        val restored = Profile(f).apply { load() }
+        assertEquals(reward, restored.missionState.loginRewardToday)
+        assertEquals(0, Missions(restored).claimLogin(today))
+
+        restored.missionState.fromJson(JSONObject("""{"day":9223372036854775807,"week":-9223372036854775807,"seen":9223372036854775807,"loginDay":9223372036854775807,"loginClaimed":9223372036854775807,"streak":55,"loginRewardToday":-10}"""))
+        assertEquals(Long.MIN_VALUE, restored.missionState.dailyDay)
+        assertEquals(Long.MIN_VALUE, restored.missionState.weeklyWeek)
+        assertEquals(Long.MIN_VALUE, restored.missionState.lastSeenDay)
+        assertEquals(Long.MIN_VALUE, restored.missionState.loginDay)
+        assertEquals(0, restored.missionState.loginStreak)
+        assertEquals(0, restored.missionState.loginRewardToday)
+    }
 }

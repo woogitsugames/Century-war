@@ -105,15 +105,20 @@ class MissionState {
         .put("daily", JSONArray().apply { daily.forEach { put(it.toJson()) } })
         .put("weekly", JSONArray().apply { weekly.forEach { put(it.toJson()) } })
 
+    private fun validDay(value: Long): Long = if (value in -100_000L..1_000_000L) value else Long.MIN_VALUE
+    private fun validWeek(value: Long): Long = if (value in -20_000L..150_000L) value else Long.MIN_VALUE
+
     fun fromJson(json: JSONObject?) {
         reset()
         if (json == null) return
-        dailyDay = json.optLong("day", Long.MIN_VALUE)
-        weeklyWeek = json.optLong("week", Long.MIN_VALUE)
-        lastSeenDay = json.optLong("seen", Long.MIN_VALUE)
-        loginDay = json.optLong("loginDay", Long.MIN_VALUE)
-        loginClaimedDay = json.optLong("loginClaimed", Long.MIN_VALUE)
+        dailyDay = validDay(json.optLong("day", Long.MIN_VALUE))
+        weeklyWeek = validWeek(json.optLong("week", Long.MIN_VALUE))
+        lastSeenDay = validDay(json.optLong("seen", Long.MIN_VALUE))
+        loginDay = validDay(json.optLong("loginDay", Long.MIN_VALUE))
+        loginClaimedDay = validDay(json.optLong("loginClaimed", Long.MIN_VALUE))
+        if (loginClaimedDay > loginDay) loginClaimedDay = Long.MIN_VALUE
         loginStreak = json.optInt("streak", 0).coerceIn(0, 7)
+        if (loginDay == Long.MIN_VALUE) loginStreak = 0
         loginRewardToday = json.optInt("loginRewardToday", 0).coerceIn(0, 10_000)
         readItems(json.optJSONArray("daily"), daily)
         readItems(json.optJSONArray("weekly"), weekly)
