@@ -17,6 +17,7 @@ import android.widget.EditText
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
+import com.centurywar.engine.Music
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
@@ -40,6 +41,7 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        game.music = Music().apply { setVolume(profile.musicVolume) }
         view = GameView(this, game)
         setContentView(view)
 
@@ -104,10 +106,13 @@ class MainActivity : Activity(), Host {
 
     override fun onResume() {
         super.onResume()
+        game.applyMusicVolume()
+        game.music?.start()
         view.onResume()
     }
 
     override fun onPause() {
+        game.music?.stop()
         game.post { game.current?.onPause(); game.profile.save() }
         view.onPause()
         game.profile.save()
@@ -116,6 +121,7 @@ class MainActivity : Activity(), Host {
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
     override fun onDestroy() {
+        game.music?.stop()
         game.sound?.release()
         super.onDestroy()
     }
