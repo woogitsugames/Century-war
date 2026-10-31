@@ -27,8 +27,11 @@ class ReplayPlayerTest {
         return b to c.log()
     }
 
-    private fun compare(cfg: BattleConfig, playerAi: Boolean = false) {
-        val (original, log) = record(cfg, playerAi = playerAi)
+    private fun compare(cfg: BattleConfig, playerAi: Boolean = false, limit: Int = 2_100,
+        required: Replay.Kind? = null) {
+        val (original, log) = record(cfg, limit = limit, playerAi = playerAi)
+        if (required != null) assertTrue("Brakuje wymaganej komendy $required",
+            log.commands.any { it.kind == required })
         val expected = Replay.verify(cfg, log)
         val p = ReplayPlayer(cfg, log)
         var limit = log.steps + 2
@@ -46,8 +49,9 @@ class ReplayPlayerTest {
     }
 
     @Test fun endlessCardsReplaysExactly() {
-        compare(BattleConfig(Mode.ENDLESS, 19L, 1f,
-            playerBonuses = Bonuses(baseHpMul = 6f)), playerAi = true)
+        compare(BattleConfig(Mode.ENDLESS, 7L, 1f,
+            playerBonuses = Bonuses(baseHpMul = 6f)), playerAi = true,
+            limit = 60 * 240, required = Replay.Kind.CARD)
     }
 
     @Test fun dailyChallengeReplaysExactly() {
