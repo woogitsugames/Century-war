@@ -135,6 +135,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     init {
         applyLanguage()
+        applyAccessibility()
         if (profile.name.isBlank()) profile.name = L["default_name"]
         setQuality(effectiveQualityLevel())
         checkDailyLogin()
@@ -142,6 +143,14 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     fun applyLanguage() {
         L.setCode(profile.lang)
+    }
+
+    /** Przelicza wygląd po zmianie profilu bez restartowania gry. */
+    fun applyAccessibility() {
+        Palette.select(profile.palette)
+        ui.textScale = profile.textScale / 100f
+        screen?.layout()
+        for (s in stack) s.layout()
     }
 
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
