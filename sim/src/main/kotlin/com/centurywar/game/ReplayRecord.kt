@@ -111,7 +111,7 @@ object ReplayRecord {
         require(m.stage in -1..10_000 && m.winner in -1..1 &&
             m.time.isFinite() && m.time in 0f..(Replay.MAX_STEPS * Battle.STEP) &&
             m.wave in 0..1_000_000 && m.dateMillis >= 0L &&
-            m.nick.length <= 32 && m.nick.none { it.isISOControl() }) {
+            m.nick.length <= 32 && m.nick.none { Character.isISOControl(it) }) {
             "Nieprawidłowe metadane powtórki"
         }
     }
