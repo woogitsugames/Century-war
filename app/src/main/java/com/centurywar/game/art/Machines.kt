@@ -22,6 +22,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     var time = 0f
     /** Wizualny odruch zwierzęcia po trafieniu (0..1). */
     var recoil = 0f
+    /** Poduszka unoszącego się pojazdu zanika w trakcie zniszczenia. */
+    var crashed = 0f
 
     private val WOOD = 0xFF8A6038.toInt()
     private val WOOD_D = 0xFF5E3E22.toInt()
@@ -643,11 +645,11 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     // ================================================================== poduszkowiec
 
     fun hover(team: Int, atk: Float) {
-        val bob = sin(time * 4f) * 2.5f
+        val bob = sin(time * 4f) * 2.5f * (1f - crashed)
         val hull = 0xFF6A6290.toInt()
         val armor = 0xFFDADDE8.toInt()
         // poduszka energii
-        val pulse = 0.6f + 0.4f * sin(time * 9f)
+        val pulse = (0.6f + 0.4f * sin(time * 9f)) * (1f - crashed)
         p.r.set(-40f, -10f, 40f, 4f); cv.drawOval(p.r, p.gp((((90 * pulse).toInt()) shl 24) or 0x78DCFF))
         p.r.set(-28f, -7f, 28f, 1f); cv.drawOval(p.r, p.gp((((150 * pulse).toInt()) shl 24) or 0xB0F4FF))
         cv.save(); cv.translate(0f, bob)
