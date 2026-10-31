@@ -52,6 +52,9 @@ class UnitDef(
     val body: Int,
     /** Mnożnik obrażeń zadawanych bazom i wieżom (oblężnicze jednostki mają > 1). */
     val siegeMul: Float,
+    val variant: Int = EraBranches.NONE,
+    val chain: Float = 0f,
+    val regen: Float = 0f,
 )
 
 class TurretDef(
@@ -63,6 +66,8 @@ class TurretDef(
     val cooldown: Float,
     val splash: Float,
     val projectile: Int,
+    val variant: Int = EraBranches.NONE,
+    val chain: Float = 0f,
 )
 
 class EraDef(
@@ -73,7 +78,11 @@ class EraDef(
     val units: Array<UnitDef>,
     val turret: TurretDef,
     val abilityKey: String,
+    val variants: Array<EraVariant> = emptyArray(),
 )
+
+/** Przejściowa nazwa zgodna z refaktorem specyfikacji epok. */
+typealias EraSpec = EraDef
 
 /** Typy pocisków, które renderer potrafi narysować. */
 object Proj {
@@ -154,10 +163,27 @@ object Defs {
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
 
-    /** Płaska tablica wszystkich jednostek; id = era * 4 + rola. */
-    val allUnits: Array<UnitDef> = Array(ERA_COUNT * 4) { eras[it / 4].units[it % 4] }
+    /** Stałe ID: 0..31 jednostki podstawowe, 32..47 warianty pary i krzemu. */
+    val allUnits: Array<UnitDef> = Array(ERA_COUNT * 4 + 16) { id ->
+        if (id < ERA_COUNT * 4) eras[id / 4].units[id % 4]
+        else {
+            val off = id - ERA_COUNT * 4
+            val era = if (off < 8) 4 else 6
+            eras[era].variants[(off % 8) / 4].units[off % 4]
+        }
+    }
 
-    fun unit(era: Int, role: Role): UnitDef = eras[era].units[role.ordinal]
+    fun unit(era: Int, role: Role, variant: Int = EraBranches.NONE): UnitDef =
+        if (variant in eras[era].variants.indices) eras[era].variants[variant].units[role.ordinal]
+        else eras[era].units[role.ordinal]
+
+    fun turret(era: Int, variant: Int = EraBranches.NONE): TurretDef =
+        if (variant in eras[era].variants.indices) eras[era].variants[variant].turret
+        else eras[era].turret
+
+    fun abilityKey(era: Int, variant: Int = EraBranches.NONE): String =
+        if (variant in eras[era].variants.indices) eras[era].variants[variant].abilityKey
+        else eras[era].abilityKey
 
     private fun buildEra(e: Int): EraDef {
         val s = statScale(e)
@@ -177,7 +203,7 @@ object Defs {
             if (turretProj[e] == Proj.SHELL || turretProj[e] == Proj.BALL || turretProj[e] == Proj.ROCKET) 60f else 0f,
             turretProj[e],
         ).let { if (it.era == 4) TurretDef(it.era, it.nameKey, it.cost, it.dmg * 0.4f, it.range, it.cooldown, it.splash, it.projectile) else it }
-        return EraDef(e, eraKeys[e], evolveXp[e], units, turret, abilityKeys[e])
+        return EraDef(e, eraKeys[e], evolveXp[e], units, turret, abilityKeys[e], EraBranches.build(e, units, turret))
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami. */
