@@ -12,8 +12,9 @@ class Ai(
     selectedPersonality: AiPersonality? = null,
 ) {
     private val me = b.sides[sideIndex]
-    val personality: AiPersonality =
+    var personality: AiPersonality =
         selectedPersonality ?: b.cfg.aiPersonality ?: personalityForSeed(b.cfg.seed, sideIndex)
+        internal set
 
     private var think = 0.4f
     private var plannedRole: Role? = null
@@ -22,6 +23,29 @@ class Ai(
     private var evolveReadyAt = -1f
     private var holdUntil = 0f
     private var nextHoldAt = 0f
+
+    /** Zmienne planowania muszą przeżyć zapis i wznowienie bitwy. */
+    var thinkTimer: Float
+        get() = think
+        set(v) { think = v }
+    var plannedRoleState: Role?
+        get() = plannedRole
+        set(v) { plannedRole = v }
+    internal var saveEraState: Int
+        get() = saveEra
+        set(v) { saveEra = v }
+    internal var saveUntilState: Float
+        get() = saveUntil
+        set(v) { saveUntil = v }
+    internal var evolveReadyAtState: Float
+        get() = evolveReadyAt
+        set(v) { evolveReadyAt = v }
+    internal var holdUntilState: Float
+        get() = holdUntil
+        set(v) { holdUntil = v }
+    internal var nextHoldAtState: Float
+        get() = nextHoldAt
+        set(v) { nextHoldAt = v }
 
     private var danger = 0
     private var barrageTargets = 0
@@ -205,35 +229,43 @@ class Ai(
         }
     }
 
-    /** Trzon doboru jest oszczędny; dowódcy modyfikują tylko część decyzji. */
+    /** Wagi dowódcy + kontratak na widoczny skład, bez zmiany statystyk. */
     private fun pickRole(melee: Int, ranged: Int, heavy: Int): Role {
-        val r = b.rng.nextInt(100)
-        val eliteCost = Defs.unit(me.era, Role.ELITE).cost
-        val eliteChance = when (personality) {
-            AiPersonality.SIEGER -> 35
-            AiPersonality.ECONOMIST -> 48
-            AiPersonality.ASSAULT -> 32
-            AiPersonality.ENGINEER -> 32
-            AiPersonality.BALANCED -> 35
-        }
-        if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < eliteChance) return Role.ELITE
-        if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
+        if (b.rangedHorde && me.index == 1 && b.rng.nextInt(100) < 55) return Role.RANGED
+
+        var meleeW = personality.meleeWeight
+        var rangedW = personality.rangedWeight
+        var heavyW = personality.heavyWeight
+        var eliteW = if (me.eliteUnlocked) personality.eliteWeight else 0
 
         if (enemyRanged >= 2 && enemyRanged > enemyMelee) {
-            if (r < 35 && me.gold >= Defs.unit(me.era, Role.HEAVY).cost) return Role.HEAVY
-            if (r < 65) return Role.MELEE
+            meleeW += 22
+            heavyW += 25
         }
-        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged && r < 35) return Role.RANGED
-        if (enemyMelee >= 3 && r < 25) return Role.RANGED
+        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) rangedW += 32
+        if (enemyMelee >= 3) rangedW += 18
+        if (melee == 0) meleeW += 45
+        if (heavy * 3 < melee + ranged) heavyW += 16
+        if (danger >= 3) meleeW += 30
 
-        if (personality == AiPersonality.ASSAULT && b.time < 90f && r in 35..60) return Role.MELEE
-        if (personality == AiPersonality.ENGINEER && r in 35..57 &&
-            heavy * 3 < melee + ranged && me.gold >= Defs.unit(me.era, Role.HEAVY).cost
-        ) return Role.HEAVY
-
-        if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
-        if (heavy * 3 < melee + ranged && r < 45) return Role.HEAVY
-        return if (ranged < melee) Role.RANGED else Role.MELEE
+        // Po dłuższym patowym starciu inwestuj w prawdziwe jednostki oblężnicze.
+        // Kupno nadal przechodzi przez standardową kolejkę i wymaga złota.
+        if (personality == AiPersonality.ECONOMIST && b.time < 75f) eliteW = 0
+        if (me.era == b.cfg.maxEra && danger < 2 && b.time > 120f && me.eliteUnlocked) {
+            eliteW += 26
+            if (b.time > 220f) eliteW += 38
+        }
+        val roll = b.rng.nextInt(meleeW + rangedW + heavyW + eliteW)
+        val role = when {
+            roll < meleeW -> Role.MELEE
+            roll < meleeW + rangedW -> Role.RANGED
+            roll < meleeW + rangedW + heavyW -> Role.HEAVY
+            else -> Role.ELITE
+        }
+        // W obronie nie blokuj produkcji na długo, oszczędzając na elitę.
+        if (danger >= 2 && role == Role.ELITE &&
+            me.gold < Defs.unit(me.era, Role.ELITE).cost) return Role.MELEE
+        return role
     }
 
     fun chooseDoctrine(options: Array<Doctrine>): Doctrine {

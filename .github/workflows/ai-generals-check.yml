@@ -20,8 +20,8 @@ jobs:
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: APK debug
         run: ./gradlew :app:assembleDebug --console=plain
-      - name: Symulacje bitwy
-        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*AiPersonalityTest*' --console=plain
+      - name: Regresje symulacji i zapisu
+        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*AiPersonalityTest*' --no-configuration-cache --console=plain
 
       - name: Statystyki składów dowódców
         run: |
