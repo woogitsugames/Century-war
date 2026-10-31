@@ -28,6 +28,7 @@ import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
+import com.centurywar.meta.ReplayStore
 import com.centurywar.notifications.DailyReminders
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
@@ -72,6 +73,7 @@ class MainActivity : Activity(), Host {
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
+        game.replays = ReplayStore(File(filesDir, "replays"))
         game.resumeOffer = snapshots.loadBattle()
         view = GameView(this, game)
         if (!pendingRenderScale.isNaN()) view.setRenderScale(pendingRenderScale)
