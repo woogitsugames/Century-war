@@ -135,8 +135,13 @@ class ArtGalleryTest {
             for (frame in 0 until frames) {
                 val hitAge = if (frame < 4) hitAges[frame] else -1f
                 val dying = if (frame >= 4) (frame - 4) / 7f * 0.8f else -1f
-                r.drawUnitPose(c, def, frame * cell + cell / 2f, y + cell * 0.88f,
-                    cell * 0.8f, Ui.PLAYER, 0f, 0f, 0f, -1f, hitAge, dying)
+                c.save()
+                c.clipRect(frame * cell.toFloat(), y, (frame + 1) * cell.toFloat(), y + cell)
+                r.drawUnitPose(c, def, frame * cell + cell / 2f +
+                    (if (def.body == Body.HUMAN && dying >= 0f) 18f else 0f),
+                    y + cell * 0.88f, cell * 0.72f, Ui.PLAYER,
+                    0f, 0f, 0f, -1f, hitAge, dying)
+                c.restore()
             }
         }
         save(bmp, "gallery_death")
