@@ -22,6 +22,11 @@ class ScoreEntry(val name: String, val score: Long, val day: Long)
 class Profile(private val file: File) {
 
     companion object {
+        const val VERSION = 2
+        /** Pierwszy etap nowej epoki żelaza ma indeks 8 (dawny etap 9). */
+        const val IRON_FIRST_STAGE = 8
+        const val INSERTED_STAGE_COUNT = 4
+
         val research = listOf(
             ResearchDef("r_elite", 1, 120, 1f),
             ResearchDef("r_rally", 1, 90, 1f),
@@ -134,7 +139,7 @@ class Profile(private val file: File) {
     fun save() {
         try {
             val o = JSONObject()
-            o.put("v", 1)
+            o.put("v", VERSION)
             o.put("name", name)
             o.put("medals", medals)
             o.put("levels", JSONObject(levels as Map<*, *>))
@@ -187,7 +192,17 @@ class Profile(private val file: File) {
             name = o.optString("name", name)
             medals = o.optInt("medals", 0)
             o.optJSONObject("levels")?.let { l -> l.keys().forEach { levels[it] = l.optInt(it) } }
-            o.optJSONArray("stars")?.let { a -> for (i in 0 until minOf(a.length(), stars.size)) stars[i] = a.optInt(i) }
+            stars.fill(0)
+            val savedVersion = o.optInt("v", 1)
+            o.optJSONArray("stars")?.let { a ->
+                // W v1 etapy 9..32 zajmowały indeksy 8..31. Nie wolno przesuwać
+                // istniejących gwiazdek przy każdym wczytaniu już migrowanego profilu.
+                val legacy = savedVersion < VERSION
+                for (i in 0 until a.length()) {
+                    val target = if (legacy && i >= IRON_FIRST_STAGE) i + INSERTED_STAGE_COUNT else i
+                    if (target in stars.indices) stars[target] = a.optInt(i).coerceIn(0, 3)
+                }
+            }
             bestWave = o.optInt("bestWave", 0)
             lastRankedDaily = o.optLong("lastRankedDaily", -1L)
             tutorialDone = o.optBoolean("tutorialDone", false)
