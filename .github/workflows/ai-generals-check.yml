@@ -23,6 +23,11 @@ jobs:
       - name: Symulacje bitwy
         run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*AiPersonalityTest*' --console=plain
 
+      - name: Diagnostyka nieudanych testów
+        if: failure()
+        run: |
+          find app/build/test-results/testDebugUnitTest -name 'TEST-*Test.xml' -exec sh -c 'echo ==== "$1"; head -c 6000 "$1"; echo' _ '{}' \;
+
       - name: Porównaj czas bitew z gałęzią bazową
         run: |
           ./gradlew :app:testDebugUnitTest --tests '*AiDurationBenchmarkTest*' --console=plain
