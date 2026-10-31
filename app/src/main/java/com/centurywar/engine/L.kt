@@ -103,6 +103,7 @@ object L {
         putAll(part4())
         putAll(part5())
         putAll(part6())
+        putAll(part67())
     }
 
     private fun part0(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1158,5 +1159,14 @@ object L {
         "about_licenses" to t("Licencje open source", "Open-source licenses", "Open-Source-Lizenzen", "Licencias de código abierto", "Licences open source", "Licenze open source", "Licenças de código aberto", "Ліцензії відкритого коду", "Opensourcelicenties", "Açık kaynak lisansları"),
         "about_link" to t("Otwórz", "Open", "Öffnen", "Abrir", "Ouvrir", "Apri", "Abrir", "Відкрити", "Openen", "Aç"),
         "about_apache_full" to t("Tekst licencji Apache 2.0", "Apache 2.0 license text", "Apache-2.0-Lizenztext", "Texto de licencia Apache 2.0", "Texte de licence Apache 2.0", "Testo licenza Apache 2.0", "Texto da licença Apache 2.0", "Текст ліцензії Apache 2.0", "Tekst Apache 2.0-licentie", "Apache 2.0 lisans metni"),
+    )
+    /** Teksty szybkiej pauzy; osobna część ogranicza konflikty tabeli językowej. */
+    private fun part67(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "pause_summary" to t("Przebieg bitwy", "Battle summary", "Kampfübersicht", "Resumen de batalla", "Résumé de bataille", "Riepilogo battaglia", "Resumo da batalha", "Підсумок битви", "Slagoverzicht", "Savaş özeti"),
+        "pause_quick" to t("Szybkie ustawienia", "Quick settings", "Schnelleinstellungen", "Ajustes rápidos", "Réglages rapides", "Impostazioni rapide", "Ajustes rápidos", "Швидкі налаштування", "Snelle instellingen", "Hızlı ayarlar"),
+        "pause_gold_earned" to t("Zdobyte złoto", "Gold earned", "Verdientes Gold", "Oro ganado", "Or gagné", "Oro guadagnato", "Ouro ganho", "Здобуте золото", "Verdiend goud", "Kazanılan altın"),
+        "pause_player_era" to t("Twoja epoka", "Your era", "Deine Epoche", "Tu era", "Votre ère", "La tua era", "Sua era", "Ваша епоха", "Jouw tijdperk", "Çağın"),
+        "pause_enemy_era" to t("Epoka wroga", "Enemy era", "Gegnerische Epoche", "Era enemiga", "Ère adverse", "Era nemica", "Era inimiga", "Епоха ворога", "Vijandelijk tijdperk", "Düşman çağı"),
+        "pause_weather" to t("Pogoda", "Weather", "Wetter", "Clima", "Météo", "Meteo", "Clima", "Погода", "Weer", "Hava"),
     )
 }
