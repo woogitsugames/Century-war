@@ -151,8 +151,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             if (battle.pendingChoice == null) {
                 acc += dt * speed
                 var steps = 0
-                while (acc >= Battle.STEP && steps < 8) { battle.step(); acc -= Battle.STEP; steps++ }
-                if (steps == 8) acc = 0f
+                while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
+                if (steps == 20) acc = 0f
             }
             if (battle.over) onFinished()
         }
@@ -246,7 +246,7 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             BARRAGE -> battle.castBarrage(p)
             RALLY -> battle.castRally(p)
             STANCE -> p.hold = !p.hold
-            SPEED -> speed = if (speed == 1) 2 else if (speed == 2) 3 else 1
+            SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
             EVOLVE -> if (battle.evolve(p)) g.haptic(40)
             PAUSE -> paused = true
             RESUME -> paused = false
