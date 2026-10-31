@@ -9,14 +9,15 @@ internal object DailyReminderProfileReader {
     fun read(context: Context): DailyReminderProfile? = read(File(context.filesDir, "profile.json"))
 
     fun read(file: File): DailyReminderProfile? {
-        if (!file.isFile) return null
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        val source = if (file.isFile) file else if (tmp.isFile) tmp else return null
         return try {
             var notifications = true
             var hour = 18
             var wins = 0
             var rankedDay = -1L
             var lang = ""
-            JsonReader(file.bufferedReader()).use { json ->
+            JsonReader(source.bufferedReader()).use { json ->
                 json.beginObject()
                 while (json.hasNext()) {
                     when (json.nextName()) {

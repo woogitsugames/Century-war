@@ -66,5 +66,13 @@ class DailyReminderLogicTest {
             "A new daily challenge awaits! Modifiers: Fragile bases, Fog of war",
             DailyReminderTexts.body(mods, "en"),
         )
+        assertEquals(
+            "Eine neue Tageschallenge wartet! Modifikatoren: Zerbrechliche Basen, Nebel des Krieges",
+            DailyReminderTexts.body(mods, "de"),
+        )
+        assertEquals(
+            "Er wacht een nieuwe daguitdaging! Modificatoren: Fragiele bases, Oorlogsmist",
+            DailyReminderTexts.body(mods, "nl"),
+        )
     }
 }

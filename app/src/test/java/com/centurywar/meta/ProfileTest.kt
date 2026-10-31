@@ -54,6 +54,29 @@ class ProfileTest {
         assertEquals(2, p.stars[2])
     }
 
+
+    @Test
+    fun remindersRoundTripAndOldProfilesGetDefaults() {
+        val f = tmpFile()
+        f.writeText("""{"wins":2,"notifyHour":99,"notifications":false}""")
+        val invalid = Profile(f).also { it.load() }
+        assertEquals(23, invalid.notifyHour)
+        assertFalse(invalid.notifications)
+        invalid.notifyHour = 7
+        invalid.save()
+        val loaded = Profile(f).also { it.load() }
+        assertEquals(7, loaded.notifyHour)
+        assertFalse(loaded.notifications)
+
+        f.writeText("""{"wins":1}""")
+        val old = Profile(f).also { it.load() }
+        assertTrue(old.notifications)
+        assertEquals(18, old.notifyHour)
+
+        f.writeText("""{"notifyHour":-50}""")
+        assertEquals(0, Profile(f).also { it.load() }.notifyHour)
+    }
+
     @Test
     fun loadFallsBackToTempFileWhenMainIsMissing() {
         val f = tmpFile()

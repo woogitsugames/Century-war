@@ -1,48 +1,25 @@
 package com.centurywar.notifications
 
+import com.centurywar.engine.L
 import com.centurywar.game.Modifier
 import java.util.Locale
 
-/** Osobny słownik PL/EN, niezależny od tabeli napisów ekranu gry. */
+/** Powiadomienia używają słownika 10 języków bez zmieniania języka aktywnej gry. */
 object DailyReminderTexts {
-    fun polish(lang: String): Boolean = when (lang) {
-        "pl" -> true
-        "en" -> false
-        else -> Locale.getDefault().language == "pl"
-    }
+    private fun languageIndex(code: String): Int =
+        L.indexOf(code).takeIf { it >= 0 } ?: L.systemLang()
 
-    fun channelName(lang: String): String =
-        if (polish(lang)) "Wyzwanie dnia" else "Daily challenge"
-
-    fun title(lang: String): String =
-        if (polish(lang)) "Century War — wyzwanie dnia" else "Century War — daily challenge"
-
-    fun channelDescription(lang: String): String =
-        if (polish(lang)) "Ciche przypomnienie o wyzwaniu dnia" else "Quiet daily challenge reminder"
+    fun channelName(lang: String): String = L.text("daily", languageIndex(lang))
+    fun title(lang: String): String = L.text("notification_title", languageIndex(lang))
+    fun channelDescription(lang: String): String = L.text("notification_channel_desc", languageIndex(lang))
+    fun settingNotifications(lang: String): String = L.text("notifications", languageIndex(lang))
+    fun settingHour(lang: String): String = L.text("notify_hour", languageIndex(lang))
 
     fun body(modifiers: Set<Modifier>, lang: String): String {
-        val pl = polish(lang)
-        val names = Modifier.values().filter { it in modifiers }.joinToString(", ") { modifierName(it, pl) }
-        return if (pl) "Nowe wyzwanie dnia czeka! Modyfikatory: $names"
-        else "A new daily challenge awaits! Modifiers: $names"
-    }
-
-    fun settingNotifications(lang: String): String =
-        if (polish(lang)) "Powiadomienia" else "Notifications"
-
-    fun settingHour(lang: String): String =
-        if (polish(lang)) "Godzina przypomnienia" else "Reminder hour"
-
-    private fun modifierName(modifier: Modifier, pl: Boolean): String = when (modifier) {
-        Modifier.DOUBLE_INCOME -> if (pl) "Podwójny przychód" else "Double income"
-        Modifier.FRAGILE_BASES -> if (pl) "Kruche bazy" else "Fragile bases"
-        Modifier.FAST_UNITS -> if (pl) "Szybkie wojska" else "Fast troops"
-        Modifier.NO_TURRETS -> if (pl) "Bez wież" else "No turrets"
-        Modifier.RANGED_HORDE -> if (pl) "Horda strzelców" else "Ranged horde"
-        Modifier.GLASS_CANNON -> if (pl) "Szklane działa" else "Glass cannons"
-        Modifier.RICH_START -> if (pl) "Bogaty start" else "Rich start"
-        Modifier.SLOW_XP -> if (pl) "Wolny rozwój" else "Slow progress"
-        Modifier.ARMORED_FOE -> if (pl) "Opancerzony wróg" else "Armored foe"
-        Modifier.FOG_OF_WAR -> if (pl) "Mgła wojny" else "Fog of war"
+        val index = languageIndex(lang)
+        // Kolejność opisów jest stała, niezależnie od implementacji Set.
+        val names = Modifier.values().filter { it in modifiers }
+            .joinToString(", ") { L.text(it.key, index) }
+        return String.format(Locale.ROOT, L.text("notification_body", index), names)
     }
 }
