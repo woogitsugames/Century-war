@@ -99,6 +99,8 @@ class Ui {
     private val tmp = RectF()
     private val tmp2 = RectF()
     private val path = Path()
+    /** Gotowe procenty dla suwaków, bez tworzenia napisów podczas rysowania. */
+    private val volumePercents = Array(101) { "$it%" }
 
     // ------------------------------------------------------------ tekst
 
@@ -163,6 +165,35 @@ class Ui {
         }
         if (line.isNotEmpty()) { c?.let { text(it, line.toString(), x, yy, sizeDp, color, align) }; yy += lh }
         return yy - y
+    }
+
+    /**
+     * Wspólny suwak głośności: ten sam wygląd i geometria w ustawieniach i pauzie.
+     * Prostokąt jest własnością ekranu; rysowanie nie tworzy obiektów ani napisów.
+     */
+    fun volumeSlider(c: Canvas, r: RectF, fraction: Float) {
+        val left = r.left + 14 * dp
+        val right = max(left + 1f, r.right - 55 * dp)
+        val y = r.centerY()
+        fill.color = OUTLINE
+        c.drawRoundRect(left, y - 6 * dp, right, y + 6 * dp, 6 * dp, 6 * dp, fill)
+        fill.color = DIM
+        c.drawRoundRect(left, y - 3 * dp, right, y + 3 * dp, 3 * dp, 3 * dp, fill)
+        fill.color = GOLD
+        val percent = (fraction.coerceIn(0f, 1f) * 100f + 0.5f).toInt()
+        val x = left + (right - left) * (percent / 100f)
+        c.drawRoundRect(left, y - 3 * dp, x, y + 3 * dp, 3 * dp, 3 * dp, fill)
+        fill.color = TEXT
+        c.drawCircle(x, y, 8 * dp, fill)
+        textO(c, volumePercents[percent], r.right - 5 * dp, y + 5 * dp, 13f, TEXT, Paint.Align.RIGHT)
+    }
+
+    /** Zwraca głośność z dokładnością 1%; wspólne granice dotyku i rysowania. */
+    fun volumeFromX(r: RectF, x: Float): Float {
+        val left = r.left + 14 * dp
+        val right = max(left + 1f, r.right - 55 * dp)
+        val portion = ((x - left) / (right - left)).coerceIn(0f, 1f)
+        return (portion * 100f + 0.5f).toInt() / 100f
     }
 
     // ------------------------------------------------------------ panele
