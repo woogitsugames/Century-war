@@ -68,7 +68,7 @@ class Profile(private val file: File) {
     // Postęp osiągnięć (osobne liczniki oraz nagrody przyznawane tylko raz).
     val achievementCounters = HashMap<String, Long>()
     val unlockedAchievements = HashSet<String>()
-    var achievementLastDailySeed = -1L
+    val achievementDailySeeds = HashSet<Long>()
     var achievementDoctrineMask = 0
 
     val boards = HashMap<String, MutableList<ScoreEntry>>()
@@ -149,7 +149,9 @@ class Profile(private val file: File) {
             o.put("unlockedAchievements", JSONArray().apply {
                 unlockedAchievements.sorted().forEach { put(it) }
             })
-            o.put("achievementLastDailySeed", achievementLastDailySeed)
+            o.put("achievementDailySeeds", JSONArray().apply {
+                achievementDailySeeds.sorted().forEach { put(it) }
+            })
             o.put("achievementDoctrineMask", achievementDoctrineMask)
             val b = JSONObject()
             for ((k, list) in boards) {
@@ -205,7 +207,13 @@ class Profile(private val file: File) {
                     if (id.isNotEmpty()) unlockedAchievements.add(id)
                 }
             }
-            achievementLastDailySeed = o.optLong("achievementLastDailySeed", -1L)
+            achievementDailySeeds.clear()
+            o.optJSONArray("achievementDailySeeds")?.let { days ->
+                for (i in 0 until days.length()) {
+                    val seed = days.optLong(i, -1L)
+                    if (seed >= 0L) achievementDailySeeds.add(seed)
+                }
+            }
             achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0)
             o.optJSONObject("boards")?.let { b ->
                 b.keys().forEach { k ->
@@ -234,7 +242,7 @@ class Profile(private val file: File) {
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
         tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         achievementCounters.clear(); unlockedAchievements.clear()
-        achievementLastDailySeed = -1L; achievementDoctrineMask = 0
+        achievementDailySeeds.clear(); achievementDoctrineMask = 0
         name = keepName
         save()
     }
