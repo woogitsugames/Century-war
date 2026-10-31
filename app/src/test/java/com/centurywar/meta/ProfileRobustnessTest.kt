@@ -179,7 +179,7 @@ class ProfileRobustnessTest {
         p.save()
         val earlier = file.lastModified()
 
-        tmp.writeText(JSONObject().put("v", 2).put("medals", 300).toString())
+        tmp.writeText(JSONObject(file.readText()).put("medals", 300).toString())
         assertTrue(tmp.setLastModified(earlier + 10_000L))
         assertEquals(300, Profile(file).apply { load() }.medals)
         assertEquals(300, Profile(file).apply { load() }.medals)
