@@ -707,7 +707,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             }
             val x = sx(px[i]); val y = sy(ph[i])
             val a = Color.alpha(pcol[i]) / 255f
-            fill.color = Color.argb((255 * a * min(1f, t * 1.5f) * if (ptype[i] == 2) fxIntensity else 1f).toInt(), Color.red(pcol[i]), Color.green(pcol[i]), Color.blue(pcol[i]))
+            fill.color = Color.argb((255 * a * min(1f, t * 1.5f) * (if (ptype[i] == 2) fxIntensity else 1f)).toInt(), Color.red(pcol[i]), Color.green(pcol[i]), Color.blue(pcol[i]))
             when (ptype[i]) {
                 0 -> c.drawRect(x - psize[i] * k / 2, y - psize[i] * k / 2, x + psize[i] * k / 2, y + psize[i] * k / 2, fill)
                 1 -> { line.color = fill.color; line.strokeWidth = 6f * k * t; c.drawCircle(x, y, psize[i] * k * (1.4f - t), line) }
