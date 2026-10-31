@@ -1,4 +1,4 @@
-# Century War: przekazanie pracy (31.10.2026, wieczór)
+# Century War: przekazanie pracy (31.10.2026, noc — po scaleniu zleceń 19–38)
 
 Ten plik jest dla nowej sesji Claude Code. Przeczytaj go w całości, zanim cokolwiek zrobisz.
 
@@ -70,32 +70,34 @@ BALANCE_RUN=true BALANCE_RUNS=8 BALANCE_PROFILE=target ./gradlew :app:testDebugU
 - `:app`: Android (ekrany `screens/`, silnik `engine/`, grafika `game/art/`, renderer `game/BattleRenderer.kt`, profil `meta/Profile.kt`). Testy symulacji też są w `app/src/test`.
 - `:server`: ranking globalny (Ktor + SQLite), weryfikuje powtórki przez `Replay.verify` z `:sim`. Niewdrożony.
 - Komendy gracza idą wyłącznie przez `BattleController` (zapis do `Replay`).
-- Wersje: `Replay.VERSION = 3`, `BattleSnapshot.VERSION = 7`, profil `CURRENT_VERSION = 3`. Nowy stan bitwy musi trafić do `BattleSnapshot` (podbij VERSION). Teksty w `engine/L.kt` w 10 językach (test `LTest`).
+- Wersje: `Replay.VERSION = 4`, `BattleSnapshot.VERSION = 11`, profil `CURRENT_VERSION = 3` (nowe pola profilu są opcjonalne z domyślnymi), wersja gry dla serwera rankingu `0.3.0` (`ScoreClient.GAME_VERSION`, `CW_GAME_VERSION`). Nowy stan bitwy musi trafić do `BattleSnapshot` (podbij VERSION). Teksty w `engine/L.kt` w 10 językach (test `LTest`); tabela jest podzielona na funkcje `partN()` (limit 64 KB metody JVM) — nowe klucze dopisuj do ostatniej części albo dodaj następną.
 - Pola `prevX/prevAnim/prevAttack/stride` w `Fighter` i `prevX/prevH` w `Projectile` są tylko wizualne (interpolacja renderera). Nie używaj ich w logice.
 
-## Co zrobiono w tej sesji
+## Co zrobiono (sesja 31.10 wieczór/noc)
 
-Scalone do `main` (każde z buildem i pełnymi testami):
-- `claude/int-meta` (osiągnięcia, misje, powiadomienia, Play Games), `claude/int-infra` (CI, wydanie, sklep, serwer; symulacja wydzielona do `:sim`), `claude/int-audio-tests` (muzyka), gpt/14 (odporny profil), gpt/16 (ulepszenia jednostek), gpt/17 (Epoka żelaza: 9 epok, 36 etapów, migracja gwiazdek), gpt/04 (tylko blokada oblężnicza i narzędzie balansu; liczby zmierzone od nowa, `docs/BALANCE.md`).
-- Naprawiony crash przy starcie (`StartupTest`), Fold: dowolna orientacja od 600 dp.
-- Płynniejszy ruch: interpolacja między krokami (90/120 Hz), wygaszanie kroku, ciągły cykl ataku.
-- `Daily.ERA_EXPANSION_DAY = 21153` (1.12.2027): data wydania nieznana. **Przed wydaniem ustawić na faktyczny dzień wydania (nigdy w przeszłości).**
-- gpt/18 odrzucone (zastąpione zleceniem 28).
+Scalone do `main` wszystkie zlecenia GPT 19–38 (kolejność: 19, 20, 24, 27, 21, 22, 25, 26, 29, 31, 28, 30, 32, 23, 33, 38, 34, 36, 35, 37), z rozwiązaniem konfliktów i poprawkami:
+- 25+26+31: typ cząstki 4 (pył) i nowy 5 (fala uderzeniowa); wstrząs ekranu: ustawienie 0/1/2 i `reduceShake`; błyski przez `allowFlash`.
+- 26+38: błysk wieży tylko z `FxBuffer.MUZZLE` z symulacji (usunięte `detectTurretFire`).
+- 29+38: dźwięki epok przeniesione do wspólnego `screens/BattleSfx` (bitwa i odtwarzacz powtórek), z obsługą wariantów epok.
+- 22: test profili osobowości grał 720 s i liczył nierozstrzygnięte jako porażki; teraz do rozstrzygnięcia, dostrojeni Inżynier i Ekonomista.
+- 23+35+36: potyczka własna nie trafia do rankingu globalnego; oblężenie tygodnia wysyłane jako tablica `weekly` (badania zerowe); poprawki walidacji serwera i kolejki wyników.
+- 32: naprawiony crash dymka podpowiedzi przy małym miejscu (`coerceIn` z pustym zakresem), zapis podpowiedzi bez wyścigu wątków.
+- 37: test alokacji nie kompilował się u GPT; źródłem ~384 B/krok było `StrictMath.pow` (JDK alokuje) w `Defs.income/costScale` — teraz tablice. Ogranicznik tempa ×3/×5 przeniesiony do obecnego `BattleScreen`. Część drobnych optymalizacji UI z 37 odpadła przy konfliktach (ekrany przebudowane przez 29/30/36).
+- Ustawienia: id przycisków 13–18 (wstrząs, dostępność, podpowiedzi, ranking globalny, nowa tożsamość, suwak efektów).
+- Pomiar balansu kampanii po fali: `docs/BALANCE.md` (0 patów; etapy 34–36 bardzo trudne dla gracza-AI).
 
-## Co teraz: zlecenia GPT 19–38
+## Co teraz
 
-Użytkownik wysłał do GPT **pierwszą falę: 19, 20, 24, 27**. Plan fal i kolejność scalania: `docs/tasks/DISPATCH.md`, zależności: `docs/tasks/README.md`.
-
-Gdy użytkownik napisze, że GPT skończył (albo na początku sesji):
-1. `git fetch origin && git ls-remote origin 'refs/heads/gpt/*'` i porównaj z poprzednim stanem (stare gałęzie 01–18 są już scalone lub odrzucone).
-2. Każdą nową gałąź przejrzyj krytycznie: determinizm, zero alokacji na klatkę, `BattleSnapshot`/`Replay` VERSION, 10 języków, zrzuty 720p..Fold (poziom i pion), brak emoji i nawiązań do innych gier. Sprawdź, czy zlecenie zostało wykonane w całości.
-3. Scalaj po kolei według `DISPATCH.md` (`git merge --no-ff`), rozwiązuj konflikty, po każdym scaleniu pełne testy. Napraw, co trzeba.
-4. Wypchnij na `main`, `claude/bold-sagan-vwz5gm` i gałąź sesji; wyślij APK; powiedz użytkownikowi, którą falę wysłać dalej.
-5. Po zmianach symulacji (28, 33, 34, 36) powtórz pomiar balansu i zaktualizuj `docs/BALANCE.md`.
+1. Warianty epok (28): różnica A/B w epoce pary była 70 pp (wymóg ≤10). Strojenie było w toku na gałęzi `variant-bal` — sprawdź, czy trafiło do `main` (`git log --oneline main | grep -i wariant`); jeśli nie, uruchom `BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.variantReport*' --no-configuration-cache` i dostrój `Defs.kt` (sekcja `variants`).
+2. Zebrać wrażenia użytkownika z APK (telefon, Galaxy Fold) i poprawiać.
+3. Zlecenia 19–38 są zamknięte; nowe zlecenia GPT pisać według wzoru w `docs/tasks/`.
 
 ## Otwarte sprawy i ryzyka
 
-- Materiały sklepu i polityka prywatności są nieaktualne po Play Games (zlecenie 20). `docs/store/data_safety.md` ma ostrzeżenie.
+- Materiały sklepu zaktualizowane w 20, ale `docs/store/monetization_plan.md` i `screenshots_plan.md` wciąż piszą „offline”.
+- Ranking: tytuł „Rankingi” nachodzi na przycisk „Nazwa dowódcy” na Foldzie w pionie; etykiety zakładek ucięte.
+- Auto-jakość (37) patrzy tylko na czas CPU; telefon ograniczony GPU nie obniży jakości.
+- `Daily.WEATHER_DAY` i `VARIANTS_DAY` = `ERA_EXPANSION_DAY` — przed wydaniem ustawić na dzień wydania.
 - Play Games wymaga konfiguracji w Play Console (`docs/PLAY_GAMES_SETUP.md`, `app/src/main/res/values/games_ids.xml` ma `REPLACE_ME`). Własny upload key: `docs/CI.md`.
 - Serwer: plansze `campaign_8..31` trzeba przenumerować o +4 przy pierwszym wdrożeniu; serwer liczy bitwy bez bonusów z badań (zlecenie 23 to rozwiązuje).
 - Balans: AI z mgłą wojny jest słabe; weteran z 80% badań wygrywa niektóre późne etapy w 1–2 min; przy 8 seedach rozrzut ±15 pp (przed wydaniem 20 seedów).

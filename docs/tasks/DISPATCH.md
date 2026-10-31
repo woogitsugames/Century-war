@@ -31,3 +31,7 @@ Po fali 4 (28) i po każdej zmianie symulacji (33, 34, 36) koordynator powtarza 
 ## Odrzucone
 
 - **gpt/18** (rozgałęzienia epok): nie scalać, zastąpione przez 28.
+
+## Stan
+
+31.10.2026 (noc): wszystkie paczki 19–38 scalone do `main` przez koordynatora. Szczegóły i poprawki po scaleniu: `docs/Century-war.md`.
