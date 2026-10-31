@@ -6,7 +6,6 @@ import java.util.LinkedHashMap
 import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import kotlin.math.abs
 
 /** Sekret HMAC w APK można wydobyć; podpis jest jedynie barierą przeciw nadużyciom. */
 class RequestAuthenticator(
@@ -27,7 +26,7 @@ class RequestAuthenticator(
     ): Boolean {
         val epoch = timestamp?.toLongOrNull() ?: return false
         val now = Math.floorDiv(nowMillis(), 1000L)
-        if (abs(now - epoch) > 300L) return false
+        if (epoch < now - 300L || epoch > now + 300L) return false
         if (nonce == null || nonce.length != 36 ||
             runCatching { UUID.fromString(nonce).toString() == nonce }.getOrDefault(false).not()
         ) return false
