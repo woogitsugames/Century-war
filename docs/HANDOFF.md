@@ -27,6 +27,26 @@
 >
 > Commity po polsku, zakończone liniami atrybucji sesji. Nie twórz PR bez prośby użytkownika.
 
+## Aktualizacja 31.10.2026 (wieczór): scalone i przetestowane
+
+Na `claude/youthful-ptolemy-fykzyu` (kopia robocza głównej linii) scalono kolejno: `claude/int-meta`, `claude/int-infra`, `claude/int-audio-tests`, `gpt/14`, `gpt/16`, `gpt/17`. Po każdym kroku: build + pełne `:app:testDebugUnitTest` + `:server:test`, wszystko zielone.
+
+Najważniejsze zmiany przy scalaniu:
+- **Moduł `:sim`** (`sim/src/main/kotlin/com/centurywar/game/`): cała symulacja poza Androidem, wspólna z serwerem. Testy symulacji nadal w `app/src/test`.
+- **Serwer** weryfikuje powtórki formatem `Replay` z gry (`Replay.verify`), nie własną listą akcji.
+- **Replay v3** (komenda `UNIT_UPGRADE`), **BattleSnapshot v6**, **profil v3** (migracja gwiazdek po wstawieniu Epoki żelaza, plik i chmura).
+- **Naprawiony crash przy starcie** (`applyRenderScale` przed utworzeniem `GameView`); `StartupTest` uruchamia pełny cykl Activity w Robolectric.
+- **Fold:** od 600 dp dowolna orientacja (rozłożony Fold był obrócony o 90°); zrzuty `foldPortrait`.
+- Zlecenia GPT **19–24** w `docs/tasks/`.
+
+Do zrobienia:
+- **gpt/04 (balans):** scalić tylko mechanikę (blokada oblężnicza), liczby zmierzyć od nowa na 36 etapach z mechanikami 05/06/07/13/16/17 (`powerByStage` ma 32 pozycje: IndexOutOfBounds po 17; `era/7f` zakłada 8 epok; `BalanceReport` trzeba schować za zmienną środowiskową; `NO_TURRETS` w etapie 1 wycina lekcję wież z samouczka).
+- **gpt/18 odłożone:** sztywne indeksy epok (kolidują z 17), `typealias EraSpec` koliduje z klasą z 17, zmienia dzisiejsze wyzwanie dnia, wybór wariantu poza `BattleController`/`Replay`, nazwa „Tesla”. Do przepisania po 17 jako `EraSpec.variants`.
+- `Daily.ERA_EXPANSION_DAY = 20758` (1.11.2026): przed wydaniem ustawić na faktyczny dzień wydania.
+- Plansze serwera `campaign_8..31` trzeba przenumerować o +4 przy pierwszym wdrożeniu serwera (dziś serwer nie jest wdrożony).
+- Materiały sklepu i polityka prywatności nieaktualne po Play Games (zlecenie 20).
+- Środowisko: brak Android SDK w kontenerze; instalacja do `~/android-sdk` (cmdline-tools z dl.google.com) i skrypt `~/.gradle/init.d/mirror.gradle` przekierowujący Maven Central na mirror GCS (429). Pełne testy trwają ok. 17 min.
+
 ## Stan projektu
 
 **W `claude/bold-sagan-vwz5gm` (`bcc158c`), zbudowane i przetestowane:**
