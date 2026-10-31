@@ -103,6 +103,45 @@ class ArtGalleryTest {
         save(bmp, "gallery_animation")
     }
 
+    /**
+     * Cztery fazy trafienia i osiem faz śmierci: każda sylwetka zachowuje własny ruch.
+     * Plik służy do wizualnej kontroli bez uruchamiania bitwy.
+     */
+    @Test
+    fun deathStrips() {
+        val g = game(1600, 900, Quality.HIGH)
+        val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
+        val frames = 12
+        val cell = 188
+        val rows = listOf(
+            Defs.unit(3, Role.MELEE),   // piechur
+            Defs.unit(4, Role.RANGED),  // strzelec
+            Defs.unit(3, Role.HEAVY),   // koń z jeźdźcem
+            Defs.unit(0, Role.ELITE),   // mamut
+            Defs.unit(4, Role.ELITE),   // armata
+            Defs.unit(6, Role.ELITE),   // czołg
+            Defs.unit(7, Role.ELITE),   // mech
+        )
+        check(rows[0].body == Body.HUMAN && rows[2].body == Body.BEAST)
+        check(rows[4].body == Body.CANNON && rows[5].body == Body.VEHICLE && rows[6].body == Body.MECH)
+        val bmp = Bitmap.createBitmap(frames * cell, rows.size * cell, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(Color.rgb(196, 214, 228))
+        val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
+        val hitAges = floatArrayOf(0f, 0.05f, 0.12f, 0.2f)
+        for ((row, def) in rows.withIndex()) {
+            val y = row * cell.toFloat()
+            c.drawRect(0f, y + cell * 0.88f, frames * cell.toFloat(), y + cell, ground)
+            for (frame in 0 until frames) {
+                val hitAge = if (frame < 4) hitAges[frame] else -1f
+                val dying = if (frame >= 4) (frame - 4) / 7f * 0.8f else -1f
+                r.drawUnitPose(c, def, frame * cell + cell / 2f, y + cell * 0.88f,
+                    cell * 0.8f, Ui.PLAYER, 0f, 0f, 0f, -1f, hitAge, dying)
+            }
+        }
+        save(bmp, "gallery_death")
+    }
+
     @Test
     fun bases() {
         for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {
