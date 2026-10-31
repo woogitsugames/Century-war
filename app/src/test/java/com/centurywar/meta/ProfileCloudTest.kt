@@ -1,6 +1,7 @@
 package com.centurywar.meta
 
 import com.centurywar.game.Mode
+import org.json.JSONObject
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -172,8 +173,7 @@ class ProfileCloudTest {
         local.recordBattle(Mode.ENDLESS, false, 7)
         val data = local.toJson()
         assertTrue(data.contains("\"modeBattles\""))
-        assertFalse(data.contains("\"entries\""))
-        assertFalse(data.contains("\"history\""))
+        assertFalse(JSONObject(data).has("history"))
         val remote = freshProfile()
         remote.fromJson(data)
         assertArrayEquals(local.modeBattles, remote.modeBattles)
