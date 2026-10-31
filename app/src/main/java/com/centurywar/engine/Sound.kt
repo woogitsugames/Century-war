@@ -41,20 +41,30 @@ class Sound(private val ctx: Context) {
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
         .build()
-    private val ids = IntArray(COUNT) { -1 }
+    /** Id próbek w SoundPool (0 = jeszcze nie wczytano). */
+    private val ids = java.util.concurrent.atomic.AtomicIntegerArray(COUNT)
+    /** Próbki, które SoundPool zgłosił jako wczytane (id są małe, więc bez alokacji przy boxingu). */
+    private val loaded: MutableSet<Int> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    @Volatile private var released = false
     private val lastPlay = LongArray(COUNT)
     @Volatile var enabled = true
     @Volatile var volume = 0.8f
 
     init {
+        // play() przed końcem ładowania próbki kończy się cichym błędem "sample not ready",
+        // więc dźwięk uznajemy za gotowy dopiero w onLoadComplete.
+        pool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (status == 0) loaded.add(sampleId)
+        }
         Thread({ generateAll() }, "sfx-gen").apply { priority = Thread.MIN_PRIORITY; start() }
     }
 
     /** Odtwarza dźwięk; [minGapMs] ogranicza spam, gdy w jednej klatce trafia 20 strzał. */
     fun play(id: Int, vol: Float = 1f, minGapMs: Long = 45L, pitch: Float = 1f) {
         if (!enabled || vol <= 0.02f) return
-        val sid = ids[id]
-        if (sid <= 0) return
+        if (released) return
+        val sid = ids.get(id)
+        if (sid <= 0 || !loaded.contains(sid)) return
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastPlay[id] < minGapMs) return
         lastPlay[id] = now
@@ -62,16 +72,29 @@ class Sound(private val ctx: Context) {
         pool.play(sid, v, v, 1, 0, pitch.coerceIn(0.5f, 2f))
     }
 
-    fun release() = pool.release()
+    fun release() = synchronized(this) {
+        released = true
+        pool.release()
+    }
 
     // ---------------------------------------------------------------- synteza
 
     private fun generateAll() {
-        val dir = File(ctx.cacheDir, "sfx").apply { mkdirs() }
-        for (i in 0 until COUNT) {
-            val f = File(dir, "s${i}_v$VERSION.wav")
-            if (!f.exists()) writeWav(f, synth(i))
-            ids[i] = pool.load(f.absolutePath, 1)
+        try {
+            val dir = File(ctx.cacheDir, "sfx").apply { mkdirs() }
+            for (i in 0 until COUNT) {
+                if (released) return
+                val f = File(dir, "s${i}_v$VERSION.wav")
+                if (!f.exists()) writeWav(f, synth(i))
+                synchronized(this) {
+                    // Activity mogła zostać zniszczona w trakcie generowania: nie wołamy load() na puli
+                    // po release() (wyścig z onDestroy), a ewentualny wyjątek nie zabija procesu.
+                    if (released) return
+                    ids.set(i, pool.load(f.absolutePath, 1))
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("CenturyWar", "sfx init failed", e)
         }
     }
 

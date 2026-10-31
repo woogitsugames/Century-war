@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
@@ -14,80 +15,125 @@ import com.centurywar.game.Daily
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.meta.Profile
+import kotlin.math.max
 import kotlin.math.min
 
 /** Ekran przed bitwą dla trybów: bez końca, wyzwanie dnia, potyczka. */
 class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private val bg = MenuBg()
+    private val chrome = Chrome(this)
     private val back = btn(-1)
     private val start = btn(-2)
     private val diff = Array(4) { btn(it) }
     private val panel = RectF()
+    private val row = RectF()
     private var dt = 0f
-    private val day = Daily.dayNumber()
+    /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
+    private var day = Daily.dayNumber()
+    private var dailyCfg: BattleConfig? = null
+    private var dailyMods = ""
+
+    private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
+    private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
 
     override fun layout() {
-        back.label = L["back"]
-        back.set(g.insetL + 12 * dp, g.insetT + 10 * dp, 100 * dp, 38 * dp)
-        val pw = min(560 * dp, w - g.insetL - g.insetR - 40 * dp)
-        panel.set(w / 2 - pw / 2, g.insetT + 60 * dp, w / 2 + pw / 2, h - 20 * dp)
-        start.set(w / 2 - 90 * dp, panel.bottom - 62 * dp, 180 * dp, 48 * dp)
+        chrome.layoutBack(back)
+        val pw = min(600 * dp, w - g.insetL - g.insetR - 40 * dp)
+        val avail = h - chrome.top - g.insetB - 26 * dp
+        val ph = min(avail, 440 * dp)
+        val top = chrome.top + 14 * dp + max(0f, (avail - ph) * 0.4f)
+        panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
+        start.set(w / 2 - 110 * dp, panel.bottom - 70 * dp, 220 * dp, 52 * dp)
         start.highlight = true
-        val dw = (pw - 50 * dp) / 4
+        start.iconId = Icons.PLAY
+        val gap = 8 * dp
+        val dw = (pw - 44 * dp - gap * 3) / 4
         for (i in 0..3) {
-            diff[i].set(panel.left + 20 * dp + i * (dw + 3.3f * dp), panel.bottom - 120 * dp, dw, 40 * dp)
+            diff[i].set(panel.left + 22 * dp + i * (dw + gap), start.r.top - 58 * dp, dw, 44 * dp)
             diff[i].label = L["diff_$i"]
+            diff[i].iconId = diffIcons[i]
             diff[i].visible = mode == Mode.SKIRMISH
         }
     }
 
     override fun update(dt: Float) {
         this.dt = dt
+        val today = Daily.dayNumber()
+        if (today != day) { day = today; dailyCfg = null }
         start.label = L["play"]
         for (i in 0..3) diff[i].selected = g.profile.skirmishDiff == i
     }
 
+    private fun line(c: Canvas, icon: Int, s: String, x: Float, y: Float, color: Int = Ui.TEXT, size: Float = 15f): Float {
+        val isz = 22 * dp
+        Icons.draw(c, icon, x + isz / 2, y - 5 * dp, isz, dp = dp)
+        ui.textO(c, s, x + isz + 10 * dp, y, size, color)
+        return 30 * dp
+    }
+
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
-        c.drawColor(Color.argb(80, 0, 0, 0))
+        chrome.dim(c, 100)
         ui.panel(c, panel)
-        val x = panel.left + 22 * dp
-        var y = panel.top + 40 * dp
         val pr = g.profile
         val title = when (mode) { Mode.ENDLESS -> L["endless"]; Mode.DAILY -> L["daily"]; else -> L["skirmish"] }
-        ui.text(c, title, x, y, 24f, Ui.GOLD, Paint.Align.LEFT, true); y += 34 * dp
-        val tw = panel.width() - 44 * dp
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, title, 22f, Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() * 0.9f)
+
+        val mr = 42 * dp
+        val mx = panel.left + 26 * dp + mr
+        val my = panel.top + 52 * dp + mr
+        ui.medallion(c, mx, my, mr, Ui.ERA[when (mode) { Mode.ENDLESS -> 3; Mode.DAILY -> 7; else -> 2 }], modeIcon)
+        val x = mx + mr + 18 * dp
+        var y = panel.top + 58 * dp
+        val tw = panel.right - 24 * dp - x
+        val lowLimit = if (mode == Mode.SKIRMISH) diff[0].r.top - 26 * dp else start.r.top - 10 * dp
         when (mode) {
             Mode.ENDLESS -> {
                 y += ui.wrap(c, L["endless_info"], x, y, tw, 15f)
-                y += 10 * dp
-                ui.text(c, "${L["best"]}: ${L.f("wave", pr.bestWave)}", x, y, 16f, Ui.GOLD, Paint.Align.LEFT, true); y += 26 * dp
+                y += 12 * dp
+                y += line(c, Icons.TROPHY, "${L["best"]}: ${L.f("wave", pr.bestWave)}", x, y, Ui.GOLD, 16f)
                 val top = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
-                if (top != null) ui.text(c, "${L["score"]}: ${top.score}", x, y, 14f)
+                if (top != null) line(c, Icons.STAR, "${L["score"]}: ${top.score}", x, y)
             }
             Mode.DAILY -> {
-                val cfg = Daily.config(day, pr.bonuses())
+                // Konfiguracja i tekst modyfikatorów raz na dzień, nie w każdej klatce.
+                val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also { dc ->
+                    dailyCfg = dc
+                    dailyMods = L["modifiers"] + ": " + dc.modifiers.joinToString(", ") { L[it.key] }
+                }
                 y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
-                y += 6 * dp
-                ui.text(c, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, 14f); y += 22 * dp
-                ui.text(c, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, 14f, Ui.BAD); y += 22 * dp
-                y += ui.wrap(c, "${L["modifiers"]}: " + cfg.modifiers.joinToString(", ") { L[it.key] }, x, y, tw, 14f, Ui.GOLD)
+                y += 8 * dp
+                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
+                y += line(c, Icons.SKULL, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, Ui.BAD, 14f)
+                val isz = 22 * dp
+                Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
+                y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
+                y += 4 * dp
                 val ranked = pr.lastRankedDaily != day
-                ui.text(c, L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"]), x, y + 4 * dp, 14f, if (ranked) Ui.GOOD else Ui.DIM, Paint.Align.LEFT, true)
-                y += 26 * dp
-                pr.top(Profile.dailyBoard(day)).firstOrNull()?.let { ui.text(c, "${L["best"]}: ${it.score}", x, y, 14f) }
+                if (y < lowLimit) y += line(c, if (ranked) Icons.CHECK else Icons.LOCK, L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"]), x, y, if (ranked) Ui.GOOD else Ui.DIM, 14f)
+                if (y < lowLimit) pr.top(Profile.dailyBoard(day)).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
             }
             else -> {
-                ui.text(c, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[7]]), x, y, 15f); y += 26 * dp
-                ui.text(c, L.f("ai_power", (aiPower() * 100).toInt()), x, y, 15f); y += 26 * dp
-                pr.top(Profile.BOARD_SKIRMISH).firstOrNull()?.let { ui.text(c, "${L["best"]}: ${it.score}", x, y, 14f) }
-                ui.text(c, L["difficulty"], x, diff[0].r.top - 10 * dp, 14f, Ui.DIM)
+                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[7]]), x, y)
+                y += line(c, Icons.SKULL, L.f("ai_power", (aiPower() * 100).toInt()), x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
+                ui.bar(c, x + 32 * dp, y - 14 * dp, min(tw - 32 * dp, 220 * dp), 9 * dp, aiPower() / 1.8f, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
+                y += 14 * dp
+                if (y < lowLimit) pr.top(Profile.BOARD_SKIRMISH).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
+                // separator + etykieta trudności
+                row.set(panel.left + 22 * dp, diff[0].r.top - 30 * dp, panel.right - 22 * dp, diff[0].r.top - 28 * dp)
+                ui.fill.color = Color.argb(70, 255, 255, 255); c.drawRect(row, ui.fill)
+                ui.textO(c, L["difficulty"], panel.centerX(), diff[0].r.top - 10 * dp, 14f, Ui.GOLD, Paint.Align.CENTER)
             }
         }
-        for (b in buttons) ui.button(c, b, 15f)
+        for (b in buttons) if (b !== start) ui.button(c, b, if (b === back) 16f else 14f)
+        ui.button(c, start, 20f)
     }
 
-    private fun aiPower() = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)[g.profile.skirmishDiff]
+    private fun aiPower() = SKIRMISH_POWER[g.profile.skirmishDiff.coerceIn(0, 3)]
+
+    private companion object {
+        val SKIRMISH_POWER = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)
+    }
 
     override fun onClick(b: Button) {
         val pr = g.profile

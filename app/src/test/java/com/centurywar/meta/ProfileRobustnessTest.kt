@@ -16,7 +16,7 @@ import java.io.File
 
 /** Odtwarzanie profilu z pełnego zapisu, starych wersji i przerwanych operacji. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE)
+@Config(sdk = [35], manifest = Config.NONE)
 class ProfileRobustnessTest {
     @get:Rule val folder = TemporaryFolder()
 
@@ -125,7 +125,7 @@ class ProfileRobustnessTest {
         }
         val backup = File(file.parentFile, file.name + ".corrupt")
         assertEquals(damaged, backup.readText())
-        assertEquals("Dowódca", p.name)
+        assertEquals("", p.name)
         assertEquals(0, p.medals)
         assertTrue(p.levels.isEmpty())
 
@@ -149,7 +149,7 @@ class ProfileRobustnessTest {
                 .toString(),
         )
         val p = Profile(file).apply { load() }
-        assertEquals("Dowódca", p.name)
+        assertEquals("", p.name)
         assertEquals(0, p.medals)
         assertTrue(p.boards.isEmpty())
         assertTrue(File(file.parentFile, file.name + ".corrupt").exists())
