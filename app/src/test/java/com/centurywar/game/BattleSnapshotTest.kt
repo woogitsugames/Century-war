@@ -85,6 +85,11 @@ class BattleSnapshotTest {
             if (!u.active) continue
             assertEquals(u.x, v.x); assertEquals(u.hp, v.hp); assertEquals(u.serial, v.serial); assertEquals(u.def.id, v.def.id)
             assertEquals(u.tier, v.tier); assertEquals(u.maxHp, v.maxHp); assertEquals(u.dmg, v.dmg)
+            assertEquals(u.bossKind, v.bossKind)
+            assertEquals(u.bossSecondaryKind, v.bossSecondaryKind)
+            assertEquals(u.bossCd, v.bossCd)
+            assertEquals(u.bossSummonCd, v.bossSummonCd)
+            assertEquals(u.bossRageActive, v.bossRageActive)
         }
         for (k in a.projs.indices) {
             assertEquals(a.projs[k].active, b.projs[k].active)
@@ -213,6 +218,34 @@ class BattleSnapshotTest {
         a.chooseEndlessCard(0); c.chooseEndlessCard(0)
         steps(a, 60 * 60, true); steps(c, 60 * 60, true)
         assertSame(a, c)
+    }
+
+    @Test
+    fun everyBossResumesDuringActiveAbility() {
+        for (w in 10..100 step 10) {
+            val a = Battle(BattleConfig(Mode.ENDLESS, 1900L + w, 1f))
+            a.wave = w - 1
+            a.nextBossToSpawn = w
+            a.waveTimer = 0f
+            a.step()
+            val boss = a.currentBoss()
+            assertNotNull("Boss w fali $w", boss)
+            a.pendingCards?.let { a.chooseEndlessCard(0) }
+            boss!!.bossCd = 0.8f
+            boss.bossSummonCd = 0.8f
+            if (boss.hasBossAbility(EndlessBosses.RAGE)) {
+                boss.hp = boss.maxHp * 0.4f
+                boss.bossRageActive = true
+            }
+            val b = roundTrip(a)
+            assertEquals(boss.bossKind, b.currentBoss()!!.bossKind)
+            assertEquals(boss.bossSecondaryKind, b.currentBoss()!!.bossSecondaryKind)
+            assertEquals(boss.bossSummonCd, b.currentBoss()!!.bossSummonCd)
+            assertEquals(boss.bossRageActive, b.currentBoss()!!.bossRageActive)
+            steps(a, 120)
+            steps(b, 120)
+            assertSame(a, b)
+        }
     }
 
     @Test
