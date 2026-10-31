@@ -72,4 +72,4 @@ HPLcom/centurywar/game/Rng;->nextFloat()F
 Lcom/centurywar/engine/FrameMetrics;
 Lcom/centurywar/engine/QualityGovernor;
 HPLcom/centurywar/engine/FrameMetrics;->add(JJII)V
-HPLcom/centurywar/engine/QualityGovernor;->record(FFZII)Z
+HPLcom/centurywar/engine/QualityGovernor;->record(FFZIIFF)Z
