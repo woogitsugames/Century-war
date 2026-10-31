@@ -31,6 +31,8 @@ class AiPersonalityProfileTest {
         var sampleCount = 0
         var pushingAlive = 0.0
         var pushingSamples = 0
+        var waveReleases = 0
+        var waveReleaseUnits = 0.0
         var duration = 0.0
 
         fun run(seed: Long) {
@@ -42,11 +44,17 @@ class AiPersonalityProfileTest {
             var firstEvolve = -1f
             var early = 0
             var steps = 0
+            var wasHolding = b.enemy.hold
             val limit = (LIMIT_SECONDS / Battle.STEP).toInt()
             while (!b.over && steps < limit) {
                 b.step()
                 b.fx.count = 0
                 steps++
+                if (wasHolding && !b.enemy.hold) {
+                    waveReleases++
+                    waveReleaseUnits += b.enemy.aliveCount
+                }
+                wasHolding = b.enemy.hold
                 if (b.time <= 90f) early = b.enemy.spawnedByRole[Role.MELEE.ordinal]
                 if (firstEvolve < 0f && b.enemy.era > startEra) firstEvolve = b.time
                 if (steps % SAMPLE_STEPS == 0) {
@@ -93,11 +101,12 @@ class AiPersonalityProfileTest {
             14 -> avg(duration)
             15 -> wins.toDouble() / games
             16 -> avg(upgrades)
+            17 -> if (waveReleases == 0) 0.0 else waveReleaseUnits / waveReleases
             else -> error("Miara poza zakresem")
         }
 
         fun line(): String {
-            val values = (0..16).joinToString("\t") { i ->
+            val values = (0..17).joinToString("\t") { i ->
                 if (i == 0 && startEra != 0) "-" else String.format(Locale.US, "%.3f", metric(i))
             }
             return (if (startEra == 0) "0-3" else "2-2") + "\t" + name.name + "\t" +
@@ -109,11 +118,15 @@ class AiPersonalityProfileTest {
     fun measureAndReport() {
         assertTrue(SEEDS >= 20)
         val header = "era\tosobowosc\tproby\tkoniec\tawans_s\tawansy\twrecz\tzasieg\tciezkie\telita\t" +
-            "wrecz_90s\twieze\tostrzaly\tzrywy\tzywi\tzloto\tarmia_w_natarciu\tpostoj\tczas_s\twygrane\tulepszenia"
+            "wrecz_90s\twieze\tostrzaly\tzrywy\tzywi\tzloto\tarmia_w_natarciu\tpostoj\tczas_s\twygrane\tulepszenia\tfala_ruszajaca"
         val lines = StringBuilder(header).append('\n')
-        for (start in intArrayOf(0, 2)) {
-            for (p in AiPersonality.entries) {
-                val r = Result(p, start)
+        val results = Array(2) { scenario ->
+            val start = if (scenario == 0) 0 else 2
+            Array(AiPersonality.entries.size) { i -> Result(AiPersonality.entries[i], start) }
+        }
+        for (scenario in results.indices) {
+            val start = if (scenario == 0) 0 else 2
+            for (r in results[scenario]) {
                 for (i in 0 until SEEDS) r.run(30001L + 7919L * i + start)
                 lines.append(r.line()).append('\n')
             }
@@ -122,5 +135,48 @@ class AiPersonalityProfileTest {
         val out = File("build/ai-personality-profile.tsv")
         out.parentFile.mkdirs()
         out.writeText(lines.toString())
+
+        val advancing = results[0]
+        val static = results[1]
+        val econ = AiPersonality.ECONOMIST.ordinal
+        val engineer = AiPersonality.ENGINEER.ordinal
+        val assault = AiPersonality.ASSAULT.ordinal
+        val siege = AiPersonality.SIEGER.ordinal
+        for (p in AiPersonality.entries) {
+            val i = p.ordinal
+            if (i != econ) {
+                assertTrue("Ekonomista ma awansować średnio najwcześniej: " + lines,
+                    advancing[econ].metric(0) <= advancing[i].metric(0))
+            }
+            if (i != engineer) {
+                assertTrue("Inżynier powinien najwięcej budować: " + lines,
+                    static[engineer].metric(7) >= static[i].metric(7))
+            }
+            if (i != assault) {
+                assertTrue("Szturm powinien szkolić najwięcej wręcz na starcie: " + lines,
+                    advancing[assault].metric(6) >= advancing[i].metric(6))
+            }
+            if (i != siege) {
+                assertTrue("Oblężnik powinien ruszać największą falą: " + lines,
+                    static[siege].metric(17) >= static[i].metric(17))
+            }
+            val winRate = (advancing[i].wins + static[i].wins).toDouble() / (SEEDS * 2)
+            assertTrue(p.name + ": wygrane spoza 30-70% (" + winRate + ")\n" + lines,
+                winRate in 0.30..0.70)
+        }
+        for (i in AiPersonality.entries.indices) {
+            for (j in i + 1 until AiPersonality.entries.size) {
+                var differences = 0
+                for (k in intArrayOf(2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 16, 17)) {
+                    val x = static[i].metric(k)
+                    val y = static[j].metric(k)
+                    val scale = maxOf(kotlin.math.abs(x), kotlin.math.abs(y))
+                    if (scale > 0.0001 && kotlin.math.abs(x - y) >= 0.15 * scale) differences++
+                }
+                assertTrue("Para " + AiPersonality.entries[i] + "/" +
+                    AiPersonality.entries[j] + " różni się tylko w " + differences +
+                    " miarach (minimum 2).\n" + lines, differences >= 2)
+            }
+        }
     }
 }
