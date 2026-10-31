@@ -306,6 +306,18 @@ class BattleHistory(private val file: File) {
     /** Używane w testach, nigdy w wątku gry. */
     fun awaitWrites() { writer.submit { }.get(10, TimeUnit.SECONDS) }
 
+    /** Ograniczona bariera dla onPause, bez wykonywania I/O na UI. */
+    fun awaitWrites(timeoutMs: Long): Boolean {
+        if (timeoutMs <= 0L) return false
+        return try {
+            writer.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            true
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        } catch (_: Exception) { false }
+    }
+
     @Synchronized
     fun toJson(): String {
         val root = JSONObject()
