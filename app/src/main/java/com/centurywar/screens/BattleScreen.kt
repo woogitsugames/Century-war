@@ -727,7 +727,19 @@ class BattleScreen(
             ui.bar(c, mini.left + 12 * dp, hy, hw, 7 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)
             Icons.draw(c, Icons.TOWER, mini.left + 4 * dp, hy + 3 * dp, 16 * dp, Ui.PLAYER, dp = dp)
             if (!battle.endless) {
-                ui.bar(c, mini.right - 12 * dp - hw, hy, hw, 7 * dp, e.baseHp / e.baseMaxHp, Ui.ENEMY)
+                val bx = mini.right - 12 * dp - hw
+                ui.bar(c, bx, hy, hw, 7 * dp, e.baseHp / e.baseMaxHp, Ui.ENEMY)
+                if (g.profile.teamMarkers) {
+                    // Pasek wroga: kreski dodatkowo do czerwieni/pomarańczu.
+                    val end = bx + hw * (e.baseHp / e.baseMaxHp).coerceIn(0f, 1f)
+                    ui.stroke.color = Ui.OUTLINE
+                    ui.stroke.strokeWidth = 1.3f * dp
+                    var xx = bx + 5f * dp
+                    while (xx < end) {
+                        c.drawLine(xx, hy, xx, hy + 7f * dp, ui.stroke)
+                        xx += 8f * dp
+                    }
+                }
                 Icons.draw(c, Icons.TOWER, mini.right - 4 * dp, hy + 3 * dp, 16 * dp, Ui.ENEMY, dp = dp)
             }
             // ramka minimapy
