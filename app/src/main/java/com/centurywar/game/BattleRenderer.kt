@@ -144,7 +144,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val d = g.ui.dp
         val top = max(field.top, groundY - 48f * d)
         val bottom = min(field.bottom, groundY + 28f * d)
-        if (bottom <= top) return
+        if (bottom - top <= 12f * d) return
 
         c.save()
         c.clipRect(field)

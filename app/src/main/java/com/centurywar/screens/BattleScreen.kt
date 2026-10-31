@@ -59,6 +59,10 @@ class BattleScreen(
     private var aimingBarrage = false
     private var aimWorldX = 0f
     private var aimScreenX = 0f
+    private var aimDownX = 0f
+    private var aimDownY = 0f
+    private var aimStartedInField = false
+    private var aimMoved = false
     private var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
@@ -525,10 +529,22 @@ class BattleScreen(
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
-        if (aimingBarrage && (e.action == TouchEvent.DOWN || e.action == TouchEvent.MOVE) &&
-            fieldRect.contains(e.x, e.y)) {
-            aimScreenX = e.x
-            aimWorldX = r.worldX(e.x)
+        if (aimingBarrage) {
+            when (e.action) {
+                TouchEvent.DOWN -> {
+                    aimDownX = e.x
+                    aimDownY = e.y
+                    aimMoved = false
+                    aimStartedInField = fieldRect.contains(e.x, e.y)
+                }
+                TouchEvent.MOVE -> if (kotlin.math.abs(e.x - aimDownX) > 10f * dp ||
+                    kotlin.math.abs(e.y - aimDownY) > 10f * dp) aimMoved = true
+            }
+            if ((e.action == TouchEvent.DOWN || e.action == TouchEvent.MOVE) &&
+                aimStartedInField && fieldRect.contains(e.x, e.y)) {
+                aimScreenX = e.x
+                aimWorldX = r.worldX(e.x)
+            }
         }
         return false // Ekran nadal rozpoznaje zwykły tap i przeciąganie.
     }
@@ -544,7 +560,8 @@ class BattleScreen(
 
     override fun onTap(x: Float, y: Float) {
         if (aimingBarrage) {
-            if (!paused && !finished && battle.abilityReady(battle.player, 0) &&
+            if (!paused && !finished && !aimMoved && aimStartedInField &&
+                battle.abilityReady(battle.player, 0) &&
                 fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
                 commands.barrage(r.worldX(x))
             }

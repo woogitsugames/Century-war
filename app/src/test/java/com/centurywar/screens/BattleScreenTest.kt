@@ -122,10 +122,34 @@ class BattleScreenTest {
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
         assertTrue(controller.log().commands.isEmpty())
         tap(g, button.r.centerX(), button.r.centerY())
+        val speedButton = field(bs, "speedBtn").get(bs) as Button
+        tap(g, speedButton.r.centerX(), speedButton.r.centerY())
+        assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
+        assertTrue(controller.log().commands.isEmpty())
+        tap(g, button.r.centerX(), button.r.centerY())
         g.back()
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
         assertFalse(field(bs, "paused").getBoolean(bs))
         assertTrue(controller.log().commands.isEmpty())
+    }
+
+    @Test
+    fun swipeFromHudIntoFieldNeverFires() {
+        val g = game()
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 335L, 1f))
+        g.setScreen(bs)
+        g.frame(canvas, 1f / 60f)
+        val barrageButton = field(bs, "barrageBtn").get(bs) as Button
+        tap(g, barrageButton.r.centerX(), barrageButton.r.centerY())
+        val speedButton = field(bs, "speedBtn").get(bs) as Button
+        val area = field(bs, "fieldRect").get(bs) as RectF
+        g.pushTouch(TouchEvent.DOWN, speedButton.r.centerX(), speedButton.r.centerY(), 0)
+        g.pushTouch(TouchEvent.MOVE, area.centerX(), area.centerY(), 0)
+        g.pushTouch(TouchEvent.UP, area.centerX(), area.centerY(), 0)
+        g.frame(canvas, 1f / 60f)
+        assertEquals(0, (field(bs, "battle").get(bs) as Battle).player.barragesUsed)
+        assertTrue((field(bs, "commands").get(bs) as BattleController).log().commands.isEmpty())
+        assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
     }
 
     @Test
