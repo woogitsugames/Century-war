@@ -45,6 +45,7 @@ jobs:
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'
+          SFX_PREVIEW: 'true'
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleDebug :app:testDebugUnitTest \
@@ -61,6 +62,7 @@ jobs:
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
             --tests '*SoundSynthTest*' \
+            --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \
             --tests '*AllocationTest*' \
             --tests '*SimPerformanceTest*' \
@@ -74,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: era-sfx-preview
-          path: app/build/sfx-preview/*.wav
+          path: app/build/sfx/*.wav
           if-no-files-found: warn
           retention-days: 14
       - name: Zapisz debug APK
