@@ -20,6 +20,21 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     private val cv: Canvas get() = p.cv
     var time = 0f
+    /** 0..1: płynny udział ruchu w pozie, także w klatce zatrzymania. */
+    var stride = 1f
+    /** -1 poza walką; 0..1 podczas przygotowania kolejnego ataku. */
+    var windup = -1f
+    /** Stałe przesunięcie fazy jednostki (nie wpływa na przebytą drogę kół). */
+    var phase = 0f
+    /** Skala UnitDef.size: odległość świata przeliczana na lokalne współrzędne. */
+    var size = 1f
+
+    private fun smooth(t: Float): Float = t * t * (3f - 2f * t)
+    private fun ready(atk: Float): Float =
+        if (atk > 0f) atk.coerceIn(0f, 1f)
+        else if (windup >= 0f) smooth(windup.coerceIn(0f, 1f)) else 0f
+    private fun rock(walk: Float, atk: Float): Float =
+        Motion.recoil(atk) * 2.2f + if (p.hi) sin(walk * 1.7f + phase) * stride * 0.7f else 0f
 
     private val WOOD = 0xFF8A6038.toInt()
     private val WOOD_D = 0xFF5E3E22.toInt()
@@ -73,19 +88,20 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     }
 
     private fun rider(era: Int, weapon: Int, team: Int, atk: Float) {
-        cv.save(); cv.translate(-4f, -26f); cv.scale(0.86f, 0.86f)
+        val bob = if (p.hi) sin((phase + time * 0f) * 2f) * stride * 1.4f else 0f
+        cv.save(); cv.translate(-4f, -26f + bob); cv.scale(0.86f, 0.86f)
         men.draw(era, false, weapon, team, 0f, atk, true, false)
         cv.restore()
     }
 
-    private fun horseLeg(x: Float, phase: Float, moving: Boolean, c: Int, hoof: Int) {
-        val a = if (moving) sin(phase) * 0.5f else 0f
-        val lift = if (moving) max(0f, cos(phase)) else 0f
+    private fun horseLeg(x: Float, stepPhase: Float, c: Int, hoof: Int) {
+        val a = sin(stepPhase) * 0.48f * stride
+        val lift = max(0f, -sin(stepPhase)) * stride
         val kx = x + sin(a) * 13f
         val ky = -33f + cos(a) * 13f
-        val sa = a - lift * 0.9f
+        val sa = a - lift * 0.42f
         val fx = kx + sin(sa) * 14f
-        val fy = ky + cos(sa) * 14f - 1f
+        val fy = ky + cos(sa) * 14f - 1f - lift * 5f
         p.poly2(kx, ky, (kx + fx) * 0.5f, (ky + fy) * 0.5f, fx, fy); p.limb(5f, c)
         p.quad(x - 5.5f, -33f, x + 5.5f, -33f, kx + 3f, ky, kx - 3f, ky); p.shape(c)
         p.circleF(kx, ky, 3.2f, c)
@@ -93,15 +109,19 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     }
 
     private fun horse(hide: Int, team: Int, walk: Float, atk: Float, armored: Boolean) {
-        val moving = walk != 0f
+        val stepPhase = walk + phase
+        val bob = if (p.hi) sin(stepPhase * 2f) * stride * 1.4f else 0f
         val hd = dark(hide, 0.28f)
         val mane = if (armored) 0xFF8A8478.toInt() else 0xFF2A1A12.toInt()
         // tylne nogi (dalsze)
-        horseLeg(16f, walk + 3.1f, moving, hd, 0xFF2A2420.toInt())
-        horseLeg(-20f, walk, moving, hd, 0xFF2A2420.toInt())
+        horseLeg(16f, stepPhase + 1.57f, hd, 0xFF2A2420.toInt())
+        horseLeg(-20f, stepPhase + 3.14159f, hd, 0xFF2A2420.toInt())
+        cv.save(); cv.translate(0f, bob)
         // ogon
         p.path.reset(); p.path.moveTo(-25f, -46f); p.path.quadTo(-38f, -40f, -34f, -20f); p.path.quadTo(-30f, -34f, -24f, -40f); p.path.close(); p.shape(mane)
-        // szyja i głowa
+        // Szyja i łeb kołyszą się razem; przed uderzeniem koń unosi głowę.
+        cv.save()
+        cv.rotate(sin(stepPhase) * stride * 2f - ready(atk) * 4f, 16f, -50f)
         p.quad(12f, -50f, 26f, -68f, 34f, -62f, 24f, -38f); p.shape(hide)
         val pa = p.path; pa.reset()
         pa.moveTo(24f, -70f); pa.lineTo(31f, -71f); pa.lineTo(44f, -60f); pa.quadTo(46f, -55f, 42f, -54f); pa.lineTo(33f, -56f); pa.lineTo(26f, -60f); pa.close()
@@ -111,6 +131,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.circleF(32f, -65f, 1.3f, 0xFF1A1418.toInt()) // oko
         // grzywa
         pa.reset(); pa.moveTo(24f, -70f); pa.lineTo(12f, -52f); pa.lineTo(14f, -48f); pa.lineTo(18f, -52f); pa.lineTo(20f, -55f); pa.lineTo(23f, -60f); pa.lineTo(27f, -66f); pa.close(); p.shape(mane)
+        cv.restore()
         // tułów
         p.oval(-28f, -52f, 24f, -28f, hide)
         if (p.hi) {
@@ -137,9 +158,10 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             if (p.hi) p.segF(-11f, -41.5f, 7f, -41.5f, 1.5f, 0xFFE8C04A.toInt())
             p.rr(-9f, -55f, 4f, -50f, 2f, 0xFF4A3020.toInt())
         }
-        // przednie nogi (bliższe)
-        horseLeg(13f, walk, moving, hide, 0xFF2A2420.toInt())
-        horseLeg(-23f, walk + 3.1f, moving, hide, 0xFF2A2420.toInt())
+        cv.restore()
+        // Bliższe nogi mają przeciwne fazy do dalszych.
+        horseLeg(13f, stepPhase + 4.71239f, hide, 0xFF2A2420.toInt())
+        horseLeg(-23f, stepPhase, hide, 0xFF2A2420.toInt())
     }
 
     private fun wheel(x: Float, y: Float, r: Float, spin: Float, rim: Int, spokes: Int) {
@@ -173,21 +195,27 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         // przód skrzyni zasłania nogi łucznika
         p.quad(-34f, -38f, -10f, -36f, -8f, -18f, -36f, -18f); p.shape(dark(team, 0.08f))
         if (p.hi) p.segF(-34f, -35f, -9f, -33.5f, 1.8f, BRONZE)
-        wheel(-22f, -13f, 13f, -walk * 0.9f, WOOD, 8)
+        wheel(-22f, -13f, 13f, walk, WOOD, 8)
     }
 
-    private fun eleLeg(moving: Boolean, x: Float, ph: Float, c: Int) {
-        val a = if (moving) sin(ph) * 0.28f else 0f
-        val fx = x + sin(a) * 26f
-        p.quad(x - 6.5f, -36f, x + 6.5f, -36f, fx + 6f, -1f, fx - 6.5f, -1f); p.shape(c)
-        if (p.hi) for (i in 0..2) p.circleF(fx - 3.5f + i * 3.5f, -2.5f, 1.4f, 0xFFE8E0CC.toInt())
+    private fun eleLeg(x: Float, stepPhase: Float, c: Int) {
+        val swing = max(0f, -sin(stepPhase)) * stride
+        val shift = sin(stepPhase) * stride * 7f
+        val fx = x + shift
+        val footY = -1f - swing * 6f
+        val knee = x + shift * 0.4f - swing * 4f
+        p.quad(x - 6.5f, -36f, x + 6.5f, -36f, knee + 7f, -17f, knee - 7f, -17f); p.shape(c)
+        p.quad(knee - 7f, -19f, knee + 7f, -19f, fx + 6f, footY, fx - 6.5f, footY); p.shape(c)
+        if (p.hi) for (i in 0..2) p.circleF(fx - 3.5f + i * 3.5f, footY - 1.5f, 1.4f, 0xFFE8E0CC.toInt())
     }
 
     private fun elephant(tusker: Boolean, team: Int, walk: Float, atk: Float) {
         val hide = if (tusker) 0xFF7A5434.toInt() else 0xFF8C8C92.toInt()
         val hd = dark(hide, 0.25f)
-        val moving = walk != 0f
-        eleLeg(moving, 14f, walk + 3.1f, hd); eleLeg(moving, -26f, walk, hd)
+        val stepPhase = walk * 0.65f + phase
+        eleLeg(14f, stepPhase + 1.57f, hd); eleLeg(-26f, stepPhase + 3.14159f, hd)
+        cv.save()
+        if (p.hi) cv.translate(0f, sin(stepPhase * 2f) * stride * 1.3f)
         // ogon
         p.seg(-36f, -60f, -42f, -38f, 2f, hd)
         // tułów
@@ -207,7 +235,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         if (tusker) { p.circle(30f, -79f, 9f, hide) } // kopuła czaszki mamuta
         // trąba
         val tr = p.path; tr.reset()
-        tr.moveTo(44f, -66f); tr.quadTo(56f, -50f, 50f, -26f + atk * -6f); tr.quadTo(52f, -18f, 58f, -20f)
+        tr.moveTo(44f, -66f); tr.quadTo(56f, -50f, 50f, -26f - atk * 6f - ready(atk) * 5f + sin(stepPhase) * stride * 2f); tr.quadTo(52f, -18f - ready(atk) * 4f, 58f, -20f - ready(atk) * 4f)
         cv.drawPath(tr, p.op(9f + p.ow * 2f)); cv.drawPath(tr, p.lp(hide, 9f))
         if (p.hi) for (i in 0..3) p.segF(47f + i * 1.6f, -56f + i * 7f, 53f + i * 0.8f, -57f + i * 7f, 0.8f, hd)
         // ucho
@@ -244,7 +272,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             p.quad(-32f, -84f, 22f, -84f, 26f, -64f, -34f, -66f); p.shape(dark(team, 0.15f)) // czaprak
             if (p.hi) p.segF(-32f, -68f, 24f, -67f, 2.2f, 0xFFE8C04A.toInt())
         }
-        eleLeg(moving, 20f, walk, hide); eleLeg(moving, -20f, walk + 3.1f, hide)
+        cv.restore()
+        eleLeg(20f, stepPhase + 4.71239f, hide); eleLeg(-20f, stepPhase, hide)
     }
 
     // ================================================================== machiny
@@ -259,15 +288,16 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.seg(-20f, -35f, 10f, -62f, 2.4f, IRON)
         val pa = p.path; pa.reset(); pa.moveTo(32f, -84f); pa.quadTo(50f, -58f, 32f, -30f)
         cv.drawPath(pa, p.op(4.2f)); cv.drawPath(pa, p.lp(WOOD, 3.8f))
-        p.seg(32f, -84f, -6f + atk * 5f, -54f, 1.4f, 0xFFF0E0BC.toInt())
-        p.seg(32f, -30f, -6f + atk * 5f, -54f, 1.4f, 0xFFF0E0BC.toInt())
+        val draw = ready(atk)
+        p.seg(32f, -84f, -6f - draw * 16f, -54f, 1.4f, 0xFFF0E0BC.toInt())
+        p.seg(32f, -30f, -6f - draw * 16f, -54f, 1.4f, 0xFFF0E0BC.toInt())
         if (atk < 0.65f) {
             p.seg(-7f, -54f, 67f, -54f, 2.7f, 0xFFB5BBC0.toInt())
             p.tri(67f, -58f, 78f, -54f, 67f, -50f); p.shape(0xFFDCE1E2.toInt())
         }
         if (p.hi) p.rivets(-30f, -21f, 30f, 5, 1.3f, IRON)
-        wheel(-28f, -12f, 12f, -walk, WOOD, 7)
-        wheel(28f, -12f, 12f, -walk, WOOD, 7)
+        wheel(-28f, -12f, 12f, walk, WOOD, 7)
+        wheel(28f, -12f, 12f, walk, WOOD, 7)
     }
 
     fun trebuchet(team: Int, walk: Float, atk: Float) {
@@ -280,7 +310,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.seg(16f, -22f, 2f, -78f, 5f, WOOD)
         p.seg(-12f, -46f, 11f, -46f, 3f, WOOD)
         // ramię miotające
-        val ang = if (atk > 0f) -150f + (1f - atk) * 120f else -28f
+        // W trakcie odnowienia ramię wraca do naciągu; przy strzale płynnie opada.
+        val ang = -28f - 122f * ready(atk)
         cv.save(); cv.translate(0f, -76f); cv.rotate(ang)
         p.seg(-22f, 0f, 52f, 0f, 4.4f, WOOD_D)
         if (p.hi) p.rivets(-12f, 0f, 40f, 4, 0.9f, IRON)
@@ -296,17 +327,20 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.seg(-36f, -24f, -36f, -60f, 1.6f, WOOD_D)
         val wv = sin(time * 6f) * 2f
         p.quad(-36f, -60f, -22f, -57f + wv, -36f, -50f, -36f, -50f); p.shape(team)
-        wheel(-28f, -11f, 11f, -walk, WOOD, 6)
-        wheel(28f, -11f, 11f, -walk, WOOD, 6)
+        wheel(-28f, -11f, 11f, walk, WOOD, 6)
+        wheel(28f, -11f, 11f, walk, WOOD, 6)
     }
 
     fun cannon(team: Int, walk: Float, atk: Float) {
-        val rec = atk * 7f
+        val kick = Motion.recoil(atk)
+        val rec = kick * 7f
+        // Laweta odskakuje pod lufą, ale koła zachowują kontakt z gruntem.
+        cv.save(); cv.translate(-rec * 0.35f, -kick * 2.2f)
         // ogon lawety
         p.quad(-42f, -4f, -36f, -12f, 10f, -36f, 8f, -18f); p.shape(team)
         if (p.hi) { p.segF(-36f, -8f, 2f, -26f, 1f, dark(team, 0.35f)); p.rivets(-28f, -13f, -6f, 3, 1f, IRON) }
         // lufa z brązu
-        cv.save(); cv.translate(-rec, -30f); cv.rotate(-12f)
+        cv.save(); cv.translate(-rec, -30f); cv.rotate(-12f - ready(atk) * 3f)
         val pa = p.path; pa.reset()
         pa.moveTo(-20f, -8.5f); pa.lineTo(38f, -5.5f); pa.lineTo(44f, -7f); pa.lineTo(44f, 7f); pa.lineTo(38f, 5.5f); pa.lineTo(-20f, 8.5f); pa.close()
         p.shape(BRONZE)
@@ -319,8 +353,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.circle(-22f, 0f, 4.5f, BRONZE) // guz
         p.circleF(44f, 0f, 3.2f, 0xFF1A1A1A.toInt())
         cv.restore()
+        cv.restore()
         // koło
-        wheel(0f, -16f, 16f, -walk * 0.8f, WOOD, 10)
+        wheel(0f, -16f, 16f, walk, WOOD, 10)
         if (p.hi) { p.r.set(-16f, -32f, 16f, 0f); cv.drawOval(p.r, p.lp(IRON, 2f)) }
         // kule
         p.circle(-30f, -4f, 4f, 0xFF2A2A2E.toInt()); p.circle(-22f, -4f, 4f, 0xFF2A2A2E.toInt()); p.circle(-26f, -10f, 4f, 0xFF2A2A2E.toInt())
