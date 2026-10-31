@@ -1,5 +1,7 @@
 package com.centurywar.meta
 
+import com.centurywar.game.Mode
+
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -161,4 +163,25 @@ class ProfileCloudTest {
             file.delete()
         }
     }
+
+    @Test
+    fun cloudRoundTripPreservesBattleCountersWithoutHistory() {
+        val local = freshProfile()
+        local.recordBattle(Mode.SKIRMISH, true, 321)
+        local.recordBattle(Mode.DAILY, true, 123)
+        local.recordBattle(Mode.ENDLESS, false, 7)
+        val data = local.toJson()
+        assertTrue(data.contains("\"modeBattles\""))
+        assertFalse(data.contains("\"entries\""))
+        assertFalse(data.contains("\"history\""))
+        val remote = freshProfile()
+        remote.fromJson(data)
+        assertArrayEquals(local.modeBattles, remote.modeBattles)
+        assertArrayEquals(local.modeWins, remote.modeWins)
+        assertArrayEquals(local.modeSeconds, remote.modeSeconds)
+        assertEquals(0, remote.winStreak)
+        assertEquals(2, remote.bestWinStreak)
+        assertEquals(data, remote.toJson())
+    }
+
 }
