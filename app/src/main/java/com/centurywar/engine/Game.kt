@@ -64,7 +64,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     init {
         applyLanguage()
         setQuality(effectiveQualityLevel())
-        Missions.refresh(profile, System.currentTimeMillis())
+        val nowMillis = System.currentTimeMillis()
+        val missions = Missions(profile)
+        missions.refresh(nowMillis)
+        missions.claimLogin(nowMillis) // nagroda przypisywana automatycznie przy starcie
     }
 
     fun applyLanguage() {
