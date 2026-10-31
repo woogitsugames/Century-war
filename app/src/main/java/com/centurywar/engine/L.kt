@@ -1145,5 +1145,6 @@ object L {
         "sk_loss" to t("Porażka", "Loss", "Niederlage", "Derrota", "Défaite", "Sconfitta", "Derrota", "Поразка", "Verlies", "Yenilgi"),
         "sk_classic" to t("Ranking", "Ranked", "Rangliste", "Ranking", "Classé", "Classifica", "Ranking", "Рейтинг", "Ranglijst", "Sıralama"),
         "sk_custom" to t("Własna", "Custom", "Eigene", "Propia", "Libre", "Libera", "Livre", "Власна", "Eigen", "Özel"),
+        "bh_loading" to t("Wczytywanie…", "Loading…", "Laden…", "Cargando…", "Chargement…", "Caricamento…", "A carregar…", "Завантаження…", "Laden…", "Yükleniyor…"),
     )
 }

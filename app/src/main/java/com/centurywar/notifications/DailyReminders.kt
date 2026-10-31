@@ -15,6 +15,7 @@ import com.centurywar.MainActivity
 import com.centurywar.R
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Daily
+import java.util.concurrent.Executors
 
 /** Jedno nieprecyzyjne przypomnienie dziennie; żadnych usług działających stale w tle. */
 object DailyReminders {
@@ -28,9 +29,17 @@ object DailyReminders {
     private const val LAST_SHOWN_DAY = "last_reminder_local_day"
     private const val ALARM_REQUEST_CODE = 1515
     private const val NOTIFICATION_ID = 1515
+    private val io = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "daily-reminder-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
 
     /** Nie pyta o uprawnienie na starcie. Może tylko odtworzyć istniejący harmonogram. */
     fun refresh(context: Context) {
+        val app = context.applicationContext
+        io.execute { refreshNow(app) }
+    }
+
+    private fun refreshNow(context: Context) {
         val profile = DailyReminderProfileReader.read(context)
         createChannel(context, profile?.lang ?: "")
         schedule(context, profile)
@@ -38,9 +47,17 @@ object DailyReminders {
 
     /** Wywołanie dopiero po zapisaniu zwycięstwa lub zmianie ustawień po zwycięstwie. */
     fun afterVictory(activity: Activity) {
-        val profile = DailyReminderProfileReader.read(activity)
+        io.execute { afterVictoryLoaded(activity, DailyReminderProfileReader.read(activity)) }
+    }
+
+    /** Migawka z pamięci gry omija odczyt pliku, który może jeszcze czekać na fsync. */
+    internal fun afterVictory(activity: Activity, profile: DailyReminderProfile) {
+        io.execute { afterVictoryLoaded(activity, profile) }
+    }
+
+    private fun afterVictoryLoaded(activity: Activity, profile: DailyReminderProfile?) {
         if (profile == null || !profile.notifications || profile.wins <= 0) {
-            refresh(activity)
+            refreshNow(activity.applicationContext)
             return
         }
         createChannel(activity, profile.lang)
@@ -49,7 +66,12 @@ object DailyReminders {
         ) {
             val lastDenied = prefs(activity).getLong(LAST_DENIAL, -1L)
             if (DailyReminderLogic.canAskPermission(System.currentTimeMillis(), lastDenied)) {
-                activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), PERMISSION_REQUEST_CODE)
+                activity.runOnUiThread {
+                    if (!activity.isFinishing && !activity.isDestroyed) {
+                        activity.requestPermissions(
+                            arrayOf(Manifest.permission.POST_NOTIFICATIONS), PERMISSION_REQUEST_CODE)
+                    }
+                }
             }
         } else {
             schedule(activity, profile)
@@ -57,11 +79,14 @@ object DailyReminders {
     }
 
     fun permissionResult(activity: Activity, granted: Boolean) {
-        val editor = prefs(activity).edit()
-        if (granted) editor.remove(LAST_DENIAL)
-        else editor.putLong(LAST_DENIAL, System.currentTimeMillis())
-        editor.apply()
-        refresh(activity)
+        val app = activity.applicationContext
+        io.execute {
+            val editor = prefs(app).edit()
+            if (granted) editor.remove(LAST_DENIAL)
+            else editor.putLong(LAST_DENIAL, System.currentTimeMillis())
+            editor.apply()
+            refreshNow(app)
+        }
     }
 
     /** Alarm może być dostarczony z opóźnieniem przez Doze; nocą nie wysyłamy zaległych alertów. */
