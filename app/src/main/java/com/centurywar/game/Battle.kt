@@ -718,7 +718,7 @@ class Battle(val cfg: BattleConfig) {
         if (gap <= def.range) {
             u.moving = false
             if (endless && u.bossKind == 1 && u.bossCd <= 0f && target != null && target.alive) {
-                target.x = max(e.baseFront, target.x - target.def.speed * 1.5f)
+                target.x = max(e.baseFront - 30f, target.x - target.def.speed * 1.5f)
                 damageUnit(target, attackDmg * 0.2f, u.side)
                 u.bossCd = 6f
             }
@@ -922,7 +922,7 @@ class Battle(val cfg: BattleConfig) {
             p.baseHp = min(p.baseMaxHp, p.baseHp + p.baseMaxHp * p.repairPerWave)
         }
         if (p.freeElitesPerWave > 0) {
-            p.freeEliteCredits = min(8, p.freeEliteCredits + p.freeElitesPerWave)
+            p.freeEliteCredits += p.freeElitesPerWave
             spawnFreeElites()
         }
         if (wave % 10 == 0) spawnPendingBoss()
