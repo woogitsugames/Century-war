@@ -1,7 +1,7 @@
 name: Weryfikacja wydania Android
 
-# Smoke test buildu release (R8 + shrinkResources) na emulatorze. Kosztowny, więc tylko
-# przy PR do main i ręcznie. Podpis: klucz debug (brak sekretów RELEASE_*) — to NIE są
+# Smoke-test release (R8 + shrinkResources) na emulatorze dla PR do main/claude/**
+# i uruchomien recznych. Podpis: klucz debug (brak sekretow RELEASE_*) — to NIE sa
 # artefakty do publikacji; podpisany release buduje job `release` w android.yml po tagu v*.
 on:
   pull_request:
