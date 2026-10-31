@@ -21,12 +21,14 @@ class BattleSimTest {
     @Test
     fun campaignStagesFinish() {
         val report = StringBuilder()
+        assertTrue("Kampania musi mieć 36 etapów", Campaign.stages.size == Defs.ERA_COUNT * 4)
         for (stage in Campaign.stages) {
             val b = run(Campaign.config(stage, Bonuses(), 1234L + stage.index))
             report.append("stage ${stage.index + 1} era ${stage.startEra}-${stage.maxEra} power ${"%.2f".format(stage.aiPower)}: ")
                 .append(if (b.over) "winner=${b.winner}" else "TIMEOUT")
                 .append(" t=${"%.1f".format(b.time / 60f)}min eras=${b.player.era}/${b.enemy.era}")
                 .append(" kills=${b.player.kills}/${b.enemy.kills}\n")
+            assertTrue("Etap ${stage.index + 1} nie zakończył się w 30 minut: ${b.time}s", b.over)
         }
         println(report)
     }
@@ -50,6 +52,30 @@ class BattleSimTest {
         val a = run(BattleConfig(Mode.SKIRMISH, 99L, 1.1f), 20f)
         val c = run(BattleConfig(Mode.SKIRMISH, 99L, 1.1f), 20f)
         assertTrue(a.time == c.time && a.player.kills == c.player.kills && a.winner == c.winner)
+    }
+
+    @Test
+    fun ironEraHasFourOriginalUnitsAndValidProgression() {
+        assertTrue(Defs.ERA_COUNT == 9)
+        val iron = Defs.eras[2]
+        assertTrue(iron.nameKey == "era_iron")
+        assertTrue(iron.units.size == Role.values().size)
+        assertTrue(iron.units.all { it.era == 2 && it.cost > 0 && it.hp > 0f })
+        assertTrue(iron.units.map { it.nameKey }.toSet().size == 4)
+        assertTrue(Defs.evolveXp.take(Defs.ERA_COUNT - 1).zipWithNext().all { it.first < it.second })
+        assertTrue(Defs.statScale(Defs.ERA_COUNT - 1) > 0f)
+    }
+
+    @Test
+    fun dailyEraSelectionChangesOnlyFromNextUtcDay() {
+        val old = Daily.config(Daily.ERA_EXPANSION_DAY - 1, Bonuses())
+        val oldAgain = Daily.config(Daily.ERA_EXPANSION_DAY - 1, Bonuses(unitDmgMul = 5f))
+        assertTrue(old.startEra == oldAgain.startEra && old.maxEra == oldAgain.maxEra)
+        assertTrue(old.startEra != 2 && old.maxEra != 2)
+        val fresh = Daily.config(Daily.ERA_EXPANSION_DAY, Bonuses())
+        assertTrue(fresh.startEra in 0 until Defs.ERA_COUNT && fresh.maxEra in fresh.startEra until Defs.ERA_COUNT)
+        assertTrue(Daily.dayNumber(1_793_491_199_999L) == Daily.ERA_EXPANSION_DAY - 1)
+        assertTrue(Daily.dayNumber(1_793_491_200_000L) == Daily.ERA_EXPANSION_DAY)
     }
 
     @Test
