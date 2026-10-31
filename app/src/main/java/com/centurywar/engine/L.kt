@@ -62,6 +62,7 @@ object L {
         "fps_max" to ("Ekran" to "Display"),
         "language" to ("Język" to "Language"),
         "vibration" to ("Wibracje" to "Vibration"),
+        "sound" to ("Dźwięk" to "Sound"),
         "on" to ("Wł." to "On"),
         "off" to ("Wył." to "Off"),
         "show_fps" to ("Pokaż FPS" to "Show FPS"),
