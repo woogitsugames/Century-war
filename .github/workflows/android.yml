@@ -44,6 +44,12 @@ jobs:
             --tests '*BattleSimTest*' \
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
+            --tests '*ScoreClientTest*' \
+            --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache

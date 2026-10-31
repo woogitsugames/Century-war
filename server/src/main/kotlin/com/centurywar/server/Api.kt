@@ -36,7 +36,7 @@ fun Application.leaderboardModule(
     store: SqliteStore,
     secret: ByteArray,
     nowMillis: () -> Long = System::currentTimeMillis,
-    supportedVersion: String = "0.1.0",
+    supportedVersion: String = "0.2.0",
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)
@@ -76,6 +76,15 @@ fun Application.leaderboardModule(
             val input = runCatching { json.decodeFromString<ScoreSubmission>(body) }.getOrNull()
             if (input == null || !validPlayer(input.player) || !validNick(input.nick)) {
                 call.fail(HttpStatusCode.BadRequest, "invalid_submission")
+                return@post
+            }
+            if (input.gameVersion != supportedVersion) {
+                call.fail(HttpStatusCode.BadRequest, "unsupported_version")
+                return@post
+            }
+            val metadataError = runCatching { validateSubmission(input) }.exceptionOrNull()
+            if (metadataError != null) {
+                call.fail(HttpStatusCode.BadRequest, metadataError.message ?: "invalid_submission")
                 return@post
             }
             if (!limiter.allow("post-player:" + input.player, 6)) {

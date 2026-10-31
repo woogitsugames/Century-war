@@ -1,25 +1,23 @@
 package com.centurywar.server
 
 import com.centurywar.game.BattleConfig
-import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import com.centurywar.game.Daily
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
+import com.centurywar.game.Research
+import com.centurywar.game.Skirmish
 
-data class VerifiedReplay(val board: String, val score: Long, val steps: Int)
+data class VerifiedReplay(val board: String, val score: Long, val steps: Int, val researchSum: Int = 0)
 
-/**
- * Powtórkę odtwarza ten sam kod co gra ([Replay.verify] z modułu :sim), więc serwer
- * zna dokładnie te komendy, które nagrywa BattleController (karty, ostrzał celowany itd.).
- */
+/** Odtwarza kod BattleController/Replay z symulacji bez udziału rendererów. */
 object ReplayVerifier {
-    /** Limity kroków na planszę: 25 min bitwy, 60 min oblężenia bez końca. */
     private const val MAX_BATTLE_STEPS = 90_000
     private const val MAX_ENDLESS_STEPS = 216_000
 
     fun verify(input: ScoreSubmission, nowMillis: Long, supportedVersion: String): VerifiedReplay {
         require(input.gameVersion == supportedVersion) { "unsupported_version" }
+        validateSubmission(input)
         require(input.score > 0L) { "invalid_score" }
 
         val board = submittedBoard(input.board, input.stage)
@@ -30,32 +28,29 @@ object ReplayVerifier {
         }
         val stepsLimit = if (board == "endless") MAX_ENDLESS_STEPS else MAX_BATTLE_STEPS
         require(log.steps in 60..stepsLimit) { "invalid_ticks" }
-        // Wczesna kapitulacja nie daje wiarygodnego wyniku do rankingu.
         require(log.commands.none { it.kind == Replay.Kind.SURRENDER && it.step < 60 }) { "early_surrender" }
-        // Złoto samouczka istnieje tylko w pierwszym etapie kampanii.
-        if (board != "campaign_0") {
-            require(log.commands.none { it.kind == Replay.Kind.TUTORIAL_GOLD }) { "illegal_command" }
-        }
+        require(board == "campaign_0" && input.tutorial ||
+            log.commands.none { it.kind == Replay.Kind.TUTORIAL_GOLD }) { "illegal_command" }
 
-        // Rankingi globalne liczą bitwy bez bonusów z badań: wynik zależy tylko od seeda i komend.
+        val bonuses = Research.bonuses(input.research.toIntArray())
         val cfg = when (input.board) {
             "daily" -> {
                 val day = requireNotNull(input.day) { "invalid_day" }
                 require(day == todayUtc(nowMillis) && input.seed == day) { "invalid_day_or_seed" }
-                Daily.config(day, Bonuses())
+                Daily.config(day, bonuses)
             }
             "endless" -> {
                 require(input.day == null) { "invalid_day" }
-                BattleConfig(Mode.ENDLESS, input.seed, 1f)
+                BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = bonuses)
             }
             "skirmish" -> {
                 require(input.day == null) { "invalid_day" }
-                BattleConfig(Mode.SKIRMISH, input.seed, 1f)
+                BattleConfig(Mode.SKIRMISH, input.seed, Skirmish.power(input.difficulty!!), playerBonuses = bonuses)
             }
             "campaign" -> {
                 require(input.day == null) { "invalid_day" }
                 val stage = requireNotNull(input.stage) { "invalid_stage" }
-                Campaign.config(Campaign.stages[stage], Bonuses(), input.seed)
+                Campaign.config(Campaign.stages[stage], bonuses, input.seed, tutorial = input.tutorial)
             }
             else -> throw IllegalArgumentException("invalid_board")
         }
@@ -68,6 +63,6 @@ object ReplayVerifier {
             throw IllegalArgumentException("illegal_replay", e)
         }
         require(result.score == input.score) { "score_mismatch" }
-        return VerifiedReplay(board, result.score, result.steps)
+        return VerifiedReplay(board, result.score, result.steps, input.research.sum())
     }
 }

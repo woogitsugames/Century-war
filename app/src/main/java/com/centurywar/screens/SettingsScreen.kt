@@ -31,18 +31,28 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val notifications = btn(9)
     private val notifyHour = btn(10)
     private val playGames = btn(11)
+    private val globalRank = btn(13)
+    private val newIdentity = btn(14)
     private val localRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, reset)
     private val onlineRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, reset)
-    /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
-    private fun rows() = if (g.online.available) onlineRows else localRows
+    private val globalRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, globalRank, newIdentity, reset)
+    private val bothRows = listOf(quality, fps, lang, snd, music, vib, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, reset)
+    private fun rows() = when {
+        g.scores != null && g.online.available -> bothRows
+        g.scores != null -> globalRows
+        g.online.available -> onlineRows
+        else -> localRows
+    }
     private fun iconOf(b: Button) = when (b) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
-        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; else -> Icons.RESTART
+        notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY
+        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; music -> "music_volume"; vib -> "vibration"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
+        globalRank -> "global_ranking"; newIdentity -> "global_identity"
         else -> "play_games"
     }
     private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
@@ -52,6 +62,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val panel = RectF()
     private val rowR = RectF()
     private var resetArmed = 0f
+    private var identityArmed = 0f
     private var dt = 0f
     private var musicPointer = -1
     private var shownMusicPercent = -1
@@ -92,6 +103,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         if (resetArmed > 0f) resetArmed -= dt
+        if (identityArmed > 0f) identityArmed -= dt
         val p = g.profile
         back.label = L["back"]
         quality.label = when (p.quality) { 1 -> L["q_low"]; 2 -> L["q_med"]; 3 -> L["q_high"]; else -> "${L["q_auto"]} (${g.quality.level})" }
@@ -119,6 +131,10 @@ class SettingsScreen(g: Game) : Screen(g) {
             else -> "pgs_disabled"
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
+        globalRank.label = if (p.globalRanking) L["on"] else L["off"]
+        globalRank.color = if (p.globalRanking) Ui.BTN_GREEN else Ui.BTN
+        newIdentity.label = if (identityArmed > 0f) L["reset_confirm"] else L["global_new_id"]
+        newIdentity.enabled = p.playerId.isNotEmpty()
         reset.label = if (resetArmed > 0f) L["reset_confirm"] else L["reset"]
         reset.color = if (resetArmed > 0f) Color.rgb(200, 60, 40) else Ui.BTN_RED
     }
@@ -230,6 +246,28 @@ class SettingsScreen(g: Game) : Screen(g) {
                 g.host.onNotificationSettingsChanged()
             }
             11 -> { g.push(PlayGamesScreen(g)); return }
+            13 -> {
+                if (p.globalRanking) {
+                    p.disableGlobalRanking()
+                    g.scores?.setEnabled(false)
+                } else {
+                    g.host.requestGlobalRankingConsent {
+                        p.enableGlobalRanking()
+                        g.scores?.setEnabled(true)
+                    }
+                }
+                return
+            }
+            14 -> {
+                if (p.playerId.isNotEmpty()) {
+                    if (identityArmed > 0f) {
+                        g.scores?.clearQueue()
+                        p.renewRankingId()
+                        identityArmed = 0f
+                    } else identityArmed = 3f
+                }
+                return
+            }
         }
         p.save()
     }

@@ -1,5 +1,11 @@
 package com.centurywar.server
 
+import com.centurywar.game.Battle
+import com.centurywar.game.BattleConfig
+import com.centurywar.game.BattleController
+import com.centurywar.game.Mode
+import com.centurywar.game.Replay
+import com.centurywar.game.Research
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -99,6 +105,42 @@ class ApiTest {
         }.status
         assertEquals(HttpStatusCode.UnprocessableEntity, send())
         assertEquals(HttpStatusCode.Unauthorized, send())
+        store.close()
+    }
+
+    @Test fun invalidResearchGets400AndChangedReplayGets422() = testApplication {
+        val store = SqliteStore("jdbc:sqlite::memory:")
+        application { leaderboardModule(store, secret, { now }) }
+        suspend fun postSigned(input: ScoreSubmission): HttpStatusCode {
+            val body = json.encodeToString(input)
+            val nonce = UUID.randomUUID().toString()
+            return client.post("/v1/score") {
+                header("X-CW-Timestamp", (now / 1000L).toString())
+                header("X-CW-Nonce", nonce)
+                header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
+                setBody(body)
+            }.status
+        }
+        val original = ReplayVerifierTest.validEndless()
+        assertEquals(HttpStatusCode.BadRequest, postSigned(
+            original.copy(research = listOf(99) + List(Research.defs.size - 1) { 0 })))
+        assertEquals(HttpStatusCode.BadRequest, postSigned(
+            original.copy(gameVersion = "0.1.0")))
+
+        val levels = IntArray(Research.defs.size)
+        levels[1] = 1
+        val battle = Battle(BattleConfig(Mode.ENDLESS, 909L, 1f,
+            playerBonuses = Research.bonuses(levels)))
+        val commands = BattleController(battle)
+        org.junit.jupiter.api.Assertions.assertTrue(commands.rally())
+        repeat(900) { battle.step(); battle.fx.count = 0 }
+        org.junit.jupiter.api.Assertions.assertTrue(commands.surrender())
+        val valid = original.copy(seed = 909L,
+            replay = Replay.encode(commands.log()), score = battle.score(),
+            research = levels.toList())
+        assertEquals(HttpStatusCode.OK, postSigned(valid))
+        assertEquals(HttpStatusCode.UnprocessableEntity,
+            postSigned(valid.copy(research = List(levels.size) { 0 })))
         store.close()
     }
 

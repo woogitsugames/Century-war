@@ -13,8 +13,8 @@ implementacji reguł walki — większe ryzyko różnic oraz błędów anty-chea
   pozostać czystym Kotlin/JVM (bez `android.*`); renderer i ekrany zostają w `:app`.
   Testy symulacji nadal są w `app/src/test` (BattleSimTest, BattleRulesTest, BattleSnapshotTest).
 - `:server`: Ktor/Netty, weryfikator headless, podpisy żądań, SQLite, testy JUnit 5.
-  Aplikacja pozostaje bez klienta HTTP — zadanie dotyczy backendu. Integracja klienta
-  wymaga późniejszego rejestratora komend i wysyłki podpisanych powtórek.
+  Aplikacja ma opcjonalny klient HTTPS w `meta/ScoreClient.kt`, aktywowany
+  tylko po zgodzie użytkownika i podaniu poprawnej konfiguracji.
 - Baza: `players` (UUID i pseudonim), `scores` (wynik i skrót SHA-256 zgłoszenia),
   `used_nonces` (przeciw ponownemu przesłaniu POST). **Nie zapisujemy logu bitwy,
   emaila ani adresu IP**. Nick i UUID są jednak danymi pseudonimowymi, mogą podlegać RODO.
@@ -27,7 +27,7 @@ SDK 36. Aby kompilować sam serwer bez instalowania SDK Android:
 ```bash
 export CW_HMAC_KEY="$(openssl rand -hex 32)"
 export CW_DATABASE_PATH="./data/leaderboards.db"
-export CW_GAME_VERSION="0.1.0"
+export CW_GAME_VERSION="0.2.0"
 ./gradlew :server:test -PserverOnly=true --console=plain
 ./gradlew :server:run -PserverOnly=true --console=plain
 ```
@@ -72,10 +72,11 @@ nie jest poprawną, zweryfikowaną powtórką):
   "board": "endless",
   "player": "a16036d5-800a-4898-aea3-11b6548de7b4",
   "nick": "Gracz_12",
-  "gameVersion": "0.1.0",
+  "gameVersion": "0.2.0",
   "seed": 12345,
   "replay": "AoQH...",
-  "score": 257
+  "score": 257,
+  "research": [0,0,0,0,0,0,0,0,0,0,0,0,0]
 }
 ```
 
@@ -87,11 +88,11 @@ spację oraz `._-`, bez białych znaków na końcach.
 Serwer **nie przyjmuje** modyfikacji rozgrywki od klienta. Konfiguracje:
 - `daily`: `day` = dzisiejszy dzień UTC, `seed=day`, `Daily.config()`
   (badania wyłączone), **pierwszy poprawny wynik dziennie**.
-- `endless`: `BattleConfig(Mode.ENDLESS, seed, 1f)`, bez badań.
-- `skirmish`: `BattleConfig(Mode.SKIRMISH, seed, 1f)`, bez badań.
-- `campaign`: `Campaign.config(stages[stage], Bonuses(), seed)`;
+- `endless`: `BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses=Research.bonuses(research))`.
+- `skirmish`: `BattleConfig(Mode.SKIRMISH, seed, Skirmish.power(difficulty), playerBonuses=Research.bonuses(research))`.
+- `campaign`: `Campaign.config(stages[stage], Research.bonuses(research), seed, tutorial)`;
   ranking oddzielny dla każdego etapu, np. `campaign_7`. **Nie** jest to
-  globalna suma gwiazdek kampanii: jej weryfikacja wymagałaby dziennika 32 etapów.
+  globalna suma gwiazdek kampanii: jej weryfikacja wymagałaby dziennika 36 etapów.
 
 `replay` to zapis `Replay.encode()` z modułu `:sim` (Base64 URL bez dopełnienia),
 czyli dokładnie to, co nagrywa w grze `BattleController`. Serwer odtwarza go
@@ -132,6 +133,32 @@ Brak wyniku gracza daje pustą listę. JSON:
 ```json
 {"board":"endless","period":"all","entries":[{"rank":1,"player":"a16036d5-800a-4898-aea3-11b6548de7b4","nick":"Gracz_12","score":257}]}
 ```
+
+### Rozszerzenie protokołu 0.2.0
+
+- \`research\`: **wymagana** lista dokładnie 13 poziomów zgodnych z kolejnością
+  \`Research.defs\`; każdy poziom w zakresie \`0..max\`. Badania są liczone na
+  serwerze w tym samym module \`:sim\` co na telefonie.
+- \`difficulty\`: **wymagane** \`0..3\` wyłącznie przy \`skirmish\`, pozostałe
+  tryby pomijają pole.
+- \`tutorial\`: opcjonalne, \`true\` tylko przy \`board=campaign,stage=0\`.
+  Weryfikator odtwarza wówczas łagodniejszy \`Campaign.config\`, dopuszczając
+  legalne komendy złota samouczka.
+- Daily musi mieć 13 zer; \`Daily.config\` normalizuje bonusy.
+- Nieobsługiwana \`gameVersion\`/błędne poziomy i konfiguracja to HTTP 400
+  (\`unsupported_version\`, \`invalid_research\`, \`invalid_difficulty\`...),
+  niezgodna powtórka to HTTP 422. Wersja \`0.1.0\` nie jest akceptowana.
+- Baza przechowuje dodatkowo sumę poziomów \`research_sum\`; migracja dodaje
+  tę kolumnę z domyślną wartością 0, bez usuwania starych wyników.
+- Rankingi nadal obejmują wyniki z badaniami i bez badań. Osobny filtr na
+  \`research_sum=0\` oraz \`research_sum>0\` można dodać później.
+- Po stronie Androida wymagane są \`CW_SERVER_URL\` (HTTPS),
+  \`CW_HMAC_KEY\` (min. 32 bajty) i \`CW_PRIVACY_URL\` (HTTPS): zmienne CI lub
+  prywatny \`local.properties\`. Wszystkie puste domyślnie. Brak choć jednego
+  oznacza brak własnego rankingu w UI. Włączenie jest dobrowolne.
+- Klucz HMAC osadzony w APK nie jest sekretem; **nie** powinien być kluczem
+  uprzywilejowanych operacji administracyjnych backendu. Więcej w
+  \`docs/replay-integration.md\`.
 
 ### Bezpieczeństwo i ograniczenia
 

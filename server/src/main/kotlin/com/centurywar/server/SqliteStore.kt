@@ -37,9 +37,17 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                         ticks INTEGER NOT NULL,
                         replay_sha256 TEXT NOT NULL,
                         verified_at INTEGER NOT NULL,
+                        research_sum INTEGER NOT NULL DEFAULT 0,
                         PRIMARY KEY(player_id, board, day)
                     )
                 """.trimIndent())
+                // Migracja istniejącej bazy bez usuwania wcześniejszych wyników.
+                val hasResearch = s.executeQuery("PRAGMA table_info(scores)").use { rs ->
+                    var found = false
+                    while (rs.next()) if (rs.getString("name") == "research_sum") found = true
+                    found
+                }
+                if (!hasResearch) s.execute("ALTER TABLE scores ADD COLUMN research_sum INTEGER NOT NULL DEFAULT 0")
                 s.execute("CREATE INDEX IF NOT EXISTS idx_scores_board_time ON scores(board, verified_at, score)")
                 s.execute("""
                     CREATE TABLE IF NOT EXISTS used_nonces (
@@ -94,14 +102,15 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
             val sql = """
                 $policy INTO scores(
                     player_id, board, day, score, seed, game_version,
-                    ticks, replay_sha256, verified_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ticks, replay_sha256, verified_at, research_sum
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent() + if (replay.board == "daily") "" else """
                  ON CONFLICT(player_id, board, day) DO UPDATE SET
                     score=excluded.score, seed=excluded.seed,
                     game_version=excluded.game_version, ticks=excluded.ticks,
                     replay_sha256=excluded.replay_sha256,
-                    verified_at=excluded.verified_at
+                    verified_at=excluded.verified_at,
+                    research_sum=excluded.research_sum
                  WHERE excluded.score > scores.score
             """
             val inserted = connection.prepareStatement(sql).use {
@@ -114,6 +123,7 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                 it.setInt(7, replay.steps)
                 it.setString(8, replayHash)
                 it.setLong(9, nowSeconds)
+                it.setInt(10, replay.researchSum)
                 it.executeUpdate() > 0
             }
             val best = connection.prepareStatement("""

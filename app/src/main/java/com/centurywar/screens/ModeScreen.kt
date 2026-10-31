@@ -10,6 +10,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import com.centurywar.game.Skirmish
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
@@ -129,11 +130,8 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         ui.button(c, start, 20f)
     }
 
-    private fun aiPower() = SKIRMISH_POWER[g.profile.skirmishDiff.coerceIn(0, 3)]
+    private fun aiPower() = Skirmish.power(g.profile.skirmishDiff)
 
-    private companion object {
-        val SKIRMISH_POWER = floatArrayOf(0.8f, 1.05f, 1.3f, 1.6f)
-    }
 
     override fun onClick(b: Button) {
         val pr = g.profile

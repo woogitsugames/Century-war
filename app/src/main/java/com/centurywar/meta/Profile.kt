@@ -2,15 +2,14 @@ package com.centurywar.meta
 
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Research
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.math.pow
+import java.util.UUID
 
-class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: Float) {
-    fun cost(level: Int): Int = (baseCost * growth.pow(level)).toInt()
-}
+typealias ResearchDef = com.centurywar.game.ResearchDef
 
 class ScoreEntry(val name: String, val score: Long, val day: Long)
 
@@ -55,21 +54,7 @@ class Profile(private val file: File) {
             return json
         }
 
-        val research = listOf(
-            ResearchDef("r_elite", 1, 120, 1f),
-            ResearchDef("r_rally", 1, 90, 1f),
-            ResearchDef("r_income", 12, 40, 1.38f),
-            ResearchDef("r_unitDmg", 15, 45, 1.33f),
-            ResearchDef("r_unitHp", 15, 45, 1.33f),
-            ResearchDef("r_startGold", 10, 30, 1.35f),
-            ResearchDef("r_baseHp", 10, 40, 1.36f),
-            ResearchDef("r_turretDmg", 10, 40, 1.36f),
-            ResearchDef("r_train", 10, 50, 1.38f),
-            ResearchDef("r_xp", 10, 50, 1.4f),
-            ResearchDef("r_cap", 6, 150, 1.6f),
-            ResearchDef("r_cd", 8, 70, 1.42f),
-            ResearchDef("r_slots", 2, 260, 2.5f),
-        )
+        val research = Research.defs
         const val BOARD_ENDLESS = "endless"
         const val BOARD_CAMPAIGN = "campaign"
         const val BOARD_SKIRMISH = "skirmish"
@@ -114,6 +99,33 @@ class Profile(private val file: File) {
     var bestWave = 0
     var lastRankedDaily = -1L
     var tutorialDone = false
+
+    /** Identyfikator powstaje dopiero po świadomym włączeniu rankingu. */
+    var playerId = ""
+        private set
+    var globalRanking = false
+        private set
+
+    fun enableGlobalRanking() {
+        if (playerId.isEmpty()) playerId = UUID.randomUUID().toString()
+        globalRanking = true
+        save()
+    }
+
+    fun disableGlobalRanking() {
+        globalRanking = false
+        save()
+    }
+
+    fun renewRankingId() {
+        playerId = UUID.randomUUID().toString()
+        save()
+    }
+
+    private fun validRankingId(id: String): Boolean {
+        val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return false
+        return uuid.version() == 4 && uuid.variant() == 2 && uuid.toString() == id
+    }
 
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
@@ -163,21 +175,11 @@ class Profile(private val file: File) {
         return true
     }
 
-    fun bonuses() = Bonuses(
-        startGold = level("r_startGold") * 20f,
-        incomeMul = 1f + level("r_income") * 0.06f,
-        unitHpMul = 1f + level("r_unitHp") * 0.04f,
-        unitDmgMul = 1f + level("r_unitDmg") * 0.04f,
-        baseHpMul = 1f + level("r_baseHp") * 0.08f,
-        turretDmgMul = 1f + level("r_turretDmg") * 0.06f,
-        trainMul = 1f + level("r_train") * 0.05f,
-        xpMul = 1f + level("r_xp") * 0.05f,
-        popCap = 12 + level("r_cap"),
-        abilityCdMul = 1f - level("r_cd") * 0.05f,
-        turretSlots = 2 + level("r_slots"),
-        eliteUnlocked = level("r_elite") > 0,
-        rallyUnlocked = level("r_rally") > 0,
-    )
+    fun researchLevels(): IntArray = IntArray(research.size) { i ->
+        level(research[i].key).coerceIn(0, research[i].max)
+    }
+
+    fun bonuses() = Research.bonuses(researchLevels())
 
     /** Pierwszy etap bez gwiazdki. Wszystkie wcześniejsze są odblokowane. */
     fun unlockedStage(): Int {
@@ -221,6 +223,8 @@ class Profile(private val file: File) {
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("tutorialDone", tutorialDone)
+        o.put("playerId", playerId)
+        o.put("globalRanking", globalRanking)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
@@ -258,11 +262,26 @@ class Profile(private val file: File) {
      */
     @Synchronized
     fun fromJson(json: String) {
+        // Zgoda na serwer rankingu i UUID są wyłącznie lokalne: chmura nie może
+        // aktywować wysyłki na innym urządzeniu.
+        val localId = playerId
+        val localConsent = globalRanking
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
         restore(migrate(o, version), version >= CURRENT_VERSION)
+        playerId = localId
+        globalRanking = localConsent && localId.isNotEmpty()
     }
+
+    /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
+    @Synchronized
+    fun toCloudJson(): String = cloudJson(toJson())
+
+    private fun cloudJson(json: String): String = JSONObject(json).apply {
+        remove("playerId")
+        remove("globalRanking")
+    }.toString()
 
     /**
      * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
@@ -294,7 +313,7 @@ class Profile(private val file: File) {
                     // Poprzedni zapis zostaje na miejscu, nowy można odzyskać z .tmp.
                 }
             }
-            if (saved) onSaved?.invoke(json)
+            if (saved) onSaved?.invoke(cloudJson(json))
         } catch (_: Exception) {
             // Brak miejsca itp. — gra działa dalej, zapis spróbuje ponownie przy kolejnej okazji.
         }
@@ -407,6 +426,9 @@ class Profile(private val file: File) {
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         tutorialDone = json.optBoolean("tutorialDone", false)
+        val storedId = json.optString("playerId", "")
+        playerId = if (validRankingId(storedId)) storedId else ""
+        globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
@@ -434,6 +456,7 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        playerId = ""; globalRanking = false
         quality = 0; fpsCap = 0; vibration = true; sound = true
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
