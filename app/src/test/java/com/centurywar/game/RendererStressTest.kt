@@ -29,7 +29,7 @@ class RendererStressTest {
             override fun applyFrameRate(fps: Int) {}
             override fun exit() {}
         }
-        val file = File.createTempFile("fx", ".json").apply { delete() }
+        val file = File.createTempFile("fxstress", ".json").apply { delete() }
         val g = Game(host, Profile(file), quality)
         g.density = 2f
         g.resize(960, 540, 960, 540)
