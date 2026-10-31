@@ -13,6 +13,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.L
 import com.centurywar.engine.Ui
 import com.centurywar.game.art.Bases
+import com.centurywar.game.art.BranchArt
 import com.centurywar.game.art.Machines
 import com.centurywar.game.art.Pen
 import com.centurywar.game.art.Soldiers
@@ -77,8 +78,9 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val men = Soldiers(pen)
     private val mach = Machines(pen, men)
     private val bases = Bases(pen)
-    /** Nagrane korpusy baz: indeks = strona * 8 + epoka. */
-    private val basePics = arrayOfNulls<Picture>(16)
+    private val branchArt = BranchArt(pen)
+    /** Korpusy: strona * 24 + epoka * 3 + (wariant + 1). */
+    private val basePics = arrayOfNulls<Picture>(48)
     private var basePicDetail = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
@@ -164,12 +166,29 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val groundC = intArrayOf(0xFF967846.toInt(), 0xFFC8AA6E.toInt(), 0xFF788C46.toInt(), 0xFF8C7850.toInt(), 0xFF6E5F50.toInt(), 0xFF696450.toInt(), 0xFF5A5A5F.toInt(), 0xFF463C5A.toInt())
 
     private fun themeEra() = b.player.era
+    private fun themeVariant() = b.player.eraVariant
 
     private fun drawSky(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
-        if (e != skyEra || skyH != groundY) {
-            skyEra = e; skyH = groundY
-            sky.shader = LinearGradient(0f, 0f, 0f, groundY, skyTop[e], skyBot[e], Shader.TileMode.CLAMP)
+        val v = themeVariant()
+        val state = e * 3 + v + 1
+        if (state != skyEra || skyH != groundY) {
+            skyEra = state; skyH = groundY
+            val top = when {
+                e == 4 && v == 0 -> 0xFF74716C.toInt()
+                e == 4 && v == 1 -> 0xFF474886.toInt()
+                e == 6 && v == 0 -> 0xFF194A79.toInt()
+                e == 6 && v == 1 -> 0xFF376B58.toInt()
+                else -> skyTop[e]
+            }
+            val bottom = when {
+                e == 4 && v == 0 -> 0xFFC4A88C.toInt()
+                e == 4 && v == 1 -> 0xFF92C8E5.toInt()
+                e == 6 && v == 0 -> 0xFF6AB8E0.toInt()
+                e == 6 && v == 1 -> 0xFFB0D0A8.toInt()
+                else -> skyBot[e]
+            }
+            sky.shader = LinearGradient(0f, 0f, 0f, groundY, top, bottom, Shader.TileMode.CLAMP)
         }
         c.drawRect(0f, 0f, w, groundY + 2f, sky)
         if (e == 7) { // gwiazdy
@@ -238,6 +257,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     /** Najbliższa warstwa: drzewa (epoki dawne), słupy i ruiny (przemysł), wieżowce/anteny (przyszłość). */
     private fun props(c: Canvas, w: Float, par: Float, color: Int, e: Int) {
         val off = camX * par
+        val branch = themeVariant()
         val step = 260f
         val first = (off / step).toInt() - 1
         val count = (w / (step * k)).toInt() + 3
@@ -247,6 +267,20 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val x = (i * step + hash * 120f - off) * k
             val s = (0.7f + hash * 0.6f) * k
             when {
+                e == 4 && branch == 1 -> { // maszty z iskrownikami
+                    c.drawLine(x, groundY, x, groundY - 145 * s, l(0xFF7F7664.toInt(), 8 * s))
+                    c.drawCircle(x, groundY - 145 * s, 13 * s, f(0xFF72EFFA.toInt()))
+                    c.drawLine(x - 30 * s, groundY - 95 * s, x + 30 * s, groundY - 95 * s, l(0xFFD6A05C.toInt(), 4 * s))
+                }
+                e == 6 && branch == 0 -> { // anteny roju
+                    c.drawLine(x, groundY, x, groundY - 155 * s, l(0xFF3F4B64.toInt(), 5 * s))
+                    c.drawCircle(x, groundY - 155 * s, 8 * s, f(0xFFEBCE44.toInt()))
+                    c.drawLine(x - 28 * s, groundY - 116 * s, x + 28 * s, groundY - 116 * s, l(0xFF76CFF1.toInt(), 3 * s))
+                }
+                e == 6 && branch == 1 -> { // żywe kolumny
+                    c.drawRoundRect(x - 13 * s, groundY - 135 * s, x + 13 * s, groundY, 11 * s, 11 * s, f(0xFF568A69.toInt()))
+                    for (j in 0..2) c.drawCircle(x, groundY - (50 + j * 37) * s, 12 * s, f(0xFF8AD68E.toInt()))
+                }
                 e <= 3 || e == 1 -> {
                     if (e == 1 && hash > 0.5f) { // palma
                         c.drawRect(x - 4 * s, groundY - 110 * s, x + 4 * s, groundY, f(0xFF7A5A3A.toInt()))
@@ -302,7 +336,13 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawGround(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
-        c.drawRect(0f, groundY, w, h, f(groundC[e]))
+        val ground = when {
+            e == 4 && themeVariant() == 1 -> 0xFF66657D.toInt()
+            e == 6 && themeVariant() == 0 -> 0xFF414D68.toInt()
+            e == 6 && themeVariant() == 1 -> 0xFF506F59.toInt()
+            else -> groundC[e]
+        }
+        c.drawRect(0f, groundY, w, h, f(ground))
         c.drawRect(0f, groundY, w, groundY + 5f * k, f(Ui.blend(groundC[e], Color.WHITE, 0.15f)))
         // kamyki / kępki trawy przewijane z polem
         val step = 90f
@@ -321,9 +361,9 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     // ---------------------------------------------------------------- bazy
 
     /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
-    private fun basePicture(side: Int, era: Int, team: Int): Picture {
+    private fun basePicture(side: Int, era: Int, variant: Int, team: Int): Picture {
         if (basePicDetail != pen.detail) { for (i in basePics.indices) basePics[i] = null; basePicDetail = pen.detail }
-        val idx = side * 8 + era
+        val idx = side * 24 + era * 3 + variant + 1
         basePics[idx]?.let { return it }
         val pic = Picture()
         val rc = pic.beginRecording((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
@@ -333,6 +373,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
         pen.setAntiAlias(true)
         bases.body(era, team)
+        if (variant >= 0) branchArt.base(era, variant, team)
         pic.endRecording()
         pen.cv = saved
         pen.setAntiAlias(g.quality.antialias)
@@ -346,7 +387,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         if (s.index == 1 && bx > viewW + 400 * k) return
         val team = if (s.index == 0) Ui.PLAYER else Ui.ENEMY
         val e = s.era
-        val pic = basePicture(s.index, e, team)
+        val pic = basePicture(s.index, e, s.eraVariant, team)
         c.save()
         c.translate(bx, groundY)
         c.scale(k * s.dir, k)
@@ -389,7 +430,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                 val hh = b.turretHeight(i)
                 bases.platform(e, -hh + 8f)
                 val te = s.turretEra[i]
-                if (te >= 0) bases.turret(te, -40f, -hh + 8f, s.turretFire[i] > 0f, team)
+                if (te >= 0) {
+                    bases.turret(te, -40f, -hh + 8f, s.turretFire[i] > 0f, team)
+                    if (s.turretVariant[i] >= 0) branchArt.turret(te, s.turretVariant[i], -40f, -hh + 8f)
+                }
             }
         }
         c.restore()
@@ -449,6 +493,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             Body.MECH -> mach.mech(def.era, def.role == Role.ELITE, team, walk, atk)
             Body.HOVER -> mach.hover(team, atk)
         }
+        if (def.variant >= 0) branchArt.unit(def, team)
     }
 
     private fun shadowW(d: UnitDef) = when (d.body) {
