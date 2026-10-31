@@ -1,4 +1,4 @@
-name: Test balansu Endless (10 seedów)
+name: Test balansu Endless (20 seedów)
 on:
   pull_request:
     branches: ['claude/**']
@@ -31,7 +31,10 @@ jobs:
       - name: Kod bazowy
         run: |
           set -o pipefail
-          git worktree add --detach "$RUNNER_TEMP/cw-baseline" b23b1e91744d276671ad78b964e2fb7fde8f3c3b
+          git fetch origin main
+          base=$(git merge-base HEAD origin/main)
+          echo "ENDLESS_BASE=$base"
+          git worktree add --detach "$RUNNER_TEMP/cw-baseline" "$base"
           cp server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt "$RUNNER_TEMP/cw-baseline/server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt"
           (cd "$RUNNER_TEMP/cw-baseline" && chmod +x ./gradlew && ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache) | tee "$RUNNER_TEMP/old.log"
       - name: Porównanie średniej
@@ -42,14 +45,14 @@ jobs:
           awk -v old="$old" -v now="$new" 'BEGIN {
             if (old <= 0) exit 2;
             diff = (now-old)/old*100;
-            printf "Endless 10 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
+            printf "Endless 20 seedów (weteran): baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
             if (diff > 15 || diff < -15) exit 1;
           }'
       - name: Logi balansu
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: endless-ten-seed-balance
+          name: endless-veteran-twenty-seed-balance
           path: |
             ${{ runner.temp }}/old.log
             ${{ runner.temp }}/new.log
