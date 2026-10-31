@@ -82,6 +82,10 @@ object CrashReports {
         val log = store
         val name = preferredName ?: log?.newest()?.name
         val saved = if (name == null) null else runCatching { log?.read(name) }.getOrNull()
-        return saved ?: snapshot(null)
+        if (preferredName != null) return saved ?: snapshot(null)
+        val current = snapshot(null)
+        // Przy ręcznym zgłoszeniu dołączamy świeży kontekst także po starszej awarii.
+        return if (saved == null) current else
+            (saved.take(16_000) + "\n--- BIEŻĄCY STAN ---\n" + current).take(CrashStore.MAX_CHARS)
     }
 }
