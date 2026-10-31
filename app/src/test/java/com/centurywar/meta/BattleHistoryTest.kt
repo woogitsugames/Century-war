@@ -12,6 +12,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /** Historia lokalna ma własny zapis, limit i walidację niezależne od profilu. */
 @RunWith(RobolectricTestRunner::class)
@@ -156,5 +158,44 @@ class BattleHistoryTest {
         assertEquals(1, m.days[13])
         assertEquals(1, m.dayWins[13])
         assertArrayEquals(longArrayOf(70, 100), m.endlessScores)
+    }
+
+    @Test
+    fun corruptHistoryLoadsInBackgroundAndSignalsCompletion() {
+        val f = file()
+        f.writeText("{\"v\":1,\"entries\":[broken")
+        val history = BattleHistory(f)
+        val complete = CountDownLatch(1)
+        try {
+            history.loadAsync { complete.countDown() }
+            assertTrue(complete.await(5, TimeUnit.SECONDS))
+            assertTrue(history.loaded)
+            assertTrue(history.snapshot().isEmpty())
+        } finally {
+            history.close()
+        }
+    }
+
+    @Test
+    fun addingWhileHistoryLoadsNeverDiscardsNewRecord() {
+        val f = file()
+        val old = BattleHistory(f)
+        old.add(entry(10))
+        old.awaitWrites()
+        old.close()
+        val history = BattleHistory(f)
+        val complete = CountDownLatch(1)
+        try {
+            history.loadAsync { complete.countDown() }
+            history.add(entry(11))
+            assertTrue(complete.await(5, TimeUnit.SECONDS))
+            history.awaitWrites()
+            assertEquals(listOf(11L, 10L), history.snapshot().map { it.score })
+            val restored = BattleHistory(f).also { it.load() }
+            try { assertEquals(listOf(11L, 10L), restored.snapshot().map { it.score }) }
+            finally { restored.close() }
+        } finally {
+            history.close()
+        }
     }
 }
