@@ -55,6 +55,7 @@ class BattleScreen(
     private val rankedDaily: Boolean = false,
     restored: RestoredBattle? = null,
 ) : Screen(g) {
+    override val crashName get() = "BattleScreen"
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val achievementEvents = AchievementBattleTracker(battle)
@@ -304,31 +305,7 @@ class BattleScreen(
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
-        // 720p poziomo: dwie kolumny; Fold i telefon pionowo: jedna kolumna.
-        val pauseFreeW = w - g.insetL - g.insetR - 24 * dp
-        val pauseFreeH = h - g.insetT - g.insetB - 20 * dp
-        pauseWide = pauseFreeW >= 650 * dp
-        val pw = min(if (pauseWide) 780 * dp else 520 * dp, pauseFreeW)
-        val ph = min(if (pauseWide) 354 * dp else 520 * dp, pauseFreeH)
-        val cx = (g.insetL + w - g.insetR) * 0.5f
-        val cy = (g.insetT + h - g.insetB) * 0.5f
-        pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
-        val controlsX = if (pauseWide) pausePanel.left + pw * 0.56f else pausePanel.left + 20 * dp
-        val controlsRight = pausePanel.right - 20 * dp
-        val sliderX = controlsX + (if (pauseWide) 90 else 108) * dp
-        val sfxY = pausePanel.top + (if (pauseWide) 76 else 297) * dp
-        val musicY = pausePanel.top + (if (pauseWide) 128 else 336) * dp
-        pauseSfxRect.set(sliderX, sfxY, controlsRight, sfxY + 36 * dp)
-        pauseMusicRect.set(sliderX, musicY, controlsRight, musicY + 36 * dp)
-        pauseVibrationBtn.set(controlsRight - 96 * dp,
-            pausePanel.top + (if (pauseWide) 186 else 382) * dp, 96 * dp, 34 * dp)
-        pauseSpeedBtn.set(controlsRight - 96 * dp,
-            pausePanel.top + (if (pauseWide) 238 else 422) * dp, 96 * dp, 34 * dp)
-        val buttonGap = 8 * dp
-        val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
-        for (i in pauseMenu.indices) pauseMenu[i].set(
-            pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
-            pausePanel.bottom - 54 * dp, buttonW, 42 * dp)
+        layoutPause()
         pauseModifierWidth = -1f
         layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
@@ -344,6 +321,68 @@ class BattleScreen(
         // Szerokość paneli zmienia łamanie opisów wariantów i kart.
         variantDescWidth = -1f
         choiceDescWidth = -1f
+    }
+
+    /**
+     * Pauza liczona z dostępnej szerokości i wysokości. Poziomo (także 640×360 dp na 16:9)
+     * dwie kolumny: dane bitwy i szybkie ustawienia; pionowo jedna kolumna. Odstępy wierszy
+     * wynikają z wysokości panelu, więc nic nie wchodzi na rząd przycisków.
+     */
+    private fun layoutPause() {
+        val freeW = w - g.insetL - g.insetR - 24 * dp
+        val freeH = h - g.insetT - g.insetB - 20 * dp
+        pauseWide = freeW >= 560 * dp || freeW > freeH
+        val pw = min(if (pauseWide) 780 * dp else 520 * dp, freeW)
+        val ph = min(if (pauseWide) 354 * dp else 560 * dp, freeH)
+        val cx = (g.insetL + w - g.insetR) * 0.5f
+        val cy = (g.insetT + h - g.insetB) * 0.5f
+        pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
+
+        val buttonH = if (ph < 380 * dp) 38 * dp else 42 * dp
+        val buttonTop = pausePanel.bottom - 12 * dp - buttonH
+        val contentTop = pausePanel.top + 48 * dp
+        val contentBottom = buttonTop - 10 * dp
+        val avail = contentBottom - contentTop
+        val info: Float // wysokość bloku danych bitwy
+        if (pauseWide) {
+            pauseStep = ((avail - 18 * dp) / 9.81f).coerceIn(12 * dp, 24 * dp)
+            pauseInfoW = pw * 0.53f - 45 * dp
+            pauseCtrlX = pausePanel.left + pw * 0.56f
+            pauseQuickY = contentTop + 14 * dp
+            info = 0f
+        } else {
+            pauseStep = ((avail - 58 * dp) / 18.61f).coerceIn(11 * dp, 22 * dp)
+            pauseInfoW = pw - 44 * dp
+            pauseCtrlX = pausePanel.left + 20 * dp
+            info = 18 * dp + 9.81f * pauseStep
+            pauseQuickY = contentTop + info + 16 * dp + 14 * dp
+        }
+        pauseInfoX = pausePanel.left + 22 * dp
+        pauseSummaryY = contentTop + 14 * dp
+        pauseLineY0 = pauseSummaryY + pauseStep * 1.25f
+        pauseModY = pauseLineY0 + pauseStep * 5.95f
+        pauseModStep = pauseStep * 0.78f
+        pauseOpponentY = pauseModY + pauseModStep * 2f + pauseStep * 1.05f
+        pauseStatSize = (pauseStep / dp * 0.62f).coerceIn(10f, 13f)
+        pauseSepTop = contentTop + 3 * dp
+        pauseSepBottom = contentBottom
+
+        val controlsRight = pausePanel.right - 20 * dp
+        val rowsTop = pauseQuickY + 10 * dp
+        val rowStep = min(if (pauseWide) 54 * dp else 48 * dp, (contentBottom - rowsTop) / 4f)
+        val ctrlH = max(18 * dp, min(36 * dp, rowStep - 8 * dp))
+        pauseCtrlLabelW = if (pauseWide) 85 * dp else 103 * dp
+        val sliderX = pauseCtrlX + pauseCtrlLabelW + 5 * dp
+        fun rowTop(i: Int) = rowsTop + rowStep * (i + 0.5f) - ctrlH / 2f
+        pauseSfxRect.set(sliderX, rowTop(0), controlsRight, rowTop(0) + ctrlH)
+        pauseMusicRect.set(sliderX, rowTop(1), controlsRight, rowTop(1) + ctrlH)
+        pauseVibrationBtn.set(controlsRight - 96 * dp, rowTop(2), 96 * dp, ctrlH)
+        pauseSpeedBtn.set(controlsRight - 96 * dp, rowTop(3), 96 * dp, ctrlH)
+
+        val buttonGap = 8 * dp
+        val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
+        for (i in pauseMenu.indices) pauseMenu[i].set(
+            pausePanel.left + 18 * dp + i * (buttonW + buttonGap), buttonTop, buttonW, buttonH)
     }
 
     private fun layoutResults() {
@@ -615,8 +654,10 @@ class BattleScreen(
         pauseMenu[0].iconId = Icons.PLAY; pauseMenu[1].iconId = Icons.RESTART; pauseMenu[2].iconId = Icons.WHITE_FLAG
         pauseMenu[0].highlight = true; pauseMenu[2].color = Ui.BTN_RED
         pauseVibrationBtn.visible = paused && !finished
-        pauseVibrationBtn.label = if (g.profile.vibration) L["on"] else L["off"]
-        pauseVibrationBtn.color = if (g.profile.vibration) Ui.BTN_GREEN else Ui.BTN
+        // Te same trzy poziomy i napisy co w Ustawieniach (0 wył., 1 słabe, 2 pełne).
+        val vibLevel = g.profile.vibrationLevel
+        pauseVibrationBtn.label = L[when (vibLevel) { 0 -> "shake_off"; 1 -> "shake_low"; else -> "shake_full" }]
+        pauseVibrationBtn.color = if (vibLevel > 0) Ui.BTN_GREEN else Ui.BTN
         pauseSpeedBtn.visible = paused && !finished
         pauseSpeedBtn.label = speedLabels[speed]
         continueBtn.visible = finished && resultTime > 0.8f
@@ -822,7 +863,11 @@ class BattleScreen(
             ARMORY -> commands.armory()
             BARRAGE -> {
                 if (aimingBarrage) {
-                    if (commands.barrage()) haptics.onBarrage() // Drugie dotknięcie: szybki ostrzał.
+                    // Drugie dotknięcie: szybki ostrzał, liczony do osiągnięć jak celowany.
+                    achievementEvents.beforeAimedBarrage()
+                    val fired = commands.barrage()
+                    achievementEvents.afterAimedBarrage(fired)
+                    if (fired) haptics.onBarrage()
                     aimingBarrage = false
                 } else if (battle.abilityReady(p, 0)) {
                     showTurrets = false
@@ -834,7 +879,10 @@ class BattleScreen(
             RALLY -> commands.rally()
             STANCE -> commands.stance(!p.hold)
             SPEED, PAUSE_SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
-            PAUSE_VIBRATION -> { g.profile.vibration = !g.profile.vibration; g.profile.save() }
+            PAUSE_VIBRATION -> {
+                g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
+                g.profile.save()
+            }
             EVOLVE -> if (commands.evolve()) haptics.onEvolve()
             PAUSE -> paused = true
             RESUME -> paused = false
@@ -981,6 +1029,22 @@ class BattleScreen(
             return
         }
         if (showTurrets && !panel.contains(x, y)) showTurrets = false
+    }
+
+    /**
+     * W bitwie tap na wyłączonym pasku pomocniczym (informacja o kolejce) trafia do onTap:
+     * podczas celowania ostrzału musi go odpalić albo anulować, a nie zniknąć.
+     */
+    override fun swallowsInactiveTap(b: Button): Boolean = false
+
+    override fun resetTouch() {
+        super.resetTouch()
+        if (pauseSliderPointer >= 0) {
+            pauseSliderPointer = -1
+            g.profile.save()
+        }
+        aimStartedInField = false
+        aimMoved = false
     }
 
     override fun onBack(): Boolean {
@@ -1240,13 +1304,27 @@ class BattleScreen(
             pauseWeather = battle.weather.ordinal
             pauseWeatherText = L["pause_weather"] + ": " + L[battle.weather.key]
         }
-        val width = if (pauseWide) pausePanel.width() * 0.53f - 45 * dp else pausePanel.width() - 44 * dp
+        val width = pauseInfoW
         if (width > 0f && pauseModifierWidth != width) {
             pauseModifierWidth = width
             pauseModifierCount = HintFrame.wrapInto(ui, pauseModifierText, width, 12f, pauseModifierLines)
         }
     }
     private val pausePanel = RectF()
+    private var pauseInfoX = 0f
+    private var pauseInfoW = 0f
+    private var pauseSummaryY = 0f
+    private var pauseLineY0 = 0f
+    private var pauseStep = 0f
+    private var pauseStatSize = 13f
+    private var pauseModY = 0f
+    private var pauseModStep = 0f
+    private var pauseOpponentY = 0f
+    private var pauseSepTop = 0f
+    private var pauseSepBottom = 0f
+    private var pauseCtrlX = 0f
+    private var pauseCtrlLabelW = 0f
+    private var pauseQuickY = 0f
     private val resultPanel = RectF()
     private val tmpR = RectF()
     private val actionBtns get() = actionArr
@@ -1348,36 +1426,33 @@ class BattleScreen(
         ui.panel(c, pausePanel)
         ui.ribbon(c, pausePanel.centerX(), pausePanel.top + 4 * dp, pauseTitleText,
             21f, Ui.RIBBON, pausePanel.width() * 0.38f, Ui.GOLD, pausePanel.width() - 20 * dp)
-        val x = pausePanel.left + 22 * dp
-        val infoWidth = if (pauseWide) pausePanel.width() * 0.53f - 45 * dp else pausePanel.width() - 44 * dp
-        val top = pausePanel.top
-        pauseLine(c, pauseSummaryLabel, x, top + 62 * dp, infoWidth, Ui.GOLD, 16f)
-        val y0 = if (pauseWide) 87f else 86f
-        val step = if (pauseWide) 24f else 21f
-        pauseLine(c, pauseTimeText, x, top + y0 * dp, infoWidth)
-        pauseLine(c, pauseKillsText, x, top + (y0 + step) * dp, infoWidth)
-        pauseLine(c, pauseGoldText, x, top + (y0 + step * 2) * dp, infoWidth)
-        pauseLine(c, pausePlayerEraText, x, top + (y0 + step * 3) * dp, infoWidth)
-        pauseLine(c, pauseEnemyEraText, x, top + (y0 + step * 4) * dp, infoWidth)
-        pauseLine(c, pauseWeatherText, x, top + (y0 + step * 5) * dp, infoWidth)
-        val modY = if (pauseWide) 233f else 213f
+        val x = pauseInfoX
+        val infoWidth = pauseInfoW
+        pauseLine(c, pauseSummaryLabel, x, pauseSummaryY, infoWidth, Ui.GOLD, 16f)
+        val step = pauseStep
+        val size = pauseStatSize
+        pauseLine(c, pauseTimeText, x, pauseLineY0, infoWidth, size = size)
+        pauseLine(c, pauseKillsText, x, pauseLineY0 + step, infoWidth, size = size)
+        pauseLine(c, pauseGoldText, x, pauseLineY0 + step * 2, infoWidth, size = size)
+        pauseLine(c, pausePlayerEraText, x, pauseLineY0 + step * 3, infoWidth, size = size)
+        pauseLine(c, pauseEnemyEraText, x, pauseLineY0 + step * 4, infoWidth, size = size)
+        pauseLine(c, pauseWeatherText, x, pauseLineY0 + step * 5, infoWidth, size = size)
+        val modSize = min(12f, size)
         for (i in 0 until min(3, pauseModifierCount)) {
             val line = pauseModifierLines[i] ?: continue
-            pauseLine(c, line, x, top + (modY + i * 15f) * dp, infoWidth, Ui.DIM, 12f)
+            pauseLine(c, line, x, pauseModY + i * pauseModStep, infoWidth, Ui.DIM, modSize)
         }
         if (pauseOpponentText.isNotEmpty())
-            pauseLine(c, pauseOpponentText, x,
-                top + (if (pauseWide) 283f else 265f) * dp, infoWidth, Ui.GOLD, 11f)
+            pauseLine(c, pauseOpponentText, x, pauseOpponentY, infoWidth, Ui.GOLD, min(11f, size))
 
         if (pauseWide) {
             ui.fill.color = Ui.FRAME_L
             val sep = pausePanel.left + pausePanel.width() * 0.53f
-            c.drawRect(sep, top + 51 * dp, sep + 1 * dp, pausePanel.bottom - 66 * dp, ui.fill)
+            c.drawRect(sep, pauseSepTop, sep + 1 * dp, pauseSepBottom, ui.fill)
         }
-        val controlsX = if (pauseWide) pausePanel.left + pausePanel.width() * 0.56f
-            else pausePanel.left + 20 * dp
-        val controlsWidth = if (pauseWide) 85 * dp else 103 * dp
-        pauseLine(c, pauseQuickLabel, controlsX, top + (if (pauseWide) 62f else 287f) * dp,
+        val controlsX = pauseCtrlX
+        val controlsWidth = pauseCtrlLabelW
+        pauseLine(c, pauseQuickLabel, controlsX, pauseQuickY,
             pausePanel.right - controlsX - 20 * dp, Ui.GOLD, 16f)
         pauseLine(c, pauseSfxLabel, controlsX, pauseSfxRect.centerY() + 5 * dp, controlsWidth)
         pauseLine(c, pauseMusicLabel, controlsX, pauseMusicRect.centerY() + 5 * dp, controlsWidth)

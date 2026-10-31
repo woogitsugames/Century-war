@@ -109,6 +109,8 @@ class TutorialOverlay(
     private var cameraMoved = false
     private var previousHold = battle.player.hold
     private var stanceUsed = battle.player.hold
+    /** Krok postawy: gracz ustawił Trzymaj; zaliczenie dopiero po powrocie do Naprzód. */
+    private var stanceHeld = false
 
     private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -167,6 +169,7 @@ class TutorialOverlay(
     fun update(dt: Float) {
         clock += dt
         if (p.hold != previousHold) { previousHold = p.hold; stanceUsed = true }
+        if (step == S_STANCE && showing && p.hold) stanceHeld = true
         if (finished) return
         if (battle.over) { skipBtn.visible = false; nextBtn.visible = false; return }
         phaseT += dt
@@ -235,7 +238,7 @@ class TutorialOverlay(
         S_DOCTRINE -> battle.pendingChoice == null
         S_TURRET -> anyTurret()
         S_ARMORY -> p.armory > 0
-        S_STANCE -> stanceUsed
+        S_STANCE -> stanceHeld && !p.hold
         S_RALLY -> p.ralliesUsed > 0
         S_BARRAGE -> p.barragesUsed > 0
         S_CAMERA -> nextPressed || (cameraMoved && phaseT > 1.2f)
@@ -273,6 +276,8 @@ class TutorialOverlay(
 
     private fun advance() {
         if (step >= S_DONE) { finished = true; markDone(); hideButtons(); return }
+        // Krok postawy nie zostawia armii w Trzymaj (np. po limicie czasu).
+        if (step == S_STANCE && showing && p.hold) commands.stance(false)
         step++
         showing = false
         phaseT = 0f

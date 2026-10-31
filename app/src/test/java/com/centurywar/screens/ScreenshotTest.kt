@@ -1204,16 +1204,23 @@ class ScreenshotTest {
         }
     }
 
-    /** Pauza z danymi bitwy i ustawieniami: 720p i oba ułożenia rozłożonego Folda. */
+    /**
+     * Pauza z danymi bitwy i ustawieniami: telefony 16:9 i 20:9 (640×360 i 800×360 dp),
+     * 1080p, oba ułożenia rozłożonego Folda i telefon pionowo. Gęstość bez skali 0,9,
+     * czyli najciaśniejszy wariant danego ekranu.
+     */
     @Test
     fun quickPauseSettings() {
         for ((tag, dims) in mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
+            "phone1280" to intArrayOf(1280, 720, 2),
+            "phone1080" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
+            "phonePortrait" to intArrayOf(1080, 2400, 3),
         )) {
-            val g = game(dims[0], dims[1], dims[2] * 0.9f,
-                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val g = game(dims[0], dims[1], dims[2].toFloat(),
+                if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
             g.profile.musicVolume = 0.65f
             g.profile.sfxVolume = 0.35f
             g.profile.vibration = false
@@ -1227,6 +1234,10 @@ class ScreenshotTest {
             battle.player.kills = 17
             battle.player.goldEarned = 1426f
             bs.onClick(field(bs, "pauseBtn").get(bs) as Button)
+            // Baner serii logowań zasłaniałby suwaki; zrzut dokumentuje sam panel pauzy.
+            (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+            (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+            field(g, "achievementSeconds").setFloat(g, 0f)
             shot(g, "${tag}_pause_quick_settings")
         }
     }
