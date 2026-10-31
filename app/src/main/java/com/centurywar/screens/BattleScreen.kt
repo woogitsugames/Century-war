@@ -786,16 +786,19 @@ class BattleScreen(
                     bossShownSecondary = boss.bossSecondaryKind
                     bossTitleText = L["eb_boss"] + " — " + L[EndlessBosses.nameKeys[bossShownKind]]
                     bossDescText = L[EndlessBosses.descriptionKeys[bossShownKind]]
-                    if (bossShownSecondary != EndlessBosses.NONE) {
+                    bossSecondDescText = if (bossShownSecondary == EndlessBosses.NONE) "" else
+                        L[EndlessBosses.descriptionKeys[bossShownSecondary]]
+                    if (bossShownSecondary != EndlessBosses.NONE)
                         bossTitleText += " + " + L[EndlessBosses.nameKeys[bossShownSecondary]]
-                        bossDescText += " / " + L[EndlessBosses.descriptionKeys[bossShownSecondary]]
-                    }
                 }
                 ui.textO(c, bossTitleText, w * 0.5f, topBar.bottom + 16 * dp,
                     ui.fit(bossTitleText, 12f, bw, 9f), Ui.ENEMY, Paint.Align.CENTER, 1.7f)
                 ui.textO(c, bossDescText, w * 0.5f, topBar.bottom + 32 * dp,
                     ui.fit(bossDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
-                ui.bar(c, bx, topBar.bottom + 40 * dp, bw, 8 * dp,
+                if (bossSecondDescText.isNotEmpty()) ui.textO(c, bossSecondDescText,
+                    w * 0.5f, topBar.bottom + 46 * dp,
+                    ui.fit(bossSecondDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
+                ui.bar(c, bx, topBar.bottom + (if (bossSecondDescText.isEmpty()) 40f else 54f) * dp, bw, 8 * dp,
                     boss.hp / boss.maxHp, Ui.ENEMY)
             }
             if (battle.wave != nextThemeShown) {
@@ -809,7 +812,8 @@ class BattleScreen(
                 } else L["next_wave"] + " " + L[battle.nextWaveKey]
             }
             ui.textO(c, nextThemeText, w * 0.5f,
-                topBar.bottom + (if (boss == null) 20f else 64f) * dp,
+                topBar.bottom + (if (boss == null) 20f else
+                    if (boss.bossSecondaryKind == EndlessBosses.NONE) 64f else 78f) * dp,
                 ui.fit(nextThemeText, 11f, w - g.insetL - g.insetR - 26 * dp, 8f),
                 Ui.GOLD, Paint.Align.CENTER, 1.7f)
         }
@@ -839,6 +843,7 @@ class BattleScreen(
     private var bossShownSecondary = -1
     private var bossTitleText = ""
     private var bossDescText = ""
+    private var bossSecondDescText = ""
 
     /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
     private fun timeStr(t: Float): String {
