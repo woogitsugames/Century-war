@@ -45,6 +45,10 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*LTest*' \
+            --tests '*Replay*' \
+            --tests '*Endless*' \
+            --tests '*Counter*' \
+            --tests '*AiPersonality*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz debug APK
