@@ -4,12 +4,18 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Picture
+import android.graphics.PorterDuff
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import com.centurywar.engine.Game
 import com.centurywar.engine.L
 import com.centurywar.engine.Ui
+import com.centurywar.game.art.Bases
+import com.centurywar.game.art.Machines
+import com.centurywar.game.art.Pen
+import com.centurywar.game.art.Soldiers
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -66,15 +72,29 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private val goldStrings = HashMap<Int, String>()
 
+    // rysowanie szczegółowe (art/*): wspólny pisak + moduły
+    private val pen = Pen()
+    private val men = Soldiers(pen)
+    private val mach = Machines(pen, men)
+    private val bases = Bases(pen)
+    /** Nagrane korpusy baz: indeks = strona * 8 + epoka. */
+    private val basePics = arrayOfNulls<Picture>(16)
+    private var basePicDetail = -1
+    private val PIC_OX = 420f
+    private val PIC_OY = 540f
+
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {
         viewW = w
         groundY = h - bottomReserve
         val visibleH = groundY - topReserve
-        // Na prawie kwadratowych ekranach (rozłożony Fold, tablet) przybliżamy pole,
-        // żeby jednostki nie ginęły pod ogromnym niebem.
+        // Na prawie kwadratowych ekranach (rozłożony Fold, tablet) widok jest węższy niż
+        // na telefonie, ale wciąż pokazuje sporą część pola. Nadmiar wysokości oddajemy
+        // ziemi (pas przedpola pod jednostkami) zamiast pustemu niebu.
         val aspect = w / h
-        val worldW = if (aspect < 1.5f) 820f else 1150f
-        k = min(visibleH / 430f, w / worldW).coerceAtLeast(0.1f)
+        val worldW = if (aspect < 1.5f) 880f else 1100f
+        k = min(visibleH / 360f, w / worldW).coerceAtLeast(0.1f)
+        val excess = visibleH - 360f * k
+        if (excess > 0f) groundY -= excess * 0.4f
         skyEra = -1
         clampCam()
     }
@@ -109,6 +129,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val q = g.quality
         fill.isAntiAlias = q.antialias
         line.isAntiAlias = q.antialias
+        pen.cv = c
+        pen.setAntiAlias(q.antialias)
+        pen.detail = q.level
+        pen.alpha = 1f; pen.flash = false
+        mach.time = time; bases.time = time
         if (shake > 0f) {
             shake = max(0f, shake - dt * 3f)
             shakeX = sin(time * 70f) * shake * 6f * g.ui.dp
@@ -295,402 +320,215 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- bazy
 
+    /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
+    private fun basePicture(side: Int, era: Int, team: Int): Picture {
+        if (basePicDetail != pen.detail) { for (i in basePics.indices) basePics[i] = null; basePicDetail = pen.detail }
+        val idx = side * 8 + era
+        basePics[idx]?.let { return it }
+        val pic = Picture()
+        val rc = pic.beginRecording((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
+        rc.translate(PIC_OX, PIC_OY)
+        val saved = pen.cv
+        pen.cv = rc
+        pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
+        pen.setAntiAlias(true)
+        bases.body(era, team)
+        pic.endRecording()
+        pen.cv = saved
+        pen.setAntiAlias(g.quality.antialias)
+        basePics[idx] = pic
+        return pic
+    }
+
     private fun drawBase(c: Canvas, s: Side) {
         val bx = sx(s.baseFront)
         if (s.index == 0 && bx < -400 * k) return
         if (s.index == 1 && bx > viewW + 400 * k) return
+        val team = if (s.index == 0) Ui.PLAYER else Ui.ENEMY
+        val e = s.era
+        val pic = basePicture(s.index, e, team)
         c.save()
         c.translate(bx, groundY)
         c.scale(k * s.dir, k)
-        val team = if (s.index == 0) Ui.PLAYER else Ui.ENEMY
-        val e = s.era
-        when (e) {
-            0 -> { // stos głazów z jaskinią
-                f(0xFF8A8A8A.toInt())
-                c.drawCircle(-150f, -90f, 95f, fill)
-                c.drawCircle(-60f, -60f, 65f, f(0xFF9A9A9A.toInt()))
-                c.drawCircle(-210f, -150f, 80f, f(0xFF7A7A7A.toInt()))
-                c.drawCircle(-120f, -190f, 60f, f(0xFF8E8E8E.toInt()))
-                rect.set(-130f, -95f, -60f, 0f); c.drawRoundRect(rect, 35f, 35f, f(0xFF2A2420.toInt()))
-                c.drawLine(-100f, -250f, -100f, -320f, l(0xFF6A4A2A.toInt(), 6f))
-            }
-            1 -> { // schodkowa świątynia z cegły
-                for (i in 0 until 4) {
-                    c.drawRect(-260f + i * 25f, -70f - i * 60f, -20f - i * 25f, -i * 60f, f(if (i % 2 == 0) 0xFFD2B47A.toInt() else 0xFFC4A26A.toInt()))
-                }
-                rect.set(-150f, -80f, -110f, 0f); c.drawRoundRect(rect, 18f, 18f, f(0xFF3A2A1A.toInt()))
-                c.drawLine(-140f, -240f, -140f, -330f, l(0xFF6A4A2A.toInt(), 5f))
-            }
-            2 -> { // zamek
-                c.drawRect(-280f, -200f, -60f, 0f, f(0xFF9C9C94.toInt()))
-                c.drawRect(-230f, -320f, -140f, -200f, f(0xFF8A8A82.toInt()))
-                for (i in 0 until 5) c.drawRect(-280f + i * 48f, -225f, -256f + i * 48f, -200f, f(0xFF9C9C94.toInt()))
-                for (i in 0 until 3) c.drawRect(-230f + i * 36f, -345f, -212f + i * 36f, -320f, f(0xFF8A8A82.toInt()))
-                rect.set(-195f, -100f, -135f, 0f); c.drawRoundRect(rect, 30f, 30f, f(0xFF4A3420.toInt()))
-                c.drawLine(-185f, -345f, -185f, -420f, l(0xFF4A3A2A.toInt(), 5f))
-            }
-            3 -> { // fort z cegły i palisady
-                c.drawRect(-290f, -170f, -40f, 0f, f(0xFFA0583C.toInt()))
-                c.drawRect(-250f, -270f, -150f, -170f, f(0xFF8E4C34.toInt()))
-                for (i in 0 until 9) c.drawRect(-40f + i * 0f, -110f, -20f, 0f, f(0xFF7A5A36.toInt()))
-                for (i in 0 until 6) { path.reset(); path.moveTo(-290f + i * 42f, -170f); path.lineTo(-269f + i * 42f, -195f); path.lineTo(-248f + i * 42f, -170f); c.drawPath(path, f(0xFF7A3E2A.toInt())) }
-                rect.set(-180f, -90f, -120f, 0f); c.drawRoundRect(rect, 8f, 8f, f(0xFF3A2A1A.toInt()))
-                c.drawLine(-200f, -270f, -200f, -360f, l(0xFF3A3A3A.toInt(), 5f))
-            }
-            4 -> { // fabryka z kominem
-                c.drawRect(-300f, -180f, -50f, 0f, f(0xFF8A4A36.toInt()))
-                for (i in 0 until 3) { path.reset(); path.moveTo(-300f + i * 83f, -180f); path.lineTo(-217f + i * 83f, -180f); path.lineTo(-217f + i * 83f, -240f); path.close(); c.drawPath(path, f(0xFF6E3A2A.toInt())) }
-                c.drawRect(-270f, -380f, -235f, -180f, f(0xFF5A3A30.toInt()))
-                for (i in 0 until 3) c.drawRect(-280f + i * 70f, -130f, -240f + i * 70f, -90f, f(0xFFFFD27A.toInt()))
-                if (g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 250f, 390f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
-                c.drawLine(-120f, -180f, -120f, -270f, l(0xFF2A2A2A.toInt(), 5f))
-            }
-            5 -> { // bunkier
-                path.reset(); path.moveTo(-320f, 0f); path.lineTo(-280f, -170f); path.lineTo(-70f, -170f); path.lineTo(-30f, 0f); path.close()
-                c.drawPath(path, f(0xFF7E8278.toInt()))
-                c.drawRect(-250f, -120f, -100f, -100f, f(0xFF1E201C.toInt()))
-                for (i in 0 until 6) { rect.set(-40f + 0f, -24f - i * 0f, 10f, 0f); c.drawRoundRect(rect, 10f, 10f, f(0xFFB4A078.toInt())) }
-                c.drawLine(-200f, -170f, -200f, -270f, l(0xFF2A2A2A.toInt(), 5f))
-            }
-            6 -> { // szklana kwatera główna
-                c.drawRect(-300f, -150f, -40f, 0f, f(0xFF6E7C8C.toInt()))
-                c.drawRect(-250f, -390f, -140f, -150f, f(0xFF5A90B8.toInt()))
-                for (yy in 0 until 8) c.drawRect(-245f, -380f + yy * 29f, -145f, -370f + yy * 29f, f(0xFF8CC8F0.toInt()))
-                c.drawLine(-195f, -390f, -195f, -470f, l(0xFFB0B0B0.toInt(), 4f))
-                c.drawCircle(-195f, -470f, 6f, f(if (sin(time * 4f) > 0) 0xFFFF3030.toInt() else 0xFF601010.toInt()))
-            }
-            else -> { // kopuła z pierścieniem energii
-                rect.set(-320f, -260f, -40f, 20f); c.drawArc(rect, 180f, 180f, true, f(0xFF4A4070.toInt()))
-                rect.set(-290f, -230f, -70f, 10f); c.drawArc(rect, 180f, 180f, true, f(0xFF6A5AA0.toInt()))
-                val pulse = 0.5f + 0.5f * sin(time * 3f)
-                l(Color.argb((120 + 100 * pulse).toInt(), 120, 240, 255), 8f)
-                rect.set(-330f, -170f, -30f, -110f); c.drawOval(rect, line)
-                c.drawLine(-180f, -260f, -180f, -340f, l(0xFFB0B0FF.toInt(), 4f))
-            }
+        pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
+        if (g.quality.shadows) {
+            fill.color = Color.argb(55, 0, 0, 0)
+            rect.set(-345f, -10f, 10f, 12f); c.drawOval(rect, fill)
         }
+        c.save(); c.translate(-PIC_OX, -PIC_OY)
+        if (s.baseFlash > 0f) {
+            c.saveLayer(0f, 0f, PIC_OX + 40f, PIC_OY + 40f, null)
+            c.drawPicture(pic)
+            c.drawColor(Color.argb((s.baseFlash / 0.15f * 110).toInt().coerceIn(0, 255), 255, 255, 255), PorterDuff.Mode.SRC_ATOP)
+            c.restore()
+        } else c.drawPicture(pic)
+        c.restore()
+        bases.live(e, team)
+        if (e == 4 && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
+
         // flaga drużyny
-        val flagTop = when (e) { 0 -> -320f; 1 -> -330f; 2 -> -420f; 3 -> -360f; 4 -> -270f; 5 -> -270f; 6 -> -440f; else -> -340f }
-        val fx0 = when (e) { 0 -> -100f; 1 -> -140f; 2 -> -185f; 3 -> -200f; 4 -> -120f; 5 -> -200f; 6 -> -195f; else -> -180f }
+        val fx0 = bases.flagX(e)
+        val flagTop = bases.flagTop(e)
         val wave = sin(time * 5f + s.index) * 6f
-        path.reset(); path.moveTo(fx0, flagTop); path.lineTo(fx0 + 60f, flagTop + 12f + wave); path.lineTo(fx0, flagTop + 34f); path.close()
-        c.drawPath(path, f(team))
+        val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
+        val fp = pen.path
+        fp.reset(); fp.moveTo(fx0, flagTop); fp.quadTo(fx0 + 34f, flagTop - 4f + wave2, fx0 + 70f, flagTop + 4f + wave)
+        fp.lineTo(fx0 + 70f, flagTop + 40f + wave); fp.quadTo(fx0 + 34f, flagTop + 32f + wave2, fx0, flagTop + 40f); fp.close()
+        pen.shape(team)
+        if (g.quality.level >= 2) {
+            pen.circle(fx0 + 34f, flagTop + 18f + (wave + wave2) * 0.4f, 8f, 0xFFF4F0E4.toInt())
+            pen.circleF(fx0 + 34f, flagTop + 18f + (wave + wave2) * 0.4f, 3.5f, team)
+        }
+        pen.circle(fx0, flagTop - 3f, 5f, 0xFFE8C04A.toInt())
 
         // wieża z platformami na wieżyczki
         if (s.slots > 0) {
             val top = b.turretHeight(s.slots - 1) + 20f
-            c.drawRect(-70f, -top, -14f, 0f, f(Ui.blend(team, 0xFF404040.toInt(), 0.65f)))
+            bases.tower(e, team, top)
             for (i in 0 until s.slots) {
                 val hh = b.turretHeight(i)
-                c.drawRect(-82f, -hh + 8f, -2f, -hh + 18f, f(0xFF3A3A3A.toInt()))
+                bases.platform(e, -hh + 8f)
                 val te = s.turretEra[i]
-                if (te >= 0) drawTurret(c, te, -40f, -hh + 8f, s.turretFire[i] > 0f)
+                if (te >= 0) bases.turret(te, -40f, -hh + 8f, s.turretFire[i] > 0f, team)
             }
         }
-        if (s.baseFlash > 0f) {
-            fill.color = Color.argb((s.baseFlash / 0.15f * 90).toInt(), 255, 255, 255)
-            c.drawRect(-300f, -300f, 0f, 0f, fill)
-        }
         c.restore()
-    }
-
-    private fun drawTurret(c: Canvas, era: Int, x: Float, y: Float, firing: Boolean) {
-        when (era) {
-            0 -> { c.drawRect(x - 18f, y - 14f, x + 18f, y, f(0xFF6A4A2A.toInt())); c.drawLine(x - 10f, y - 12f, x + 26f, y - 38f, l(0xFF8A6A3A.toInt(), 6f)); c.drawCircle(x + 26f, y - 40f, 8f, f(0xFF8A8A8A.toInt())) }
-            1 -> { c.drawRect(x - 20f, y - 12f, x + 10f, y, f(0xFF7A5A36.toInt())); c.drawLine(x - 20f, y - 16f, x + 34f, y - 22f, l(0xFF5A3A20.toInt(), 6f)); c.drawLine(x + 6f, y - 36f, x + 6f, y - 4f, l(0xFF5A3A20.toInt(), 4f)) }
-            2 -> { c.drawRect(x - 20f, y - 34f, x + 20f, y, f(0xFF8A8A82.toInt())); for (i in 0..2) c.drawRect(x - 20f + i * 15f, y - 44f, x - 12f + i * 15f, y - 34f, f(0xFF8A8A82.toInt())) }
-            3 -> { c.drawCircle(x - 6f, y - 8f, 10f, f(0xFF5A3A20.toInt())); c.drawLine(x - 6f, y - 16f, x + 36f, y - 22f, l(0xFF2A2A2A.toInt(), 11f)) }
-            4 -> { c.drawRect(x - 16f, y - 22f, x + 6f, y, f(0xFF6A6A5A.toInt())); for (i in 0..2) c.drawLine(x, y - 18f + i * 5f, x + 36f, y - 18f + i * 5f, l(0xFF3A3A3A.toInt(), 3.5f)) }
-            5 -> { c.drawRect(x - 18f, y - 18f, x + 8f, y, f(0xFF5A6248.toInt())); c.drawLine(x, y - 14f, x + 32f, y - 40f, l(0xFF2A2E22.toInt(), 6f)); c.drawLine(x + 6f, y - 10f, x + 38f, y - 36f, l(0xFF2A2E22.toInt(), 6f)) }
-            6 -> { rect.set(x - 20f, y - 30f, x + 22f, y); c.drawRoundRect(rect, 6f, 6f, f(0xFF7A8490.toInt())); for (i in 0..1) for (j in 0..1) c.drawCircle(x - 6f + i * 16f, y - 20f + j * 12f, 5f, f(0xFF2A2A2A.toInt())) }
-            else -> { c.drawCircle(x - 4f, y - 14f, 14f, f(0xFF6A5AA0.toInt())); c.drawLine(x, y - 14f, x + 40f, y - 20f, l(0xFFB8B0FF.toInt(), 7f)); c.drawCircle(x + 40f, y - 20f, 5f, f(0xFF80F0FF.toInt())) }
-        }
-        if (firing) c.drawCircle(x + 38f, y - 24f, 10f, f(0xC0FFE080.toInt()))
     }
 
     // ---------------------------------------------------------------- jednostki
 
-    private val OUTLINE = 0xFF1C1A20.toInt()
-    private val skin = intArrayOf(0xFFE0B48A.toInt(), 0xFFD8A878.toInt(), 0xFFE6BE96.toInt(), 0xFFE6BE96.toInt(), 0xFFE0B48A.toInt(), 0xFFD8A878.toInt(), 0xFFE0B48A.toInt(), 0xFFC8C8D8.toInt())
-    private val gear = intArrayOf(0xFF8A5A30.toInt(), 0xFFB08040.toInt(), 0xFF9AA0A8.toInt(), 0xFF3A3A5A.toInt(), 0xFF5A4A3A.toInt(), 0xFF5A6248.toInt(), 0xFF3E4650.toInt(), 0xFF8E86C8.toInt())
-
     private fun drawUnit(c: Canvas, u: Fighter) {
         val x = sx(u.x)
-        val margin = 120f * k * u.def.size
+        val margin = 130f * k * u.def.size
         if (x < -margin || x > viewW + margin) return
         if (b.fog && u.side == 1 && u.x - b.player.front > 650f) return
         val s = b.sides[u.side]
         alpha = if (u.dying >= 0f) max(0f, 1f - u.dying / 0.8f) else 1f
+        val def = u.def
         if (g.quality.shadows) {
-            fill.color = col(Color.argb(60, 0, 0, 0))
-            rect.set(x - 22f * k * u.def.size, groundY - 4f * k, x + 22f * k * u.def.size, groundY + 4f * k)
+            fill.color = col(Color.argb(70, 0, 0, 0))
+            val sw = shadowW(def) * k * def.size
+            rect.set(x - sw, groundY - 3.5f * k, x + sw, groundY + 3.5f * k)
             c.drawOval(rect, fill)
         }
         c.save()
         c.translate(x, groundY)
-        val sc = k * u.def.size
+        val sc = k * def.size
         c.scale(sc * s.dir, sc)
         if (u.dying >= 0f) c.rotate(-min(80f, u.dying * 200f))
         val team = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
-        val flash = u.flash > 0f
-        val def = u.def
         val walk = if (u.moving) u.anim else 0f
         val atk = if (u.attackAnim > 0f) u.attackAnim / 0.25f else 0f
-        when (def.body) {
-            Body.HUMAN -> human(c, def.era, def.weapon, team, walk, atk, flash, def.role == Role.HEAVY)
-            Body.BEAST -> beast(c, def.era, def.role, team, walk, atk, flash)
-            Body.SIEGE -> siege(c, team, walk, atk, flash)
-            Body.CANNON -> cannon(c, team, walk, atk, flash)
-            Body.VEHICLE -> vehicle(c, def.era, def.role, team, walk, atk, flash)
-            Body.MECH -> mech(c, def.era, def.role, team, walk, atk, flash)
-            Body.HOVER -> hover(c, team, atk, flash)
-        }
+        pen.alpha = alpha
+        pen.flash = u.flash > 0f
+        drawBody(def, team, walk, atk)
+        pen.flash = false
         c.restore()
         // pasek HP, gdy ranny
         if (u.dying < 0f && u.hp < u.maxHp) {
-            val bw = 34f * k * u.def.size
-            val top = groundY - unitHeight(def) * k * def.size - 10f * k
-            fill.color = Color.argb(170, 0, 0, 0)
-            c.drawRect(x - bw / 2, top, x + bw / 2, top + 4f * k, fill)
+            val bw = 36f * k * def.size
+            val top = groundY - unitHeight(def) * k * def.size - 12f * k
+            val bh = 4.5f * k
+            fill.color = Color.argb(200, 20, 18, 24)
+            c.drawRect(x - bw / 2 - k, top - k, x + bw / 2 + k, top + bh + k, fill)
             fill.color = team
-            c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + 4f * k, fill)
+            c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + bh, fill)
+            fill.color = Color.argb(90, 255, 255, 255)
+            c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + bh * 0.4f, fill)
         }
+    }
+
+    private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float) {
+        pen.ow = 1.5f / def.size
+        when (def.body) {
+            Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
+            Body.BEAST -> mach.beast(def.era, def.role == Role.ELITE, team, walk, atk)
+            Body.SIEGE -> mach.trebuchet(team, walk, atk)
+            Body.CANNON -> mach.cannon(team, walk, atk)
+            Body.VEHICLE -> mach.vehicle(def.era, def.role == Role.ELITE, team, walk, atk)
+            Body.MECH -> mach.mech(def.era, def.role == Role.ELITE, team, walk, atk)
+            Body.HOVER -> mach.hover(team, atk)
+        }
+    }
+
+    private fun shadowW(d: UnitDef) = when (d.body) {
+        Body.HUMAN -> 13f; Body.BEAST -> if (d.role == Role.ELITE) 40f else 32f
+        Body.VEHICLE -> 50f; Body.HOVER -> 0f; Body.MECH -> 22f; else -> 38f
     }
 
     /** Podgląd jednostki na przycisku HUD (ten sam kod rysujący co na polu bitwy). */
     fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int) {
-        val sc = height / (unitHeight(def) * def.size + 8f)
+        val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
         val save = alpha
         alpha = 1f
+        val savedCv = if (pen.cvReady()) pen.cv else null
+        pen.cv = c
+        pen.alpha = 1f; pen.flash = false
+        pen.detail = g.quality.level
+        pen.setAntiAlias(true)
         c.save()
-        c.translate(cx - 6f * sc * def.size, bottom)
+        c.translate(cx - iconShift(def) * sc * def.size, bottom)
         c.scale(sc * def.size, sc * def.size)
-        when (def.body) {
-            Body.HUMAN -> human(c, def.era, def.weapon, team, 0f, 0f, false, def.role == Role.HEAVY)
-            Body.BEAST -> beast(c, def.era, def.role, team, 0f, 0f, false)
-            Body.SIEGE -> siege(c, team, 0f, 0f, false)
-            Body.CANNON -> cannon(c, team, 0f, 0f, false)
-            Body.VEHICLE -> vehicle(c, def.era, def.role, team, 0f, 0f, false)
-            Body.MECH -> mech(c, def.era, def.role, team, 0f, 0f, false)
-            Body.HOVER -> hover(c, team, 0f, false)
-        }
+        drawBody(def, team, 0f, 0f)
         c.restore()
+        pen.setAntiAlias(g.quality.antialias)
+        if (savedCv != null) pen.cv = savedCv
         alpha = save
     }
 
+    private fun unitWidth(d: UnitDef) = when (d.body) {
+        Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
+        Body.VEHICLE -> if (d.role == Role.ELITE && d.era == 5) 130f else 104f; Body.HOVER -> 96f
+        Body.MECH -> if (d.era == 7) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+    }
+
+    private fun iconShift(d: UnitDef) = when (d.body) {
+        Body.HUMAN -> 4f; Body.VEHICLE -> 6f; Body.SIEGE -> 4f; Body.CANNON -> 0f; else -> 8f
+    }
+
     private fun unitHeight(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 66f; Body.BEAST -> if (d.role == Role.ELITE) 80f else 92f
-        Body.MECH -> 90f; Body.VEHICLE -> 60f; Body.HOVER -> 56f; Body.SIEGE -> 85f; else -> 50f
-    }
-
-    private fun human(c: Canvas, era: Int, weapon: Int, team: Int, walk: Float, atk: Float, flash: Boolean, armored: Boolean) {
-        val a = sin(walk) * 0.55f
-        val pants = gear[era]
-        // nogi
-        l(pants, 5.5f)
-        c.drawLine(0f, -26f, sin(a) * 15f, 0f, line)
-        c.drawLine(0f, -26f, -sin(a) * 15f, 0f, line)
-        // tułów
-        rect.set(-8f, -50f, 8f, -24f)
-        c.drawRoundRect(rect, 4f, 4f, f(if (flash) Color.WHITE else team))
-        c.drawRoundRect(rect, 4f, 4f, l(OUTLINE, 1.6f))
-        if (armored || era >= 2 && era != 3) {
-            rect.set(-8f, -50f, 8f, -40f); c.drawRoundRect(rect, 3f, 3f, f(Ui.blend(gear[era], Color.WHITE, 0.2f)))
-        }
-        // głowa + nakrycie
-        c.drawCircle(1f, -57f, 7.5f, f(if (flash) Color.WHITE else skin[era]))
-        c.drawCircle(1f, -57f, 7.5f, l(OUTLINE, 1.4f))
-        helmet(c, era)
-        // ramię z bronią
-        val swing = if (atk > 0f) -atk * 1.4f + 0.6f else 0.15f
-        c.save()
-        c.translate(2f, -45f)
-        c.rotate(Math.toDegrees(swing.toDouble()).toFloat())
-        c.drawLine(0f, 0f, 12f, 4f, l(skin[era], 4.5f))
-        weaponShape(c, weapon, era, atk)
-        c.restore()
-        if (armored) { // tarcza
-            rect.set(6f, -46f, 16f, -22f); c.drawRoundRect(rect, 4f, 4f, f(Ui.blend(team, Color.BLACK, 0.3f)))
-        }
-    }
-
-    private fun helmet(c: Canvas, era: Int) {
-        when (era) {
-            0 -> { c.drawLine(-6f, -63f, 6f, -66f, l(0xFF5A3A20.toInt(), 3f)) } // opaska
-            1 -> { rect.set(-7f, -66f, 9f, -56f); c.drawArc(rect, 180f, 180f, true, f(0xFFC08A3A.toInt())); c.drawLine(1f, -66f, -6f, -72f, l(0xFFB03020.toInt(), 3f)) }
-            2 -> { rect.set(-8f, -67f, 10f, -54f); c.drawArc(rect, 180f, 200f, true, f(0xFFA8AEB6.toInt())) }
-            3 -> { path.reset(); path.moveTo(-10f, -61f); path.lineTo(12f, -61f); path.lineTo(1f, -71f); path.close(); c.drawPath(path, f(0xFF2A2A3A.toInt())) }
-            4 -> { rect.set(-7f, -67f, 9f, -60f); c.drawRect(rect, f(0xFF4A3A2A.toInt())); c.drawLine(4f, -60f, 12f, -60f, l(0xFF2A2A2A.toInt(), 2f)) }
-            5 -> { rect.set(-9f, -68f, 11f, -54f); c.drawArc(rect, 180f, 180f, true, f(0xFF5A6248.toInt())) }
-            6 -> { rect.set(-8f, -68f, 10f, -54f); c.drawArc(rect, 180f, 200f, true, f(0xFF2E3640.toInt())); c.drawLine(3f, -58f, 9f, -58f, l(0xFF60D0FF.toInt(), 2.5f)) }
-            else -> { c.drawCircle(1f, -58f, 9f, f(0xFF8E86C8.toInt())); c.drawLine(2f, -58f, 10f, -58f, l(0xFF80FFFF.toInt(), 3f)) }
-        }
-    }
-
-    private fun weaponShape(c: Canvas, w: Int, era: Int, atk: Float) {
-        when (w) {
-            Weapon.CLUB -> { c.drawLine(10f, 4f, 26f, -10f, l(0xFF6A4A2A.toInt(), 6f)); c.drawCircle(27f, -11f, 5f, f(0xFF6A4A2A.toInt())) }
-            Weapon.SLING -> { c.drawLine(10f, 4f, 20f, -6f, l(0xFF8A6A4A.toInt(), 2f)); c.drawCircle(21f, -7f, 3f, f(0xFF8A8A8A.toInt())) }
-            Weapon.SPEAR, Weapon.PIKE -> {
-                val len = if (w == Weapon.PIKE) 46f else 34f
-                c.drawLine(-6f, 6f, len, 2f, l(0xFF7A5A3A.toInt(), 3f))
-                path.reset(); path.moveTo(len, -2f); path.lineTo(len + 9f, 2f); path.lineTo(len, 6f); path.close(); c.drawPath(path, f(0xFFC0C0C8.toInt()))
-            }
-            Weapon.SWORD -> { c.drawLine(10f, 4f, 34f, -4f, l(0xFFD0D4DA.toInt(), 3.5f)); c.drawLine(12f, -1f, 12f, 9f, l(0xFF6A4A2A.toInt(), 3f)) }
-            Weapon.BOW -> { rect.set(8f, -12f, 22f, 20f); c.drawArc(rect, -90f, 180f, false, l(0xFF7A5A3A.toInt(), 2.5f)); c.drawLine(15f, -12f, 15f, 20f, l(0xFFE0E0E0.toInt(), 1f)) }
-            Weapon.CROSSBOW -> { c.drawLine(8f, 4f, 28f, 2f, l(0xFF6A4A2A.toInt(), 4f)); c.drawLine(24f, -7f, 24f, 11f, l(0xFF5A3A20.toInt(), 3f)) }
-            Weapon.MUSKET, Weapon.RIFLE -> {
-                c.drawLine(4f, 6f, 36f, 2f, l(if (w == Weapon.MUSKET) 0xFF5A3A20.toInt() else 0xFF3A3A3A.toInt(), 4f))
-                if (atk > 0.7f) c.drawCircle(39f, 2f, 5f, f(0xC0FFE070.toInt()))
-            }
-            Weapon.MG -> { rect.set(6f, -1f, 30f, 8f); c.drawRect(rect, f(0xFF2A2A2A.toInt())); c.drawLine(28f, 3f, 42f, 3f, l(0xFF2A2A2A.toInt(), 3f)); if (atk > 0.5f) c.drawCircle(44f, 3f, 5f, f(0xC0FFE070.toInt())) }
-            Weapon.LAUNCHER -> { rect.set(-6f, -6f, 32f, 4f); c.drawRoundRect(rect, 4f, 4f, f(0xFF4A5A3A.toInt())) }
-            Weapon.BLASTER -> { rect.set(6f, -2f, 30f, 7f); c.drawRoundRect(rect, 3f, 3f, f(0xFF5A5080.toInt())); c.drawCircle(31f, 2.5f, if (atk > 0.5f) 5f else 2.5f, f(0xFF80FFFF.toInt())) }
-            Weapon.RAIL -> { c.drawLine(2f, 3f, 46f, 1f, l(0xFF6A6A90.toInt(), 5f)); c.drawLine(10f, 3f, 40f, 1f, l(0xFF90F0FF.toInt(), 1.5f)) }
-        }
-    }
-
-    private fun beast(c: Canvas, era: Int, role: Role, team: Int, walk: Float, atk: Float, flash: Boolean) {
-        val big = role == Role.ELITE
-        val hide = when { era == 0 -> 0xFF7A5A3A.toInt(); era == 1 && big -> 0xFF8A8A8A.toInt(); era == 1 -> 0xFFB08A5A.toInt(); era == 2 -> 0xFF6A4A3A.toInt(); else -> 0xFF4A3A2A.toInt() }
-        val bodyC = if (flash) Color.WHITE else hide
-        val a = sin(walk) * 0.5f
-        // nogi
-        l(Ui.blend(hide, Color.BLACK, 0.25f), if (big) 9f else 6f)
-        val lx = if (big) 22f else 18f
-        c.drawLine(lx, -24f, lx + sin(a) * 10f, 0f, line)
-        c.drawLine(lx - 8f, -24f, lx - 8f - sin(a) * 10f, 0f, line)
-        c.drawLine(-lx, -24f, -lx - sin(a) * 10f, 0f, line)
-        c.drawLine(-lx + 8f, -24f, -lx + 8f + sin(a) * 10f, 0f, line)
-        // korpus
-        if (big) {
-            rect.set(-36f, -62f, 34f, -20f); c.drawRoundRect(rect, 22f, 22f, f(bodyC))
-            c.drawCircle(36f, -50f, 16f, f(bodyC))
-            // kły
-            c.drawLine(44f, -42f, 58f, -34f + atk * 8f, l(0xFFF0E8D0.toInt(), 4f))
-            if (era == 0) { c.drawLine(48f, -46f, 52f, -18f, l(bodyC, 6f)) } // trąba
-            // kosz bojowy z barwami drużyny
-            rect.set(-20f, -80f, 14f, -60f); c.drawRect(rect, f(team))
-            c.drawLine(-20f, -80f, 14f, -80f, l(0xFF5A3A20.toInt(), 3f))
-        } else {
-            rect.set(-28f, -46f, 26f, -22f); c.drawRoundRect(rect, 12f, 12f, f(bodyC))
-            path.reset(); path.moveTo(20f, -40f); path.lineTo(38f, -58f); path.lineTo(44f, -50f); path.lineTo(28f, -32f); path.close()
-            c.drawPath(path, f(bodyC))
-            if (era == 0) c.drawLine(42f, -54f, 50f, -62f, l(0xFFF0E8D0.toInt(), 3f)) // róg
-            rect.set(-12f, -50f, 10f, -42f); c.drawRect(rect, f(team)) // czaprak
-            // jeździec
-            c.save(); c.translate(-2f, -32f); c.scale(0.85f, 0.85f)
-            human(c, era, if (era == 1) Weapon.BOW else if (era == 2) Weapon.PIKE else Weapon.SWORD, team, 0f, atk, flash, false)
-            c.restore()
-            if (era == 1) { // rydwan: koło
-                c.drawCircle(-30f, -12f, 12f, l(0xFF5A3A20.toInt(), 3f))
-            }
-        }
-    }
-
-    private fun siege(c: Canvas, team: Int, walk: Float, atk: Float, flash: Boolean) {
-        val wood = if (flash) Color.WHITE else 0xFF7A5A36.toInt()
-        c.drawRect(-34f, -22f, 34f, -12f, f(wood))
-        c.drawCircle(-24f, -10f, 10f, f(0xFF4A3420.toInt()))
-        c.drawCircle(24f, -10f, 10f, f(0xFF4A3420.toInt()))
-        c.drawLine(-10f, -20f, 0f, -70f, l(wood, 6f))
-        c.drawLine(10f, -20f, 0f, -70f, l(wood, 6f))
-        val ang = if (atk > 0f) -150f + atk * 120f else -30f
-        c.save(); c.translate(0f, -66f); c.rotate(ang)
-        c.drawLine(-20f, 0f, 46f, 0f, l(0xFF5A3A20.toInt(), 5f))
-        c.drawRect(-30f, -8f, -16f, 8f, f(0xFF5A5A5A.toInt()))
-        c.restore()
-        c.drawRect(-34f, -30f, -18f, -22f, f(team))
-    }
-
-    private fun cannon(c: Canvas, team: Int, walk: Float, atk: Float, flash: Boolean) {
-        c.drawLine(-36f, -8f, 0f, -20f, l(0xFF5A3A20.toInt(), 6f))
-        c.save(); c.translate(0f, -24f); c.rotate(-12f - atk * 6f)
-        rect.set(-18f - atk * 6f, -9f, 42f - atk * 6f, 9f); c.drawRoundRect(rect, 8f, 8f, f(if (flash) Color.WHITE else 0xFF2E2E2E.toInt()))
-        c.restore()
-        c.drawCircle(0f, -16f, 16f, l(0xFF6A4A2A.toInt(), 5f))
-        c.drawCircle(0f, -16f, 4f, f(team))
-        if (atk > 0.75f) c.drawCircle(48f, -36f, 12f, f(0xC0FFE070.toInt()))
-    }
-
-    private fun vehicle(c: Canvas, era: Int, role: Role, team: Int, walk: Float, atk: Float, flash: Boolean) {
-        val hull = if (flash) Color.WHITE else when (era) { 4 -> 0xFF6A5A48.toInt(); 5 -> 0xFF5A6248.toInt(); else -> 0xFF6E7884.toInt() }
-        val big = role == Role.ELITE
-        val len = if (big) 46f else 38f
-        // gąsienice / koła
-        rect.set(-len, -18f, len, 0f); c.drawRoundRect(rect, 9f, 9f, f(0xFF2A2A2A.toInt()))
-        val n = if (big) 5 else 4
-        for (i in 0 until n) {
-            val wx = -len + 9f + i * ((2 * len - 18f) / (n - 1))
-            c.drawCircle(wx, -9f, 6f, f(0xFF5A5A5A.toInt()))
-            c.drawLine(wx, -9f, wx + cos(walk * 2f) * 5f, -9f + sin(walk * 2f) * 5f, l(0xFF3A3A3A.toInt(), 1.5f))
-        }
-        // kadłub
-        path.reset(); path.moveTo(-len - 2f, -18f); path.lineTo(-len + 6f, -38f); path.lineTo(len - 8f, -38f); path.lineTo(len + 4f, -18f); path.close()
-        c.drawPath(path, f(hull))
-        rect.set(-len + 10f, -34f, -len + 26f, -26f); c.drawRect(rect, f(team))
-        // wieża + lufa
-        val recoil = atk * 6f
-        rect.set(-18f, -54f, 16f, -36f); c.drawRoundRect(rect, 8f, 8f, f(Ui.blend(hull, Color.BLACK, 0.12f)))
-        c.drawLine(10f - recoil, -46f, (if (big) 62f else 50f) - recoil, -48f, l(Ui.blend(hull, Color.BLACK, 0.3f), if (big) 8f else 6f))
-        if (era == 4) { // komin parowy
-            c.drawRect(-30f, -60f, -22f, -38f, f(0xFF3A3A3A.toInt()))
-            if (walk != 0f && g.quality.level >= 2 && ((time * 20f).toInt() % 5 == 0)) { /* dym rysuje system cząsteczek z fabryki */ }
-        }
-        if (atk > 0.75f) c.drawCircle((if (big) 66f else 54f), -48f, 9f, f(0xC0FFE070.toInt()))
-    }
-
-    private fun mech(c: Canvas, era: Int, role: Role, team: Int, walk: Float, atk: Float, flash: Boolean) {
-        val metal = if (flash) Color.WHITE else when (era) { 4 -> 0xFFB08A4A.toInt(); 7 -> 0xFF8E86C8.toInt(); else -> 0xFF6E7884.toInt() }
-        val big = role == Role.ELITE && era == 7
-        val s = if (big) 1.25f else 1f
-        val a = sin(walk) * 0.5f
-        l(Ui.blend(metal, Color.BLACK, 0.35f), 8f * s)
-        c.drawLine(-8f * s, -40f * s, -8f * s + sin(a) * 14f, -20f * s, line); c.drawLine(-8f * s + sin(a) * 14f, -20f * s, -4f * s + sin(a) * 10f, 0f, line)
-        c.drawLine(8f * s, -40f * s, 8f * s - sin(a) * 14f, -20f * s, line); c.drawLine(8f * s - sin(a) * 14f, -20f * s, 12f * s - sin(a) * 10f, 0f, line)
-        rect.set(-22f * s, -80f * s, 22f * s, -40f * s); c.drawRoundRect(rect, 8f, 8f, f(metal))
-        rect.set(-14f * s, -74f * s, 0f, -64f * s); c.drawRect(rect, f(team))
-        c.drawRect(4f * s, -76f * s, 18f * s, -68f * s, f(if (era == 4) 0xFFFFC060.toInt() else 0xFF60E0FF.toInt()))
-        c.drawLine(16f * s, -56f * s, (44f - atk * 6f) * s, -58f * s, l(Ui.blend(metal, Color.BLACK, 0.4f), 9f * s))
-        if (era == 4) c.drawRect(-20f * s, -96f * s, -12f * s, -80f * s, f(0xFF3A3A3A.toInt()))
-        if (big) { l(Color.argb(140, 120, 240, 255), 4f); rect.set(-30f, -110f, 30f, -30f); c.drawOval(rect, line) }
-        if (atk > 0.75f) c.drawCircle(48f * s, -58f * s, 10f, f(if (era >= 6) 0xC080F0FF.toInt() else 0xC0FFE070.toInt()))
-    }
-
-    private fun hover(c: Canvas, team: Int, atk: Float, flash: Boolean) {
-        val bob = sin(time * 4f) * 3f
-        f(Color.argb(120, 120, 220, 255)); rect.set(-34f, -10f, 34f, 2f); c.drawOval(rect, fill)
-        path.reset(); path.moveTo(-40f, -16f + bob); path.lineTo(-30f, -36f + bob); path.lineTo(30f, -36f + bob); path.lineTo(44f, -16f + bob); path.close()
-        c.drawPath(path, f(if (flash) Color.WHITE else 0xFF6A6290.toInt()))
-        c.drawRect(-24f, -32f + bob, -8f, -24f + bob, f(team))
-        rect.set(-14f, -50f + bob, 16f, -34f + bob); c.drawRoundRect(rect, 8f, 8f, f(0xFF8E86C8.toInt()))
-        c.drawLine(12f, -42f + bob, 52f - atk * 5f, -44f + bob, l(0xFFB8B0FF.toInt(), 6f))
-        if (atk > 0.6f) c.drawCircle(56f, -44f + bob, 8f, f(0xC080FFFF.toInt()))
+        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.era == 1) 120f else 92f) else 80f
+        Body.MECH -> if (d.era == 7) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
     }
 
     // ---------------------------------------------------------------- pociski
 
     private fun drawProj(c: Canvas, p: Projectile) {
         val x = sx(p.x)
-        if (x < -50f || x > viewW + 50f) return
+        if (x < -60f || x > viewW + 60f) return
         val y = sy(p.h)
         val ang = atan2(-p.vh, p.vx)
-        val ca = cos(ang); val sa = sin(ang)
-        val kk = k
+        c.save()
+        c.translate(x, y)
+        c.rotate(ang * 57.29578f)
+        c.scale(k, k)
+        pen.alpha = 1f; pen.flash = false; pen.ow = 1.2f
         when (p.type) {
-            Proj.STONE -> c.drawCircle(x, y, 4f * kk, f(0xFF8A8A8A.toInt()))
-            Proj.BOULDER -> c.drawCircle(x, y, 10f * kk, f(0xFF7A7A7A.toInt()))
-            Proj.JAVELIN, Proj.ARROW -> c.drawLine(x - ca * 16f * kk, y - sa * 16f * kk, x + ca * 10f * kk, y + sa * 10f * kk, l(0xFF6A4A2A.toInt(), 2.5f * kk))
-            Proj.BOLT -> c.drawLine(x - ca * 10f * kk, y - sa * 10f * kk, x + ca * 6f * kk, y + sa * 6f * kk, l(0xFF3A2A1A.toInt(), 3f * kk))
-            Proj.BALL -> c.drawCircle(x, y, 6f * kk, f(0xFF1E1E1E.toInt()))
-            Proj.BULLET -> c.drawLine(x - ca * 14f * kk, y - sa * 14f * kk, x, y, l(0xFFFFE070.toInt(), 2.5f * kk))
-            Proj.SHELL -> { c.drawCircle(x, y, 5f * kk, f(0xFF3A3A30.toInt())); c.drawLine(x - ca * 14f * kk, y - sa * 14f * kk, x, y, l(0x80FFFFFF.toInt(), 2f * kk)) }
-            Proj.ROCKET -> {
-                c.drawLine(x - ca * 14f * kk, y - sa * 14f * kk, x + ca * 6f * kk, y + sa * 6f * kk, l(0xFFD0D0D0.toInt(), 5f * kk))
-                c.drawCircle(x - ca * 16f * kk, y - sa * 16f * kk, 5f * kk, f(0xFFFF9030.toInt()))
+            Proj.STONE -> pen.circle(0f, 0f, 4f, 0xFF8E8A84.toInt())
+            Proj.BOULDER -> { pen.circle(0f, 0f, 10f, 0xFF7E7A74.toInt()); if (pen.hi) pen.circleF(-3f, -3f, 3.5f, 0xFFA8A49C.toInt()) }
+            Proj.JAVELIN, Proj.ARROW -> {
+                val jav = p.type == Proj.JAVELIN
+                pen.seg(-18f, 0f, 8f, 0f, if (jav) 2.2f else 1.6f, 0xFF7A5232.toInt())
+                pen.tri(8f, -2.6f, 15f, 0f, 8f, 2.6f); pen.shape(if (jav) 0xFFC8923A.toInt() else 0xFFB4BCC6.toInt())
+                if (!jav) { pen.tri(-18f, 0f, -13f, -4f, -11f, 0f); pen.shapeF(0xFFE8E4DA.toInt()); pen.tri(-18f, 0f, -13f, 4f, -11f, 0f); pen.shapeF(0xFFD0302A.toInt()) }
             }
-            Proj.PLASMA -> { c.drawCircle(x, y, 9f * kk, f(0x6080FFFF)); c.drawCircle(x, y, 5f * kk, f(0xFFE0FFFF.toInt())) }
-            Proj.BEAM -> c.drawLine(x - ca * 50f * kk, y - sa * 50f * kk, x, y, l(0xFF90F8FF.toInt(), 4f * kk))
+            Proj.BOLT -> { pen.seg(-11f, 0f, 5f, 0f, 2.4f, 0xFF4A3420.toInt()); pen.tri(5f, -3f, 11f, 0f, 5f, 3f); pen.shape(0xFFB4BCC6.toInt()) }
+            Proj.BALL -> { pen.circle(0f, 0f, 6f, 0xFF26262A.toInt()); if (pen.hi) pen.circleF(-2f, -2f, 1.8f, 0xFF6A6A70.toInt()) }
+            Proj.BULLET -> { pen.glow(-8f, 0f, 3f, 0x60FFE070); c.drawLine(-16f, 0f, 0f, 0f, l(0xFFFFE070.toInt(), 2.4f)); pen.glow(0f, 0f, 1.8f, 0xFFFFFFE0.toInt()) }
+            Proj.SHELL -> {
+                c.drawLine(-20f, 0f, -6f, 0f, l(0x80FFFFFF.toInt(), 2.4f))
+                pen.rr(-6f, -3.5f, 6f, 3.5f, 3.4f, 0xFF4A4A3A.toInt()); pen.rectF(-5f, -3f, -2f, 3f, 0xFFC8923A.toInt())
+            }
+            Proj.ROCKET -> {
+                pen.glow(-18f, 0f, 6f, 0xC0FF9030.toInt()); pen.glow(-16f, 0f, 3f, 0xFFFFF0A0.toInt())
+                pen.tri(-14f, -6f, -8f, 0f, -14f, 6f); pen.shape(0xFF5A6446.toInt())
+                pen.rr(-14f, -3f, 8f, 3f, 2f, 0xFFD8D8D0.toInt())
+                pen.tri(8f, -3f, 14f, 0f, 8f, 3f); pen.shape(0xFFD0302A.toInt())
+            }
+            Proj.PLASMA -> { pen.glow(0f, 0f, 11f, 0x5080FFFF); pen.glow(-6f, 0f, 7f, 0x4080FFFF); pen.glow(0f, 0f, 6f, 0xFFB0FFFF.toInt()); pen.glow(0f, 0f, 3f, 0xFFFFFFFF.toInt()) }
+            Proj.BEAM -> { c.drawLine(-52f, 0f, 0f, 0f, l(0x6090F8FF, 8f)); c.drawLine(-50f, 0f, 0f, 0f, l(0xFFE0FFFF.toInt(), 2.6f)) }
         }
+        c.restore()
     }
 
     // ---------------------------------------------------------------- efekty

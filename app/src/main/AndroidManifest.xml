@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".CenturyWarApp"
         android:allowBackup="true"
         android:appCategory="game"
         android:enableOnBackInvokedCallback="true"
@@ -19,12 +20,11 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.CenturyWar">
 
-        <!-- SDK inicjujemy tylko po uzupełnieniu ID; placeholder nie uruchamia PGS. -->
+        <!-- Bez ID nie inicjujemy PGS przez provider przed startem aplikacji. -->
         <provider
             android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
             android:authorities="${applicationId}.playgamesinitprovider"
             tools:node="remove" />
-
         <meta-data
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/game_services_project_id" />

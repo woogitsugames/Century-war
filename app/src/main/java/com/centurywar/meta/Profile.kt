@@ -5,6 +5,7 @@ import com.centurywar.game.Campaign
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.pow
 
 class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: Float) {
@@ -73,7 +74,7 @@ class Profile(private val file: File) {
         }
     }
 
-    var name = "Dowódca"
+    var name = ""            // pusty = nowy profil; Game nadaje L["default_name"]
     var medals = 0
     val levels = HashMap<String, Int>()
     val stars = IntArray(Campaign.stages.size)
@@ -87,7 +88,7 @@ class Profile(private val file: File) {
     var vibration = true
     var sound = true
     var showFps = false
-    var lang = ""            // "" = systemowy, "pl", "en"
+    var lang = ""            // "" = systemowy, inaczej kod z L.CODES ("pl", "en", "de"...)
     var skirmishDiff = 1
 
     // statystyki
@@ -97,6 +98,9 @@ class Profile(private val file: File) {
     var playSeconds = 0L
 
     val boards = HashMap<String, MutableList<ScoreEntry>>()
+
+    /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
+    fun replayTutorial() { tutorialDone = false; save() }
 
     fun level(key: String) = levels[key] ?: 0
 
@@ -134,10 +138,15 @@ class Profile(private val file: File) {
 
     fun totalStars() = stars.sum()
 
-    /** Dodaje wynik do lokalnego rankingu; zwraca true, jeśli to rekord gracza na tej tablicy. */
+    /**
+     * Dodaje wynik do lokalnego rankingu; zwraca true, jeśli to rekord gracza na tej tablicy.
+     * Lokalne tablice zawierają wyłącznie wyniki tego urządzenia, więc rekord liczymy po całej
+     * liście (a nie po nazwie): zmiana nazwy dowódcy nie może robić "rekordu" ze słabszego wyniku.
+     */
+    @Synchronized
     fun submit(board: String, score: Long, day: Long): Boolean {
         val list = boards.getOrPut(board) { ArrayList() }
-        val prevBest = list.filter { it.name == name }.maxOfOrNull { it.score } ?: -1L
+        val prevBest = list.maxOfOrNull { it.score } ?: -1L
         list.add(ScoreEntry(name, score, day))
         list.sortByDescending { it.score }
         while (list.size > 20) list.removeAt(list.size - 1)
@@ -149,9 +158,10 @@ class Profile(private val file: File) {
     // ---------------------------------------------------------------- zapis
 
     /** Wywoływane wyłącznie po udanym zapisie lokalnym; callback nie blokuje gry. */
-    var onSaved: ((String) -> Unit)? = null
+    @Volatile var onSaved: ((String) -> Unit)? = null
 
     /** Ten sam format JSON v1, którego używa plik profilu. */
+    @Synchronized
     fun toJson(): String {
         val o = JSONObject()
         o.put("v", 1)
@@ -184,6 +194,7 @@ class Profile(private val file: File) {
     }
 
     /** Parsuje dane przed zmianą stanu, aby uszkodzony snapshot nie naruszył profilu. */
+    @Synchronized
     fun fromJson(json: String) {
         val o = JSONObject(json)
         val newLevels = HashMap<String, Int>()
@@ -207,6 +218,9 @@ class Profile(private val file: File) {
             }
         }
 
+        for (i in newStars.indices) newStars[i] = newStars[i].coerceIn(0, 3)
+        for (d in research) newLevels[d.key]?.let { newLevels[d.key] = it.coerceIn(0, d.max) }
+
         name = o.optString("name", name)
         medals = o.optInt("medals", 0)
         levels.clear()
@@ -226,40 +240,66 @@ class Profile(private val file: File) {
         wins = o.optInt("wins", 0)
         totalKills = o.optLong("totalKills", 0L)
         playSeconds = o.optLong("playSeconds", 0L)
+        medals = medals.coerceAtLeast(0)
+        bestWave = bestWave.coerceAtLeast(0)
+        lastRankedDaily = lastRankedDaily.coerceAtLeast(-1L)
+        if (quality !in 0..3) quality = 0
+        if (fpsCap != 0 && fpsCap != 30 && fpsCap != 60) fpsCap = 0
+        skirmishDiff = skirmishDiff.coerceIn(0, 3)
+        battles = battles.coerceAtLeast(0)
+        wins = wins.coerceIn(0, battles)
+        totalKills = totalKills.coerceAtLeast(0L)
+        playSeconds = playSeconds.coerceAtLeast(0L)
         boards.clear()
         boards.putAll(newBoards)
     }
 
+
+    /**
+     * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
+     * równoległe zapisy pisały do tego samego pliku .tmp i mogły zostawić sklejony, uszkodzony JSON.
+     */
+    @Synchronized
     fun save() {
         try {
             val json = toJson()
             val tmp = File(file.parentFile, file.name + ".tmp")
-            tmp.writeText(json)
+            FileOutputStream(tmp).use { out ->
+                out.write(json.toByteArray(Charsets.UTF_8))
+                out.flush()
+                // fsync przed rename: po utracie zasilania nie zostanie pusty plik profilu.
+                try { out.fd.sync() } catch (_: Exception) { }
+            }
             val saved = if (tmp.renameTo(file)) true else {
                 file.delete()
                 tmp.renameTo(file)
             }
             if (saved) onSaved?.invoke(json)
         } catch (_: Exception) {
-            // Brak miejsca itp. — gra spróbuje ponownie przy kolejnej okazji.
+            // Brak miejsca itp. — gra działa dalej, zapis spróbuje ponownie przy kolejnej okazji.
         }
     }
 
+    @Synchronized
     fun load() {
-        if (!file.exists()) return
+        // Awaryjny zapis (delete + rename) mógł zostać przerwany po usunięciu głównego pliku.
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        val src = if (file.exists()) file else if (tmp.exists()) tmp else return
         try {
-            fromJson(file.readText())
+            fromJson(src.readText())
         } catch (_: Exception) {
-            // Uszkodzony plik — zachowujemy kopię, bez automatycznego nadpisywania.
-            file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true)
+            // Uszkodzony plik — zaczynamy od czystego profilu, ale nie nadpisujemy go od razu.
+            try { src.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true) } catch (_: Exception) { }
         }
     }
 
+    @Synchronized
     fun pruneDailyBoards(today: Long) {
         boards.keys.filter { it.startsWith("daily_") && (it.removePrefix("daily_").toLongOrNull() ?: 0L) < today - 7 }
             .forEach { boards.remove(it) }
     }
 
+    @Synchronized
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
