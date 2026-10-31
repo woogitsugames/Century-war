@@ -1242,7 +1242,7 @@ class BattleScreen(
             pauseSpeedBtn.r.left - controlsX - 8 * dp)
         ui.button(c, pauseVibrationBtn, 14f)
         ui.button(c, pauseSpeedBtn, 14f)
-        for (b in pauseMenu) ui.button(c, b, 17f)
+        for (i in pauseMenu.indices) ui.button(c, pauseMenu[i], 17f)
     }
 
     private fun drawTop(c: Canvas) {
