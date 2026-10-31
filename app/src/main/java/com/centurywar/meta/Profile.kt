@@ -120,6 +120,8 @@ class Profile(private val file: File) {
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
     var vibration = true
     var sound = true
+    var sfxVolume = 0.8f
+        set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.8f }
     var musicVolume = 0.5f
         set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.5f }
     var showFps = false
@@ -225,6 +227,7 @@ class Profile(private val file: File) {
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
         o.put("sound", sound)
+        o.put("sfxVolume", sfxVolume.toDouble())
         o.put("musicVolume", musicVolume.toDouble())
         o.put("showFps", showFps)
         o.put("lang", lang)
@@ -411,6 +414,8 @@ class Profile(private val file: File) {
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
         sound = json.optBoolean("sound", true)
+        // Stare profile (także z sound=false) zachowują domyślne 80% efektów.
+        sfxVolume = json.optDouble("sfxVolume", 0.8).toFloat()
         showFps = json.optBoolean("showFps", false)
         lang = json.optString("lang", "")
         skirmishDiff = json.optInt("skirmishDiff", 1).coerceIn(0, 3)
@@ -437,7 +442,7 @@ class Profile(private val file: File) {
         quality = 0; fpsCap = 0; vibration = true; sound = true
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
-        musicVolume = 0.5f; notifications = true; notifyHour = 18
+        musicVolume = 0.5f; sfxVolume = 0.8f; notifications = true; notifyHour = 18
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()
