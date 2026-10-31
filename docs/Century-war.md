@@ -88,7 +88,7 @@ Scalone do `main` wszystkie zlecenia GPT 19–38 (kolejność: 19, 20, 24, 27, 2
 
 ## Co teraz
 
-1. Warianty epok (28): różnica A/B w epoce pary była 70 pp (wymóg ≤10). Strojenie było w toku na gałęzi `variant-bal` — sprawdź, czy trafiło do `main` (`git log --oneline main | grep -i wariant`); jeśli nie, uruchom `BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.variantReport*' --no-configuration-cache` i dostrój `Defs.kt` (sekcja `variants`).
+1. Warianty epok (28) zbalansowane (STEAM 0,5 pp, SILICON 4 pp przy 400 pojedynkach; `docs/BALANCE.md`). Po zmianach wariantów warto powtórzyć pomiar kampanii.
 2. Zebrać wrażenia użytkownika z APK (telefon, Galaxy Fold) i poprawiać.
 3. Zlecenia 19–38 są zamknięte; nowe zlecenia GPT pisać według wzoru w `docs/tasks/`.
 
