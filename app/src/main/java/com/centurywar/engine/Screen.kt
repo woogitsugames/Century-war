@@ -59,6 +59,7 @@ abstract class Screen(val g: Game) {
                             hit = true
                             b.pressed = false
                             g.haptic()
+                            g.sfx(Sound.CLICK, 0.6f)
                             onClick(b)
                             break
                         }

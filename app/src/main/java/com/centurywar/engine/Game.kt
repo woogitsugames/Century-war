@@ -38,6 +38,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var quality = Quality(Quality.HIGH)
         private set
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
+    /** Null w testach; na urządzeniu ustawia MainActivity. */
+    var sound: Sound? = null
+
+    fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
+        if (profile.sound) sound?.play(id, vol, gap, pitch)
+    }
 
     private var screen: Screen? = null
     private val stack = ArrayList<Screen>()

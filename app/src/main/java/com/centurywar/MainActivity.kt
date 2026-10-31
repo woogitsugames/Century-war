@@ -19,6 +19,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
+import com.centurywar.engine.Sound
 import com.centurywar.meta.Profile
 import java.io.File
 
@@ -38,6 +39,7 @@ class MainActivity : Activity(), Host {
         val profile = Profile(File(filesDir, "profile.json")).also { it.load() }
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
+        game.sound = Sound(this)
         view = GameView(this, game)
         setContentView(view)
 
@@ -113,6 +115,11 @@ class MainActivity : Activity(), Host {
     }
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
+    override fun onDestroy() {
+        game.sound?.release()
+        super.onDestroy()
+    }
+
     @Deprecated("Starsze Androidy (< 13)")
     @android.annotation.SuppressLint("GestureBackNavigation")
     override fun onBackPressed() {

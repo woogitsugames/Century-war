@@ -54,6 +54,7 @@ class Profile(private val file: File) {
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
     var vibration = true
+    var sound = true
     var showFps = false
     var lang = ""            // "" = systemowy, "pl", "en"
     var skirmishDiff = 1
@@ -130,6 +131,7 @@ class Profile(private val file: File) {
             o.put("quality", quality)
             o.put("fpsCap", fpsCap)
             o.put("vibration", vibration)
+            o.put("sound", sound)
             o.put("showFps", showFps)
             o.put("lang", lang)
             o.put("skirmishDiff", skirmishDiff)
@@ -170,6 +172,7 @@ class Profile(private val file: File) {
             quality = o.optInt("quality", 0)
             fpsCap = o.optInt("fpsCap", 0)
             vibration = o.optBoolean("vibration", true)
+            sound = o.optBoolean("sound", true)
             showFps = o.optBoolean("showFps", false)
             lang = o.optString("lang", "")
             skirmishDiff = o.optInt("skirmishDiff", 1)
