@@ -1,0 +1,43 @@
+name: Backend rankingów
+
+on:
+  push:
+    branches: [gpt/08-server]
+  pull_request:
+    paths:
+      - "server/**"
+      - "sim/**"
+      - "app/build.gradle.kts"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - ".github/workflows/server.yml"
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Testy endpointów i weryfikatora
+        run: ./gradlew :server:test -PserverOnly=true --console=plain
+
+  android-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Instalacja Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Kompilacja aplikacji
+        run: ./gradlew :app:assembleDebug --console=plain
+      - name: Test deterministyczności symulacji
+        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain

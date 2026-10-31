@@ -1,0 +1,212 @@
+# Century War — własny backend rankingów
+
+Kotlin/JVM + **Ktor 3** + **SQLite**. Wybór zamiast Cloudflare Workers/D1:
+kompilujemy ten sam kod deterministycznej symulacji w `:sim` dla Androida i backendu.
+D1 nie uruchamia natywnego Kotlin/JVM, więc weryfikacja wymagałaby dwóch niezależnych
+implementacji reguł walki — większe ryzyko różnic oraz błędów anty-cheatu.
+
+## Architektura
+
+- `:sim`: pojedyncze źródło prawdy — `Battle.kt`, `Ai.kt`, `Defs.kt`, `Modes.kt`,
+  przeniesione z aplikacji **bez zmiany pakietu `com.centurywar.game` ani logiki**.
+  Android importuje moduł przez `implementation(project(":sim"))`.
+- `:server`: Ktor/Netty, weryfikator headless, podpisy żądań, SQLite, testy JUnit 5.
+  Aplikacja pozostaje bez klienta HTTP — zadanie dotyczy backendu. Integracja klienta
+  wymaga późniejszego rejestratora komend i wysyłki podpisanych powtórek.
+- Baza: `players` (UUID i pseudonim), `scores` (wynik i skrót SHA-256 zgłoszenia),
+  `used_nonces` (przeciw ponownemu przesłaniu POST). **Nie zapisujemy logu bitwy,
+  emaila ani adresu IP**. Nick i UUID są jednak danymi pseudonimowymi, mogą podlegać RODO.
+
+## Lokalnie
+
+Wymagane JDK 17+ oraz dostęp do Maven Central. Aplikacja Android dodatkowo wymaga
+SDK 36. Aby kompilować sam serwer bez instalowania SDK Android:
+
+```bash
+export CW_HMAC_KEY="$(openssl rand -hex 32)"
+export CW_DATABASE_PATH="./data/leaderboards.db"
+export CW_GAME_VERSION="0.1.0"
+./gradlew :server:test -PserverOnly=true --console=plain
+./gradlew :server:run -PserverOnly=true --console=plain
+```
+
+Standardowe zadanie akceptacyjne `./gradlew :server:test` również istnieje
+(przy normalnej konfiguracji projektu Android SDK może być wymagany).
+Testy kompatybilności aplikacji:
+
+```bash
+./gradlew :app:assembleDebug --console=plain
+./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
+```
+
+### API v1
+
+Każde żądanie, **również GET**, musi mieć nagłówki:
+
+| Nagłówek | Wartość |
+|---|---|
+| `X-CW-Timestamp` | czas UTC, sekundy Unix, dopuszczalna różnica ±300 s |
+| `X-CW-Nonce` | nowe UUID na każde żądanie |
+| `X-CW-Signature` | HMAC-SHA256 lowercase hex (64 znaki) |
+
+Klucz: `CW_HMAC_KEY` (co najmniej 32 bajty UTF-8, podawany przez środowisko).
+Podpis powstaje z **dokładnych bajtów tekstu UTF-8**:
+
+```text
+timestamp\nnonce\nMETHOD\n/uri?query=...\nbody
+```
+
+Elementy oddzielone pojedynczym LF, bez dodatkowego LF na końcu; body jest
+pustym ciągiem dla GET. URI zawiera query string w takiej kolejności, w jakiej
+zostanie wysłany. Metoda to `GET` albo `POST`.
+
+#### POST /v1/score
+
+Przykładowy format (wynik poniżej jest **wyłącznie przykładem schematu**,
+nie jest poprawną, zweryfikowaną powtórką):
+
+```json
+{
+  "board": "endless",
+  "player": "a16036d5-800a-4898-aea3-11b6548de7b4",
+  "nick": "Gracz_12",
+  "gameVersion": "0.1.0",
+  "replayVersion": 1,
+  "seed": 12345,
+  "ticks": 900,
+  "commands": [{"tick": 900, "action": "SURRENDER"}],
+  "score": 257
+}
+```
+
+Pozostałe pola: `day` (tylko `daily`, dzień UTC od epoki Unix), `stage`
+(tylko `campaign`, indeks 0–31). Gracz to losowy **UUID v4**, utrwalany
+lokalnie na urządzeniu; `nick` ma 1–24 znaki Unicode: litery, cyfry,
+spację oraz `._-`, bez białych znaków na końcach.
+
+Serwer **nie przyjmuje** modyfikacji rozgrywki od klienta. Konfiguracje:
+- `daily`: `day` = dzisiejszy dzień UTC, `seed=day`, `Daily.config()`
+  (badania wyłączone), **pierwszy poprawny wynik dziennie**.
+- `endless`: `BattleConfig(Mode.ENDLESS, seed, 1f)`, bez badań.
+- `skirmish`: `BattleConfig(Mode.SKIRMISH, seed, 1f)`, bez badań.
+- `campaign`: `Campaign.config(stages[stage], Bonuses(), seed)`;
+  ranking oddzielny dla każdego etapu, np. `campaign_7`. **Nie** jest to
+  globalna suma gwiazdek kampanii: jej weryfikacja wymagałaby dziennika 32 etapów.
+
+Dopuszczalne akcje:
+
+| Akcja | `arg` | Efekt |
+|---|---|---|
+| `QUEUE_UNIT` | 0..3 | `Role` od MELEE do ELITE |
+| `CANCEL_LAST`, `EVOLVE`, `ARMORY` | 0 | Odpowiednia komenda bitwy |
+| `CHOOSE_DOCTRINE` | 0..2 | Wybór z trzech proponowanych doktryn |
+| `BUY_TURRET`, `UPGRADE_TURRET`, `SELL_TURRET` | 0..3 | Numer slotu |
+| `BARRAGE`, `RALLY` | 0 | Umiejętności |
+| `HOLD` | 0 lub 1 | Postawa armii |
+| `SURRENDER` | 0 | Zakończ po co najmniej 60 tickach |
+
+`tick` to numer kroku **przed** wywołaniem `Battle.step()`, liczony od 0.
+Wszystkie akcje w ramach jednego ticku są wykonywane w kolejności w tablicy.
+`ticks` oznacza całkowitą liczbę przeprowadzonych kroków; akcja na ticku
+`ticks` wykonuje się po ostatnim kroku (np. rezygnacja).
+Każda komenda musi się udać — serwer odrzuca niemożliwe zakupy,
+awans bez XP, doktrynę poza wyborem, pauzę bez wyboru, działania po końcu.
+Przyjęta bitwa musi być zakończona, a `score` musi być identyczne z
+`Battle.score()`. Niepoprawne logi nie zajmują miejsca w rankingu.
+
+Ograniczenia: 1 MiB żądania, 20 000 komend, 32 akcje/tick,
+maks. 90 000 ticków (pozostałe tryby) lub 216 000 (endless),
+budżet weryfikacji 12 s. Wynik musi być dodatni. Błędy: `400` (format),
+`401` (podpis / nonce), `409` (drugie zgłoszenie daily),
+`413` (rozmiar), `422` (niezgodna powtórka), `429` (limit).
+
+Odpowiedź `200`:
+```json
+{"board":"endless","verifiedScore":257,"bestScore":257,"accepted":true}
+```
+
+Dla rekordów poza daily zapisujemy najlepszy wynik gracza na danej tablicy
+w danym dniu; dla okresu tygodnia/całości wybieramy najlepszy wynik gracza
+ze wszystkich zakwalifikowanych dni. Przesłanie słabszego wyniku daje
+`accepted:false`, a drugi poprawny daily daje `409`.
+
+#### GET /v1/top?board=endless&period=week
+
+`period`: `day` (dzisiaj UTC), `week` (poniedziałek UTC–niedziela),
+`all` (bez daty). `board`: `daily`, `endless`, `skirmish`,
+`campaign_0` ... `campaign_31`. Odpowiedź zawiera pierwsze 50 pozycji.
+Remisy rozstrzyga leksykograficznie UUID (stabilna kolejność).
+
+#### GET /v1/around?board=endless&period=all&player=<uuid>
+
+Zwraca do 3 miejsc przed i 3 za wskazanym graczem, wraz z nim samym.
+Brak wyniku gracza daje pustą listę. JSON:
+
+```json
+{"board":"endless","period":"all","entries":[{"rank":1,"player":"a16036d5-800a-4898-aea3-11b6548de7b4","nick":"Gracz_12","score":257}]}
+```
+
+### Bezpieczeństwo i ograniczenia
+
+- HMAC **nie jest silnym uwierzytelnieniem** w aplikacji mobilnej: klucz da
+  się wyodrębnić z APK. Znajomość sekretu pozwala podszyć się pod cudzy UUID.
+  To **weryfikacja możliwego przebiegu**, a nie dowód uczciwego gracza.
+  Do produkcji rozważ Google Play Integrity i token wydawany przez serwer
+  per instalacja / sesja, wraz z serwerowym seedem i ograniczeniem prób.
+- Dowolny klient może generować wiele legalnych powtórek offline. Serwer
+  nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
+  Dla daily seed jest stały; dla pozostałych trybów klient deklaruje seed.
+- Weryfikator jest ściśle związany z wersją symulacji. Podbij
+  `CW_GAME_VERSION` i `replayVersion` przy zmianach balansu/protokołu.
+  Przed wdrożeniem sprawdź **te same** powtórki na Android/JVM (Float).
+- Ograniczenia: POST 20/min/IP i 6/min/UUID; GET 120/min/IP,
+  maks. 2 równoczesne weryfikacje; nonce POST trwały w SQLite
+  (10 minut). Rate limiter IP jest **w pamięci jednej instancji**.
+  Nie ufamy nagłówkowi `X-Forwarded-For`; stosujemy adres połączenia.
+- Konieczny jest HTTPS/TLS na reverse proxy, limit surowego body 1 MiB
+  w proxy (serwer Ktor sprawdza wielkość dopiero po odczycie body),
+  per-IP limit również na proxy, nadzór logów, kopie bazy.
+- Jedna instancja SQLite z trwałym wolumenem. **Nie skaluj** równolegle
+  wielu kontenerów z jedną lokalną bazą, bez zmiany warstwy danych.
+- Dane wyników i pseudonimy wymagają polityki retencji, informacji o
+  przetwarzaniu i funkcji usunięcia/zmiany identyfikatora przed publikacją.
+
+## Wdrożenie: Docker / VPS
+
+Build z **katalogu głównego repozytorium**:
+
+```bash
+docker build -f server/Dockerfile -t century-war-score .
+docker volume create century-war-data
+docker run -d --restart unless-stopped --name century-war-score \
+    -p 127.0.0.1:8080:8080 \
+    -v century-war-data:/var/lib/cw \
+    -e CW_HMAC_KEY="$CW_HMAC_KEY" \
+    -e CW_DATABASE_PATH=/var/lib/cw/leaderboards.db \
+    century-war-score
+```
+
+Postaw Nginx/Caddy z TLS przed portem 8080, ustaw `client_max_body_size 1m`,
+limit zapytań i czas odczytu żądania. Zrób backup SQLite przez
+`sqlite3 /var/lib/cw/leaderboards.db '.backup /.../backup.db'`.
+
+**Fly.io:** stwórz aplikację Docker, `fly volumes create data --size 1`
+w regionie aplikacji, zamontuj do `/var/lib/cw`, ustaw
+`fly secrets set CW_HMAC_KEY=...` i uruchom jedną maszynę.
+Dane na wolumenie lokalnym nie replikują się automatycznie.
+
+**Render:** wybierz Docker Web Service i **płatny persistent disk**
+zamontowany pod `/var/lib/cw`, `CW_HMAC_KEY` ustaw jako secret
+environment variable, `PORT=8080`. Na usługach z nietrwałym FS
+rankingi znikną po redeployu.
+
+**VPS:** Docker Compose lub systemd z pojedynczą instancją i
+stałym wolumenem, reverse proxy TLS i backupami.
+
+## Kryteria testowe
+
+`./gradlew :server:test` uruchamia testy prawdziwej powtórki,
+odrzucenia sfałszowanego wyniku i niedozwolonej komendy,
+HMAC/nonce, endpointów oraz polityki jednego zgłoszenia daily.
+Workflow w `.github/workflows/server.yml` uruchamia również budowę
+aplikacji i test deterministyczności `BattleSimTest`.
