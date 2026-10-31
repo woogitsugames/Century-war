@@ -734,7 +734,7 @@ class BattleScreen(
             ui.panel(c, tmpR, Color.argb(245, 40, 48, 70), 14f)
             val mr = min(36 * dp, b.r.width() * 0.2f)
             val my = tmpR.top + 18 * dp + mr
-            ui.medallion(c, tmpR.centerX(), my, mr, Ui.ERA[(i * 3 + ch[i].ordinal) % 8], doctrineIcon(ch[i]))
+            ui.medallion(c, tmpR.centerX(), my, mr, Ui.ERA[(i * 3 + ch[i].ordinal) % Defs.ERA_COUNT], doctrineIcon(ch[i]))
             val name = L[ch[i].key]
             ui.textO(c, name, tmpR.centerX(), my + mr + 26 * dp, ui.fit(name, 19f, tmpR.width() - 24 * dp), Ui.GOLD, Paint.Align.CENTER)
             ui.wrap(c, L[ch[i].key + "_d"], tmpR.centerX(), my + mr + 48 * dp, tmpR.width() - 28 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
