@@ -41,6 +41,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var weeklyLang = -1
     private var weeklySecond = -1L
     private var weeklyInfo = ""
+    private var weeklyInfoLines = emptyArray<String>()
+    private var weeklyModsLines = emptyArray<String>()
     private var weeklyEras = ""
     private var weeklyMods = ""
     private var weeklyCard = ""
@@ -73,6 +75,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyTab.iconId = Icons.MEDAL
         dailyTab.visible = mode == Mode.DAILY
         weeklyTab.visible = mode == Mode.DAILY
+        weeklyLang = -1 // Po zmianie rozmiaru ekranu przelicz szerokości tekstu.
         val gap = 8 * dp
         val dw = (pw - 44 * dp - gap * 3) / 4
         for (i in 0..3) {
@@ -105,6 +108,21 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         for (i in 0..3) diff[i].selected = g.profile.skirmishDiff == i
     }
 
+    /** Dzielenie tekstu przy przebudowie karty, nie w klatce renderowania. */
+    private fun cachedWrap(value: String, width: Float, size: Float): Array<String> {
+        val lines = ArrayList<String>()
+        var line = ""
+        for (word in value.split(' ')) {
+            val candidate = if (line.isEmpty()) word else "$line $word"
+            if (line.isNotEmpty() && ui.measure(candidate, size) > width) {
+                lines.add(line)
+                line = word
+            } else line = candidate
+        }
+        if (line.isNotEmpty()) lines.add(line)
+        return lines.toTypedArray()
+    }
+
     /** Odświeżenie opisów wyłącznie przy zmianie tygodnia lub języka. */
     private fun rebuildWeekly(today: Long) {
         week = Weekly.weekNumber(today)
@@ -117,6 +135,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
         weeklyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
         weeklyCard = L["weekly_start_card"] + ": " + L[cfg.weeklyCard!!.textKey]
+        val full = panel.width() - 40 * dp
+        weeklyInfoLines = cachedWrap(weeklyInfo, full, 13f)
+        weeklyModsLines = cachedWrap(weeklyMods, (full - 16 * dp) / 2f - 23 * dp, 12f)
         val score = g.profile.top(Profile.weeklyBoard(week)).firstOrNull()?.score
         weeklyBest = L["best"] + ": " + (score?.toString() ?: L["no_scores"])
         for (i in 0 until Weekly.TIER_COUNT) {
@@ -132,23 +153,29 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val full = panel.width() - 40 * dp
         val colWidth = (full - 16 * dp) / 2f
         var y = panel.top + 81 * dp
-        y += ui.wrap(c, weeklyInfo, x, y, full, 13f)
-        y += 11 * dp
+        for (line in weeklyInfoLines) {
+            ui.textO(c, line, x, y, 13f)
+            y += 17 * dp
+        }
+        y += 7 * dp
         val leftX = x
         val rightX = x + colWidth + 16 * dp
         val leftTop = y
         Icons.draw(c, Icons.TOWER, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyEras, leftX + 23 * dp, y, ui.fit(weeklyEras, 13f, colWidth - 23 * dp), Ui.TEXT)
-        y += 28 * dp
+        y += 24 * dp
         Icons.draw(c, Icons.CROWN, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyCard, leftX + 23 * dp, y, ui.fit(weeklyCard, 13f, colWidth - 23 * dp), Ui.GOLD)
-        y += 28 * dp
+        y += 24 * dp
         Icons.draw(c, Icons.HOURGLASS, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyCountdown, leftX + 23 * dp, y, ui.fit(weeklyCountdown, 13f, colWidth - 23 * dp), Ui.TEXT)
 
         var ry = leftTop
         Icons.draw(c, Icons.FLAG, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
-        ry += ui.wrap(c, weeklyMods, rightX + 23 * dp, ry, colWidth - 23 * dp, 12f, Ui.TEXT)
+        for (line in weeklyModsLines) {
+            ui.textO(c, line, rightX + 23 * dp, ry, 12f)
+            ry += 16 * dp
+        }
         ry += 8 * dp
         Icons.draw(c, Icons.TROPHY, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyBest, rightX + 23 * dp, ry, ui.fit(weeklyBest, 13f, colWidth - 23 * dp), Ui.GOLD)

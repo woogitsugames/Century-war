@@ -32,6 +32,8 @@ class RankingsScreen(g: Game) : Screen(g) {
     private var day = Daily.dayNumber()
     private var week = Weekly.weekNumber(day)
     private var previousWeek = false
+    private var periodLabelWeek = Long.MIN_VALUE
+    private var periodLabel = ""
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS, Icons.MEDAL)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
 
@@ -88,6 +90,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         }
         if (global.visible != (g.online.available && tab != 4) || periodToggle.visible != (tab == 4)) layout()
         periodToggle.label = L[if (previousWeek) "weekly_current" else "weekly_previous"]
+        val selectedWeek = if (previousWeek) week - 1L else week
+        if (periodLabelWeek != selectedWeek) {
+            periodLabelWeek = selectedWeek
+            periodLabel = L.f("weekly_week_number", selectedWeek)
+        }
         for (i in 0..4) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }
 
@@ -107,7 +114,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val r = panel.right - inner
         var y = panel.top + 54 * dp
         if (tab == 4) {
-            ui.textO(c, L.f("weekly_week_number", if (previousWeek) week - 1L else week),
+            ui.textO(c, periodLabel,
                 panel.centerX(), y + 2 * dp, 12f, Ui.GOLD, Paint.Align.CENTER)
             y += 20 * dp
         }
