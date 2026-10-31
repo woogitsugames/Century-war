@@ -39,7 +39,8 @@ class ModerationStoreTest {
                 assertThrows(BlockedPlayerException::class.java) {
                     store.save(first, VerifiedReplay("endless", 300L, 900), now, "hash-d")
                 }
-                assertEquals(2, store.recentScores().size + store.recentScores().count { it.board == "campaign_7" } - 1)
+                assertEquals(3, store.recentScores().size)
+                assertEquals(2, store.recentScores().count { it.blocked })
             }
             SqliteStore(jdbc).use { store ->
                 assertTrue(store.isBlocked(first.player))
