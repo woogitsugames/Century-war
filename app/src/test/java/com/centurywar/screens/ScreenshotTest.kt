@@ -585,7 +585,9 @@ class ScreenshotTest {
                     g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 9900L, 1f,
                         startEra = steam, maxEra = steam)))
                     shot(g, "variant_modal_${tag}_${lang}")
-                    g.setScreen(CodexScreen(g, steam))
+                    val variantCodex = CodexScreen(g, steam)
+                    g.setScreen(variantCodex)
+                    variantCodex.showCategory(2)
                     shot(g, "variant_codex_${tag}_${lang}")
                 }
             }
@@ -811,11 +813,40 @@ class ScreenshotTest {
             shot(g, "${tag}_endless_skirmishers_preview")
             val codex = CodexScreen(g, 0)
             g.setScreen(codex)
+            codex.showCategory(9)
             val end = field(codex, "maxScroll").getFloat(codex)
             field(codex, "scroll").setFloat(codex, end * 0.5f)
             shot(g, "${tag}_codex_endless_bosses")
             field(codex, "scroll").setFloat(codex, end)
             shot(g, "${tag}_codex_endless_waves")
+        }
+    }
+
+    /** Wszystkie działy Kodeksu: góra i dół na 720p oraz Foldzie w pionie, także przy 130%. */
+    @Test
+    fun codexAllCategories() {
+        val priorLang = L.lang
+        try {
+            L.setCode("pl")
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.textScale = 130
+                g.applyAccessibility()
+                val codex = CodexScreen(g, Defs.eraOf(com.centurywar.game.EraArt.STEAM))
+                g.setScreen(codex)
+                for (category in 0 until 10) {
+                    codex.showCategory(category)
+                    shot(g, "${tag}_codex_section_${category}_top")
+                    codex.onDrag(0f, -100000f)
+                    shot(g, "${tag}_codex_section_${category}_bottom")
+                }
+            }
+        } finally {
+            L.lang = priorLang
         }
     }
 
@@ -897,7 +928,9 @@ class ScreenshotTest {
         show("accessibility_bottom", access, "accessibility")
         show("hints", HintSettingsScreen(g), "hint_settings")
         show("codex", CodexScreen(g, 0), "codex")
-        show("codex_variants", CodexScreen(g, 4), "codex")
+        val variantGuide = CodexScreen(g, Defs.eraOf(com.centurywar.game.EraArt.STEAM))
+        variantGuide.showCategory(2)
+        show("codex_variants", variantGuide, "codex")
         show("play_games", PlayGamesScreen(g), "play_games")
     }
 
