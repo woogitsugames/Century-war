@@ -59,7 +59,8 @@ abstract class Screen(val g: Game) {
                 activePointer = -1
                 if (e.action == TouchEvent.UP && !dragging) {
                     var hit = false
-                    for (b in buttons.toList()) {
+                    for (i in 0 until buttons.size) {
+                        val b = buttons[i]
                         if (b.pressed && b.contains(e.x, e.y) && b.enabled) {
                             hit = true
                             b.pressed = false

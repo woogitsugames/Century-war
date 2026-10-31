@@ -89,7 +89,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         statsTimer -= dt
-        if (statsTimer <= 0f) { statsTimer = 1f; refreshStats() }
+        if (statsTimer <= 0f) { statsTimer = 1f; refreshStats(); refreshEntries() }
         // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
         if (global.visible != g.online.available) layout()
         for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }

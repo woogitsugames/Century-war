@@ -69,6 +69,13 @@ class BattleScreen(
     private var reward = 0
     private var newRecord = false
     private var tipKey = ""
+    private var resultKills = ""
+    private var resultWave = ""
+    private var resultWaveLabel = ""
+    private var resultBosses = ""
+    private var resultScore = ""
+    private var resultReward = ""
+    private var resultTip = ""
 
     private companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
@@ -341,6 +348,12 @@ class BattleScreen(
     private fun refreshButtons() {
         val p = battle.player
         if (p.slots != turretSlotsLaid) layoutTurretPanel()
+        if (p.era != turretHeadingEra || turretHeadingLanguage != L.lang) {
+            turretHeadingEra = p.era
+            turretHeadingLanguage = L.lang
+            turretHeading = "${L["turrets"]} — ${L[Defs.eras[p.era].turret.nameKey]}"
+            for (i in slotLabels.indices) slotLabels[i] = L.f("slot", i + 1)
+        }
         val modal = paused || finished || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
         for (i in 0..3) {
             val role = roles[i]
@@ -481,6 +494,11 @@ class BattleScreen(
     private val costCache = IntArray(6) { -1 }
     private val costText = Array(6) { "" }
     private var armoryLv = -1
+    private var turretHeadingEra = -1
+    private var turretHeadingLanguage = -1
+    private var turretHeading = ""
+    private val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
+    private val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
     private var shownRank = -1
     private var shownRankLanguage = -1
     private var shownRankText = ""
@@ -649,6 +667,13 @@ class BattleScreen(
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
             else -> "tip_ability"
         }
+        resultKills = battle.player.kills.toString()
+        resultWave = battle.wave.toString()
+        resultWaveLabel = L.f("wave", battle.wave).substringBefore(' ')
+        resultBosses = battle.bossesDefeated.toString()
+        resultScore = score.toString()
+        resultReward = "+$reward ${L["medals"]}"
+        resultTip = if (tipKey.isEmpty()) "" else "${L["why_lost"]}: ${L[tipKey]}"
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         if (won) g.host.onBattleWon()
@@ -949,7 +974,7 @@ class BattleScreen(
     private fun drawTurretPanel(c: Canvas) {
         val p = battle.player
         ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, "${L["turrets"]} — ${L[Defs.eras[p.era].turret.nameKey]}", 16f,
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, turretHeading, 16f,
             Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
         for (i in 0 until p.slots) {
             val b = slotBuy[i]
@@ -960,11 +985,11 @@ class BattleScreen(
             val cy = b.r.centerY()
             val mr = b.r.height() * 0.5f
             ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
-            if (te < 0) ui.textO(c, (i + 1).toString(), panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            if (te < 0) ui.textO(c, slotNumbers[i], panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             val tx = panel.left + 28 * dp + mr * 2
             val name = if (te >= 0) L[Defs.eras[te].turret.nameKey] else L["empty"]
             val avail = b.r.left - tx - 6 * dp
-            ui.textO(c, L.f("slot", i + 1), tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
+            ui.textO(c, slotLabels[i], tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
             ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
             ui.button(c, slotBuy[i], 13f)
             ui.button(c, slotSell[i], 13f)
@@ -1007,6 +1032,21 @@ class BattleScreen(
         }
     }
 
+    private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
+        val lh = 28 * dp
+        if (y + lh > restartEnd.r.top - 8 * dp) return y
+        val lx = resultPanel.left + 30 * dp
+        val rx = resultPanel.right - 30 * dp
+        tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
+        ui.fill.color = Color.argb(30, 255, 255, 255)
+        c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+        val cy = tmpR.centerY()
+        Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
+        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+        ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
+        return y + lh
+    }
+
     private fun drawResults(c: Canvas) {
         val a = min(1f, resultTime * 2f)
         c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
@@ -1034,34 +1074,20 @@ class BattleScreen(
             Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
             y += 48 * dp
         }
-        val lx = rp.left + 30 * dp
-        val rx = rp.right - 30 * dp
-        val lh = 28 * dp
-        fun row(icon: Int, k: String, v: String, col: Int = Ui.TEXT) {
-            if (y + lh > restartEnd.r.top - 8 * dp) return
-            tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
-            ui.fill.color = Color.argb(30, 255, 255, 255)
-            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-            val cy = tmpR.centerY()
-            Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-            ui.textO(c, k, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
-            ui.textO(c, v, rx, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
-            y += lh
-        }
-        row(Icons.STOPWATCH, L["time"], timeStr(battle.time))
-        row(Icons.SKULL, L["kills"], battle.player.kills.toString())
+        y = drawResultRow(c, y, Icons.STOPWATCH, L["time"], timeStr(battle.time))
+        y = drawResultRow(c, y, Icons.SKULL, L["kills"], resultKills)
         if (cfg.mode == Mode.ENDLESS) {
-            row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
-            row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
+            y = drawResultRow(c, y, Icons.TOWER, resultWaveLabel, resultWave)
+            y = drawResultRow(c, y, Icons.CROWN, L["bosses_defeated"], resultBosses)
         }
-        if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
-        row(Icons.MEDAL, L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
+        if (cfg.mode != Mode.CAMPAIGN) y = drawResultRow(c, y, Icons.STAR, L["score"], resultScore, Ui.GOLD)
+        y = drawResultRow(c, y, Icons.MEDAL, L["reward"], resultReward, Ui.GOLD)
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
             ui.textO(c, L["new_record"], rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
         if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            ui.wrap(c, "${L["why_lost"]}: ${L[tipKey]}", rp.centerX(), y + 18 * dp, rp.width() - 50 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
+            ui.wrap(c, resultTip, rp.centerX(), y + 18 * dp, rp.width() - 50 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
         }
         c.restore()
         ui.button(c, continueBtn, 17f)
