@@ -4,9 +4,9 @@ import android.app.ActivityManager
 import android.content.Context
 
 /**
- * Profil wydajności. Na tanich telefonach renderujemy w mniejszej rozdzielczości
+ * Profil wydajności. Na tanich telefonach renderujemy w mniejszej rozdzielczości (75–90%)
  * (sprzętowy skaler ekranu powiększa obraz za darmo), z mniejszą liczbą cząsteczek
- * i bez antyaliasingu. Na flagowcach i Foldach w pełnej rozdzielczości.
+ * i bez drobnych detali (faktury, nity, cieniowanie). Na flagowcach i Foldach w pełnej rozdzielczości.
  */
 class Quality(val level: Int) {
     companion object {
@@ -31,9 +31,10 @@ class Quality(val level: Int) {
         }
     }
 
-    val baseScale = when (level) { LOW -> 0.6f; MED -> 0.8f; else -> 1f }
+    val baseScale = when (level) { LOW -> 0.75f; MED -> 0.9f; else -> 1f }
     val maxParticles = when (level) { LOW -> 70; MED -> 160; else -> 320 }
-    val antialias = level >= MED
+    /** Kontury postaci bez antyaliasingu wyglądają poszarpane; na GPU (lockHardwareCanvas) AA jest prawie darmowe. */
+    val antialias = true
     val parallaxLayers = when (level) { LOW -> 1; MED -> 2; else -> 3 }
     val clouds = level >= MED
     val shadows = level >= HIGH
