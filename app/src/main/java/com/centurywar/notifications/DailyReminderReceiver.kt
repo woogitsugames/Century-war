@@ -8,9 +8,15 @@ import android.content.Intent
 class DailyReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         when (intent?.action) {
-            DailyReminders.ACTION_REMIND -> DailyReminders.onAlarm(
-                context, intent.getLongExtra(DailyReminders.EXTRA_EXPECTED_AT, -1L),
-            )
+            DailyReminders.ACTION_REMIND -> {
+                val expectedAt = intent.getLongExtra(DailyReminders.EXTRA_EXPECTED_AT, -1L)
+                val pending = goAsync()
+                val app = context.applicationContext
+                Thread({
+                    try { DailyReminders.onAlarm(app, expectedAt) }
+                    finally { pending.finish() }
+                }, "reminder-alarm-io").apply { isDaemon = true; start() }
+            }
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
             Intent.ACTION_TIME_CHANGED,
