@@ -41,6 +41,7 @@ import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
 import com.centurywar.notifications.DailyReminders
+import com.centurywar.notifications.DailyReminderProfile
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
 import java.net.URI
@@ -195,10 +196,7 @@ class MainActivity : Activity(), Host {
         view.onResume()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
-        val app = applicationContext
-        Thread({ DailyReminders.refresh(app) }, "reminder-io").apply {
-            isDaemon = true; priority = Thread.MIN_PRIORITY; start()
-        }
+        DailyReminders.refresh(this)
         playGames?.refreshSignIn()
         game.music?.resume()
     }
@@ -285,15 +283,22 @@ class MainActivity : Activity(), Host {
 
     // ---------------------------------------------------------------- Host
 
+    private fun reminderSnapshot(): DailyReminderProfile {
+        val p = game.profile
+        return DailyReminderProfile(p.notifications, p.notifyHour, p.wins, p.lastRankedDaily, p.lang)
+    }
+
     override fun onBattleWon() {
+        val snapshot = reminderSnapshot()
         runOnUiThread {
-            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this, snapshot)
         }
     }
 
     override fun onNotificationSettingsChanged() {
+        val snapshot = reminderSnapshot()
         runOnUiThread {
-            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this, snapshot)
         }
     }
 
