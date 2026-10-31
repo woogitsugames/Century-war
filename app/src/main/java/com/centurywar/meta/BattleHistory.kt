@@ -245,6 +245,13 @@ class BattleHistory(private val file: File) {
         writer.execute { persist() }
     }
 
+    /** Reset profilu usuwa także lokalną historię, nie dotykając stanu w chmurze. */
+    @Synchronized
+    fun clear() {
+        entries.clear()
+        writer.execute { persist() }
+    }
+
     private fun persist() {
         val content = synchronized(this) { toJson() }
         try {
