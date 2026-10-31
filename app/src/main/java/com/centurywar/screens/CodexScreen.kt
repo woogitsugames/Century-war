@@ -16,6 +16,7 @@ import com.centurywar.game.Body
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Defs
+import com.centurywar.game.Weather
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import java.util.Locale
@@ -75,7 +76,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var scroll = 0f
     private var maxScroll = 0f
     private val gap get() = 12 * dp
-    private val headerH get() = 50 * dp
+    private val headerH get() = 174 * dp
     private val rowH get() = (if (ui.textScale > 1.15f) 26f else 21f) * dp
 
     // dane kart (przeliczane w rebuild)
@@ -93,6 +94,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var eraNum = ""
     private var evolveText = ""
     private var eliteTag = ""
+    private val weatherNames = Array(Weather.entries.size) { "" }
+    private val weatherDescriptions = Array(Weather.entries.size) { "" }
     private var eliteLocked = false
 
     private val card = RectF()
@@ -148,6 +151,10 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     /** Przelicza wszystkie teksty i wartości (bez tego render nie alokuje). */
     private fun rebuild() {
+        for (type in Weather.entries) {
+            weatherNames[type.ordinal] = L[type.key]
+            weatherDescriptions[type.ordinal] = L[type.key + "_d"]
+        }
         val b = if (withResearch) g.profile.bonuses() else Bonuses()
         val e = Defs.eras[era]
         val variant = Defs.spec(era).variants.getOrNull(selectedVariant)
@@ -300,7 +307,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     }
 
     private fun drawEraHeader(c: Canvas, y: Float) {
-        val cy = y + headerH * 0.42f
+        val cy = y + 25 * dp
         val col = Ui.ERA[era]
         ui.medallion(c, left + 18 * dp, cy, 18 * dp, col, Icons.CODEX)
         val tx = left + 44 * dp
@@ -308,6 +315,19 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         ui.textO(c, eraNum, tx + ui.measure(eraName, 22f, true) + 10 * dp, cy + 1 * dp, 13f, Ui.DIM)
         val right = left + contentW
         ui.badge(c, right, cy, Icons.XP, evolveText, 15f, Ui.XP, alignRight = true)
+        ui.textO(c, L["w_codex"], left + 2 * dp, y + 54 * dp, 14f, Ui.GOLD)
+        for (type in Weather.entries) {
+            val i = type.ordinal
+            val yy = y + (77 + i * 23) * dp
+            Icons.draw(c, Icons.weatherIcon(type), left + 12 * dp, yy - 5 * dp, 18 * dp, dp = dp)
+            ui.textO(c, weatherNames[i], left + 27 * dp, yy, 12f, Ui.TEXT)
+            val x = left + 128 * dp
+            val available = contentW - 131 * dp
+            if (available > 40 * dp) {
+                val desc = weatherDescriptions[i]
+                ui.textO(c, desc, x, yy, ui.fit(desc, 12f, available, 8.5f), Ui.DIM)
+            }
+        }
     }
 
     private fun drawCard(c: Canvas, i: Int) {

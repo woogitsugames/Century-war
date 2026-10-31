@@ -3,6 +3,10 @@ package com.centurywar.server
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
+import com.centurywar.game.Bonuses
+import com.centurywar.game.Campaign
+import com.centurywar.game.Daily
+import com.centurywar.game.Weather
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.Research
@@ -47,6 +51,57 @@ class ReplayVerifierTest {
 
         fun replayOf(input: ScoreSubmission): Replay.Log = Replay.decode(input.replay)
         fun withLog(input: ScoreSubmission, log: Replay.Log) = input.copy(replay = Replay.encode(log))
+    }
+
+    private fun weatherSubmission(
+        cfg: com.centurywar.game.BattleConfig,
+        board: String,
+        stage: Int? = null,
+        day: Long? = null,
+    ): ScoreSubmission {
+        val battle = Battle(cfg)
+        val controller = BattleController(battle)
+        while (!battle.over && battle.stepCount < 60 * 180) {
+            if (battle.pendingChoice != null) controller.doctrine(0)
+            if (battle.pendingCards != null) controller.card(0)
+            if (battle.stepCount % 90 == 0 && battle.canQueue(battle.player, Role.MELEE)) {
+                controller.queue(Role.MELEE)
+            }
+            battle.step()
+            battle.fx.count = 0
+        }
+        if (!battle.over) controller.surrender()
+        return ScoreSubmission(
+            board = board,
+            player = UUID.randomUUID().toString(),
+            nick = "Dowodca",
+            gameVersion = "0.1.0",
+            day = day,
+            seed = cfg.seed,
+            stage = stage,
+            replay = Replay.encode(controller.log()),
+            score = battle.score(),
+            research = List(Research.defs.size) { 0 },
+        )
+    }
+
+    @Test fun verifiesCampaignWithRain() {
+        val stage = Campaign.stages[4]
+        val cfg = Campaign.config(stage, Research.bonuses(IntArray(Research.defs.size)), 9991L)
+        assertEquals(Weather.RAIN, cfg.weather)
+        val submission = weatherSubmission(cfg, "campaign", stage = 4)
+        val verified = ReplayVerifier.verify(submission, now, "0.1.0")
+        assertEquals(submission.score, verified.score)
+    }
+
+    @Test fun verifiesDailyWithIndependentWeather() {
+        val day = (Daily.WEATHER_DAY until Daily.WEATHER_DAY + 20L).first {
+            Daily.config(it, Bonuses()).weather != Weather.CLEAR
+        }
+        val cfg = Daily.config(day, Research.bonuses(IntArray(Research.defs.size)))
+        val submission = weatherSubmission(cfg, "daily", day = day)
+        val verified = ReplayVerifier.verify(submission, day * 86_400_000L + 1_000L, "0.1.0")
+        assertEquals(submission.score, verified.score)
     }
 
     @Test fun verifiesRealScoreFromSim() {

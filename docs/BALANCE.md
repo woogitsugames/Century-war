@@ -93,3 +93,28 @@ Plik wynikowy: `app/build/balance/variants.md`. Po uruchomieniu pomiaru należy
 włączyć wynik do tego dokumentu i porównać wyniki etapów z wcześniejszymi
 progami kampanii. **Pomiar nie został jeszcze wykonany w tej gałęzi;
 nie ma podstaw, by deklarować spełnienie progu 10 pp.**
+
+## Pogoda — zlecenie 33 (31.10.2026)
+
+Od etapu 5 co trzy etapy włącza się pogoda, w cyklu **deszcz → wiatr → noc**:
+5 (deszcz), 8 (wiatr), 11 (noc), 14 (deszcz), 17 (wiatr), 20 (noc),
+23 (deszcz), 26 (wiatr), 29 (noc), 32 (deszcz), 35 (wiatr).
+Pozostałe etapy mają `CLEAR`. Modyfikatory kampanii i wcześniejsze losowania
+wyzwania dnia nie ulegają zmianie.
+
+**Metodyka porównania:** nowy `BalanceReport.weatherImpactReport` uruchamia
+dla każdego zmienionego etapu tę samą liczbę seedów i ten sam docelowy profil
+badań czterokrotnie: etap z pogodą, identyczny etap z `CLEAR`, poprzedni i
+następny etap. Zapisuje `weather-impact.csv` i `weather-impact.md`.
+Różnicę względem identycznego etapu `CLEAR` należy oddzielić od
+różnic między sąsiadującymi etapami (z inną siłą AI i modyfikatorami).
+
+```bash
+BALANCE_RUN=true BALANCE_RUNS=20 BALANCE_PROFILE=target ./gradlew :app:testDebugUnitTest --rerun-tasks --tests '*BalanceReport.weatherImpactReport*' --console=plain
+```
+
+**Status pomiarów:** niezweryfikowane w tym środowisku — brak lokalnego SDK
+Android i możliwości uruchomienia Gradle. Nie przypisujemy pogodowym etapom
+fikcyjnych procentów zwycięstw. Warunek ±10 p.p. względem sąsiadów wymaga
+porównania wyników nowego raportu; historyczny raport powyżej miał już
+różnice większe niż 10 p.p. pomiędzy niektórymi sąsiadami bez pogody.

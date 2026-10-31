@@ -28,6 +28,7 @@ import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.game.Weather
 import com.centurywar.meta.Achievements
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Profile
@@ -544,7 +545,7 @@ class BattleScreen(
     }
 
     private fun BattleConfig.copyWithSeed() = BattleConfig(mode, if (mode == Mode.DAILY) seed else seed + 1, aiPower, startEra, maxEra, modifiers, playerBonuses, stageIndex,
-        tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled)
+        tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather)
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -872,6 +873,22 @@ class BattleScreen(
         ui.textO(c, L[Defs.eraKeys[p.era]], bx + bw / 2, t + 37 * dp, 10f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
+            // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
+            val wx = mini.right + 14 * dp
+            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, t + 11 * dp, 21 * dp, dp = dp)
+            val weatherName = L[battle.weather.key]
+            ui.textO(c, weatherName, wx + 14 * dp, t + 15 * dp,
+                ui.fit(weatherName, 12f, max(32f * dp, pauseBtn.r.left - wx - 24 * dp), 8f), Ui.TEXT)
+            if (battle.weather == Weather.WIND) {
+                val dir = battle.windDirection().toFloat()
+                val mx = wx + 24 * dp
+                val my = t + 33 * dp
+                ui.stroke.color = Ui.GOLD
+                ui.stroke.strokeWidth = 2 * dp
+                c.drawLine(mx - 11 * dp * dir, my, mx + 11 * dp * dir, my, ui.stroke)
+                c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my - 5 * dp, ui.stroke)
+                c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my + 5 * dp, ui.stroke)
+            }
             val hw = mini.width() * 0.5f - 14 * dp
             val hy = mini.top - 11 * dp
             ui.bar(c, mini.left + 12 * dp, hy, hw, 7 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)

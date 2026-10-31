@@ -487,6 +487,43 @@ class BattleSnapshotTest {
         assertFalse(f.exists())
     }
     @Test
+    fun rainWeatherSurvivesSaveAndResimulation() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 4401L, 1f, startEra = 2, maxEra = 4,
+            weather = Weather.RAIN)
+        val (a, b) = check(cfg, 60 * 90, 60 * 120)
+        assertEquals(Weather.RAIN, b.cfg.weather)
+        assertEquals(a.weather, b.weather)
+    }
+
+    @Test
+    fun windChangeAcrossSnapshotBoundaryMatchesExactly() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 4402L, 1f, startEra = 1, maxEra = 3,
+            weather = Weather.WIND)
+        val a = Battle(cfg)
+        a.playerAi = Ai(a, 0)
+        steps(a, 75 * 60 - 12)
+        assertFalse(a.over)
+        val before = a.windDirection()
+        val b = roundTrip(a)
+        assertEquals(before, b.windDirection())
+        steps(a, 60 * 5)
+        steps(b, 60 * 5)
+        assertEquals(-before, a.windDirection())
+        assertEquals(a.windDirection(), b.windDirection())
+        assertSame(a, b)
+    }
+
+    @Test
+    fun endlessWeatherDerivesFromSavedEra() {
+        val cfg = BattleConfig(Mode.ENDLESS, 4420L, 1f)
+        val a = Battle(cfg)
+        a.enemy.era = 3
+        val b = roundTrip(a)
+        assertEquals(a.weather, b.weather)
+        assertSame(a, b)
+    }
+
+    @Test
     fun snapshotKeepsReplayAndBothAiStreams() {
         val cfg = BattleConfig(Mode.SKIRMISH, 919191L, 0.95f, maxEra = 2)
         val a = Battle(cfg)

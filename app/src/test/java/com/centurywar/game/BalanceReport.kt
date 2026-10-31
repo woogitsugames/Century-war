@@ -92,7 +92,7 @@ class BalanceReport {
     private fun run(stage: Stage, bonus: Bonuses, seed: Long): Result {
         val base = Campaign.config(stage, bonus, seed)
         val battle = Battle(if (powerScale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * powerScale,
-            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality))
+            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.variantsEnabled, base.weather))
         battle.playerAi = Ai(battle, 0)
         val maxSteps = (30f * 60f / Battle.STEP).toInt()
         var steps = 0
@@ -143,6 +143,46 @@ class BalanceReport {
     }
 
     private fun fmt(value: Double) = String.format(Locale.US, "%.2f", value)
+
+    /**
+     * Dla każdej planszy z pogodą: ten sam zestaw seedów, profil badań i AI
+     * przeciw wersji CLEAR oraz dwóm sąsiednim etapom.
+     * BALANCE_RUN=true BALANCE_PROFILE=target BALANCE_RUNS=20.
+     */
+    @Test
+    fun weatherImpactReport() {
+        val runs = (System.getenv("BALANCE_RUNS")?.toIntOrNull() ?: 20).coerceAtLeast(1)
+        val only = System.getenv("BALANCE_STAGES")?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()
+        val out = File(System.getenv("BALANCE_OUT") ?: "build/balance")
+        out.mkdirs()
+        val csv = StringBuilder("stage,weather,profile,runs,weather_win_pct,clear_win_pct,delta_pp,prev_win_pct,next_win_pct\n")
+        val md = StringBuilder("# Wpływ pogody na balans kampanii\n\n")
+            .append("Te same seedy i profil badań dla pogody, CLEAR i sąsiadów; N=$runs. ")
+            .append("Wyniki są porównywane w punktach procentowych.\n\n")
+            .append("| Etap | Pogoda | Profil | N | Wygrane pogoda | CLEAR | Delta [pp] | Poprz. | Nast. |\n")
+            .append("|---:|---|---|---:|---:|---:|---:|---:|---:|\n")
+        for (stage in Campaign.stages) {
+            if (stage.weather == Weather.CLEAR || (only != null && stage.index + 1 !in only)) continue
+            val profile = profiles.first { it.name == targetProfile(stage.index) }
+            val bonus = bonuses(profile.progress)
+            val rainy = measure(stage, profile.name, bonus, runs)
+            val clearStage = Stage(stage.index, stage.nameKey, stage.startEra, stage.maxEra,
+                stage.aiPower, stage.modifiers, Weather.CLEAR)
+            val baseline = measure(clearStage, profile.name, bonus, runs)
+            val previous = if (stage.index > 0) measure(Campaign.stages[stage.index - 1], profile.name, bonus, runs).winPct else Double.NaN
+            val next = if (stage.index + 1 < Campaign.stages.size)
+                measure(Campaign.stages[stage.index + 1], profile.name, bonus, runs).winPct else Double.NaN
+            val delta = rainy.winPct - baseline.winPct
+            println("WEATHER_BALANCE stage=${stage.index + 1} weather=${stage.weather} profile=${profile.name}" +
+                " win=${fmt(rainy.winPct)}% clear=${fmt(baseline.winPct)}% delta=${fmt(delta)}pp" +
+                " neighbors=${fmt(previous)}%/${fmt(next)}%")
+            csv.append("${stage.index + 1},${stage.weather},${profile.name},$runs,${fmt(rainy.winPct)},${fmt(baseline.winPct)},${fmt(delta)},${fmt(previous)},${fmt(next)}\n")
+            md.append("| ${stage.index + 1} | ${stage.weather} | ${profile.name} | $runs | ${fmt(rainy.winPct)}% | ${fmt(baseline.winPct)}% | ${fmt(delta)} | ${fmt(previous)}% | ${fmt(next)}% |\n")
+        }
+        File(out, "weather-impact.csv").writeText(csv.toString())
+        File(out, "weather-impact.md").writeText(md.toString())
+        println("WEATHER_BALANCE_REPORT ${File(out, "weather-impact.csv").absolutePath}")
+    }
 
     @Test
     fun campaignReport() {

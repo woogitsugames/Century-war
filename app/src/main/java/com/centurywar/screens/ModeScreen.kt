@@ -36,6 +36,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private var day = Daily.dayNumber()
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
+    private var dailyWeather = ""
 
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
@@ -113,11 +114,15 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also { dc ->
                     dailyCfg = dc
                     dailyMods = L["modifiers"] + ": " + dc.modifiers.joinToString(", ") { L[it.key] }
+                    dailyWeather = L[dc.weather.key]
                 }
                 y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
                 y += 8 * dp
                 y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
                 y += line(c, if (cfg.aiPower > 1f) Icons.SKULL else Icons.CHECK, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, if (cfg.aiPower > 1f) Ui.BAD else Ui.GOOD, 14f)
+                if (y + 30 * dp < lowLimit) {
+                    y += line(c, Icons.weatherIcon(cfg.weather), dailyWeather, x, y, Ui.TEXT, 14f)
+                }
                 val isz = 22 * dp
                 Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
                 y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)

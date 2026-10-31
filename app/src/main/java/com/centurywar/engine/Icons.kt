@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import com.centurywar.game.Weather
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
@@ -73,6 +74,17 @@ object Icons {
     const val SPEAKER = 52
     const val NOTE = 53
     const val CHART = 54
+    const val RAIN = 55
+    const val WIND = 56
+    const val MOON = 57
+    const val SUN = 58
+
+    fun weatherIcon(weather: Weather): Int = when (weather) {
+        Weather.CLEAR -> SUN
+        Weather.RAIN -> RAIN
+        Weather.WIND -> WIND
+        Weather.NIGHT -> MOON
+    }
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -174,6 +186,10 @@ object Icons {
             SPEAKER -> speaker(c)
             NOTE -> note(c)
             CHART -> chart(c)
+            RAIN -> rain(c)
+            WIND -> wind(c)
+            MOON -> moon(c)
+            SUN -> sun(c)
         }
         c.restoreToCount(save)
     }
@@ -898,6 +914,46 @@ object Icons {
         // klamra
         rect(c, 0.5f, -0.32f, 0.96f, -0.06f, GOLD_D, 0.06f)
         circle(c, 0.8f, -0.19f, 0.07f, GOLD_L, false)
+    }
+
+    private fun rain(c: Canvas) {
+        circle(c, -0.35f, -0.32f, 0.37f, WHITE)
+        circle(c, 0.1f, -0.51f, 0.42f, WHITE)
+        circle(c, 0.52f, -0.25f, 0.34f, WHITE)
+        rect(c, -0.68f, -0.36f, 0.76f, -0.04f, WHITE, 0.12f)
+        stroke(c, -0.46f, 0.18f, -0.67f, 0.73f, 0.12f, BLUE)
+        stroke(c, 0.05f, 0.18f, -0.16f, 0.73f, 0.12f, BLUE)
+        stroke(c, 0.56f, 0.18f, 0.35f, 0.73f, 0.12f, BLUE)
+    }
+
+    private fun wind(c: Canvas) {
+        // Trzy smugi z zawiniętymi końcami.
+        stroke(c, -0.82f, -0.48f, 0.42f, -0.48f, 0.12f, WHITE)
+        stroke(c, 0.42f, -0.48f, 0.68f, -0.25f, 0.12f, WHITE)
+        stroke(c, -0.9f, 0.02f, 0.83f, 0.02f, 0.13f, BLUE)
+        stroke(c, -0.66f, 0.5f, 0.38f, 0.5f, 0.12f, WHITE)
+        stroke(c, 0.38f, 0.5f, 0.63f, 0.76f, 0.12f, WHITE)
+    }
+
+    private fun moon(c: Canvas) {
+        p.reset()
+        p.moveTo(0.52f, -0.88f)
+        p.cubicTo(-0.95f, -0.8f, -0.99f, 0.8f, 0.16f, 0.92f)
+        p.cubicTo(0.7f, 0.94f, 0.95f, 0.56f, 0.98f, 0.14f)
+        p.cubicTo(0.36f, 0.48f, -0.4f, 0.06f, -0.18f, -0.45f)
+        p.cubicTo(-0.07f, -0.71f, 0.17f, -0.86f, 0.52f, -0.88f)
+        p.close()
+        shape(c, GOLD_L)
+    }
+
+    private fun sun(c: Canvas) {
+        for (i in 0 until 8) {
+            val a = i * (Math.PI / 4.0)
+            val dx = cos(a).toFloat()
+            val dy = sin(a).toFloat()
+            stroke(c, dx * 0.65f, dy * 0.65f, dx * 0.94f, dy * 0.94f, 0.12f, GOLD)
+        }
+        circle(c, 0f, 0f, 0.53f, GOLD)
     }
 
     private fun heart(c: Canvas) {

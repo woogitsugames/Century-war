@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 8
+    const val VERSION = 9
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -150,6 +150,7 @@ object BattleSnapshot {
         o.writeBoolean(c.tutorial)
         o.writeByte(c.aiPersonality?.ordinal ?: -1)
         o.writeBoolean(c.variantsEnabled)
+        o.writeByte(c.weather.ordinal)
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
@@ -306,8 +307,9 @@ object BattleSnapshot {
         val p = i.readByte().toInt()
         val personality = if (p < 0) null else enumAt(AiPersonality.values(), p)
         val enabled = i.readBoolean()
+        val weather = enumAt(Weather.values(), i.readByte().toInt())
         if (startEra > maxEra) return null
-        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial, personality, enabled)
+        return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial, personality, enabled, weather)
     }
 
     private fun readSide(i: DataInputStream, s: Side) {

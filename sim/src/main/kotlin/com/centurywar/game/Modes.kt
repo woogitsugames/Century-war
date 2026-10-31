@@ -30,6 +30,14 @@ enum class Modifier(val key: String) {
     FOG_OF_WAR("m_fog"),
 }
 
+/** Warunki atmosferyczne mają osobny model, aby nie zmieniać losowania modyfikatorów dnia. */
+enum class Weather(val key: String) {
+    CLEAR("w_clear"),
+    RAIN("w_rain"),
+    WIND("w_wind"),
+    NIGHT("w_night"),
+}
+
 enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
 
 /** Mnożniki z badań gracza (metaprogresja). Liczy je [com.centurywar.meta.Profile]. */
@@ -65,6 +73,7 @@ class BattleConfig(
     val aiPersonality: AiPersonality? = null,
     /** Historyczne wyzwania dnia pozostają bez wariantów. */
     val variantsEnabled: Boolean = true,
+    val weather: Weather = Weather.CLEAR,
 )
 
 class Stage(
@@ -74,6 +83,7 @@ class Stage(
     val maxEra: Int,
     val aiPower: Float,
     val modifiers: Set<Modifier>,
+    val weather: Weather = Weather.CLEAR,
 )
 
 object Campaign {
@@ -101,7 +111,13 @@ object Campaign {
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
             val power = (0.72f + i * (0.868f / (Defs.ERA_COUNT * 4 - 1)) + sub * 0.03f) * stageRamp(i)
             val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
-            add(Stage(i, "stage_${i + 1}", start, max, power, mods))
+            // Pogoda co trzy etapy, począwszy od piątego; tutorial zostaje bez zmian.
+            val weather = if (i >= 4 && (i - 4) % 3 == 0) when ((i - 4) / 3 % 3) {
+                0 -> Weather.RAIN
+                1 -> Weather.WIND
+                else -> Weather.NIGHT
+            } else Weather.CLEAR
+            add(Stage(i, "stage_${i + 1}", start, max, power, mods, weather))
         }
     }
 
@@ -131,6 +147,7 @@ object Campaign {
         stage.startEra,
         if (tutorial) maxOf(stage.maxEra, minOf(Defs.ERA_COUNT - 1, stage.startEra + 1)) else stage.maxEra,
         stage.modifiers, bonuses, stage.index, tutorial,
+        weather = stage.weather,
     )
 }
 
@@ -142,6 +159,8 @@ object Daily {
     /** Data włączenia wariantów: nie przesuwać wstecz ani przed ERA_EXPANSION_DAY. */
     // Zastępcza data wydania; przed premierą ustawić dzień pierwszego udostępnienia wariantów.
     const val VARIANTS_DAY = ERA_EXPANSION_DAY
+    /** Data aktywacji pogody: historyczne wyzwania nie zmieniają przebiegu. Jak wyżej: dzień wydania. */
+    const val WEATHER_DAY = ERA_EXPANSION_DAY
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
@@ -158,8 +177,12 @@ object Daily {
         val start = if (historical && rolledStart >= 2) rolledStart + 1 else rolledStart
         val rolledMax = if (historical) minOf(7, rolledStart + 3) else minOf(Defs.ERA_COUNT - 1, rolledStart + 3)
         val maxEra = if (historical && rolledMax >= 2) rolledMax + 1 else rolledMax
-        return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f,
-            start, maxEra, mods, normalizedBonuses(), variantsEnabled = day >= VARIANTS_DAY)
+        val power = 1.1f + rng.nextFloat() * 0.25f
+        // Drugi, niezależny strumień: nie przesuwa żadnego starego losowania.
+        val weather = if (day < WEATHER_DAY) Weather.CLEAR
+            else Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
+        return BattleConfig(Mode.DAILY, day, power,
+            start, maxEra, mods, normalizedBonuses(), variantsEnabled = day >= VARIANTS_DAY, weather = weather)
     }
 
     private fun normalizedBonuses() = Bonuses(
