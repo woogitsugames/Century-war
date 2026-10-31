@@ -27,11 +27,18 @@ The game stores the following in its private app storage:
 - campaign stages, stars, medals, research, missions, achievements, and local leaderboard records;
 - statistics (such as battles, wins, defeated units, and play time);
 - settings (such as language, graphics quality, sound, vibration, reminders, and reminder hour);
-- a temporary interrupted-battle save for resuming play (the battle.snap file).
+- a temporary interrupted-battle save for resuming play (the battle.snap file);
+- up to 10 local crash and error reports (the files/crash directory).
 
 Core gameplay, local leaderboards, and local progress saving **work without an internet connection**. No publisher account is required. The app does not request access to location, contacts, microphone, or camera. There are no ads, in-app purchases, or chat features.
 
 The battle.snap file is used only to resume a battle locally; it is not uploaded in the Play Games cloud save and is excluded from Android system backup rules.
+
+### Local problem reports
+
+After a crash, the app stores a technical report on the device containing the game version, device model, Android version, current screen, the last 30 technical events (such as screen changes and battle stage), and the call stack. It does **not** include the in-game nickname, player IDs, exception messages, or profile data. Up to 10 reports are retained; older reports are automatically removed. These files are not uploaded to Play Games and are excluded from Android system backup.
+
+On the next launch after a crash, the game asks **once** whether you want to share the report. You can also choose **Settings → About → Report a problem**. Both options only open the Android system text-sharing chooser (for example, email); the game **never automatically sends reports** to the publisher or a third-party service. You decide whether to send the report and to whom. Clearing the app's storage also deletes local reports.
 
 ## 3. Google Play Games — account and authentication
 
@@ -95,7 +102,7 @@ Google's retention periods are determined by Google and your account settings. T
 
 ## 9. Data protection and children
 
-Local records are stored in Android's private app storage. The game has no chat, player-to-player messages, custom file sharing, or location sharing. PGS leaderboards may nevertheless show Google profile names and scores according to the selected visibility settings. The game's content rating comes from the IARC questionnaire and does not, by itself, mean that the product targets children.
+Local records are stored in Android's private app storage. The game has no chat, player-to-player messages, or location sharing. Technical reports can only be shared manually through Android's system chooser. PGS leaderboards may nevertheless show Google profile names and scores according to the selected visibility settings. The game's content rating comes from the IARC questionnaire and does not, by itself, mean that the product targets children.
 
 ## 10. Policy changes
 
