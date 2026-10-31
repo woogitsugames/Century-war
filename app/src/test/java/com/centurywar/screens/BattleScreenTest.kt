@@ -9,6 +9,11 @@ import com.centurywar.engine.Quality
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Campaign
+import com.centurywar.game.Modifier
+import com.centurywar.game.AiPersonality
+import com.centurywar.meta.OnlineLeaderboards
+import com.centurywar.meta.OnlineState
+import com.centurywar.meta.SkirmishSetup
 import com.centurywar.game.Mode
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertEquals
@@ -81,5 +86,54 @@ class BattleScreenTest {
         (field(bs, "battle").get(bs) as Battle).surrender()
         g.frame(canvas, 1f / 60f)
         assertEquals(before, g.profile.medals)
+    }
+
+    @Test
+    fun restartKeepsEveryCustomSkirmishSetting() {
+        val g = game()
+        val setup = SkirmishSetup(2, 5, AiPersonality.SIEGER.ordinal, 185,
+            (1 shl Modifier.FOG_OF_WAR.ordinal) or (1 shl Modifier.SLOW_XP.ordinal))
+        val cfg = setup.toConfig(88L, g.profile.bonuses())
+        val bs = BattleScreen(g, cfg)
+        g.setScreen(bs)
+        val restart = field(bs, "restartEnd").get(bs) as Button
+        bs.onClick(restart)
+        val next = g.current as BattleScreen
+        val actual = field(next, "cfg").get(next) as BattleConfig
+        assertEquals(89L, actual.seed)
+        assertEquals(cfg.mode, actual.mode)
+        assertEquals(cfg.aiPower, actual.aiPower, 0.0001f)
+        assertEquals(cfg.startEra, actual.startEra)
+        assertEquals(cfg.maxEra, actual.maxEra)
+        assertEquals(cfg.modifiers, actual.modifiers)
+        assertEquals(cfg.aiPersonality, actual.aiPersonality)
+    }
+
+    @Test
+    fun customWinIsRecordedButCannotSubmitLocalOrOnlineRanking() {
+        val g = game()
+        val submissions = ArrayList<Pair<String, Long>>()
+        g.online = object : OnlineLeaderboards {
+            override val available = true
+            override val state = OnlineState.CONNECTED
+            override fun submit(board: String, score: Long) {
+                submissions.add(board to score)
+            }
+            override fun showUi(board: String) {}
+        }
+        val cfg = SkirmishSetup(3, 3, AiPersonality.ASSAULT.ordinal, 60,
+            1 shl Modifier.FOG_OF_WAR.ordinal).toConfig(22L, g.profile.bonuses())
+        val bs = BattleScreen(g, cfg)
+        g.setScreen(bs)
+        val battle = field(bs, "battle").get(bs) as Battle
+        battle.enemy.baseHp = 0f
+        battle.step()
+        assertTrue(battle.over)
+        g.frame(canvas, 1f / 60f)
+        assertTrue(g.profile.top(Profile.BOARD_SKIRMISH).isEmpty())
+        assertTrue(submissions.isEmpty())
+        assertEquals(1, g.profile.skirmishHistory.size)
+        assertTrue(g.profile.skirmishHistory.first().won)
+        assertTrue(!g.profile.skirmishHistory.first().ranked)
     }
 }
