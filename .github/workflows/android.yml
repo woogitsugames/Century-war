@@ -45,6 +45,10 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*LTest*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz debug APK
@@ -63,6 +67,7 @@ jobs:
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
+            app/build/ai-personality-profile.tsv
           if-no-files-found: warn
           retention-days: 14
 
