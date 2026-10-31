@@ -241,5 +241,12 @@ object L {
         "r_elite_d" to ("Odblokowuje jednostki elitarne" to "Unlocks elite units"),
         "r_rally" to ("Okrzyk bojowy" to "War Cry"),
         "r_rally_d" to ("Odblokowuje Zryw (+40% tempa)" to "Unlocks Rally (+40% tempo)"),
+
+        // --- wznawianie przerwanej bitwy (BattleSnapshot / MenuScreen) --------------
+        "resume_title" to ("Wznowić bitwę?" to "Resume battle?"),
+        "resume_desc" to ("Poprzednia bitwa została przerwana. Możesz ją dokończyć albo porzucić." to "Your previous battle was interrupted. You can finish it or discard it."),
+        "resume_yes" to ("Wznów" to "Resume"),
+        "resume_no" to ("Porzuć" to "Discard"),
+        // --- koniec bloku wznawiania bitwy -----------------------------------------
     )
 }
