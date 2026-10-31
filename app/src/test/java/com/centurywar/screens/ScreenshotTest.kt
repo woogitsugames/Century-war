@@ -116,6 +116,30 @@ class ScreenshotTest {
             field(bs, "paused").set(bs, false)
             b.surrender()
             shot(g, "${tag}_battle_results", 90)
+
+            // Endless 2.0: osobne kadry zapowiedzi, wyboru kart i aktywnego bossa.
+            val es = BattleScreen(g, BattleConfig(Mode.ENDLESS, 2026L, 1f))
+            g.setScreen(es)
+            val endless = field(es, "battle").get(es) as Battle
+            repeat(4) {
+                endless.waveTimer = 0f
+                endless.step()
+            }
+            shot(g, "${tag}_endless_preview")
+            endless.waveTimer = 0f
+            endless.step()
+            assertTrue("Karty po piątej fali", endless.pendingCards != null)
+            shot(g, "${tag}_endless_cards")
+            endless.chooseEndlessCard(0)
+            repeat(5) {
+                endless.waveTimer = 0f
+                endless.step()
+                if (endless.wave != 10 && endless.pendingCards != null) endless.chooseEndlessCard(0)
+            }
+            assertTrue("Boss po dziesiątej fali", endless.currentBoss() != null)
+            shot(g, "${tag}_endless_boss_with_cards")
+            endless.chooseEndlessCard(0)
+            shot(g, "${tag}_endless_boss")
         }
     }
 
