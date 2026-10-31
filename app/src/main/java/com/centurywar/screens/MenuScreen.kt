@@ -10,6 +10,7 @@ import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
+import com.centurywar.engine.Quality
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Mode
@@ -20,6 +21,8 @@ class MenuScreen(g: Game) : Screen(g) {
     /** W menu Wstecz przechwytujemy tylko przy otwartym oknie. */
     val hasOpenModal get() = g.resumeOffer != null
     private val bg = MenuBg()
+    private val battleScene = MenuBattleScene()
+    private val emblem = MenuEmblem()
     private val campaign = btn(1)
     private val endless = btn(2)
     private val daily = btn(3)
@@ -173,7 +176,9 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     override fun render(c: Canvas) {
-        bg.draw(c, w, h, dt)
+        val animated = g.quality.level != Quality.LOW && !g.profile.reduceFlash
+        val time = bg.draw(c, w, h, dt, animated)
+        battleScene.draw(c, w, h, time, animated, g.quality.level)
         drawLogo(c)
         for (b in buttons) if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
         drawPlayer(c)
@@ -206,8 +211,7 @@ class MenuScreen(g: Game) : Screen(g) {
         val title = L["title"]
         val midY = logoY - s * 0.36f
         // emblemat: skrzyżowane miecze za tarczą, nad napisem
-        Icons.draw(c, Icons.CROSSED_SWORDS, cx, midY - s * 0.98f, s * 1.45f, dp = dp)
-        Icons.draw(c, Icons.SHIELD, cx, midY - s * 1.0f, s * 0.82f, Ui.RIBBON, dp = dp)
+        emblem.draw(c, cx, midY - s * 0.88f, s * 1.15f)
         // cień, gruby kontur, ekstruzja (fazowanie), złote wypełnienie, połysk
         logoLine.color = Color.argb(140, 0, 0, 0)
         logoLine.strokeWidth = s * 0.2f
