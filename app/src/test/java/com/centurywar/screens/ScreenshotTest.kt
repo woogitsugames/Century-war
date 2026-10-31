@@ -95,6 +95,42 @@ class ScreenshotTest {
 
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
+    /** Zrzuty przytrzymanych przycisków na telefonie 720p i rozłożonym Foldzie. */
+    @Test
+    fun hudTooltips() {
+        val oldLang = L.lang
+        try {
+            L.lang = L.PL
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "foldPortrait" to intArrayOf(2184, 1968, 3),
+            )) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 535L, 1f))
+                g.setScreen(bs)
+                val clear = Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888))
+                g.frame(clear, 1f / 60f)
+                val armory = field(bs, "armoryBtn").get(bs) as Button
+                g.pushTouch(TouchEvent.DOWN, armory.r.centerX(), armory.r.centerY(), 0)
+                repeat(30) { g.frame(clear, 1f / 60f) }
+                shot(g, "${tag}_tip53_armory", 1)
+                g.pushTouch(TouchEvent.UP, armory.r.centerX(), armory.r.centerY(), 0)
+                g.frame(clear, 1f / 60f)
+                val unit = field(bs, "unitBtn").get(bs) as Array<*>
+                val melee = unit[0] as Button
+                g.pushTouch(TouchEvent.DOWN, melee.r.centerX(), melee.r.centerY(), 0)
+                repeat(30) { g.frame(clear, 1f / 60f) }
+                shot(g, "${tag}_tip53_unit", 1)
+                g.pushTouch(TouchEvent.UP, melee.r.centerX(), melee.r.centerY(), 0)
+                g.frame(clear, 1f / 60f)
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
+
     /** Testuje układ rankingów i ustawień przy aktywnym PGS, bez połączeń sieciowych. */
     @Test
     fun playGamesMenus() {

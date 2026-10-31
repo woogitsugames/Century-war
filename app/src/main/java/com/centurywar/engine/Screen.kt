@@ -11,6 +11,11 @@ abstract class Screen(val g: Game) {
     private var lastY = 0f
     private var dragging = false
     private var activePointer = -1
+    private var touchCandidate: Button? = null
+    private var touchElapsed = 0f
+    private var touchMoved = false
+    private var heldButton: Button? = null
+    private val heldTooltip = TooltipBubble()
 
     val ui get() = g.ui
     val dp get() = g.ui.dp
@@ -24,6 +29,35 @@ abstract class Screen(val g: Game) {
     open fun update(dt: Float) {}
     abstract fun render(c: Canvas)
     open fun onClick(b: Button) {}
+
+    /** Nadpisz dla dynamicznych opisów; domyślnie odczytuje opis przycisku. */
+    open fun onLongPress(b: Button): Boolean {
+        if (b.tooltipTitle.isEmpty()) return false
+        heldTooltip.set(b.tooltipTitle, b.tooltipBody)
+        return true
+    }
+
+    /** Zegar gestu z czasu klatek, bez alokacji i bez zegara systemowego. */
+    fun advanceTouch(dt: Float) {
+        val candidate = touchCandidate ?: return
+        if (activePointer < 0 || touchMoved || heldButton != null ||
+            !candidate.visible || !candidate.contains(lastX, lastY)) return
+        touchElapsed += dt
+        if (touchElapsed >= 0.45f) {
+            // Rozpoznanie tylko raz w ramach gestu, także gdy ekran odrzuci przytrzymanie.
+            touchMoved = true
+            if (onLongPress(candidate)) heldButton = candidate
+        }
+    }
+
+    /** Rysuj na końcu renderowania, ponad HUD i panelami. */
+    protected fun drawHeldTooltip(c: Canvas) {
+        val b = heldButton ?: return
+        ui.tooltip(c, b.r, heldTooltip, g.insetL, g.insetT, w - g.insetR, h - g.insetB)
+    }
+
+    protected fun clearHeldTooltip() { heldButton = null }
+    protected val isTooltipHeld get() = heldButton != null
     /** true = obsłużone; false = gra cofa do poprzedniego ekranu / wychodzi. */
     open fun onBack(): Boolean = false
     open fun onDrag(dx: Float, dy: Float) {}
@@ -42,12 +76,19 @@ abstract class Screen(val g: Game) {
                 if (activePointer != -1) return
                 activePointer = e.pointer
                 downX = e.x; downY = e.y; lastX = e.x; lastY = e.y; dragging = false
-                for (b in buttons) b.pressed = b.contains(e.x, e.y) && b.enabled
+                touchCandidate = null; touchElapsed = 0f; touchMoved = false; heldButton = null
+                for (b in buttons) {
+                    val inside = b.contains(e.x, e.y)
+                    if (touchCandidate == null && inside) touchCandidate = b
+                    b.pressed = inside && b.enabled
+                }
             }
             TouchEvent.MOVE -> {
                 if (e.pointer != activePointer) return
-                if (!dragging && (kotlin.math.abs(e.x - downX) > 10 * dp || kotlin.math.abs(e.y - downY) > 10 * dp)) {
-                    dragging = buttons.none { it.pressed } || isDragScreen()
+                if (kotlin.math.abs(e.x - downX) > 10 * dp ||
+                    kotlin.math.abs(e.y - downY) > 10 * dp) {
+                    touchMoved = true
+                    if (!dragging) dragging = buttons.none { it.pressed } || isDragScreen()
                     if (dragging) for (b in buttons) b.pressed = false
                 }
                 if (dragging) onDrag(e.x - lastX, e.y - lastY)
@@ -59,7 +100,11 @@ abstract class Screen(val g: Game) {
                 // utknąć i ekran przestałby reagować na dotyk.
                 if (activePointer == -1 || (e.action == TouchEvent.UP && e.pointer != activePointer)) return
                 activePointer = -1
-                if (e.action == TouchEvent.UP && !dragging) {
+                val consumed = heldButton != null
+                val inactiveTarget = touchCandidate
+                heldButton = null
+                touchCandidate = null
+                if (e.action == TouchEvent.UP && !dragging && !consumed) {
                     var hit = false
                     for (i in 0 until buttons.size) {
                         val b = buttons[i]
@@ -72,6 +117,9 @@ abstract class Screen(val g: Game) {
                             break
                         }
                     }
+                    // Wyłączony przycisk (np. informacja o kolejce) nie jest tapem pola bitwy.
+                    if (!hit && inactiveTarget != null && !inactiveTarget.enabled &&
+                        inactiveTarget.contains(e.x, e.y)) hit = true
                     if (!hit) onTap(e.x, e.y)
                 }
                 for (b in buttons) b.pressed = false

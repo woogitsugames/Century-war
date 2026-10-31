@@ -11,6 +11,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Sound
 import com.centurywar.engine.TouchEvent
+import com.centurywar.engine.TooltipBubble
 import com.centurywar.game.FxBuffer
 import com.centurywar.game.Body
 import com.centurywar.game.EraArt
@@ -179,6 +180,12 @@ class BattleScreen(
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
     private val closeBtn = btn(CLOSE)
+    /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
+    private val queueInfoBtn = btn(90)
+    private val introTooltip = TooltipBubble()
+    private var introDelay = 0f
+    private var introRemaining = 0f
+    private var introChecked = false
 
     private val topBar = RectF()
     private val mini = RectF()
@@ -266,6 +273,7 @@ class BattleScreen(
         for (b in unitBtn) { b.set(x, y, size, size); x += size + gap }
         val arrow = min(24 * dp, size * 0.36f)
         for (i in 0..3) unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
+        queueInfoBtn.set(unitBtn[0].r.left, y - 23 * dp, 92 * dp, 22 * dp)
         x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
@@ -355,6 +363,7 @@ class BattleScreen(
         pauseLanguage = -1
         variantDescLanguage = -1
         choiceDescLanguage = -1
+        if (introRemaining > 0f) introTooltip.set(L["hint_title"], L["tip53_intro"])
         tut?.onLanguageChanged()
         super.onLanguageChanged()
         if (finished) refreshResultTexts()
@@ -441,11 +450,29 @@ class BattleScreen(
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
+        // Nie zużywamy czasu ani bitu wskazówki, gdy zasłania ją inna podpowiedź.
+        if (!paused && !finished && hints.activeId < 0 && !isTooltipHeld &&
+            showUpgrade < 0 && !showTurrets &&
+            battle.pendingVariant == null && battle.pendingChoice == null &&
+            battle.pendingCards == null && tut == null && g.profile.hintsEnabled) {
+            if (introRemaining > 0f) introRemaining = (introRemaining - dt).coerceAtLeast(0f)
+            if (!introChecked) {
+                introDelay += dt
+                if (introDelay >= 0.12f) {
+                    introChecked = true
+                    if (g.profile.markHintSeen(Profile.HINT_LONG_PRESS)) {
+                        introTooltip.set(L["hint_title"], L["tip53_intro"])
+                        introRemaining = 6f
+                    }
+                }
+            }
+        }
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
         hints.update(dt, finished || paused || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
-            showTurrets || showUpgrade >= 0 || criticalDaily)
+            showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f)
+
     }
 
     private var turretSlotsLaid = -1
@@ -497,6 +524,8 @@ class BattleScreen(
             upgradeBuy.enabled = battle.canUpgradeUnit(p, role)
             upgradeBuy.highlight = upgradeBuy.enabled
         }
+        queueInfoBtn.visible = !modal && p.queueSize > 0
+        queueInfoBtn.enabled = false
         turretBtn.visible = !modal; turretBtn.label = L["turrets"]; turretBtn.enabled = p.slots > 0
         turretBtn.iconId = Icons.TOWER; turretBtn.iconTint = Ui.PLAYER
         turretBtn.selected = showTurrets
@@ -637,6 +666,99 @@ class BattleScreen(
         return costText[slot]
     }
 
+
+    /** Opisy wyliczamy tylko przy otwarciu dymka, nie podczas renderowania. */
+    override fun onLongPress(b: Button): Boolean {
+        if (paused || finished || (tut != null && !tut.finished)) return false
+        val p = battle.player
+        val title: String
+        val body: String
+        when (b.id) {
+            in UNIT0..UNIT0 + 3 -> {
+                val i = b.id - UNIT0
+                val def = p.unit(roles[i])
+                title = L[def.tierNameKeys[(p.unitTier[i] - 1).coerceIn(0, 2)]]
+                body = if (i == 3) L.f("tip53_unit_elite", def.cost, p.queueSize)
+                    else L.f("tip53_unit", L["bh_role_" + i],
+                        L["bh_role_" + when (i) { 0 -> 1; 1 -> 2; else -> 0 }],
+                        def.cost, p.queueSize)
+            }
+            in UNIT_UPGRADE0..UNIT_UPGRADE0 + 3, UNIT_UPGRADE_BUY -> {
+                val i = if (b.id == UNIT_UPGRADE_BUY) showUpgrade else b.id - UNIT_UPGRADE0
+                if (i !in 0..3) return false
+                title = L["unit_upgrade_title"]
+                val cost = battle.unitUpgradeCost(p, roles[i])
+                body = if (cost < 0) L["unit_upgrade_max"]
+                    else L.f("tip53_upgrade", p.unitTier[i], Defs.MAX_UNIT_TIER, cost)
+            }
+            TURRET -> { title = L["turrets"]; body = L.f("tip53_turrets", p.slots) }
+            ARMORY -> {
+                title = L["armory"]
+                body = L.f("tip53_armory", p.armory, battle.armoryCost(p))
+            }
+            BARRAGE -> {
+                title = L["tip53_barrage_title"]
+                body = L.f("tip53_barrage", kotlin.math.ceil(p.abilityCd[0].toDouble()).toInt())
+            }
+            RALLY -> {
+                title = L["rally"]
+                body = L.f("tip53_rally", kotlin.math.ceil(p.abilityCd[1].toDouble()).toInt())
+            }
+            STANCE -> {
+                title = L[if (p.hold) "hold" else "advance"]
+                body = L[if (p.hold) "tip53_hold" else "tip53_advance"]
+            }
+            SPEED -> { title = L["tip53_speed_title"]; body = L.f("tip53_speed", speed) }
+            EVOLVE -> {
+                title = L[if (p.era >= cfg.maxEra) "rank" else "evolve"].let {
+                    if (p.era >= cfg.maxEra) L.f("rank", p.rank) else it
+                }
+                body = if (p.era >= cfg.maxEra) L["tip53_veteran"]
+                    else L.f("tip53_evolve", Defs.evolveXp[p.era])
+            }
+            PAUSE -> { title = L["paused"]; body = L["tip53_pause"] }
+            90 -> { title = L["tip53_queue_title"]; body = L.f("tip53_queue", p.queueSize) }
+            in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
+                val i = b.id - SLOT_BUY0
+                title = L[if (p.turretEra[i] < 0) "buy" else "upgrade"]
+                val cost = if (p.turretEra[i] < 0) p.turretCost() else battle.upgradeCost(p, i)
+                body = if (cost < 0) L["unit_upgrade_max"] else L.f(
+                    if (p.turretEra[i] < 0) "tip53_slot_buy" else "tip53_slot_upgrade", cost)
+            }
+            in SLOT_SELL0 until SLOT_SELL0 + Defs.MAX_TURRET_SLOTS -> {
+                val i = b.id - SLOT_SELL0
+                if (p.turretEra[i] < 0) return false
+                title = L["sell"]
+                body = L.f("tip53_slot_sell", p.turretCost(p.turretEra[i], p.turretVariant[i]) / 2)
+            }
+            CLOSE, UNIT_UPGRADE_CLOSE -> {
+                title = L["back"]
+                body = L["tip53_close"]
+            }
+            in DOCTRINE0..DOCTRINE0 + 2 -> {
+                val i = b.id - DOCTRINE0
+                val card = battle.pendingCards?.get(i)
+                val doctrine = battle.pendingChoice?.get(i)
+                if (card == null && doctrine == null) return false
+                title = L[card?.textKey ?: doctrine!!.key]
+                body = L[if (card != null) cardDescKeys[card.ordinal] else doctrineDescKeys[doctrine!!.ordinal]]
+            }
+            in VARIANT0..VARIANT0 + 1 -> {
+                val era = battle.pendingVariant ?: return false
+                val variant = Defs.spec(era).variants[b.id - VARIANT0]
+                title = L[variant.nameKey]
+                body = L[variant.descKey]
+            }
+            else -> return false
+        }
+        b.tooltipTitle = title
+        b.tooltipBody = body
+        if (!super.onLongPress(b)) return false
+        introRemaining = 0f
+        introChecked = true
+        g.profile.markHintSeen(Profile.HINT_LONG_PRESS)
+        return true
+    }
 
     override fun onClick(b: Button) {
         if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
@@ -788,6 +910,7 @@ class BattleScreen(
     /** Przy pauzie serializujemy stan na wątku gry, a fsync wykonuje wątek I/O. */
     override fun onPause() {
         aimingBarrage = false
+        clearHeldTooltip()
         if (finished || closed || battle.over) return
         paused = true
         g.snapshots?.saveAsync(snapshotBytes())
@@ -1054,6 +1177,12 @@ class BattleScreen(
             for (i in pauseMenu.indices) ui.button(c, pauseMenu[i], 18f)
         }
         if (finished) drawResults(c)
+        if (!finished && !paused && introRemaining > 0f && !isTooltipHeld &&
+            showUpgrade < 0 && !showTurrets && hints.activeId < 0 && tut == null) {
+            ui.tooltip(c, unitBtn[0].r, introTooltip, g.insetL, g.insetT,
+                w - g.insetR, h - g.insetB)
+        }
+        if (!paused && !finished) drawHeldTooltip(c)
         ui.textScale = regularTextScale
     }
 
