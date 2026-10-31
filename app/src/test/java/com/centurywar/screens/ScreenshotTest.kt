@@ -66,7 +66,6 @@ class ScreenshotTest {
 
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
-    /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     /** Testuje układ rankingów i ustawień przy aktywnym PGS, bez połączeń sieciowych. */
     @Test
     fun playGamesMenus() {
@@ -91,6 +90,7 @@ class ScreenshotTest {
         }
     }
 
+    /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
         for ((tag, dims) in mapOf(
@@ -102,7 +102,23 @@ class ScreenshotTest {
             g.profile.stars[0] = 3; g.profile.stars[1] = 2; g.profile.stars[2] = 1
             g.profile.submit(Profile.BOARD_ENDLESS, 12345, 1)
             g.profile.submit(Profile.BOARD_ENDLESS, 8000, 1)
-            shot(g, "${tag}_menu")
+            // Start gry przyznaje nagrodę za logowanie: baner powiadomienia, potem czyste menu.
+            shot(g, "${tag}_menu_login", 20)
+            shot(g, "${tag}_menu", 200)
+            // Osiągnięcia: kilka odblokowanych i postęp innych.
+            g.profile.battles = 30; g.profile.wins = 12; g.profile.totalKills = 640
+            g.profile.unlockedAchievements.addAll(listOf("win_1", "win_10", "battles_25", "kills_100"))
+            g.profile.achievementCounters["TURRETS_BUILT"] = 21L
+            g.setScreen(AchievementsScreen(g)); shot(g, "${tag}_achievements")
+            g.showAchievements(listOf(com.centurywar.meta.Achievements.all[1]))
+            shot(g, "${tag}_achievements_toast", 20)
+            repeat(200) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
+            // Misje: pierwsza dzienna ukończona (do odebrania).
+            val ms = com.centurywar.meta.Missions(g.profile)
+            ms.refresh(System.currentTimeMillis())
+            ms.state.daily[0].progress = ms.state.daily[0].target
+            ms.state.weekly[0].progress = ms.state.weekly[0].target / 2
+            g.setScreen(MissionsScreen(g)); shot(g, "${tag}_missions")
             val cs = CampaignScreen(g)
             g.setScreen(cs); shot(g, "${tag}_campaign")
             field(cs, "selected").set(cs, com.centurywar.game.Campaign.stages[2])
