@@ -74,21 +74,21 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             Defs.spec(era).art == EraArt.BRONZE -> chariot(team, walk, atk)
             Defs.spec(era).art == EraArt.IRON -> {
                 horse(0xFF73624E.toInt(), team, walk, atk, true)
-                rider(era, Weapon.SWORD, team, atk)
+                rider(era, Weapon.SWORD, team, walk, atk)
             }
             Defs.spec(era).art == EraArt.FEUDAL -> {
                 horse(0xFFE2DCD0.toInt(), team, walk, atk, true)
-                rider(era, Weapon.PIKE, team, atk)
+                rider(era, Weapon.PIKE, team, walk, atk)
             }
             else -> {
                 horse(0xFF6A4630.toInt(), team, walk, atk, false)
-                rider(era, Weapon.SWORD, team, atk)
+                rider(era, Weapon.SWORD, team, walk, atk)
             }
         }
     }
 
-    private fun rider(era: Int, weapon: Int, team: Int, atk: Float) {
-        val bob = if (p.hi) sin((phase + time * 0f) * 2f) * stride * 1.4f else 0f
+    private fun rider(era: Int, weapon: Int, team: Int, walk: Float, atk: Float) {
+        val bob = if (p.hi) sin((walk + phase) * 2f) * stride * 1.4f else 0f
         cv.save(); cv.translate(-4f, -26f + bob); cv.scale(0.86f, 0.86f)
         men.draw(era, false, weapon, team, 0f, atk, true, false)
         cv.restore()
@@ -564,14 +564,14 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         }
     }
 
-    private fun mechLeg(hx: Float, hy: Float, phase: Float, moving: Boolean, s: Float, c: Int, foot: Int, digi: Boolean) {
-        val a = if (moving) sin(phase) * 0.42f else if (hx < 0f) -0.16f else 0.16f
-        val lift = if (moving) max(0f, cos(phase)) else 0f
-        val kx = hx + sin(a) * 16f * s + (if (digi) 6f * s else 0f)
-        val ky = hy + cos(a) * 16f * s
-        val sa = a - 0.2f - lift * 0.6f
-        val fx = kx + sin(sa) * 18f * s - (if (digi) 6f * s else 0f)
-        val fy = (ky + cos(sa) * 18f * s).coerceAtMost(-3f * s)
+    private fun mechLeg(hx: Float, hy: Float, stepPhase: Float, s: Float, c: Int, foot: Int, digi: Boolean) {
+        // Podparcie trwa połowę cyklu: stopa cofa się o -drogę/size bez poślizgu.
+        val xStep = Motion.mechFootX(stepPhase, size) * stride
+        val lift = Motion.mechFootLift(stepPhase) * stride * 9f * s
+        val fx = hx + xStep + if (hx < 0f) -2f * s else 2f * s
+        val fy = -3f * s - lift
+        val kx = hx + (fx - hx) * 0.48f + if (digi) 6f * s else 0f
+        val ky = hy + 17f * s + lift * 0.15f
         p.poly2(hx, hy, kx, ky, fx, fy); p.limb(10f * s, c)
         if (p.hi) { p.poly2(hx, hy, kx, ky, fx, fy); p.cv.drawPath(p.path, p.lp(light(c, 0.18f), 2.6f * s)) }
         p.circle(hx, hy, 6f * s, dark(c, 0.1f))
@@ -582,8 +582,11 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     private fun steamWalker(team: Int, walk: Float, atk: Float) {
         val brass = 0xFFB8883E.toInt()
         val iron = 0xFF55524E.toInt()
-        val m = walk != 0f
-        mechLeg(-6f, -40f, walk + 3.1f, m, 1f, dark(iron, 0.25f), dark(brass, 0.3f), false)
+        val m = stride > 0.01f
+        mechLeg(-6f, -40f, walk + phase + Motion.PI, 1f, dark(iron, 0.25f), dark(brass, 0.3f), false)
+        val kick = Motion.recoil(atk)
+        cv.save()
+        cv.translate(-kick * 3f, kick * 2.5f + if (p.hi) sin(walk * 2f + phase) * stride else 0f)
         // komin
         p.rect(-20f, -98f, -12f, -76f, 0xFF3A3A3E.toInt()); p.rect(-22f, -101f, -10f, -97f, 0xFF2A2A2E.toInt())
         if (m || atk > 0f) for (i in 0..1) { val t = ((time * 0.9f + i * 0.5f) % 1f); p.glow(-16f - t * 8f, -104f - t * 20f, 3f + t * 7f, ((0x90 * (1f - t)).toInt() shl 24) or 0x605A54) }
@@ -603,19 +606,22 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         // manometr
         if (p.hi) { p.circle(-11f, -50f, 3.4f, 0xFFF0EAD8.toInt()); p.segF(-11f, -50f, -9f, -52f, 0.8f, 0xFFB02A20.toInt()) }
         // karabin maszynowy
-        val rec = atk * 4f
+        val rec = kick * 4f
         p.rect(16f - rec, -60f, 30f - rec, -52f, iron)
         p.seg(28f - rec, -56f, 46f - rec, -56f, 2.6f, 0xFF2A2A2E.toInt())
         if (p.hi) for (i in 0..2) p.segF(18f - rec + i * 4f, -59f, 18f - rec + i * 4f, -53f, 0.8f, dark(iron, 0.4f))
         muzzle(48f - rec, -56f, atk, 0.9f)
-        mechLeg(6f, -40f, walk, m, 1f, iron, dark(brass, 0.1f), false)
+        cv.restore()
+        mechLeg(6f, -40f, walk + phase, 1f, iron, dark(brass, 0.1f), false)
     }
 
     private fun battleMech(team: Int, walk: Float, atk: Float) {
         val metal = 0xFF6C7682.toInt()
         val md = dark(metal, 0.3f)
-        val m = walk != 0f
-        mechLeg(-6f, -42f, walk + 3.1f, m, 1f, md, dark(metal, 0.4f), true)
+        mechLeg(-6f, -42f, walk + phase + Motion.PI, 1f, md, dark(metal, 0.4f), true)
+        val kick = Motion.recoil(atk)
+        cv.save()
+        cv.translate(-kick * 3.5f, kick * 2.5f + if (p.hi) sin(walk * 2f + phase) * stride else 0f)
         // wyrzutnia rakiet na plecach
         p.rr(-24f, -92f, -4f, -74f, 2f, dark(metal, 0.15f))
         if (p.hi) for (i in 0..1) for (j in 0..1) p.circle(-19f + i * 9f, -87f + j * 8f, 2.4f, if (atk > 0.3f && i + j == 0) 0xFFFF9030.toInt() else 0xFF2A2A2E.toInt())
@@ -633,22 +639,25 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.rr(6f, -88f, 22f, -78f, 3f, md)
         p.glow(17f, -83f, 2.6f, GLOW)
         // ramię z działem
-        val rec = atk * 4f
+        val rec = kick * 4f
         p.rr(10f - rec, -62f, 34f - rec, -52f, 3f, md)
         p.seg(32f - rec, -57f, 48f - rec, -57f, 3f, 0xFF2A2E34.toInt())
         if (p.hi) p.rect(18f - rec, -64f, 24f - rec, -50f, team)
         muzzle(50f - rec, -57f, atk, 1f)
-        mechLeg(6f, -42f, walk, m, 1f, metal, dark(metal, 0.2f), true)
+        cv.restore()
+        mechLeg(6f, -42f, walk + phase, 1f, metal, dark(metal, 0.2f), true)
     }
 
     private fun titan(team: Int, walk: Float, atk: Float) {
         val s = 1.22f
         val armor = 0xFFDADDE8.toInt()
         val frame = 0xFF5A5480.toInt()
-        val m = walk != 0f
-        mechLeg(-8f * s, -42f * s, walk + 3.1f, m, s, dark(frame, 0.2f), dark(armor, 0.35f), false)
+        mechLeg(-8f * s, -42f * s, walk + phase + Motion.PI, s, dark(frame, 0.2f), dark(armor, 0.35f), false)
+        val kick = Motion.recoil(atk)
+        cv.save()
+        cv.translate(-kick * 3f, kick * 3f + if (p.hi) sin(walk * 2f + phase) * stride else 0f)
         // pierścień tarczy energetycznej
-        val pulse = 0.5f + 0.5f * sin(time * 3f)
+        val pulse = 0.5f + 0.5f * sin(time * 3f + phase)
         p.r.set(-36f * s, -110f * s, 36f * s, -26f * s)
         cv.drawOval(p.r, p.glp((((60 + 60 * pulse).toInt()) shl 24) or 0x78F0FF, 2.6f))
         // tułów
@@ -668,24 +677,25 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         p.rr(4f * s, -98f * s, 20f * s, -86f * s, 4f * s, armor)
         cv.drawLine(9f * s, -92f * s, 19f * s, -92f * s, p.glp(GLOW, 2.4f))
         // naramiennik + działo szynowe
-        val rec = atk * 5f
+        val rec = kick * 5f
         p.rr(-30f * s, -90f * s, -10f * s, -74f * s, 5f * s, team)
         p.rr(8f * s - rec, -64f * s, 40f * s - rec, -52f * s, 3f * s, frame)
         p.seg(38f * s - rec, -61f * s, 58f * s - rec, -61f * s, 2f, 0xFF8A86B0.toInt())
         p.seg(38f * s - rec, -55f * s, 58f * s - rec, -55f * s, 2f, 0xFF8A86B0.toInt())
         cv.drawLine(12f * s - rec, -58f * s, 56f * s - rec, -58f * s, p.glp(GLOW, if (atk > 0.3f) 3f else 1.6f))
         if (atk > 0.7f) { p.glow(60f * s, -58f * s, 10f, 0xC080F0FF.toInt()); p.glow(60f * s, -58f * s, 5f, 0xF0FFFFFF.toInt()) }
-        mechLeg(8f * s, -42f * s, walk, m, s, frame, armor, false)
+        cv.restore()
+        mechLeg(8f * s, -42f * s, walk + phase, s, frame, armor, false)
     }
 
     // ================================================================== poduszkowiec
 
     fun hover(team: Int, atk: Float) {
-        val bob = sin(time * 4f) * 2.5f
+        val bob = sin(time * 4f + phase) * 2.5f
         val hull = 0xFF6A6290.toInt()
         val armor = 0xFFDADDE8.toInt()
         // poduszka energii
-        val pulse = 0.6f + 0.4f * sin(time * 9f)
+        val pulse = 0.6f + 0.4f * sin(time * 9f + phase * 1.7f)
         p.r.set(-40f, -10f, 40f, 4f); cv.drawOval(p.r, p.gp((((90 * pulse).toInt()) shl 24) or 0x78DCFF))
         p.r.set(-28f, -7f, 28f, 1f); cv.drawOval(p.r, p.gp((((150 * pulse).toInt()) shl 24) or 0xB0F4FF))
         cv.save(); cv.translate(0f, bob)
@@ -701,7 +711,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         // dysze
         for (i in 0..2) { val x = -30f + i * 26f; p.rr(x - 6f, -14f, x + 6f, -9f, 2f, 0xFF3A3658.toInt()); p.glow(x, -8f, 2.6f, GLOW) }
         // wieża z działem plazmowym
-        val rec = atk * 4f
+        val rec = Motion.recoil(atk) * 4f
         p.rr(10f - rec, -48f, 44f - rec, -41f, 3f, hull)
         cv.drawLine(14f - rec, -44.5f, 42f - rec, -44.5f, p.glp(GLOW, 1.6f))
         p.rr(-16f, -52f, 18f, -35f, 8f, armor)
