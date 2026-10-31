@@ -340,6 +340,7 @@ class Ai(
         // Nie planuj drogich formacji zbyt wcześnie: oszczędzanie jest świadomą decyzją.
         if (me.gold < Defs.unit(me.era, Role.HEAVY).cost * 0.65f) wh = 0
         if (me.eliteUnlocked &&
+            (profile.eliteBeforeLastEra || me.era == b.cfg.maxEra) &&
             me.gold >= Defs.unit(me.era, Role.ELITE).cost * profile.eliteCommitment
         ) {
             we = profile.eliteWeight
