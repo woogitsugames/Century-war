@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 3
+    const val VERSION = 4
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -69,6 +69,7 @@ object BattleSnapshot {
         o.writeInt(b.wave)
         o.writeFloat(b.waveTimer)
         o.writeInt(b.serialCounter)
+        o.writeBoolean(b.achievementsRecorded)
         val pc = b.pendingChoice
         o.writeByte(pc?.size ?: -1)
         pc?.forEach { o.writeByte(it.ordinal) }
@@ -159,6 +160,9 @@ object BattleSnapshot {
         o.writeShort(s.rank); o.writeShort(s.armory)
         o.writeInt(s.kills); o.writeInt(s.killValue); o.writeInt(s.spawned); o.writeFloat(s.goldEarned)
         for (v in s.spawnedByRole) o.writeInt(v)
+        // liczniki misji i osiągnięć (v4)
+        o.writeInt(s.turretsBuilt); o.writeInt(s.barragesUsed); o.writeInt(s.ralliesUsed)
+        o.writeInt(s.elitesLost); o.writeInt(s.erasAdvanced); o.writeFloat(s.baseDamageTaken)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -208,6 +212,7 @@ object BattleSnapshot {
         b.wave = i.readInt()
         b.waveTimer = i.readFloat()
         b.serialCounter = i.readInt()
+        b.achievementsRecorded = i.readBoolean()
         val pcn = i.readByte().toInt()
         b.pendingChoice = if (pcn < 0) null else Array(pcn) { enumAt(Doctrine.values(), i.readByte().toInt()) }
         val cn = i.readByte().toInt()
@@ -312,6 +317,10 @@ object BattleSnapshot {
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         s.kills = i.readInt(); s.killValue = i.readInt(); s.spawned = i.readInt(); s.goldEarned = i.readFloat()
         for (k in s.spawnedByRole.indices) s.spawnedByRole[k] = i.readInt().also { require(it >= 0) }
+        s.turretsBuilt = i.readInt(); s.barragesUsed = i.readInt(); s.ralliesUsed = i.readInt()
+        s.elitesLost = i.readInt(); s.erasAdvanced = i.readInt(); s.baseDamageTaken = i.readFloat()
+        require(s.turretsBuilt >= 0 && s.barragesUsed >= 0 && s.ralliesUsed >= 0)
+        require(s.elitesLost >= 0 && s.erasAdvanced >= 0 && s.baseDamageTaken >= 0f)
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */

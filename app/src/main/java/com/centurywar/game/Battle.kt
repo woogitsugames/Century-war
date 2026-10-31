@@ -116,6 +116,19 @@ class Side(val index: Int) {
     val spawnedByRole = IntArray(Role.entries.size)
     var goldEarned = 0f
 
+    // Liczniki misji i osiągnięć: wyłącznie statystyczne, nie zmieniają decyzji ani losowości
+    // symulacji (zapisywane w BattleSnapshot). Elita liczona raz, w trainedByRole.
+    val trainedByRole: IntArray get() = spawnedByRole
+    var elitesTrained: Int
+        get() = trainedByRole[Role.ELITE.ordinal]
+        set(v) { trainedByRole[Role.ELITE.ordinal] = v }
+    var elitesLost = 0
+    var turretsBuilt = 0
+    var barragesUsed = 0
+    var ralliesUsed = 0
+    var erasAdvanced = 0
+    var baseDamageTaken = 0f
+
     fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
 }
 
@@ -181,6 +194,8 @@ class Battle(val cfg: BattleConfig) {
     var wave = 0
     var waveTimer = 12f
     var serialCounter = 0
+    /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
+    var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
@@ -287,6 +302,7 @@ class Battle(val cfg: BattleConfig) {
         side.xp -= Defs.evolveXp[side.era]
         val ratio = side.baseHp / side.baseMaxHp
         side.era++
+        side.erasAdvanced++
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
@@ -426,6 +442,7 @@ class Battle(val cfg: BattleConfig) {
         side.gold -= cost
         side.turretEra[slot] = side.era
         side.turretCd[slot] = 0.5f
+        side.turretsBuilt++
         return true
     }
 
@@ -462,6 +479,7 @@ class Battle(val cfg: BattleConfig) {
         if (!abilityReady(side, 0)) return false
         side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
         fireBarrage(side, targetX)
+        side.barragesUsed++
         return true
     }
 
@@ -511,6 +529,7 @@ class Battle(val cfg: BattleConfig) {
         if (!abilityReady(side, 1)) return false
         side.abilityCd[1] = RALLY_CD * side.abilityCdMul
         side.rallyT = RALLY_TIME
+        side.ralliesUsed++
         return true
     }
 
@@ -888,6 +907,7 @@ class Battle(val cfg: BattleConfig) {
                 bossRewardsPending++
             }
             v.aliveCount--
+            if (u.def.role == Role.ELITE) v.elitesLost++
             fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size)
         }
     }
@@ -896,7 +916,9 @@ class Battle(val cfg: BattleConfig) {
         if (endless && s.index == 1) return
         val k = sides[attacker]
         // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
-        s.baseHp -= d * k.siegeMul * siegePressure()
+        val damage = d * k.siegeMul * siegePressure()
+        s.baseHp -= damage
+        if (damage > 0f) s.baseDamageTaken += damage
         s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
         fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index)

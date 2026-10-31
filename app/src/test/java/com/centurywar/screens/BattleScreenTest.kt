@@ -72,6 +72,8 @@ class BattleScreenTest {
     @Test
     fun practiceDailySurrenderDoesNotFarmMedals() {
         val g = game()
+        // Jednorazowe osiągnięcia (np. pierwsza bitwa) to nie farmienie: wyłącz je z porównania.
+        com.centurywar.meta.Achievements.all.forEach { g.profile.unlockedAchievements.add(it.id) }
         val bs = BattleScreen(g, com.centurywar.game.Daily.config(20000L, g.profile.bonuses()), rankedDaily = false)
         g.setScreen(bs)
         g.frame(canvas, 1f / 60f)

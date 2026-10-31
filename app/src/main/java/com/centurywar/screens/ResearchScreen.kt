@@ -10,6 +10,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ResearchDef
 import kotlin.math.max
@@ -147,6 +148,9 @@ class ResearchScreen(g: Game) : Screen(g) {
     override fun onClick(b: Button) {
         if (b.id == -1) { g.pop(); return }
         val d = b.tag as? ResearchDef ?: return
-        if (g.profile.buy(d)) g.haptic(30)
+        if (g.profile.buy(d)) {
+            g.showAchievements(Achievements.onResearchBought(g.profile, d, g.onlineAchievements))
+            g.haptic(30)
+        }
     }
 }

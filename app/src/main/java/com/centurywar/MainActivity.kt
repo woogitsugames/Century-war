@@ -2,6 +2,8 @@ package com.centurywar
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +25,8 @@ import com.centurywar.engine.Sound
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
+import com.centurywar.notifications.DailyReminders
+import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -38,6 +42,7 @@ class MainActivity : Activity(), Host {
     private lateinit var game: Game
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
+    private var playGames: PlayGamesLeaderboards? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +51,14 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        if ((application as? CenturyWarApp)?.playGamesReady == true) {
+            try {
+                playGames = PlayGamesLeaderboards(this, game)
+                game.online = playGames!!
+            } catch (_: RuntimeException) {
+                // Niepowodzenie PGS nie blokuje uruchomienia gry.
+            }
+        }
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
@@ -115,6 +128,10 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         view.onResume()
+        // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
+        game.post { game.checkDailyLogin() }
+        DailyReminders.refresh(this)
+        playGames?.refreshSignIn()
     }
 
     override fun onPause() {
@@ -140,6 +157,7 @@ class MainActivity : Activity(), Host {
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
     override fun onDestroy() {
+        playGames?.close()
         game.sound?.release()
         super.onDestroy()
     }
@@ -150,7 +168,38 @@ class MainActivity : Activity(), Host {
         game.requestBack()
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == DailyReminders.PERMISSION_REQUEST_CODE) {
+            DailyReminders.permissionResult(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+            hideSystemBars()
+        }
+    }
+
     // ---------------------------------------------------------------- Host
+
+    override fun onBattleWon() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
+
+    override fun onNotificationSettingsChanged() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
+
+    override fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            TimePickerDialog(this, { _, hour, _ ->
+                game.post { onResult(hour) }
+            }, current.coerceIn(0, 23), 0, true).apply {
+                setOnDismissListener { hideSystemBars() }
+            }.show()
+        }
+    }
 
     override fun vibrate(ms: Long) {
         val v = vibrator ?: return

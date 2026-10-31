@@ -26,7 +26,9 @@ import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
+import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
 
@@ -463,12 +465,10 @@ class BattleScreen(
         g.snapshots?.delete()
         val pr = g.profile
         val won = battle.winner == 0
-        pr.battles++
-        if (won) pr.wins++
-        pr.totalKills += battle.player.kills
-        pr.playSeconds += battle.time.toLong()
+        // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
+        var earnedStars = 0
         // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
         // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
         val effort = (battle.time / 240f).coerceIn(0f, 1f)
@@ -479,6 +479,7 @@ class BattleScreen(
                 val st = battle.stars()
                 reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
                 if (st > old) {
+                    earnedStars = st - old
                     pr.stars[stage] = st
                     newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day)
                     g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
@@ -487,7 +488,10 @@ class BattleScreen(
             }
             Mode.SKIRMISH -> {
                 reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
-                if (won) newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
+                if (won) {
+                    newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
+                    g.online.submit(Profile.BOARD_SKIRMISH, score)
+                }
             }
             Mode.ENDLESS -> {
                 reward = battle.wave * 3 + battle.player.kills / 10
@@ -503,14 +507,18 @@ class BattleScreen(
                 } else reward = (5 * effort).toInt()
             }
         }
-        pr.medals += reward
+        pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        Missions(pr).onBattleEnd(battle, System.currentTimeMillis(), persist = false, newStars = earnedStars)
+        g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
         tipKey = if (won) "" else when {
             battle.enemy.era > battle.player.era -> "tip_era"
             battle.enemy.goldEarned > battle.player.goldEarned * 1.25f -> "tip_eco"
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
             else -> "tip_ability"
         }
+        // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
+        if (won) g.host.onBattleWon()
         g.haptic(if (won) 80 else 160)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 1f, 0)
     }

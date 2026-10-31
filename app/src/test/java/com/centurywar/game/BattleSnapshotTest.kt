@@ -57,6 +57,7 @@ class BattleSnapshotTest {
         assertEquals(a.winner, b.winner)
         assertEquals(a.wave, b.wave)
         assertEquals(a.serialCounter, b.serialCounter)
+        assertEquals(a.achievementsRecorded, b.achievementsRecorded)
         for (k in 0..1) {
             val x = a.sides[k]; val y = b.sides[k]
             assertEquals(x.baseHp, y.baseHp)
@@ -65,6 +66,16 @@ class BattleSnapshotTest {
             assertEquals(x.era, y.era)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
+            assertEquals(x.elitesTrained, y.elitesTrained)
+            assertEquals(x.elitesLost, y.elitesLost)
+            assertEquals(x.turretsBuilt, y.turretsBuilt)
+            assertEquals(x.barragesUsed, y.barragesUsed)
+            assertEquals(x.erasAdvanced, y.erasAdvanced)
+            assertEquals(x.baseDamageTaken, y.baseDamageTaken)
+            assertArrayEquals(x.trainedByRole, y.trainedByRole)
+            assertEquals(x.turretsBuilt, y.turretsBuilt)
+            assertEquals(x.barragesUsed, y.barragesUsed)
+            assertEquals(x.ralliesUsed, y.ralliesUsed)
             assertEquals(x.doctrines, y.doctrines)
         }
         for (k in a.units.indices) {
@@ -284,6 +295,46 @@ class BattleSnapshotTest {
         steps(restored, 100)
         assertTrue(target.hp < hp)
         assertSame(battle, restored)
+    }
+
+    @Test
+    fun achievementCountersSurviveSnapshotAndFurtherSimulation() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 91L, 1f, playerBonuses = Bonuses(eliteUnlocked = true))
+        val a = Battle(cfg)
+        val p = a.player
+        p.gold = 200000f
+        assertTrue(a.buyTurret(p, 0))
+        assertTrue(a.castBarrage(p))
+        assertTrue(a.spawn(p, Defs.unit(0, Role.ELITE)))
+        p.xp = Defs.evolveXp[0].toFloat()
+        assertTrue(a.evolve(p))
+        a.chooseDoctrine(0)
+        p.elitesLost = 1
+        p.baseDamageTaken = 36f
+        a.achievementsRecorded = true
+        val b = roundTrip(a)
+        assertEquals(1, b.player.turretsBuilt)
+        assertEquals(1, b.player.barragesUsed)
+        assertEquals(1, b.player.elitesTrained)
+        assertEquals(1, b.player.elitesLost)
+        assertEquals(1, b.player.erasAdvanced)
+        assertEquals(36f, b.player.baseDamageTaken)
+        assertTrue(b.achievementsRecorded)
+        steps(a, 60 * 60, true)
+        steps(b, 60 * 60, true)
+        assertSame(a, b)
+    }
+
+    @Test
+    fun missionCountersSurviveResume() {
+        val a = Battle(BattleConfig(Mode.SKIRMISH, 1234L, 1.0f))
+        a.player.trainedByRole[Role.ELITE.ordinal] = 7
+        a.player.trainedByRole[Role.RANGED.ordinal] = 4
+        a.player.turretsBuilt = 3
+        a.player.barragesUsed = 2
+        a.player.ralliesUsed = 1
+        val restored = roundTrip(a)
+        assertSame(a, restored)
     }
 
     @Test

@@ -14,6 +14,8 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
+import com.centurywar.meta.OnlineLeaderboards
+import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -64,6 +66,30 @@ class ScreenshotTest {
 
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
+    /** Testuje układ rankingów i ustawień przy aktywnym PGS, bez połączeń sieciowych. */
+    @Test
+    fun playGamesMenus() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.online = object : OnlineLeaderboards {
+                override val available = true
+                override val state = OnlineState.SIGNED_OUT
+                override fun submit(board: String, score: Long) {}
+            }
+            g.setScreen(RankingsScreen(g))
+            shot(g, "${tag}_pgs_rankings")
+            g.setScreen(SettingsScreen(g))
+            shot(g, "${tag}_pgs_settings")
+            g.setScreen(PlayGamesScreen(g))
+            shot(g, "${tag}_pgs_signin")
+        }
+    }
+
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
@@ -76,7 +102,23 @@ class ScreenshotTest {
             g.profile.stars[0] = 3; g.profile.stars[1] = 2; g.profile.stars[2] = 1
             g.profile.submit(Profile.BOARD_ENDLESS, 12345, 1)
             g.profile.submit(Profile.BOARD_ENDLESS, 8000, 1)
-            shot(g, "${tag}_menu")
+            // Start gry przyznaje nagrodę za logowanie: baner powiadomienia, potem czyste menu.
+            shot(g, "${tag}_menu_login", 20)
+            shot(g, "${tag}_menu", 200)
+            // Osiągnięcia: kilka odblokowanych i postęp innych.
+            g.profile.battles = 30; g.profile.wins = 12; g.profile.totalKills = 640
+            g.profile.unlockedAchievements.addAll(listOf("win_1", "win_10", "battles_25", "kills_100"))
+            g.profile.achievementCounters["TURRETS_BUILT"] = 21L
+            g.setScreen(AchievementsScreen(g)); shot(g, "${tag}_achievements")
+            g.showAchievements(listOf(com.centurywar.meta.Achievements.all[1]))
+            shot(g, "${tag}_achievements_toast", 20)
+            repeat(200) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
+            // Misje: pierwsza dzienna ukończona (do odebrania).
+            val ms = com.centurywar.meta.Missions(g.profile)
+            ms.refresh(System.currentTimeMillis())
+            ms.state.daily[0].progress = ms.state.daily[0].target
+            ms.state.weekly[0].progress = ms.state.weekly[0].target / 2
+            g.setScreen(MissionsScreen(g)); shot(g, "${tag}_missions")
             val cs = CampaignScreen(g)
             g.setScreen(cs); shot(g, "${tag}_campaign")
             field(cs, "selected").set(cs, com.centurywar.game.Campaign.stages[2])
