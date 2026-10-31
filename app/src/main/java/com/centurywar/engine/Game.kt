@@ -22,6 +22,8 @@ import com.centurywar.screens.ReplayScreen
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
 interface Host {
     fun vibrate(ms: Long)
+    /** Starsze implementacje Host zachowują krótkie kliknięcie. */
+    fun haptic(kind: HapticKind) { vibrate(12L) }
     fun requestText(title: String, current: String, onResult: (String) -> Unit)
     fun applyRenderScale(scale: Float)
     fun applyFrameRate(fps: Int)
@@ -305,7 +307,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         refreshBackHandling()
     }
 
-    fun haptic(ms: Long = 12) { if (profile.vibration) host.vibrate(ms) }
+    fun haptic(kind: HapticKind = HapticKind.TAP) {
+        if (profile.vibrationLevel > 0) host.haptic(kind)
+    }
+
+    /** Zgodność ze starszymi ekranami: sygnał dotknięcia zamiast czasu trwania. */
+    fun haptic(ms: Long) { haptic(HapticKind.TAP) }
 
     // ---------------------------------------------------------------- wątki
 
