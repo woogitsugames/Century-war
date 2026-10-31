@@ -93,7 +93,7 @@ Różnicę względem identycznego etapu `CLEAR` należy oddzielić od
 różnic między sąsiadującymi etapami (z inną siłą AI i modyfikatorami).
 
 ```bash
-BALANCE_RUN=true BALANCE_RUNS=20 BALANCE_PROFILE=target ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.weatherImpactReport*' --console=plain
+BALANCE_RUN=true BALANCE_RUNS=20 BALANCE_PROFILE=target ./gradlew :app:testDebugUnitTest --rerun-tasks --tests '*BalanceReport.weatherImpactReport*' --console=plain
 ```
 
 **Status pomiarów:** niezweryfikowane w tym środowisku — brak lokalnego SDK
