@@ -4,6 +4,7 @@ import com.centurywar.engine.Palette
 import com.centurywar.engine.Ui
 import org.junit.Assert.assertEquals
 import com.centurywar.game.Mode
+import com.centurywar.game.GameIoCounter
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertFalse
@@ -543,6 +544,7 @@ class ProfileTest {
 
     @Test
     fun rapidGameThreadSavesKeepLatestSnapshotAndWriteOffThread() {
+        GameIoCounter.resetForTest()
         val file = tmpFile()
         val profile = Profile(file)
         val writerThread = java.util.concurrent.atomic.AtomicReference<String>()
@@ -557,6 +559,7 @@ class ProfileTest {
         gameThread.join()
         assertTrue(profile.awaitWrites(10_000))
         assertEquals("cw-profile-io", writerThread.get())
+        assertEquals(0, GameIoCounter.diskViolations)
         assertEquals(120, Profile(file).also { it.load() }.medals)
         assertFalse(profile.awaitWrites(0))
     }
