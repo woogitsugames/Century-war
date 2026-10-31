@@ -27,6 +27,7 @@ import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.meta.Achievements
+import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Profile
 import com.centurywar.meta.Missions
 import kotlin.math.max
@@ -58,6 +59,7 @@ class BattleScreen(
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
     private var finished = false
+    private var surrendered = false
     private var resultTime = 0f
 
 
@@ -477,7 +479,7 @@ class BattleScreen(
                 g.snapshots?.delete()
                 g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
             }
-            QUIT -> { paused = false; commands.surrender() }
+            QUIT -> { paused = false; surrendered = commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 if (battle.pendingCards != null) commands.card(b.id - DOCTRINE0)
@@ -592,7 +594,8 @@ class BattleScreen(
             }
         }
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        Missions(pr).onBattleEnd(battle, System.currentTimeMillis(), persist = false, newStars = earnedStars)
+        val finishedAt = System.currentTimeMillis()
+        Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars)
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
         tipKey = if (won) "" else when {
             battle.enemy.era > battle.player.era -> "tip_era"
@@ -600,6 +603,8 @@ class BattleScreen(
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
             else -> "tip_ability"
         }
+        pr.recordBattle(cfg.mode, won, battle.time.toInt())
+        g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         if (won) g.host.onBattleWon()
