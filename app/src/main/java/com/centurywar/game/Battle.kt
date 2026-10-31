@@ -353,6 +353,7 @@ class Battle(val cfg: BattleConfig) {
             EndlessCard.BLOOD_GOLD -> {
                 side.incomeMul *= 1.5f
                 side.killGoldMul *= 1.5f
+                side.baseHpMul *= 0.8f
                 side.baseMaxHp *= 0.8f
                 side.baseHp *= 0.8f
             }
@@ -364,6 +365,7 @@ class Battle(val cfg: BattleConfig) {
             EndlessCard.EXTRA_GOLD -> side.gold += 500f * Defs.costScale(side.era)
             EndlessCard.MOBILIZATION -> side.cap = min(MAX_UNITS, side.cap + 3)
             EndlessCard.FORTRESS -> {
+                side.baseHpMul *= 1.25f
                 side.baseMaxHp *= 1.25f
                 side.baseHp *= 1.25f
             }
