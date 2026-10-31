@@ -23,8 +23,8 @@ import kotlin.math.sin
  * Interaktywny samouczek pierwszego etapu kampanii. Maszyna stanów sterowana stanem
  * bitwy: każdy krok czeka na swój warunek (np. pierwsze zabójstwo), potem przyciemnia
  * ekran z wycięciem na podświetlony element, pokazuje rękę, ramkę z tekstem i czeka,
- * aż gracz wykona akcję. Kroki "zadaniowe" zatrzymują albo spowalniają symulację
- * ([timeScale]), a każdy ma limit czasu, więc samouczek nigdy się nie zablokuje.
+ * aż gracz wykona akcję. Każdy widoczny krok zatrzymuje symulację ([timeScale]),
+ * a każdy ma limit czasu, więc samouczek nigdy się nie zablokuje.
  * Przycisk "Pomiń samouczek" jest dostępny przez cały czas.
  *
  * Rysowanie nie alokuje: teksty są łamane tylko przy zmianie kroku albo szerokości.
@@ -143,13 +143,9 @@ class TutorialOverlay(
     val timeScale: Float
         get() {
             if (finished || !showing) return 1f
-            return when (step) {
-                S_MELEE, S_RANGED, S_TURRET, S_BARRAGE -> 0f
-                S_INCOME, S_KILL -> 0.3f
-                S_EVOLVE -> if (battle.canEvolve(p)) 0f else 1f
-                S_CAMERA -> 0.5f
-                else -> 1f
-            }
+            // Każdy widoczny dymek zatrzymuje bitwę: gracz czyta we własnym tempie
+            // i nie traci jednostek ani bazy, zanim przeczyta i wykona polecenie.
+            return 0f
         }
 
     private val gating: Boolean
@@ -189,7 +185,7 @@ class TutorialOverlay(
     private fun trigger(waited: Float): Boolean = when (step) {
         S_INCOME -> p.spawned >= 1
         S_KILL -> p.kills >= 1
-        S_EVOLVE -> battle.canEvolve(p) || p.xp >= Defs.evolveXp[p.era] * 0.8f
+        S_EVOLVE -> battle.canEvolve(p)
         S_DOCTRINE -> battle.pendingChoice != null
         S_TURRET -> waited >= 2f
         S_BARRAGE -> battle.abilityReady(p, 0) && enemiesNear(1350f) >= 3
@@ -226,12 +222,13 @@ class TutorialOverlay(
 
     /** Limity czasu rzeczywistego: po nich krok znika sam (zabezpieczenie przed blokadą). */
     private fun timedOut(): Boolean = when (step) {
-        S_INCOME, S_KILL -> phaseT > 16f
-        S_EVOLVE -> readyT > 40f || phaseT > 240f
-        S_DOCTRINE -> phaseT > 90f
-        S_CAMERA -> phaseT > 18f
-        S_DONE -> phaseT > 7f
-        else -> phaseT > 45f
+        // Bitwa stoi, więc limity są długie; to tylko zabezpieczenie przed zablokowaniem.
+        S_INCOME, S_KILL -> phaseT > 90f
+        S_EVOLVE -> readyT > 120f || phaseT > 240f
+        S_DOCTRINE -> phaseT > 120f
+        S_CAMERA -> phaseT > 90f
+        S_DONE -> phaseT > 60f
+        else -> phaseT > 120f
     }
 
     private fun show() {
@@ -408,7 +405,7 @@ class TutorialOverlay(
         val hand = hasHole && !big && step != S_DOCTRINE
 
         // 1. przyciemnienie z wycięciem
-        val dimA = when (timeScale) { 0f -> 170; 1f -> if (step == S_DOCTRINE) 110 else 120; else -> 140 }
+        val dimA = if (gating) 170 else if (step == S_DOCTRINE) 110 else 120
         dimPaint.color = Color.argb(dimA, 4, 6, 14)
         path.rewind()
         path.addRect(0f, 0f, g.width.toFloat(), g.height.toFloat(), Path.Direction.CW)
