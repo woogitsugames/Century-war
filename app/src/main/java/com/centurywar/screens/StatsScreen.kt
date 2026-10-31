@@ -42,6 +42,7 @@ class StatsScreen(g: Game) : Screen(g) {
     private var scroll = 0f
     private var maxScroll = 0f
     private var elapsed = 0f
+    private var observedHistoryLoaded = false
     private var history: List<BattleHistory.Record> = emptyList()
     private var metrics = BattleHistory.aggregate(emptyList(), 0L)
     private val modeTexts = Array(4) { "" }
@@ -175,7 +176,14 @@ class StatsScreen(g: Game) : Screen(g) {
         }
     }
 
-    override fun update(dt: Float) { elapsed = dt }
+    override fun update(dt: Float) {
+        elapsed = dt
+        if (!observedHistoryLoaded && g.historyLoaded) {
+            observedHistoryLoaded = true
+            refresh()
+            adjustScroll()
+        }
+    }
 
     override fun onDrag(dx: Float, dy: Float) {
         scroll = (scroll - dy).coerceIn(0f, maxScroll)
@@ -307,7 +315,10 @@ class StatsScreen(g: Game) : Screen(g) {
         c.save()
         c.clipRect(panel.left + 3 * dp, panel.top + 3 * dp,
             panel.right - 3 * dp, panel.bottom - 4 * dp)
-        if (selected >= 0) drawDetails(c)
+        if (!g.historyLoaded) {
+            ui.textO(c, L["bh_loading"], panel.centerX(), panel.centerY(),
+                16f, Ui.DIM, Paint.Align.CENTER)
+        } else if (selected >= 0) drawDetails(c)
         else if (tab == 0) drawStats(c) else drawHistory(c)
         c.restore()
         ui.button(c, back, 16f)
