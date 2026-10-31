@@ -27,6 +27,7 @@ class BattleSimTest {
                 .append(if (b.over) "winner=${b.winner}" else "TIMEOUT")
                 .append(" t=${"%.1f".format(b.time / 60f)}min eras=${b.player.era}/${b.enemy.era}")
                 .append(" kills=${b.player.kills}/${b.enemy.kills}\n")
+            assertTrue("AI nie ukończyło etapu ${stage.index + 1} w limicie 30 min", b.over)
         }
         println(report)
     }
