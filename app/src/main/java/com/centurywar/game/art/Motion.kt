@@ -31,6 +31,14 @@ internal object Motion {
         return rem * rem * (1.25f - 0.25f * rem)
     }
 
+    /** Pochylenie kadłuba ze słabym odbiciem w przeciwnym kierunku pod koniec powrotu. */
+    fun hullTilt(atk: Float): Float {
+        val t = 1f - atk.coerceIn(0f, 1f)
+        val overshoot = if (t > 0.58f && t < 1f)
+            -sin((t - 0.58f) / 0.42f * PI) * (1f - t) * 1.3f else 0f
+        return recoil(atk) * 2.2f + overshoot
+    }
+
     /** Podparta stopa przesuwa się w lokalnym układzie dokładnie o -drogę / size. */
     fun mechFootX(phase: Float, size: Float): Float {
         var a = phase % TAU
