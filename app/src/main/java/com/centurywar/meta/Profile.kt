@@ -632,7 +632,26 @@ class Profile(private val file: File) {
             val it = c.keys()
             while (it.hasNext()) {
                 val key = it.next()
-                if (key in known) newCounters[key] = c.optLong(key, 0L).coerceAtLeast(0L)
+                if (key in known) {
+                    val value = c.optLong(key, 0L).coerceAtLeast(0L)
+                    newCounters[key] = when (key) {
+                        AchievementMetric.STEAM_VARIANTS.name,
+                        AchievementMetric.SILICON_VARIANTS.name -> value and 3L
+                        AchievementMetric.BARRAGE_EIGHT.name,
+                        AchievementMetric.BOSS_KNOCKBACK.name,
+                        AchievementMetric.BOSS_AURA.name,
+                        AchievementMetric.BOSS_SHIELD.name,
+                        AchievementMetric.BOSS_RECRUITER.name,
+                        AchievementMetric.BOSS_RAGE.name,
+                        AchievementMetric.WEEKLY_GOLD.name,
+                        AchievementMetric.CUSTOM_THREE.name,
+                        AchievementMetric.REPLAY_RECORD.name -> value.coerceAtMost(1L)
+                        AchievementMetric.RAIN_WINS.name,
+                        AchievementMetric.WIND_WINS.name,
+                        AchievementMetric.NIGHT_WINS.name -> value.coerceAtMost(10_000_000L)
+                        else -> value
+                    }
+                }
             }
         }
         val newUnlocked = HashSet<String>()
