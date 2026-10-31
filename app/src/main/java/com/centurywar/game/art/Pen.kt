@@ -65,18 +65,27 @@ class Pen {
         fill.isAntiAlias = aa; stroke.isAntiAlias = aa; line.isAntiAlias = aa
     }
 
+    /** Przyciemnia bez zmiany kanału alfa (dym, szybki blask i szkło pozostają półprzezroczyste). */
+    private fun scorched(color: Int): Int {
+        if (char <= 0f || color == OUTLINE) return color
+        val mixed = mix(color, 0xFF32343A.toInt(), char)
+        return (color and 0xFF000000.toInt()) or (mixed and 0x00FFFFFF)
+    }
+
     fun c(color: Int): Int {
-        var col = color
-        if (char > 0f) col = mix(col, 0xFF32343A.toInt(), char)
+        var col = scorched(color)
         if (flash) col = mix(col, 0xFFFFFFFF.toInt(), 0.78f)
-        else if (tintAmt > 0f) col = mix(col, tint, tintAmt)
+        else if (tintAmt > 0f) {
+            val mixed = mix(col, tint, tintAmt)
+            col = (col and 0xFF000000.toInt()) or (mixed and 0x00FFFFFF)
+        }
         if (alpha >= 1f) return col
         return Color.argb((Color.alpha(col) * alpha).toInt(), Color.red(col), Color.green(col), Color.blue(col))
     }
 
     /** Kolor bez wybielenia przy trafieniu (np. świecące elementy), ale z przezroczystością. */
     fun raw(color: Int): Int {
-        val col = if (char > 0f && color != OUTLINE) mix(color, 0xFF32343A.toInt(), char) else color
+        val col = scorched(color)
         return if (alpha >= 1f) col else Color.argb((Color.alpha(col) * alpha).toInt(), Color.red(col), Color.green(col), Color.blue(col))
     }
 
