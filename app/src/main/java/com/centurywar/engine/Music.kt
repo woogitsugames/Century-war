@@ -15,7 +15,7 @@ import android.os.SystemClock
 class Music {
     companion object {
         const val MENU = MusicSynth.MENU
-        private const val CHUNK_SAMPLES = 1024
+        private const val CHUNK_SAMPLES = 2048
         /** Sen, gdy bufor AudioTrack jest pełny (~1/3 porcji). */
         private const val FULL_SLEEP_MS = 15L
     }
@@ -101,8 +101,8 @@ class Music {
             MusicSynth.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
         if (minBytes <= 0) return
-        // ~250 ms bufora (PCM16 mono = 2 bajty na próbkę).
-        val bufferBytes = (maxOf(minBytes, MusicSynth.SAMPLE_RATE * 2 / 4) + 1) and -2
+        // Co najmniej 500 ms bufora sprzętowego (PCM16 mono = 2 bajty na próbkę).
+        val bufferBytes = (maxOf(minBytes, MusicSynth.SAMPLE_RATE * 2 / 2) + 1) and -2
         var track: AudioTrack? = null
         try {
             track = AudioTrack.Builder()
