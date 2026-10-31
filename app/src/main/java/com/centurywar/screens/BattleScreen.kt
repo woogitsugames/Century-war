@@ -105,6 +105,15 @@ class BattleScreen(
     private var resultBossesText = ""
     private var resultScoreText = ""
     private var resultUnrankedText = ""
+    private var resultTimeLabel = ""
+    private var resultKillsLabel = ""
+    private var resultBossesLabel = ""
+    private var resultWeeklyTiersLabel = ""
+    private var resultScoreLabel = ""
+    private var resultRewardLabel = ""
+    private var resultNewRecordLabel = ""
+    private var resultStars = 0
+    private var resultCustomSkirmish = false
     private val resultTipLines = arrayOfNulls<String>(16)
     private var resultTipCount = 0
 
@@ -1368,6 +1377,64 @@ class BattleScreen(
         }
     }
 
+    /** Wynik i tłumaczenia wyliczamy przy końcu bitwy, nie w każdej klatce. */
+    private fun refreshResultTexts() {
+        if (!finished) return
+        val won = battle.winner == 0
+        resultTitle = when {
+            cfg.weekly >= 0L -> L["weekly_over"]
+            cfg.mode == Mode.ENDLESS -> L["siege_over"]
+            won -> L["victory"]
+            else -> L["defeat"]
+        }
+        val seconds = battle.time.toInt()
+        resultTimeText = "%d:%02d".format(seconds / 60, seconds % 60)
+        resultKillsText = battle.player.kills.toString()
+        resultWaveText = battle.wave.toString()
+        resultWaveLabel = L.f("wave", battle.wave).substringBefore(' ')
+        resultBossesText = battle.bossesDefeated.toString()
+        resultScoreText = battle.score().toString()
+        resultStars = if (cfg.mode == Mode.CAMPAIGN && won) battle.stars() else 0
+        resultCustomSkirmish = cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)
+        resultUnrankedText = L["sk_unranked"]
+        resultTimeLabel = L["time"]
+        resultKillsLabel = L["kills"]
+        resultBossesLabel = L["bosses_defeated"]
+        resultWeeklyTiersLabel = L["weekly_tiers"]
+        resultScoreLabel = L["score"]
+        resultRewardLabel = L["reward"]
+        resultNewRecordLabel = L["new_record"]
+        weeklyResultLabel = if (weeklyResultKey.isEmpty()) "" else L[weeklyResultKey]
+        rewardText = "+" + L.plural("medals_n", reward.toLong())
+        tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        prepareResultTipLines()
+    }
+
+    /** Zawijanie tylko przy rozliczeniu, zmianie języka lub wymiarów ekranu. */
+    private fun prepareResultTipLines() {
+        if (tipKey.isEmpty()) { resultTipCount = 0; return }
+        val scale = ui.textScale
+        ui.textScale = min(scale, 1.15f)
+        try {
+            resultTipCount = HintFrame.wrapInto(ui, tipText,
+                resultPanel.width() - 79 * dp, 13f, resultTipLines)
+        } finally {
+            ui.textScale = scale
+        }
+    }
+
+    /** Rysowanie wcześniej złamanych wierszy nie tworzy nowych ciągów znaków. */
+    private fun drawWrappedLines(c: Canvas, lines: Array<String?>, count: Int,
+                                 x: Float, y: Float, sizeDp: Float, color: Int, align: Paint.Align) {
+        var yy = y
+        val lineH = sizeDp * dp * ui.textScale * 1.3f
+        for (i in 0 until count) {
+            val line = lines[i] ?: continue
+            ui.text(c, line, x, yy, sizeDp, color, align)
+            yy += lineH
+        }
+    }
+
     private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
         val lh = 28 * dp
         if (y + lh > restartEnd.r.top - 8 * dp) return y
@@ -1387,71 +1454,53 @@ class BattleScreen(
         val a = min(1f, resultTime * 2f)
         c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
         val won = battle.winner == 0
-        val title = when {
-            cfg.weekly >= 0L -> L["weekly_over"]
-            cfg.mode == Mode.ENDLESS -> L["siege_over"]
-            won -> L["victory"]
-            else -> L["defeat"]
-        }
         val rp = resultPanel
-        // wjazd panelu od dołu
+        // Wjazd panelu od dołu.
         val slide = (1f - a) * 60 * dp
         c.save()
         c.translate(0f, slide)
         ui.panel(c, rp)
         val good = won || cfg.mode == Mode.ENDLESS
-        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, title, 26f, if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
+        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, resultTitle, 26f,
+            if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
             rp.width() * 0.7f, if (good) Color.rgb(255, 246, 200) else Ui.TEXT, rp.width() + 40 * dp)
         var y = rp.top + 44 * dp
         if (cfg.mode == Mode.CAMPAIGN && won) {
-            val st = battle.stars()
-            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, st, 3, 1.05f)
+            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, resultStars, 3, 1.05f)
             y += 54 * dp
         } else {
             Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
             y += 48 * dp
         }
-        if (cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)) {
-            val info = L["sk_unranked"]
-            ui.textO(c, info, rp.centerX(), y + 7 * dp, ui.fit(info, 14f, rp.width() - 32 * dp),
-                Ui.GOLD, Paint.Align.CENTER)
+        if (resultCustomSkirmish) {
+            ui.textO(c, resultUnrankedText, rp.centerX(), y + 7 * dp,
+                ui.fit(resultUnrankedText, 14f, rp.width() - 32 * dp), Ui.GOLD, Paint.Align.CENTER)
             y += 28 * dp
         }
-        val lx = rp.left + 30 * dp
-        val rx = rp.right - 30 * dp
-        val lh = 28 * dp
-        fun row(icon: Int, k: String, v: String, col: Int = Ui.TEXT) {
-            if (y + lh > restartEnd.r.top - 8 * dp) return
-            tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
-            ui.fill.color = Color.argb(30, 255, 255, 255)
-            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-            val cy = tmpR.centerY()
-            Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-            ui.textO(c, k, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
-            ui.textO(c, v, rx, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
-            y += lh
-        }
-        row(Icons.STOPWATCH, L["time"], timeStr(battle.time))
-        row(Icons.SKULL, L["kills"], battle.player.kills.toString())
+        y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
+        y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
         if (cfg.mode == Mode.ENDLESS) {
-            row(Icons.TOWER, L.f("wave", battle.wave).substringBefore(' '), battle.wave.toString())
-            row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
-            if (cfg.weekly >= 0L) row(Icons.MEDAL, L["weekly_tiers"], weeklyResultLabel, Ui.GOLD)
+            y = drawResultRow(c, y, Icons.TOWER, resultWaveLabel, resultWaveText)
+            y = drawResultRow(c, y, Icons.CROWN, resultBossesLabel, resultBossesText)
+            if (cfg.weekly >= 0L)
+                y = drawResultRow(c, y, Icons.MEDAL, resultWeeklyTiersLabel, weeklyResultLabel, Ui.GOLD)
         }
-        if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
-        row(Icons.MEDAL, L["reward"], rewardText, Ui.GOLD)
+        if (cfg.mode != Mode.CAMPAIGN)
+            y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
+        y = drawResultRow(c, y, Icons.MEDAL, resultRewardLabel, rewardText, Ui.GOLD)
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
-            ui.textO(c, L["new_record"], rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
+            ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
         if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
             Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            ui.wrap(c, tipText, rp.left + 53 * dp, y + 18 * dp,
-                rp.width() - 79 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
+            drawWrappedLines(c, resultTipLines, resultTipCount,
+                rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
         }
         c.restore()
         ui.button(c, continueBtn, 17f)
         ui.button(c, restartEnd, 17f)
         if (replayEnd.visible) ui.button(c, replayEnd, 15f)
     }
+
 }
