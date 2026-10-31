@@ -36,23 +36,21 @@ class AppIconScreenshotTest {
         }
     }
 
-    /** Podglad launchera przy rzeczywistej powierzchni 108dp, z okragla maska. */
+    /** Podglad launchera po przycieciu 108dp do widocznych 72dp, z okragla maska. */
     private fun adaptive(size: Int, playStore: Boolean): Bitmap {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val checkpoint = canvas.save()
-        if (playStore) {
-            // Google Play: wypelnij kwadrat bez maski, przytnij tylko bezpieczna strefe
-            // 18..90dp tych samych warstw wektorowych z launchera.
-            canvas.scale(size / 72f, size / 72f)
-            canvas.translate(-18f, -18f)
-        } else {
+        if (!playStore) {
             val clip = Path().apply {
                 addCircle(size / 2f, size / 2f, size / 2f, Path.Direction.CW)
             }
             canvas.clipPath(clip)
-            canvas.scale(size / 108f, size / 108f)
         }
+        // Launcher kadruje warstwy 108 dp do widocznych 72 dp (18..90).
+        // Google Play korzysta z tego samego kadru, ale bez maski kola.
+        canvas.scale(size / 72f, size / 72f)
+        canvas.translate(-18f, -18f)
         for (id in intArrayOf(R.drawable.ic_launcher_background, R.drawable.ic_launcher_foreground)) {
             drawable(id).apply { setBounds(0, 0, 108, 108); draw(canvas) }
         }
