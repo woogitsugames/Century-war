@@ -166,9 +166,9 @@ val releaseChecklist = tasks.register("releaseChecklist") {
         val problems = ReleaseChecklist.problems(checks)
         if (problems.isNotEmpty()) {
             throw GradleException(
-                "LISTA KONTROLNA WYDANIA NIEZALICZONA:\\n" +
-                    problems.joinToString("\\n") { " - $it" } +
-                    "\\nWyjątek tylko po świadomej decyzji: " +
+                "LISTA KONTROLNA WYDANIA NIEZALICZONA:\n" +
+                    problems.joinToString("\n") { " - $it" } +
+                    "\nWyjątek tylko po świadomej decyzji: " +
                     "-PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode " +
                     "(wybierz wyłącznie potrzebne flagi; patrz docs/RELEASE.md).",
             )
