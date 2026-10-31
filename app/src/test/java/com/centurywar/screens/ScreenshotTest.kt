@@ -119,6 +119,32 @@ class ScreenshotTest {
         }
     }
 
+    /** Rozgałęzienia: modal i oba warianty kodeksu na trzech proporcjach ekranu. */
+    @Test
+    fun eraBranches() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            for (era in intArrayOf(4, 6)) {
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 19L + era, 1f, startEra = era, maxEra = era))
+                g.setScreen(bs)
+                shot(g, "${tag}_branch_era${era}_choice")
+                val b = field(bs, "battle").get(bs) as Battle
+                b.chooseEraVariant(0)
+                shot(g, "${tag}_branch_era${era}_first_hud")
+                val cx = CodexScreen(g, era)
+                g.setScreen(cx)
+                shot(g, "${tag}_branch_era${era}_first_codex")
+                cx.onClick(cx.buttons.first { it.id == 201 })
+                shot(g, "${tag}_branch_era${era}_second_codex")
+            }
+        }
+    }
+
     @Test
     fun screens() {
         for ((tag, dims) in mapOf(
