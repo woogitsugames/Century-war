@@ -307,7 +307,7 @@ class ScoreClient(
     }
 
     companion object {
-        const val GAME_VERSION = "0.2.0"
+        const val GAME_VERSION = "0.3.0"
         private const val CACHE_MS = 120_000L
         private val PERIODS = setOf("day", "week", "all")
         private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")

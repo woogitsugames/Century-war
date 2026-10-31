@@ -10,7 +10,7 @@ fun main() {
     require(secret.size >= 32) { "CW_HMAC_KEY must be at least 32 UTF-8 bytes" }
     val dbPath = System.getenv("CW_DATABASE_PATH") ?: "./data/leaderboards.db"
     val port = (System.getenv("PORT") ?: "8080").toInt().also { require(it in 1..65535) }
-    val gameVersion = System.getenv("CW_GAME_VERSION") ?: "0.2.0"
+    val gameVersion = System.getenv("CW_GAME_VERSION") ?: "0.3.0"
     File(dbPath).absoluteFile.parentFile?.mkdirs()
     val store = SqliteStore("jdbc:sqlite:" + dbPath)
     Runtime.getRuntime().addShutdownHook(Thread { store.close() })
