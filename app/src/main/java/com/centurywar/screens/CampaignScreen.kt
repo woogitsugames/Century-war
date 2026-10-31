@@ -19,7 +19,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Mapa kampanii: 8 epok × 4 etapy, przewijana pionowo. Każda epoka to pas z
+ * Mapa kampanii: epoki × 4 etapy, przewijana pionowo. Każda epoka to pas z
  * wstęgą i medalionem epoki, a etapy to węzły na krętej ścieżce (wąż: kolejne
  * epoki idą na przemian w prawo i w lewo).
  */
@@ -86,7 +86,8 @@ class CampaignScreen(g: Game) : Screen(g) {
             cx[s.index] = x; cy[s.index] = y
             val r = nodeR * (if (s.index % 4 == 3) 1.1f else 1f)
             t.set(x - r * 1.35f, y - r * 1.25f, r * 2.7f, r * 2.7f)
-            t.enabled = s.index <= unlocked
+            // Po wstawieniu epoki weteran może mieć gwiazdki za „dziurą” nowych etapów.
+            t.enabled = s.index <= unlocked || g.profile.stars[s.index] > 0
             t.highlight = s.index == unlocked
             t.visible = selected == null && t.r.bottom > top && t.r.top < h
         }

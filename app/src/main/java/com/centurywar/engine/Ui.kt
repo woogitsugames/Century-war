@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
+import com.centurywar.game.Defs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -67,11 +68,8 @@ class Ui {
         val TRIM = Color.rgb(222, 170, 70)
         val RIBBON = Color.rgb(196, 54, 46)
 
-        /** Kolory przewodnie 8 epok (mapa kampanii, wstęgi). */
-        val ERA = intArrayOf(
-            Color.rgb(150, 104, 60), Color.rgb(196, 128, 50), Color.rgb(84, 112, 150), Color.rgb(150, 58, 50),
-            Color.rgb(140, 112, 64), Color.rgb(96, 110, 74), Color.rgb(40, 140, 160), Color.rgb(110, 76, 170),
-        )
+        /** Barwy epok pochodzą z ich definicji, nie z indeksów UI. */
+        val ERA: IntArray = IntArray(Defs.ERA_COUNT) { Defs.spec(it).accent }
 
         fun blend(a: Int, b: Int, t: Float): Int {
             val it = 1f - t

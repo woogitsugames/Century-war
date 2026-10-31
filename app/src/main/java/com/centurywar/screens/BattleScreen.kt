@@ -67,6 +67,11 @@ class BattleScreen(
     private var tipKey = ""
 
     private companion object {
+        /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
+        val CARD_RARITY = intArrayOf(
+            android.graphics.Color.rgb(150, 104, 60), android.graphics.Color.rgb(84, 112, 150),
+            android.graphics.Color.rgb(140, 112, 64), android.graphics.Color.rgb(40, 140, 160),
+        )
         const val UNIT0 = 0 // 0..3
         const val TURRET = 10
         const val ARMORY = 11
@@ -930,7 +935,7 @@ class BattleScreen(
             val off = if (b.pressed) 3 * dp else 0f
             tmpR.set(b.r.left, b.r.top + off, b.r.right, b.r.bottom + off)
             val rarity = cards?.get(i)?.rarity
-            val trim = if (rarity == null) Ui.GOLD else Ui.ERA[min(7, rarity.ordinal * 2)]
+            val trim = if (rarity == null) Ui.GOLD else CARD_RARITY[rarity.ordinal.coerceIn(0, CARD_RARITY.size - 1)]
             ui.panel(c, tmpR, Color.argb(245, 40, 48, 70), 14f)
             val mr = min(33 * dp, min(b.r.width() * 0.2f, b.r.height() * 0.18f))
             val my = tmpR.top + 10 * dp + mr

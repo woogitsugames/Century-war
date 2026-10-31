@@ -105,11 +105,41 @@ class ProfileRobustnessTest {
         assertEquals(-1L, p.lastRankedDaily)
 
         val migrated = Profile.migrate(JSONObject().put("v", 1).put("medals", 99), 1)
-        assertEquals(2, migrated.getInt("v"))
+        assertEquals(Profile.CURRENT_VERSION, migrated.getInt("v"))
         assertEquals(99, migrated.getInt("medals"))
         p.save()
-        assertEquals(2, JSONObject(file.readText()).getInt("v"))
+        assertEquals(Profile.CURRENT_VERSION, JSONObject(file.readText()).getInt("v"))
         assertEquals(99, Profile(file).apply { load() }.medals)
+    }
+
+    @Test
+    fun ironAgeInsertionShiftsCampaignStarsOnce() {
+        // Profil sprzed Epoki żelaza: 32 etapy, gwiazdki na etapach 1, 8 (indeks 7), 9 (8) i 32 (31).
+        val old = JSONArray()
+        for (i in 0 until 32) old.put(0)
+        old.put(0, 3); old.put(7, 2); old.put(8, 1); old.put(31, 3)
+        for (version in intArrayOf(1, 2)) {
+            val file = File(folder.newFolder("v$version"), "profile.json")
+            Profile(file).apply { stars[0] = 0; save() }
+            val json = JSONObject(file.readText()).put("v", version).put("stars", JSONArray(old.toString()))
+            file.writeText(json.toString())
+            val p = Profile(file).apply { load() }
+            assertEquals(3, p.stars[0])
+            assertEquals(2, p.stars[7])
+            for (i in 8..11) assertEquals("nowy etap ${i + 1}", 0, p.stars[i])
+            assertEquals(1, p.stars[12])
+            assertEquals(3, p.stars[35])
+            // Ponowny zapis i odczyt nie przesuwa gwiazdek drugi raz.
+            p.save()
+            val again = Profile(file).apply { load() }
+            assertEquals(1, again.stars[12])
+            assertEquals(3, again.stars[35])
+            assertEquals(0, again.stars[8])
+            // Zapis z chmury w starej wersji przechodzi tę samą migrację.
+            val cloud = Profile(File(file.parentFile, "cloud.json")).apply { fromJson(json.toString()) }
+            assertEquals(1, cloud.stars[12])
+            assertEquals(3, cloud.stars[35])
+        }
     }
 
     @Test

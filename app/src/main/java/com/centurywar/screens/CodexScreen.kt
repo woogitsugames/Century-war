@@ -110,7 +110,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         // zakładki epok: jeden rząd, a gdy za wąsko, dwa rzędy po 4
         val tabGap = 8 * dp
-        val perRow = if ((contentW - 7 * tabGap) / 8 < 66 * dp) 4 else 8
+        val perRow = if ((contentW - (Defs.ERA_COUNT - 1) * tabGap) / Defs.ERA_COUNT < 66 * dp) 5 else Defs.ERA_COUNT
         val tabW = (contentW - (perRow - 1) * tabGap) / perRow
         val tabH = 40 * dp
         val tabTop = chrome.top + 2 * dp

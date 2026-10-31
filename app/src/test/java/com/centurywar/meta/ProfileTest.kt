@@ -78,6 +78,28 @@ class ProfileTest {
     }
 
     @Test
+    fun migrationKeepsLegacyStarsAndLeaderboard() {
+        val f = tmpFile()
+        val legacy = IntArray(32) { (it % 3) + 1 }
+        val json = """{"v":1,"medals":117,"stars":[${legacy.joinToString(",")}],
+            "boards":{"campaign":[{"n":"Komendant","s":1234,"d":17}]}}"""
+        f.writeText(json)
+        val p = Profile(f).also { it.load() }
+        assertEquals(36, p.stars.size)
+        assertEquals(legacy[7], p.stars[7])
+        for (i in 8..11) assertEquals(0, p.stars[i])
+        for (i in 8 until 32) assertEquals("Stary etap ${i + 1}", legacy[i], p.stars[i + 4])
+        assertEquals(legacy.sum(), p.totalStars())
+        assertEquals(1234L, p.top(Profile.BOARD_CAMPAIGN).single().score)
+        p.save()
+        val reloaded = Profile(f).also { it.load() }
+        assertEquals(p.stars.toList(), reloaded.stars.toList())
+        assertEquals(legacy.sum(), reloaded.totalStars())
+        assertEquals(117, reloaded.medals)
+        assertEquals(1234L, reloaded.top(Profile.BOARD_CAMPAIGN).single().score)
+    }
+
+    @Test
     fun loadFallsBackToTempFileWhenMainIsMissing() {
         val f = tmpFile()
         Profile(f).apply { medals = 321; save() }

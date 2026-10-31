@@ -1,6 +1,7 @@
 package com.centurywar.meta
 
 import com.centurywar.game.Battle
+import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import com.centurywar.game.Rng
@@ -194,7 +195,7 @@ class Missions(private val profile: Profile) {
                 (type != MissionType.ELITES || profile.level("r_elite") > 0) &&
                 (type != MissionType.RALLIES || profile.level("r_rally") > 0)
         }.toMutableList()
-        val stars = profile.totalStars().coerceIn(0, 96)
+        val stars = profile.totalStars().coerceIn(0, Campaign.stages.size * 3)
         repeat(3) {
             val type = available.removeAt(rng.nextInt(available.size))
             val modifier = if (type == MissionType.MODIFIER_WINS) {

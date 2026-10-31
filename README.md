@@ -1,8 +1,12 @@
 # Century War
 
-Strategia na Androida: wojna na jednym pasie przez 8 epok, od plemion do ery orbitalnej.
-Krótkie bitwy, długa metaprogresja (kampania 32 etapów, badania, oblężenie bez końca,
+Strategia na Androida: wojna na jednym pasie przez 9 epok, od plemion do ery orbitalnej.
+Krótkie bitwy, długa metaprogresja (kampania 36 etapów, badania, oblężenie bez końca,
 wyzwanie dnia, rankingi). Projekt i zawartość: [docs/GDD.md](docs/GDD.md).
+
+Między epoką brązu a feudalizmem znajduje się **epoka żelaza**: czterech nowych wojowników,
+fort z palisadą, balista murowa i salwa oszczepów. Instrukcja rozbudowy o kolejne epoki:
+[docs/ADDING_ERA.md](docs/ADDING_ERA.md).
 
 ## Budowanie
 

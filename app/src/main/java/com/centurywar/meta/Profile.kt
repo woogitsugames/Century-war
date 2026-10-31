@@ -22,15 +22,31 @@ class ScoreEntry(val name: String, val score: Long, val day: Long)
 class Profile(private val file: File) {
 
     companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
+        /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
+        const val IRON_FIRST_STAGE = 8
+        const val INSERTED_STAGE_COUNT = 4
 
-        /** Migracje danych profilu; wersja 1 nie wymaga zmiany pól. */
+        /**
+         * Migracje danych profilu (plik i zapis z chmury):
+         * 1 -> 2 bez zmian pól; 2 -> 3 wstawienie Epoki żelaza: gwiazdki etapów 9..32
+         * (indeksy 8..31) przesuwają się o 4, a nowe etapy 9..12 startują od zera.
+         */
         internal fun migrate(json: JSONObject, fromVersion: Int): JSONObject {
             require(fromVersion in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $fromVersion" }
             var version = fromVersion
             while (version < CURRENT_VERSION) {
                 when (version) {
                     1 -> Unit
+                    2 -> json.optJSONArray("stars")?.let { old ->
+                        val moved = JSONArray()
+                        for (i in 0 until old.length()) {
+                            val target = if (i >= IRON_FIRST_STAGE) i + INSERTED_STAGE_COUNT else i
+                            while (moved.length() < target) moved.put(0)
+                            moved.put(target, old.opt(i))
+                        }
+                        json.put("stars", moved)
+                    }
                     else -> error("Brak migracji z wersji $version")
                 }
                 version++

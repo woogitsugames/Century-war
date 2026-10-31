@@ -559,10 +559,7 @@ class Battle(val cfg: BattleConfig) {
         return true
     }
 
-    private fun barrageProj(era: Int) = when (era) {
-        0 -> Proj.BOULDER; 1 -> Proj.JAVELIN; 2 -> Proj.ARROW; 3 -> Proj.BALL
-        4 -> Proj.SHELL; 5 -> Proj.SHELL; 6 -> Proj.ROCKET; else -> Proj.BEAM
-    }
+    private fun barrageProj(era: Int) = Defs.spec(era).barrageProj
 
     fun castRally(side: Side): Boolean {
         if (!abilityReady(side, 1)) return false

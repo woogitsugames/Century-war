@@ -2,6 +2,7 @@ package com.centurywar.meta
 
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
+import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
@@ -45,9 +46,9 @@ object Achievements {
         def("battles_1000", AchievementMetric.BATTLES, 1000, 650, AchievementCategory.COMBAT),
         def("stars_24", AchievementMetric.STARS, 24, 75, AchievementCategory.CAMPAIGN),
         def("stars_48", AchievementMetric.STARS, 48, 170, AchievementCategory.CAMPAIGN),
-        def("stars_96", AchievementMetric.STARS, 96, 500, AchievementCategory.CAMPAIGN),
+        def("stars_96", AchievementMetric.STARS, Campaign.stages.size * 3L, 500, AchievementCategory.CAMPAIGN),
         def("stages_16", AchievementMetric.STAGES, 16, 85, AchievementCategory.CAMPAIGN),
-        def("stages_32", AchievementMetric.STAGES, 32, 250, AchievementCategory.CAMPAIGN),
+        def("stages_32", AchievementMetric.STAGES, Campaign.stages.size.toLong(), 250, AchievementCategory.CAMPAIGN),
         def("wave_10", AchievementMetric.WAVES, 10, 40, AchievementCategory.ENDLESS),
         def("wave_25", AchievementMetric.WAVES, 25, 120, AchievementCategory.ENDLESS),
         def("wave_50", AchievementMetric.WAVES, 50, 280, AchievementCategory.ENDLESS),

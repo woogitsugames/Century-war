@@ -1,13 +1,15 @@
 package com.centurywar.game.art
 
 import android.graphics.Canvas
+import com.centurywar.game.Defs
+import com.centurywar.game.EraArt
 import com.centurywar.game.art.Pen.Companion.dark
 import com.centurywar.game.art.Pen.Companion.light
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Bazy 8 epok i modele wież. Statyczny korpus bazy ([body]) renderer nagrywa raz do
+ * Bazy wszystkich epok i modele wież. Statyczny korpus bazy ([body]) renderer nagrywa raz do
  * android.graphics.Picture (na epokę i drużynę), więc tekstury – bloki kamienne, cegły,
  * deski, panele betonowe, okna – nic nie kosztują CPU w kolejnych klatkach.
  * Układ: front bazy w x = 0 (strona wroga to +x), grunt y = 0, baza sięga do x ≈ −320.
@@ -26,8 +28,8 @@ class Bases(private val p: Pen) {
     private val GLOW = 0xFF7FF4FF.toInt()
 
     /** Pozycja masztu flagi: (x, y szczytu). */
-    fun flagX(e: Int) = when (e) { 0 -> -150f; 1 -> -155f; 2 -> -195f; 3 -> -205f; 4 -> -120f; 5 -> -200f; 6 -> -195f; else -> -180f }
-    fun flagTop(e: Int) = when (e) { 0 -> -330f; 1 -> -360f; 2 -> -470f; 3 -> -370f; 4 -> -270f; 5 -> -270f; 6 -> -470f; else -> -350f }
+    fun flagX(e: Int) = if (Defs.spec(e).art == EraArt.IRON) -165f else when (Defs.artPreset(e)) { 0 -> -150f; 1 -> -155f; 2 -> -195f; 3 -> -205f; 4 -> -120f; 5 -> -200f; 6 -> -195f; else -> -180f }
+    fun flagTop(e: Int) = if (Defs.spec(e).art == EraArt.IRON) -365f else when (Defs.artPreset(e)) { 0 -> -330f; 1 -> -360f; 2 -> -470f; 3 -> -370f; 4 -> -270f; 5 -> -270f; 6 -> -470f; else -> -350f }
 
     // ------------------------------------------------------------------ tekstury
 
@@ -120,9 +122,36 @@ class Bases(private val p: Pen) {
 
     // ------------------------------------------------------------------ korpusy baz
 
+    /** Oryginalny fort żelazny: kamienna brama, drewniana palisada i blanki. */
+    private fun ironFort(team: Int, pole: Float) {
+        val stone = 0xFF918B7D.toInt()
+        p.rect(-314f, -230f, -48f, 0f, stone)
+        if (p.hi) masonry(-314f, -230f, -48f, 0f, 18f, 36f, 0xFF565349.toInt(), 1.5f)
+        for (i in 0..7) {
+            val x = -314f + i * 34f
+            p.rect(x + 3f, -252f, x + 23f, -230f, stone)
+        }
+        p.rect(-319f, -72f, -268f, 0f, 0xFF80603D.toInt())
+        for (i in 0..4) stake(-316f + i * 12f, 73f + (i % 2) * 10f, WOOD)
+        p.rr(-206f, -144f, -125f, 0f, 19f, 0xFF48443E.toInt())
+        p.rr(-195f, -130f, -136f, 0f, 10f, WOOD_D)
+        if (p.hi) {
+            for (i in 1..3) p.seg(-195f + i * 14f, -115f, -195f + i * 14f, 0f, 1.6f, 0xFFBC9870.toInt())
+            p.seg(-208f, -147f, -124f, -147f, 7f, stone)
+            p.circle(-165f, -120f, 4f, GOLD)
+        }
+        p.rect(-256f, -325f, -235f, -230f, 0xFF817B70.toInt())
+        p.rect(-262f, -335f, -229f, -321f, stone)
+        p.rect(-223f, -284f, -73f, -230f, 0xFF7A746B.toInt())
+        for (i in 0..3) p.rect(-220f + i * 38f, -303f, -197f + i * 38f, -281f, stone)
+        banner(-295f, -211f, 28f, 62f, team, 0xFFF5E6BC.toInt())
+        p.seg(pole, -364f, pole, -253f, 5f, WOOD_D)
+    }
+
     fun body(e: Int, team: Int) {
         val pole = flagX(e)
-        when (e) {
+        if (Defs.spec(e).art == EraArt.IRON) { ironFort(team, pole); return }
+        when (Defs.artPreset(e)) {
             0 -> {
                 // namiot ze skór
                 p.tri(-330f, 0f, -285f, -120f, -240f, 0f); p.shape(0xFFB08A5A.toInt())
@@ -372,7 +401,7 @@ class Bases(private val p: Pen) {
     // ------------------------------------------------------------------ dynamiczne detale bazy
 
     fun live(e: Int, team: Int) {
-        when (e) {
+        when (Defs.artPreset(e)) {
             0 -> { // migotanie ogniska
                 val f = 0.6f + 0.4f * sin(time * 17f) * sin(time * 7f)
                 p.glow(-160f, -14f, 16f + f * 8f, ((0x50 * f).toInt() shl 24) or 0xFFB040)
@@ -389,7 +418,8 @@ class Bases(private val p: Pen) {
 
     // ------------------------------------------------------------------ wieża na działka
 
-    fun tower(e: Int, team: Int, top: Float) {
+    fun tower(epoch: Int, team: Int, top: Float) {
+        val e = Defs.artPreset(epoch)
         val c = when (e) { 0, 1 -> WOOD; 2 -> 0xFF92928A.toInt(); 3 -> 0xFF9A5238.toInt(); 4 -> 0xFF8A4232.toInt(); 5 -> 0xFF7E8278.toInt(); 6 -> 0xFF6E7A8A.toInt(); else -> 0xFF4A4070.toInt() }
         if (e <= 1) {
             // dwa pnie z poprzeczkami
@@ -412,7 +442,8 @@ class Bases(private val p: Pen) {
         p.rect(-68f, -top + 14f, -16f, -top + 26f, team)
     }
 
-    fun platform(e: Int, y: Float) {
+    fun platform(epoch: Int, y: Float) {
+        val e = Defs.artPreset(epoch)
         val c = when (e) { 0, 1 -> WOOD_D; 2, 3 -> 0xFF6E6E68.toInt(); else -> 0xFF3A3C42.toInt() }
         p.rect(-84f, y, 0f, y + 10f, c)
         if (p.hi) p.rectF(-82f, y + 1.5f, -2f, y + 3.5f, light(c, 0.25f))
@@ -427,8 +458,29 @@ class Bases(private val p: Pen) {
         cv.restore()
     }
 
+    /** Żelazna balista osadzona na kamiennym przedpiersiu fortu. */
+    private fun ironWallBallista(x: Float, y: Float, firing: Boolean, team: Int) {
+        val stone = 0xFF817E78.toInt()
+        p.rect(x - 23f, y - 22f, x + 12f, y, stone)
+        if (p.hi) masonry(x - 23f, y - 22f, x + 12f, y, 7f, 12f, 0xFF4E4D47.toInt(), 1.3f)
+        for (i in 0..2) p.rect(x - 24f + i * 13f, y - 29f, x - 16f + i * 13f, y - 21f, stone)
+        p.seg(x - 11f, y - 26f, x + 37f, y - 28f, 4f, WOOD_D)
+        p.seg(x - 9f, y - 20f, x + 12f, y - 39f, 3f, WOOD)
+        val pa = p.path; pa.reset(); pa.moveTo(x + 12f, y - 45f); pa.quadTo(x + 31f, y - 27f, x + 12f, y - 8f)
+        cv.drawPath(pa, p.op(4f)); cv.drawPath(pa, p.lp(0xFFB8A88A.toInt(), 3.3f))
+        p.seg(x + 12f, y - 45f, x - 2f, y - 27f, 1.1f, 0xFFEAE4D2.toInt())
+        p.seg(x + 12f, y - 8f, x - 2f, y - 27f, 1.1f, 0xFFEAE4D2.toInt())
+        if (!firing) {
+            p.seg(x - 3f, y - 27f, x + 49f, y - 29f, 2.2f, 0xFFD8D9CC.toInt())
+            p.tri(x + 49f, y - 33f, x + 58f, y - 29f, x + 49f, y - 25f); p.shape(0xFF9DA1A0.toInt())
+        }
+        p.rectF(x - 12f, y - 19f, x + 5f, y - 15f, team)
+    }
+
     private fun turretModel(era: Int, x: Float, y: Float, firing: Boolean, team: Int) {
-        when (era) {
+        if (Defs.spec(era).art == EraArt.IRON) {
+            ironWallBallista(x, y, firing, team)
+        } else when (Defs.artPreset(era)) {
             0 -> { // miotacz kamieni
                 p.rect(x - 20f, y - 12f, x + 16f, y, WOOD)
                 p.seg(x - 12f, y - 12f, x - 2f, y - 30f, 3f, WOOD_D); p.seg(x + 8f, y - 12f, x - 2f, y - 30f, 3f, WOOD_D)
@@ -498,6 +550,6 @@ class Bases(private val p: Pen) {
                 p.glow(x + 40f, y - 19f, if (firing) 8f else 4f, GLOW)
             }
         }
-        if (firing && era != 7) { p.glow(x + 40f, y - 22f, 10f, 0xC0FFE080.toInt()); p.glow(x + 40f, y - 22f, 5f, 0xF0FFFFFF.toInt()) }
+        if (firing && Defs.spec(era).art != EraArt.ORBITAL) { p.glow(x + 40f, y - 22f, 10f, 0xC0FFE080.toInt()); p.glow(x + 40f, y - 22f, 5f, 0xF0FFFFFF.toInt()) }
     }
 }

@@ -55,11 +55,11 @@ private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")
 
 internal fun validBoard(board: String): Boolean =
     board in setOf("daily", "endless", "skirmish") ||
-        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[01])$"))
+        board.matches(Regex("^campaign_([0-9]|[12][0-9]|3[0-5])$"))
 
 internal fun submittedBoard(board: String, stage: Int?): String = when (board) {
     "campaign" -> {
-        require(stage != null && stage in 0..31) { "invalid_stage" }
+        require(stage != null && stage in 0 until com.centurywar.game.Campaign.stages.size) { "invalid_stage" }
         "campaign_" + stage
     }
     "daily", "endless", "skirmish" -> {

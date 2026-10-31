@@ -17,8 +17,8 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * Galeria grafiki do przeglądu: wszystkie 32 jednostki w dużym powiększeniu
- * (ten sam kod co na polu bitwy, przez drawUnitIcon) oraz bazy 8 epok z wieżami.
+ * Galeria grafiki do przeglądu: wszystkie jednostki w dużym powiększeniu
+ * (ten sam kod co na polu bitwy, przez drawUnitIcon) oraz bazy wszystkich epok z wieżami.
  * Pliki: build/screenshots/gallery_*.png
  */
 @RunWith(RobolectricTestRunner::class)
@@ -52,11 +52,11 @@ class ArtGalleryTest {
         val b = Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f))
         val r = BattleRenderer(g, b)
         val cols = 4
-        val bmp = Bitmap.createBitmap(cols * cell, 8 * cell, Bitmap.Config.ARGB_8888)
+        val bmp = Bitmap.createBitmap(cols * cell, Defs.ERA_COUNT * cell, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(Color.rgb(196, 214, 228))
         val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
-        for (era in 0 until 8) for (i in 0 until 4) {
+        for (era in 0 until Defs.ERA_COUNT) for (i in 0 until 4) {
             val def = Defs.unit(era, Role.values()[i])
             val x = i * cell.toFloat(); val y = era * cell.toFloat()
             c.drawRect(x, y + cell * 0.86f, x + cell, y + cell, ground)
@@ -76,11 +76,11 @@ class ArtGalleryTest {
     fun bases() {
         for (q in intArrayOf(Quality.HIGH, Quality.LOW)) {
             val pw = 1100; val ph = 760
-            val bmp = Bitmap.createBitmap(pw * 2, ph * 4, Bitmap.Config.ARGB_8888)
+            val bmp = Bitmap.createBitmap(pw * 2, ph * ((Defs.ERA_COUNT + 1) / 2), Bitmap.Config.ARGB_8888)
             val c = Canvas(bmp)
             val g = game(pw, ph, q)
-            for (era in 0 until 8) {
-                val b = Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f, startEra = era, maxEra = 7))
+            for (era in 0 until Defs.ERA_COUNT) {
+                val b = Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f, startEra = era, maxEra = Defs.ERA_COUNT - 1))
                 val s = b.sides[0]
                 s.slots = 4
                 for (i in 0 until 4) s.turretEra[i] = (era - i).coerceAtLeast(0)

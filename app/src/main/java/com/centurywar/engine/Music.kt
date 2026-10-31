@@ -50,7 +50,8 @@ class Music {
     }
 
     fun setEra(newEra: Int) {
-        era = if (newEra == MENU) MENU else newEra.coerceIn(0, 7)
+        // 8 motywów odpowiada stylom grafiki; Epoka żelaza gra motyw feudalny (Defs.artPreset).
+        era = if (newEra == MENU) MENU else com.centurywar.game.Defs.artPreset(newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1))
     }
 
     fun setIntensity(value: Float) {

@@ -3,6 +3,8 @@ package com.centurywar.game.art
 import android.graphics.Canvas
 import com.centurywar.game.Body
 import com.centurywar.game.Weapon
+import com.centurywar.game.Defs
+import com.centurywar.game.EraArt
 import com.centurywar.game.art.Pen.Companion.dark
 import com.centurywar.game.art.Pen.Companion.light
 import kotlin.math.cos
@@ -53,10 +55,20 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     fun beast(era: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
         when {
-            elite -> elephant(era == 0, team, walk, atk)
-            era == 1 -> chariot(team, walk, atk)
-            era == 2 -> { horse(0xFFE2DCD0.toInt(), team, walk, atk, true); rider(2, Weapon.PIKE, team, atk) }
-            else -> { horse(0xFF6A4630.toInt(), team, walk, atk, false); rider(era, Weapon.SWORD, team, atk) }
+            elite -> elephant(Defs.spec(era).art == EraArt.TRIBAL, team, walk, atk)
+            Defs.spec(era).art == EraArt.BRONZE -> chariot(team, walk, atk)
+            Defs.spec(era).art == EraArt.IRON -> {
+                horse(0xFF73624E.toInt(), team, walk, atk, true)
+                rider(era, Weapon.SWORD, team, atk)
+            }
+            Defs.spec(era).art == EraArt.FEUDAL -> {
+                horse(0xFFE2DCD0.toInt(), team, walk, atk, true)
+                rider(era, Weapon.PIKE, team, atk)
+            }
+            else -> {
+                horse(0xFF6A4630.toInt(), team, walk, atk, false)
+                rider(era, Weapon.SWORD, team, atk)
+            }
         }
     }
 
@@ -237,6 +249,27 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     // ================================================================== machiny
 
+    /** Lekka polowa balista na dwukołowej ramie, elita Epoki żelaza. */
+    fun scorpion(team: Int, walk: Float, atk: Float) {
+        p.rect(-39f, -26f, 38f, -15f, WOOD)
+        p.seg(-25f, -22f, -10f, -63f, 5f, WOOD_D)
+        p.seg(24f, -22f, 6f, -63f, 5f, WOOD)
+        p.rect(-14f, -62f, 24f, -51f, team)
+        p.seg(-25f, -54f, 58f, -54f, 5f, WOOD_D)
+        p.seg(-20f, -35f, 10f, -62f, 2.4f, IRON)
+        val pa = p.path; pa.reset(); pa.moveTo(32f, -84f); pa.quadTo(50f, -58f, 32f, -30f)
+        cv.drawPath(pa, p.op(4.2f)); cv.drawPath(pa, p.lp(WOOD, 3.8f))
+        p.seg(32f, -84f, -6f + atk * 5f, -54f, 1.4f, 0xFFF0E0BC.toInt())
+        p.seg(32f, -30f, -6f + atk * 5f, -54f, 1.4f, 0xFFF0E0BC.toInt())
+        if (atk < 0.65f) {
+            p.seg(-7f, -54f, 67f, -54f, 2.7f, 0xFFB5BBC0.toInt())
+            p.tri(67f, -58f, 78f, -54f, 67f, -50f); p.shape(0xFFDCE1E2.toInt())
+        }
+        if (p.hi) p.rivets(-30f, -21f, 30f, 5, 1.3f, IRON)
+        wheel(-28f, -12f, 12f, -walk, WOOD, 7)
+        wheel(28f, -12f, 12f, -walk, WOOD, 7)
+    }
+
     fun trebuchet(team: Int, walk: Float, atk: Float) {
         val wd = dark(WOOD, 0.25f)
         // rama na kołach
@@ -321,11 +354,10 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         if (p.hi) { val a = walk * 2f; for (i in 0..2) { val b = a + i * 2.094f; p.circleF(x + cos(b) * r * 0.35f, y + sin(b) * r * 0.35f, r * 0.1f, 0xFF3A3A40.toInt()) } }
     }
 
-    fun vehicle(era: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
-        when {
-            era == 4 -> ironclad(team, walk, atk)
-            era == 5 && !elite -> halftrack(team, walk, atk)
-            era == 5 -> heavyTank(team, walk, atk)
+    fun vehicle(epoch: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
+        when (Defs.spec(epoch).art) {
+            EraArt.STEAM -> ironclad(team, walk, atk)
+            EraArt.STEEL -> if (elite) heavyTank(team, walk, atk) else halftrack(team, walk, atk)
             else -> apc(team, walk, atk)
         }
     }
@@ -477,10 +509,10 @@ class Machines(private val p: Pen, private val men: Soldiers) {
 
     // ================================================================== mechy
 
-    fun mech(era: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
-        when (era) {
-            4 -> steamWalker(team, walk, atk)
-            7 -> titan(team, walk, atk)
+    fun mech(epoch: Int, elite: Boolean, team: Int, walk: Float, atk: Float) {
+        when (Defs.spec(epoch).art) {
+            EraArt.STEAM -> steamWalker(team, walk, atk)
+            EraArt.ORBITAL -> titan(team, walk, atk)
             else -> battleMech(team, walk, atk)
         }
     }

@@ -167,6 +167,15 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun ironAgeSnapshotResumesDeterministically() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 1702L, 1.05f, startEra = 2, maxEra = 3)
+        val (a, b) = check(cfg, 60 * 110, 60 * 210)
+        assertEquals("era_iron", Defs.eras[cfg.startEra].nameKey)
+        assertEquals(a.player.era, b.player.era)
+        assertEquals(a.enemy.era, b.enemy.era)
+    }
+
+    @Test
     fun endlessResumesExactly() {
         val (a, _) = check(BattleConfig(Mode.ENDLESS, 7L, 1f), 60 * 200, 60 * 300)
         assertTrue(a.wave >= 5)
