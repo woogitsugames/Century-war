@@ -190,7 +190,7 @@ class Battle(val cfg: BattleConfig) {
         p.xpMul *= b.xpMul
         p.cap = b.popCap
         p.abilityCdMul *= b.abilityCdMul
-        if (p.slots > 0) p.slots = b.turretSlots
+        if (p.slots > 0) p.slots = b.turretSlots.coerceIn(0, Defs.MAX_TURRET_SLOTS)
         p.eliteUnlocked = b.eliteUnlocked
         p.rallyUnlocked = b.rallyUnlocked
 
@@ -221,7 +221,7 @@ class Battle(val cfg: BattleConfig) {
     fun canQueue(side: Side, role: Role): Boolean {
         val def = Defs.unit(side.era, role)
         if (role == Role.ELITE && !side.eliteUnlocked) return false
-        return side.queueSize < side.queueMax && side.gold >= def.cost
+        return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= def.cost
     }
 
     fun queueUnit(side: Side, role: Role): Boolean {
@@ -292,7 +292,13 @@ class Battle(val cfg: BattleConfig) {
             Doctrine.SWIFT -> { side.trainMul *= 1.25f; side.speedMul *= 1.1f }
             Doctrine.VETERAN -> side.xpMul *= 1.3f
             Doctrine.FURY -> side.dmgMul *= 1.12f
-            Doctrine.ARSENAL -> { side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1); side.turretCostMul *= 0.8f }
+            Doctrine.ARSENAL -> {
+                // Zakaz wież jest nadrzędny także wobec doktryny.
+                if (Modifier.NO_TURRETS !in cfg.modifiers && side.slots > 0) {
+                    side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
+                    side.turretCostMul *= 0.8f
+                }
+            }
             Doctrine.TACTICS -> side.abilityCdMul *= 0.75f
             Doctrine.PLUNDER -> side.killGoldMul *= 1.35f
         }
@@ -327,6 +333,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun upgradeCost(side: Side, slot: Int): Int {
+        if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return -1
         val te = side.turretEra[slot]
         if (te < 0 || te >= side.era) return -1
         return max(0, side.turretCost() - side.turretCost(te) / 2)
@@ -341,6 +348,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun sellTurret(side: Side, slot: Int): Boolean {
+        if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return false
         val te = side.turretEra[slot]
         if (over || te < 0) return false
         side.gold += side.turretCost(te) / 2
@@ -349,12 +357,12 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun abilityReady(side: Side, i: Int): Boolean =
-        !over && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
+        !over && i in 0..1 && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
 
     fun castBarrage(side: Side): Boolean {
         if (!abilityReady(side, 0)) return false
-        side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
         val count = 16
+        var fired = 0
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
         val type = barrageProj(side.era)
         for (i in 0 until count) {
@@ -375,7 +383,10 @@ class Battle(val cfg: BattleConfig) {
             p.dmg = dmg
             p.splash = 60f
             p.siegeMul = 0.25f
+            fired++
         }
+        if (fired == 0) return false
+        side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
         return true
     }
@@ -701,7 +712,7 @@ class Battle(val cfg: BattleConfig) {
 
     private fun damageBase(s: Side, d: Float, attacker: Int) {
         if (endless && s.index == 1) return
-        s.baseHp -= d * siegePressure()
+        s.baseHp = (s.baseHp - d * siegePressure()).coerceIn(0f, s.baseMaxHp)
         s.baseFlash = 0.15f
         val k = sides[attacker]
         k.xp += d * 0.12f * k.xpMul
