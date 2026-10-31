@@ -182,10 +182,13 @@ class MainActivity : Activity(), Host {
     }
 
     override fun applyRenderScale(scale: Float) {
+        // Game wywołuje to już w konstruktorze, zanim powstanie GameView.
+        if (!::view.isInitialized) return
         runOnUiThread { view.setRenderScale(scale) }
     }
 
     override fun applyFrameRate(fps: Int) {
+        if (!::view.isInitialized) return
         runOnUiThread { view.setFrameRate(fps) }
     }
 

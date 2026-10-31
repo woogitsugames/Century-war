@@ -79,6 +79,7 @@ ze świadomie włączonym podpisem testowym, uruchamia:
 ./gradlew :app:testDebugUnitTest \
   --tests '*BattleSimTest*' --tests '*BattleRulesTest*' \
   --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' \
+  --tests '*ReleaseStartupTest*' \
   --console=plain
 ./gradlew :app:assembleRelease :app:bundleRelease -PreleaseTestSigning=true --console=plain
 ```
@@ -129,3 +130,14 @@ awarii aplikacji i środowiska — nowy skrypt zabezpiecza diagnostykę.
 | --- | ---: | ---: | ---: |
 | APK | 230772 | 232655 | +1883 |
 | AAB | 400337 | 402654 | +2317 |
+
+## Usunięcie błędu startu Activity
+
+Próba na emulatorze API 34 z KVM (run 41207270716) potwierdziła crash release
+`lateinit property view has not been initialized`: konstruktor `Game` wywoływał
+`Host.applyRenderScale()` podczas `MainActivity.onCreate`, zanim powstał
+`GameView`. Metoda hosta ignoruje wywołania przed inicjalizacją widoku;
+`GameView.onSizeChanged` i tak stosuje właściwą skalę po przydzieleniu
+rozmiaru, a FPS ustawia `MainActivity.onCreate` po stworzeniu widoku.
+`ReleaseStartupTest` sprawdza inicjalizację Activity przez Robolectric.
+Potwierdzenie działania zoptymalizowanego wydania wymaga ponownego smoke-testu.

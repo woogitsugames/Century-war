@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew :app:assembleDebug --console=plain --no-daemon 2>&1 | tee build/release-metrics/debug.log
-          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/required-tests.log
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' --tests '*ReleaseStartupTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/required-tests.log
 
       - name: Zbuduj APK i AAB release z podpisem testowym
         shell: bash
