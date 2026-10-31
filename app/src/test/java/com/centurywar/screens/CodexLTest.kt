@@ -25,6 +25,7 @@ class CodexLTest {
             "cx62_abilities", "cx62_doctrines", "cx62_weather", "cx62_modifiers",
             "cx62_cards", "cx62_bosses", "cx62_armory_d", "cx62_no_variants_d",
             "cx62_rain_d", "cx62_wind_d", "cx62_night_d", "cx62_waves_d",
+            "cx62_rally_d",
         )
         for (era in Defs.specs) {
             required.add(era.nameKey)
