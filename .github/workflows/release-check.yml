@@ -42,8 +42,9 @@ jobs:
           mkdir -p build/release-metrics
           ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
 
+      # Smoke-test R8/manifestu na placeholderach, nie jest to walidacja publikacji.
       - name: Zbuduj APK i AAB release
-        run: ./gradlew :app:assembleRelease :app:bundleRelease --console=plain 2>&1 | tee build/release-metrics/release.log
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --console=plain -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode 2>&1 | tee build/release-metrics/release.log
 
       - name: Sprawdź manifest, profil i rozmiary
         shell: bash
