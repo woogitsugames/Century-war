@@ -48,6 +48,9 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     private var colW = 0f
     private var colR = 0f
     private val labelsY = FloatArray(6)
+    private val historyY = FloatArray(10)
+    private val historyLines = Array(10) { "" }
+    private var historyCount = 0
     private val sectionX = FloatArray(6)
     private var fromY = 0f
     private var toY = 0f
@@ -163,7 +166,15 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         powerButtons[0].iconId = Icons.BACK
         powerButtons[1].iconId = Icons.ADVANCE
         slider.set(x + 59 * dp, y + 10 * dp, x + colW - 59 * dp, y + 28 * dp)
-        return y + 59 * dp
+        y += 59 * dp
+        sectionX[4] = x; labelsY[4] = y + 15 * dp
+        y += 29 * dp
+        historyCount = max(1, min(10, g.profile.skirmishHistory.size))
+        for (i in 0 until historyCount) {
+            historyY[i] = y + 14 * dp
+            y += 24 * dp
+        }
+        return y + 8 * dp
     }
 
     private fun placeModifiers(x: Float, top: Float): Float {
@@ -191,6 +202,15 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         summary = L.f("eras_range", L[Defs.eraKeys[setup.startEra]], L[Defs.eraKeys[setup.maxEra]]) +
             "   " + L.f("ai_power", setup.powerPercent)
         rankingText = L[if (setup.isRanked()) "sk_ranked" else "sk_unranked"]
+        for (i in 0 until historyCount) {
+            val r = g.profile.skirmishHistory.getOrNull(i)
+            historyLines[i] = if (r == null) L["sk_history_empty"] else {
+                val date = if (r.day in 0L..120000L) java.time.LocalDate.ofEpochDay(r.day).toString() else "?"
+                date + "  ·  " + r.score + "  ·  " +
+                    L[if (r.won) "sk_win" else "sk_loss"] + "  ·  " +
+                    L[if (r.ranked) "sk_classic" else "sk_custom"]
+            }
+        }
     }
 
     override fun update(dt: Float) { this.dt = dt }
@@ -230,6 +250,9 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
             ui.fill.color = Ui.GOLD
             c.drawCircle(x, slider.centerY(), 7 * dp, ui.fill)
         }
+        textIfVisible(c, L["sk_history"], sectionX[4], labelsY[4], 17f, Ui.GOLD)
+        for (i in 0 until historyCount)
+            textIfVisible(c, historyLines[i], colL, historyY[i], 11f, Ui.TEXT, width = colW)
         textIfVisible(c, L["modifiers"], sectionX[3], labelsY[3], 17f, Ui.GOLD)
         textIfVisible(c, L["sk_mod_limit"], sectionX[3], modLimitY, 11f, Ui.DIM)
         for (b in eraButtons) ui.button(c, b, 13f)
