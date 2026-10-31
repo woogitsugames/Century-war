@@ -131,20 +131,22 @@ object Achievements {
         }
         battle.achievementsRecorded = true
 
-        profile.battles++
-        if (won) profile.wins++
-        profile.totalKills += battle.player.kills.toLong()
-        profile.playSeconds += battle.time.toLong()
+        if (profile.battles < Int.MAX_VALUE) profile.battles++
+        if (won && profile.wins < Int.MAX_VALUE) profile.wins++
+        val kills = battle.player.kills.toLong().coerceAtLeast(0L)
+        profile.totalKills = if (kills > Long.MAX_VALUE - profile.totalKills) Long.MAX_VALUE else profile.totalKills + kills
+        val elapsed = battle.time.toLong().coerceAtLeast(0L)
+        profile.playSeconds = if (elapsed > Long.MAX_VALUE - profile.playSeconds) Long.MAX_VALUE else profile.playSeconds + elapsed
         if (cfg.mode == Mode.ENDLESS && battle.wave > profile.bestWave) profile.bestWave = battle.wave
 
         val player = battle.player
-        if (cfg.mode == Mode.DAILY && cfg.seed >= 0L && profile.achievementDailySeeds.add(cfg.seed)) {
+        if (cfg.mode == Mode.DAILY && cfg.seed >= 0L && (cfg.seed in profile.achievementDailySeeds || profile.achievementDailySeeds.size < 4096) && profile.achievementDailySeeds.add(cfg.seed)) {
             add(profile, AchievementMetric.DAILY_DAYS)
         }
         if (cfg.mode == Mode.SKIRMISH && won && cfg.aiPower >= 1.6f) {
             add(profile, AchievementMetric.INSANE_WINS)
         }
-        if (won && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers) {
+        if (won && player.slots > 0 && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers) {
             add(profile, AchievementMetric.NO_TURRET_WINS)
         }
         if (won && player.elitesTrained > 0 && player.elitesLost == 0) {

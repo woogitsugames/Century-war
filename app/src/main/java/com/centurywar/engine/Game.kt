@@ -3,7 +3,11 @@ package com.centurywar.engine
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.os.SystemClock
+import com.centurywar.game.RestoredBattle
+import com.centurywar.game.SnapshotStore
+import com.centurywar.meta.AchievementDef
 import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
@@ -42,6 +46,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
+    /** Zrzut przerwanej bitwy (filesDir/battle.snap). Null w testach. */
+    var snapshots: SnapshotStore? = null
+    /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
+    var resumeOffer: RestoredBattle? = null
 
     fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
         if (profile.sound) sound?.play(id, vol, gap, pitch)
@@ -61,18 +69,42 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var fps = 60f
         private set
     private val fpsPaint = Paint().apply { color = Color.YELLOW }
+    private val achievementQueue = ArrayDeque<AchievementDef>()
+    private val achievementBanner = RectF()
+    private var achievementMessage = ""
+    private var achievementSeconds = 0f
+
+    /** Kolejka powiadomień; tekst jest przygotowany przy odblokowaniu, nie w renderze. */
+    fun showAchievements(unlocked: List<AchievementDef>) {
+        for (a in unlocked) achievementQueue.addLast(a)
+    }
+
+    private fun drawAchievementNotice(c: Canvas, dt: Float) {
+        achievementSeconds -= dt
+        if (achievementSeconds <= 0f && achievementQueue.isNotEmpty()) {
+            val a = achievementQueue.removeFirst()
+            achievementMessage = L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")"
+            achievementSeconds = 2.9f
+        }
+        if (achievementSeconds <= 0f) return
+        val pw = minOf(470 * ui.dp, width - insetL - insetR - 20 * ui.dp)
+        val px = (width + insetL - insetR - pw) / 2f
+        val py = insetT + 72 * ui.dp
+        achievementBanner.set(px, py, px + pw, py + 50 * ui.dp)
+        ui.card(c, achievementBanner, Color.rgb(42, 74, 64), 12f, Ui.GOLD)
+        Icons.draw(c, Icons.MEDAL, px + 23 * ui.dp, py + 25 * ui.dp, 26 * ui.dp, dp = ui.dp)
+        val size = ui.fit(achievementMessage, 14f, pw - 61 * ui.dp)
+        ui.textO(c, achievementMessage, px + 45 * ui.dp, py + 30 * ui.dp, size, Ui.TEXT)
+    }
 
     init {
         applyLanguage()
+        if (profile.name.isBlank()) profile.name = L["default_name"]
         setQuality(effectiveQualityLevel())
     }
 
     fun applyLanguage() {
-        L.polish = when (profile.lang) {
-            "pl" -> true
-            "en" -> false
-            else -> java.util.Locale.getDefault().language == "pl"
-        }
+        L.setCode(profile.lang)
     }
 
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
@@ -89,6 +121,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun resize(bufW: Int, bufH: Int, vW: Int, vH: Int) {
         width = bufW; height = bufH; viewW = vW; viewH = vH
         renderScale = bufW.toFloat() / vW.coerceAtLeast(1)
+        scaleInsets()
         // Rozmiar UI w dp, ale na bardzo dużych ekranach (rozłożony Fold, tablet)
         // lekko powiększamy, żeby interfejs nie wyglądał na zagubiony.
         val minDp = minOf(vW, vH) / density
@@ -99,10 +132,28 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         for (s in stack) s.layout()
     }
 
+    /** Ostatnie wcięcia w pikselach widoku: przeliczamy je przy każdej zmianie skali bufora. */
+    private val rawInsets = IntArray(4)
+
     fun setInsets(l: Int, t: Int, r: Int, b: Int) {
-        val s = renderScale
-        insetL = l * s; insetT = t * s; insetR = r * s; insetB = b * s
+        rawInsets[0] = l; rawInsets[1] = t; rawInsets[2] = r; rawInsets[3] = b
+        scaleInsets()
         screen?.layout()
+    }
+
+    private fun scaleInsets() {
+        val s = renderScale
+        insetL = rawInsets[0] * s; insetT = rawInsets[1] * s; insetR = rawInsets[2] * s; insetB = rawInsets[3] * s
+    }
+
+    /**
+     * Nowy rozmiar widoku (UI thread przez [post]). Skalę bufora liczymy od razu z nowych
+     * wymiarów; wcześniej setQuality używało starych viewW/viewH i po złożeniu/rozłożeniu
+     * Folda nadpisywało poprawną skalę wartością policzoną dla poprzedniego ekranu.
+     */
+    fun viewResized(vW: Int, vH: Int) {
+        viewW = vW; viewH = vH
+        setQuality(quality.level)
     }
 
     fun setScreen(s: Screen) {
@@ -173,6 +224,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
         screen?.update(dt)
         screen?.render(c)
+        drawAchievementNotice(c, dt)
 
         monitor(dt)
         if (profile.showFps) {

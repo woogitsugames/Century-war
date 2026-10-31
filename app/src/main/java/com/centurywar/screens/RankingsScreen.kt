@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
@@ -15,13 +16,18 @@ import kotlin.math.min
 
 class RankingsScreen(g: Game) : Screen(g) {
     private val bg = MenuBg()
+    private val chrome = Chrome(this)
     private val back = btn(-1)
     private val rename = btn(-2)
+    private val achievementsButton = btn(101)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
     private val panel = RectF()
+    private val row = RectF()
     private var dt = 0f
     private val day = Daily.dayNumber()
+    private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
+    private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
 
     private fun board(i: Int) = when (i) {
         0 -> Profile.BOARD_ENDLESS
@@ -31,53 +37,90 @@ class RankingsScreen(g: Game) : Screen(g) {
     }
 
     override fun layout() {
-        back.label = L["back"]
-        back.set(g.insetL + 12 * dp, g.insetT + 10 * dp, 100 * dp, 38 * dp)
-        rename.label = "✎ ${L["name"]}"
-        rename.set(w - g.insetR - 190 * dp, g.insetT + 10 * dp, 178 * dp, 38 * dp)
+        chrome.layoutBack(back)
+        rename.label = L["name"]
+        rename.iconId = Icons.PENCIL
+        val rw = min(200 * dp, ui.measure(rename.label, 14f, true) + 70 * dp)
+        rename.set(w - g.insetR - rw - 12 * dp, g.insetT + 10 * dp, rw, 44 * dp)
         val keys = arrayOf("board_endless", "board_daily", "board_campaign", "board_skirmish")
-        val tw = min(190 * dp, (w - g.insetL - g.insetR - 40 * dp) / 4)
+        val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val gap = 6 * dp
+        val tw = (pw - gap * 3) / 4
+        val l = w / 2 - pw / 2
         for (i in 0..3) {
             tabs[i].label = L[keys[i]]
-            tabs[i].set(w / 2 - tw * 2 - 6 * dp + i * (tw + 4 * dp), g.insetT + 58 * dp, tw, 36 * dp)
+            tabs[i].iconId = tabIcons[i]
+            tabs[i].set(l + i * (tw + gap), chrome.top + 4 * dp, tw, 42 * dp)
         }
-        panel.set(w / 2 - min(520 * dp, w * 0.45f), g.insetT + 104 * dp, w / 2 + min(520 * dp, w * 0.45f), h - 12 * dp)
+        panel.set(l, chrome.top + 56 * dp, l + pw, h - g.insetB - 12 * dp)
+        achievementsButton.label = L["achievements"]
+        achievementsButton.iconId = Icons.MEDAL
+        val aw = min(178 * dp, pw * 0.48f)
+        achievementsButton.set(panel.right - aw - 12 * dp, panel.top + 8 * dp, aw, 38 * dp)
     }
 
     override fun update(dt: Float) {
         this.dt = dt
-        for (i in 0..3) tabs[i].selected = i == tab
+        for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
-        c.drawColor(Color.argb(110, 0, 0, 0))
-        for (b in tabs) ui.button(c, b, 12f)
-        ui.button(c, back); ui.button(c, rename, 13f)
+        chrome.dim(c, 120)
         ui.panel(c, panel)
+        for (b in tabs) ui.button(c, b, 13f)
+        ui.button(c, back, 16f); ui.button(c, rename, 14f)
+        ui.button(c, achievementsButton, 13f)
+        chrome.title(c, L["rankings"])
         val list = g.profile.top(board(tab))
-        var y = panel.top + 30 * dp
-        if (list.isEmpty()) ui.text(c, L["no_scores"], panel.centerX(), y + 20 * dp, 16f, Ui.DIM, Paint.Align.CENTER)
-        val lh = 24 * dp
+        val inner = 16 * dp
+        val l = panel.left + inner
+        val r = panel.right - inner
+        var y = panel.top + 54 * dp
+        val bottomLimit = panel.bottom - 52 * dp
+        if (list.isEmpty()) {
+            Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
+            ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
+        }
+        val lh = 34 * dp
         for ((i, e) in list.withIndex()) {
-            if (y > panel.bottom - 36 * dp) break
+            if (y + lh > bottomLimit) break
             val me = e.name == g.profile.name
+            row.set(l, y, r, y + lh - 4 * dp)
+            ui.fill.color = when {
+                me -> Color.argb(110, 64, 140, 235)
+                i % 2 == 0 -> Color.argb(40, 255, 255, 255)
+                else -> Color.argb(14, 255, 255, 255)
+            }
+            c.drawRoundRect(row, 8 * dp, 8 * dp, ui.fill)
+            val cy = row.centerY()
+            if (i < 3) {
+                val rr = 12 * dp
+                ui.fill.color = Ui.OUTLINE; c.drawCircle(l + 22 * dp, cy, rr, ui.fill)
+                ui.fill.color = podium[i]; c.drawCircle(l + 22 * dp, cy, rr - 2 * dp, ui.fill)
+                ui.textO(c, (i + 1).toString(), l + 22 * dp, cy + 5 * dp, 13f, Ui.TEXT, Paint.Align.CENTER, 2f)
+            } else {
+                ui.textO(c, "${i + 1}.", l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            }
             val col = if (i == 0) Ui.GOLD else if (me) Ui.XP else Ui.TEXT
-            ui.text(c, "${i + 1}.", panel.left + 18 * dp, y, 14f, col, Paint.Align.LEFT, true)
-            ui.text(c, e.name, panel.left + 56 * dp, y, 14f, col)
-            ui.text(c, e.score.toString(), panel.right - 18 * dp, y, 14f, col, Paint.Align.RIGHT, true)
+            if (me) Icons.draw(c, Icons.HELMET, l + 52 * dp, cy, 20 * dp, dp = dp)
+            ui.textO(c, e.name, l + (if (me) 68 else 48) * dp, cy + 5 * dp, 15f, col, Paint.Align.LEFT, 1.8f)
+            ui.textO(c, e.score.toString(), r - 12 * dp, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
         val pr = g.profile
         val hrs = pr.playSeconds / 3600f
-        ui.text(c, "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(hrs)} h",
-            panel.centerX(), panel.bottom - 30 * dp, 12f, Ui.DIM, Paint.Align.CENTER)
-        ui.text(c, L["online_note"], panel.centerX(), panel.bottom - 12 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
+        row.set(l, panel.bottom - 48 * dp, r, panel.bottom - 46 * dp)
+        ui.fill.color = Color.argb(60, 255, 255, 255); c.drawRect(row, ui.fill)
+        ui.textO(c, "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(hrs)} h",
+            panel.centerX(), panel.bottom - 28 * dp, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)
+        ui.text(c, L["online_note"], panel.centerX(), panel.bottom - 13 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
     }
 
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()
+            101 -> g.push(AchievementsScreen(g))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
             in 0..3 -> tab = b.id
         }

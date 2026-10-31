@@ -1,5 +1,6 @@
 package com.centurywar.meta
 
+import com.centurywar.engine.L
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Defs
@@ -44,10 +45,16 @@ class AchievementsTest {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
             assertTrue(a.pgsKey.isNotBlank())
-            assertTrue(AchievementTexts.get(a.id, true).name != a.id)
-            assertTrue(AchievementTexts.get(a.id, false).name != a.id)
-            assertTrue(AchievementTexts.get(a.id, true).description.isNotBlank())
-            assertTrue(AchievementTexts.get(a.id, false).description.isNotBlank())
+            for (lang in L.CODES.indices) {
+                val nameKey = "ach_" + a.id
+                val descKey = nameKey + "_d"
+                assertEquals(L.CODES.size, L.raw(nameKey)?.size)
+                assertEquals(L.CODES.size, L.raw(descKey)?.size)
+                assertTrue(L.text(nameKey, lang).isNotBlank())
+                assertTrue(L.text(nameKey, lang) != nameKey)
+                assertTrue(L.text(descKey, lang).isNotBlank())
+                assertTrue(L.text(descKey, lang) != descKey)
+            }
         }
     }
 
@@ -206,6 +213,29 @@ class AchievementsTest {
         b.player.xp = Defs.evolveXp[0].toFloat()
         assertTrue(b.evolve(b.player))
         assertEquals(1, b.player.erasAdvanced)
+    }
+
+    @Test
+    fun onlineAdapterCannotBlockLocalUnlock() {
+        val p = profile()
+        val cfg = BattleConfig(Mode.SKIRMISH, 303L, 1f)
+        val adapter = object : OnlineAchievements {
+            override fun unlock(pgsKey: String) { throw IllegalStateException("PGS offline") }
+        }
+        val unlocked = Achievements.onBattleEnd(p, finished(cfg, true), cfg, true, adapter)
+        assertTrue(unlocked.any { it.id == "win_1" })
+        assertTrue("win_1" in p.unlockedAchievements)
+    }
+
+    @Test
+    fun profileProgressDoesNotGrantRewardsWithoutUnlock() {
+        val p = profile()
+        p.battles = 1
+        p.wins = 1
+        assertFalse(Achievements.isUnlocked(p, "win_1"))
+        val def = Achievements.byId("win_1")!!
+        assertEquals(1L, Achievements.progress(p, def))
+        assertEquals(0, p.medals)
     }
 
     @Test

@@ -57,6 +57,27 @@ class AchievementPersistenceTest {
     }
 
     @Test
+    fun badAchievementJsonIsClampedAndUnknownIdsIgnored() {
+        val file = tempProfileFile()
+        file.writeText("""{"battles":-5,"wins":15,"totalKills":-12,
+            "achievementCounters":{"WINS":-9,"BARRAGES_CAST":20,"UNKNOWN":13},
+            "unlockedAchievements":["win_1","invented"],
+            "achievementDailySeeds":[20000,-2],
+            "achievementDoctrineMask":2147483647}""")
+        val p = Profile(file)
+        p.load()
+        assertEquals(0, p.battles)
+        assertEquals(0, p.wins)
+        assertEquals(0L, p.totalKills)
+        assertEquals(0L, p.achievementCounters["WINS"])
+        assertEquals(20L, p.achievementCounters["BARRAGES_CAST"])
+        assertFalse(p.achievementCounters.containsKey("UNKNOWN"))
+        assertEquals(setOf("win_1"), p.unlockedAchievements)
+        assertEquals(setOf(20000L), p.achievementDailySeeds)
+        assertEquals(0x1FF, p.achievementDoctrineMask)
+    }
+
+    @Test
     fun resetClearsUnlocksAndCounters() {
         val file = tempProfileFile()
         val p = Profile(file)

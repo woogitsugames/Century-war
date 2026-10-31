@@ -5,6 +5,7 @@ import com.centurywar.game.Campaign
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.pow
 
 class ResearchDef(val key: String, val max: Int, val baseCost: Int, val growth: Float) {
@@ -42,7 +43,7 @@ class Profile(private val file: File) {
         fun dailyBoard(day: Long) = "daily_$day"
     }
 
-    var name = "Dowódca"
+    var name = ""            // pusty = nowy profil; Game nadaje L["default_name"]
     var medals = 0
     val levels = HashMap<String, Int>()
     val stars = IntArray(Campaign.stages.size)
@@ -56,7 +57,7 @@ class Profile(private val file: File) {
     var vibration = true
     var sound = true
     var showFps = false
-    var lang = ""            // "" = systemowy, "pl", "en"
+    var lang = ""            // "" = systemowy, inaczej kod z L.CODES ("pl", "en", "de"...)
     var skirmishDiff = 1
 
     // statystyki
@@ -65,13 +66,16 @@ class Profile(private val file: File) {
     var totalKills = 0L
     var playSeconds = 0L
 
-    // Postęp osiągnięć (osobne liczniki oraz nagrody przyznawane tylko raz).
+    // Trwały postęp osiągnięć; brak tych pól w starym JSON oznacza zero.
     val achievementCounters = HashMap<String, Long>()
     val unlockedAchievements = HashSet<String>()
     val achievementDailySeeds = HashSet<Long>()
     var achievementDoctrineMask = 0
 
     val boards = HashMap<String, MutableList<ScoreEntry>>()
+
+    /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
+    fun replayTutorial() { tutorialDone = false; save() }
 
     fun level(key: String) = levels[key] ?: 0
 
@@ -109,10 +113,15 @@ class Profile(private val file: File) {
 
     fun totalStars() = stars.sum()
 
-    /** Dodaje wynik do lokalnego rankingu; zwraca true, jeśli to rekord gracza na tej tablicy. */
+    /**
+     * Dodaje wynik do lokalnego rankingu; zwraca true, jeśli to rekord gracza na tej tablicy.
+     * Lokalne tablice zawierają wyłącznie wyniki tego urządzenia, więc rekord liczymy po całej
+     * liście (a nie po nazwie): zmiana nazwy dowódcy nie może robić "rekordu" ze słabszego wyniku.
+     */
+    @Synchronized
     fun submit(board: String, score: Long, day: Long): Boolean {
         val list = boards.getOrPut(board) { ArrayList() }
-        val prevBest = list.filter { it.name == name }.maxOfOrNull { it.score } ?: -1L
+        val prevBest = list.maxOfOrNull { it.score } ?: -1L
         list.add(ScoreEntry(name, score, day))
         list.sortByDescending { it.score }
         while (list.size > 20) list.removeAt(list.size - 1)
@@ -123,6 +132,11 @@ class Profile(private val file: File) {
 
     // ---------------------------------------------------------------- zapis
 
+    /**
+     * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
+     * równoległe zapisy pisały do tego samego pliku .tmp i mogły zostawić sklejony, uszkodzony JSON.
+     */
+    @Synchronized
     fun save() {
         try {
             val o = JSONObject()
@@ -146,12 +160,8 @@ class Profile(private val file: File) {
             o.put("totalKills", totalKills)
             o.put("playSeconds", playSeconds)
             o.put("achievementCounters", JSONObject(achievementCounters as Map<*, *>))
-            o.put("unlockedAchievements", JSONArray().apply {
-                unlockedAchievements.sorted().forEach { put(it) }
-            })
-            o.put("achievementDailySeeds", JSONArray().apply {
-                achievementDailySeeds.sorted().forEach { put(it) }
-            })
+            o.put("unlockedAchievements", JSONArray().apply { unlockedAchievements.sorted().forEach { put(it) } })
+            o.put("achievementDailySeeds", JSONArray().apply { achievementDailySeeds.sorted().forEach { put(it) } })
             o.put("achievementDoctrineMask", achievementDoctrineMask)
             val b = JSONObject()
             for ((k, list) in boards) {
@@ -162,7 +172,12 @@ class Profile(private val file: File) {
             }
             o.put("boards", b)
             val tmp = File(file.parentFile, file.name + ".tmp")
-            tmp.writeText(o.toString())
+            FileOutputStream(tmp).use { out ->
+                out.write(o.toString().toByteArray(Charsets.UTF_8))
+                out.flush()
+                // fsync przed rename: po utracie zasilania nie zostanie pusty plik profilu.
+                try { out.fd.sync() } catch (_: Exception) { }
+            }
             if (!tmp.renameTo(file)) {
                 file.delete()
                 tmp.renameTo(file)
@@ -172,10 +187,13 @@ class Profile(private val file: File) {
         }
     }
 
+    @Synchronized
     fun load() {
-        if (!file.exists()) return
+        // Awaryjny zapis (delete + rename) mógł zostać przerwany po usunięciu głównego pliku.
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        val src = if (file.exists()) file else if (tmp.exists()) tmp else return
         try {
-            val o = JSONObject(file.readText())
+            val o = JSONObject(src.readText())
             name = o.optString("name", name)
             medals = o.optInt("medals", 0)
             o.optJSONObject("levels")?.let { l -> l.keys().forEach { levels[it] = l.optInt(it) } }
@@ -193,28 +211,41 @@ class Profile(private val file: File) {
             battles = o.optInt("battles", 0)
             wins = o.optInt("wins", 0)
             totalKills = o.optLong("totalKills", 0L)
-            playSeconds = o.optLong("playSeconds", 0L)
+            playSeconds = o.optLong("playSeconds", 0L).coerceAtLeast(0L)
+            battles = battles.coerceAtLeast(0)
+            wins = wins.coerceIn(0, battles)
+            totalKills = totalKills.coerceAtLeast(0L)
             achievementCounters.clear()
-            o.optJSONObject("achievementCounters")?.let { counters ->
-                counters.keys().forEach { k ->
-                    achievementCounters[k] = counters.optLong(k, 0L).coerceAtLeast(0L)
+            o.optJSONObject("achievementCounters")?.let { c ->
+                val keys = AchievementMetric.values().map { it.name }.toSet()
+                val it = c.keys()
+                while (it.hasNext()) {
+                    val key = it.next()
+                    if (key in keys) achievementCounters[key] = c.optLong(key, 0L).coerceAtLeast(0L)
                 }
             }
             unlockedAchievements.clear()
             o.optJSONArray("unlockedAchievements")?.let { ids ->
-                for (i in 0 until ids.length()) {
+                for (i in 0 until minOf(ids.length(), 128)) {
                     val id = ids.optString(i)
-                    if (id.isNotEmpty()) unlockedAchievements.add(id)
+                    if (Achievements.byId(id) != null) unlockedAchievements.add(id)
                 }
             }
             achievementDailySeeds.clear()
             o.optJSONArray("achievementDailySeeds")?.let { days ->
-                for (i in 0 until days.length()) {
-                    val seed = days.optLong(i, -1L)
-                    if (seed >= 0L) achievementDailySeeds.add(seed)
+                for (i in 0 until minOf(days.length(), 4096)) {
+                    val day = days.optLong(i, -1L)
+                    if (day >= 0L) achievementDailySeeds.add(day)
                 }
             }
-            achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0)
+            achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0) and ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
+            // Wartości spoza zakresu (ręczna edycja, stara wersja) wywracały np. ModeScreen.aiPower().
+            medals = medals.coerceAtLeast(0)
+            for (i in stars.indices) stars[i] = stars[i].coerceIn(0, 3)
+            if (quality !in 0..3) quality = 0
+            if (fpsCap != 0 && fpsCap != 30 && fpsCap != 60) fpsCap = 0
+            skirmishDiff = skirmishDiff.coerceIn(0, 3)
+            for (d in research) levels[d.key]?.let { levels[d.key] = it.coerceIn(0, d.max) }
             o.optJSONObject("boards")?.let { b ->
                 b.keys().forEach { k ->
                     val a = b.getJSONArray(k)
@@ -228,15 +259,17 @@ class Profile(private val file: File) {
             }
         } catch (_: Exception) {
             // Uszkodzony plik — zaczynamy od czystego profilu, ale nie nadpisujemy go od razu.
-            file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true)
+            try { src.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true) } catch (_: Exception) { }
         }
     }
 
+    @Synchronized
     fun pruneDailyBoards(today: Long) {
         boards.keys.filter { it.startsWith("daily_") && (it.removePrefix("daily_").toLongOrNull() ?: 0L) < today - 7 }
             .forEach { boards.remove(it) }
     }
 
+    @Synchronized
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
