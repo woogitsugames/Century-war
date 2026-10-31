@@ -82,25 +82,54 @@ class ArtGalleryTest {
         val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
         val frames = 16
         val cell = 180
-        val rows = listOf(Defs.unit(2, Role.RANGED), Defs.unit(3, Role.MELEE), Defs.unit(4, Role.RANGED), Defs.unit(1, Role.MELEE))
-        val bmp = Bitmap.createBitmap(frames * cell, rows.size * cell, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        c.drawColor(Color.rgb(196, 214, 228))
         val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
-        for ((row, def) in rows.withIndex()) {
-            val y = row * cell.toFloat()
-            c.drawRect(0f, y + cell * 0.86f, frames * cell.toFloat(), y + cell, ground)
-            for (f in 0 until frames) {
-                // 0-5: marsz i wygaszanie kroku, 6-11: odnowienie, 12-15: atak.
-                val walk = f * 0.55f
-                val stride = when { f < 3 -> 1f; f < 6 -> 1f - (f - 2) / 3f; else -> 0f }
-                val windup = if (f in 6..11) (f - 6) / 5f else if (f >= 12) 0f else -1f
-                val atk = if (f >= 12) 1f - (f - 12) / 4f else 0f
-                r.drawUnitPose(c, def, f * cell + cell / 2f, y + cell * 0.86f, cell * 0.78f, Ui.PLAYER,
-                    if (stride > 0f) walk else 0f, stride, atk, windup)
-            }
+        val labels = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(28, 35, 46); textSize = 15f; isFakeBoldText = true
         }
-        save(bmp, "gallery_animation")
+
+        fun strip(rows: List<Pair<String, UnitDef>>, filename: String) {
+            val bmp = Bitmap.createBitmap(frames * cell, rows.size * cell, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            c.drawColor(Color.rgb(196, 214, 228))
+            for ((row, entry) in rows.withIndex()) {
+                val (name, def) = entry
+                val y = row * cell.toFloat()
+                c.drawRect(0f, y + cell * 0.86f, frames * cell.toFloat(), y + cell, ground)
+                for (f in 0 until frames) {
+                    // 0-5: marsz i wygaszenie, 6-11: odnowienie, 12-15: odrzut/cios.
+                    // Faza chodu zostaje stała od klatki 5: koła nie mogą wrócić do zera.
+                    val walk = minOf(f, 5) * 0.55f
+                    val stride = when { f < 3 -> 1f; f < 6 -> 1f - (f - 2) / 3f; else -> 0f }
+                    val windup = if (f in 6..11) (f - 6) / 5f else if (f >= 12) 0f else -1f
+                    val atk = if (f >= 12) 1f - (f - 12) / 4f else 0f
+                    r.drawUnitPose(c, def, f * cell + cell / 2f, y + cell * 0.86f,
+                        cell * 0.78f, Ui.PLAYER, walk, stride, atk, windup)
+                    c.drawText(name, f * cell + 6f, y + 18f, labels)
+                }
+            }
+            save(bmp, filename)
+            bmp.recycle()
+        }
+
+        strip(listOf(
+            "Łucznik żelaza" to Defs.unit(2, Role.RANGED),
+            "Piechur feudalny" to Defs.unit(3, Role.MELEE),
+            "Strzelec prochu" to Defs.unit(4, Role.RANGED),
+            "Piechur brązu" to Defs.unit(1, Role.MELEE),
+        ), "gallery_animation")
+
+        strip(listOf(
+            "Koń z jeźdźcem" to Defs.unit(3, Role.HEAVY),
+            "Rydwan" to Defs.unit(1, Role.HEAVY),
+            "Mamut" to Defs.unit(0, Role.ELITE),
+            "Słoń bojowy" to Defs.unit(1, Role.ELITE),
+            "Trebusz" to Defs.unit(3, Role.ELITE),
+            "Armata" to Defs.unit(4, Role.ELITE),
+            "Mech parowy" to Defs.unit(5, Role.HEAVY),
+            "Czołg ciężki" to Defs.unit(6, Role.ELITE),
+            "Mech bojowy" to Defs.unit(7, Role.ELITE),
+            "Poduszkowiec" to Defs.unit(8, Role.HEAVY),
+        ), "gallery_animation_machines")
     }
 
     @Test
