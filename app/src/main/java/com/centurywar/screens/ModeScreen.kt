@@ -32,6 +32,45 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private var day = Daily.dayNumber()
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
+    private var labelTimer = 0f
+    private var endlessBest = ""
+    private var endlessScore = ""
+    private var dailyRange = ""
+    private var dailyPower = ""
+    private var dailyRanked = ""
+    private var dailyScore = ""
+    private var skirmishRange = ""
+    private var skirmishPower = ""
+    private var skirmishScore = ""
+
+    private fun refreshLabels() {
+        val pr = g.profile
+        when (mode) {
+            Mode.ENDLESS -> {
+                endlessBest = "${L["best"]}: ${L.f("wave", pr.bestWave)}"
+                val best = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
+                endlessScore = if (best == null) "" else "${L["score"]}: ${best.score}"
+            }
+            Mode.DAILY -> {
+                val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also {
+                    dailyCfg = it
+                    dailyMods = L["modifiers"] + ": " + it.modifiers.joinToString(", ") { modifier -> L[modifier.key] }
+                }
+                dailyRange = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
+                dailyPower = L.f("ai_power", (cfg.aiPower * 100).toInt())
+                val ranked = pr.lastRankedDaily != day
+                dailyRanked = L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"])
+                val best = pr.top(Profile.dailyBoard(day)).firstOrNull()
+                dailyScore = if (best == null) "" else "${L["best"]}: ${best.score}"
+            }
+            else -> {
+                skirmishRange = L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]])
+                skirmishPower = L.f("ai_power", (aiPower() * 100).toInt())
+                val best = pr.top(Profile.BOARD_SKIRMISH).firstOrNull()
+                skirmishScore = if (best == null) "" else "${L["best"]}: ${best.score}"
+            }
+        }
+    }
 
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
@@ -59,7 +98,9 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         val today = Daily.dayNumber()
-        if (today != day) { day = today; dailyCfg = null }
+        if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
+        labelTimer -= dt
+        if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
         start.label = L["play"]
         for (i in 0..3) diff[i].selected = g.profile.skirmishDiff == i
     }
@@ -91,34 +132,29 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
             Mode.ENDLESS -> {
                 y += ui.wrap(c, L["endless_info"], x, y, tw, 15f)
                 y += 12 * dp
-                y += line(c, Icons.TROPHY, "${L["best"]}: ${L.f("wave", pr.bestWave)}", x, y, Ui.GOLD, 16f)
-                val top = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
-                if (top != null) line(c, Icons.STAR, "${L["score"]}: ${top.score}", x, y)
+                y += line(c, Icons.TROPHY, endlessBest, x, y, Ui.GOLD, 16f)
+                if (endlessScore.isNotEmpty()) line(c, Icons.STAR, endlessScore, x, y)
             }
             Mode.DAILY -> {
                 // Konfiguracja i tekst modyfikatorów raz na dzień, nie w każdej klatce.
-                val cfg = dailyCfg ?: Daily.config(day, pr.bonuses()).also { dc ->
-                    dailyCfg = dc
-                    dailyMods = L["modifiers"] + ": " + dc.modifiers.joinToString(", ") { L[it.key] }
-                }
                 y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
                 y += 8 * dp
-                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
-                y += line(c, Icons.SKULL, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, Ui.BAD, 14f)
+                y += line(c, Icons.TOWER, dailyRange, x, y, Ui.TEXT, 14f)
+                y += line(c, Icons.SKULL, dailyPower, x, y, Ui.BAD, 14f)
                 val isz = 22 * dp
                 Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
                 y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
                 y += 4 * dp
                 val ranked = pr.lastRankedDaily != day
-                if (y < lowLimit) y += line(c, if (ranked) Icons.CHECK else Icons.LOCK, L.f("daily_ranked", if (ranked) L["daily_free"] else L["daily_used"]), x, y, if (ranked) Ui.GOOD else Ui.DIM, 14f)
-                if (y < lowLimit) pr.top(Profile.dailyBoard(day)).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
+                if (y < lowLimit) y += line(c, if (ranked) Icons.CHECK else Icons.LOCK, dailyRanked, x, y, if (ranked) Ui.GOOD else Ui.DIM, 14f)
+                if (y < lowLimit && dailyScore.isNotEmpty()) line(c, Icons.TROPHY, dailyScore, x, y, Ui.TEXT, 14f)
             }
             else -> {
-                y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[0]], L[Defs.eraKeys[Defs.ERA_COUNT - 1]]), x, y)
-                y += line(c, Icons.SKULL, L.f("ai_power", (aiPower() * 100).toInt()), x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
+                y += line(c, Icons.TOWER, skirmishRange, x, y)
+                y += line(c, Icons.SKULL, skirmishPower, x, y, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 ui.bar(c, x + 32 * dp, y - 14 * dp, min(tw - 32 * dp, 220 * dp), 9 * dp, aiPower() / 1.8f, if (aiPower() > 1f) Ui.BAD else Ui.GOOD)
                 y += 14 * dp
-                if (y < lowLimit) pr.top(Profile.BOARD_SKIRMISH).firstOrNull()?.let { line(c, Icons.TROPHY, "${L["best"]}: ${it.score}", x, y, Ui.TEXT, 14f) }
+                if (y < lowLimit && skirmishScore.isNotEmpty()) line(c, Icons.TROPHY, skirmishScore, x, y, Ui.TEXT, 14f)
                 // separator + etykieta trudności
                 row.set(panel.left + 22 * dp, diff[0].r.top - 30 * dp, panel.right - 22 * dp, diff[0].r.top - 28 * dp)
                 ui.fill.color = Color.argb(70, 255, 255, 255); c.drawRect(row, ui.fill)
@@ -151,7 +187,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                     else -> g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, aiPower(), playerBonuses = pr.bonuses())))
                 }
             }
-            in 0..3 -> { pr.skirmishDiff = b.id; pr.save() }
+            in 0..3 -> { pr.skirmishDiff = b.id; pr.save(); labelTimer = 0f }
         }
     }
 }
