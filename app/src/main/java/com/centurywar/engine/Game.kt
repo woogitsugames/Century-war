@@ -95,6 +95,57 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     private var screen: Screen? = null
     private val stack = ArrayList<Screen>()
+
+    // Przenikanie ekranów bez buforów Bitmap i bez zmiany kroku symulacji.
+    private var transitionFrom: Screen? = null
+    private var transitionTime = 0f
+    private var transitionDirection = 1f
+    private val transitionDuration = 0.22f
+    internal val transitionActive: Boolean get() = transitionFrom != null
+
+    /** Używane przez testy zrzutów, które potrzebują docelowego, nieruchomego ekranu. */
+    internal fun finishScreenTransition() { transitionFrom = null }
+
+    private fun startScreenTransition(from: Screen?, to: Screen, direction: Float) {
+        transitionFrom = null
+        if (from == null || from === to || profile.reduceFlash || quality.level == Quality.LOW ||
+            from is BattleScreen || to is BattleScreen ||
+            from is ReplayScreen || to is ReplayScreen) return
+        transitionFrom = from
+        transitionTime = 0f
+        transitionDirection = direction
+    }
+
+    /** Kierunkowe nasunięcie; bez alokacji klatek, renderowania bitmap i pracy w :sim. */
+    private fun drawScreen(c: Canvas, dt: Float) {
+        val previous = transitionFrom
+        val active = screen
+        if (previous == null || active == null) {
+            active?.render(c)
+            return
+        }
+        if (profile.reduceFlash || quality.level == Quality.LOW) {
+            finishScreenTransition()
+            active.render(c)
+            return
+        }
+        transitionTime += dt
+        if (transitionTime >= transitionDuration) {
+            finishScreenTransition()
+            active.render(c)
+            return
+        }
+        val t = (transitionTime / transitionDuration).coerceIn(0f, 1f)
+        val smooth = t * t * (3f - 2f * t)
+        val shift = width * (1f - smooth) * transitionDirection
+        previous.render(c)
+        val saved = c.save()
+        if (shift > 0f) c.clipRect(shift, 0f, width.toFloat(), height.toFloat())
+        else c.clipRect(0f, 0f, width + shift, height.toFloat())
+        c.translate(shift, 0f)
+        active.render(c)
+        c.restoreToCount(saved)
+    }
     /** Publikowany tylko po zmianie; odczyt przez Activity odbywa się na wątku UI. */
     @Volatile var wantsBack = false
         private set
@@ -235,6 +286,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     /** Wywoływane z wątku gry, gdy zmienił się bufor powierzchni. */
     fun resize(bufW: Int, bufH: Int, vW: Int, vH: Int) {
+        finishScreenTransition()
         width = bufW; height = bufH; viewW = vW; viewH = vH
         renderScale = bufW.toFloat() / vW.coerceAtLeast(1)
         scaleInsets()
@@ -252,6 +304,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private val rawInsets = IntArray(4)
 
     fun setInsets(l: Int, t: Int, r: Int, b: Int) {
+        finishScreenTransition()
         rawInsets[0] = l; rawInsets[1] = t; rawInsets[2] = r; rawInsets[3] = b
         scaleInsets()
         screen?.layout()
@@ -273,26 +326,34 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     fun setScreen(s: Screen) {
-        screen?.onPause()
+        val previous = screen
+        previous?.onPause()
         stack.clear()
         screen = s
         syncMusicScreen(s)
         s.layout()
+        startScreenTransition(previous, s, 1f)
         refreshBackHandling()
     }
 
     fun push(s: Screen) {
-        screen?.let { stack.add(it) }
+        val previous = screen
+        previous?.let { stack.add(it) }
         screen = s
         syncMusicScreen(s)
         s.layout()
+        startScreenTransition(previous, s, 1f)
         refreshBackHandling()
     }
 
     fun pop() {
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
-        screen = stack.removeAt(stack.size - 1)
-        screen?.let { syncMusicScreen(it); it.layout() }
+        val previous = screen
+        val restored = stack.removeAt(stack.size - 1)
+        screen = restored
+        syncMusicScreen(restored)
+        restored.layout()
+        startScreenTransition(previous, restored, -1f)
         refreshBackHandling()
     }
 
@@ -338,7 +399,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         taskBuf.clear()
         val s0 = screen
         for (e in frameEvents) {
-            if (e.action == TouchEvent.CANCEL + 10) { back() } else screen?.handle(e)
+            if (e.action == TouchEvent.CANCEL + 10) back()
+            else if (!transitionActive) screen?.handle(e)
         }
         synchronized(inputLock) { inputPool.addAll(frameEvents) }
         frameEvents.clear()
@@ -350,7 +412,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen?.update(dt)
         refreshBackHandling()
         val renderStart = System.nanoTime()
-        screen?.render(c)
+        drawScreen(c, dt)
         drawAchievementNotice(c, dt)
         val renderEnd = System.nanoTime()
         frameMetrics.add(renderStart - updateStart, renderEnd - renderStart, simulatedSteps, discardedSteps)
