@@ -191,20 +191,17 @@ class HintOverlay(
         }
     }
 
-    /** Nazwy i zwięzłe objaśnienia dwóch pierwszych modyfikatorów, w kolejności enum. */
+    /** Nazwy i zwięzłe objaśnienia wszystkich modyfikatorów, w kolejności enum. */
     private fun modifierDescription(): String {
         val b = battle ?: return L["hint_modifiers"]
         val sb = StringBuilder(L["hint_modifiers"])
         var count = 0
         for (mod in Modifier.entries) {
             if (mod !in b.cfg.modifiers) continue
-            if (count < 2) {
-                sb.append(if (count == 0) ": " else "; ")
-                sb.append(L[mod.key]).append(" — ").append(L[mod.key + "_d"])
-            }
+            sb.append(if (count == 0) ": " else "; ")
+            sb.append(L[mod.key]).append(" — ").append(L[mod.key + "_d"])
             count++
         }
-        if (count > 2) sb.append(" (+").append(count - 2).append(")")
         return sb.toString()
     }
 
