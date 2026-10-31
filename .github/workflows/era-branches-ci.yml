@@ -1,0 +1,46 @@
+name: Rozgalezienia epok - Android
+
+on:
+  push:
+    branches:
+      - gpt/18-era-branches
+  pull_request:
+    branches:
+      - claude/bold-sagan-vwz5gm
+
+jobs:
+  build-and-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK 36
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Tests symulacji i zrzutow
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*BattleBranchesTest*' --tests '*VariantBalanceReportTest*' --console=plain --no-configuration-cache
+      - name: Screenshoty UI
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.menus*' --console=plain --no-configuration-cache
+      - name: Zapis raportow
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: era-branches-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/screenshots/
+          if-no-files-found: ignore
