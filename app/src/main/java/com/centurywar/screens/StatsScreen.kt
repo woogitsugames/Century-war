@@ -61,6 +61,8 @@ class StatsScreen(g: Game) : Screen(g) {
     private val detailNames = ArrayList<String>(48)
     private val detailValues = ArrayList<String>(48)
     private val detailIcons = ArrayList<Int>(48)
+    private val tipLines = ArrayList<String>(5)
+    private val tipPanel = RectF()
 
     private fun clock(s: Long): String {
         val seconds = s.coerceAtLeast(0L)
@@ -150,12 +152,16 @@ class StatsScreen(g: Game) : Screen(g) {
         detailBack.set(cx - pw / 2 + 8 * dp, chrome.top + 5 * dp, min(132 * dp, pw * 0.4f), 38 * dp)
         panel.set(cx - pw / 2, chrome.top + 53 * dp, cx + pw / 2, h - g.insetB - 12 * dp)
         refresh()
-        adjustScroll()
+        if (selected in history.indices) openDetails(selected) else {
+            selected = -1
+            adjustScroll()
+        }
     }
 
     private fun adjustScroll() {
         val content = when {
-            selected >= 0 -> detailNames.size * 34 * dp + 38 * dp
+            selected >= 0 -> (detailNames.size * 34 + 38 +
+                if (tipLines.isEmpty()) 0 else (48 + tipLines.size * 19)) * dp
             tab == 1 -> history.size * 66 * dp + 24 * dp
             else -> 970 * dp // sekcje, dwa wykresy i pięć wierszy AI
         }
@@ -188,7 +194,7 @@ class StatsScreen(g: Game) : Screen(g) {
     private fun openDetails(index: Int) {
         selected = index
         scroll = 0f
-        detailNames.clear(); detailValues.clear(); detailIcons.clear()
+        detailNames.clear(); detailValues.clear(); detailIcons.clear(); tipLines.clear()
         val e = history[index]
         val now = System.currentTimeMillis()
         detail(L["bh_history"], modeLabel(e.mode) + " · " + resultLabel(e.result), modeIcons[e.mode])
@@ -241,7 +247,18 @@ class StatsScreen(g: Game) : Screen(g) {
         }
         if (modCount == 0) detail(L["none"], "")
         detail(L["reward"], e.medals.toString(), Icons.MEDAL)
-        if (e.result != BattleHistory.WIN && e.tipKey.isNotEmpty()) detail(L["why_lost"], L[e.tipKey], Icons.BOOK)
+        if (e.result != BattleHistory.WIN && e.tipKey.isNotEmpty()) {
+            val maxWidth = max(100f * dp, panel.width() - 64 * dp)
+            var current = ""
+            for (word in L[e.tipKey].split(' ')) {
+                val next = if (current.isEmpty()) word else current + " " + word
+                if (current.isNotEmpty() && ui.measure(next, 12f) > maxWidth) {
+                    tipLines.add(current)
+                    current = word
+                } else current = next
+            }
+            if (current.isNotEmpty()) tipLines.add(current)
+        }
         // Identyfikator powtórki można już przechować; odtwarzacz dołącza zadanie 29.
         if (e.replayId.isNotEmpty()) detail(L["bh_replay"], e.replayId, Icons.PLAY)
         adjustScroll()
@@ -432,6 +449,18 @@ class StatsScreen(g: Game) : Screen(g) {
             val y = panel.top + 10 * dp + i * 34 * dp - scroll
             if (y > panel.bottom || y + 31 * dp < panel.top) continue
             drawPair(c, detailNames[i], detailValues[i], y, detailIcons[i])
+        }
+        if (tipLines.isEmpty()) return
+        val y = panel.top + 12 * dp + detailNames.size * 34 * dp - scroll
+        val height = (42 + tipLines.size * 19) * dp
+        if (y > panel.bottom || y + height < panel.top) return
+        tipPanel.set(panel.left + 18 * dp, y, panel.right - 18 * dp, y + height)
+        ui.card(c, tipPanel, Color.rgb(66, 56, 44), 9f, Ui.GOLD)
+        Icons.draw(c, Icons.BOOK, tipPanel.left + 20 * dp, y + 18 * dp, 20 * dp, dp = dp)
+        ui.textO(c, L["why_lost"], tipPanel.left + 37 * dp, y + 22 * dp, 13f, Ui.GOLD)
+        for (i in tipLines.indices) {
+            ui.text(c, tipLines[i], tipPanel.left + 18 * dp,
+                y + (41 + i * 19) * dp, 12f, Ui.TEXT)
         }
     }
 }
