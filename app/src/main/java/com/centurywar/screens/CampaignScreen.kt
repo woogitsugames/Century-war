@@ -228,7 +228,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
         y += 28 * dp
         Icons.draw(c, Icons.weatherIcon(s.weather), x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, "${L["w_label"]}: ${L[s.weather.key]}", x + isz + 8 * dp, y, 14f, Ui.TEXT)
+        ui.textO(c, L[s.weather.key], x + isz + 8 * dp, y, 14f, Ui.TEXT)
         y += 28 * dp
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, "${L["modifiers"]}:", x + isz + 8 * dp, y, 14f, Ui.GOLD)
