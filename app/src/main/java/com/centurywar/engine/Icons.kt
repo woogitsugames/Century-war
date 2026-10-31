@@ -815,6 +815,15 @@ object Icons {
         line.strokeWidth = ow; c.drawCircle(0f, 0f, 0.86f, line)
     }
 
+    private fun speaker(c: Canvas) {
+        p.reset()
+        p.moveTo(-0.8f, -0.28f); p.lineTo(-0.4f, -0.28f); p.lineTo(0.08f, -0.72f)
+        p.lineTo(0.08f, 0.72f); p.lineTo(-0.4f, 0.28f); p.lineTo(-0.8f, 0.28f); p.close()
+        shape(c, STEEL)
+        stroke(c, 0.36f, -0.26f, 0.36f, 0.26f, ow * 1.1f, WHITE)
+        stroke(c, 0.62f, -0.46f, 0.62f, 0.46f, ow * 1.1f, WHITE)
+    }
+
     private fun vibrate(c: Canvas) {
         rect(c, -0.42f, -0.82f, 0.42f, 0.82f, Color.rgb(60, 66, 84), 0.14f)
         rect(c, -0.3f, -0.64f, 0.3f, 0.5f, Color.rgb(120, 190, 240), 0.04f, false)
@@ -823,14 +832,6 @@ object Icons {
         plainLine(c, 0.65f, -0.35f, 0.65f, 0.35f, ow * 1.1f, WHITE)
         plainLine(c, -0.85f, -0.2f, -0.85f, 0.2f, ow * 1.1f, WHITE)
         plainLine(c, 0.85f, -0.2f, 0.85f, 0.2f, ow * 1.1f, WHITE)
-    }
-
-    private fun speaker(c: Canvas) {
-        p.reset(); p.moveTo(-0.8f, -0.28f); p.lineTo(-0.38f, -0.28f); p.lineTo(0.12f, -0.72f); p.lineTo(0.12f, 0.72f); p.lineTo(-0.38f, 0.28f); p.lineTo(-0.8f, 0.28f); p.close()
-        shape(c, STEEL)
-        plainLine(c, 0.38f, -0.3f, 0.38f, 0.3f, ow * 1.1f, WHITE)
-        plainLine(c, 0.62f, -0.5f, 0.62f, 0.5f, ow * 1.1f, WHITE)
-        plainLine(c, 0.86f, -0.68f, 0.86f, 0.68f, ow * 1.1f, WHITE)
     }
 
     private fun monitor(c: Canvas) {

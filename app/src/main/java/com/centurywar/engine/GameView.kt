@@ -30,7 +30,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     /** true, dopóki wątek gry faktycznie działa (od startu pętli do jej wyjścia). */
     @Volatile var loopActive = false
         private set
-    private var thread: Thread? = null
+    @Volatile private var thread: Thread? = null
     private var scale = 1f
 
     init {
@@ -58,7 +58,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Nowy rozmiar widoku (obrót, Fold): przelicz skalę bufora.
-        game.post { game.setQuality(game.quality.level) }
+        game.post { game.viewResized(w, h) }
         setRenderScale(game.quality.renderScale(w, h))
     }
 
@@ -84,10 +84,10 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
         if (running) return
         running = true
         loopActive = true
-        thread = Thread(this, "game-loop").apply {
-            priority = Thread.MAX_PRIORITY
-            start()
-        }
+        // Najpierw przypisanie, potem start: pętla porównuje się z polem [thread].
+        val t = Thread(this, "game-loop").apply { priority = Thread.MAX_PRIORITY }
+        thread = t
+        t.start()
     }
 
     private fun stopThread() {
@@ -104,7 +104,10 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
 
     private fun loop() {
         var last = System.nanoTime()
-        while (running) {
+        val me = Thread.currentThread()
+        // Sprawdzamy też tożsamość wątku: jeśli join() w stopThread przekroczył limit, a zaraz
+        // potem startThread ustawił running = true, stary wątek nie może dalej rysować równolegle.
+        while (running && thread === me) {
             if (!hasSurface) break
             if (sizeChanged) {
                 sizeChanged = false
