@@ -171,7 +171,7 @@ BUILD SUCCESSFUL in 54s
 BUILD SUCCESSFUL in 23s
 ```
 
-Nie uruchamiano wolnego `ScreenshotTest`, bo zlecenie nie dotyczy grafiki.
+Powyższe logi dotyczą pierwszej implementacji na starszej bazie. Po integracji z aktualną bazą wykonano pełne testy i zrzuty Kodeksu (wyniki poniżej).
 
 
 ## Integracja z aktualną bazą
@@ -182,4 +182,32 @@ Po pierwotnej implementacji gałąź bazowa została rozbudowana o zapis bitwy, 
 - Odcisk balansu zawiera macierz kontr i premię wież, dzięki czemu niezgodne zrzuty są odrzucane.
 - Dodano dwa testy porównujące przebieg po wznowieniu pocisku w locie: strzelec przeciw ciężkiemu celowi oraz wieża z Epoki pary przeciw ciężkiej jednostce.
 - Kodeks pokazuje podpowiedź na kartach wszystkich czterech ról oraz późnych wież, z tłumaczeniem na 10 języków i prealokowanym tekstem.
-- Wcześniejsze surowe wyniki symulacji (wyżej) pochodzą z wersji bazowej sprzed integracji. Aktualny test przejścia na nową bazę jest osobno dokumentowany w PR.
+- Surowe wyniki 32 etapów powyżej potwierdzono ponownie po integracji z aktualną bazą; wyniki identyczne: 25/32 przed i 29/32 po wdrożeniu kontr.
+
+### Walidacja końcowa — aktualna baza (31.10.2026)
+
+[GitHub Actions — przebieg #41205820390](https://github.com/woogitsugames/Century-war/actions/runs/41205820390) zakończył się sukcesem dla obu zadań: `kotlin-simulation` i `android-build`.
+
+```text
+# Kotlin JVM: testy bazowej gałęzi (w tym BattleSimTest, Snapshot, LTest)
+BUILD SUCCESSFUL in 43s
+# Kotlin JVM: testy gałęzi gpt/06-counters (w tym 11 testów kontr)
+BUILD SUCCESSFUL in 17s
+# Android SDK 36, JDK 17
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 1m 46s
+> Task :app:testDebugUnitTest
+BUILD SUCCESSFUL in 20s
+> Task :app:testDebugUnitTest --tests '*ScreenshotTest.menus*'
+BUILD SUCCESSFUL in 28s
+```
+
+**Porównanie `BattleSimTest` dla najnowszej bazy:**
+
+- Przed wdrożeniem: 25/32 ukończone w limicie, 7 przekroczeń 30 min (3, 4, 6, 18, 22, 25, 32).
+- Po wdrożeniu: 29/32 ukończone w limicie, 3 przekroczenia 30 min (4, 6, 14). Poprawa wynosi cztery dodatkowe zakończone etapy.
+- Testy deterministyczności, serializacji i wznowienia pocisków z kontrami przechodzą, podobnie jak `LTest`.
+
+**Zrzuty ekranu:** [artefakt `counters-codex-screenshots`](https://github.com/woogitsugames/Century-war/actions/runs/41205820390/artifacts/13044670050) zawiera 51 PNG; sprawdzono wizualnie Kodeks na telefonach 720p/20:9 i rozłożonym Foldzie. Teksty kontr, bonus oblężnika i bonus późnych wież są czytelne w sprawdzonych widokach.
+
+**Pozostałe ograniczenia:** etapy 4, 6 i 14 wymagają dalszego balansu. Wieże nie mają HP ani logiki niszczenia, dlatego elita zachowuje bonus do baz, lecz nie atakuje wież. Zrzuty bitwy w starszym formacie są celowo niekompatybilne z `BattleSnapshot.VERSION = 3`.
