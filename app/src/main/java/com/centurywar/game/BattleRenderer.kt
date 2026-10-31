@@ -77,8 +77,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val men = Soldiers(pen)
     private val mach = Machines(pen, men)
     private val bases = Bases(pen)
-    /** Nagrane korpusy baz: indeks = strona * 8 + epoka. */
-    private val basePics = arrayOfNulls<Picture>(16)
+    /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
+    private val basePics = arrayOfNulls<Picture>(Defs.ERA_COUNT * 2)
     private var basePicDetail = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
@@ -156,12 +156,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // ---------------------------------------------------------------- tło
 
-    private val skyTop = intArrayOf(0xFF6EBEF0.toInt(), 0xFF78B4E6.toInt(), 0xFF64AAE6.toInt(), 0xFF82AAD2.toInt(), 0xFF969696.toInt(), 0xFF78828C.toInt(), 0xFF3C6EAA.toInt(), 0xFF140F32.toInt())
-    private val skyBot = intArrayOf(0xFFC8E6FA.toInt(), 0xFFF0DCB4.toInt(), 0xFFD2E6F5.toInt(), 0xFFE6D2BE.toInt(), 0xFFD2BEA0.toInt(), 0xFFC8BEAA.toInt(), 0xFFAAC8E6.toInt(), 0xFF5A3278.toInt())
-    private val hillFar = intArrayOf(0xFF7FA0B8.toInt(), 0xFFC8AA7A.toInt(), 0xFF7E9EB0.toInt(), 0xFF8C9AA0.toInt(), 0xFF7C7A78.toInt(), 0xFF6E7478.toInt(), 0xFF46506E.toInt(), 0xFF3A2860.toInt())
-    private val hillMid = intArrayOf(0xFF5A8C50.toInt(), 0xFFB48C5A.toInt(), 0xFF50825A.toInt(), 0xFF6E8250.toInt(), 0xFF646458.toInt(), 0xFF5A644B.toInt(), 0xFF3C465A.toInt(), 0xFF2C2050.toInt())
-    private val hillNear = intArrayOf(0xFF3C6E3C.toInt(), 0xFF9C7448.toInt(), 0xFF326440.toInt(), 0xFF506440.toInt(), 0xFF4E4E46.toInt(), 0xFF464E3A.toInt(), 0xFF2A3246.toInt(), 0xFF22183E.toInt())
-    private val groundC = intArrayOf(0xFF967846.toInt(), 0xFFC8AA6E.toInt(), 0xFF788C46.toInt(), 0xFF8C7850.toInt(), 0xFF6E5F50.toInt(), 0xFF696450.toInt(), 0xFF5A5A5F.toInt(), 0xFF463C5A.toInt())
+    // Kolory krajobrazu są częścią EraSpec, brak równoległych tablic.
 
     private fun themeEra() = b.player.era
 
@@ -169,10 +164,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val e = themeEra()
         if (e != skyEra || skyH != groundY) {
             skyEra = e; skyH = groundY
-            sky.shader = LinearGradient(0f, 0f, 0f, groundY, skyTop[e], skyBot[e], Shader.TileMode.CLAMP)
+            sky.shader = LinearGradient(0f, 0f, 0f, groundY, Defs.spec(e).palette[0], Defs.spec(e).palette[1], Shader.TileMode.CLAMP)
         }
         c.drawRect(0f, 0f, w, groundY + 2f, sky)
-        if (e == 7) { // gwiazdy
+        if (Defs.spec(e).art == EraArt.ORBITAL) { // gwiazdy
             fill.color = Color.argb(200, 255, 255, 255)
             for (i in 0 until 60) {
                 val x = ((i * 977) % 1000) / 1000f * w
@@ -181,8 +176,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                 c.drawCircle(x, y, (1f + (i % 3)) * g.ui.dp * 0.6f * tw, fill)
             }
         }
-        if (g.quality.clouds && e != 7) {
-            val cloud = if (e == 4 || e == 5) Color.argb(110, 90, 85, 80) else Color.argb(150, 255, 255, 255)
+        if (g.quality.clouds && Defs.spec(e).art != EraArt.ORBITAL) {
+            val cloud = if (Defs.spec(e).terrain == Terrain.INDUSTRIAL) Color.argb(110, 90, 85, 80) else Color.argb(150, 255, 255, 255)
             for (i in 0 until 5) {
                 val span = w + 400f * g.ui.dp
                 val x = ((i * 397f + time * (8f + i * 3f) * g.ui.dp) % span) - 200f * g.ui.dp
@@ -201,9 +196,9 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private fun drawBackdrop(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
         val layers = g.quality.parallaxLayers
-        if (layers >= 3) ridge(c, w, 0.15f, 300f, 220f, hillFar[e], 1)
-        if (layers >= 2) ridge(c, w, 0.35f, 190f, 140f, hillMid[e], 2)
-        props(c, w, 0.7f, hillNear[e], e)
+        if (layers >= 3) ridge(c, w, 0.15f, 300f, 220f, Defs.spec(e).palette[2], 1)
+        if (layers >= 2) ridge(c, w, 0.35f, 190f, 140f, Defs.spec(e).palette[3], 2)
+        props(c, w, 0.7f, Defs.spec(e).palette[4], e)
     }
 
     /** Pasmo wzgórz/gór z paralaksą. Kształt jest deterministyczny (z indeksu), bez losowania w klatce. */
@@ -218,7 +213,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         for (i in first..first + count) {
             val hx = (i * step - off) * k
             val hash = (((i * 7349 + seed * 1597) and 0x7fffffff) % 1000) / 1000f
-            val hh = if (e == 6 && seed == 2) (height * (0.4f + hash)) else height * 0.5f + amp * hash
+            val hh = if (Defs.spec(e).terrain == Terrain.CITY && seed == 2) (height * (0.4f + hash)) else height * 0.5f + amp * hash
             if (e == 6 && seed == 2) { // panorama miasta: prostokąty
                 path.lineTo(hx, groundY - hh * k * 0.8f)
                 path.lineTo(hx + step * k * 0.8f, groundY - hh * k * 0.8f)
@@ -247,14 +242,14 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val x = (i * step + hash * 120f - off) * k
             val s = (0.7f + hash * 0.6f) * k
             when {
-                e <= 3 || e == 1 -> {
-                    if (e == 1 && hash > 0.5f) { // palma
+                (Defs.spec(e).terrain == Terrain.WOODS || Defs.spec(e).terrain == Terrain.DESERT || Defs.spec(e).terrain == Terrain.PAVED_HILLS || Defs.spec(e).terrain == Terrain.PINES) -> {
+                    if (Defs.spec(e).terrain == Terrain.DESERT && hash > 0.5f) { // palma
                         c.drawRect(x - 4 * s, groundY - 110 * s, x + 4 * s, groundY, f(0xFF7A5A3A.toInt()))
                         for (j in 0 until 5) {
                             val a = -2.6f + j * 0.55f
                             c.drawLine(x, groundY - 110 * s, x + cos(a) * 45 * s, groundY - 110 * s + sin(a) * 30 * s + 20 * s, l(color, 9 * s))
                         }
-                    } else if (e == 2 || hash < 0.4f) { // świerk
+                    } else if (Defs.spec(e).terrain == Terrain.PINES || hash < 0.4f) { // świerk
                         c.drawRect(x - 4 * s, groundY - 30 * s, x + 4 * s, groundY, f(0xFF5A3F28.toInt()))
                         for (j in 0..2) {
                             path.reset()
@@ -272,7 +267,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                         c.drawCircle(x + 24 * s, groundY - 68 * s, 26 * s, f(color))
                     }
                 }
-                e <= 5 -> {
+                Defs.spec(e).terrain == Terrain.INDUSTRIAL -> {
                     if (hash < 0.5f) { // słup telegraficzny
                         c.drawLine(x, groundY, x, groundY - 120 * s, l(0xFF4A3A2A.toInt(), 5 * s))
                         c.drawLine(x - 18 * s, groundY - 110 * s, x + 18 * s, groundY - 110 * s, l(0xFF4A3A2A.toInt(), 4 * s))
@@ -285,14 +280,14 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                     if (hash < 0.5f) { // antena / pylon
                         c.drawLine(x, groundY, x, groundY - 150 * s, l(dark, 4 * s))
                         val blink = if (sin(time * 3f + i) > 0f) 0xFFFF4040.toInt() else 0xFF601010.toInt()
-                        c.drawCircle(x, groundY - 150 * s, 4 * s, f(if (e == 7) 0xFF60F0FF.toInt() else blink))
+                        c.drawCircle(x, groundY - 150 * s, 4 * s, f(if (Defs.spec(e).art == EraArt.ORBITAL) 0xFF60F0FF.toInt() else blink))
                     } else {
                         rect.set(x - 26 * s, groundY - 120 * s, x + 26 * s, groundY)
                         c.drawRoundRect(rect, 6 * s, 6 * s, f(color))
                         for (yy in 0 until 4) for (xx in 0 until 2) {
                             if (((i + yy + xx) % 3) == 0) continue
                             c.drawRect(x - 18 * s + xx * 20 * s, groundY - 108 * s + yy * 26 * s, x - 8 * s + xx * 20 * s, groundY - 96 * s + yy * 26 * s,
-                                f(if (e == 7) 0xFF9060FF.toInt() else 0xFFFFE08A.toInt()))
+                                f(if (Defs.spec(e).art == EraArt.ORBITAL) 0xFF9060FF.toInt() else 0xFFFFE08A.toInt()))
                         }
                     }
                 }
@@ -302,7 +297,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun drawGround(c: Canvas, w: Float, h: Float) {
         val e = themeEra()
-        c.drawRect(0f, groundY, w, h, f(groundC[e]))
+        c.drawRect(0f, groundY, w, h, f(Defs.spec(e).palette[5]))
         c.drawRect(0f, groundY, w, groundY + 5f * k, f(Ui.blend(groundC[e], Color.WHITE, 0.15f)))
         // kamyki / kępki trawy przewijane z polem
         val step = 90f
@@ -314,6 +309,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val x = sx(i * step + hash * 50f)
             val y = groundY + (10f + hash * 40f) * k
             if (y > h) continue
+            if (Defs.spec(e).terrain == Terrain.PAVED_HILLS) {
+                // Kamienie brukowej drogi i spoiny na wzgórzach Epoki żelaza.
+                val bx = sx(i * step)
+                c.drawRect(bx, groundY + 12f * k, bx + 68f * k, groundY + 22f * k, f(if (i % 2 == 0) 0xFFAAA28F.toInt() else 0xFF978E80.toInt()))
+                c.drawRect(bx + 12f * k, groundY + 24f * k, bx + 70f * k, groundY + 30f * k, f(0xFF756E62.toInt()))
+            }
             c.drawCircle(x, y, (2f + hash * 3f) * k, f(dark))
         }
     }
@@ -323,7 +324,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
     private fun basePicture(side: Int, era: Int, team: Int): Picture {
         if (basePicDetail != pen.detail) { for (i in basePics.indices) basePics[i] = null; basePicDetail = pen.detail }
-        val idx = side * 8 + era
+        val idx = side * Defs.ERA_COUNT + era
         basePics[idx]?.let { return it }
         val pic = Picture()
         val rc = pic.beginRecording((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
@@ -364,7 +365,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         } else c.drawPicture(pic)
         c.restore()
         bases.live(e, team)
-        if (e == 4 && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
+        if (Defs.spec(e).art == EraArt.STEAM && g.quality.level >= 2 && (time * 10f).toInt() % 6 == 0) spawnParticle(s.baseFront - s.dir * 260f, 420f, s.dir * 10f, 40f, 2.2f, 26f, 0x80585050.toInt(), 3)
 
         // flaga drużyny
         val fx0 = bases.flagX(e)
@@ -443,7 +444,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         when (def.body) {
             Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
             Body.BEAST -> mach.beast(def.era, def.role == Role.ELITE, team, walk, atk)
-            Body.SIEGE -> mach.trebuchet(team, walk, atk)
+            Body.SIEGE -> if (Defs.spec(def.era).art == EraArt.IRON) mach.scorpion(team, walk, atk) else mach.trebuchet(team, walk, atk)
             Body.CANNON -> mach.cannon(team, walk, atk)
             Body.VEHICLE -> mach.vehicle(def.era, def.role == Role.ELITE, team, walk, atk)
             Body.MECH -> mach.mech(def.era, def.role == Role.ELITE, team, walk, atk)
@@ -478,8 +479,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun unitWidth(d: UnitDef) = when (d.body) {
         Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
-        Body.VEHICLE -> if (d.role == Role.ELITE && d.era == 5) 130f else 104f; Body.HOVER -> 96f
-        Body.MECH -> if (d.era == 7) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+        Body.VEHICLE -> if (d.role == Role.ELITE && Defs.spec(d.era).art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
+        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
     }
 
     private fun iconShift(d: UnitDef) = when (d.body) {
@@ -487,7 +488,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     private fun unitHeight(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.era == 1) 120f else 92f) else 80f
+        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (Defs.spec(d.era).art == EraArt.BRONZE) 120f else 92f) else 80f
         Body.MECH -> if (d.era == 7) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
     }
 
