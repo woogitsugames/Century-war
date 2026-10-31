@@ -221,6 +221,29 @@ class Battle(val cfg: BattleConfig) {
     /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
     var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
+    /** W Endless pogoda jest pochodną seeda i epoki przeciwnika (co sześć fal). */
+    val weather: Weather get() = if (!endless) cfg.weather else when (
+        (((cfg.seed xor (cfg.seed ushr 32)).toInt() and 3) + enemy.era) and 3
+    ) {
+        0 -> Weather.CLEAR
+        1 -> Weather.RAIN
+        2 -> Weather.WIND
+        else -> Weather.NIGHT
+    }
+
+    /** Kierunek +1 oznacza wiatr w prawo. Zmiana co 75 s bez użycia RNG. */
+    fun windDirection(): Int {
+        val phase = (stepCount / (75 * 60)).toLong()
+        return if (((cfg.seed xor (cfg.seed ushr 32) xor phase) and 1L) == 0L) 1 else -1
+    }
+
+    /** Mnożniki identyczne dla obu stron, zależą jedynie od kierunku wystrzału. */
+    fun projectileRangeMul(side: Int, turret: Boolean = false): Float = when (weather) {
+        Weather.CLEAR -> 1f
+        Weather.RAIN -> 0.9f
+        Weather.WIND -> if (sides[side].dir == windDirection().toFloat()) 1.1f else 0.9f
+        Weather.NIGHT -> if (turret) 0.85f else 0.95f
+    }
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
 
@@ -789,7 +812,7 @@ class Battle(val cfg: BattleConfig) {
             if (s.turretCd[i] > 0f) { s.turretCd[i] -= dt; continue }
             val td = Defs.eras[te].turret
             val dist = (target.x - s.baseFront) * s.dir
-            if (dist > td.range) continue
+            if (dist > td.range * projectileRangeMul(s.index, turret = true)) continue
             s.turretCd[i] = td.cooldown / s.turretRateMul
             s.turretFire[i] = 0.15f
             val h = turretHeight(i)
@@ -810,7 +833,8 @@ class Battle(val cfg: BattleConfig) {
         if (u.burnLeft > 0f) {
             val tick = min(dt, u.burnLeft)
             u.burnLeft -= tick
-            damageUnit(u, u.burnDps * tick, 1 - u.side)
+            val burn = u.burnDps * tick
+            damageUnit(u, if (weather == Weather.RAIN) burn * 0.5f else burn, 1 - u.side)
             if (!u.alive) return
         }
         if (u.bossCd > 0f) u.bossCd -= dt
@@ -830,7 +854,10 @@ class Battle(val cfg: BattleConfig) {
         val attackDmg = if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.35f)
             u.dmg * s.lastStandMul else u.dmg
 
-        if (gap <= Defs.unitRange(def, u.tier)) {
+        val attackRange = Defs.unitRange(def, u.tier)
+        val effectiveRange = if (def.projectile == Proj.NONE) attackRange
+            else attackRange * projectileRangeMul(u.side)
+        if (gap <= effectiveRange) {
             u.moving = false
             if (endless && u.bossKind == 1 && u.bossCd <= 0f && target != null && target.alive) {
                 target.x = max(e.baseFront + 16f, target.x - 90f)
@@ -872,7 +899,8 @@ class Battle(val cfg: BattleConfig) {
             if ((u.x - holdX) * s.dir >= 0f) blocked = true
         }
         if (!blocked) {
-            val v = Defs.unitSpeed(def, u.tier) * s.speedMul * rally
+            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * rally
+            val v = if (weather == Weather.RAIN) normalSpeed * 0.92f else normalSpeed
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
             u.moving = true
@@ -1029,6 +1057,7 @@ class Battle(val cfg: BattleConfig) {
         nextWaveTheme = EndlessCards.nextTheme(rng)
 
         val e = enemy
+        // Zmiana epoki od razu przełącza pogodę wyliczaną z seeda i enemy.era.
         val nextEra = min(cfg.maxEra, cfg.startEra + wave / 6)
         if (nextEra != e.era) { e.era = nextEra; e.unitTier.fill(1) }
         val inEra = wave % 6
