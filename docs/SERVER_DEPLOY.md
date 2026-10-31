@@ -54,7 +54,7 @@ chmod 600 .env
 
 Wklej wygenerowane 64 znaki w polu CW_HMAC_KEY. Ustaw
 CW_GAME_VERSION zgodnie z **ScoreClient.GAME_VERSION w Androidzie**
-(obecnie 0.3.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
+(obecnie 0.4.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
 Klucz ten jest również w APK, a więc **nie zapewnia mocnego uwierzytelnienia**.
 Ta wersja API pozwala każdemu posiadającemu klucz na żądanie usunięcia
 dowolnego UUID; przed dużą skalą konieczny będzie silniejszy dowód własności.

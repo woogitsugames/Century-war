@@ -23,7 +23,7 @@ class PlayerDeletionTest {
     private val secret = "test-secret-at-least-32-characters-long!".toByteArray()
 
     private fun input(player: String = UUID.randomUUID().toString()) = ScoreSubmission(
-        board = "endless", player = player, nick = "Gracz", gameVersion = "0.3.0",
+        board = "endless", player = player, nick = "Gracz", gameVersion = "0.4.0",
         seed = 42L, replay = "nieistotny", score = 100L,
         research = List(13) { 0 },
     )

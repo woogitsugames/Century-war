@@ -37,7 +37,7 @@ fun Application.leaderboardModule(
     store: SqliteStore,
     secret: ByteArray,
     nowMillis: () -> Long = System::currentTimeMillis,
-    supportedVersion: String = "0.3.0",
+    supportedVersion: String = "0.4.0",
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)

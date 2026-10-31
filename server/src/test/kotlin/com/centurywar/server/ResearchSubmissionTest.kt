@@ -23,7 +23,7 @@ import java.util.UUID
 
 class ResearchSubmissionTest {
     private val now = 1_800_000_000_000L
-    private val version = "0.3.0"
+    private val version = "0.4.0"
     private val json = Json { encodeDefaults = true }
     private val full = IntArray(Research.defs.size) { Research.defs[it].max }
 

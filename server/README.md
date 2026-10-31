@@ -27,7 +27,7 @@ SDK 36. Aby kompilować sam serwer bez instalowania SDK Android:
 ```bash
 export CW_HMAC_KEY="$(openssl rand -hex 32)"
 export CW_DATABASE_PATH="./data/leaderboards.db"
-export CW_GAME_VERSION="0.3.0"
+export CW_GAME_VERSION="0.4.0"
 ./gradlew :server:test -PserverOnly=true --console=plain
 ./gradlew :server:run -PserverOnly=true --console=plain
 ```
@@ -98,7 +98,7 @@ nie jest poprawną, zweryfikowaną powtórką):
   "board": "endless",
   "player": "a16036d5-800a-4898-aea3-11b6548de7b4",
   "nick": "Gracz_12",
-  "gameVersion": "0.3.0",
+  "gameVersion": "0.4.0",
   "seed": 12345,
   "replay": "AoQH...",
   "score": 257,
