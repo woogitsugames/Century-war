@@ -92,6 +92,7 @@ class Sound(private val ctx: Context) {
     private val requested = AtomicIntegerArray(SAMPLE_COUNT)
     private val wake = java.lang.Object()
     private val lastPlay = LongArray(COUNT)
+    private val pending = PendingSfx(COUNT)
     @Volatile private var released = false
     @Volatile var enabled = true
     @Volatile var volume = 0.8f
@@ -103,14 +104,25 @@ class Sound(private val ctx: Context) {
 
     init {
         pool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) synchronized(this) {
+            synchronized(this) {
                 // load() i wpis ID są pod tym samym zamkiem: callback nie wyprzedzi zapisu.
                 if (!released) {
                     for (i in 0 until SAMPLE_COUNT) {
-                        if (ids.get(i) == sampleId) {
+                        if (ids.get(i) != sampleId) continue
+                        val soundId = i / VARIANTS
+                        if (status == 0) {
                             ready.set(i, 1)
-                            break
+                            val now = SystemClock.uptimeMillis()
+                            // Pierwsze zdarzenie odtwarzamy tylko, jeśli nadal jest aktualne.
+                            if (pending.pop(soundId, now) && enabled) {
+                                playLoaded(soundId, sampleId, pending.volume(soundId), pending.gap(soundId),
+                                    pending.pitch(soundId), pending.pan(soundId), pending.priority(soundId), now)
+                            }
+                        } else {
+                            requested.set(i, 3)
+                            pending.clear(soundId)
                         }
+                        break
                     }
                 }
             }
@@ -133,11 +145,14 @@ class Sound(private val ctx: Context) {
     }
 
     /** Głośność i panorama są niezależne; wyższy priorytet chroni wybuchy przed trafieniami. */
+    @Synchronized
     fun play(
         id: Int, vol: Float = 1f, minGapMs: Long = 45L,
         pitch: Float = 1f, pan: Float = 0f, priority: Int = 1,
     ) {
-        if (released || !enabled || id !in 0 until COUNT || !vol.isFinite() || vol <= 0.02f) return
+        if (released || !enabled || id !in 0 until COUNT || !vol.isFinite() ||
+            vol <= 0.02f || !pitch.isFinite() || !pan.isFinite()) return
+        val now = SystemClock.uptimeMillis()
         val index = id * VARIANTS
         val first = variantCounter[id] % VARIANTS
         var sample = index + first
@@ -146,16 +161,24 @@ class Sound(private val ctx: Context) {
             sample = index + ((first + 1) % VARIANTS)
             sid = ids.get(sample)
             if (sid <= 0 || ready.get(sample) == 0) {
+                pending.offer(id, vol, minGapMs, pitch, pan, priority, now)
                 prewarm(id)
                 return
             }
         }
-        val now = SystemClock.uptimeMillis()
-        if (now - lastPlay[id] < minGapMs) return
+        playLoaded(id, sid, vol, minGapMs, pitch, pan, priority, now)
+    }
+
+    /** Wywołuj wyłącznie pod zamkiem Sound: także callback ładowania może zagrać próbkę. */
+    private fun playLoaded(
+        id: Int, sid: Int, vol: Float, minGapMs: Long,
+        pitch: Float, pan: Float, priority: Int, now: Long,
+    ) {
+        if (released || !enabled || now - lastPlay[id] < minGapMs) return
         lastPlay[id] = now
         variantCounter[id] = (variantCounter[id] + 1) and Int.MAX_VALUE
 
-        // Krótkie okno obciążeń miksu: tłumiemy drobne dźwięki zamiast ścinać wybuchy.
+        // Krótkie okno obciążeń miksu: tłumimy drobne dźwięki zamiast ścinać wybuchy.
         budget = (budget - (now - lastBudgetAt).coerceIn(0L, 500L) * 0.02f).coerceAtLeast(0f)
         lastBudgetAt = now
         val quiet = if (priority >= 3) 1f else (1f - budget / 3.4f).coerceIn(0.26f, 1f)
@@ -213,10 +236,18 @@ class Sound(private val ctx: Context) {
                     }
                     synchronized(this) {
                         if (released) return
-                        ids.set(next, pool.load(f.absolutePath, 1))
+                        val sid = pool.load(f.absolutePath, 1)
+                        if (sid > 0) ids.set(next, sid)
+                        else {
+                            requested.set(next, 3)
+                            pending.clear(next)
+                        }
                     }
                 } catch (e: Exception) {
-                    requested.set(next, 3)
+                    synchronized(this) {
+                        requested.set(next, 3)
+                        pending.clear(next)
+                    }
                     android.util.Log.w("CenturyWar", "sfx sample $next failed", e)
                 }
                 // Ograniczamy ciągłe obciążenie CPU przez generowanie na tanich telefonach.

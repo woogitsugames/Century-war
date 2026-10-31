@@ -39,6 +39,10 @@ class ReplayScreen(
     private var acc = 0f
     private var frameDt = 0f
     private var draggingTime = false
+    private var preparedPlayerEra = -1
+    private var preparedEnemyEra = -1
+    private var preparedPlayerVariant = -2
+    private var preparedEnemyVariant = -2
 
     private val back = btn(1)
     private val pause = btn(2)
@@ -107,7 +111,24 @@ class ReplayScreen(
         }
         state = READY
         rebuildRenderer()
+        prepareEras(replay.battle)
         if (g.current === this) layout()
+    }
+
+    /** Także odtwarzana bitwa może startować w różnych epokach i wybierać wariant. */
+    private fun prepareEras(battle: Battle) {
+        val p = battle.player
+        val e = battle.enemy
+        if (preparedPlayerEra != p.era || preparedPlayerVariant != p.eraVariant) {
+            BattleSfx.prepareEra(g, p.era, p.eraVariant)
+            preparedPlayerEra = p.era
+            preparedPlayerVariant = p.eraVariant
+        }
+        if (preparedEnemyEra != e.era || preparedEnemyVariant != e.eraVariant) {
+            BattleSfx.prepareEra(g, e.era, e.eraVariant)
+            preparedEnemyEra = e.era
+            preparedEnemyVariant = e.eraVariant
+        }
     }
 
     private fun addMark(step: Int, kind: Int) {
@@ -177,6 +198,7 @@ class ReplayScreen(
         if (p.broken) { state = BROKEN; return }
         if (p.finished) paused = true
         val r = renderer ?: return
+        prepareEras(p.battle)
         g.music?.setEra(p.battle.player.era)
         g.music?.setIntensity(0f)
         if (follow) r.follow(dt)
