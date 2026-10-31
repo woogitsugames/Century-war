@@ -13,4 +13,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "CenturyWar"
-include(":app")
+
+val serverOnly = providers.gradleProperty("serverOnly").orNull == "true"
+if (!serverOnly) include(":app")
+include(":sim", ":server")
