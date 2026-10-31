@@ -19,8 +19,8 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 13 | [Oblężenie bez końca 2.0: karty roguelite i bossowie](13-endless-cards.md) | `gpt/13-endless-cards` | — |
 | 14 | [Testy odporności: zapis profilu, migracje, przypadki brzegowe](14-tests-robustness.md) | `gpt/14-tests-robustness` | — |
 | 15 | [Przypomnienie o wyzwaniu dnia (powiadomienia)](15-notifications.md) | `gpt/15-notifications` | — |
-| 16 | [Ulepszenia jednostek w obrębie epoki](16-unit-upgrades.md) | `gpt/16-unit-upgrades` | faza 2 |
-| 17 | [Nowa epoka: Epoka żelaza + szablon kolejnych](17-new-era.md) | `gpt/17-new-era` | faza 2, po 16 lub równolegle |
-| 18 | [Rozgałęzienia epok (Diesel/Tesla, Cyber/Bio)](18-era-branches.md) | `gpt/18-era-branches` | faza 2, po 17 |
+| 16 | [Ulepszenia jednostek w obrębie epoki](16-unit-upgrades.md) | `gpt/16-unit-upgrades` | — |
+| 17 | [Nowa epoka: Epoka żelaza + szablon kolejnych](17-new-era.md) | `gpt/17-new-era` | po 16 lub równolegle |
+| 18 | [Rozgałęzienia epok (Diesel/Tesla, Cyber/Bio)](18-era-branches.md) | `gpt/18-era-branches` | po 17 |
 
-**Konflikty:** zlecenia 05, 06, 07 i 13 dotykają `game/Battle.kt` lub `game/Ai.kt`; scalane będą po kolei. Pliki `screens/*`, `engine/Ui.kt`, `engine/L.kt`, `engine/Quality.kt`, `game/BattleRenderer.kt` są zablokowane do czasu scalenia przebudowy grafiki i menu.
+**Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
