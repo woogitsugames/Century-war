@@ -80,9 +80,10 @@ class MainActivity : Activity(), Host {
         applyOrientation(resources.configuration)
         setContentView(TextView(this).apply {
             text = L["bh_loading"]
-            gravity = Gravity.CENTER
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            setPadding(0, 0, 0, (32f * resources.displayMetrics.density).toInt())
             setTextColor(Color.WHITE)
-            setBackgroundColor(Color.BLACK)
+            setBackgroundResource(R.drawable.bg_launch)
         })
         // Profil i zrzut są potrzebne przed pierwszą klatką, ale nigdy nie czytamy ich na UI.
         val app = applicationContext
