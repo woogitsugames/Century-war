@@ -69,6 +69,8 @@ class Sound(private val ctx: Context) {
         const val ERA_UNLOCK = SoundSynth.ERA_UNLOCK
         const val BOSS = SoundSynth.BOSS
         private const val COUNT = SoundSynth.COUNT
+        private const val MAX_GENERATION_BURST_MS = 750L
+        private const val GENERATION_REST_MS = 120L
     }
 
     private val pool = SoundPool.Builder()
@@ -159,6 +161,7 @@ class Sound(private val ctx: Context) {
                 if (it.name.endsWith(".wav") && !it.name.endsWith("_v${SoundSynth.VERSION}.wav")) it.delete()
             }
             if (SoundSynth.totalWavBytes() > SoundSynth.MAX_CACHE_BYTES) return
+            var burstStart = SystemClock.elapsedRealtime()
             while (!released) {
                 var next = -1
                 synchronized(wake) {
@@ -181,6 +184,11 @@ class Sound(private val ctx: Context) {
                 } catch (e: Exception) {
                     requested.set(next, 3)
                     android.util.Log.w("CenturyWar", "sfx sample $next failed", e)
+                }
+                // Ograniczamy ciągłe obciążenie CPU przez generowanie na tanich telefonach.
+                if (SystemClock.elapsedRealtime() - burstStart > MAX_GENERATION_BURST_MS) {
+                    Thread.sleep(GENERATION_REST_MS)
+                    burstStart = SystemClock.elapsedRealtime()
                 }
             }
         } catch (_: InterruptedException) {
