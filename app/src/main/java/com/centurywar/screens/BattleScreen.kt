@@ -14,6 +14,7 @@ import com.centurywar.game.FxBuffer
 import com.centurywar.game.Proj
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
+import com.centurywar.game.BattleController
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.BattleSnapshot
@@ -39,6 +40,7 @@ class BattleScreen(
 ) : Screen(g) {
 
     private val battle = restored?.battle ?: Battle(cfg)
+    private val commands = battle.commandController ?: BattleController(battle)
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
@@ -121,7 +123,7 @@ class BattleScreen(
 
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
     private val tut: TutorialOverlay? =
-        if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, TutorialOverlay.Targets(
+        if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, commands, TutorialOverlay.Targets(
             unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
@@ -373,15 +375,15 @@ class BattleScreen(
         val t = tut
         if (t != null && (t.onClick(b) || !t.allows(b))) return
         when (b.id) {
-            in UNIT0..UNIT0 + 3 -> battle.queueUnit(p, roles[b.id - UNIT0])
+            in UNIT0..UNIT0 + 3 -> commands.queue(roles[b.id - UNIT0])
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
-            ARMORY -> battle.buyArmory(p)
-            BARRAGE -> battle.castBarrage(p)
-            RALLY -> battle.castRally(p)
-            STANCE -> p.hold = !p.hold
+            ARMORY -> commands.armory()
+            BARRAGE -> commands.barrage()
+            RALLY -> commands.rally()
+            STANCE -> commands.stance(!p.hold)
             SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
-            EVOLVE -> if (battle.evolve(p)) g.haptic(40)
+            EVOLVE -> if (commands.evolve()) g.haptic(40)
             PAUSE -> paused = true
             RESUME -> paused = false
             RESTART, RESTART + 100 -> {
@@ -389,14 +391,14 @@ class BattleScreen(
                 g.snapshots?.delete()
                 g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
             }
-            QUIT -> { paused = false; battle.surrender() }
+            QUIT -> { paused = false; commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
-            in DOCTRINE0..DOCTRINE0 + 2 -> battle.chooseDoctrine(b.id - DOCTRINE0)
+            in DOCTRINE0..DOCTRINE0 + 2 -> commands.doctrine(b.id - DOCTRINE0)
             in SLOT_BUY0 until SLOT_BUY0 + Defs.MAX_TURRET_SLOTS -> {
                 val i = b.id - SLOT_BUY0
-                if (p.turretEra[i] < 0) battle.buyTurret(p, i) else battle.upgradeTurret(p, i)
+                if (p.turretEra[i] < 0) commands.buyTurret(i) else commands.upgradeTurret(i)
             }
-            in SLOT_SELL0 until SLOT_SELL0 + Defs.MAX_TURRET_SLOTS -> battle.sellTurret(p, b.id - SLOT_SELL0)
+            in SLOT_SELL0 until SLOT_SELL0 + Defs.MAX_TURRET_SLOTS -> commands.sellTurret(b.id - SLOT_SELL0)
         }
     }
 

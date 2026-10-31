@@ -140,6 +140,27 @@ object Daily {
 class Rng(seed: Long) {
     private var s: Long = if (seed == 0L) 0x9E3779B97F4A7C15uL.toLong() else seed xor 0x5DEECE66DL
 
+    // Osobny strumień decyzji dla każdego AI; obie pule są częścią snapshotu.
+    private val aiStates = LongArray(2) { i ->
+        val value = seed xor if (i == 0) 0x6A09E667F3BCC909L else 0x3C6EF372FE94F82BL
+        if (value == 0L) 0x2545F4914F6CDD1DL else value
+    }
+
+    fun aiState(side: Int): Long = aiStates[side]
+    fun setAiState(side: Int, state: Long) { aiStates[side] = state }
+
+    private fun nextAiLong(side: Int): Long {
+        var x = aiStates[side]
+        x = x xor (x shl 13)
+        x = x xor (x ushr 7)
+        x = x xor (x shl 17)
+        aiStates[side] = x
+        return x
+    }
+
+    fun nextAiInt(side: Int, bound: Int): Int = ((nextAiLong(side) ushr 1) % bound).toInt()
+    fun nextAiFloat(side: Int): Float = ((nextAiLong(side) ushr 40).toFloat() / (1L shl 24).toFloat())
+
     /** Wewnętrzny stan generatora (zapis/wczytanie bitwy w [BattleSnapshot]). */
     var state: Long
         get() = s

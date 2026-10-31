@@ -61,7 +61,9 @@ object BattleSnapshot {
         o.writeFloat(camX)
         writeConfig(o, b.cfg)
         o.writeLong(b.rng.state)
+        o.writeLong(b.rng.aiState(0)); o.writeLong(b.rng.aiState(1))
         o.writeFloat(b.time)
+        o.writeInt(b.stepCount)
         o.writeBoolean(b.over)
         o.writeInt(b.winner)
         o.writeInt(b.wave)
@@ -73,6 +75,8 @@ object BattleSnapshot {
         for (s in b.sides) writeSide(o, s)
         writeAi(o, b.ai)
         writeAi(o, b.playerAi)
+        o.writeBoolean(b.commandController != null)
+        b.commandController?.writeSnapshot(o)
 
         o.writeShort(b.units.count { it.active })
         for ((i, u) in b.units.withIndex()) {
@@ -180,7 +184,10 @@ object BattleSnapshot {
         val cfg = readConfig(i) ?: return null
         val b = Battle(cfg)
         b.rng.state = i.readLong()
+        b.rng.setAiState(0, i.readLong()); b.rng.setAiState(1, i.readLong())
         b.time = i.readFloat()
+        b.stepCount = i.readInt()
+        require(b.stepCount >= 0 && b.time == b.stepCount * Battle.STEP)
         b.over = i.readBoolean()
         b.winner = i.readInt()
         b.wave = i.readInt()
@@ -195,6 +202,7 @@ object BattleSnapshot {
             readAiState(i, pa)
             b.playerAi = pa
         }
+        if (i.readBoolean()) BattleController(b).readSnapshot(i, b.stepCount)
 
         val un = i.readShort().toInt()
         require(un in 0..Battle.MAX_UNITS)

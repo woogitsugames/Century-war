@@ -312,4 +312,26 @@ class BattleSnapshotTest {
         assertNull(store.loadBattle())
         assertFalse(f.exists())
     }
+    @Test
+    fun snapshotKeepsReplayAndBothAiStreams() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 919191L, 0.95f, maxEra = 2)
+        val a = Battle(cfg)
+        val originalController = BattleController(a)
+        a.playerAi = Ai(a, 0)
+        repeat(60 * 35) { if (!a.over) { a.step(); a.fx.count = 0 } }
+        assertTrue(originalController.log().commands.isNotEmpty())
+        val restored = BattleSnapshot.decode(BattleSnapshot.encode(a))!!
+        val b = restored.battle
+        assertNotNull(b.commandController)
+        assertEquals(a.stepCount, b.stepCount)
+        assertEquals(a.rng.aiState(0), b.rng.aiState(0))
+        assertEquals(a.rng.aiState(1), b.rng.aiState(1))
+        assertEquals(originalController.log(), b.commandController!!.log())
+        repeat(60 * 45) {
+            if (!a.over) { a.step(); a.fx.count = 0 }
+            if (!b.over) { b.step(); b.fx.count = 0 }
+        }
+        assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
+        assertEquals(originalController.log(), b.commandController!!.log())
+    }
 }

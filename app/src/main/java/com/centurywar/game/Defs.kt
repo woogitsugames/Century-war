@@ -1,6 +1,5 @@
 package com.centurywar.game
 
-import kotlin.math.pow
 
 /** Role jednostki na pasie. Każda epoka ma po jednej jednostce z każdej roli. */
 enum class Role { MELEE, RANGED, HEAVY, ELITE }
@@ -166,8 +165,8 @@ object Defs {
 
     val evolveXp = intArrayOf(1000, 2600, 6400, 15500, 37000, 88000, 210000, Int.MAX_VALUE)
 
-    fun statScale(era: Int): Float = STAT_GROWTH.pow(era)
-    fun costScale(era: Int): Float = COST_GROWTH.pow(era)
+    fun statScale(era: Int): Float = StrictMath.pow(STAT_GROWTH.toDouble(), era.toDouble()).toFloat()
+    fun costScale(era: Int): Float = StrictMath.pow(COST_GROWTH.toDouble(), era.toDouble()).toFloat()
 
     val eras: Array<EraDef> = Array(ERA_COUNT) { e -> buildEra(e) }
 
@@ -198,10 +197,10 @@ object Defs {
     }
 
     /** Bazowe HP bazy w danej epoce, przed bonusami. */
-    fun baseHp(era: Int): Float = 1600f * 1.85f.pow(era)
+    fun baseHp(era: Int): Float = 1600f * StrictMath.pow(1.85f.toDouble(), era.toDouble()).toFloat()
 
     /** Pasywny przychód złota na sekundę w danej epoce. */
-    fun income(era: Int): Float = 2.6f * 1.8f.pow(era)
+    fun income(era: Int): Float = 2.6f * StrictMath.pow(1.8f.toDouble(), era.toDouble()).toFloat()
 
     /** Obrażenia jednego pocisku zdolności specjalnej. */
     fun abilityDmg(era: Int): Float = 46f * statScale(era)

@@ -11,6 +11,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
+import com.centurywar.game.BattleController
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import kotlin.math.abs
@@ -31,6 +32,7 @@ import kotlin.math.sin
 class TutorialOverlay(
     private val g: Game,
     private val battle: Battle,
+    private val commands: BattleController,
     private val t: Targets,
 ) {
     /** Elementy ekranu bitwy, na które samouczek wskazuje (referencje, nie kopie). */
@@ -258,7 +260,7 @@ class TutorialOverlay(
     }
 
     /** Samouczek ma nauczyć, nie karać: brakujące złoto na wymaganą akcję dopłacamy. */
-    private fun ensureGold(cost: Int) { if (p.gold < cost) p.gold = cost.toFloat() }
+    private fun ensureGold(cost: Int) { commands.tutorialGold(cost) }
 
     private fun anyTurret(): Boolean {
         for (i in 0 until p.slots) if (p.turretEra[i] >= 0) return true
