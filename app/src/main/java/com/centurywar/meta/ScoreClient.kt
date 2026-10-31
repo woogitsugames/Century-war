@@ -128,10 +128,9 @@ class ScoreClient(
             generation++
             sending = false
             queue.clear()
-            if (!persistQueue()) {
-                callback(false)
-                return@execute
-            }
+            // Plik usunięcia jest zapisany niezależnie. Nawet przy błędzie zapisu
+            // starej kolejki wyników odfiltrujemy ten UUID po następnym starcie.
+            persistQueue()
             cache.clear()
             callback(true)
             pumpDeletions()
