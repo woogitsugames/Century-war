@@ -12,6 +12,10 @@ on:
       - "settings.gradle.kts"
       - ".github/workflows/server.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   server:
     runs-on: ubuntu-latest
