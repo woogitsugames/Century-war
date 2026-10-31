@@ -21,14 +21,36 @@ class BattleSimTest {
     @Test
     fun campaignStagesFinish() {
         val report = StringBuilder()
+        var finished = 0
         for (stage in Campaign.stages) {
             val b = run(Campaign.config(stage, Bonuses(), 1234L + stage.index))
             report.append("stage ${stage.index + 1} era ${stage.startEra}-${stage.maxEra} power ${"%.2f".format(stage.aiPower)}: ")
                 .append(if (b.over) "winner=${b.winner}" else "TIMEOUT")
                 .append(" t=${"%.1f".format(b.time / 60f)}min eras=${b.player.era}/${b.enemy.era}")
                 .append(" kills=${b.player.kills}/${b.enemy.kills}\n")
+            if (b.over) finished++
         }
         println(report)
+        // Dłuższe etapy przy równych siłach są raportowane, nie maskowane.
+        // Wymagamy zakończenia większości etapów w limicie czasu.
+        assertTrue("AI ukończyło tylko $finished z ${Campaign.stages.size} etapów", finished >= Campaign.stages.size * 3 / 4)
+    }
+
+    /** Raport bazowego i ulepszonego balansu: różnice wynikają tylko z reguł stopni. */
+    @Test
+    fun unitTierBalanceReport() {
+        println("epoka/rola | bez ulepszeń HP/DMG | stopień 2 HP/DMG koszt | stopień 3 HP/DMG koszt")
+        for (e in 0 until Defs.ERA_COUNT) {
+            for (r in Role.values()) {
+                val d = Defs.unit(e, r)
+                val hp2 = d.hp * Defs.tierStatMul(2)
+                val hp3 = d.hp * Defs.tierStatMul(3)
+                val dmg2 = d.dmg * Defs.tierStatMul(2)
+                val dmg3 = d.dmg * Defs.tierStatMul(3)
+                println("${e}/${r} | ${d.hp.toInt()}/${d.dmg.toInt()} | ${hp2.toInt()}/${dmg2.toInt()} ${Defs.unitUpgradeCost(e, r, 2)} | ${hp3.toInt()}/${dmg3.toInt()} ${Defs.unitUpgradeCost(e, r, 3)}")
+                assertTrue(hp3 > hp2 && hp2 > d.hp && dmg3 > dmg2 && dmg2 > d.dmg)
+            }
+        }
     }
 
     @Test

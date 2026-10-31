@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 4
+    const val VERSION = 5
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -36,9 +36,13 @@ object BattleSnapshot {
         fun mix(v: Int) { h = h * 31 + v }
         fun mixF(v: Float) = mix(v.toRawBits())
         mix(Defs.ERA_COUNT); mixF(Defs.LANE); mixF(Defs.BASE_FRONT); mix(Defs.MAX_TURRET_SLOTS)
+        mix(Defs.MAX_UNIT_TIER); mixF(Defs.tierStatMul(2)); mixF(Defs.tierStatMul(3))
         for (u in Defs.allUnits) {
             mix(u.id); mix(u.era); mix(u.role.ordinal); mix(u.cost); mixF(u.hp); mixF(u.dmg); mixF(u.range)
             mixF(u.cooldown); mixF(u.speed); mixF(u.trainTime); mixF(u.size); mixF(u.splash); mix(u.projectile); mixF(u.siegeMul)
+            mix(Defs.unitUpgradeCost(u.era, u.role, 2)); mix(Defs.unitUpgradeCost(u.era, u.role, 3))
+            mixF(Defs.unitRange(u, 3)); mixF(Defs.unitSplash(u, 3))
+            mixF(Defs.unitSpeed(u, 3)); mixF(Defs.unitTrainRate(u, 3))
         }
         for (e in Defs.eras) {
             val t = e.turret
@@ -92,7 +96,7 @@ object BattleSnapshot {
         for ((i, u) in b.units.withIndex()) {
             if (!u.active) continue
             o.writeShort(i)
-            o.writeByte(u.side); o.writeShort(u.def.id)
+            o.writeByte(u.side); o.writeShort(u.def.id); o.writeByte(u.tier)
             o.writeFloat(u.x); o.writeFloat(u.hp); o.writeFloat(u.maxHp); o.writeFloat(u.dmg); o.writeFloat(u.cd)
             o.writeFloat(u.anim); o.writeFloat(u.attackAnim); o.writeFloat(u.flash)
             o.writeBoolean(u.moving); o.writeFloat(u.dying); o.writeInt(u.serial)
@@ -158,6 +162,7 @@ object BattleSnapshot {
         o.writeShort(s.doctrines.size)
         for (d in s.doctrines) o.writeByte(d.ordinal)
         o.writeShort(s.rank); o.writeShort(s.armory)
+        for (tier in s.unitTier) o.writeByte(tier)
         o.writeInt(s.kills); o.writeInt(s.killValue); o.writeInt(s.spawned); o.writeFloat(s.goldEarned)
         for (v in s.spawnedByRole) o.writeInt(v)
         // liczniki misji i osiągnięć (v4)
@@ -243,6 +248,7 @@ object BattleSnapshot {
             u.active = true
             u.side = side(i.readByte().toInt())
             u.def = Defs.allUnits[i.readShort().toInt()]
+            u.tier = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }
             u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.cd = i.readFloat()
             u.anim = i.readFloat(); u.attackAnim = i.readFloat(); u.flash = i.readFloat()
             u.moving = i.readBoolean(); u.dying = i.readFloat(); u.serial = i.readInt()
@@ -315,6 +321,7 @@ object BattleSnapshot {
         s.doctrines.clear()
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
+        for (k in s.unitTier.indices) s.unitTier[k] = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }
         s.kills = i.readInt(); s.killValue = i.readInt(); s.spawned = i.readInt(); s.goldEarned = i.readFloat()
         for (k in s.spawnedByRole.indices) s.spawnedByRole[k] = i.readInt().also { require(it >= 0) }
         s.turretsBuilt = i.readInt(); s.barragesUsed = i.readInt(); s.ralliesUsed = i.readInt()

@@ -421,7 +421,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val atk = if (u.attackAnim > 0f) u.attackAnim / 0.25f else 0f
         pen.alpha = alpha
         pen.flash = u.flash > 0f
-        drawBody(def, team, walk, atk)
+        drawBody(def, team, walk, atk, u.tier)
         pen.flash = false
         c.restore()
         // pasek HP, gdy ranny
@@ -438,7 +438,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         }
     }
 
-    private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float) {
+    private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
         pen.ow = 1.5f / def.size
         when (def.body) {
             Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
@@ -449,6 +449,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             Body.MECH -> mach.mech(def.era, def.role == Role.ELITE, team, walk, atk)
             Body.HOVER -> mach.hover(team, atk)
         }
+        if (tier > 1) {
+            if (def.body == Body.HUMAN) men.tierMarks(tier, team)
+            else mach.tierMarks(def.body, tier, team)
+        }
     }
 
     private fun shadowW(d: UnitDef) = when (d.body) {
@@ -457,7 +461,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     /** Podgląd jednostki na przycisku HUD (ten sam kod rysujący co na polu bitwy). */
-    fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int) {
+    fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1) {
         val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
         val save = alpha
         alpha = 1f
@@ -469,7 +473,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.save()
         c.translate(cx - iconShift(def) * sc * def.size, bottom)
         c.scale(sc * def.size, sc * def.size)
-        drawBody(def, team, 0f, 0f)
+        drawBody(def, team, 0f, 0f, tier)
         c.restore()
         pen.setAntiAlias(g.quality.antialias)
         if (savedCv != null) pen.cv = savedCv

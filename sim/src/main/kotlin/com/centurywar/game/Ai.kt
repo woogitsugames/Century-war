@@ -18,6 +18,7 @@ class Ai(
         internal set
 
     private var think = 0.4f
+    private val upgradeOrder = arrayOf(Role.RANGED, Role.MELEE, Role.HEAVY, Role.ELITE)
     private var plannedRole: Role? = null
     private var saveEra = -1
     private var saveUntil = 0f
@@ -76,6 +77,7 @@ class Ai(
     private fun sellTurret(slot: Int) = commands?.sellTurret(slot) ?: b.sellTurret(me, slot)
     private fun armory() = commands?.armory() ?: b.buyArmory(me)
     private fun queue(role: Role) = commands?.queue(role) ?: b.queueUnit(me, role)
+    private fun upgradeUnit(role: Role) = commands?.upgradeUnit(role) ?: b.upgradeUnit(me, role)
 
     fun update(dt: Float) {
         think -= dt
@@ -97,7 +99,27 @@ class Ai(
         useAbilities()
         val saving = savingForNextEra()
         manageTurrets(saving)
+        considerUnitUpgrades()
         trainUnits(saving)
+    }
+
+    /** Ulepszaj liczne formacje, gdy armia jest pełna lub awans epoki jest odległy. */
+    private fun considerUnitUpgrades() {
+        val full = me.aliveCount + me.queueSize >= me.cap
+        if (!full && me.era < b.cfg.maxEra && me.xp > Defs.evolveXp[me.era] * 0.55f) return
+        val reserve = Defs.unit(me.era, Role.MELEE).cost * (if (full) 2 else 5)
+        for (role in upgradeOrder) {
+            if (role == Role.ELITE && !me.eliteUnlocked) continue
+            val cost = b.unitUpgradeCost(me, role)
+            if (cost < 0 || me.gold < cost + reserve) continue
+            var count = 0
+            for (u in b.units) if (u.alive && u.side == me.index && u.def.role == role) count++
+            for (i in 0 until me.queueSize) if (Defs.allUnits[me.queue[i]].role == role) count++
+            if (count >= 2 || (full && count > 0)) {
+                upgradeUnit(role)
+                return
+            }
+        }
     }
 
     /** Dokładnie ten sam próg mgły, lecz mierzony od frontu sterowanej strony. */

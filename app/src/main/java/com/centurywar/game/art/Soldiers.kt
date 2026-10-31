@@ -146,6 +146,19 @@ class Soldiers(private val p: Pen) {
         cv.restore()
     }
 
+    /** Drobne naszywki i okucia: odróżniają stopnie bez zmiany sylwetki. */
+    fun tierMarks(tier: Int, team: Int) {
+        if (tier < 2) return
+        val metal = 0xFFE8C04A.toInt()
+        p.rr(-12f, -49f, -7f, -43f, 1.5f, metal)
+        p.rr(7f, -49f, 12f, -43f, 1.5f, metal)
+        if (tier >= 3) {
+            p.segF(-8f, -53f, 8f, -53f, 1.5f, metal)
+            p.circle(0f, -40f, 4.5f, metal)
+            p.circleF(0f, -40f, 2.2f, team)
+        }
+    }
+
     private fun deg(rad: Float) = rad * 57.29578f
 
     fun isGun(w: Int) = w == Weapon.MUSKET || w == Weapon.RIFLE || w == Weapon.MG || w == Weapon.LAUNCHER ||

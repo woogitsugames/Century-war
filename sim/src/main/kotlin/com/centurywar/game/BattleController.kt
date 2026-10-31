@@ -40,6 +40,13 @@ class BattleController(
         return true
     }
 
+    /** Ulepszenie formacji (stopień jednostek danej roli w bieżącej epoce). */
+    fun upgradeUnit(role: Role): Boolean {
+        if (!canAct() || !battle.upgradeUnit(battle.player, role)) return false
+        append(Replay.Kind.UNIT_UPGRADE, role.ordinal)
+        return true
+    }
+
     fun cancel(): Boolean {
         if (!canAct() || !battle.cancelLast(battle.player)) return false
         append(Replay.Kind.CANCEL)

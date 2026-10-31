@@ -147,6 +147,10 @@ class ScreenshotTest {
             repeat(60 * 20) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
             b.playerAi = null
             shot(g, "${tag}_battle_hud")
+            // Podgląd ulepszenia w trzech formatach ekranu (telefon i rozłożony Fold).
+            field(bs, "showUpgrade").setInt(bs, 0)
+            shot(g, "${tag}_battle_unit_upgrade")
+            field(bs, "showUpgrade").setInt(bs, -1)
             field(bs, "showTurrets").set(bs, true)
             shot(g, "${tag}_battle_turrets")
             field(bs, "showTurrets").set(bs, false)

@@ -8,7 +8,7 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 2
+    const val VERSION = 3
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -17,7 +17,7 @@ object Replay {
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
         ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
-        BARRAGE_AT, CARD,
+        BARRAGE_AT, CARD, UNIT_UPGRADE,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -113,6 +113,7 @@ object Replay {
                     Kind.TUTORIAL_GOLD -> controller.tutorialGold(command.argument)
                     Kind.BARRAGE_AT -> controller.barrage(command.argument.toFloat())
                     Kind.CARD -> controller.card(command.argument)
+                    Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
                 }
                 require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
@@ -139,7 +140,7 @@ object Replay {
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
         Kind.QUEUE, Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET,
-        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD -> true
+        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD, Kind.UNIT_UPGRADE -> true
         else -> false
     }
 
@@ -152,7 +153,7 @@ object Replay {
             require(command.step >= previousStep && command.step <= log.steps) { "Komenda spoza zakresu kroków" }
             val arg = command.argument
             val correct = when (command.kind) {
-                Kind.QUEUE -> arg in 0 until Role.values().size
+                Kind.QUEUE, Kind.UNIT_UPGRADE -> arg in 0 until Role.values().size
                 Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET ->
                     arg in 0 until Defs.MAX_TURRET_SLOTS
                 Kind.STANCE -> arg == 0 || arg == 1

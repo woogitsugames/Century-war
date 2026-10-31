@@ -1,6 +1,7 @@
 package com.centurywar.game.art
 
 import android.graphics.Canvas
+import com.centurywar.game.Body
 import com.centurywar.game.Weapon
 import com.centurywar.game.art.Pen.Companion.dark
 import com.centurywar.game.art.Pen.Companion.light
@@ -27,6 +28,26 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     private val GLOW = 0xFF7FF4FF.toInt()
     private val FLASH = 0xE0FFE27A.toInt()
     private val GLASS = 0xFF8ED0EE.toInt()
+
+    /** Emblemat na pancerzu/oporządzeniu, bez przebudowy konturu maszyny. */
+    fun tierMarks(body: Int, tier: Int, team: Int) {
+        if (tier < 2) return
+        val x = if (body == Body.SIEGE) -18f else if (body == Body.CANNON) 8f else 0f
+        val y = when (body) {
+            Body.BEAST -> -42f
+            Body.SIEGE -> -32f
+            Body.CANNON -> -25f
+            Body.MECH -> -65f
+            Body.HOVER -> -28f
+            else -> -38f
+        }
+        val metal = 0xFFE8C04A.toInt()
+        p.rr(x - 9f, y - 4f, x + 9f, y + 4f, 2f, metal)
+        if (tier >= 3) {
+            p.circle(x, y, 5f, 0xFFF8E2A0.toInt())
+            p.circleF(x, y, 2.3f, team)
+        }
+    }
 
     // ================================================================== zwierzęta
 

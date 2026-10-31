@@ -51,7 +51,10 @@ class UnitDef(
     val body: Int,
     /** Mnożnik obrażeń zadawanych bazom i wieżom (oblężnicze jednostki mają > 1). */
     val siegeMul: Float,
-)
+) {
+    /** Klucze lokalizowanych nazw trzech stopni. */
+    val tierNameKeys = arrayOf(nameKey, nameKey + "_t2", nameKey + "_t3")
+}
 
 class TurretDef(
     val era: Int,
@@ -100,6 +103,8 @@ object Defs {
     const val LANE = 2800f
     const val BASE_FRONT = 190f
     const val MAX_TURRET_SLOTS = 4
+    const val MAX_UNIT_TIER = 3
+    private val upgradeBase = intArrayOf(65, 95, 155, 255)
 
     /** Wiersz: rola atakująca; kolumna: rola obrońcy. Kolejność jak w [Role]. */
     private val roleMultipliers = arrayOf(
@@ -174,6 +179,29 @@ object Defs {
     val allUnits: Array<UnitDef> = Array(ERA_COUNT * 4) { eras[it / 4].units[it % 4] }
 
     fun unit(era: Int, role: Role): UnitDef = eras[era].units[role.ordinal]
+
+    /** Koszt zależy od epoki, roli i kupowanego stopnia. */
+    fun unitUpgradeCost(era: Int, role: Role, nextTier: Int): Int {
+        require(nextTier in 2..MAX_UNIT_TIER)
+        val step = if (nextTier == 2) 1f else 2.1f
+        return (upgradeBase[role.ordinal] * costScale(era) * step).toInt()
+    }
+
+    /** +20% bazowych HP i obrażeń za każdy kupiony stopień. */
+    fun tierStatMul(tier: Int): Float = 1f + 0.2f * (tier - 1)
+
+    /** Trzeci stopień ma cechę specjalną zależną od roli. */
+    fun unitRange(def: UnitDef, tier: Int): Float =
+        if (tier >= 3 && def.role == Role.RANGED) def.range * 1.1f else def.range
+
+    fun unitSplash(def: UnitDef, tier: Int): Float =
+        if (tier >= 3 && def.role == Role.ELITE) def.splash + 25f else def.splash
+
+    fun unitSpeed(def: UnitDef, tier: Int): Float =
+        if (tier >= 3 && def.role == Role.MELEE) def.speed * 1.1f else def.speed
+
+    fun unitTrainRate(def: UnitDef, tier: Int): Float =
+        if (tier >= 3 && def.role == Role.HEAVY) 1.15f else 1f
 
     private fun buildEra(e: Int): EraDef {
         val s = statScale(e)
