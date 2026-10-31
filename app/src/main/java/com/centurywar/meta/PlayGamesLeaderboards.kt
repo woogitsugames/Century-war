@@ -63,7 +63,7 @@ class PlayGamesLeaderboards(
     private var checkingAuth = false
     private var cloudBusy = false
     private var initialCloudChecked = false
-    private var latestLocalJson = game.profile.toJson()
+    private var latestLocalJson = game.profile.toCloudJson()
     private var lastSyncedJson: String? = null
     private val queuedScores = LinkedHashMap<String, Long>()
     private val sentScores = HashMap<String, Long>()
@@ -364,7 +364,7 @@ class PlayGamesLeaderboards(
         }
         // Porównanie z aktualnym profilem wykonujemy na jego wątku właścicielskim.
         game.post {
-            val localJson = game.profile.toJson()
+            val localJson = game.profile.toCloudJson()
             val useCloud = cloudJson.isNotEmpty() && Profile.preferCloud(localJson, cloudJson)
             var appliedCloud = false
             if (useCloud) {
