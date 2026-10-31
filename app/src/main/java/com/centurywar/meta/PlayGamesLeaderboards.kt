@@ -265,9 +265,12 @@ class PlayGamesLeaderboards(
         }
     }
 
+    /** Pusty napis oznacza nowy snapshot, null — błąd danych lub odczytu. */
     private fun readJson(snapshot: Snapshot): String? = try {
         val bytes = snapshot.snapshotContents.readFully()
-        String(bytes, Charsets.UTF_8).takeIf { Profile.isValidJson(it) }
+        if (bytes.isEmpty()) "" else {
+            String(bytes, Charsets.UTF_8).takeIf { Profile.isValidJson(it) }
+        }
     } catch (e: Exception) {
         Log.w(TAG, "Nie można odczytać snapshotu", e)
         null
@@ -291,7 +294,8 @@ class PlayGamesLeaderboards(
                 finishSync(false)
                 return
             }
-            val winner = if (second != null && (first == null || Profile.preferCloud(first, second))) {
+            val winner = if (second != null && (first.isNullOrEmpty() ||
+                    (second.isNotEmpty() && Profile.preferCloud(first, second)))) {
                 conflict.conflictingSnapshot
             } else {
                 conflict.snapshot
@@ -311,10 +315,15 @@ class PlayGamesLeaderboards(
 
         val snapshot = result.data
         val cloudJson = readJson(snapshot)
+        if (cloudJson == null) {
+            // Nieważne lub nieczytelne dane: nie nadpisujemy potencjalnego backupu.
+            discardSnapshot(snapshot, null, allowNextSync = false)
+            return
+        }
         // Porównanie z aktualnym profilem wykonujemy na jego wątku właścicielskim.
         game.post {
             val localJson = game.profile.toJson()
-            val useCloud = cloudJson != null && Profile.preferCloud(localJson, cloudJson)
+            val useCloud = cloudJson.isNotEmpty() && Profile.preferCloud(localJson, cloudJson)
             var appliedCloud = false
             if (useCloud) {
                 try {
