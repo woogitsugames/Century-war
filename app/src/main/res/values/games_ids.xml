@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ID projektu usług gier (liczbowy), nie identyfikator klienta OAuth. -->
+    <string name="game_services_project_id" translatable="false">REPLACE_ME</string>
+    <string name="leaderboard_endless" translatable="false">REPLACE_ME</string>
+    <string name="leaderboard_daily" translatable="false">REPLACE_ME</string>
+    <string name="leaderboard_campaign" translatable="false">REPLACE_ME</string>
+    <string name="leaderboard_skirmish" translatable="false">REPLACE_ME</string>
+</resources>
