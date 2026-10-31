@@ -117,10 +117,8 @@ class ReplayStore(private val directory: File) {
         directory.mkdirs()
         val tmp = File(directory, file.name + ".tmp")
         FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            tmp.renameTo(file)
-        } else true
+        // Gdy rename się nie powiedzie, zachowaj poprzedni plik zamiast usuwać go.
+        tmp.renameTo(file).also { if (!it) tmp.delete() }
     } catch (_: Exception) {
         File(directory, file.name + ".tmp").delete()
         false
