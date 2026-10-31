@@ -1204,4 +1204,30 @@ class ScreenshotTest {
         }
     }
 
+    /** Pauza z danymi bitwy i ustawieniami: 720p i oba ułożenia rozłożonego Folda. */
+    @Test
+    fun quickPauseSettings() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.profile.musicVolume = 0.65f
+            g.profile.sfxVolume = 0.35f
+            g.profile.vibration = false
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 6701L, 1.2f,
+                startEra = 2, maxEra = 7, weather = Weather.NIGHT,
+                modifiers = setOf(Modifier.FOG_OF_WAR, Modifier.FAST_UNITS),
+                aiPersonality = AiPersonality.ENGINEER))
+            g.setScreen(bs)
+            val battle = field(bs, "battle").get(bs) as Battle
+            battle.time = 125f
+            battle.player.kills = 17
+            battle.player.goldEarned = 1426f
+            bs.onClick(field(bs, "pauseBtn").get(bs) as Button)
+            shot(g, "${tag}_pause_quick_settings")
+        }
+    }
 }

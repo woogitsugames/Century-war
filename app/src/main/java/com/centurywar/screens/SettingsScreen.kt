@@ -2,7 +2,6 @@ package com.centurywar.screens
 
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.RectF
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
@@ -81,10 +80,6 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var shownAutoQuality = -1
     private var shownAutoLanguage = -1
     private var autoQualityLabel = ""
-    private var shownMusicPercent = -1
-    private var musicPercentLabel = ""
-    private var shownSfxPercent = -1
-    private var sfxPercentLabel = ""
 
     override fun isDragScreen() = true
 
@@ -202,7 +197,8 @@ class SettingsScreen(g: Game) : Screen(g) {
                     ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
             }
             if (b === music || b === sfxLevel) {
-                if (b.r.bottom > contentTop && b.r.top < contentBottom) drawVolumeSlider(c, b)
+                if (b.r.bottom > contentTop && b.r.top < contentBottom)
+                    ui.volumeSlider(c, b.r, if (b === music) g.profile.musicVolume else g.profile.sfxVolume)
             } else ui.button(c, b, 15f)
         }
         c.restore()
@@ -211,42 +207,8 @@ class SettingsScreen(g: Game) : Screen(g) {
     }
 
 
-    private fun drawVolumeSlider(c: Canvas, b: Button) {
-        val left = b.r.left + 14 * dp
-        val right = b.r.right - 55 * dp
-        val y = b.r.centerY()
-        val fraction = if (b === music) g.profile.musicVolume else g.profile.sfxVolume
-        ui.fill.color = Ui.OUTLINE
-        c.drawRoundRect(left, y - 6 * dp, right, y + 6 * dp, 6 * dp, 6 * dp, ui.fill)
-        ui.fill.color = Ui.DIM
-        c.drawRoundRect(left, y - 3 * dp, right, y + 3 * dp, 3 * dp, 3 * dp, ui.fill)
-        ui.fill.color = Ui.GOLD
-        val x = left + (right - left) * fraction
-        c.drawRoundRect(left, y - 3 * dp, x, y + 3 * dp, 3 * dp, 3 * dp, ui.fill)
-        ui.fill.color = Ui.TEXT
-        c.drawCircle(x, y, 8 * dp, ui.fill)
-        val percent = (fraction * 100f + 0.5f).toInt()
-        val text = if (b === music) {
-            if (percent != shownMusicPercent) {
-                shownMusicPercent = percent
-                musicPercentLabel = percent.toString() + "%"
-            }
-            musicPercentLabel
-        } else {
-            if (percent != shownSfxPercent) {
-                shownSfxPercent = percent
-                sfxPercentLabel = percent.toString() + "%"
-            }
-            sfxPercentLabel
-        }
-        ui.textO(c, text, b.r.right - 5 * dp, y + 5 * dp, 13f, Ui.TEXT, Paint.Align.RIGHT)
-    }
-
     private fun setVolumeFromX(b: Button, x: Float) {
-        val left = b.r.left + 14 * dp
-        val right = b.r.right - 55 * dp
-        val portion = ((x - left) / (right - left).coerceAtLeast(1f)).coerceIn(0f, 1f)
-        val value = (portion * 100f + 0.5f).toInt() / 100f
+        val value = ui.volumeFromX(b.r, x)
         if (b === music) {
             g.profile.musicVolume = value
             g.applyMusicVolume()
