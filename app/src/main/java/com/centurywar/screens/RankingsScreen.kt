@@ -65,7 +65,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val both = global.visible && globalScores.visible
         val gw = min(if (both) 185 * dp else 270 * dp, (pw - 36 * dp - if (both) 12 * dp else 0f) / if (both) 2 else 1)
         if (global.visible) {
-            global.label = L["pgs_info"]
+            global.label = L["play_games"]
             global.iconId = Icons.TROPHY
             global.set(panel.centerX() - if (both) gw + 6 * dp else gw / 2, panel.bottom - 96 * dp, gw, 38 * dp)
         }
