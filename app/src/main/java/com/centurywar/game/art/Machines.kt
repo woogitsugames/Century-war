@@ -34,7 +34,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         if (atk > 0f) atk.coerceIn(0f, 1f)
         else if (windup >= 0f) smooth(windup.coerceIn(0f, 1f)) else 0f
     private fun rock(walk: Float, atk: Float): Float =
-        Motion.recoil(atk) * 2.2f + if (p.hi) sin(walk * 1.7f + phase) * stride * 0.7f else 0f
+        if (p.hi) Motion.hullTilt(atk) + sin(walk * 1.7f + phase) * stride * 0.7f else 0f
 
     private val WOOD = 0xFF8A6038.toInt()
     private val WOOD_D = 0xFF5E3E22.toInt()
