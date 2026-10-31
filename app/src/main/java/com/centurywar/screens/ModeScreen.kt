@@ -27,6 +27,9 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private val diff = Array(4) { btn(it) }
     private val panel = RectF()
     private val row = RectF()
+    private val hints = HintOverlay(g)
+
+    init { buttons.add(0, hints.okBtn) }
     private var dt = 0f
     /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
     private var day = Daily.dayNumber()
@@ -54,9 +57,12 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
             diff[i].iconId = diffIcons[i]
             diff[i].visible = mode == Mode.SKIRMISH
         }
+        if (mode == Mode.DAILY) hints.showScreen(HintOverlay.DAILY_MENU, start.r)
+        if (mode == Mode.ENDLESS) hints.showScreen(HintOverlay.ENDLESS_MENU, start.r)
     }
 
     override fun update(dt: Float) {
+        hints.update(dt)
         this.dt = dt
         val today = Daily.dayNumber()
         if (today != day) { day = today; dailyCfg = null }
@@ -127,6 +133,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         }
         for (b in buttons) if (b !== start) ui.button(c, b, if (b === back) 16f else 14f)
         ui.button(c, start, 20f)
+        hints.draw(c)
     }
 
     private fun aiPower() = SKIRMISH_POWER[g.profile.skirmishDiff.coerceIn(0, 3)]
@@ -136,6 +143,8 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        if (hints.onClick(b)) return
+        hints.onAction()
         val pr = g.profile
         when (b.id) {
             -1 -> g.pop()

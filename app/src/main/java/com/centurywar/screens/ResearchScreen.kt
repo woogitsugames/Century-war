@@ -30,6 +30,10 @@ class ResearchScreen(g: Game) : Screen(g) {
     private var top = 0f
     private var dt = 0f
     private val tmp = RectF()
+    private val hintMedalsRect = RectF()
+    private val hints = HintOverlay(g)
+
+    init { buttons.add(0, hints.okBtn) }
     private val costs = arrayOfNulls<String>(cards.size)
     private val costLv = IntArray(cards.size) { -1 }
 
@@ -70,6 +74,9 @@ class ResearchScreen(g: Game) : Screen(g) {
         val rows = (cards.size + cols - 1) / cols
         maxScroll = max(0f, top + rows * (ch + 12 * dp) + 12 * dp - h + g.insetB)
         place()
+        hintMedalsRect.set(w - g.insetR - 172 * dp, g.insetT + 7 * dp,
+            w - g.insetR - 12 * dp, g.insetT + 48 * dp)
+        hints.showScreen(HintOverlay.RESEARCH, hintMedalsRect)
     }
 
     private fun place() {
@@ -83,8 +90,8 @@ class ResearchScreen(g: Game) : Screen(g) {
         }
     }
 
-    override fun update(dt: Float) { this.dt = dt; place() }
-    override fun onDrag(dx: Float, dy: Float) { scroll = (scroll - dy).coerceIn(0f, maxScroll) }
+    override fun update(dt: Float) { this.dt = dt; place(); hints.update(dt) }
+    override fun onDrag(dx: Float, dy: Float) { hints.onAction(); scroll = (scroll - dy).coerceIn(0f, maxScroll) }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
@@ -99,6 +106,7 @@ class ResearchScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f)
         chrome.title(c, L["research"])
         chrome.badges(c, g.profile.medals)
+        hints.draw(c)
     }
 
     private fun drawCard(c: Canvas, i: Int, b: Button) {
@@ -146,6 +154,8 @@ class ResearchScreen(g: Game) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        if (hints.onClick(b)) return
+        hints.onAction()
         if (b.id == -1) { g.pop(); return }
         val d = b.tag as? ResearchDef ?: return
         if (g.profile.buy(d)) {
