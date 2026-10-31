@@ -10,6 +10,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Sound
+import com.centurywar.engine.TouchEvent
 import com.centurywar.game.FxBuffer
 import com.centurywar.game.Proj
 import com.centurywar.engine.Ui
@@ -54,6 +55,14 @@ class BattleScreen(
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
+    /** Stan wyłącznie interfejsu, nie wchodzi do zapisu bitwy. */
+    private var aimingBarrage = false
+    private var aimWorldX = 0f
+    private var aimScreenX = 0f
+    private var aimDownX = 0f
+    private var aimDownY = 0f
+    private var aimStartedInField = false
+    private var aimMoved = false
     private var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
     private var showUpgrade = -1
@@ -159,6 +168,7 @@ class BattleScreen(
             unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
+            { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
         )) else null
 
     init {
@@ -261,6 +271,11 @@ class BattleScreen(
 
     override fun update(dt: Float) {
         frameDt = dt
+        if (aimingBarrage && (paused || finished || battle.over ||
+                battle.pendingChoice != null || battle.pendingCards != null ||
+                showUpgrade >= 0 || !battle.abilityReady(battle.player, 0))) {
+            aimingBarrage = false
+        }
         val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
             tut?.update(dt)
@@ -379,6 +394,9 @@ class BattleScreen(
         barrageBtn.iconId = Icons.METEOR
         barrageBtn.enabled = battle.abilityReady(p, 0)
         barrageBtn.progress = if (p.abilityCd[0] > 0f) 1f - p.abilityCd[0] / (Battle.BARRAGE_CD * p.abilityCdMul) else -1f
+        if (modal || !barrageBtn.enabled) aimingBarrage = false
+        barrageBtn.selected = aimingBarrage
+        barrageBtn.highlight = aimingBarrage
         rallyBtn.visible = !modal && p.rallyUnlocked
         rallyBtn.label = ""
         rallyBtn.iconId = Icons.FLAG; rallyBtn.iconTint = Ui.PLAYER
@@ -462,6 +480,7 @@ class BattleScreen(
 
 
     override fun onClick(b: Button) {
+        if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
         val p = battle.player
         val t = tut
         if (t != null && (t.onClick(b) || !t.allows(b))) return
@@ -476,7 +495,17 @@ class BattleScreen(
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> commands.armory()
-            BARRAGE -> commands.barrage()
+            BARRAGE -> {
+                if (aimingBarrage) {
+                    commands.barrage() // Drugie dotknięcie: szybki ostrzał bez wyboru celu.
+                    aimingBarrage = false
+                } else if (battle.abilityReady(p, 0)) {
+                    showTurrets = false
+                    aimingBarrage = true
+                    aimScreenX = w * 0.5f
+                    aimWorldX = r.worldX(aimScreenX)
+                }
+            }
             RALLY -> commands.rally()
             STANCE -> commands.stance(!p.hold)
             SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
@@ -510,15 +539,46 @@ class BattleScreen(
         Mode.ENDLESS, Mode.DAILY, Mode.SKIRMISH -> ModeScreen(g, cfg.mode)
     }
 
+    override fun onTouch(e: TouchEvent): Boolean {
+        if (aimingBarrage) {
+            when (e.action) {
+                TouchEvent.DOWN -> {
+                    aimDownX = e.x
+                    aimDownY = e.y
+                    aimMoved = false
+                    aimStartedInField = fieldRect.contains(e.x, e.y)
+                }
+                TouchEvent.MOVE -> if (kotlin.math.abs(e.x - aimDownX) > 10f * dp ||
+                    kotlin.math.abs(e.y - aimDownY) > 10f * dp) aimMoved = true
+            }
+            if ((e.action == TouchEvent.DOWN || e.action == TouchEvent.MOVE) &&
+                aimStartedInField && fieldRect.contains(e.x, e.y)) {
+                aimScreenX = e.x
+                aimWorldX = r.worldX(e.x)
+            }
+        }
+        return false // Ekran nadal rozpoznaje zwykły tap i przeciąganie.
+    }
+
     override fun onDrag(dx: Float, dy: Float) {
         if (finished || paused) return
         r.camX -= dx / r.k
         r.clampCam()
+        if (aimingBarrage) aimWorldX = r.worldX(aimScreenX)
         manualCam = 4f
         tut?.onCamera()
     }
 
     override fun onTap(x: Float, y: Float) {
+        if (aimingBarrage) {
+            if (!paused && !finished && !aimMoved && aimStartedInField &&
+                battle.abilityReady(battle.player, 0) &&
+                fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
+                commands.barrage(r.worldX(x))
+            }
+            aimingBarrage = false // Dotknięcie poza polem walki anuluje.
+            return
+        }
         if (showUpgrade >= 0) {
             if (!upgradePanel.contains(x, y)) showUpgrade = -1
             return
@@ -533,6 +593,7 @@ class BattleScreen(
     }
 
     override fun onBack(): Boolean {
+        if (aimingBarrage) { aimingBarrage = false; return true }
         if (finished) { g.setScreen(nextScreen()); return true }
         if (showUpgrade >= 0) { showUpgrade = -1; return true }
         if (showTurrets) { showTurrets = false; return true }
@@ -545,6 +606,7 @@ class BattleScreen(
      * czeka na to, zanim zatrzyma wątek gry, bo proces może zaraz zostać zabity.
      */
     override fun onPause() {
+        aimingBarrage = false
         if (finished || closed || battle.over) return
         paused = true
         g.snapshots?.saveNow(snapshotBytes())
@@ -555,6 +617,7 @@ class BattleScreen(
     // ---------------------------------------------------------------- koniec bitwy
 
     private fun onFinished() {
+        aimingBarrage = false
         finished = true
         // Najpierw usuń zrzut, potem przyznaj nagrody: wznowienie nie może dać ich drugi raz.
         g.snapshots?.delete()
@@ -677,7 +740,12 @@ class BattleScreen(
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
         r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        if (aimingBarrage) r.drawBarrageAim(c, aimWorldX, fieldRect)
         drawTop(c)
+        if (aimingBarrage) {
+            ui.ribbon(c, w * 0.5f, fieldRect.top + 22 * dp, L["barrage_aim_hint"],
+                15f, Ui.PLAYER, 0f, Ui.TEXT, w - g.insetL - g.insetR - 24 * dp)
+        }
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
         for (b in unitBtn) ui.button(c, b, 13f)

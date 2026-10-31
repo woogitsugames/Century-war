@@ -189,6 +189,10 @@ class ScreenshotTest {
             repeat(60 * 20) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
             b.playerAi = null
             shot(g, "${tag}_battle_hud")
+            b.player.abilityCd[0] = 0f
+            bs.onClick(field(bs, "barrageBtn").get(bs) as com.centurywar.engine.Button)
+            shot(g, "${tag}_battle_barrage_aim")
+            bs.onBack()
             // Podgląd ulepszenia w trzech formatach ekranu (telefon i rozłożony Fold).
             field(bs, "showUpgrade").setInt(bs, 0)
             shot(g, "${tag}_battle_unit_upgrade")
@@ -309,6 +313,8 @@ class ScreenshotTest {
             repeat(5) { g.frame(c, 1f / 60f) }
             shot(g, "${tag}_tut07_turret_buy"); tapHole()
             until(TutorialOverlay.S_BARRAGE); shot(g, "${tag}_tut08_barrage"); tapHole()
+            shot(g, "${tag}_tut08_barrage_aim"); tapHole()
+            assertTrue("$tag: ostrzał samouczka", b.player.barragesUsed > 0)
             until(TutorialOverlay.S_CAMERA); shot(g, "${tag}_tut09_camera"); next()
             until(TutorialOverlay.S_DONE); shot(g, "${tag}_tut10_done"); next()
             repeat(5) { g.frame(c, 1f / 60f) }
