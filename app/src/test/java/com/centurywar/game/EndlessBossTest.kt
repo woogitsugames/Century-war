@@ -50,6 +50,45 @@ class EndlessBossTest {
         }
     }
 
+    @Test fun knockbackPushesTargetOnItsCooldown() {
+        val b = bossAt(10)
+        b.chooseEndlessCard(0)
+        val boss = b.currentBoss()!!
+        b.enemy.queueSize = 0
+        assertTrue(b.spawn(b.player, Defs.unit(b.player.era, Role.MELEE)))
+        val soldier = b.units.first { it.alive && it.side == 0 }
+        soldier.x = boss.x - boss.radius - soldier.radius
+        soldier.hp = 1_000_000f
+        soldier.maxHp = soldier.hp
+        boss.bossCd = 0f
+        val before = soldier.x
+        b.waveTimer = 800f
+        b.step()
+        assertTrue("Odrzut powinien cofnąć jednostkę", soldier.x < before - 30f)
+        assertTrue("Odrzut włącza odnowienie", boss.bossCd > 5f)
+    }
+
+    @Test fun auraAcceleratesAlliesIncludingSecondaryAura() {
+        for (w in intArrayOf(20, 60)) {
+            val b = bossAt(w)
+            b.chooseEndlessCard(0)
+            b.enemy.queueSize = 0
+            assertTrue(b.spawn(b.enemy, Defs.unit(b.enemy.era, Role.MELEE)))
+            val boss = b.currentBoss()!!
+            val ally = b.units.first { it.alive && it.side == 1 && !it.isBoss }
+            ally.x = boss.x - 45f
+            ally.cd = 100f
+            b.waveTimer = 800f
+            val plain = BattleSnapshot.decode(BattleSnapshot.encode(b))!!.battle
+            plain.currentBoss()!!.bossKind = EndlessBosses.SHIELD
+            plain.currentBoss()!!.bossSecondaryKind = EndlessBosses.NONE
+            b.step()
+            plain.step()
+            val allyWithoutAura = plain.units.first { it.alive && it.side == 1 && !it.isBoss }
+            assertTrue("Aura musi przyspieszać ataki sojuszników", ally.cd < allyWithoutAura.cd)
+        }
+    }
+
     @Test fun shieldProtectsAgainstProjectilesOnlyAboveHalfHp() {
         val b = bossAt(30)
         val u = b.currentBoss()!!
