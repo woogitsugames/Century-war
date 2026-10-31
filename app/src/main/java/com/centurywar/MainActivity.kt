@@ -2,6 +2,8 @@ package com.centurywar
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +25,7 @@ import com.centurywar.engine.Sound
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
+import com.centurywar.notifications.DailyReminders
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -117,6 +120,7 @@ class MainActivity : Activity(), Host {
         view.onResume()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
+        DailyReminders.refresh(this)
     }
 
     override fun onPause() {
@@ -152,7 +156,38 @@ class MainActivity : Activity(), Host {
         game.requestBack()
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == DailyReminders.PERMISSION_REQUEST_CODE) {
+            DailyReminders.permissionResult(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+            hideSystemBars()
+        }
+    }
+
     // ---------------------------------------------------------------- Host
+
+    override fun onBattleWon() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
+
+    override fun onNotificationSettingsChanged() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) DailyReminders.afterVictory(this)
+        }
+    }
+
+    override fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            TimePickerDialog(this, { _, hour, _ ->
+                game.post { onResult(hour) }
+            }, current.coerceIn(0, 23), 0, true).apply {
+                setOnDismissListener { hideSystemBars() }
+            }.show()
+        }
+    }
 
     override fun vibrate(ms: Long) {
         val v = vibrator ?: return

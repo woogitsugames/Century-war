@@ -21,6 +21,9 @@ interface Host {
     fun applyRenderScale(scale: Float)
     fun applyFrameRate(fps: Int)
     fun exit()
+    fun onBattleWon() {}
+    fun onNotificationSettingsChanged() {}
+    fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {}
 }
 
 /**

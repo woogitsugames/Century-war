@@ -24,9 +24,14 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val snd = btn(8)
     private val name = btn(6)
     private val reset = btn(7)
-    private val rows = listOf(quality, fps, lang, snd, vib, showFps, name, reset)
-    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.SPEAKER, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.RESTART)
-    private val labelKeys = arrayOf("quality", "fps", "language", "sound", "vibration", "show_fps", "name")
+    private val notifications = btn(9)
+    private val notifyHour = btn(10)
+    private val rows = listOf(quality, fps, lang, snd, vib, showFps, name, notifications, notifyHour, reset)
+    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.SPEAKER, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.CALENDAR, Icons.HOURGLASS, Icons.RESTART)
+    private val labelKeys = arrayOf("quality", "fps", "language", "sound", "vibration", "show_fps", "name", "notifications", "notify_hour")
+    private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
+    private var rowsPerColumn = 10
+    private var columnWidth = 0f
     private val panel = RectF()
     private val rowR = RectF()
     private var resetArmed = 0f
@@ -36,15 +41,22 @@ class SettingsScreen(g: Game) : Screen(g) {
         chrome.layoutBack(back)
         val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
         val avail = h - chrome.top - g.insetB - 20 * dp
-        val step = min(54 * dp, (avail - 44 * dp) / rows.size)
-        val ph = step * rows.size + 44 * dp
+        // Dwie kolumny na telefonach poziomych; jedna na wąskich ekranach.
+        val columns = if (pw >= 470 * dp) 2 else 1
+        rowsPerColumn = (rows.size + columns - 1) / columns
+        columnWidth = (pw - 24 * dp) / columns
+        val step = min(54 * dp, (avail - 44 * dp) / rowsPerColumn)
+        val ph = step * rowsPerColumn + 44 * dp
         val top = chrome.top + 10 * dp + max(0f, (avail - ph) * 0.35f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
-        val bw = min(250 * dp, pw * 0.46f)
+        val bw = min(124 * dp, columnWidth * 0.42f)
         for ((i, b) in rows.withIndex()) {
-            val y = panel.top + 24 * dp + i * step
-            if (b === reset) b.set(panel.left + 24 * dp, y + 4 * dp, pw - 48 * dp, step - 10 * dp)
-            else b.set(panel.right - 22 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
+            val col = i / rowsPerColumn
+            val line = i % rowsPerColumn
+            val left = panel.left + 12 * dp + col * columnWidth
+            val y = panel.top + 24 * dp + line * step
+            if (b === reset) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
+            else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
         }
         reset.iconId = Icons.RESTART
     }
@@ -64,6 +76,9 @@ class SettingsScreen(g: Game) : Screen(g) {
         showFps.label = if (p.showFps) L["on"] else L["off"]
         showFps.color = if (p.showFps) Ui.BTN_GREEN else Ui.BTN
         name.label = p.name
+        notifications.label = if (p.notifications) L["on"] else L["off"]
+        notifications.color = if (p.notifications) Ui.BTN_GREEN else Ui.BTN
+        notifyHour.label = hourLabels[p.notifyHour.coerceIn(0, 23)]
         reset.label = if (resetArmed > 0f) L["reset_confirm"] else L["reset"]
         reset.color = if (resetArmed > 0f) Color.rgb(200, 60, 40) else Ui.BTN_RED
     }
@@ -75,14 +90,17 @@ class SettingsScreen(g: Game) : Screen(g) {
         chrome.title(c, L["settings"])
         for ((i, b) in rows.withIndex()) {
             if (b !== reset) {
-                rowR.set(panel.left + 16 * dp, b.r.top - 3 * dp, panel.right - 16 * dp, b.r.bottom + 3 * dp)
+                val col = i / rowsPerColumn
+                val left = panel.left + 12 * dp + col * columnWidth
+                rowR.set(left + 2 * dp, b.r.top - 3 * dp, left + columnWidth - 2 * dp, b.r.bottom + 3 * dp)
                 ui.fill.color = if (i % 2 == 0) Color.argb(36, 255, 255, 255) else Color.argb(14, 255, 255, 255)
                 c.drawRoundRect(rowR, 10 * dp, 10 * dp, ui.fill)
-                val isz = min(26 * dp, b.r.height() * 0.7f)
-                Icons.draw(c, icons[i], panel.left + 30 * dp + isz / 2, b.r.centerY(), isz, dp = dp)
-                val tx = panel.left + 42 * dp + isz
+                val isz = min(24 * dp, b.r.height() * 0.7f)
+                Icons.draw(c, icons[i], left + 10 * dp + isz / 2, b.r.centerY(), isz, dp = dp)
+                val tx = left + 20 * dp + isz
                 val label = L[labelKeys[i]]
-                ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp, ui.fit(label, 16f, b.r.left - tx - 8 * dp), Ui.TEXT)
+                ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp,
+                    ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
             }
             ui.button(c, b, 15f)
         }
@@ -101,6 +119,16 @@ class SettingsScreen(g: Game) : Screen(g) {
             5 -> p.showFps = !p.showFps
             6 -> g.host.requestText(L["name"], p.name) { n -> p.name = n; p.save() }
             7 -> if (resetArmed > 0f) { p.reset(); resetArmed = 0f } else resetArmed = 3f
+            9 -> {
+                p.notifications = !p.notifications
+                p.save()
+                g.host.onNotificationSettingsChanged()
+            }
+            10 -> g.host.requestNotifyHour(p.notifyHour) { hour ->
+                p.notifyHour = hour.coerceIn(0, 23)
+                p.save()
+                g.host.onNotificationSettingsChanged()
+            }
         }
         p.save()
     }

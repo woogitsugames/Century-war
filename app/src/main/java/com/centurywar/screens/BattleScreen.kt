@@ -505,6 +505,7 @@ class BattleScreen(
         }
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
+        if (won) g.host.onBattleWon()
         g.haptic(if (won) 80 else 160)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 1f, 0)
     }
