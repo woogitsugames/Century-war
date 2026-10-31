@@ -1,0 +1,58 @@
+name: Pomiary balansu kampanii
+
+on:
+  pull_request:
+    branches: [claude/bold-sagan-vwz5gm]
+  workflow_dispatch:
+
+jobs:
+  balance:
+    name: Etapy ${{ matrix.from }}-${{ matrix.to }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { from: 1, to: 4 }
+          - { from: 5, to: 8 }
+          - { from: 9, to: 12 }
+          - { from: 13, to: 16 }
+          - { from: 17, to: 20 }
+          - { from: 21, to: 24 }
+          - { from: 25, to: 28 }
+          - { from: 29, to: 32 }
+    env:
+      BALANCE_STAGE_FROM: ${{ matrix.from }}
+      BALANCE_STAGE_TO: ${{ matrix.to }}
+      BALANCE_RUNS: '20'
+      BALANCE_BASELINE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Budowanie i testy podstawowe
+        run: |
+          ./gradlew :app:assembleDebug --console=plain
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
+      - name: Pomiar kampanii
+        run: ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignReport' --console=plain
+      - name: Wynik CSV
+        if: always()
+        run: |
+          if [ -f app/build/balance/report.csv ]; then
+            cat app/build/balance/report.csv
+          else
+            echo 'BRAK RAPORTU'
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: balance-${{ matrix.from }}-${{ matrix.to }}
+          path: app/build/balance/
+          if-no-files-found: warn
