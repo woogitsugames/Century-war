@@ -27,6 +27,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val snd = btn(8)
     private val music = btn(12)
     private val sfxLevel = btn(13)
+    private val volumeSliders = arrayOf(music, sfxLevel)
     private val name = btn(6)
     private val reset = btn(7)
     private val notifications = btn(9)
@@ -221,7 +222,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             return true
         }
         if (e.action == TouchEvent.DOWN) {
-            for (b in arrayOf(music, sfxLevel)) {
+            for (b in volumeSliders) {
                 if (e.x >= b.r.left && e.x <= b.r.right &&
                     e.y >= b.r.top - 5 * dp && e.y <= b.r.bottom + 5 * dp) {
                     sliderPointer = e.pointer
