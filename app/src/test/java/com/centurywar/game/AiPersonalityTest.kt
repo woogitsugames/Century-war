@@ -106,7 +106,13 @@ class AiPersonalityTest {
         me.xp = Defs.evolveXp[me.era] * 0.9f
         b.ai!!.update(1f)
         assertEquals(0, me.queueSize)
+        b.time = 13f
+        b.ai!!.update(1f)
+        assertTrue("oszczędzanie nie może blokować produkcji bez końca", me.queueSize > 0)
         me.xp = Defs.evolveXp[me.era].toFloat()
+        b.ai!!.update(1f)
+        assertEquals("ekonomista odracza awans", 0, me.era)
+        b.time = 21f
         b.ai!!.update(1f)
         assertEquals(1, me.era)
     }
