@@ -848,8 +848,8 @@ class Battle(val cfg: BattleConfig) {
         if (u.attackAnim > 0f) u.attackAnim -= dt
         var rally = if (s.rallyT > 0f) 1.4f else 1f
         if (endless && u.side == 1 && abs(bossAuraX - u.x) < EndlessBosses.AURA_RANGE) rally *= 1.25f
-        if (u.bossRageActive) rally *= 1.3f
-        if (u.cd > 0f) u.cd -= dt * rally
+        val attackRate = rally * (if (u.bossRageActive) 1.3f else 1f)
+        if (u.cd > 0f) u.cd -= dt * attackRate
 
         val target = frontUnit(eIdx)
         val gap = if (target != null) (target.x - u.x) * s.dir - u.radius - target.radius
