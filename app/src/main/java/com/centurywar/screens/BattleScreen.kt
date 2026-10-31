@@ -183,6 +183,7 @@ class BattleScreen(
     private val goldRect = RectF()
     private val xpRect = RectF()
     private val fieldRect = RectF()
+    private val weatherRect = RectF()
     private val panel = RectF()
     private val upgradePanel = RectF()
     private val upgradeRoleKeys = arrayOf("unit_upgrade_melee", "unit_upgrade_ranged", "unit_upgrade_heavy", "unit_upgrade_elite")
@@ -231,7 +232,7 @@ class BattleScreen(
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
     private val tut: TutorialOverlay? =
         if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, commands, TutorialOverlay.Targets(
-            unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
+            unitBtn, evolveBtn, turretBtn, armoryBtn, stanceBtn, rallyBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
             { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
@@ -240,7 +241,7 @@ class BattleScreen(
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(
         unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
-        goldRect, xpRect, mini, fieldRect,
+        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn,
     ), rankedDaily)
 
     init {
@@ -273,6 +274,8 @@ class BattleScreen(
         pauseBtn.set(rr - 46 * dp, t, 46 * dp, 40 * dp)
         mini.set(evolveBtn.r.right + 16 * dp, t + 13 * dp, pauseBtn.r.left - 112 * dp, t + 29 * dp)
         if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
+        if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, t, mini.right + 27 * dp, t + 25 * dp)
+        else weatherRect.setEmpty()
         goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
         xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
         fieldRect.set(0f, topH + g.insetT, w, h - hudH)
