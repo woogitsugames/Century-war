@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.os.Build
+import android.os.StrictMode
+import com.centurywar.BuildConfig
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -98,6 +100,11 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     }
 
     override fun run() {
+        if (BuildConfig.DEBUG) {
+            // Pętla nie ma Loopera: politykę ustawiamy bezpośrednio na jej wątku.
+            StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
+        }
         loopActive = true
         try { loop() } finally { loopActive = false }
     }
