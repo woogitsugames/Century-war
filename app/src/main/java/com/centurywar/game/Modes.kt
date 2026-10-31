@@ -74,7 +74,7 @@ class Stage(
 
 object Campaign {
     /**
-     * 32 etapy, po 4 na epokę. Każdy etap ma ograniczony zakres epok, więc bitwa trwa
+     * Cztery etapy na epokę. Każdy etap ma ograniczony zakres epok, więc bitwa trwa
      * kilka minut, a cała kampania wiele godzin. Do tego dochodzą gwiazdki do zdobycia.
      */
     val stages: List<Stage> = buildList {
@@ -90,12 +90,12 @@ object Campaign {
             setOf(Modifier.FOG_OF_WAR),
             setOf(Modifier.DOUBLE_INCOME, Modifier.ARMORED_FOE),
         )
-        for (i in 0 until 32) {
+        for (i in 0 until Defs.ERA_COUNT * 4) {
             val era = i / 4
             val sub = i % 4
             val start = if (sub == 3) maxOf(0, era - 2) else era
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
-            val power = 0.72f + i * 0.028f + sub * 0.03f
+            val power = 0.72f + i * (0.868f / (Defs.ERA_COUNT * 4 - 1)) + sub * 0.03f
             val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
             add(Stage(i, "stage_${i + 1}", start, max, power, mods))
         }
@@ -115,7 +115,9 @@ object Campaign {
 }
 
 object Daily {
-    /** Numer dnia (UTC) — ten sam dla wszystkich graczy na świecie. */
+    /** Pierwszy dzień UTC, w którym losowanie uwzględnia nową epokę. */
+    const val ERA_EXPANSION_DAY = 20758L // 2026-11-01 00:00 UTC
+
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
     fun config(day: Long, bonuses: Bonuses): BattleConfig {
@@ -124,12 +126,18 @@ object Daily {
         val mods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
-        val start = rng.nextInt(3)
-        // W wyzwaniu dnia wszyscy grają tymi samymi, ujednoliconymi bonusami. Ranking jest wtedy uczciwy.
-        return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f, start, minOf(7, start + 3), mods, normalizedBonuses(bonuses))
+        val historical = day < ERA_EXPANSION_DAY
+        // Stare dni zachowują losowanie sprzed dodania żelaza. Numer epoki >=2
+        // otrzymuje tylko nowy indeks, nie zmieniając historycznej pary epok.
+        val rolledStart = if (historical) rng.nextInt(3) else rng.nextInt(Defs.ERA_COUNT - 3)
+        val start = if (historical && rolledStart >= 2) rolledStart + 1 else rolledStart
+        val rolledMax = if (historical) minOf(7, rolledStart + 3) else minOf(Defs.ERA_COUNT - 1, rolledStart + 3)
+        val maxEra = if (historical && rolledMax >= 2) rolledMax + 1 else rolledMax
+        return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f,
+            start, maxEra, mods, normalizedBonuses())
     }
 
-    private fun normalizedBonuses(b: Bonuses) = Bonuses(
+    private fun normalizedBonuses() = Bonuses(
         popCap = 14, turretSlots = 3, eliteUnlocked = true, rallyUnlocked = true,
     )
 }
