@@ -147,7 +147,7 @@ fun Application.leaderboardModule(
                 call.fail(HttpStatusCode.Unauthorized, "invalid_signature")
                 return@get
             }
-            val board = call.request.queryParameters["board"] ?: ""
+            val board = call.request.queryParameters["board"] ?: "endless"
             val period = call.request.queryParameters["period"] ?: "all"
             val player = call.request.queryParameters["player"] ?: ""
             if (!validBoard(board) || period !in setOf("day", "week", "all") || !validPlayer(player)) {
