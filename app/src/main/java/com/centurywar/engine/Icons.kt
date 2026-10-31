@@ -257,9 +257,9 @@ object Icons {
 
     /** Słupki i trend na małym ekranie; kontur zgodny z resztą ikon. */
     private fun chart(c: Canvas) {
-        rect(-0.92f, 0.22f, -0.53f, 0.88f, BLUE, 0.04f)
-        rect(-0.34f, -0.16f, 0.05f, 0.88f, GOLD, 0.04f)
-        rect(0.25f, -0.75f, 0.66f, 0.88f, GREEN, 0.04f)
+        rect(c, -0.92f, 0.22f, -0.53f, 0.88f, BLUE, 0.04f)
+        rect(c, -0.34f, -0.16f, 0.05f, 0.88f, GOLD, 0.04f)
+        rect(c, 0.25f, -0.75f, 0.66f, 0.88f, GREEN, 0.04f)
         stroke(c, -0.94f, 0.98f, 0.93f, 0.98f, 0.09f, STEEL)
     }
 
