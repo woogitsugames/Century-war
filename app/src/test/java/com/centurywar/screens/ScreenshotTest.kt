@@ -3,6 +3,7 @@ package com.centurywar.screens
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.centurywar.engine.Game
+import com.centurywar.engine.L
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.TouchEvent
@@ -14,6 +15,9 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
+import com.centurywar.meta.MissionItem
+import com.centurywar.meta.MissionType
+import com.centurywar.meta.Missions
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
@@ -87,6 +91,42 @@ class ScreenshotTest {
             shot(g, "${tag}_pgs_settings")
             g.setScreen(PlayGamesScreen(g))
             shot(g, "${tag}_pgs_signin")
+        }
+    }
+
+    /** Misje 1/2/5 oraz nagrody 1/2/5 w dwóch językach, na ekranie 720p. */
+    @Test
+    fun pluralForms() {
+        val previousLang = L.lang
+        try {
+            for (code in arrayOf("pl", "en")) {
+                val g = game(1600, 720, 1.8f, Quality.LOW)
+                g.profile.lang = code
+                L.setCode(code)
+                val state = Missions(g.profile).refresh(System.currentTimeMillis())
+                state.daily.clear()
+                state.weekly.clear()
+                for (n in intArrayOf(1, 2, 5)) {
+                    state.daily.add(MissionItem("plural_wins_" + n, MissionType.WINS, n, 5))
+                    state.weekly.add(MissionItem("plural_stars_" + n, MissionType.STARS, n, 5))
+                }
+                g.setScreen(MissionsScreen(g))
+                shot(g, "phone720_" + code + "_plural_missions")
+
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 99L, 1f))
+                g.setScreen(bs)
+                val battle = field(bs, "battle").get(bs) as Battle
+                battle.surrender()
+                val tiny = Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888))
+                repeat(3) { g.frame(tiny, 1f / 60f) }
+                for (n in intArrayOf(1, 2, 5)) {
+                    field(bs, "reward").setInt(bs, n)
+                    field(bs, "rewardText").set(bs, "+" + L.plural("medals_n", n.toLong()))
+                    shot(g, "phone720_" + code + "_plural_results_" + n)
+                }
+            }
+        } finally {
+            L.lang = previousLang
         }
     }
 
