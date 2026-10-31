@@ -24,3 +24,37 @@ jobs:
         run: ./gradlew :app:assembleDebug --console=plain
       - name: Symulacje bitwy
         run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*AiPersonalityTest*' --console=plain
+
+      - name: Porównaj czas bitew z gałęzią bazową
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*AiDurationBenchmarkTest*' --console=plain
+          git fetch origin claude/bold-sagan-vwz5gm
+          git worktree add --detach /tmp/century-war-base FETCH_HEAD
+          cp app/src/test/java/com/centurywar/game/AiDurationBenchmarkTest.kt /tmp/century-war-base/app/src/test/java/com/centurywar/game/
+          (cd /tmp/century-war-base && ./gradlew :app:testDebugUnitTest --tests '*AiDurationBenchmarkTest*' --console=plain)
+          python3 - <<'PY'
+          import re
+          import xml.etree.ElementTree as ET
+
+          name = "app/build/test-results/testDebugUnitTest/TEST-com.centurywar.game.AiDurationBenchmarkTest.xml"
+          pattern = re.compile(r"BENCHMARK seed=(\d+) seconds=([\d.]+) completed=(true|false)")
+          def times(path):
+              root = ET.parse(path).getroot()
+              output = "\n".join(x.text or "" for x in root.iter("system-out"))
+              rows = {int(seed): (float(seconds), ok == "true")
+                      for seed, seconds, ok in pattern.findall(output)}
+              if len(rows) != 6 or not all(ok for _, ok in rows.values()):
+                  raise SystemExit("Benchmark zawiera timeout lub brak wyników: " + str(rows))
+              return rows
+
+          new = times(name)
+          old = times("/tmp/century-war-base/" + name)
+          base_avg = sum(old[s][0] for s in old) / len(old)
+          new_avg = sum(new[s][0] for s in old) / len(old)
+          ratio = new_avg / base_avg
+          print("BAZA", old)
+          print("NOWA", new)
+          print(f"ŚREDNIA: baza={base_avg:.2f}s nowa={new_avg:.2f}s zmiana={(ratio-1)*100:.1f}%")
+          if ratio > 1.2:
+              raise SystemExit("Średni czas bitew wzrósł o ponad 20%")
+          PY
