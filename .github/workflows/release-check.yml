@@ -1,0 +1,118 @@
+name: Weryfikacja wydania Android
+
+on:
+  push:
+    branches:
+      - gpt/11-release-config
+  pull_request:
+    branches:
+      - claude/bold-sagan-vwz5gm
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Pobierz repozytorium i historię tagów
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Zainstaluj Android SDK 36
+        shell: bash
+        run: |
+          sdkmanager_bin=$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' -type f | sort -V | tail -n 1)
+          test -x "$sdkmanager_bin"
+          "$sdkmanager_bin" --install "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Zbuduj APK i AAB przed zmianami
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "+refs/heads/claude/bold-sagan-vwz5gm:refs/remotes/origin/claude/bold-sagan-vwz5gm"
+          git worktree add --detach "$RUNNER_TEMP/centurywar-before" origin/claude/bold-sagan-vwz5gm
+          mkdir -p build/release-metrics
+          (
+            cd "$RUNNER_TEMP/centurywar-before"
+            ./gradlew :app:assembleRelease :app:bundleRelease --console=plain --no-daemon
+          ) 2>&1 | tee build/release-metrics/przed.log
+
+      - name: Build debug i testy symulacji
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleDebug --console=plain --no-daemon 2>&1 | tee build/release-metrics/debug.log
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*ReleaseConfigTest*' --tests '*ReleaseStartupTest*' --console=plain --no-daemon 2>&1 | tee build/release-metrics/required-tests.log
+
+      - name: Zbuduj APK i AAB release z podpisem testowym
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleRelease :app:bundleRelease -PreleaseTestSigning=true --console=plain --no-daemon 2>&1 | tee build/release-metrics/po.log
+
+      - name: Sprawdź manifest, profil i rozmiary
+        shell: bash
+        run: |
+          set -euo pipefail
+          before_apk="$RUNNER_TEMP/centurywar-before/app/build/outputs/apk/release/app-release.apk"
+          before_aab="$RUNNER_TEMP/centurywar-before/app/build/outputs/bundle/release/app-release.aab"
+          after_apk="app/build/outputs/apk/release/app-release.apk"
+          after_aab="app/build/outputs/bundle/release/app-release.aab"
+          for file in "$before_apk" "$before_aab" "$after_apk" "$after_aab"; do test -s "$file"; done
+          unzip -Z -1 "$after_apk" | grep -E 'baseline\.prof(m)?$'
+          unzip -Z -1 "$after_aab" | grep -E 'baseline\.prof(m)?$'
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$after_apk" | tee build/release-metrics/manifest.txt
+          grep -q "package: name='com.centurywar.game'" build/release-metrics/manifest.txt
+          grep -q "launchable-activity: name='com.centurywar.MainActivity'" build/release-metrics/manifest.txt
+          {
+            echo '| Artefakt | Przed (B) | Po (B) | Różnica (B) |'
+            echo '| --- | ---: | ---: | ---: |'
+            for kind in apk aab; do
+              if [ "$kind" = apk ]; then old="$before_apk"; new="$after_apk"; else old="$before_aab"; new="$after_aab"; fi
+              old_size=$(stat -c%s "$old")
+              new_size=$(stat -c%s "$new")
+              printf '| %s | %s | %s | %+d |\n' "$kind" "$old_size" "$new_size" "$((new_size - old_size))"
+            done
+          } | tee build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Zezwól emulatorowi na akcelerację KVM
+        shell: bash
+        run: |
+          if test -e /dev/kvm; then
+            sudo chmod 0666 /dev/kvm
+            ls -l /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+          else
+            echo "::warning::Brak /dev/kvm: emulator zadziała bez akceleracji"
+          fi
+
+      - name: Uruchom wydanie release na emulatorze
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 2048
+          script: bash .github/scripts/smoke-release.sh
+
+      - name: Zachowaj raport i logi
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-walidacja
+          path: build/release-metrics/
+          if-no-files-found: warn

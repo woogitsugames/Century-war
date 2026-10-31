@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Jedyny plik do przywracania; cache i zapisy tymczasowe są wykluczone przez include. -->
+    <include domain="file" path="profile.json" />
+</full-backup-content>
