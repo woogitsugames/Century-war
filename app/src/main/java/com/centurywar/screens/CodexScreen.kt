@@ -37,6 +37,7 @@ import kotlin.math.roundToInt
  * więc samo rysowanie klatki nie alokuje pamięci.
  */
 class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
+    override val crashName get() = "CodexScreen"
     private companion object {
         const val CARDS = 6          // 4 jednostki + wieża + ostrzał
         const val MAX_STATS = 9

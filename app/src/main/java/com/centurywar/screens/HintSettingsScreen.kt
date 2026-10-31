@@ -15,6 +15,7 @@ import kotlin.math.min
 
 /** Dodatkowe ustawienia: nie ściskamy głównej listy na telefonach 720p. */
 class HintSettingsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "HintSettingsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

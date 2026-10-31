@@ -18,6 +18,7 @@ import kotlin.math.min
 
 /** Misje i seria logowań, odświeżane tylko po wejściu lub zmianie dnia UTC. */
 class MissionsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "MissionsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

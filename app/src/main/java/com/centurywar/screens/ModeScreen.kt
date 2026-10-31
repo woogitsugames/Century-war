@@ -23,6 +23,7 @@ import java.util.Locale
 
 /** Ekran przed bitwą dla trybów: bez końca, wyzwanie dnia, potyczka. */
 class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Boolean = false) : Screen(g) {
+    override val crashName get() = "ModeScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

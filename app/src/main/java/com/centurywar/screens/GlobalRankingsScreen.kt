@@ -16,6 +16,7 @@ import kotlin.math.min
 
 /** Własne rankingi serwera, niezależne od Google Play Games. */
 class GlobalRankingsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "GlobalRankingsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

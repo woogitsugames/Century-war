@@ -18,6 +18,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class MenuScreen(g: Game) : Screen(g) {
+    override val crashName get() = "MenuScreen"
     /** W menu Wstecz przechwytujemy tylko przy otwartym oknie. */
     val hasOpenModal get() = g.resumeOffer != null
     private val bg = MenuBg()

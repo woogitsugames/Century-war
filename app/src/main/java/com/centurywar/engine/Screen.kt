@@ -17,6 +17,12 @@ abstract class Screen(val g: Game) {
     private var heldButton: Button? = null
     private val heldTooltip = TooltipBubble()
 
+    /**
+     * Stała nazwa do dziennika awarii. R8 zaciemnia nazwy klas, więc nie czytamy javaClass;
+     * ekrany gry nadpisują ją literałem.
+     */
+    open val crashName: String get() = "OtherScreen"
+
     val ui get() = g.ui
     val dp get() = g.ui.dp
     val w get() = g.width.toFloat()
@@ -65,6 +71,26 @@ abstract class Screen(val g: Game) {
     /** true oznacza, że ekran przejął surowe zdarzenie dotyku. */
     open fun onTouch(e: TouchEvent): Boolean = false
     open fun onPause() {}
+
+    /**
+     * Czy tap na widocznym, ale wyłączonym przycisku pomocniczym ma zostać pochłonięty
+     * zamiast trafić do [onTap].
+     */
+    protected open fun swallowsInactiveTap(b: Button): Boolean = true
+
+    /**
+     * Czyści stan gestu (wciśnięcia, palec, przeciąganie). Gra wywołuje to przy zmianie
+     * ekranu, bo zdarzenia UP/CANCEL mogły trafić do innego ekranu.
+     */
+    open fun resetTouch() {
+        activePointer = -1
+        dragging = false
+        touchCandidate = null
+        touchElapsed = 0f
+        touchMoved = false
+        heldButton = null
+        for (b in buttons) b.pressed = false
+    }
 
     fun btn(id: Int, label: String = "", sub: String = ""): Button =
         Button(id).also { it.label = label; it.sub = sub; buttons.add(it) }
@@ -119,7 +145,7 @@ abstract class Screen(val g: Game) {
                     }
                     // Wyłączony przycisk (np. informacja o kolejce) nie jest tapem pola bitwy.
                     if (!hit && inactiveTarget != null && !inactiveTarget.enabled &&
-                        inactiveTarget.contains(e.x, e.y)) hit = true
+                        inactiveTarget.contains(e.x, e.y) && swallowsInactiveTap(inactiveTarget)) hit = true
                     if (!hit) onTap(e.x, e.y)
                 }
                 for (b in buttons) b.pressed = false

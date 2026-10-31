@@ -14,6 +14,7 @@ import kotlin.math.min
 
 /** Logowanie i stan chmurowego profilu; żadne operacje sieciowe nie dotykają pętli gry. */
 class PlayGamesScreen(g: Game) : Screen(g) {
+    override val crashName get() = "PlayGamesScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

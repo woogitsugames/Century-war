@@ -17,6 +17,7 @@ import com.centurywar.meta.Profile
 import kotlin.math.min
 
 class RankingsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "RankingsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

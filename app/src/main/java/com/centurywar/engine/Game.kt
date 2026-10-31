@@ -332,9 +332,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun setScreen(s: Screen) {
         val previous = screen
         previous?.onPause()
+        previous?.resetTouch()
         stack.clear()
         screen = s
-        CrashReports.screenChanged(s.javaClass.simpleName)
+        CrashReports.screenChanged(s.crashName)
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -343,9 +344,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     fun push(s: Screen) {
         val previous = screen
+        previous?.resetTouch()
         previous?.let { stack.add(it) }
         screen = s
-        CrashReports.screenChanged(s.javaClass.simpleName)
+        CrashReports.screenChanged(s.crashName)
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -356,8 +358,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
         val previous = screen
         val restored = stack.removeAt(stack.size - 1)
+        previous?.resetTouch()
+        restored.resetTouch()
         screen = restored
-        CrashReports.screenChanged(restored.javaClass.simpleName)
+        CrashReports.screenChanged(restored.crashName)
         syncMusicScreen(restored)
         restored.layout()
         startScreenTransition(previous, restored, -1f)
@@ -412,7 +416,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val s0 = screen
         for (e in frameEvents) {
             if (e.action == TouchEvent.CANCEL + 10) back()
-            else if (!transitionActive) screen?.handle(e)
+            // Podczas przejścia odrzucamy tylko DOWN/MOVE; UP/CANCEL muszą dojść, by nie
+            // zostawić wciśniętego przycisku ani zajętego palca.
+            else if (!transitionActive || e.action == TouchEvent.UP || e.action == TouchEvent.CANCEL)
+                screen?.handle(e)
         }
         synchronized(inputLock) { inputPool.addAll(frameEvents) }
         frameEvents.clear()

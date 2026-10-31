@@ -21,6 +21,7 @@ import kotlin.math.min
 
 /** Wszystkie opcje dostępności w jednej przewijanej karcie. */
 class AccessibilityScreen(g: Game) : Screen(g) {
+    override val crashName get() = "AccessibilityScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

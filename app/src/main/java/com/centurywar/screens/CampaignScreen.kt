@@ -28,6 +28,7 @@ import kotlin.math.sin
  * na pionowym ekranie od góry do dołu. Tła są nagrane w Picture przy layout().
  */
 class CampaignScreen(g: Game) : Screen(g) {
+    override val crashName get() = "CampaignScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

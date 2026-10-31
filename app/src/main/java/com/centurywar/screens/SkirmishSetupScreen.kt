@@ -20,6 +20,7 @@ import kotlin.random.Random
 
 /** Potyczka własna: jeden przewijany formularz lub dwie kolumny na rozłożonym Foldzie. */
 class SkirmishSetupScreen(g: Game) : Screen(g) {
+    override val crashName get() = "SkirmishSetupScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

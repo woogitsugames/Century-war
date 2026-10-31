@@ -15,6 +15,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class SettingsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "SettingsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

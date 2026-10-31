@@ -17,6 +17,7 @@ import java.util.Locale
 
 /** Lista metadanych odczytywana na osobnym wątku; bez odczytu dysku podczas renderowania. */
 class ReplayListScreen(g: Game) : Screen(g) {
+    override val crashName get() = "ReplayListScreen"
     private data class Display(val entry: ReplayStore.Entry, val title: String, val detail: String)
 
     private val bg = MenuBg()

@@ -19,6 +19,7 @@ import kotlin.math.min
 
 /** Drzewko badań: trwałe ulepszenia kupowane za medale z każdej bitwy (także przegranej). */
 class ResearchScreen(g: Game) : Screen(g) {
+    override val crashName get() = "ResearchScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)

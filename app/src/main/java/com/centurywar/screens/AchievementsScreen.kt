@@ -16,6 +16,7 @@ import kotlin.math.min
 
 /** Lista osiągnięć z postępem, nagrodami i ukrytymi wyzwaniami. */
 class AchievementsScreen(g: Game) : Screen(g) {
+    override val crashName get() = "AchievementsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
