@@ -82,6 +82,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     // dane kart (przeliczane w rebuild)
     private val titles = arrayOfNulls<String>(CARDS)
     private val roles = arrayOfNulls<String>(CARDS)
+    private val roleDefs = Role.values()
     private val lines = Array(CARDS) { arrayOfNulls<String>(MAX_LINES) }
     private val lineCount = IntArray(CARDS)
     private val statN = IntArray(CARDS)
@@ -390,7 +391,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             TURRET -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, col, Icons.TOWER)
             BARRAGE -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, ROLE_COL[BARRAGE], Icons.METEOR)
             else -> {
-                val def = Defs.unit(era, Role.values()[i], if (EraBranches.available(era)) branch else EraBranches.NONE)
+                val def = Defs.unit(era, roleDefs[i], if (EraBranches.available(era)) branch else EraBranches.NONE)
                 val k = when (def.body) {
                     Body.HUMAN -> 0.8f
                     Body.MECH -> 0.7f
