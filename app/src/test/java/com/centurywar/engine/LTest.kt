@@ -47,19 +47,98 @@ class LTest {
     fun placeholdersMatchEnglish() {
         val bad = mutableListOf<String>()
         for (k in L.keys) {
-            val e = L.raw(k)!!
-            val en = e[L.EN]
-            val enSpecs = spec.findAll(en.replace("%%", "")).map { it.value }.toList()
-            val enPct = Regex("%%").findAll(en).count()
-            for (i in e.indices) {
-                val s = e[i]
-                if (s.isEmpty()) continue
-                val specs = spec.findAll(s.replace("%%", "")).map { it.value }.toList()
-                val pct = Regex("%%").findAll(s).count()
-                if (specs != enSpecs || pct != enPct) bad += "$k/${L.CODES[i]}: '$s'"
+            val entry = L.raw(k)!!
+            val englishForms = entry[L.EN].split('|')
+            for (i in entry.indices) {
+                if (entry[i].isEmpty()) continue
+                for ((formIndex, variant) in entry[i].split('|').withIndex()) {
+                    val en = englishForms[formIndex.coerceAtMost(englishForms.lastIndex)]
+                    val enSpecs = spec.findAll(en.replace("%%", "")).map { it.value }.toList()
+                    val specs = spec.findAll(variant.replace("%%", "")).map { it.value }.toList()
+                    val enPct = Regex("%%").findAll(en).count()
+                    val pct = Regex("%%").findAll(variant).count()
+                    if (specs != enSpecs || pct != enPct) {
+                        bad += k + "/" + L.CODES[i] + "#" + formIndex + ": '" + variant + "'"
+                    }
+                }
             }
         }
         assertTrue("Niezgodne placeholdery: $bad", bad.isEmpty())
+    }
+
+    @Test
+    fun pluralEntriesHaveAllForms() {
+        for (k in L.keys) {
+            val entry = L.raw(k)!!
+            if (entry.none { it.contains('|') }) continue
+            for (i in L.CODES.indices) {
+                val forms = entry[i].split('|')
+                val expected = when (L.CODES[i]) {
+                    "pl", "uk" -> 3
+                    "tr" -> 1
+                    else -> 2
+                }
+                assertEquals(k + "/" + L.CODES[i], expected, forms.size)
+                assertTrue(k + "/" + L.CODES[i] + ": pusta forma", forms.all { it.isNotEmpty() })
+                assertTrue(k + "/" + L.CODES[i] + ": separator", !L.text(k, i).contains('|'))
+            }
+        }
+    }
+
+    @Test
+    fun pluralRules() {
+        val samples = longArrayOf(0, 1, 2, 4, 5, 11, 12, 14, 21, 22, 25, 101, 111, 112)
+        val pl = intArrayOf(2, 0, 1, 1, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2)
+        val uk = intArrayOf(2, 0, 1, 1, 2, 2, 2, 2, 0, 1, 2, 0, 2, 2)
+        for (i in samples.indices) {
+            assertEquals("pl/" + samples[i], pl[i], L.pluralIndex(0, samples[i]))
+            assertEquals("uk/" + samples[i], uk[i], L.pluralIndex(7, samples[i]))
+        }
+        assertEquals(0, L.pluralIndex(4, 0)); assertEquals(0, L.pluralIndex(4, 1))
+        assertEquals(1, L.pluralIndex(4, 2))
+        assertEquals(0, L.pluralIndex(1, 1)); assertEquals(1, L.pluralIndex(1, 2))
+        assertEquals(0, L.pluralIndex(9, 1)); assertEquals(0, L.pluralIndex(9, 5))
+    }
+
+    @Test
+    fun pluralExamplesAndFallback() {
+        L.lang = L.PL
+        assertEquals("Wygraj 1 bitwę", L.plural("ms_wins", 1L))
+        assertEquals("Wygraj 2 bitwy", L.plural("ms_wins", 2L))
+        assertEquals("Wygraj 5 bitew", L.plural("ms_wins", 5L))
+        assertEquals("Pokonaj 2 wrogów", L.plural("ms_kills", 2L))
+        assertEquals("Zdobądź 1 nową gwiazdkę", L.plural("ms_stars", 1L))
+        assertEquals("Zdobądź 2 nowe gwiazdki", L.plural("ms_stars", 2L))
+        assertEquals("Zdobądź 5 nowych gwiazdek", L.plural("ms_stars", 5L))
+        assertEquals("Wygraj z Mgłą 2 razy", L.plural("ms_modifier_wins", 2L, "Mgłą", 2))
+        assertEquals("1 medal", L.plural("medals_n", 1L))
+        assertEquals("2 medale", L.plural("medals_n", 2L))
+        assertEquals("5 medali", L.plural("medals_n", 5L))
+        assertEquals("21 medali", L.plural("medals_n", 21L))
+        assertEquals("Dziś: +1 medal", L.f("ms_login_paid", L.plural("medals_n", 1L)))
+        assertEquals("Wygraj %d bitew", L["ms_wins"])
+        assertTrue(!L.f("ms_wins", 1).contains('|'))
+        L.lang = L.EN
+        assertEquals("Win 1 battle", L.plural("ms_wins", 1L))
+        assertEquals("Win 2 battles", L.plural("ms_wins", 2L))
+        L.lang = 7
+        assertEquals("21 медаль", L.plural("medals_n", 21L))
+        assertEquals("5 медалей", L.plural("medals_n", 5L))
+    }
+
+    @Test
+    fun pluralNeverRendersSeparators() {
+        for (i in L.CODES.indices) {
+            L.lang = i
+            for (k in L.keys) {
+                if (L.raw(k)!!.none { it.contains('|') }) continue
+                for (n in longArrayOf(1L, 2L, 5L)) {
+                    val text = if (k == "ms_modifier_wins") L.plural(k, n, "x", n)
+                        else L.plural(k, n)
+                    assertTrue(k + "/" + L.CODES[i] + "/" + n, !text.contains('|'))
+                }
+            }
+        }
     }
 
     @Test
@@ -72,7 +151,7 @@ class LTest {
                 if (specs.isEmpty() && !en.contains("%%")) continue
                 val args = specs.map<String, Any> { when (it.last()) { 'd' -> 7; 's' -> "x"; else -> 1.5f } }.toTypedArray()
                 val out = L.f(k, *args)
-                assertTrue("$k/${L.CODES[i]}: '$out'", !out.contains("%d") && !out.contains("%s"))
+                assertTrue("$k/${L.CODES[i]}: '$out'", !out.contains("%d") && !out.contains("%s") && !out.contains('|'))
             }
         }
     }

@@ -63,6 +63,7 @@ class BattleScreen(
 
     // wynik
     private var reward = 0
+    private var rewardText = ""
     private var newRecord = false
     private var tipKey = ""
 
@@ -591,6 +592,7 @@ class BattleScreen(
                 } else reward = (5 * effort).toInt()
             }
         }
+        rewardText = "+" + L.plural("medals_n", reward.toLong())
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         Missions(pr).onBattleEnd(battle, System.currentTimeMillis(), persist = false, newStars = earnedStars)
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
@@ -1006,7 +1008,7 @@ class BattleScreen(
             row(Icons.CROWN, L["bosses_defeated"], battle.bossesDefeated.toString())
         }
         if (cfg.mode != Mode.CAMPAIGN) row(Icons.STAR, L["score"], battle.score().toString(), Ui.GOLD)
-        row(Icons.MEDAL, L["reward"], "+$reward ${L["medals"]}", Ui.GOLD)
+        row(Icons.MEDAL, L["reward"], rewardText, Ui.GOLD)
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
             ui.textO(c, L["new_record"], rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp

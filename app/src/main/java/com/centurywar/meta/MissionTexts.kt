@@ -7,8 +7,12 @@ import java.util.Locale
 object MissionTexts {
     fun label(item: MissionItem): String {
         val key = "ms_" + item.type.name.lowercase(Locale.ROOT)
-        return if (item.type == MissionType.MODIFIER_WINS) {
-            L.f(key, L[item.modifier?.key ?: ""], item.target)
-        } else L.f(key, item.target)
+        return when (item.type) {
+            MissionType.MODIFIER_WINS ->
+                L.plural(key, item.target.toLong(), L[item.modifier?.key ?: ""], item.target)
+            // Numer fali i wartość pokonanych wrogów nie są liczebnikami rzeczownika.
+            MissionType.WAVES, MissionType.KILL_VALUE -> L.f(key, item.target)
+            else -> L.plural(key, item.target.toLong())
+        }
     }
 }

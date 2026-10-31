@@ -112,7 +112,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val m = Missions(profile)
         m.refresh(nowMillis)
         val reward = m.claimLogin(nowMillis)
-        if (reward > 0) showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7: " + L.f("ms_login_paid", reward), Icons.CALENDAR)
+        if (reward > 0) showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7: " + L.f("ms_login_paid", L.plural("medals_n", reward.toLong())), Icons.CALENDAR)
     }
 
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
