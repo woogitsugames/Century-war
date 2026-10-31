@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 11
+    const val VERSION = 12
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -107,7 +107,7 @@ object BattleSnapshot {
             if (!u.active) continue
             o.writeShort(i)
             o.writeByte(u.side); o.writeShort(u.def.id); o.writeByte(u.tier)
-            o.writeFloat(u.x); o.writeFloat(u.hp); o.writeFloat(u.maxHp); o.writeFloat(u.dmg); o.writeFloat(u.cd)
+            o.writeFloat(u.x); o.writeFloat(u.hp); o.writeFloat(u.maxHp); o.writeFloat(u.dmg); o.writeFloat(u.waveSpeedMul); o.writeFloat(u.cd)
             o.writeFloat(u.anim); o.writeFloat(u.attackAnim); o.writeFloat(u.flash)
             o.writeBoolean(u.moving); o.writeFloat(u.dying); o.writeInt(u.serial)
             o.writeByte(u.bossKind); o.writeByte(u.bossSecondaryKind)
@@ -161,6 +161,7 @@ object BattleSnapshot {
         o.writeByte(s.era); o.writeByte(s.eraVariant); o.writeFloat(s.gold); o.writeFloat(s.xp); o.writeFloat(s.baseHp); o.writeFloat(s.baseMaxHp)
         o.writeByte(s.queueSize); o.writeByte(s.queueMax)
         for (i in 0 until s.queueSize) o.writeShort(s.queue[i])
+        for (i in 0 until s.queueSize) o.writeByte(s.queueWaveTheme[i])
         o.writeFloat(s.trainT)
         for (i in 0 until Defs.MAX_TURRET_SLOTS) { o.writeByte(s.turretEra[i]); o.writeByte(s.turretVariant[i]); o.writeFloat(s.turretCd[i]); o.writeFloat(s.turretFire[i]) }
         o.writeByte(s.slots)
@@ -268,7 +269,8 @@ object BattleSnapshot {
             u.side = side(i.readByte().toInt())
             u.def = Defs.allUnits[i.readShort().toInt()]
             u.tier = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }
-            u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.cd = i.readFloat()
+            u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.waveSpeedMul = i.readFloat(); u.cd = i.readFloat()
+            require(u.waveSpeedMul == 1f || u.waveSpeedMul == 0.85f)
             u.anim = i.readFloat(); u.attackAnim = i.readFloat(); u.flash = i.readFloat()
             u.moving = i.readBoolean(); u.dying = i.readFloat(); u.serial = i.readInt()
             u.bossKind = i.readByte().toInt().also { require(it in 0..EndlessBosses.MAX_KIND) }
@@ -331,6 +333,7 @@ object BattleSnapshot {
         s.queueSize = i.readByte().toInt(); s.queueMax = i.readByte().toInt()
         require(s.queueSize in 0..Battle.QUEUE_CAP && s.queueMax in 0..Battle.QUEUE_CAP)
         for (k in 0 until s.queueSize) s.queue[k] = i.readShort().toInt().also { require(it in Defs.allUnits.indices) }
+        for (k in 0 until s.queueSize) s.queueWaveTheme[k] = i.readUnsignedByte().also { require(it in EndlessWaveTheme.entries.indices) }
         s.trainT = i.readFloat()
         for (k in 0 until Defs.MAX_TURRET_SLOTS) {
             s.turretEra[k] = i.readByte().toInt().also { require(it in -1 until Defs.ERA_COUNT) }
