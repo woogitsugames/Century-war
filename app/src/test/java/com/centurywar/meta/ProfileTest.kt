@@ -45,6 +45,31 @@ class ProfileTest {
     }
 
     @Test
+    fun playGamesCloudCannotImportConsentOrRankingId() {
+        val local = Profile(tmpFile())
+        val remote = Profile(tmpFile())
+        remote.enableGlobalRanking()
+        remote.medals = 250
+        assertFalse(remote.toCloudJson().contains("\"globalRanking\""))
+        assertFalse(remote.toCloudJson().contains("\"playerId\""))
+
+        local.fromJson(remote.toJson())
+        assertFalse(local.globalRanking)
+        assertEquals("", local.playerId)
+        assertEquals(250, local.medals)
+
+        local.enableGlobalRanking()
+        val id = local.playerId
+        val other = Profile(tmpFile())
+        other.enableGlobalRanking()
+        other.medals = 300
+        local.fromJson(other.toJson())
+        assertTrue(local.globalRanking)
+        assertEquals(id, local.playerId)
+        assertEquals(300, local.medals)
+    }
+
+    @Test
     fun malformedIdAndLegacyFileDisableGlobalRanking() {
         val file = tmpFile()
         file.writeText("""{"playerId":"fake","globalRanking":true}""")
