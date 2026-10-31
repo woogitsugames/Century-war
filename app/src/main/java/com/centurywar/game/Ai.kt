@@ -13,20 +13,31 @@ class Ai(private val b: Battle, sideIndex: Int) {
     private var think = 0.4f
     private var plannedRole: Role? = null
 
+    // Komendy gracza przechodzą przez rejestrator, przeciwnik działa bezpośrednio.
+    private val commands: BattleController? get() = if (me.index == 0) b.commandController else null
+
+    private fun evolve() = commands?.evolve() ?: b.evolve(me)
+    private fun barrage() = commands?.barrage() ?: b.castBarrage(me)
+    private fun rally() = commands?.rally() ?: b.castRally(me)
+    private fun upgrade(slot: Int) = commands?.upgradeTurret(slot) ?: b.upgradeTurret(me, slot)
+    private fun buyTurret(slot: Int) = commands?.buyTurret(slot) ?: b.buyTurret(me, slot)
+    private fun armory() = commands?.armory() ?: b.buyArmory(me)
+    private fun queue(role: Role) = commands?.queue(role) ?: b.queueUnit(me, role)
+
     fun update(dt: Float) {
         think -= dt
         if (think > 0f) return
-        think = 0.45f + b.rng.nextFloat() * 0.3f
+        think = 0.45f + b.rng.nextAiFloat(me.index) * 0.3f
 
-        if (b.canEvolveSide(me)) b.evolve(me)
+        if (b.canEvolveSide(me)) evolve()
 
         val danger = countFoesNear(700f)
         val inBarrageZone = countFoesNear(1350f)
         if (b.abilityReady(me, 0) && (inBarrageZone >= 4 || (danger >= 2 && me.baseHp < me.baseMaxHp * 0.6f))) {
-            b.castBarrage(me)
+            barrage()
         }
         if (b.abilityReady(me, 1) && me.aliveCount >= 5 && (danger > 0 || pushing())) {
-            b.castRally(me)
+            rally()
         }
 
         manageTurrets()
@@ -49,17 +60,17 @@ class Ai(private val b: Battle, sideIndex: Int) {
         val unitReserve = Defs.unit(me.era, Role.HEAVY).cost
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
-            if (cost >= 0 && me.gold > cost + unitReserve * 2) { b.upgradeTurret(me, i); return }
+            if (cost >= 0 && me.gold > cost + unitReserve * 2) { upgrade(i); return }
         }
         val slot = b.freeSlot(me)
-        if (slot >= 0 && me.gold > me.turretCost() + unitReserve) b.buyTurret(me, slot)
+        if (slot >= 0 && me.gold > me.turretCost() + unitReserve) buyTurret(slot)
     }
 
     private fun trainUnits(danger: Int) {
         if (me.aliveCount + me.queueSize >= me.cap) {
             // Armia pełna: nadwyżkę złota zamień w ulepszenia, zamiast ją trzymać.
             val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2
-            if (me.gold > b.armoryCost(me) + reserve) b.buyArmory(me)
+            if (me.gold > b.armoryCost(me) + reserve) armory()
             return
         }
         if (me.queueSize >= 2) return
@@ -73,17 +84,17 @@ class Ai(private val b: Battle, sideIndex: Int) {
             }
         }
         val role = plannedRole ?: pickRole(melee, ranged, heavy, danger).also { plannedRole = it }
-        if (b.queueUnit(me, role)) {
+        if (queue(role)) {
             plannedRole = null
-        } else if (danger >= 2 && b.queueUnit(me, Role.MELEE)) {
+        } else if (danger >= 2 && queue(Role.MELEE)) {
             plannedRole = null
-        } else if (me.gold > Defs.unit(me.era, role).cost * 0.5f && b.rng.nextInt(10) == 0) {
+        } else if (me.gold > Defs.unit(me.era, role).cost * 0.5f && b.rng.nextAiInt(me.index, 10) == 0) {
             plannedRole = null // zmień plan, jeśli długo nie stać nas na wybraną jednostkę
         }
     }
 
     private fun pickRole(melee: Int, ranged: Int, heavy: Int, danger: Int): Role {
-        val r = b.rng.nextInt(100)
+        val r = b.rng.nextAiInt(me.index, 100)
         val eliteCost = Defs.unit(me.era, Role.ELITE).cost
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < 35) return Role.ELITE
         if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
@@ -95,7 +106,7 @@ class Ai(private val b: Battle, sideIndex: Int) {
     fun chooseDoctrine(options: Array<Doctrine>): Doctrine {
         val pref = arrayOf(Doctrine.FURY, Doctrine.ECONOMY, Doctrine.BULWARK, Doctrine.SWIFT, Doctrine.SIEGE,
             Doctrine.VETERAN, Doctrine.PLUNDER, Doctrine.ARSENAL, Doctrine.TACTICS)
-        return options.minByOrNull { pref.indexOf(it) + b.rng.nextInt(3) } ?: options[0]
+        return options.minByOrNull { pref.indexOf(it) + b.rng.nextAiInt(me.index, 3) } ?: options[0]
     }
 }
 
