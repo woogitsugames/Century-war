@@ -516,19 +516,37 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         alpha = save
     }
 
-    private fun unitWidth(d: UnitDef) = when (d.body) {
+    private fun unitWidth(d: UnitDef): Float {
+        if (d.variant >= 0 && (d.role == Role.HEAVY || d.role == Role.ELITE)) return when (d.art) {
+            EraArt.COMBUSTION -> if (d.role == Role.ELITE) 145f else 120f
+            EraArt.GALVANIC -> 110f
+            EraArt.SWARM -> if (d.role == Role.ELITE) 152f else 128f
+            EraArt.BIOTECH -> if (d.role == Role.ELITE) 140f else 122f
+            else -> 110f
+        }
+        return when (d.body) {
         Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
         Body.VEHICLE -> if (d.role == Role.ELITE && d.art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
         Body.MECH -> if (d.art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+        }
     }
 
     private fun iconShift(d: UnitDef) = when (d.body) {
         Body.HUMAN -> 4f; Body.VEHICLE -> 6f; Body.SIEGE -> 4f; Body.CANNON -> 0f; else -> 8f
     }
 
-    private fun unitHeight(d: UnitDef) = when (d.body) {
+    private fun unitHeight(d: UnitDef): Float {
+        if (d.variant >= 0 && (d.role == Role.HEAVY || d.role == Role.ELITE)) return when (d.art) {
+            EraArt.COMBUSTION -> if (d.role == Role.ELITE) 112f else 98f
+            EraArt.GALVANIC -> if (d.role == Role.ELITE) 155f else 131f
+            EraArt.SWARM -> 96f
+            EraArt.BIOTECH -> if (d.role == Role.ELITE) 141f else 108f
+            else -> 112f
+        }
+        return when (d.body) {
         Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.art == EraArt.BRONZE) 120f else 92f) else 80f
         Body.MECH -> if (d.art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+        }
     }
 
     // ---------------------------------------------------------------- pociski

@@ -266,7 +266,12 @@ class BattleScreen(
         val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished) {
             tut?.update(dt)
-            if (battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null) {
+            // Auto-gracz musi zatwierdzić wybór przez BattleController.
+            // Nie zatrzymuj pętli ekranu, gdy w testach włączono AI gracza.
+            val waiting = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
+            if (waiting && battle.playerAi != null) {
+                battle.step()
+            } else if (!waiting) {
                 acc += dt * speed * tutScale
                 var steps = 0
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
