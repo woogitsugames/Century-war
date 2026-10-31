@@ -674,7 +674,7 @@ class ScreenshotTest {
         }
     }
 
-    /** Przegląd 5 nowych dymków bitwy i pierwszego dymka Badań: 720p, 20:9, Fold. */
+    /** Przegląd nowych dymków bitwy i pierwszego dymka Badań: 720p, 20:9, Fold. */
     @Test
     fun contextualHints() {
         for ((tag, dims) in mapOf(
@@ -707,6 +707,18 @@ class ScreenshotTest {
             capture(hints, HintOverlay.UPGRADE, "hint_upgrade", "upgrade")
             b.player.aliveCount = b.player.cap
             capture(hints, HintOverlay.CAP, "hint_cap", "armory")
+
+            val weatherScreen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 562L, 1f,
+                weather = Weather.WIND))
+            g.setScreen(weatherScreen)
+            val weatherHint = field(weatherScreen, "hints").get(weatherScreen) as HintOverlay
+            capture(weatherHint, HintOverlay.WEATHER, "hint_weather54", "weather")
+
+            val variantScreen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 563L, 1f,
+                startEra = 5, maxEra = 6, weather = Weather.RAIN))
+            g.setScreen(variantScreen)
+            val variantHint = field(variantScreen, "hints").get(variantScreen) as HintOverlay
+            capture(variantHint, HintOverlay.VARIANT, "hint_variant54", "variant")
 
             val endlessScreen = BattleScreen(g, BattleConfig(Mode.ENDLESS, 561L, 1f))
             g.setScreen(endlessScreen)
