@@ -149,6 +149,9 @@ class Battle(val cfg: BattleConfig) {
     val projs = Array(MAX_PROJ) { Projectile() }
     val fx = FxBuffer()
     var time = 0f
+    /** Liczba zakończonych kroków symulacji; komendy kroku N są przed krokiem N. */
+    var stepCount = 0
+        private set
     var over = false
     var winner = -1
     var wave = 0
@@ -164,6 +167,9 @@ class Battle(val cfg: BattleConfig) {
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
     var playerAi: Ai? = null
+    /** Aktywny kontroler komend gracza (opcjonalny dla starego API). */
+    var commandController: BattleController? = null
+        internal set
 
     init {
         val mods = cfg.modifiers
@@ -264,7 +270,7 @@ class Battle(val cfg: BattleConfig) {
             val i = rng.nextInt(pool.size)
             pool.removeAt(i)
         }
-        if (side.index == 0 && playerAi == null) {
+        if (side.index == 0 && (playerAi == null || commandController != null)) {
             pendingChoice = picks
         } else {
             val brain = if (side.index == 0) playerAi else ai
@@ -395,8 +401,17 @@ class Battle(val cfg: BattleConfig) {
     // ---------------------------------------------------------------- symulacja
 
     fun step() {
-        if (over || pendingChoice != null) return
+        if (over) return
+        val controller = commandController
+        // W trybie automatycznym obsłuż wybór wywołany przez poprzedni krok (np. fala).
+        if (pendingChoice != null && controller != null && playerAi != null) {
+            controller.choosePendingDoctrine()
+        }
+        if (pendingChoice != null) return
         val dt = STEP
+        // Rejestrowane rozkazy AI gracza muszą poprzedzać ten sam krok symulacji.
+        if (controller != null) playerAi?.update(dt)
+        if (pendingChoice != null) return
         time += dt
         updateFronts()
         val control = ((sides[0].front + sides[1].front) * 0.5f / Defs.LANE).coerceIn(0f, 1f)
@@ -417,13 +432,14 @@ class Battle(val cfg: BattleConfig) {
         for (s in sides) promote(s)
         if (endless) director(dt)
         ai?.update(dt)
-        playerAi?.update(dt)
+        if (controller == null) playerAi?.update(dt)
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
         }
+        stepCount++
     }
 
     /** Koszt XP kolejnej rangi weteranów (gdy nie ma już epoki do awansu). */
