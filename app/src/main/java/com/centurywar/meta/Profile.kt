@@ -285,6 +285,21 @@ class Profile(private val file: File) {
 
     fun top(board: String): List<ScoreEntry> = boards[board] ?: emptyList()
 
+    /** Usuwa wyłącznie odnośniki do skasowanych plików; wyniki pozostają w rankingu. */
+    @Synchronized
+    fun clearReplayReferences(removedIds: Collection<String>): Boolean {
+        if (removedIds.isEmpty()) return false
+        var changed = false
+        for (list in boards.values) for (i in list.indices) {
+            val entry = list[i]
+            if (entry.replay != null && entry.replay in removedIds) {
+                list[i] = ScoreEntry(entry.name, entry.score, entry.day)
+                changed = true
+            }
+        }
+        return changed
+    }
+
     /** Zmiana tygodnia i ograniczenie historii do ośmiu zakończonych lub bieżących tygodni. */
     @Synchronized
     fun syncWeekly(currentWeek: Long) {
@@ -450,6 +465,18 @@ class Profile(private val file: File) {
         if (newerProfileVersion) return
         val json = try { toJson() } catch (_: Exception) { return }
         writeJson(json, ++saveSeq)
+    }
+
+    /** Migawka powstaje na wątku gry; zapis pliku trafia do istniejącego wątku I/O. */
+    fun saveAsync() {
+        val json: String
+        val seq: Long
+        synchronized(this) {
+            if (newerProfileVersion) return
+            json = try { toJson() } catch (_: Exception) { return }
+            seq = ++saveSeq
+        }
+        hintWriter.execute { writeJson(json, seq) }
     }
 
     /** Numer migawki: starsza migawka z wątku w tle nie nadpisze nowszego zapisu. */

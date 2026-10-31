@@ -96,7 +96,13 @@ class MainActivity : Activity(), Host {
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         val snapshots = SnapshotStore(File(filesDir, "battle.snap"))
         game.snapshots = snapshots
-        game.replays = ReplayStore(File(filesDir, "replays"))
+        game.replays = ReplayStore(File(filesDir, "replays")).also { store ->
+            store.onRemoved = { ids ->
+                game.post {
+                    if (profile.clearReplayReferences(ids)) profile.saveAsync()
+                }
+            }
+        }
         game.resumeOffer = snapshots.loadBattle()
         view = GameView(this, game)
         if (!pendingRenderScale.isNaN()) view.setRenderScale(pendingRenderScale)
