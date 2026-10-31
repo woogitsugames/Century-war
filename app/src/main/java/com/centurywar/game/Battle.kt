@@ -593,13 +593,13 @@ class Battle(val cfg: BattleConfig) {
             val te = s.turretEra[i]
             if (te < 0) continue
             if (s.turretCd[i] > 0f) { s.turretCd[i] -= dt; continue }
-            val td = Defs.eras[te].turret
+            val td = Defs.turret(te, s.turretVariant[i])
             val dist = (target.x - s.baseFront) * s.dir
             if (dist > td.range) continue
             s.turretCd[i] = td.cooldown
             s.turretFire[i] = 0.15f
             val h = turretHeight(i)
-            launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile, td.dmg * s.turretDmgMul, td.splash, 0f, te)
+            launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile, td.dmg * s.turretDmgMul, td.splash, 0f, te, td.chain)
         }
     }
 
@@ -610,6 +610,9 @@ class Battle(val cfg: BattleConfig) {
             u.dying += dt
             if (u.dying > 0.8f) u.active = false
             return
+        }
+        if (u.def.regen > 0f && u.hp < u.maxHp) {
+            u.hp = min(u.maxHp, u.hp + u.maxHp * u.def.regen * dt)
         }
         val s = sides[u.side]
         val eIdx = 1 - u.side
@@ -635,6 +638,7 @@ class Battle(val cfg: BattleConfig) {
                         splashDamage(u.side, cx, def.splash, u.dmg, def.siegeMul, def.era)
                     } else if (target != null) {
                         damageUnit(target, u.dmg, u.side)
+                        if (def.chain > 0f) chainDamage(u.side, target, u.dmg, def.chain)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx)
                     } else {
                         damageBase(e, u.dmg * def.siegeMul, u.side)
@@ -642,7 +646,7 @@ class Battle(val cfg: BattleConfig) {
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul, def.era)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, u.dmg, def.splash, def.siegeMul, def.era, def.chain)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side, def.projectile.toFloat())
                 }
             }
@@ -675,10 +679,11 @@ class Battle(val cfg: BattleConfig) {
         return null
     }
 
-    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int) {
+    private fun launch(side: Int, x: Float, h: Float, tx: Float, type: Int, dmg: Float, splash: Float, siegeMul: Float, era: Int, chain: Float = 0f) {
         val p = allocProj() ?: return
         p.side = side; p.type = type; p.x = x; p.h = h; p.tx = tx; p.era = era
-        p.dmg = dmg; p.splash = splash; p.siegeMul = if (siegeMul <= 0f) 0.6f else siegeMul
+        p.dmg = dmg; p.splash = splash; p.chain = chain
+        p.siegeMul = if (siegeMul <= 0f) 0.6f else siegeMul
         p.delay = 0f; p.t = 0f
         val dist = abs(tx - x)
         val straight = type == Proj.BULLET || type == Proj.BEAM || type == Proj.PLASMA || type == Proj.ROCKET || type == Proj.BOLT
@@ -708,7 +713,7 @@ class Battle(val cfg: BattleConfig) {
         p.active = false
         val e = sides[1 - p.side]
         if (p.splash > 0f) {
-            splashDamage(p.side, p.tx, p.splash, p.dmg, p.siegeMul, p.era)
+            splashDamage(p.side, p.tx, p.splash, p.dmg, p.siegeMul, p.era, p.chain)
             return
         }
         var best: Fighter? = null
@@ -720,20 +725,52 @@ class Battle(val cfg: BattleConfig) {
         }
         if (best != null) {
             damageUnit(best, p.dmg, p.side)
+            if (p.chain > 0f) chainDamage(p.side, best, p.dmg, p.chain)
             fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side)
         } else if ((p.tx - e.baseFront) * -e.dir >= -50f) {
             damageBase(e, p.dmg * p.siegeMul, p.side)
         }
     }
 
-    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float, siegeMul: Float, era: Int) {
+    private fun splashDamage(attacker: Int, cx: Float, radius: Float, dmg: Float, siegeMul: Float, era: Int, chain: Float = 0f) {
+        var primary: Fighter? = null
         for (u in units) {
             if (!u.alive || u.side == attacker) continue
-            if (abs(u.x - cx) <= radius + u.radius) damageUnit(u, dmg, attacker)
+            if (abs(u.x - cx) <= radius + u.radius) {
+                if (primary == null) primary = u
+                damageUnit(u, dmg, attacker)
+            }
         }
+        if (chain > 0f && primary != null) chainDamage(attacker, primary, dmg, chain)
         val e = sides[1 - attacker]
         if ((cx - e.baseFront) * -e.dir >= -radius) damageBase(e, dmg * siegeMul, attacker)
         fx.add(FxBuffer.EXPLOSION, cx, 20f, attacker, 0.6f + radius / 100f)
+    }
+
+    /** Dwa najbliższe wtórne cele, jeden przebieg puli bez alokacji i bez losowości. */
+    private fun chainDamage(attacker: Int, origin: Fighter, dmg: Float, mul: Float) {
+        var first: Fighter? = null
+        var second: Fighter? = null
+        var d1 = 205f
+        var d2 = 205f
+        for (u in units) {
+            if (!u.alive || u.side == attacker || u === origin) continue
+            val d = abs(u.x - origin.x)
+            if (d < d1) {
+                second = first; d2 = d1
+                first = u; d1 = d
+            } else if (d < d2) {
+                second = u; d2 = d
+            }
+        }
+        if (first != null) {
+            damageUnit(first, dmg * mul, attacker)
+            fx.add(FxBuffer.HIT, first.x, 50f * first.def.size, first.side)
+        }
+        if (second != null) {
+            damageUnit(second, dmg * mul * 0.5f, attacker)
+            fx.add(FxBuffer.HIT, second.x, 50f * second.def.size, second.side)
+        }
     }
 
     private fun damageUnit(u: Fighter, d: Float, attacker: Int) {
