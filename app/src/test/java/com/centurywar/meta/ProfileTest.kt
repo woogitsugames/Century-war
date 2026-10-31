@@ -18,6 +18,20 @@ class ProfileTest {
     private fun tmpFile(): File = File(Files.createTempDirectory("cw").toFile(), "profile.json")
 
     @Test
+    fun legacySkirmishUsesExistingDifficultyWhenSetupMissing() {
+        val f = tmpFile()
+        f.writeText("""{"skirmishDiff":3}""")
+        val old = Profile(f).also { it.load() }
+        assertEquals(3, old.skirmishDiff)
+        assertEquals(160, old.skirmishSetup.powerPercent)
+        assertTrue(old.skirmishSetup.isRanked())
+        assertEquals(0, old.skirmishSetup.startEra)
+        old.save()
+        val again = Profile(f).also { it.load() }
+        assertEquals(old.skirmishSetup, again.skirmishSetup)
+    }
+
+    @Test
     fun personalBestSurvivesRename() {
         val p = Profile(tmpFile())
         p.name = "Alfa"
