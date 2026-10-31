@@ -315,6 +315,7 @@ class PlayGamesLeaderboards(
         game.post {
             val localJson = game.profile.toJson()
             val useCloud = cloudJson != null && Profile.preferCloud(localJson, cloudJson)
+            var appliedCloud = false
             if (useCloud) {
                 try {
                     game.profile.fromJson(cloudJson!!)
@@ -322,14 +323,16 @@ class PlayGamesLeaderboards(
                     game.applyLanguage()
                     game.setQuality(game.effectiveQualityLevel())
                     game.applyFrameRate()
+                    appliedCloud = true
                 } catch (e: Exception) {
                     Log.w(TAG, "Nie udało się odtworzyć profilu", e)
                 }
             }
             handler.post {
-                if (useCloud) {
-                    discardSnapshot(snapshot, cloudJson)
-                } else if (cloudJson == localJson) {
+                if (useCloud && !appliedCloud) {
+                    // Błędny zdalny profil pozostaje w chmurze; nie tworzymy pętli nadpisywania.
+                    discardSnapshot(snapshot, null, allowNextSync = false)
+                } else if (useCloud || cloudJson == localJson) {
                     discardSnapshot(snapshot, cloudJson)
                 } else {
                     commitSnapshot(snapshot, localJson)
@@ -338,11 +341,11 @@ class PlayGamesLeaderboards(
         }
     }
 
-    private fun discardSnapshot(snapshot: Snapshot, cloudJson: String?) {
+    private fun discardSnapshot(snapshot: Snapshot, cloudJson: String?, allowNextSync: Boolean = true) {
         try {
             snapshotsClient.discardAndClose(snapshot).addOnCompleteListener { task ->
                 if (task.isSuccessful) lastSyncedJson = cloudJson
-                finishSync(task.isSuccessful)
+                finishSync(task.isSuccessful && allowNextSync)
             }
         } catch (e: RuntimeException) {
             Log.w(TAG, "Nie można zamknąć snapshotu", e)
