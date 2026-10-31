@@ -7,6 +7,8 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -31,9 +33,12 @@ import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.ScoreClient
+import com.centurywar.engine.L
 import com.centurywar.notifications.DailyReminders
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
+import java.net.URI
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -66,6 +71,15 @@ class MainActivity : Activity(), Host {
         game.history = BattleHistory(File(filesDir, "history.json")).also { it.load() }
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+        // Nie wystawiamy zgody bez skonfigurowanego HTTPS i polityki prywatności.
+        val privacyOk = runCatching {
+            val policy = URI(BuildConfig.CW_PRIVACY_URL)
+            policy.scheme == "https" && !policy.host.isNullOrEmpty()
+        }.getOrDefault(false)
+        if (privacyOk && ScoreClient.configured(BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY)) {
+            game.scores = ScoreClient(File(filesDir, "score-queue.json"),
+                BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY, profile)
+        }
         if ((application as? CenturyWarApp)?.playGamesReady == true) {
             try {
                 playGames = PlayGamesLeaderboards(this, game)
@@ -193,6 +207,7 @@ class MainActivity : Activity(), Host {
             gameBackRegistered = false
         }
         playGames?.close()
+        game.scores?.close()
         game.music?.release()
         game.history?.close()
         game.sound?.release()
@@ -235,6 +250,23 @@ class MainActivity : Activity(), Host {
             }, current.coerceIn(0, 23), 0, true).apply {
                 setOnDismissListener { hideSystemBars() }
             }.show()
+        }
+    }
+
+    override fun requestGlobalRankingConsent(onAccepted: () -> Unit) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            AlertDialog.Builder(this)
+                .setTitle(L["global_consent_title"])
+                .setMessage(L["global_consent_desc"])
+                .setPositiveButton(L["global_allow"]) { _, _ -> game.post { onAccepted() } }
+                .setNegativeButton(L["global_cancel"], null)
+                .setNeutralButton(L["global_privacy"]) { _, _ ->
+                    val uri = Uri.parse(BuildConfig.CW_PRIVACY_URL)
+                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                }
+                .setOnDismissListener { hideSystemBars() }
+                .show()
         }
     }
 

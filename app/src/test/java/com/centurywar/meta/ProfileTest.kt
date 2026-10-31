@@ -23,6 +23,93 @@ class ProfileTest {
     private fun tmpFile(): File = File(Files.createTempDirectory("cw").toFile(), "profile.json")
 
     @Test
+    fun globalRankingRequiresConsentAndKeepsIdAfterReset() {
+        val file = tmpFile()
+        val profile = Profile(file)
+        assertFalse(profile.globalRanking)
+        assertEquals("", profile.playerId)
+        profile.save()
+        assertFalse(Profile(file).also { it.load() }.globalRanking)
+
+        profile.enableGlobalRanking()
+        val firstId = profile.playerId
+        assertTrue(profile.globalRanking)
+        assertTrue(java.util.UUID.fromString(firstId).version() == 4)
+        profile.reset()
+        assertEquals(firstId, profile.playerId)
+        assertTrue(profile.globalRanking)
+
+        profile.disableGlobalRanking()
+        assertFalse(profile.globalRanking)
+        assertEquals(firstId, profile.playerId)
+        val fromFile = Profile(file).also { it.load() }
+        assertFalse(fromFile.globalRanking)
+        assertEquals(firstId, fromFile.playerId)
+        fromFile.renewRankingId()
+        assertTrue(fromFile.playerId != firstId)
+    }
+
+    @Test
+    fun playGamesCloudCannotImportConsentOrRankingId() {
+        val local = Profile(tmpFile())
+        val remote = Profile(tmpFile())
+        remote.enableGlobalRanking()
+        remote.medals = 250
+        assertFalse(remote.toCloudJson().contains("\"globalRanking\""))
+        assertFalse(remote.toCloudJson().contains("\"playerId\""))
+
+        local.fromJson(remote.toJson())
+        assertFalse(local.globalRanking)
+        assertEquals("", local.playerId)
+        assertEquals(250, local.medals)
+
+        local.enableGlobalRanking()
+        val id = local.playerId
+        val other = Profile(tmpFile())
+        other.enableGlobalRanking()
+        other.medals = 300
+        local.fromJson(other.toJson())
+        assertTrue(local.globalRanking)
+        assertEquals(id, local.playerId)
+        assertEquals(300, local.medals)
+    }
+
+    @Test
+    fun malformedIdAndLegacyFileDisableGlobalRanking() {
+        val file = tmpFile()
+        file.writeText("""{"playerId":"fake","globalRanking":true}""")
+        val malformed = Profile(file).also { it.load() }
+        assertFalse(malformed.globalRanking)
+        assertEquals("", malformed.playerId)
+        file.writeText("""{"name":"Dawny profil"}""")
+        val legacy = Profile(file).also { it.load() }
+        assertFalse(legacy.globalRanking)
+        assertEquals("", legacy.playerId)
+    }
+
+    @Test
+    fun researchFormulaMatchesPreviousBonuses() {
+        val profile = Profile(tmpFile())
+        for (def in Profile.research) {
+            profile.levels[def.key] = def.max
+        }
+        val p = profile.bonuses()
+        assertEquals(200f, p.startGold, 0.001f)
+        assertEquals(1.72f, p.incomeMul, 0.001f)
+        assertEquals(1.6f, p.unitHpMul, 0.001f)
+        assertEquals(1.6f, p.unitDmgMul, 0.001f)
+        assertEquals(1.8f, p.baseHpMul, 0.001f)
+        assertEquals(1.6f, p.turretDmgMul, 0.001f)
+        assertEquals(1.5f, p.trainMul, 0.001f)
+        assertEquals(1.5f, p.xpMul, 0.001f)
+        assertEquals(18, p.popCap)
+        assertEquals(0.6f, p.abilityCdMul, 0.001f)
+        assertEquals(4, p.turretSlots)
+        assertTrue(p.eliteUnlocked)
+        assertTrue(p.rallyUnlocked)
+    }
+
+    @Test
     fun personalBestSurvivesRename() {
         val p = Profile(tmpFile())
         p.name = "Alfa"

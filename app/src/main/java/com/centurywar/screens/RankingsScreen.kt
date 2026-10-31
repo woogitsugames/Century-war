@@ -27,6 +27,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private var cachedEntries: List<com.centurywar.meta.ScoreEntry> = emptyList()
     private var cachedScores = emptyArray<String>()
     private val global = btn(-3)
+    private val globalScores = btn(-4)
     private val tabs = Array(4) { btn(it) }
     private var tab = 0
     private val panel = RectF()
@@ -87,18 +88,25 @@ class RankingsScreen(g: Game) : Screen(g) {
         statsButton.set(panel.centerX() - sw / 2, panel.bottom - 50 * dp, sw, 31 * dp)
         cacheRows()
         global.visible = g.online.available
+        globalScores.visible = g.scores != null && g.profile.globalRanking
+        val both = global.visible && globalScores.visible
+        val gw = min(if (both) 185 * dp else 270 * dp, (pw - 36 * dp - if (both) 12 * dp else 0f) / if (both) 2 else 1)
         if (global.visible) {
-            global.label = L["global_ranking"]
-            global.iconId = Icons.GLOBE
-            val gw = min(270 * dp, pw - 32 * dp)
-            global.set(panel.centerX() - gw / 2, panel.bottom - 96 * dp, gw, 38 * dp)
+            global.label = L["play_games"]
+            global.iconId = Icons.TROPHY
+            global.set(panel.centerX() - if (both) gw + 6 * dp else gw / 2, panel.bottom - 96 * dp, gw, 38 * dp)
+        }
+        if (globalScores.visible) {
+            globalScores.label = L["global_ranking"]
+            globalScores.iconId = Icons.GLOBE
+            globalScores.set(panel.centerX() + if (both) 6 * dp else -gw / 2, panel.bottom - 96 * dp, gw, 38 * dp)
         }
     }
 
     override fun update(dt: Float) {
         this.dt = dt
         // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
-        if (global.visible != g.online.available) layout()
+        if (global.visible != g.online.available || globalScores.visible != (g.scores != null && g.profile.globalRanking)) layout()
         for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
     }
 
@@ -111,14 +119,15 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.button(c, achievementsButton, 13f)
         ui.button(c, replayListButton, 13f)
         ui.button(c, statsButton, 12f)
-        if (global.visible) ui.button(c, global, 14f)
+        if (global.visible) ui.button(c, global, 12f)
+        if (globalScores.visible) ui.button(c, globalScores, 14f)
         chrome.title(c, L["rankings"])
         val list = cachedEntries
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
         var y = panel.top + 54 * dp
-        val bottomLimit = panel.bottom - (if (global.visible) 112 * dp else 62 * dp)
+        val bottomLimit = panel.bottom - (if (global.visible || globalScores.visible) 112 * dp else 62 * dp)
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
             ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
@@ -181,6 +190,7 @@ class RankingsScreen(g: Game) : Screen(g) {
             102 -> g.push(ReplayListScreen(g))
             103 -> g.push(StatsScreen(g))
             -3 -> if (g.online.available) g.online.showUi(board(tab))
+            -4 -> if (g.scores != null && g.profile.globalRanking) g.push(GlobalRankingsScreen(g))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
             in 0..3 -> { tab = b.id; cacheRows() }
         }

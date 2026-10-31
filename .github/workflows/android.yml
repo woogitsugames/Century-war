@@ -49,6 +49,8 @@ jobs:
             --tests '*Endless*' \
             --tests '*AiPersonality*' \
             --tests '*MotionTest*' \
+            --tests '*ScoreClientTest*' \
+            --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
             --tests '*Replay*' \
             --tests '*Counter*' \

@@ -724,6 +724,12 @@ class BattleScreen(
             else -> Icons.BOLT
         }
         tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        // Sam zapis powtórki i HTTPS wykonuje osobny wątek, nigdy pętla gry.
+        // Wyniki z podejść treningowych daily i wczesne kapitulacje pomijamy.
+        if (pr.globalRanking && battle.stepCount >= 60 && (cfg.mode != Mode.DAILY || rankedDaily)) {
+            g.scores?.submit(cfg, commands.log(), score, rankedDaily, pr.name, pr.playerId,
+                pr.researchLevels(), pr.skirmishDiff)
+        }
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         if (won) g.host.onBattleWon()

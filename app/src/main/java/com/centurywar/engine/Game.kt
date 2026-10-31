@@ -13,6 +13,7 @@ import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.ScoreClient
 import com.centurywar.meta.Missions
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
@@ -29,6 +30,7 @@ interface Host {
     fun onBattleWon() {}
     fun onNotificationSettingsChanged() {}
     fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {}
+    fun requestGlobalRankingConsent(onAccepted: () -> Unit) {}
 }
 
 /**
@@ -52,6 +54,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var quality = Quality(Quality.HIGH)
         private set
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
+    var scores: ScoreClient? = null
     var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null

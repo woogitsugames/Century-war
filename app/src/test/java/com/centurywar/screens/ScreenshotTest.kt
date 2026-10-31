@@ -29,6 +29,7 @@ import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.ScoreClient
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -637,6 +638,29 @@ class ScreenshotTest {
             siege.time = Battle.SIEGE_START + 7f
             val sh = field(siegeScreen, "hints").get(siegeScreen) as HintOverlay
             capture(sh, HintOverlay.SIEGE, "hint_siege", "siege")
+        }
+    }
+
+    /** Zrzuty ustawień i rankingu serwera: tryb bez zgody, bez żadnych zapytań HTTP. */
+    @Test
+    fun globalRankingMenus() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val queue = File.createTempFile("score", ".json").apply { delete() }
+            val scores = ScoreClient(queue, "https://scores.example.invalid",
+                "testing-key-at-least-32-characters-long", g.profile)
+            g.scores = scores // Domyślnie wyłączony: nie wysyła żadnego żądania.
+            g.setScreen(SettingsScreen(g))
+            shot(g, "${tag}_global_settings")
+            g.setScreen(RankingsScreen(g))
+            shot(g, "${tag}_global_rankings_local")
+            g.setScreen(GlobalRankingsScreen(g))
+            shot(g, "${tag}_global_rankings")
+            scores.close()
         }
     }
 }
