@@ -100,6 +100,33 @@ class Profile(private val file: File) {
     var lastRankedDaily = -1L
     var tutorialDone = false
 
+    /** Identyfikator powstaje dopiero po świadomym włączeniu rankingu. */
+    var playerId = ""
+        private set
+    var globalRanking = false
+        private set
+
+    fun enableGlobalRanking() {
+        if (playerId.isEmpty()) playerId = UUID.randomUUID().toString()
+        globalRanking = true
+        save()
+    }
+
+    fun disableGlobalRanking() {
+        globalRanking = false
+        save()
+    }
+
+    fun renewRankingId() {
+        playerId = UUID.randomUUID().toString()
+        save()
+    }
+
+    private fun validRankingId(id: String): Boolean {
+        val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return false
+        return uuid.version() == 4 && uuid.variant() == 2 && uuid.toString() == id
+    }
+
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
     var fpsCap = 0           // 0 = częstotliwość ekranu, 30, 60
@@ -196,6 +223,8 @@ class Profile(private val file: File) {
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("tutorialDone", tutorialDone)
+        o.put("playerId", playerId)
+        o.put("globalRanking", globalRanking)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
@@ -382,6 +411,9 @@ class Profile(private val file: File) {
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         tutorialDone = json.optBoolean("tutorialDone", false)
+        val storedId = json.optString("playerId", "")
+        playerId = if (validRankingId(storedId)) storedId else ""
+        globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
@@ -409,6 +441,7 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        playerId = ""; globalRanking = false
         quality = 0; fpsCap = 0; vibration = true; sound = true
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
