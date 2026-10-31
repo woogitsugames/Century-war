@@ -156,6 +156,7 @@ class ProfileCloudTest {
             val profile = Profile(file)
             profile.stars[1] = 3
             profile.save()
+            Profile.awaitHintWrites()
             assertTrue(file.readText().contains("\"v\":" + Profile.CURRENT_VERSION))
             val loaded = Profile(file)
             loaded.load()
