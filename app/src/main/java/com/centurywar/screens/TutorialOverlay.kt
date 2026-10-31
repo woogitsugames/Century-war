@@ -40,6 +40,9 @@ class TutorialOverlay(
         val unitBtn: Array<Button>,
         val evolveBtn: Button,
         val turretBtn: Button,
+        val armoryBtn: Button,
+        val stanceBtn: Button,
+        val rallyBtn: Button,
         val barrageBtn: Button,
         val slotBuy: Array<Button>,
         val doctrineBtn: Array<Button>,
@@ -69,14 +72,18 @@ class TutorialOverlay(
         const val S_EVOLVE = 4
         const val S_DOCTRINE = 5
         const val S_TURRET = 6
-        const val S_BARRAGE = 7
-        const val S_CAMERA = 8
-        const val S_DONE = 9
-        const val STEPS = 9 // numerowane kroki (bez końcowego "Gotowe")
+        const val S_ARMORY = 7
+        const val S_STANCE = 8
+        const val S_RALLY = 9
+        const val S_BARRAGE = 10
+        const val S_CAMERA = 11
+        const val S_DONE = 12
+        const val STEPS = 12 // numerowane kroki (bez końcowego "Gotowe")
 
         private val TITLES = arrayOf(
             "tut_melee_t", "tut_income_t", "tut_ranged_t", "tut_kill_t", "tut_evolve_t",
-            "tut_doctrine_t", "tut_turret_t", "tut_barrage_t", "tut_camera_t", "tut_done_t",
+            "tut_doctrine_t", "tut_turret_t", "tut_armory54_t", "tut_stance54_t",
+            "tut_rally54_t", "tut_barrage_t", "tut_camera_t", "tut_done_t",
         )
         private val SIZES = floatArrayOf(17f, 15.5f, 14f, 12.5f)
         private const val MAX_LINES = 12
@@ -150,7 +157,7 @@ class TutorialOverlay(
 
     private val gating: Boolean
         get() = showing && !finished && when (step) {
-            S_MELEE, S_RANGED, S_TURRET, S_BARRAGE -> true
+            S_MELEE, S_RANGED, S_TURRET, S_ARMORY, S_STANCE, S_RALLY, S_BARRAGE -> true
             S_EVOLVE -> battle.canEvolve(p)
             else -> false
         }
@@ -178,6 +185,9 @@ class TutorialOverlay(
         S_EVOLVE -> p.era > battle.cfg.startEra || battle.cfg.maxEra <= battle.cfg.startEra
         S_DOCTRINE -> battle.pendingChoice == null && (p.doctrines.isNotEmpty() || p.era == battle.cfg.startEra)
         S_TURRET -> p.slots == 0 || anyTurret()
+        S_ARMORY -> p.armory > 0 || p.armory >= 15
+        S_STANCE -> p.hold
+        S_RALLY -> !p.rallyUnlocked || p.abilityCd[1] > 0f
         S_BARRAGE -> p.abilityCd[0] > 0f
         else -> false
     }
@@ -188,6 +198,9 @@ class TutorialOverlay(
         S_EVOLVE -> battle.canEvolve(p)
         S_DOCTRINE -> battle.pendingChoice != null
         S_TURRET -> waited >= 2f
+        S_ARMORY -> p.armory < 15 && (p.aliveCount >= p.cap || p.gold >= battle.armoryCost(p) * 1.35f)
+        S_STANCE -> !p.hold && enemiesNear(700f) >= 2
+        S_RALLY -> p.rallyUnlocked && battle.abilityReady(p, 1) && enemiesNear(700f) >= 2
         S_BARRAGE -> battle.abilityReady(p, 0) && enemiesNear(1350f) >= 3
         S_CAMERA -> waited >= 3f
         else -> true
@@ -198,6 +211,8 @@ class TutorialOverlay(
         S_INCOME -> 15f
         S_KILL -> 90f
         S_EVOLVE -> 420f
+        S_ARMORY -> 30f
+        S_STANCE, S_RALLY -> 25f
         S_BARRAGE -> 70f
         else -> 30f
     }
@@ -215,6 +230,9 @@ class TutorialOverlay(
         S_EVOLVE -> p.era > battle.cfg.startEra
         S_DOCTRINE -> battle.pendingChoice == null
         S_TURRET -> anyTurret()
+        S_ARMORY -> p.armory > 0
+        S_STANCE -> p.hold
+        S_RALLY -> p.abilityCd[1] > 0f
         S_BARRAGE -> p.abilityCd[0] > 0f
         S_CAMERA -> nextPressed || (cameraMoved && phaseT > 1.2f)
         else -> nextPressed
@@ -239,7 +257,8 @@ class TutorialOverlay(
             S_MELEE -> ensureGold(Defs.unit(p.era, Role.MELEE).cost)
             S_RANGED -> { ensureGold(Defs.unit(p.era, Role.RANGED).cost); baseline = countRanged() }
             S_TURRET -> ensureGold(p.turretCost())
-            S_BARRAGE, S_CAMERA -> t.closeTurrets() // panel wież zasłaniałby pole bitwy
+            S_ARMORY -> { t.closeTurrets(); ensureGold(battle.armoryCost(p)) }
+            S_STANCE, S_RALLY, S_BARRAGE, S_CAMERA -> t.closeTurrets() // odsłaniamy HUD i pole bitwy
             S_DONE -> markDone()
         }
         title = L[TITLES[step]]
@@ -301,6 +320,9 @@ class TutorialOverlay(
             S_MELEE -> b === t.unitBtn[0]
             S_RANGED -> b === t.unitBtn[1]
             S_TURRET -> b === t.turretBtn
+            S_ARMORY -> b === t.armoryBtn
+            S_STANCE -> b === t.stanceBtn
+            S_RALLY -> b === t.rallyBtn
             S_BARRAGE -> b === t.barrageBtn
             S_EVOLVE -> b === t.evolveBtn
             else -> true
@@ -324,7 +346,10 @@ class TutorialOverlay(
         S_EVOLVE -> if (battle.canEvolve(p)) "tut_evolve" else "tut_evolve_wait"
         S_DOCTRINE -> "tut_doctrine"
         S_TURRET -> if (t.turretsOpen()) "tut_turret_buy" else "tut_turret_open"
-        S_BARRAGE -> if (t.barrageAiming()) "tut_barrage_aim" else "tut_barrage"
+        S_ARMORY -> "tut_armory54"
+        S_STANCE -> "tut_stance54"
+        S_RALLY -> "tut_rally54"
+        S_BARRAGE -> if (t.barrageAiming()) "tut_barrage_drag54" else "tut_barrage54"
         S_CAMERA -> "tut_camera"
         else -> "tut_done"
     }
@@ -375,6 +400,9 @@ class TutorialOverlay(
                 val s = battle.freeSlot(p)
                 hole.set(t.slotBuy[if (s >= 0) s else 0].r)
             } else hole.set(t.turretBtn.r)
+            S_ARMORY -> hole.set(t.armoryBtn.r)
+            S_STANCE -> hole.set(t.stanceBtn.r)
+            S_RALLY -> hole.set(t.rallyBtn.r)
             S_BARRAGE -> if (t.barrageAiming()) barrageTargetHole() else hole.set(t.barrageBtn.r)
             S_CAMERA -> { if (t.minimap.width() <= 0f) return false; hole.set(t.minimap) }
             else -> return false
@@ -402,7 +430,7 @@ class TutorialOverlay(
         }
         val hasHole = target()
         val big = hasHole && hole.height() > (sb - st) * 0.35f
-        val hand = hasHole && !big && step != S_DOCTRINE
+        val hand = hasHole && !big && step != S_DOCTRINE && !(step == S_BARRAGE && t.barrageAiming())
 
         // 1. przyciemnienie z wycięciem
         val dimA = if (gating) 170 else if (step == S_DOCTRINE) 110 else 120
@@ -500,6 +528,22 @@ class TutorialOverlay(
             val tipY = if (down) hole.top - 6 * dp - bob else hole.bottom + 6 * dp + bob
             drawHand(c, hole.centerX(), tipY, 46 * dp, down)
         }
+        if (hasHole && step == S_BARRAGE && t.barrageAiming()) drawBarrageDrag(c)
+    }
+
+    /** Tor palca nad celem; znacznik ostrzału rysuje ekran bitwy. */
+    private fun drawBarrageDrag(c: Canvas) {
+        val x1 = hole.left + 18f * dp
+        val x2 = hole.right - 18f * dp
+        if (x2 <= x1) return
+        val y = hole.centerY()
+        handLine.color = Ui.GOLD
+        handLine.strokeWidth = 2.5f * dp
+        c.drawLine(x1, y, x2, y, handLine)
+        handFill.color = Ui.GOLD
+        c.drawCircle(x2, y, 4f * dp, handFill)
+        val travel = (sin(clock * 2.5f) + 1f) * 0.5f
+        drawHand(c, x1 + (x2 - x1) * travel, y, 27f * dp, true)
     }
 
     /** Kreskówkowa dłoń z wyciągniętym palcem; czubek palca w ([x], [y]). */
