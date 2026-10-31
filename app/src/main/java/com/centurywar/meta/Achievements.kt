@@ -6,6 +6,8 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
+import com.centurywar.game.Weather
+import com.centurywar.game.Weekly
 
 enum class AchievementCategory { COMBAT, CAMPAIGN, ENDLESS, RESEARCH, DAILY, TACTICS }
 
@@ -14,6 +16,9 @@ enum class AchievementMetric {
     DAILY_DAYS, INSANE_WINS, DOCTRINES, ORBITAL_REACHED, NO_TURRET_WINS,
     ELITE_SAVED_WINS, PERFECT_WINS, ARMORY_TEN, TURRETS_BUILT,
     BARRAGES_CAST, ELITES_TRAINED, EVOLUTIONS, FAST_WINS,
+    STEAM_VARIANTS, SILICON_VARIANTS, RAIN_WINS, WIND_WINS, NIGHT_WINS,
+    BARRAGE_EIGHT, BOSS_KNOCKBACK, BOSS_AURA, BOSS_SHIELD, BOSS_RECRUITER,
+    BOSS_RAGE, WEEKLY_GOLD, CUSTOM_THREE, REPLAY_RECORD,
 }
 
 data class AchievementDef(
@@ -77,6 +82,20 @@ object Achievements {
         def("elites_100", AchievementMetric.ELITES_TRAINED, 100, 210, AchievementCategory.COMBAT),
         def("evolutions_50", AchievementMetric.EVOLUTIONS, 50, 170, AchievementCategory.TACTICS),
         def("fast_win", AchievementMetric.FAST_WINS, 1, 95, AchievementCategory.TACTICS, true),
+        def("steam_twins", AchievementMetric.STEAM_VARIANTS, 2, 140, AchievementCategory.TACTICS),
+        def("silicon_twins", AchievementMetric.SILICON_VARIANTS, 2, 180, AchievementCategory.TACTICS),
+        def("rain_victory", AchievementMetric.RAIN_WINS, 1, 55, AchievementCategory.TACTICS),
+        def("wind_victory", AchievementMetric.WIND_WINS, 1, 55, AchievementCategory.TACTICS),
+        def("night_victory", AchievementMetric.NIGHT_WINS, 1, 65, AchievementCategory.TACTICS),
+        def("barrage_eight", AchievementMetric.BARRAGE_EIGHT, 1, 160, AchievementCategory.COMBAT, true),
+        def("boss_knockback", AchievementMetric.BOSS_KNOCKBACK, 1, 70, AchievementCategory.ENDLESS),
+        def("boss_aura", AchievementMetric.BOSS_AURA, 1, 90, AchievementCategory.ENDLESS),
+        def("boss_shield", AchievementMetric.BOSS_SHIELD, 1, 110, AchievementCategory.ENDLESS),
+        def("boss_recruiter", AchievementMetric.BOSS_RECRUITER, 1, 130, AchievementCategory.ENDLESS),
+        def("boss_rage", AchievementMetric.BOSS_RAGE, 1, 150, AchievementCategory.ENDLESS),
+        def("weekly_gold", AchievementMetric.WEEKLY_GOLD, 1, 200, AchievementCategory.ENDLESS),
+        def("custom_three", AchievementMetric.CUSTOM_THREE, 1, 105, AchievementCategory.TACTICS),
+        def("replay_record", AchievementMetric.REPLAY_RECORD, 1, 90, AchievementCategory.TACTICS),
     )
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
@@ -96,6 +115,8 @@ object Achievements {
             profile.level(it.key) >= it.max
         }.toLong()
         AchievementMetric.DOCTRINES -> Integer.bitCount(profile.achievementDoctrineMask).toLong()
+        AchievementMetric.STEAM_VARIANTS, AchievementMetric.SILICON_VARIANTS ->
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 3L).toLong()
         else -> profile.achievementCounters[definition.metric.name] ?: 0L
     }
 
@@ -104,6 +125,23 @@ object Achievements {
         val old = (profile.achievementCounters[metric.name] ?: 0L).coerceAtLeast(0L)
         profile.achievementCounters[metric.name] =
             if (amount > Long.MAX_VALUE - old) Long.MAX_VALUE else old + amount
+    }
+
+    private fun rememberVariants(profile: Profile, metric: AchievementMetric, mask: Int) {
+        if (mask == 0) return
+        val key = metric.name
+        profile.achievementCounters[key] =
+            (((profile.achievementCounters[key] ?: 0L).toInt() or mask) and 3).toLong()
+    }
+
+    private fun defeatedBossMask(battle: Battle): Int {
+        if (battle.bossesDefeated <= 0) return 0
+        var mask = 0
+        for (u in battle.units) {
+            if (u.side == 1 && u.isBoss && !u.alive && u.hp <= 0f &&
+                u.bossKind in 1..5) mask = mask or (1 shl (u.bossKind - 1))
+        }
+        return mask
     }
 
     private fun unlockReady(profile: Profile, online: OnlineAchievements): List<AchievementDef> {
@@ -126,11 +164,13 @@ object Achievements {
     fun onBattleEnd(
         profile: Profile, battle: Battle, cfg: BattleConfig, won: Boolean,
         online: OnlineAchievements = OnlineAchievements.NoOp,
+        events: AchievementBattleTracker? = null,
     ): List<AchievementDef> {
         if (battle.achievementsRecorded || !battle.over || cfg !== battle.cfg || won != (battle.winner == 0)) {
             return emptyList()
         }
         battle.achievementsRecorded = true
+        events?.afterStep()
 
         if (profile.battles < Int.MAX_VALUE) profile.battles++
         if (won && profile.wins < Int.MAX_VALUE) profile.wins++
@@ -160,6 +200,38 @@ object Achievements {
         ) add(profile, AchievementMetric.ORBITAL_REACHED)
         if (won && battle.time <= 300f) add(profile, AchievementMetric.FAST_WINS)
 
+        // Warianty liczą się dopiero po wygranej; maski 1 i 2 przechodzą między bitwami.
+        if (won) {
+            val variant = player.eraVariant
+            val eraKey = Defs.eraKeys.getOrNull(player.era)
+            val currentMask = if (variant in 0..1) 1 shl variant else 0
+            rememberVariants(profile, AchievementMetric.STEAM_VARIANTS,
+                events?.steamMask ?: if (eraKey == "era_steam") currentMask else 0)
+            rememberVariants(profile, AchievementMetric.SILICON_VARIANTS,
+                events?.siliconMask ?: if (eraKey == "era_silicon") currentMask else 0)
+            if (cfg.mode != Mode.ENDLESS) when (cfg.weather) {
+                Weather.RAIN -> add(profile, AchievementMetric.RAIN_WINS)
+                Weather.WIND -> add(profile, AchievementMetric.WIND_WINS)
+                Weather.NIGHT -> add(profile, AchievementMetric.NIGHT_WINS)
+                Weather.CLEAR -> {}
+            }
+            if (cfg.mode == Mode.SKIRMISH && cfg.modifiers.size == 3)
+                add(profile, AchievementMetric.CUSTOM_THREE)
+        }
+        if (events?.barrageEight == true) add(profile, AchievementMetric.BARRAGE_EIGHT)
+        if (cfg.mode == Mode.ENDLESS) {
+            val bossMask = events?.bossMask ?: defeatedBossMask(battle)
+            val bossMetrics = arrayOf(AchievementMetric.BOSS_KNOCKBACK, AchievementMetric.BOSS_AURA,
+                AchievementMetric.BOSS_SHIELD, AchievementMetric.BOSS_RECRUITER, AchievementMetric.BOSS_RAGE)
+            for (i in bossMetrics.indices) {
+                if ((bossMask and (1 shl i)) != 0 &&
+                    (profile.achievementCounters[bossMetrics[i].name] ?: 0L) == 0L
+                ) add(profile, bossMetrics[i])
+            }
+            if (cfg.weekly >= 0L && battle.wave >= Weekly.threshold(2))
+                add(profile, AchievementMetric.WEEKLY_GOLD)
+        }
+
         add(profile, AchievementMetric.TURRETS_BUILT, player.turretsBuilt.toLong())
         add(profile, AchievementMetric.BARRAGES_CAST, player.barragesUsed.toLong())
         add(profile, AchievementMetric.ELITES_TRAINED, player.elitesTrained.toLong())
@@ -180,6 +252,21 @@ object Achievements {
         online: OnlineAchievements = OnlineAchievements.NoOp,
     ): List<AchievementDef> {
         if (profile.level(def.key) <= 0 || Profile.research.none { it.key == def.key }) return emptyList()
+        val unlocked = unlockReady(profile, online)
+        if (unlocked.isNotEmpty()) profile.save()
+        return unlocked
+    }
+
+    /** Odtworzenie własnego najlepszego wyniku przez co najmniej 10 s realnego oglądania. */
+    fun onReplayWatched(
+        profile: Profile, replayId: String?,
+        online: OnlineAchievements = OnlineAchievements.NoOp,
+    ): List<AchievementDef> {
+        if (replayId.isNullOrBlank() || profile.boards.values.none {
+                it.firstOrNull()?.replay == replayId
+            }) return emptyList()
+        val key = AchievementMetric.REPLAY_RECORD.name
+        if ((profile.achievementCounters[key] ?: 0L) == 0L) profile.achievementCounters[key] = 1L
         val unlocked = unlockReady(profile, online)
         if (unlocked.isNotEmpty()) profile.save()
         return unlocked
