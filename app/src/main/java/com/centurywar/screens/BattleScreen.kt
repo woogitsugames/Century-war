@@ -139,6 +139,8 @@ class BattleScreen(
         const val QUIT = 22
         const val CONTINUE = 23
         const val WATCH_REPLAY = 24
+        const val PAUSE_VIBRATION = 25
+        const val PAUSE_SPEED = 26
         const val DOCTRINE0 = 30 // 30..32
         const val VARIANT0 = 80 // 80..81
         const val SLOT_BUY0 = 40 // 40..43
@@ -169,6 +171,13 @@ class BattleScreen(
     private val evolveBtn = btn(EVOLVE)
     private val pauseBtn = btn(PAUSE)
     private val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
+    private val pauseVibrationBtn = btn(PAUSE_VIBRATION)
+    private val pauseSpeedBtn = btn(PAUSE_SPEED)
+    private val pauseSfxRect = RectF()
+    private val pauseMusicRect = RectF()
+    private var pauseWide = false
+    private var pauseSliderPointer = -1
+    private var pauseSliderMusic = false
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
     private val replayEnd = btn(WATCH_REPLAY)
@@ -279,11 +288,32 @@ class BattleScreen(
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
-        val bw = min(270 * dp, w * 0.6f)
-        val bh = 50 * dp
-        val pmH = bh * 3 + 12 * dp * 2 + (if (cfg.mode == Mode.SKIRMISH) 162 else 96) * dp
-        pausePanel.set(w / 2 - bw / 2 - 28 * dp, h / 2 - pmH / 2, w / 2 + bw / 2 + 28 * dp, h / 2 + pmH / 2)
-        for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, pausePanel.top + (if (cfg.mode == Mode.SKIRMISH) 118 else 52) * dp + i * (bh + 12 * dp), bw, bh)
+        // 720p poziomo: dwie kolumny; Fold i telefon pionowo: jedna kolumna.
+        val freeW = w - g.insetL - g.insetR - 24 * dp
+        val freeH = h - g.insetT - g.insetB - 20 * dp
+        pauseWide = freeW >= 650 * dp
+        val pw = min(if (pauseWide) 780 * dp else 520 * dp, freeW)
+        val ph = min(if (pauseWide) 354 * dp else 520 * dp, freeH)
+        val cx = (g.insetL + w - g.insetR) * 0.5f
+        val cy = (g.insetT + h - g.insetB) * 0.5f
+        pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
+        val controlsX = if (pauseWide) pausePanel.left + pw * 0.56f else pausePanel.left + 20 * dp
+        val controlsRight = pausePanel.right - 20 * dp
+        val sliderX = controlsX + (if (pauseWide) 90 else 108) * dp
+        val sfxY = pausePanel.top + (if (pauseWide) 76 else 297) * dp
+        val musicY = pausePanel.top + (if (pauseWide) 128 else 336) * dp
+        pauseSfxRect.set(sliderX, sfxY, controlsRight, sfxY + 36 * dp)
+        pauseMusicRect.set(sliderX, musicY, controlsRight, musicY + 36 * dp)
+        pauseVibrationBtn.set(controlsRight - 96 * dp,
+            pausePanel.top + (if (pauseWide) 186 else 382) * dp, 96 * dp, 34 * dp)
+        pauseSpeedBtn.set(controlsRight - 96 * dp,
+            pausePanel.top + (if (pauseWide) 238 else 422) * dp, 96 * dp, 34 * dp)
+        val buttonGap = 8 * dp
+        val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
+        for (i in pauseMenu.indices) pauseMenu[i].set(
+            pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
+            pausePanel.bottom - 54 * dp, buttonW, 42 * dp)
+        pauseModifierWidth = -1f
         layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
         val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
