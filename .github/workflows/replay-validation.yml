@@ -18,9 +18,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: Instalacja SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: APK debug
         run: ./gradlew :app:assembleDebug --console=plain
       - name: Testy bazowe
