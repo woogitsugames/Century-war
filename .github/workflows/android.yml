@@ -111,6 +111,7 @@ jobs:
             --tests '*BackLocaleTest*' \
             --tests '*ScreenshotTest*' \
             --tests '*ArtGalleryTest*' \
+            --tests '*RendererStressTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz zrzuty PNG
         if: ${{ always() }}

@@ -130,6 +130,31 @@ class ScreenshotTest {
         }
     }
 
+    /** Czytelność salwy i znaczników na małym telefonie oraz rozłożonym Foldzie. */
+    @Test
+    fun barrageDuringBattle() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            g.profile.screenShake = 2
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 77L, 1f, startEra = 6))
+            g.setScreen(bs)
+            val battle = field(bs, "battle").get(bs) as Battle
+            assertTrue(battle.commandController!!.barrage(560f))
+            assertTrue(battle.castBarrage(battle.sides[1], 560f))
+            val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            repeat(42) { g.frame(canvas, Battle.STEP) }
+            File(out, tag + "_battle_barrage.png").outputStream().use {
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            bmp.recycle()
+        }
+    }
+
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
