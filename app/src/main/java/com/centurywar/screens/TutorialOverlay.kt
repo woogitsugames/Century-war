@@ -469,8 +469,7 @@ class TutorialOverlay(
             else -> min(top0, sb - ph)
         }
         panel.set(left, top, left + pw, top + ph)
-        ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, title, 18f, Ui.RIBBON, pw * 0.45f, Ui.GOLD, pw - 20 * dp)
+        HintFrame.chrome(c, ui, panel, title, dp)
         var y = panel.top + 24 * dp
         if (counter.isNotEmpty()) {
             y += 13 * dp
@@ -544,28 +543,7 @@ class TutorialOverlay(
         if (key == wrapKey && width == wrapW) return
         wrapKey = key; wrapW = width
         val s = L[key]
-        for (i in SIZES.indices) lineCount[i] = wrapInto(s, width, SIZES[i], lines[i])
+        for (i in SIZES.indices) lineCount[i] = HintFrame.wrapInto(g.ui, s, width, SIZES[i], lines[i])
     }
 
-    private fun wrapInto(s: String, width: Float, size: Float, out: Array<String?>): Int {
-        var n = 0
-        var start = 0
-        var lastFit = -1
-        var i = 0
-        while (i <= s.length && n < MAX_LINES) {
-            if (i == s.length || s[i] == ' ') {
-                val wpx = g.ui.measure(s.substring(start, i), size)
-                if (wpx > width && lastFit > start) {
-                    out[n++] = s.substring(start, lastFit)
-                    start = lastFit + 1
-                    lastFit = -1
-                    continue // ponownie sprawdź to samo słowo w nowej linii
-                }
-                if (i == s.length) { out[n++] = s.substring(start); break }
-                lastFit = i
-            }
-            i++
-        }
-        return n
-    }
 }

@@ -80,6 +80,8 @@ class BattleScreen(
     private var rewardText = ""
     private var newRecord = false
     private var tipKey = ""
+    private var tipText = ""
+    private var tipIcon = Icons.BOLT
 
     private companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
@@ -180,9 +182,16 @@ class BattleScreen(
             { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
         )) else null
 
+    /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
+    private val hints = HintOverlay(g, battle, HintOverlay.Targets(
+        unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
+        goldRect, xpRect, mini, fieldRect,
+    ), rankedDaily)
+
     init {
-        // przyciski samouczka na początku listy: mają pierwszeństwo przed HUD pod spodem
+        // OK oraz przyciski samouczka mają pierwszeństwo przed HUD.
         tut?.let { buttons.add(0, it.nextBtn); buttons.add(0, it.skipBtn) }
+        buttons.add(0, hints.okBtn)
     }
 
     override fun layout() {
@@ -325,6 +334,11 @@ class BattleScreen(
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
+        val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
+            battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
+        hints.update(dt, finished || paused || (tut != null && !tut.finished) ||
+            battle.pendingChoice != null || battle.pendingCards != null ||
+            showTurrets || showUpgrade >= 0 || criticalDaily)
     }
 
     private var turretSlotsLaid = -1
@@ -344,7 +358,7 @@ class BattleScreen(
             b.subIcon = if (locked) Icons.LOCK else Icons.COIN
             b.progress = if (p.queueSize > 0 && p.queue[0] == def.id) p.trainT / def.trainTime else -1f
             val up = unitUpgrade[i]
-            up.visible = !modal && !locked && tut == null && p.unitTier[i] < Defs.MAX_UNIT_TIER
+            up.visible = !modal && !locked && (tut == null || tut.finished) && p.unitTier[i] < Defs.MAX_UNIT_TIER
             up.enabled = true // Dostęp do opisu także wtedy, gdy brakuje złota.
             up.iconId = Icons.CHEVRONS
             up.iconTint = Ui.GOLD
@@ -476,8 +490,10 @@ class BattleScreen(
     override fun onClick(b: Button) {
         if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
         val p = battle.player
+        if (hints.onClick(b)) return
         val t = tut
         if (t != null && (t.onClick(b) || !t.allows(b))) return
+        hints.onAction()
         when (b.id) {
             in UNIT0..UNIT0 + 3 -> commands.queue(roles[b.id - UNIT0])
             in UNIT_UPGRADE0..UNIT_UPGRADE0 + 3 -> {
@@ -685,6 +701,11 @@ class BattleScreen(
         Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars)
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
         tipKey = if (won) "" else when {
+            !battle.endless && battle.time >= Battle.SIEGE_START + 35f -> "tip_siege"
+            battle.player.aliveCount >= battle.player.cap &&
+                battle.player.gold >= battle.armoryCost(battle.player) * 1.3f -> "tip_cap"
+            counterRoleLoss() -> "tip_counter"
+            battle.player.spawned >= 6 && battle.player.unitTier.all { it == 1 } -> "tip_upgrade"
             battle.enemy.era > battle.player.era -> "tip_era"
             battle.enemy.goldEarned > battle.player.goldEarned * 1.25f -> "tip_eco"
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
@@ -692,11 +713,34 @@ class BattleScreen(
         }
         pr.recordBattle(cfg.mode, won, battle.time.toInt())
         g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
+        tipIcon = when (tipKey) {
+            "tip_siege" -> Icons.HOURGLASS
+            "tip_cap" -> Icons.HELMET
+            "tip_counter" -> Icons.CROSSED_SWORDS
+            "tip_upgrade" -> Icons.CHEVRONS
+            "tip_era" -> Icons.EVOLVE
+            "tip_eco" -> Icons.COINS
+            "tip_turret" -> Icons.TOWER
+            else -> Icons.BOLT
+        }
+        tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
         if (won) g.host.onBattleWon()
         g.haptic(if (won) 80 else 160)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 1f, 0)
+    }
+
+    /** Rozpoznaj kontrę wobec najczęściej szkolonej roli; tylko liczniki z bitwy. */
+    private fun counterRoleLoss(): Boolean {
+        val own = battle.player.spawnedByRole
+        val foe = battle.enemy.spawnedByRole
+        var lead = 0
+        for (i in 1..2) if (own[i] > own[lead]) lead = i
+        if (own[lead] < 6) return false
+        val counter = when (lead) { 0 -> 2; 1 -> 0; 2 -> 1; else -> return false }
+        return foe[counter] >= 5 && foe[counter] * 2 >= battle.enemy.spawned &&
+            Defs.counterMultiplier(roles[counter], roles[lead]) > 1f
     }
 
     // ---------------------------------------------------------------- rysowanie
@@ -777,7 +821,10 @@ class BattleScreen(
         if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawTurretPanel(c)
         if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawUpgradePanel(c)
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
-        if (!finished) tut?.draw(c)
+        if (!finished) {
+            tut?.draw(c)
+            hints.draw(c)
+        }
         if (paused && !finished) {
             c.drawColor(Color.argb(150, 0, 0, 0))
             ui.panel(c, pausePanel)
@@ -1154,7 +1201,9 @@ class BattleScreen(
             y += 28 * dp
         }
         if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            ui.wrap(c, "${L["why_lost"]}: ${L[tipKey]}", rp.centerX(), y + 18 * dp, rp.width() - 50 * dp, 13f, Ui.TEXT, Paint.Align.CENTER)
+            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
+            ui.wrap(c, tipText, rp.left + 53 * dp, y + 18 * dp,
+                rp.width() - 79 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
         }
         c.restore()
         ui.button(c, continueBtn, 17f)

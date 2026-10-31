@@ -111,6 +111,7 @@ jobs:
             --tests '*BattleHistoryTest*' \
             --tests '*BattleScreenTest*' \
             --tests '*BackLocaleTest*' \
+            --tests '*HintOverlayTest*' \
             --tests '*ScreenshotTest*' \
             --tests '*ArtGalleryTest*' \
             --tests '*RendererStressTest*' \

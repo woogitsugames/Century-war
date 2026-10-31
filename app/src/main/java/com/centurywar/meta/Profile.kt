@@ -25,6 +25,13 @@ class Profile(private val file: File) {
     companion object {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
+        const val HINT_COUNT = 17
+        const val HINT_VALID_MASK = 131071L
+        private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+            Thread(task, "cw-hints").apply { isDaemon = true }
+        }
+        /** Bariera testowa; produkcyjny wątek gry nie czeka na operacje zapisu. */
+        internal fun awaitHintWrites() { hintWriter.submit {}.get() }
         /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
         const val IRON_FIRST_STAGE = 8
         const val INSERTED_STAGE_COUNT = 4
@@ -116,6 +123,9 @@ class Profile(private val file: File) {
     var bestWave = 0
     var lastRankedDaily = -1L
     var tutorialDone = false
+    /** Jednorazowe podpowiedzi: bit oznacza już pokazany komunikat. */
+    var hintsSeen = 0L
+    var hintsEnabled = true
 
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
@@ -179,6 +189,24 @@ class Profile(private val file: File) {
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
     fun replayTutorial() { tutorialDone = false; save() }
+
+    /** Znacznik zmieniamy na wątku gry, zapis wykonuje pojedynczy wątek I/O. */
+    fun markHintSeen(id: Int): Boolean {
+        if (!hintsEnabled || id !in 0 until HINT_COUNT) return false
+        val bit = 1L shl id
+        if (hintsSeen and bit != 0L) return false
+        hintsSeen = (hintsSeen or bit) and HINT_VALID_MASK
+        // Migawka JSON powstaje na wątku gry (bez wyścigu z mutacjami), w tle tylko zapis pliku.
+        if (!newerProfileVersion) {
+            val seq: Long
+            val json: String
+            synchronized(this) { seq = ++saveSeq; json = toJson() }
+            hintWriter.execute { writeJson(json, seq) }
+        }
+        return true
+    }
+
+    fun replayHints() { hintsSeen = 0L; save() }
 
     fun level(key: String) = levels[key] ?: 0
 
@@ -253,6 +281,8 @@ class Profile(private val file: File) {
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("tutorialDone", tutorialDone)
+        o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
+        o.put("hintsEnabled", hintsEnabled)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
@@ -316,8 +346,19 @@ class Profile(private val file: File) {
     @Synchronized
     fun save() {
         if (newerProfileVersion) return
+        val json = try { toJson() } catch (_: Exception) { return }
+        writeJson(json, ++saveSeq)
+    }
+
+    /** Numer migawki: starsza migawka z wątku w tle nie nadpisze nowszego zapisu. */
+    private var saveSeq = 0L
+    private var writtenSeq = 0L
+
+    @Synchronized
+    private fun writeJson(json: String, seq: Long) {
+        if (newerProfileVersion || seq <= writtenSeq) return
+        writtenSeq = seq
         try {
-            val json = toJson()
             val tmp = File(file.parentFile, file.name + ".tmp")
             FileOutputStream(tmp).use { out ->
                 out.write(json.toByteArray(Charsets.UTF_8))
@@ -468,6 +509,8 @@ class Profile(private val file: File) {
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         tutorialDone = json.optBoolean("tutorialDone", false)
+        hintsSeen = json.optLong("hintsSeen", 0L).coerceIn(0L, HINT_VALID_MASK)
+        hintsEnabled = json.optBoolean("hintsEnabled", true)
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
@@ -509,6 +552,7 @@ class Profile(private val file: File) {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
         quality = 0; fpsCap = 0; vibration = true; screenShake = 2; sound = true
+        hintsSeen = 0L; hintsEnabled = true
         quality = 0; fpsCap = 0; vibration = true; sound = true
         palette = 0; teamMarkers = false; textScale = 100
         reduceShake = false; reduceFlash = false
@@ -600,7 +644,8 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
-        tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
+        battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
         winStreak = 0; bestWinStreak = 0
         achievementCounters.clear(); unlockedAchievements.clear()

@@ -579,4 +579,64 @@ class ScreenshotTest {
             archive.close()
         }
     }
+
+    /** Przegląd 5 nowych dymków bitwy i pierwszego dymka Badań: 720p, 20:9, Fold. */
+    @Test
+    fun contextualHints() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            // Ukryj powitalny baner z nagrodą za logowanie przed kadrami dymków.
+            val clear = Canvas(Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888))
+            repeat(210) { g.frame(clear, 1f / 60f) }
+            g.setScreen(ResearchScreen(g))
+            shot(g, tag + "_hint_research", 1)
+
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 560L, 1f))
+            g.setScreen(bs)
+            val b = field(bs, "battle").get(bs) as Battle
+            b.player.gold = 50000f
+            val hints = field(bs, "hints").get(bs) as HintOverlay
+            val show = hints.javaClass.getDeclaredMethod("activate",
+                Int::class.javaPrimitiveType, String::class.java).apply { isAccessible = true }
+            fun capture(overlay: HintOverlay, id: Int, key: String, name: String) {
+                g.profile.hintsSeen = 0L
+                show.invoke(overlay, id, key)
+                shot(g, tag + "_hint_" + name, 1)
+                overlay.dismiss()
+            }
+            capture(hints, HintOverlay.UPGRADE, "hint_upgrade", "upgrade")
+            b.player.aliveCount = b.player.cap
+            capture(hints, HintOverlay.CAP, "hint_cap", "armory")
+
+            val endlessScreen = BattleScreen(g, BattleConfig(Mode.ENDLESS, 561L, 1f))
+            g.setScreen(endlessScreen)
+            val eh = field(endlessScreen, "hints").get(endlessScreen) as HintOverlay
+            val eb = field(endlessScreen, "battle").get(endlessScreen) as Battle
+            eb.wave = 4
+            eb.waveTimer = 5f
+            capture(eh, HintOverlay.CARD, "hint_card", "endless_card")
+            eb.wave = 10
+            eb.units[0].active = true
+            eb.units[0].dying = -1f
+            eb.units[0].side = 1
+            eb.units[0].bossKind = 1
+            eb.units[0].hp = 100000f
+            eb.units[0].maxHp = 100000f
+            eb.units[0].x = 1800f
+            capture(eh, HintOverlay.BOSS, "hint_boss_push", "boss")
+
+            val siegeScreen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 562L, 1f))
+            g.setScreen(siegeScreen)
+            val siege = field(siegeScreen, "battle").get(siegeScreen) as Battle
+            siege.time = Battle.SIEGE_START + 7f
+            val sh = field(siegeScreen, "hints").get(siegeScreen) as HintOverlay
+            capture(sh, HintOverlay.SIEGE, "hint_siege", "siege")
+        }
+    }
 }

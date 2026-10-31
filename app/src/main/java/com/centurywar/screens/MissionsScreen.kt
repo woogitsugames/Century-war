@@ -29,6 +29,9 @@ class MissionsScreen(g: Game) : Screen(g) {
     private val rewards = Array(6) { "" }
     private val rects = Array(6) { RectF() }
     private val loginRect = RectF()
+    private val hints = HintOverlay(g)
+
+    init { buttons.add(0, hints.okBtn) }
     private val loginBar = RectF()
     private var left = 0f
     private var cardWidth = 0f
@@ -53,6 +56,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         contentTop = chrome.top + 8 * dp
         bottom = h - g.insetB - 8 * dp
         updateData()
+        hints.showScreen(HintOverlay.MISSIONS, loginRect)
     }
 
     private fun updateData() {
@@ -116,11 +120,13 @@ class MissionsScreen(g: Game) : Screen(g) {
     }
 
     override fun onDrag(dx: Float, dy: Float) {
+        hints.onAction()
         scroll = (scroll - dy).coerceIn(0f, maxScroll)
         place()
     }
 
     override fun update(dt: Float) {
+        hints.update(dt)
         this.dt = dt
         elapsed += dt
         if (elapsed >= 30f) {
@@ -167,9 +173,12 @@ class MissionsScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f)
         chrome.title(c, L["ms_missions"])
         chrome.badges(c, g.profile.medals)
+        hints.draw(c)
     }
 
     override fun onClick(b: Button) {
+        if (hints.onClick(b)) return
+        hints.onAction()
         if (b.id == -1) { g.pop(); return }
         val index = b.id - 100
         if (index !in 0 until items.size) return
