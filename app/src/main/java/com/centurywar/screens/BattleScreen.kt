@@ -1003,8 +1003,15 @@ class BattleScreen(
             val wx = mini.right + 14 * dp
             Icons.draw(c, Icons.weatherIcon(battle.weather), wx, t + 11 * dp, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
-            ui.textO(c, weatherName, wx + 14 * dp, t + 15 * dp,
-                ui.fit(weatherName, 12f, max(32f * dp, pauseBtn.r.left - wx - 24 * dp), 8f), Ui.TEXT)
+            // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
+            // gdy brak miejsca, zostaje sama ikona.
+            val eraLeft = pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
+            val wAvail = eraLeft - (wx + 14 * dp) - 6 * dp
+            if (wAvail >= 30 * dp) {
+                val size = ui.fit(weatherName, 12f, wAvail, 8f)
+                if (ui.measure(weatherName, size, true) <= wAvail)
+                    ui.textO(c, weatherName, wx + 14 * dp, t + 15 * dp, size, Ui.TEXT)
+            }
             if (battle.weather == Weather.WIND) {
                 val dir = battle.windDirection().toFloat()
                 val mx = wx + 24 * dp
