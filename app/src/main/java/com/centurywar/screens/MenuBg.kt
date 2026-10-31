@@ -75,11 +75,13 @@ class MenuBg {
     private var tile = 1f
 
     /** [dt] jest ignorowane, jeśli w tej klatce czas już przesunięto (wspólny zegar). */
-    fun draw(c: Canvas, w: Float, h: Float, dt: Float) {
-        val now = System.nanoTime()
-        if (now - lastFrameNanos > 4_000_000L) { time += dt; lastFrameNanos = now }
+    fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean): Float {
+        if (animated) {
+            val now = System.nanoTime()
+            if (now - lastFrameNanos > 4_000_000L) { time += dt; lastFrameNanos = now }
+        }
         if (w != lw || h != lh) build(w, h)
-        val t = time
+        val t = if (animated) time else 0f
         c.drawRect(0f, 0f, w, h, sky)
         drawStars(c, w, h, t)
         drawSun(c, w, h, t)
@@ -99,6 +101,7 @@ class MenuBg {
         fill.color = GRASS; c.drawPath(tufts, fill)
         foreground(c, w, h, t)
         c.drawRect(0f, h * 0.45f, w, h, shade)
+        return t
     }
 
     // ---------------------------------------------------------------- budowa warstw
