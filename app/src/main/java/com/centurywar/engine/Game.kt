@@ -109,7 +109,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private val tasks = ArrayList<Runnable>()
     private val frameEvents = ArrayList<TouchEvent>()
 
-    // Pomiar CPU nie obejmuje oczekiwania na vsync ani Thread.sleep.
+    // CPU nie obejmuje vsync i uśpienia; pomiary post/odstępu dopisuje GameView.
     val frameMetrics = FrameMetrics()
     private val governor = QualityGovernor()
     private var frameAvg = 16f
@@ -135,7 +135,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         overlayTimer = 0.5f
         val m = frameMetrics
         fun tenth(v: Float) = (v * 10f).toInt() / 10f
-        overlayTop = "${fps.toInt()} FPS  U ${tenth(m.avgUpdateMs)}  R ${tenth(m.avgRenderMs)}  p95 ${tenth(m.p95Ms())} ms"
+        overlayTop = "${fps.toInt()} FPS  U ${tenth(m.avgUpdateMs)}  R ${tenth(m.avgRenderMs)}  GPU/post ${tenth(m.avgPostMs)}  p95 ${tenth(m.p95Ms())} ms"
         overlayBottom = "Q${quality.level}-${quality.reduction}  ${(renderScale * 100).toInt()}%  p${quality.maxParticles}  steps ${m.steps}  lost ${m.droppedSteps}"
     }
     /** Gotowe teksty powiadomień (budowane przy zdarzeniu, nie w renderze) i ich ikony. */
@@ -218,7 +218,11 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     fun setQuality(level: Int) {
         if (profile.quality != 0) governor.reset()
-        quality = Quality(level, if (profile.quality == 0) governor.reduction else 0)
+        quality = Quality(
+            level,
+            if (profile.quality == 0) governor.reduction else 0,
+            if (profile.quality == 0) governor.gpuReduction else 0
+        )
         ui.fill.isAntiAlias = quality.antialias
         host.applyRenderScale(quality.renderScale(viewW, viewH))
     }
@@ -362,7 +366,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         frameAvg += (ms - frameAvg) * 0.05f
         fps = 1000f / frameAvg.coerceAtLeast(1f)
         if (governor.record(frameMetrics.avgCpuMs, dt, profile.quality == 0,
-                profile.fpsCap, quality.maxReductionSteps)) {
+                profile.fpsCap, quality.maxReductionSteps,
+                frameMetrics.avgFrameIntervalMs, frameMetrics.refreshHz)) {
             setQuality(effectiveQualityLevel())
         }
     }
