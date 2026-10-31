@@ -198,7 +198,8 @@ class Battle(val cfg: BattleConfig) {
         private set
     var bossesDefeated = 0
         private set
-    private var bossPendingWave = 0
+    /** Najstarsza fala bossa oczekująca na miejsce w puli jednostek. */
+    private var nextBossToSpawn = 10
     private var bossRewardsPending = 0
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
@@ -894,7 +895,7 @@ class Battle(val cfg: BattleConfig) {
             }
         }
         spawnFreeElites()
-        if (bossPendingWave > 0) spawnPendingBoss()
+        if (wave >= nextBossToSpawn) spawnPendingBoss()
 
         waveTimer -= dt
         if (waveTimer > 0f) return
@@ -924,10 +925,7 @@ class Battle(val cfg: BattleConfig) {
             p.freeEliteCredits = min(8, p.freeEliteCredits + p.freeElitesPerWave)
             spawnFreeElites()
         }
-        if (wave % 10 == 0) {
-            bossPendingWave = wave
-            spawnPendingBoss()
-        }
+        if (wave % 10 == 0) spawnPendingBoss()
         if (wave % ENDLESS_CHOICE_EVERY == 0) offerEndlessCards()
 
         // Narastająca presja po bardzo długim oblężeniu uniemożliwia wieczny pat.
@@ -967,8 +965,8 @@ class Battle(val cfg: BattleConfig) {
     }
 
     private fun spawnPendingBoss() {
-        val bossWave = bossPendingWave
-        if (bossWave == 0) return
+        val bossWave = nextBossToSpawn
+        if (wave < bossWave) return
         val e = enemy
         val f = spawnFighter(e, Defs.unit(e.era, Role.ELITE), 3f + bossWave / 10f * 0.45f)
             ?: return
@@ -976,7 +974,7 @@ class Battle(val cfg: BattleConfig) {
         f.dmg *= 1.4f + bossWave / 10f * 0.1f
         f.bossCd = 1.5f
         bossesSpawned++
-        bossPendingWave = 0
+        nextBossToSpawn += 10
         fx.add(FxBuffer.EVOLVE, f.x, 0f, e.index, 2f)
     }
 
