@@ -520,6 +520,21 @@ class BattleSnapshotTest {
         assertFalse(f.exists())
     }
     @Test
+    fun interruptedRenameRecoversValidTemporarySnapshot() {
+        val file = tmp.newFolder().resolve("battle.snap")
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 17L, 1f))
+        battle.playerAi = Ai(battle, 0)
+        steps(battle, 60)
+        val bytes = BattleSnapshot.encode(battle)
+        file.resolveSibling("battle.snap.tmp").writeBytes(bytes)
+        val restored = SnapshotStore(file).loadBattle()
+        assertNotNull(restored)
+        assertEquals(battle.time, restored!!.battle.time)
+        assertTrue(file.exists())
+        assertFalse(file.resolveSibling("battle.snap.tmp").exists())
+    }
+
+    @Test
     fun rainWeatherSurvivesSaveAndResimulation() {
         val cfg = BattleConfig(Mode.SKIRMISH, 4401L, 1f, startEra = 2, maxEra = 4,
             weather = Weather.RAIN)
