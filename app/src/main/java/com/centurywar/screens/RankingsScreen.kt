@@ -33,7 +33,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
 
-    init {
+    private fun refreshReplayIds() {
         g.replays?.listAsync { records ->
             val ids = records.mapTo(HashSet()) { it.id }
             g.post { existingReplayIds = ids }
@@ -48,6 +48,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     }
 
     override fun layout() {
+        refreshReplayIds()
         chrome.layoutBack(back)
         rename.label = L["name"]
         rename.iconId = Icons.PENCIL
