@@ -112,7 +112,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val puffLastTime = FloatArray(Battle.MAX_PROJ)
     private val motorSmoke = FloatArray(Battle.MAX_UNITS)
     private val baseSmoke = FloatArray(2)
-    private val turretFirePrev = FloatArray(Defs.MAX_TURRET_SLOTS * 2)
 
     // Ślady na ziemi nie zajmują puli cząsteczek.
     private val SCARS = 16
@@ -276,7 +275,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawScars(c, dt)
         drawBarrageMarkers(c)
         emitAmbient(dt)
-        detectTurretFire()
         drawBase(c, b.sides[0])
         drawBase(c, b.sides[1])
         drawWrecks(c, dt)
@@ -1104,19 +1102,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                     0.72f, (if (art == EraArt.STEAM) 14f else 9f) * size,
                     if (art == EraArt.STEAM) 0x807E7772.toInt() else 0x706E737C, 3)
             }
-        }
-    }
-
-    /** Sygnał ognia wieżyczki pochodzi z już istniejącego licznika animacji. */
-    private fun detectTurretFire() {
-        for (s in b.sides) for (i in s.turretFire.indices) {
-            val slot = s.index * Defs.MAX_TURRET_SLOTS + i
-            val current = s.turretFire[i]
-            if (i < s.slots && s.turretEra[i] >= 0 && current > turretFirePrev[slot] + 0.04f) {
-                emitMuzzle(s.baseFront - s.dir * 40f, b.turretHeight(i),
-                    s.dir, Defs.spec(s.turretEra[i]).turretProj)
-            }
-            turretFirePrev[slot] = current
         }
     }
 
