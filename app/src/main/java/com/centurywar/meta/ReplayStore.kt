@@ -21,6 +21,9 @@ class ReplayStore(private val directory: File) {
     private val pinsFile = File(directory, "pinned.txt")
     private var pins: MutableSet<String>? = null
 
+    /** Wywołanie na wątku I/O; odbiorca przenosi zmianę profilu przez Game.post. */
+    @Volatile var onRemoved: ((List<String>) -> Unit)? = null
+
     fun newId(): String = System.currentTimeMillis().toString(36) + "-" +
         seq.incrementAndGet().toString(36)
 
@@ -50,9 +53,10 @@ class ReplayStore(private val directory: File) {
     fun deleteAsync(id: String) {
         if (!pattern.matches(id)) return
         io.execute {
-            File(directory, "$id.cwr").delete()
+            val deleted = File(directory, "$id.cwr").delete()
             pinned().remove(id)
             savePins()
+            if (deleted) onRemoved?.invoke(listOf(id))
         }
     }
 
@@ -103,10 +107,12 @@ class ReplayStore(private val directory: File) {
         val keepPins = all.filter { it.id in set }.take(MAX_PINNED).mapTo(HashSet()) { it.id }
         set.retainAll(keepPins)
         val latest = all.filter { it.id !in keepPins }.take(MAX_RECENT).mapTo(HashSet()) { it.id }
+        val removed = ArrayList<String>()
         for (entry in all) if (entry.id !in keepPins && entry.id !in latest) {
-            File(directory, "${entry.id}.cwr").delete()
+            if (File(directory, "${entry.id}.cwr").delete()) removed.add(entry.id)
         }
         savePins()
+        if (removed.isNotEmpty()) onRemoved?.invoke(removed)
     }
 
     private fun savePins() {
