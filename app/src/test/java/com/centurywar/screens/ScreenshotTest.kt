@@ -79,6 +79,8 @@ class ScreenshotTest {
     }
 
     private fun shot(g: Game, name: String, frames: Int = 3) {
+        // Zrzuty dokumentują ekran docelowy, nie pośrednią klatkę nasunięcia.
+        g.finishScreenTransition()
         val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         repeat(frames) { g.frame(c, 1f / 60f) }
