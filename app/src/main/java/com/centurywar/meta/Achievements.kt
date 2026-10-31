@@ -144,7 +144,7 @@ object Achievements {
         if (cfg.mode == Mode.DAILY && cfg.seed >= 0L && (cfg.seed in profile.achievementDailySeeds || profile.achievementDailySeeds.size < 4096) && profile.achievementDailySeeds.add(cfg.seed)) {
             add(profile, AchievementMetric.DAILY_DAYS)
         }
-        if (cfg.mode == Mode.SKIRMISH && won && cfg.aiPower >= 1.6f) {
+        if (cfg.mode == Mode.SKIRMISH && won && cfg.aiPower >= 1.6f && Modifier.FOG_OF_WAR !in cfg.modifiers) {
             add(profile, AchievementMetric.INSANE_WINS)
         }
         if (won && player.slots > 0 && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers) {

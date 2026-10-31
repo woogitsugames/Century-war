@@ -11,6 +11,9 @@ import com.centurywar.engine.Quality
 import com.centurywar.engine.Palette
 import com.centurywar.engine.TouchEvent
 import com.centurywar.game.Ai
+import com.centurywar.game.AiPersonality
+import com.centurywar.game.Modifier
+import com.centurywar.meta.SkirmishSetup
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
@@ -215,6 +218,19 @@ class ScreenshotTest {
             g.profile.submit(Profile.weeklyBoard(weeklyWeek - 1), 16200, Daily.dayNumber() - 7L)
             g.setScreen(ModeScreen(g, Mode.DAILY, true)); shot(g, "${tag}_mode_weekly")
             g.setScreen(ModeScreen(g, Mode.SKIRMISH)); shot(g, "${tag}_mode_skirmish")
+            g.setScreen(SkirmishSetupScreen(g)); shot(g, "${tag}_skirmish_default")
+            g.profile.skirmishSetup = SkirmishSetup(
+                startEra = 2, maxEra = 6, personality = AiPersonality.ENGINEER.ordinal,
+                powerPercent = 175,
+                modifierMask = (1 shl Modifier.DOUBLE_INCOME.ordinal) or
+                    (1 shl Modifier.SLOW_XP.ordinal) or (1 shl Modifier.FOG_OF_WAR.ordinal),
+            )
+            val customScreen = SkirmishSetupScreen(g)
+            g.setScreen(customScreen); shot(g, "${tag}_skirmish_custom")
+            field(customScreen, "scroll").setFloat(customScreen,
+                field(customScreen, "maxScroll").getFloat(customScreen))
+            customScreen.layout()
+            shot(g, "${tag}_skirmish_modifiers")
             g.setScreen(RankingsScreen(g)); shot(g, "${tag}_rankings")
             val weeklyRanking = RankingsScreen(g)
             g.setScreen(weeklyRanking)
@@ -249,7 +265,10 @@ class ScreenshotTest {
             shot(g, "${tag}_codex_era6_end")
             g.profile.levels.clear()
 
-            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7L, 1f, startEra = 2, maxEra = 7))
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7L, 1f,
+                startEra = 2, maxEra = 7,
+                modifiers = setOf(Modifier.FOG_OF_WAR),
+                aiPersonality = AiPersonality.ENGINEER))
             g.setScreen(bs)
             val b = field(bs, "battle").get(bs) as com.centurywar.game.Battle
             b.playerAi = Ai(b, 0)
@@ -273,9 +292,11 @@ class ScreenshotTest {
             b.pendingChoice = null
             field(bs, "paused").set(bs, true)
             shot(g, "${tag}_battle_pause")
+            shot(g, "${tag}_skirmish_pause_named")
             field(bs, "paused").set(bs, false)
             b.surrender()
             shot(g, "${tag}_battle_results", 90)
+            shot(g, "${tag}_skirmish_results_unranked")
 
             // Endless 2.0: osobne kadry zapowiedzi, wyboru kart i aktywnego bossa.
             val es = BattleScreen(g, BattleConfig(Mode.ENDLESS, 2026L, 1f))

@@ -32,10 +32,12 @@ import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
 import com.centurywar.game.Weekly
 import com.centurywar.game.Role
+import com.centurywar.game.Skirmish
 import com.centurywar.game.Weather
 import com.centurywar.meta.Achievements
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Profile
+import com.centurywar.meta.SkirmishSetup
 import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
@@ -234,9 +236,9 @@ class BattleScreen(
 
         val bw = min(270 * dp, w * 0.6f)
         val bh = 50 * dp
-        val pmH = bh * 3 + 12 * dp * 2 + 96 * dp
+        val pmH = bh * 3 + 12 * dp * 2 + (if (cfg.mode == Mode.SKIRMISH) 162 else 96) * dp
         pausePanel.set(w / 2 - bw / 2 - 28 * dp, h / 2 - pmH / 2, w / 2 + bw / 2 + 28 * dp, h / 2 + pmH / 2)
-        for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, pausePanel.top + 52 * dp + i * (bh + 12 * dp), bw, bh)
+        for ((i, b) in pauseMenu.withIndex()) b.set(w / 2 - bw / 2, pausePanel.top + (if (cfg.mode == Mode.SKIRMISH) 118 else 52) * dp + i * (bh + 12 * dp), bw, bh)
         layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
         val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
@@ -579,7 +581,8 @@ class BattleScreen(
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
         Mode.ENDLESS -> if (cfg.weekly >= 0L) ModeScreen(g, Mode.DAILY, true) else ModeScreen(g, Mode.ENDLESS)
-        Mode.DAILY, Mode.SKIRMISH -> ModeScreen(g, cfg.mode)
+        Mode.DAILY -> ModeScreen(g, cfg.mode)
+        Mode.SKIRMISH -> SkirmishSetupScreen(g)
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
@@ -702,8 +705,9 @@ class BattleScreen(
                 if (won) pr.tutorialDone = true
             }
             Mode.SKIRMISH -> {
-                reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
-                if (won) {
+                pr.recordSkirmish(cfg, score, day, won)
+                reward = SkirmishSetup.reward(cfg, won, battle.time, battle.player.kills)
+                if (won && SkirmishSetup.isRanked(cfg)) {
                     newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day, replayId)
                     g.online.submit(Profile.BOARD_SKIRMISH, score)
                 }
@@ -772,9 +776,13 @@ class BattleScreen(
         tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         // Sam zapis powtórki i HTTPS wykonuje osobny wątek, nigdy pętla gry.
         // Wyniki z podejść treningowych daily i wczesne kapitulacje pomijamy.
-        if (pr.globalRanking && battle.stepCount >= 60 && (cfg.mode != Mode.DAILY || rankedDaily)) {
+        // Potyczka własna (zlecenie 35) nie trafia do rankingu; poziom trudności wynika z konfiguracji bitwy.
+        val skirmishDiff = if (cfg.mode == Mode.SKIRMISH)
+            (0..3).firstOrNull { kotlin.math.abs(Skirmish.power(it) - cfg.aiPower) < 0.0001f } ?: -1 else 0
+        val rankedSkirmish = cfg.mode != Mode.SKIRMISH || (SkirmishSetup.isRanked(cfg) && skirmishDiff >= 0)
+        if (pr.globalRanking && battle.stepCount >= 60 && (cfg.mode != Mode.DAILY || rankedDaily) && rankedSkirmish) {
             g.scores?.submit(cfg, commands.log(), score, rankedDaily, pr.name, pr.playerId,
-                pr.researchLevels(), pr.skirmishDiff)
+                pr.researchLevels(), skirmishDiff)
         }
         // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
         pr.save()
@@ -800,6 +808,16 @@ class BattleScreen(
 
     // ---------------------------------------------------------------- rysowanie
 
+    private val pausePersonText = if (cfg.mode == Mode.SKIRMISH) {
+        val personality = battle.ai?.personality
+        L["sk_opponent"] + ": " + if (personality == null) L["sk_random"]
+            else L["sk_person_" + personality.ordinal]
+    } else ""
+    private val pauseModifierText = if (cfg.mode == Mode.SKIRMISH) {
+        L["modifiers"] + ": " + if (cfg.modifiers.isEmpty()) L["sk_none"]
+            else cfg.modifiers.sortedBy { it.ordinal }.joinToString(", ") { L[it.key] }
+    } else ""
+    private val pausePowerText = if (cfg.mode == Mode.SKIRMISH) L.f("ai_power", (cfg.aiPower * 100f + 0.5f).toInt()) else ""
     private val pausePanel = RectF()
     private val resultPanel = RectF()
     private val tmpR = RectF()
@@ -884,6 +902,16 @@ class BattleScreen(
             c.drawColor(Color.argb(150, 0, 0, 0))
             ui.panel(c, pausePanel)
             ui.ribbon(c, pausePanel.centerX(), pausePanel.top + 4 * dp, L["paused"], 22f, Ui.RIBBON, pausePanel.width() * 0.6f)
+            if (cfg.mode == Mode.SKIRMISH) {
+                val center = pausePanel.centerX()
+                val textW = pausePanel.width() - 25 * dp
+                ui.textO(c, pausePersonText, center, pausePanel.top + 47 * dp,
+                    ui.fit(pausePersonText, 14f, textW), Ui.GOLD, Paint.Align.CENTER)
+                ui.textO(c, pauseModifierText, center, pausePanel.top + 70 * dp,
+                    ui.fit(pauseModifierText, 12f, textW), Ui.TEXT, Paint.Align.CENTER)
+                ui.textO(c, pausePowerText, center, pausePanel.top + 92 * dp,
+                    ui.fit(pausePowerText, 12f, textW), Ui.DIM, Paint.Align.CENTER)
+            }
             for (b in pauseMenu) ui.button(c, b, 18f)
         }
         if (finished) drawResults(c)
@@ -1273,6 +1301,12 @@ class BattleScreen(
         } else {
             Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
             y += 48 * dp
+        }
+        if (cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)) {
+            val info = L["sk_unranked"]
+            ui.textO(c, info, rp.centerX(), y + 7 * dp, ui.fit(info, 14f, rp.width() - 32 * dp),
+                Ui.GOLD, Paint.Align.CENTER)
+            y += 28 * dp
         }
         val lx = rp.left + 30 * dp
         val rx = rp.right - 30 * dp

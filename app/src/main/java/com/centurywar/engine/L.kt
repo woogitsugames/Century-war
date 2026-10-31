@@ -101,6 +101,7 @@ object L {
         putAll(part2())
         putAll(part3())
         putAll(part4())
+        putAll(part5())
     }
 
     private fun part0(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1100,5 +1101,49 @@ object L {
         "m_slowxp_d" to t("wolniejszy XP", "slower XP", "langsamere EP", "XP más lenta", "XP plus lente", "XP più lenti", "XP mais lento", "повільніший XP", "tragere XP", "yavaş XP"),
         "m_armored_d" to t("silniejszy wróg", "tougher foe", "stärkerer Feind", "enemigo más fuerte", "ennemi renforcé", "nemico più forte", "inimigo mais forte", "сильніший ворог", "sterkere vijand", "güçlü düşman"),
         "m_fog_d" to t("ukryte jednostki", "hidden troops", "verborgene Truppen", "tropas ocultas", "troupes cachées", "truppe nascoste", "tropas ocultas", "приховані війська", "verborgen troepen", "gizli birlikler"),
+    )
+
+    private fun part5(): Array<Pair<String, Array<out String>>> = arrayOf(
+        // --- potyczka własna
+        "sk_setup" to t("Ustawienia potyczki", "Skirmish setup", "Gefecht einstellen", "Configurar escaramuza", "Configurer l'escarmouche", "Configura schermaglia", "Configurar escaramuça", "Налаштування сутички", "Schermutseling instellen", "Çatışma ayarları"),
+        "sk_eras" to t("Zakres epok", "Era range", "Epochenbereich", "Rango de eras", "Période des ères", "Intervallo di ere", "Intervalo de eras", "Діапазон епох", "Tijdperkbereik", "Çağ aralığı"),
+        "sk_start" to t("Początek", "Start", "Beginn", "Inicio", "Début", "Inizio", "Início", "Початок", "Begin", "Başlangıç"),
+        "sk_end" to t("Koniec", "End", "Ende", "Fin", "Fin", "Fine", "Fim", "Кінець", "Einde", "Bitiş"),
+        "sk_opponent" to t("Osobowość przeciwnika", "Enemy personality", "Gegnerprofil", "Personalidad enemiga", "Profil adverse", "Personalità nemica", "Perfil inimigo", "Характер ворога", "Vijandprofiel", "Düşman kişiliği"),
+        "sk_random" to t("Losowy", "Random", "Zufällig", "Aleatorio", "Aléatoire", "Casuale", "Aleatório", "Випадковий", "Willekeurig", "Rastgele"),
+        "sk_strength" to t("Siła AI", "AI strength", "KI-Stärke", "Fuerza IA", "Force de l'IA", "Forza IA", "Força da IA", "Сила ШІ", "AI-sterkte", "YZ gücü"),
+        "sk_defaults" to t("Domyślne", "Defaults", "Standard", "Por defecto", "Défaut", "Predefiniti", "Padrões", "Типові", "Standaard", "Varsayılan"),
+        "sk_shuffle" to t("Losuj", "Randomize", "Würfeln", "Al azar", "Tirage", "Casuale", "Sortear", "Навмання", "Loten", "Rastgele"),
+        "sk_ranked" to t("Potyczka standardowa – ranking", "Standard skirmish – ranked", "Standardgefecht – Rangliste", "Escaramuza estándar – ranking", "Escarmouche standard – classée", "Schermaglia standard – classifica", "Escaramuça padrão – ranking", "Звичайна сутичка – рейтинг", "Standaardgevecht – ranglijst", "Standart çatışma – sıralama"),
+        "sk_unranked" to t("Bitwa własna – poza rankingiem", "Custom battle – unranked", "Eigene Schlacht – ohne Rang", "Batalla propia – sin ranking", "Bataille libre – hors classement", "Battaglia libera – non classificata", "Batalha livre – sem ranking", "Власний бій – без рейтингу", "Eigen gevecht – geen ranglijst", "Özel savaş – sıralamasız"),
+        "sk_mod_limit" to t("Maksymalnie 3 modyfikatory", "Maximum 3 modifiers", "Maximal 3 Modifikatoren", "Máximo 3 modificadores", "Maximum 3 modificateurs", "Massimo 3 modificatori", "Máximo 3 modificadores", "До 3 модифікаторів", "Maximaal 3 modifiers", "En fazla 3 değiştirici"),
+        "sk_person_0" to t("Szturmowy", "Assault", "Sturm", "Asalto", "Assaut", "Assalto", "Assalto", "Штурм", "Aanval", "Saldırı"),
+        "sk_person_1" to t("Inżynier", "Engineer", "Ingenieur", "Ingeniero", "Ingénieur", "Ingegnere", "Engenheiro", "Інженер", "Ingenieur", "Mühendis"),
+        "sk_person_2" to t("Ekonomista", "Economist", "Ökonom", "Economista", "Économe", "Economista", "Economista", "Економіст", "Econoom", "Ekonomist"),
+        "sk_person_3" to t("Oblężniczy", "Sieger", "Belagerer", "Asediador", "Assiégeant", "Assediante", "Sitiador", "Облоговий", "Belegeraar", "Kuşatmacı"),
+        "sk_person_4" to t("Zrównoważony", "Balanced", "Ausgewogen", "Equilibrado", "Équilibré", "Equilibrato", "Equilibrado", "Збалансований", "Evenwichtig", "Dengeli"),
+        "sk_desc_random" to t("Dowódca wybrany z ziarna bitwy.", "Commander chosen from battle seed.", "Kommandant durch Gefechts-Seed gewählt.", "Comandante elegido por semilla.", "Commandant choisi selon la graine.", "Comandante scelto dal seme.", "Comandante definido pela semente.", "Командир визначається зерном.", "Commandant op basis van de seed.", "Komutan savaş tohumuyla seçilir."),
+        "sk_desc_0" to t("Często posyła piechotę do natarcia.", "Often sends infantry on the attack.", "Schickt oft Infanterie zum Angriff.", "Ataca a menudo con infantería.", "Attaque souvent avec l'infanterie.", "Attacca spesso con la fanteria.", "Ataca com infantaria frequentemente.", "Часто атакує піхотою.", "Valt vaak aan met infanterie.", "Piyadeyle sık sık saldırır."),
+        "sk_desc_1" to t("Stawia na ciężkie jednostki i wsparcie.", "Favors heavy troops and support.", "Setzt auf schwere Truppen und Hilfe.", "Prefiere tropas pesadas y apoyo.", "Privilégie unités lourdes et soutien.", "Preferisce unità pesanti e supporto.", "Prefere tropas pesadas e apoio.", "Обирає важкі війська й підтримку.", "Kiest zware troepen en steun.", "Ağır birlikleri ve desteği seçer."),
+        "sk_desc_2" to t("Oszczędza środki na elitarne oddziały.", "Saves resources for elite units.", "Spart für Elitetruppen.", "Ahorra para tropas de élite.", "Épargne pour les unités d'élite.", "Risparmia per le unità d'élite.", "Poupa para tropas de elite.", "Накопичує ресурси для еліти.", "Spaart voor elitetroepen.", "Seçkin birlikler için biriktirir."),
+        "sk_desc_3" to t("Dąży do przełamania silnymi oddziałami.", "Seeks breakthroughs with powerful units.", "Bricht mit starken Einheiten durch.", "Rompe el frente con tropas potentes.", "Perce avec des unités puissantes.", "Sfonda con unità potenti.", "Rompe a linha com tropas fortes.", "Прориває оборону сильними загонами.", "Breekt door met sterke eenheden.", "Güçlü birliklerle hatları yarar."),
+        "sk_desc_4" to t("Dostosowuje dobór jednostek do walki.", "Balances its troop choices.", "Passt die Truppenauswahl an.", "Equilibra sus tropas.", "Équilibre le choix des troupes.", "Bilancia la scelta delle truppe.", "Equilibra as tropas.", "Збалансовує вибір військ.", "Wisselt troepentypen af.", "Birlik seçimini dengeler."),
+        "sk_moddesc_0" to t("Obie strony zarabiają dwa razy szybciej.", "Both sides earn twice as fast.", "Beide Seiten verdienen doppelt.", "Ambos bandos ganan el doble.", "Les deux camps gagnent double.", "Entrambe le parti guadagnano doppio.", "Ambos os lados ganham o dobro.", "Обидві сторони заробляють удвічі.", "Beide kanten verdienen dubbel.", "İki taraf da iki kat kazanır."),
+        "sk_moddesc_1" to t("Bazy mają mniej punktów życia.", "Bases have less health.", "Basen haben weniger Lebenspunkte.", "Las bases tienen menos salud.", "Les bases ont moins de vie.", "Le basi hanno meno salute.", "Bases têm menos vida.", "Бази мають менше здоров'я.", "Basissen hebben minder leven.", "Üslerin canı azalır."),
+        "sk_moddesc_2" to t("Jednostki poruszają się szybciej.", "Units move faster.", "Einheiten bewegen sich schneller.", "Las unidades se mueven más rápido.", "Les unités vont plus vite.", "Le unità si muovono più veloci.", "Unidades se movem mais rápido.", "Бійці рухаються швидше.", "Eenheden bewegen sneller.", "Birlikler daha hızlı yürür."),
+        "sk_moddesc_3" to t("Nie można stawiać wież.", "Turrets cannot be built.", "Keine Türme baubar.", "No se pueden construir torretas.", "Impossible de bâtir des tourelles.", "Non si possono costruire torrette.", "Não é possível construir torres.", "Не можна будувати вежі.", "Geen torens bouwen.", "Kule inşa edilemez."),
+        "sk_moddesc_4" to t("Przeciwnik wybiera więcej strzelców.", "Enemy favors ranged troops.", "Gegner bevorzugt Fernkämpfer.", "El enemigo prefiere tiradores.", "L'ennemi préfère les tireurs.", "Il nemico preferisce i tiratori.", "O inimigo prefere atiradores.", "Ворог обирає більше стрільців.", "Vijand kiest meer schutters.", "Düşman menzilli askerleri seçer."),
+        "sk_moddesc_5" to t("Większe obrażenia, mniejsza wytrzymałość.", "More damage, less durability.", "Mehr Schaden, weniger Schutz.", "Más daño, menos resistencia.", "Plus de dégâts, moins de vie.", "Più danni, meno resistenza.", "Mais dano, menos resistência.", "Більше шкоди, менше міцності.", "Meer schade, minder leven.", "Daha çok hasar, az dayanıklılık."),
+        "sk_moddesc_6" to t("Więcej zasobów na początku.", "More starting resources.", "Mehr Startressourcen.", "Más recursos al inicio.", "Plus de ressources au départ.", "Più risorse iniziali.", "Mais recursos no início.", "Більше ресурсів на початку.", "Meer startmiddelen.", "Başlangıçta daha çok kaynak."),
+        "sk_moddesc_7" to t("Doświadczenie przyrasta wolniej.", "Experience grows more slowly.", "Erfahrung wächst langsamer.", "La experiencia crece más lento.", "L'expérience progresse moins vite.", "Esperienza più lenta.", "Experiência cresce mais devagar.", "Досвід зростає повільніше.", "Ervaring stijgt langzamer.", "Deneyim daha yavaş artar."),
+        "sk_moddesc_8" to t("Wróg ma lepszą ochronę.", "Enemy has better armor.", "Gegner hat bessere Rüstung.", "El enemigo tiene más armadura.", "L'ennemi est mieux protégé.", "Il nemico ha più armatura.", "O inimigo tem mais armadura.", "Ворог має кращу броню.", "Vijand heeft meer pantser.", "Düşman daha iyi zırhlıdır."),
+        "sk_moddesc_9" to t("Niepełna informacja o wojskach gracza.", "Enemy sees less of your army.", "Gegner sieht weniger deiner Armee.", "El enemigo ve menos de tu ejército.", "L'ennemi voit moins votre armée.", "Il nemico vede meno il tuo esercito.", "O inimigo vê menos do seu exército.", "Ворог гірше бачить вашу армію.", "Vijand ziet minder van je leger.", "Düşman ordunu kısmen görür."),
+        "sk_none" to t("Brak", "None", "Keine", "Ninguno", "Aucun", "Nessuno", "Nenhum", "Немає", "Geen", "Yok"),
+        "sk_history" to t("Ostatnie potyczki", "Recent skirmishes", "Letzte Gefechte", "Escaramuzas recientes", "Escarmouches récentes", "Schermaglie recenti", "Escaramuças recentes", "Останні сутички", "Recente gevechten", "Son çatışmalar"),
+        "sk_history_empty" to t("Brak rozegranych potyczek", "No skirmishes yet", "Noch keine Gefechte", "Aún no hay escaramuzas", "Aucune escarmouche", "Nessuna schermaglia", "Nenhuma escaramuça", "Сутичок ще немає", "Nog geen gevechten", "Henüz çatışma yok"),
+        "sk_win" to t("Wygrana", "Win", "Sieg", "Victoria", "Victoire", "Vittoria", "Vitória", "Перемога", "Winst", "Zafer"),
+        "sk_loss" to t("Porażka", "Loss", "Niederlage", "Derrota", "Défaite", "Sconfitta", "Derrota", "Поразка", "Verlies", "Yenilgi"),
+        "sk_classic" to t("Ranking", "Ranked", "Rangliste", "Ranking", "Classé", "Classifica", "Ranking", "Рейтинг", "Ranglijst", "Sıralama"),
+        "sk_custom" to t("Własna", "Custom", "Eigene", "Propia", "Libre", "Libera", "Livre", "Власна", "Eigen", "Özel"),
     )
 }

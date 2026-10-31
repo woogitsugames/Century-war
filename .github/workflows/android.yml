@@ -127,6 +127,7 @@ jobs:
             --tests '*ProfileTest*' \
             --tests '*ProfileCloudTest*' \
             --tests '*BattleHistoryTest*' \
+            --tests '*SkirmishSetupTest*' \
             --tests '*BattleScreenTest*' \
             --tests '*BackLocaleTest*' \
             --tests '*HintOverlayTest*' \

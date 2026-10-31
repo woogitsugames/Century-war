@@ -251,7 +251,7 @@ class Missions(private val profile: Profile) {
             MissionType.THREE_STARS -> if (campaign && battle.stars() == 3) item.add(1)
             MissionType.GOLD -> item.add(player.goldEarned.toInt().coerceAtLeast(0))
             MissionType.KILL_VALUE -> item.add(player.killValue)
-            MissionType.HARD_WINS -> if (won && battle.cfg.aiPower >= 1.2f) item.add(1)
+            MissionType.HARD_WINS -> if (won && battle.cfg.aiPower >= 1.2f && Modifier.FOG_OF_WAR !in battle.cfg.modifiers) item.add(1)
         }
     }
 

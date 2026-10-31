@@ -269,7 +269,7 @@ class MenuScreen(g: Game) : Screen(g) {
             1 -> g.push(CampaignScreen(g))
             2 -> g.push(ModeScreen(g, Mode.ENDLESS))
             3 -> g.push(ModeScreen(g, Mode.DAILY))
-            4 -> g.push(ModeScreen(g, Mode.SKIRMISH))
+            4 -> g.push(SkirmishSetupScreen(g))
             5 -> g.push(ResearchScreen(g))
             6 -> g.push(RankingsScreen(g))
             7 -> g.push(SettingsScreen(g))
