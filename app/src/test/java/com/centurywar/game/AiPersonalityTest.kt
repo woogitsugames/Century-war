@@ -78,6 +78,23 @@ class AiPersonalityTest {
     }
 
     @Test
+    fun rallySupportsBattleLineBeforeEnemyReachesBase() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 908L, 1f,
+            aiPersonality = AiPersonality.ENGINEER))
+        val me = battle.enemy
+        val def = Defs.unit(me.era, Role.MELEE)
+        repeat(5) { assertTrue(battle.spawn(me, def)) }
+        val foe = battle.player
+        assertTrue(battle.spawn(foe, Defs.unit(foe.era, Role.MELEE)))
+        me.front = 1500f
+        battle.units[5].x = 1450f
+        assertTrue(me.aliveCount >= 5)
+        assertTrue(me.baseFront - me.front < Defs.LANE * 0.45f)
+        battle.ai!!.update(1f)
+        assertTrue("Zryw powinien wspierać walkę na linii starcia", me.abilityCd[1] > 0f)
+    }
+
+    @Test
     fun hiddenArmyDoesNotChangeAiOrdersOrTriggerBarrage() {
         val cfg = BattleConfig(Mode.SKIRMISH, 34L, 1f,
             modifiers = setOf(Modifier.FOG_OF_WAR),
