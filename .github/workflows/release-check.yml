@@ -1,12 +1,13 @@
 name: Weryfikacja wydania Android
 
-# Smoke test buildu release (R8 + shrinkResources) na emulatorze. Kosztowny, więc tylko
-# przy PR do main i ręcznie. Podpis: klucz debug (brak sekretów RELEASE_*) — to NIE są
+# Smoke-test release (R8 + shrinkResources) na emulatorze dla PR do main/claude/**
+# i uruchomien recznych. Podpis: klucz debug (brak sekretow RELEASE_*) — to NIE sa
 # artefakty do publikacji; podpisany release buduje job `release` w android.yml po tagu v*.
 on:
   pull_request:
     branches:
       - main
+      - 'claude/**'
   workflow_dispatch:
 
 permissions:
@@ -15,7 +16,7 @@ permissions:
 jobs:
   release-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +41,32 @@ jobs:
         run: |
           chmod +x ./gradlew
           mkdir -p build/release-metrics
+          python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
           ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
+
+      # Porownanie na tych samych SDK/runnerze: najnowszy wspolny commit z baza PR.
+      - name: Zbuduj bazowe APK i AAB (porownanie rozmiaru)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
+          base_sha="$(git merge-base HEAD "origin/$BASE_BRANCH")"
+          echo "$base_sha" > build/release-metrics/base-sha.txt
+          git worktree add --detach "$RUNNER_TEMP/cw-before" "$base_sha"
+          (
+            cd "$RUNNER_TEMP/cw-before"
+            chmod +x ./gradlew
+            ./gradlew :app:assembleRelease :app:bundleRelease \
+              -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode \
+              --console=plain --no-configuration-cache
+          )
+          mkdir -p "$RUNNER_TEMP/cw-before-artifacts"
+          cp "$RUNNER_TEMP/cw-before/app/build/outputs/apk/release/app-release.apk" "$RUNNER_TEMP/cw-before-artifacts/before.apk"
+          cp "$RUNNER_TEMP/cw-before/app/build/outputs/bundle/release/app-release.aab" "$RUNNER_TEMP/cw-before-artifacts/before.aab"
+          git worktree remove --force "$RUNNER_TEMP/cw-before"
 
       # Smoke-test R8/manifestu na placeholderach, nie jest to walidacja publikacji.
       - name: Zbuduj APK i AAB release
@@ -60,12 +86,14 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | tee build/release-metrics/manifest.txt
           grep -q "package: name='com.centurywar.game'" build/release-metrics/manifest.txt
           grep -q "launchable-activity: name='com.centurywar.MainActivity'" build/release-metrics/manifest.txt
-          {
-            echo '| Artefakt | Rozmiar (B) |'
-            echo '| --- | ---: |'
-            echo "| apk | $(stat -c%s "$apk") |"
-            echo "| aab | $(stat -c%s "$aab") |"
-          } | tee build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/release_size_report.py \
+            --apk "$apk" \
+            --aab "$aab" \
+            --before-apk "$RUNNER_TEMP/cw-before-artifacts/before.apk" \
+            --before-aab "$RUNNER_TEMP/cw-before-artifacts/before.aab" \
+            --mapping app/build/outputs/mapping/release/mapping.txt \
+            --usage app/build/outputs/mapping/release/usage.txt \
+            --output build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Uruchom release na emulatorze
         uses: reactivecircus/android-emulator-runner@v2
@@ -84,6 +112,18 @@ jobs:
             adb shell pidof com.centurywar.game
             adb logcat -d -s AndroidRuntime:E > build/release-metrics/androidruntime.log
             if grep -q "FATAL EXCEPTION" build/release-metrics/androidruntime.log; then cat build/release-metrics/androidruntime.log; exit 1; fi
+
+      - name: Zachowaj mapping i usage R8
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-r8-mapping
+          path: |
+            app/build/outputs/mapping/release/mapping.txt
+            app/build/outputs/mapping/release/usage.txt
+            app/build/outputs/mapping/release/configuration.txt
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Zachowaj raport i logi
         if: always()
