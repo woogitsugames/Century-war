@@ -1036,4 +1036,21 @@ class ScreenshotTest {
             L.lang = originalLang
         }
     }
+    /** Zrzuty bitew w pięciu epokach: 720p i rozłożony Fold. */
+    @Test
+    fun eraBackdropBattleScreens() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        )) {
+            val quality = if (tag == "phone720") Quality.LOW else Quality.HIGH
+            val g = game(dims[0], dims[1], dims[2] * 0.9f, quality)
+            for (era in intArrayOf(0, 2, 4, 6, 8)) {
+                g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 5600L + era, 1f,
+                    startEra = era, maxEra = Defs.ERA_COUNT - 1)))
+                shot(g, tag + "_backdrop_era" + era, 2)
+            }
+        }
+    }
+
 }
