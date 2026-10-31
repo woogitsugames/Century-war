@@ -23,6 +23,11 @@ class Profile(private val file: File) {
 
     companion object {
         const val CURRENT_VERSION = 3
+        const val HINT_COUNT = 17
+        const val HINT_VALID_MASK = (1L shl HINT_COUNT) - 1L
+        private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+            Thread(task, "cw-hints").apply { isDaemon = true }
+        }
         /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
         const val IRON_FIRST_STAGE = 8
         const val INSERTED_STAGE_COUNT = 4
@@ -114,6 +119,9 @@ class Profile(private val file: File) {
     var bestWave = 0
     var lastRankedDaily = -1L
     var tutorialDone = false
+    /** Jednorazowe podpowiedzi: bit oznacza już pokazany komunikat. */
+    var hintsSeen = 0L
+    var hintsEnabled = true
 
     // ustawienia
     var quality = 0          // 0 auto, 1 low, 2 med, 3 high
@@ -147,6 +155,18 @@ class Profile(private val file: File) {
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
     fun replayTutorial() { tutorialDone = false; save() }
+
+    /** Znacznik zmieniamy na wątku gry, zapis wykonuje pojedynczy wątek I/O. */
+    fun markHintSeen(id: Int): Boolean {
+        if (!hintsEnabled || id !in 0 until HINT_COUNT) return false
+        val bit = 1L shl id
+        if (hintsSeen and bit != 0L) return false
+        hintsSeen = (hintsSeen or bit) and HINT_VALID_MASK
+        hintWriter.execute { save() }
+        return true
+    }
+
+    fun replayHints() { hintsSeen = 0L; save() }
 
     fun level(key: String) = levels[key] ?: 0
 
@@ -221,6 +241,8 @@ class Profile(private val file: File) {
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("tutorialDone", tutorialDone)
+        o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
+        o.put("hintsEnabled", hintsEnabled)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
         o.put("vibration", vibration)
@@ -407,6 +429,8 @@ class Profile(private val file: File) {
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         tutorialDone = json.optBoolean("tutorialDone", false)
+        hintsSeen = json.optLong("hintsSeen", 0L).coerceIn(0L, HINT_VALID_MASK)
+        hintsEnabled = json.optBoolean("hintsEnabled", true)
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
         vibration = json.optBoolean("vibration", true)
@@ -434,6 +458,7 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        hintsSeen = 0L; hintsEnabled = true
         quality = 0; fpsCap = 0; vibration = true; sound = true
         showFps = false; lang = ""; skirmishDiff = 1
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
@@ -521,7 +546,8 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
-        tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
+        battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
         missionState.reset()
