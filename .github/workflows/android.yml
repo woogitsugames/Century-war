@@ -44,6 +44,8 @@ jobs:
             --tests '*BattleSimTest*' \
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
+            --tests '*WeatherTest*' \
+            --tests '*Replay*' \
             --tests '*LTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
