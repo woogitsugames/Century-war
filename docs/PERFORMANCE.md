@@ -1,20 +1,22 @@
-# Wydajność Century War (zlecenie 37)
+# Wydajność Century War (zlecenia 37 i 41)
 
 ## Budżet klatki
 
-- Ekran 60 Hz: **16,67 ms CPU na update i render łącznie**. Na 90/120 Hz nie zakładamy, że telefon musi utrzymać 90/120 FPS: punktem odniesienia regulatora pozostaje 60 FPS.
-- Limit 30 FPS: budżet 33,33 ms. Sam odstęp między klatkami (vsync i uśpienie) nie uruchamia redukcji.
-- Obserwacje: średnie update/render z kołowego okna **120 klatek**; p95 sumy obu faz z prealokowanej tablicy (liczony podczas odświeżania nakładki).
-- Po **4 s** CPU powyżej 103% budżetu regulator odejmuje jeden stopień; po **10 s** poniżej 70% budżetu przywraca jeden stopień. Minimalny odstęp zmian: **3 s**. Ręczny wybór jakości wyłącza automat.
-- Kolejność degradacji: liczba cząstek, chmury, paralaksa, cienie, następnie skala bufora po 0,05 do 0,60. Dotychczasowe trzy poziomy LOW/MED/HIGH pozostają podstawą jakości.
+- Ekran 60 Hz: **16,67 ms CPU na update i render łącznie**. Przy 90/120 Hz celem regulatora pozostaje stabilne tempo około 60 FPS, **nie** pełne 90/120 FPS. Okres celu = 1000 / min(odświeżanie ekranu, cel FPS).
+- Limit 30 FPS: budżet CPU i okres celu **33,33 ms**. Normalne 30 FPS (w tym oczekiwanie na vsync i sen pętli) nie uruchamia redukcji.
+- Obserwacje: średnie update/render z kołowego okna **120 klatek**; p95 sumy obu faz z prealokowanej tablicy (liczony podczas odświeżania nakładki). Drugie okno 120 próbek przechowuje rzeczywisty odstęp między startami klatek i czas `lockHardwareCanvas/lockCanvas…unlockCanvasAndPost`.
+- **CPU-bound:** po **4 s** CPU powyżej 103% budżetu odejmowany jest jeden stopień jakości.
+- **GPU/kompozytor-bound:** po **co najmniej 3 s** średni odstęp klatek > **1,35 × okres celu**, przy CPU ≤80% budżetu, odejmowany jest jeden stopień. Pomiar czasu `lock…post` pomaga diagnozować oczekiwanie na GPU/kompozytor, ale nie jest odczytem czasu wykonania poleceń bezpośrednio na GPU.
+- **Powrót jakości:** po **10 s** CPU ≤70% budżetu i odstępie ≤110% okresu celu przywracany jest jeden stopień. Przy braku pomiaru odstępu zachowane jest dotychczasowe zachowanie CPU-only. Dla obu rodzajów przeciążenia minimalny odstęp zmian wynosi **3 s**; ręczny wybór jakości wyłącza automat i resetuje redukcje.
+- **CPU:** najpierw mniej cząstek, chmur, paralaksy i cieni, następnie skala bufora −0,05 na stopień. **GPU:** od pierwszego stopnia skala bufora −0,05 i wyłączone cienie, a dopiero po wykorzystaniu zakresu skalowania redukowane są dalsze efekty. Oba rodzaje stopni mogą się sumować; skala nigdy nie spada poniżej **0,60**. Podstawowe poziomy LOW/MED/HIGH pozostają bez zmian.
 
 ## Odczyt nakładki na telefonie
 
 W Ustawieniach włącz `FPS`. Nakładka na dole pokazuje:
 
 - `FPS` — rzeczywista średnia liczba klatek/s (łącznie z oczekiwaniem),
-- `U` / `R` — CPU update i render w ms, `p95` — 95. percentyl ich sumy,
-- `Q3-2` — jakość bazowa 3, redukcja automatyczna o dwa stopnie,
+- `U` / `R` — CPU update i render w ms, `GPU/post` — czas od pozyskania Canvas do opublikowania klatki (zawiera też CPU render), `p95` — 95. percentyl sumy CPU,
+- `Q3-2` — jakość bazowa 3, łącznie dwa stopnie redukcji (CPU i/lub GPU),
 - `95%` — rzeczywista skala bufora, `p160` — maksymalna liczba cząstek,
 - `steps` — kroki symulacji ostatniej klatki, `lost` — odrzucone kroki przy limicie 20.
 
@@ -39,7 +41,8 @@ PERF_REPORT=true ./gradlew :app:testDebugUnitTest --tests '*SimPerformanceTest*'
 
 1. Podłącz tani telefon (2–3 GB RAM); ustaw tryb auto i włącz `FPS`.
 2. Wypełnij armię w Endless po fali 40, uruchom ×5 i obserwuj `p95`, `steps`, `lost` przez co najmniej 30 sekund; powtórz po rozgrzaniu urządzenia i w oszczędzaniu energii.
-3. W nowym terminalu użyj `adb shell dumpsys gfxinfo com.centurywar.game reset`, a następnie po ~30 s `adb shell dumpsys gfxinfo com.centurywar.game framestats`. SurfaceView może nie wykazać wszystkich wewnętrznych klatek; porównuj z nakładką CPU i odczuciem płynności.
-4. Weryfikuj `dumpsys meminfo com.centurywar.game`, temperaturę i throttling. Pomiar p95 z JVM nie jest równoznaczny z rzeczywistym czasem GPU ani opóźnieniem prezentacji.
+3. Dla GPU-bound obserwuj przez ponad 3 s niski czas `U + R` przy długich odstępach między klatkami; `GPU/post` pomaga wskazać blokowanie na powierzchni. Na ekranie 120 Hz stabilne 70 FPS nie powinno uruchamiać redukcji. Zweryfikuj osobno limit 30 FPS.
+4. W nowym terminalu użyj `adb shell dumpsys gfxinfo com.centurywar.game reset`, a następnie po ~30 s `adb shell dumpsys gfxinfo com.centurywar.game framestats`. SurfaceView może nie wykazać wszystkich wewnętrznych klatek; porównuj z nakładką CPU i odczuciem płynności.
+5. Weryfikuj `dumpsys meminfo com.centurywar.game`, temperaturę i throttling. Pomiar p95 z JVM i `GPU/post` nie są równoznaczne z rzeczywistym czasem GPU ani opóźnieniem prezentacji.
 
 Zrzuty nakładki: `app/build/screenshots/phone720_performance_overlay.png` oraz `foldOpen_performance_overlay.png` po wykonaniu `ScreenshotTest.performanceOverlay`. Wyniki kroki/s przed/po są emitowane wyłącznie przy `PERF_REPORT=true` i są zależne od wydajności CI. Do PR należy przepisać dane z logów rzeczywistego uruchomienia, a nie wartości orientacyjne.
