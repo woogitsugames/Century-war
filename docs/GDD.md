@@ -30,7 +30,7 @@
 | Rankingi | 4 tablice: fale oblężenia, wyzwanie dnia, gwiazdki kampanii, potyczka |
 
 ### Kampania (36 etapów)
-- Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Feudalizm), więc bitwa trwa kilka minut.
+- Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Epoka żelaza), więc bitwa trwa kilka minut.
 - Co 4. etap to „wielki” etap przez 2–3 epoki.
 - Siła wroga rośnie od 72% do ok. 170% (jawny mnożnik złota i XP AI, widoczny przed bitwą).
 - Gwiazdki zależą od HP bazy po zwycięstwie: ≥75% = ★★★, ≥40% = ★★.
@@ -104,6 +104,6 @@ Koszty rosną wykładniczo (×1,33–1,6 na poziom), więc pełne drzewko to wie
 
 1. **Ulepszenia jednostek w epoce:** każda jednostka ma 2–3 stopnie ulepszenia kupowane w bitwie (statystyki i detale wyglądu). Decyzja: awansować epokę czy wzmocnić obecną armię.
 2. **Nowe epoki pomiędzy istniejącymi** (jedna na aktualizację): Renesans (między feudalizmem a prochem), Epoka atomowa (między stalą a krzemem), Era galaktyczna (po orbitalnej). Docelowo 12 epok i 48 etapów kampanii.
-   - Technicznie: `Defs` jest sterowane danymi (tablice na epokę). Trzeba dopisać jednostki, wieżę, ostrzał, grafikę (`game/art/*`), etapy kampanii i przestroić balans testem `BattleSimTest`/`BalanceReport`. Instrukcja: `docs/ADDING_ERA.md`.
+   - Technicznie: `Defs` jest sterowane danymi (`EraSpec` na epokę). Trzeba dopisać jednostki, wieżę, ostrzał, grafikę (`game/art/*`) i przestroić balans testem `BattleSimTest`/`BalanceReport`. Instrukcja: `docs/ADDING_ERA.md`.
    - Zapis gracza: `Profile.stars` dopasowuje się do liczby etapów. Przy wstawianiu epok w środek trzeba zmapować stare gwiazdki na nowe numery etapów (migracja profilu).
 3. **Rozgałęzienia epok:** przy awansie wybór jednej z dwóch wersji następnej epoki (np. Para: Diesel / Tesla).
