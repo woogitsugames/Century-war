@@ -22,6 +22,23 @@ class ScoreEntry(val name: String, val score: Long, val day: Long)
 class Profile(private val file: File) {
 
     companion object {
+        const val CURRENT_VERSION = 2
+
+        /** Migracje danych profilu; wersja 1 nie wymaga zmiany pól. */
+        internal fun migrate(json: JSONObject, fromVersion: Int): JSONObject {
+            require(fromVersion in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $fromVersion" }
+            var version = fromVersion
+            while (version < CURRENT_VERSION) {
+                when (version) {
+                    1 -> Unit
+                    else -> error("Brak migracji z wersji $version")
+                }
+                version++
+            }
+            json.put("v", version)
+            return json
+        }
+
         val research = listOf(
             ResearchDef("r_elite", 1, 120, 1f),
             ResearchDef("r_rally", 1, 90, 1f),
@@ -65,7 +82,7 @@ class Profile(private val file: File) {
 
         fun isValidJson(json: String): Boolean = try {
             val o = JSONObject(json)
-            o.optInt("v", -1) == 1 &&
+            o.optInt("v", -1) in 1..CURRENT_VERSION &&
                 o.optJSONArray("stars") != null &&
                 o.optJSONObject("levels") != null &&
                 o.optJSONObject("boards") != null
@@ -109,6 +126,8 @@ class Profile(private val file: File) {
 
     val missionState = MissionState()
     val boards = HashMap<String, MutableList<ScoreEntry>>()
+    // Pliku utworzonego przez nowszą wersję gry nie wolno nadpisać.
+    private var newerProfileVersion = false
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
     fun replayTutorial() { tutorialDone = false; save() }
@@ -174,11 +193,11 @@ class Profile(private val file: File) {
     /** Wywoływane wyłącznie po udanym zapisie lokalnym; callback nie blokuje gry. */
     @Volatile var onSaved: ((String) -> Unit)? = null
 
-    /** Ten sam format JSON v1, którego używa plik profilu. */
+    /** Ten sam format JSON, którego używa plik profilu (wersja [CURRENT_VERSION]). */
     @Synchronized
     fun toJson(): String {
         val o = JSONObject()
-        o.put("v", 1)
+        o.put("v", CURRENT_VERSION)
         o.put("name", name)
         o.put("medals", medals)
         o.put("levels", JSONObject(levels as Map<*, *>))
@@ -208,102 +227,26 @@ class Profile(private val file: File) {
         val b = JSONObject()
         for ((k, list) in boards) {
             b.put(k, JSONArray().apply {
-                list.forEach { put(JSONObject().put("n", it.name).put("s", it.score).put("d", it.day)) }
+                list.sortedByDescending { it.score }.take(20).forEach {
+                    put(JSONObject().put("n", it.name).put("s", it.score).put("d", it.day))
+                }
             })
         }
         o.put("boards", b)
         return o.toString()
     }
 
-    /** Parsuje dane przed zmianą stanu, aby uszkodzony snapshot nie naruszył profilu. */
+    /**
+     * Zapis z chmury (Play Games). Ta sama walidacja i migracja co przy odczycie pliku;
+     * dane są parsowane przed zmianą stanu, więc uszkodzony snapshot nie narusza profilu.
+     */
     @Synchronized
     fun fromJson(json: String) {
         val o = JSONObject(json)
-        val newLevels = HashMap<String, Int>()
-        o.optJSONObject("levels")?.let { l ->
-            l.keys().forEach { newLevels[it] = l.optInt(it) }
-        }
-        val newStars = IntArray(stars.size)
-        o.optJSONArray("stars")?.let { a ->
-            for (i in 0 until minOf(a.length(), newStars.size)) newStars[i] = a.optInt(i)
-        }
-        val newBoards = HashMap<String, MutableList<ScoreEntry>>()
-        o.optJSONObject("boards")?.let { b ->
-            b.keys().forEach { k ->
-                val a = b.getJSONArray(k)
-                val list = ArrayList<ScoreEntry>()
-                for (i in 0 until a.length()) {
-                    val e = a.getJSONObject(i)
-                    list.add(ScoreEntry(e.optString("n"), e.optLong("s"), e.optLong("d")))
-                }
-                newBoards[k] = list
-            }
-        }
-
-        for (i in newStars.indices) newStars[i] = newStars[i].coerceIn(0, 3)
-        for (d in research) newLevels[d.key]?.let { newLevels[d.key] = it.coerceIn(0, d.max) }
-
-        name = o.optString("name", name)
-        medals = o.optInt("medals", 0)
-        levels.clear()
-        levels.putAll(newLevels)
-        newStars.copyInto(stars)
-        bestWave = o.optInt("bestWave", 0)
-        lastRankedDaily = o.optLong("lastRankedDaily", -1L)
-        tutorialDone = o.optBoolean("tutorialDone", false)
-        quality = o.optInt("quality", 0)
-        fpsCap = o.optInt("fpsCap", 0)
-        vibration = o.optBoolean("vibration", true)
-        sound = o.optBoolean("sound", true)
-        musicVolume = o.optDouble("musicVolume", 0.5).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0.5f }
-        showFps = o.optBoolean("showFps", false)
-        lang = o.optString("lang", "")
-        skirmishDiff = o.optInt("skirmishDiff", 1)
-        battles = o.optInt("battles", 0)
-        wins = o.optInt("wins", 0)
-        totalKills = o.optLong("totalKills", 0L)
-        playSeconds = o.optLong("playSeconds", 0L)
-        medals = medals.coerceAtLeast(0)
-        bestWave = bestWave.coerceAtLeast(0)
-        lastRankedDaily = lastRankedDaily.coerceAtLeast(-1L)
-        if (quality !in 0..3) quality = 0
-        if (fpsCap != 0 && fpsCap != 30 && fpsCap != 60) fpsCap = 0
-        skirmishDiff = skirmishDiff.coerceIn(0, 3)
-        battles = battles.coerceAtLeast(0)
-        wins = wins.coerceIn(0, battles)
-        totalKills = totalKills.coerceAtLeast(0L)
-        playSeconds = playSeconds.coerceAtLeast(0L)
-        notifications = o.optBoolean("notifications", true)
-        notifyHour = o.optInt("notifyHour", 18).coerceIn(0, 23)
-        achievementCounters.clear()
-        o.optJSONObject("achievementCounters")?.let { c ->
-            val keys = AchievementMetric.values().map { it.name }.toSet()
-            val it = c.keys()
-            while (it.hasNext()) {
-                val key = it.next()
-                if (key in keys) achievementCounters[key] = c.optLong(key, 0L).coerceAtLeast(0L)
-            }
-        }
-        unlockedAchievements.clear()
-        o.optJSONArray("unlockedAchievements")?.let { ids ->
-            for (i in 0 until minOf(ids.length(), 128)) {
-                val id = ids.optString(i)
-                if (Achievements.byId(id) != null) unlockedAchievements.add(id)
-            }
-        }
-        achievementDailySeeds.clear()
-        o.optJSONArray("achievementDailySeeds")?.let { days ->
-            for (i in 0 until minOf(days.length(), 4096)) {
-                val day = days.optLong(i, -1L)
-                if (day >= 0L) achievementDailySeeds.add(day)
-            }
-        }
-        achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0) and ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
-        missionState.fromJson(o.optJSONObject("missions"))
-        boards.clear()
-        boards.putAll(newBoards)
+        val version = o.optInt("v", 1)
+        require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
+        restore(migrate(o, version), version >= CURRENT_VERSION)
     }
-
 
     /**
      * Synchronizowane: zapis bywa wołany z wątku gry i z wątku UI (onPause). Bez blokady dwa
@@ -311,6 +254,7 @@ class Profile(private val file: File) {
      */
     @Synchronized
     fun save() {
+        if (newerProfileVersion) return
         try {
             val json = toJson()
             val tmp = File(file.parentFile, file.name + ".tmp")
@@ -320,9 +264,19 @@ class Profile(private val file: File) {
                 // fsync przed rename: po utracie zasilania nie zostanie pusty plik profilu.
                 try { out.fd.sync() } catch (_: Exception) { }
             }
-            val saved = if (tmp.renameTo(file)) true else {
-                file.delete()
-                tmp.renameTo(file)
+            // Nigdy nie kasujemy poprawnego profilu, gdy podmiana się nie uda.
+            var saved = tmp.renameTo(file)
+            if (!saved) {
+                try {
+                    java.nio.file.Files.move(
+                        tmp.toPath(), file.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    )
+                    saved = true
+                } catch (_: Exception) {
+                    // Poprzedni zapis zostaje na miejscu, nowy można odzyskać z .tmp.
+                }
             }
             if (saved) onSaved?.invoke(json)
         } catch (_: Exception) {
@@ -330,17 +284,215 @@ class Profile(private val file: File) {
         }
     }
 
+    /** Przyjmuje tylko poprawny JSON. Dane są przypisywane po pełnym odczycie tablic. */
+    private fun restore(json: JSONObject, strict: Boolean) {
+        if (strict) {
+            // Nie uznajemy uciętego, syntaktycznie poprawnego JSON za pełny zapis v2.
+            val mandatory = arrayOf(
+                "name", "medals", "levels", "stars", "bestWave", "lastRankedDaily",
+                "tutorialDone", "quality", "fpsCap", "vibration", "sound",
+                "showFps", "lang", "skirmishDiff", "battles", "wins",
+                "totalKills", "playSeconds", "boards",
+            )
+            for (key in mandatory) {
+                if (!json.has(key) || json.isNull(key)) error("Niepełny profil: $key")
+            }
+            // Nie zamieniamy uszkodzonych wartości na domyślne po cichu.
+            for (key in arrayOf("name", "lang")) {
+                if (json.opt(key) !is String) error("Niepoprawny tekst: $key")
+            }
+            for (key in arrayOf("medals", "bestWave", "lastRankedDaily", "quality",
+                "fpsCap", "skirmishDiff", "battles", "wins", "totalKills", "playSeconds")) {
+                if (json.opt(key) !is Number) error("Niepoprawna liczba: $key")
+            }
+            for (key in arrayOf("tutorialDone", "vibration", "sound", "showFps")) {
+                if (json.opt(key) !is Boolean) error("Niepoprawna flaga: $key")
+            }
+        }
+        fun obj(key: String): JSONObject? {
+            if (!json.has(key) || json.isNull(key)) return null
+            return json.optJSONObject(key) ?: error("Niepoprawny obiekt: $key")
+        }
+
+        fun arr(key: String): JSONArray? {
+            if (!json.has(key) || json.isNull(key)) return null
+            return json.optJSONArray(key) ?: error("Niepoprawna tablica: $key")
+        }
+
+        val newLevels = HashMap<String, Int>()
+        obj("levels")?.let { l ->
+            l.keys().forEach { key ->
+                if (strict && l.opt(key) !is Number) error("Niepoprawny poziom: $key")
+                newLevels[key] = l.optInt(key)
+            }
+        }
+        for (def in research) {
+            newLevels[def.key]?.let { newLevels[def.key] = it.coerceIn(0, def.max) }
+        }
+        val newStars = IntArray(stars.size)
+        arr("stars")?.let { a ->
+            for (i in 0 until a.length()) {
+                if (strict && a.opt(i) !is Number) error("Niepoprawna gwiazdka: $i")
+                if (i < newStars.size) newStars[i] = a.optInt(i).coerceIn(0, 3)
+            }
+        }
+        val newBoards = HashMap<String, MutableList<ScoreEntry>>()
+        obj("boards")?.let { b ->
+            b.keys().forEach { key ->
+                val entries = b.optJSONArray(key) ?: error("Niepoprawny ranking: $key")
+                val best = ArrayList<ScoreEntry>(20)
+                for (i in 0 until entries.length()) {
+                    val e = entries.getJSONObject(i)
+                    if (strict && (e.opt("n") !is String || e.opt("s") !is Number || e.opt("d") !is Number)) {
+                        error("Niepoprawny wpis rankingu: $key/$i")
+                    }
+                    val score = e.optLong("s")
+                    if (best.size >= 20 && score <= best[best.lastIndex].score) continue
+                    val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"))
+                    var pos = 0
+                    while (pos < best.size && best[pos].score >= score) pos++
+                    best.add(pos, entry)
+                    if (best.size > 20) best.removeAt(20)
+                }
+                newBoards[key] = best
+            }
+        }
+
+        val newCounters = HashMap<String, Long>()
+        obj("achievementCounters")?.let { c ->
+            val known = AchievementMetric.values().map { it.name }.toSet()
+            val it = c.keys()
+            while (it.hasNext()) {
+                val key = it.next()
+                if (key in known) newCounters[key] = c.optLong(key, 0L).coerceAtLeast(0L)
+            }
+        }
+        val newUnlocked = HashSet<String>()
+        arr("unlockedAchievements")?.let { ids ->
+            for (i in 0 until minOf(ids.length(), 128)) {
+                val id = ids.optString(i)
+                if (Achievements.byId(id) != null) newUnlocked.add(id)
+            }
+        }
+        val newDailySeeds = HashSet<Long>()
+        arr("achievementDailySeeds")?.let { days ->
+            for (i in 0 until minOf(days.length(), 4096)) {
+                val day = days.optLong(i, -1L)
+                if (day >= 0L) newDailySeeds.add(day)
+            }
+        }
+        val missions = obj("missions")
+
+        // Zmieniamy aktualny stan dopiero po pomyślnym przetworzeniu całego dokumentu.
+        name = json.optString("name", "")
+        medals = json.optInt("medals", 0).coerceAtLeast(0)
+        levels.clear(); levels.putAll(newLevels)
+        newStars.copyInto(stars)
+        bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
+        lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
+        tutorialDone = json.optBoolean("tutorialDone", false)
+        quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
+        fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
+        vibration = json.optBoolean("vibration", true)
+        sound = json.optBoolean("sound", true)
+        showFps = json.optBoolean("showFps", false)
+        lang = json.optString("lang", "")
+        skirmishDiff = json.optInt("skirmishDiff", 1).coerceIn(0, 3)
+        battles = json.optInt("battles", 0).coerceAtLeast(0)
+        wins = json.optInt("wins", 0).coerceAtLeast(0)
+        totalKills = json.optLong("totalKills", 0L).coerceAtLeast(0L)
+        playSeconds = json.optLong("playSeconds", 0L).coerceAtLeast(0L)
+        wins = wins.coerceAtMost(battles)
+        musicVolume = json.optDouble("musicVolume", 0.5).toFloat()
+        notifications = json.optBoolean("notifications", true)
+        notifyHour = json.optInt("notifyHour", 18).coerceIn(0, 23)
+        achievementCounters.clear(); achievementCounters.putAll(newCounters)
+        unlockedAchievements.clear(); unlockedAchievements.addAll(newUnlocked)
+        achievementDailySeeds.clear(); achievementDailySeeds.addAll(newDailySeeds)
+        achievementDoctrineMask = json.optInt("achievementDoctrineMask", 0) and
+            ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
+        missionState.fromJson(missions)
+        boards.clear(); boards.putAll(newBoards)
+    }
+
+    private fun clearInMemory() {
+        name = ""; medals = 0; levels.clear(); stars.fill(0)
+        bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        quality = 0; fpsCap = 0; vibration = true; sound = true
+        showFps = false; lang = ""; skirmishDiff = 1
+        battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
+        musicVolume = 0.5f; notifications = true; notifyHour = 18
+        achievementCounters.clear(); unlockedAchievements.clear()
+        achievementDailySeeds.clear(); achievementDoctrineMask = 0
+        missionState.reset()
+        boards.clear()
+    }
+
+    /** Nigdy nie nadpisujemy poprzedniej kopii uszkodzonego profilu. */
+    private fun preserveCorrupt(source: File): Boolean = try {
+        var backup = File(file.parentFile, file.name + ".corrupt")
+        var n = 1
+        while (backup.exists()) {
+            backup = File(file.parentFile, file.name + ".corrupt." + n++)
+        }
+        source.copyTo(backup, overwrite = false)
+        true
+    } catch (_: Exception) {
+        false
+    }
+
     @Synchronized
     fun load() {
-        // Awaryjny zapis (delete + rename) mógł zostać przerwany po usunięciu głównego pliku.
         val tmp = File(file.parentFile, file.name + ".tmp")
-        val src = if (file.exists()) file else if (tmp.exists()) tmp else return
-        try {
-            fromJson(src.readText())
-        } catch (_: Exception) {
-            // Uszkodzony plik — zaczynamy od czystego profilu, ale nie nadpisujemy go od razu.
-            try { src.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true) } catch (_: Exception) { }
+        if (!file.exists() && !tmp.exists()) return
+        // Nawet starsza data pliku z przyszłej wersji jest ważniejsza niż zapis .tmp.
+        if (file.exists()) {
+            try {
+                if (JSONObject(file.readText(Charsets.UTF_8)).optInt("v", 1) > CURRENT_VERSION) {
+                    newerProfileVersion = true
+                    return
+                }
+            } catch (_: Exception) {
+                // Uszkodzony plik zostanie obsłużony w pętli poniżej.
+            }
         }
+        val tmpFirst = tmp.exists() && (!file.exists() || tmp.lastModified() >= file.lastModified())
+        val candidates = if (tmpFirst) arrayOf(tmp, file) else arrayOf(file, tmp)
+        for (candidate in candidates) {
+            if (!candidate.exists()) continue
+            try {
+                val json = JSONObject(candidate.readText(Charsets.UTF_8))
+                val version = json.optInt("v", 1)
+                // Nowszej wersji nie wolno nadpisać ze starszej aplikacji.
+                if (version > CURRENT_VERSION) {
+                    newerProfileVersion = true
+                    return
+                }
+                restore(migrate(json, version), version >= CURRENT_VERSION)
+                newerProfileVersion = false
+                if (candidate == tmp) {
+                    // Przerwany zapis: odtwarzamy pełną, zweryfikowaną zawartość .tmp.
+                    if (!tmp.renameTo(file)) {
+                        try {
+                            java.nio.file.Files.move(
+                                tmp.toPath(), file.toPath(),
+                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            )
+                        } catch (_: Exception) {
+                            // Poprawny zapis wciąż jest dostępny jako .tmp.
+                        }
+                    }
+                } else if (tmp.exists() && tmp.lastModified() <= file.lastModified()) {
+                    tmp.delete()
+                }
+                return
+            } catch (_: Exception) {
+                if (preserveCorrupt(candidate) && candidate == tmp) tmp.delete()
+            }
+        }
+        clearInMemory()
+        newerProfileVersion = false
     }
 
     @Synchronized

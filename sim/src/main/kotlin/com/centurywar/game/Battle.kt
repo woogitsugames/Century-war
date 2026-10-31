@@ -243,7 +243,7 @@ class Battle(val cfg: BattleConfig) {
         p.xpMul *= b.xpMul
         p.cap = b.popCap
         p.abilityCdMul *= b.abilityCdMul
-        if (p.slots > 0) p.slots = b.turretSlots
+        if (p.slots > 0) p.slots = b.turretSlots.coerceIn(0, Defs.MAX_TURRET_SLOTS)
         p.eliteUnlocked = b.eliteUnlocked
         p.rallyUnlocked = b.rallyUnlocked
 
@@ -274,7 +274,7 @@ class Battle(val cfg: BattleConfig) {
     fun canQueue(side: Side, role: Role): Boolean {
         val def = Defs.unit(side.era, role)
         if (role == Role.ELITE && !side.eliteUnlocked) return false
-        return side.queueSize < side.queueMax && side.gold >= def.cost
+        return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= def.cost
     }
 
     fun queueUnit(side: Side, role: Role): Boolean {
@@ -411,7 +411,13 @@ class Battle(val cfg: BattleConfig) {
             Doctrine.SWIFT -> { side.trainMul *= 1.25f; side.speedMul *= 1.1f }
             Doctrine.VETERAN -> side.xpMul *= 1.3f
             Doctrine.FURY -> side.dmgMul *= 1.12f
-            Doctrine.ARSENAL -> { side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1); side.turretCostMul *= 0.8f }
+            Doctrine.ARSENAL -> {
+                // Modyfikator zakazu wież ma pierwszeństwo przed doktryną.
+                if (Modifier.NO_TURRETS !in cfg.modifiers && side.slots > 0) {
+                    side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
+                    side.turretCostMul *= 0.8f
+                }
+            }
             Doctrine.TACTICS -> side.abilityCdMul *= 0.75f
             Doctrine.PLUNDER -> side.killGoldMul *= 1.35f
         }
@@ -447,6 +453,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun upgradeCost(side: Side, slot: Int): Int {
+        if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return -1
         val te = side.turretEra[slot]
         if (te < 0 || te >= side.era) return -1
         return max(0, side.turretCost() - side.turretCost(te) / 2)
@@ -461,6 +468,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun sellTurret(side: Side, slot: Int): Boolean {
+        if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return false
         val te = side.turretEra[slot]
         if (over || te < 0) return false
         side.gold += side.turretCost(te) / 2
@@ -469,7 +477,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun abilityReady(side: Side, i: Int): Boolean =
-        !over && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
+        !over && i in 0..1 && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
 
     /** Bez argumentu celu zachowuje dawny, losowy rozrzut ostrzału. */
     fun castBarrage(side: Side): Boolean = castBarrage(side, Float.NaN)
@@ -477,15 +485,19 @@ class Battle(val cfg: BattleConfig) {
     /** Ostrzał skupiony wokół wskazanego miejsca, ograniczony do zasięgu zdolności. */
     fun castBarrage(side: Side, targetX: Float): Boolean {
         if (!abilityReady(side, 0)) return false
+        if (!fireBarrage(side, targetX)) return false
         side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
-        fireBarrage(side, targetX)
         side.barragesUsed++
         return true
     }
 
-    /** Dodatkowy ostrzał (karta) nie blokuje ostrzału ręcznego. NaN = klasyczny rozrzut. */
-    private fun fireBarrage(side: Side, targetX: Float = Float.NaN) {
+    /**
+     * Dodatkowy ostrzał (karta) nie blokuje ostrzału ręcznego. NaN = klasyczny rozrzut.
+     * false = pula pocisków pełna, nic nie wystrzelono (ręczny ostrzał nie zużywa wtedy odnowienia).
+     */
+    private fun fireBarrage(side: Side, targetX: Float = Float.NaN): Boolean {
         val count = 16
+        var fired = 0
         val dmg = Defs.abilityDmg(side.era) * side.dmgMul
         val type = barrageProj(side.era)
         val aimed = targetX.isFinite()
@@ -516,8 +528,11 @@ class Battle(val cfg: BattleConfig) {
             p.shooterRole = null
             p.turretEra = -1
             p.burnDps = 0f
+            fired++
         }
+        if (fired == 0) return false
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
+        return true
     }
 
     private fun barrageProj(era: Int) = when (era) {
@@ -916,8 +931,9 @@ class Battle(val cfg: BattleConfig) {
         if (endless && s.index == 1) return
         val k = sides[attacker]
         // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
-        val damage = d * k.siegeMul * siegePressure()
-        s.baseHp -= damage
+        val before = s.baseHp
+        s.baseHp = (s.baseHp - d * k.siegeMul * siegePressure()).coerceIn(0f, s.baseMaxHp)
+        val damage = before - s.baseHp
         if (damage > 0f) s.baseDamageTaken += damage
         s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul

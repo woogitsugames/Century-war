@@ -147,13 +147,13 @@ class ProfileCloudTest {
     }
 
     @Test
-    fun localSaveAndLoadKeepV1Format() {
+    fun localSaveAndLoadKeepCurrentFormat() {
         val file = File.createTempFile("century-save-", ".json")
         try {
             val profile = Profile(file)
             profile.stars[1] = 3
             profile.save()
-            assertTrue(file.readText().contains("\"v\":1"))
+            assertTrue(file.readText().contains("\"v\":" + Profile.CURRENT_VERSION))
             val loaded = Profile(file)
             loaded.load()
             assertEquals(3, loaded.stars[1])
