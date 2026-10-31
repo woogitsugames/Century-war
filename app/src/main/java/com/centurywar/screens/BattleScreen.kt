@@ -16,6 +16,8 @@ import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleRenderer
+import com.centurywar.game.BattleSnapshot
+import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
 import com.centurywar.game.Doctrine
@@ -25,17 +27,31 @@ import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
 
-class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDaily: Boolean = false) : Screen(g) {
+/**
+ * [restored] != null: bitwa wznowiona ze zrzutu (aplikacja została zabita w tle).
+ * Startuje wtedy w pauzie, a [cfg] musi być konfiguracją odtworzonej bitwy.
+ */
+class BattleScreen(
+    g: Game,
+    private val cfg: BattleConfig,
+    private val rankedDaily: Boolean = false,
+    restored: RestoredBattle? = null,
+) : Screen(g) {
 
-    private val battle = Battle(cfg)
+    private val battle = restored?.battle ?: Battle(cfg)
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
-    private var paused = false
+    private var paused = restored != null
+    /** Czas bitwy ostatniego autozapisu. */
+    private var lastAutosave = battle.time
+    /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
+    private var closed = false
     private var manualCam = 0f
     private var showTurrets = false
     private var finished = false
     private var resultTime = 0f
+
 
     // wynik
     private var reward = 0
@@ -60,6 +76,8 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
         const val CLOSE = 60
+        /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
+        const val AUTOSAVE_EVERY = 30f
     }
 
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
@@ -96,12 +114,12 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                 r.drawUnitIcon(c, def, rr.centerX(), rr.bottom - 18 * dp, rr.height() - 26 * dp, Ui.PLAYER)
             }
         }
-        r.camX = -120f
+        r.camX = restored?.camX ?: -120f
     }
 
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
     private val tut: TutorialOverlay? =
-        if (cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, TutorialOverlay.Targets(
+        if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, TutorialOverlay.Targets(
             unitBtn, evolveBtn, turretBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
@@ -195,6 +213,11 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
                 if (steps == 20) acc = 0f
             }
             if (battle.over) onFinished()
+            else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
+                // Bajty powstają tu, na wątku gry (spójny stan); plik zapisuje wątek w tle.
+                lastAutosave = battle.time
+                g.snapshots?.saveAsync(snapshotBytes())
+            }
         }
         playSounds()
         if (finished) resultTime += dt
@@ -358,7 +381,11 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
             EVOLVE -> if (battle.evolve(p)) g.haptic(40)
             PAUSE -> paused = true
             RESUME -> paused = false
-            RESTART, RESTART + 100 -> g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
+            RESTART, RESTART + 100 -> {
+                closed = true
+                g.snapshots?.delete()
+                g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
+            }
             QUIT -> { paused = false; battle.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
             in DOCTRINE0..DOCTRINE0 + 2 -> battle.chooseDoctrine(b.id - DOCTRINE0)
@@ -403,14 +430,24 @@ class BattleScreen(g: Game, private val cfg: BattleConfig, private val rankedDai
         return true
     }
 
+    /**
+     * Pauza aplikacji (albo zmiana ekranu). Zrzut zapisujemy synchronicznie: MainActivity
+     * czeka na to, zanim zatrzyma wątek gry, bo proces może zaraz zostać zabity.
+     */
     override fun onPause() {
-        if (!finished) paused = true
+        if (finished || closed || battle.over) return
+        paused = true
+        g.snapshots?.saveNow(snapshotBytes())
     }
+
+    private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX)
 
     // ---------------------------------------------------------------- koniec bitwy
 
     private fun onFinished() {
         finished = true
+        // Najpierw usuń zrzut, potem przyznaj nagrody: wznowienie nie może dać ich drugi raz.
+        g.snapshots?.delete()
         val pr = g.profile
         val won = battle.winner == 0
         pr.battles++

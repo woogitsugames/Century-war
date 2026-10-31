@@ -27,6 +27,9 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     @Volatile private var bufH = 0
     @Volatile private var sizeChanged = false
     @Volatile var frameCapFps = 0
+    /** true, dopóki wątek gry faktycznie działa (od startu pętli do jej wyjścia). */
+    @Volatile var loopActive = false
+        private set
     private var thread: Thread? = null
     private var scale = 1f
 
@@ -80,6 +83,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     private fun startThread() {
         if (running) return
         running = true
+        loopActive = true
         thread = Thread(this, "game-loop").apply {
             priority = Thread.MAX_PRIORITY
             start()
@@ -94,6 +98,11 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     }
 
     override fun run() {
+        loopActive = true
+        try { loop() } finally { loopActive = false }
+    }
+
+    private fun loop() {
         var last = System.nanoTime()
         while (running) {
             if (!hasSurface) break

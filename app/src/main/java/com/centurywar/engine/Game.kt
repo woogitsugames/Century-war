@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.SystemClock
+import com.centurywar.game.RestoredBattle
+import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import com.centurywar.screens.MenuScreen
@@ -40,6 +42,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     var sound: Sound? = null
+    /** Zrzut przerwanej bitwy (filesDir/battle.snap). Null w testach. */
+    var snapshots: SnapshotStore? = null
+    /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
+    var resumeOffer: RestoredBattle? = null
 
     fun sfx(id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f) {
         if (profile.sound) sound?.play(id, vol, gap, pitch)

@@ -503,5 +503,38 @@ object L {
         "tut_done_t" to t("Gotowe, dowódco!", "Well done, commander!"),
         "tut_done" to t("Znasz podstawy. Zniszcz wrogą bazę po prawej stronie, zanim wróg zniszczy twoją.", "You know the basics. Destroy the enemy base on the right before the enemy destroys yours."),
         // --- koniec bloku samouczka
+        "r_startGold" to t("Skarbiec", "Treasury"),
+        "r_startGold_d" to t("+40 złota na start", "+40 starting gold"),
+        "r_income" to t("Handel", "Trade"),
+        "r_income_d" to t("+6% przychodu", "+6% income"),
+        "r_unitHp" to t("Pancerze", "Armor"),
+        "r_unitHp_d" to t("+4% HP jednostek", "+4% unit HP"),
+        "r_unitDmg" to t("Kowalstwo", "Smithing"),
+        "r_unitDmg_d" to t("+4% obrażeń jednostek", "+4% unit damage"),
+        "r_baseHp" to t("Fortyfikacje", "Fortifications"),
+        "r_baseHp_d" to t("+8% HP bazy", "+8% base HP"),
+        "r_turretDmg" to t("Balistyka", "Ballistics"),
+        "r_turretDmg_d" to t("+6% obrażeń wież", "+6% turret damage"),
+        "r_train" to t("Musztra", "Drill"),
+        "r_train_d" to t("+5% szybkości szkolenia", "+5% training speed"),
+        "r_xp" to t("Kroniki", "Chronicles"),
+        "r_xp_d" to t("+5% XP", "+5% XP"),
+        "r_cap" to t("Koszary", "Barracks"),
+        "r_cap_d" to t("+1 limit armii", "+1 army cap"),
+        "r_cd" to t("Sztab", "Command"),
+        "r_cd_d" to t("-5% odnowienia zdolności", "-5% ability cooldown"),
+        "r_slots" to t("Inżynieria", "Engineering"),
+        "r_slots_d" to t("+1 slot wieży", "+1 turret slot"),
+        "r_elite" to t("Doktryna elit", "Elite Doctrine"),
+        "r_elite_d" to t("Odblokowuje jednostki elitarne", "Unlocks elite units"),
+        "r_rally" to t("Okrzyk bojowy", "War Cry"),
+        "r_rally_d" to t("Odblokowuje Zryw (+40% tempa)", "Unlocks Rally (+40% tempo)"),
+
+        // --- wznawianie przerwanej bitwy (BattleSnapshot / MenuScreen) --------------
+        "resume_title" to t("Wznowić bitwę?", "Resume battle?"),
+        "resume_desc" to t("Poprzednia bitwa została przerwana. Możesz ją dokończyć albo porzucić.", "Your previous battle was interrupted. You can finish it or discard it."),
+        "resume_yes" to t("Wznów", "Resume"),
+        "resume_no" to t("Porzuć", "Discard"),
+        // --- koniec bloku wznawiania bitwy -----------------------------------------
     )
 }

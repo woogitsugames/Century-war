@@ -26,7 +26,17 @@ class MenuScreen(g: Game) : Screen(g) {
     private val rankings = btn(6)
     private val settings = btn(7)
     private val codex = btn(8)
+    // pytanie o wznowienie przerwanej bitwy (g.resumeOffer)
+    private val resumeYes = btn(RESUME_YES)
+    private val resumeNo = btn(RESUME_NO)
+    private val resumePanel = RectF()
+    private var resumeInfo = ""
     private var dt = 0f
+
+    private companion object {
+        const val RESUME_YES = 20
+        const val RESUME_NO = 21
+    }
 
     // logo
     private val logoFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
@@ -87,10 +97,44 @@ class MenuScreen(g: Game) : Screen(g) {
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         codex.set(settings.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
+        layoutResume(cx)
+    }
+
+    private fun layoutResume(cx: Float) {
+        resumeYes.label = L["resume_yes"]; resumeYes.iconId = Icons.PLAY; resumeYes.highlight = true
+        resumeNo.label = L["resume_no"]; resumeNo.iconId = Icons.CLOSE; resumeNo.color = Ui.BTN_RED
+        val pw = min(440 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val ph = min(230 * dp, h - g.insetT - g.insetB - 24 * dp)
+        val cy = (g.insetT + h - g.insetB) / 2
+        resumePanel.set(cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2)
+        val gap = 14 * dp
+        val bw = (pw - 48 * dp - gap) / 2
+        val bh = 50 * dp
+        val by = resumePanel.bottom - bh - 20 * dp
+        resumeNo.set(resumePanel.left + 24 * dp, by, bw, bh)
+        resumeYes.set(resumeNo.r.right + gap, by, bw, bh)
+        resumeInfo = g.resumeOffer?.let { o ->
+            val b = o.battle
+            val mode = when (b.cfg.mode) {
+                Mode.CAMPAIGN -> L.f("stage_n", b.cfg.stageIndex + 1)
+                Mode.ENDLESS -> L["endless"] + " · " + L.f("wave", b.wave)
+                Mode.DAILY -> L["daily"]
+                Mode.SKIRMISH -> L["skirmish"]
+            }
+            val s = b.time.toInt()
+            mode + " · " + L["time"] + " " + String.format(java.util.Locale.ROOT, "%d:%02d", s / 60, s % 60)
+        } ?: ""
+        updateResumeVisibility()
+    }
+
+    private fun updateResumeVisibility() {
+        val show = g.resumeOffer != null
+        resumeYes.visible = show; resumeNo.visible = show
     }
 
     override fun update(dt: Float) {
         this.dt = dt
+        updateResumeVisibility()
         val pr = g.profile
         research.sub = "${pr.medals} ${L["medals"]}"
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber()
@@ -103,9 +147,29 @@ class MenuScreen(g: Game) : Screen(g) {
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
         drawLogo(c)
-        for (b in buttons) ui.button(c, b, if (b === settings || b === codex) 20f else 17f)
+        for (b in buttons) if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b === settings || b === codex) 20f else 17f)
         drawPlayer(c)
         ui.textO(c, "v0.2", w - g.insetR - 12 * dp, h - g.insetB - 10 * dp, 10f, Ui.DIM, Paint.Align.RIGHT, 1.5f)
+        if (g.resumeOffer != null) drawResume(c)
+    }
+
+    private fun drawResume(c: Canvas) {
+        c.drawColor(Color.argb(160, 0, 0, 0))
+        val p = resumePanel
+        ui.panel(c, p)
+        ui.ribbon(c, p.centerX(), p.top + 4 * dp, L["resume_title"], 22f, Ui.RIBBON, p.width() * 0.6f, Ui.GOLD, p.width() + 20 * dp)
+        ui.wrap(c, L["resume_desc"], p.centerX(), p.top + 52 * dp, p.width() - 48 * dp, 14f, Ui.TEXT, Paint.Align.CENTER)
+        if (resumeInfo.isNotEmpty()) {
+            ui.textO(c, resumeInfo, p.centerX(), resumeYes.r.top - 16 * dp, ui.fit(resumeInfo, 15f, p.width() - 40 * dp), Ui.GOLD, Paint.Align.CENTER)
+        }
+        ui.button(c, resumeNo, 17f)
+        ui.button(c, resumeYes, 17f)
+    }
+
+    override fun onBack(): Boolean {
+        // Wstecz tylko chowa pytanie; zrzut zostaje (zapyta przy następnym uruchomieniu).
+        if (g.resumeOffer != null) { g.resumeOffer = null; return true }
+        return false
     }
 
     private fun drawLogo(c: Canvas) {
@@ -163,6 +227,20 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        val offer = g.resumeOffer
+        if (offer != null) {
+            when (b.id) {
+                RESUME_YES -> {
+                    g.resumeOffer = null
+                    g.setScreen(BattleScreen(g, offer.battle.cfg, offer.rankedDaily, offer))
+                }
+                RESUME_NO -> {
+                    g.resumeOffer = null
+                    g.snapshots?.delete()
+                }
+            }
+            return // okno pytania blokuje resztę menu
+        }
         when (b.id) {
             1 -> g.push(CampaignScreen(g))
             2 -> g.push(ModeScreen(g, Mode.ENDLESS))

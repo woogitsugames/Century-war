@@ -138,6 +138,11 @@ object Daily {
 class Rng(seed: Long) {
     private var s: Long = if (seed == 0L) 0x9E3779B97F4A7C15uL.toLong() else seed xor 0x5DEECE66DL
 
+    /** Wewnętrzny stan generatora (zapis/wczytanie bitwy w [BattleSnapshot]). */
+    var state: Long
+        get() = s
+        set(v) { s = v }
+
     fun nextLong(): Long {
         var x = s
         x = x xor (x shl 13)
