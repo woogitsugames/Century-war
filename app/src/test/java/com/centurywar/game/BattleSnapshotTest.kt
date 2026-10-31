@@ -62,6 +62,7 @@ class BattleSnapshotTest {
             assertEquals(x.gold, y.gold)
             assertEquals(x.xp, y.xp)
             assertEquals(x.era, y.era)
+            assertArrayEquals(x.unitTier, y.unitTier)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
             assertEquals(x.doctrines, y.doctrines)
@@ -71,6 +72,7 @@ class BattleSnapshotTest {
             assertEquals(u.active, v.active)
             if (!u.active) continue
             assertEquals(u.x, v.x); assertEquals(u.hp, v.hp); assertEquals(u.serial, v.serial); assertEquals(u.def.id, v.def.id)
+            assertEquals(u.tier, v.tier); assertEquals(u.maxHp, v.maxHp); assertEquals(u.dmg, v.dmg)
         }
         for (k in a.projs.indices) {
             assertEquals(a.projs[k].active, b.projs[k].active)
@@ -104,6 +106,25 @@ class BattleSnapshotTest {
         assertTrue(a.over && b.over)
         assertEquals(a.winner, b.winner)
         assertEquals(a.score(), b.score())
+    }
+
+    @Test
+    fun upgradedFightersAndTiersSurviveSave() {
+        val a = Battle(BattleConfig(Mode.SKIRMISH, 303L, 1f))
+        a.player.gold = 10000f
+        assertTrue(a.upgradeUnit(a.player, Role.MELEE))
+        assertTrue(a.spawn(a.player, Defs.unit(0, Role.MELEE)))
+        assertTrue(a.upgradeUnit(a.player, Role.MELEE))
+        assertTrue(a.spawn(a.player, Defs.unit(0, Role.MELEE)))
+        val fighters = a.units.filter { it.alive && it.side == 0 }
+        assertEquals(2, fighters.size)
+        assertEquals(2, fighters[0].tier)
+        assertEquals(3, fighters[1].tier)
+        val b = roundTrip(a)
+        assertArrayEquals(a.player.unitTier, b.player.unitTier)
+        steps(a, 60 * 25)
+        steps(b, 60 * 25)
+        assertSame(a, b)
     }
 
     @Test

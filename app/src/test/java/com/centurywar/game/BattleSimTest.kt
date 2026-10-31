@@ -31,6 +31,23 @@ class BattleSimTest {
         println(report)
     }
 
+    /** Raport bazowego i ulepszonego balansu: różnice wynikają tylko z reguł stopni. */
+    @Test
+    fun unitTierBalanceReport() {
+        println("epoka/rola | bez ulepszeń HP/DMG | stopień 2 HP/DMG koszt | stopień 3 HP/DMG koszt")
+        for (e in 0 until Defs.ERA_COUNT) {
+            for (r in Role.values()) {
+                val d = Defs.unit(e, r)
+                val hp2 = d.hp * Defs.tierStatMul(2)
+                val hp3 = d.hp * Defs.tierStatMul(3)
+                val dmg2 = d.dmg * Defs.tierStatMul(2)
+                val dmg3 = d.dmg * Defs.tierStatMul(3)
+                println("${e}/${r} | ${d.hp.toInt()}/${d.dmg.toInt()} | ${hp2.toInt()}/${dmg2.toInt()} ${Defs.unitUpgradeCost(e, r, 2)} | ${hp3.toInt()}/${dmg3.toInt()} ${Defs.unitUpgradeCost(e, r, 3)}")
+                assertTrue(hp3 > hp2 && hp2 > d.hp && dmg3 > dmg2 && dmg2 > d.dmg)
+            }
+        }
+    }
+
     @Test
     fun fullSkirmishProgressesThroughEras() {
         val b = run(BattleConfig(Mode.SKIRMISH, 42L, 1.0f), 90f)
