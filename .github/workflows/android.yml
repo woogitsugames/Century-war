@@ -48,6 +48,10 @@ jobs:
           ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
           ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
           python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
+      - name: Testy listy kontrolnej wydania
+        run: |
+          chmod +x ./gradlew
+          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'
@@ -59,6 +63,7 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*WeatherTest*' \
+            --tests '*DailyTest*' \
             --tests '*Replay*' \
             --tests '*Counter*' \
             --tests '*Endless*' \

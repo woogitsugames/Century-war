@@ -216,25 +216,25 @@ object Weekly {
 }
 
 object Daily {
-    /** Pierwszy dzień UTC, w którym losowanie uwzględnia nową epokę. */
-    // Data wydania jeszcze nieznana (31.10.2026): odległa data, do tego dnia wyzwanie dnia
-    // losuje jak przed Epoką żelaza. Przed wydaniem ustawić na faktyczny dzień (nigdy w przeszłości).
-    const val ERA_EXPANSION_DAY = 21153L // 2027-12-01 00:00 UTC
-    /** Data włączenia wariantów: nie przesuwać wstecz ani przed ERA_EXPANSION_DAY. */
-    // Zastępcza data wydania; przed premierą ustawić dzień pierwszego udostępnienia wariantów.
-    const val VARIANTS_DAY = ERA_EXPANSION_DAY
-    /** Data aktywacji pogody: historyczne wyzwania nie zmieniają przebiegu. Jak wyżej: dzień wydania. */
-    const val WEATHER_DAY = ERA_EXPANSION_DAY
+    /** Pierwszy dzień UTC pełnej zawartości wyzwania dnia (żelazo, warianty i pogoda). */
+    // Przed pierwszym wydaniem ustaw na faktyczny dzień publikacji; potem NIGDY nie zmieniaj.
+    // 21153 (2027-12-01 UTC) to wyłącznie data zastępcza do czasu ustalenia premiery.
+    const val RELEASE_DAY = 21153L
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
-    fun config(day: Long, bonuses: Bonuses): BattleConfig {
+    fun config(day: Long, bonuses: Bonuses): BattleConfig =
+        if (day < RELEASE_DAY) legacyConfig(day) else generatedConfig(day, historical = false)
+
+    /** Zamrożone zasady sprzed premiery: stare nasiona i epoki pozostają bez zmian. */
+    private fun legacyConfig(day: Long): BattleConfig = generatedConfig(day, historical = true)
+
+    private fun generatedConfig(day: Long, historical: Boolean): BattleConfig {
         val rng = Rng(day * 7919L + 17L)
         val all = Modifier.values()
         val mods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
-        val historical = day < ERA_EXPANSION_DAY
         // Stare dni zachowują losowanie sprzed dodania żelaza. Numer epoki >=2
         // otrzymuje tylko nowy indeks, nie zmieniając historycznej pary epok.
         val rolledStart = if (historical) rng.nextInt(3) else rng.nextInt(6) // zamrożone: kolejna epoka nie może przelosować przyszłych dni
@@ -243,10 +243,10 @@ object Daily {
         val maxEra = if (historical && rolledMax >= 2) rolledMax + 1 else rolledMax
         val power = 1.1f + rng.nextFloat() * 0.25f
         // Drugi, niezależny strumień: nie przesuwa żadnego starego losowania.
-        val weather = if (day < WEATHER_DAY) Weather.CLEAR
+        val weather = if (historical) Weather.CLEAR
             else Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
         return BattleConfig(Mode.DAILY, day, power,
-            start, maxEra, mods, normalizedBonuses(), variantsEnabled = day >= VARIANTS_DAY, weather = weather)
+            start, maxEra, mods, normalizedBonuses(), variantsEnabled = !historical, weather = weather)
     }
 
     internal fun normalizedBonuses() = Bonuses(
