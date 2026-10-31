@@ -176,7 +176,9 @@ class ScoreClient(
     }
 
     private fun sendNext(token: Long) {
-        if (!enabled || !profile.globalRanking || token != generation) {
+        // Opóźniona próba starej generacji nie może wyzerować stanu nowej.
+        if (token != generation) return
+        if (!enabled || !profile.globalRanking) {
             sending = false
             return
         }
@@ -196,7 +198,8 @@ class ScoreClient(
         } catch (_: Exception) {
             -1
         }
-        if (!enabled || token != generation) {
+        if (token != generation) return
+        if (!enabled || !profile.globalRanking) {
             sending = false
             return
         }
