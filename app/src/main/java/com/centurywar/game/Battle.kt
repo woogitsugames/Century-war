@@ -94,6 +94,14 @@ class Side(val index: Int) {
     var spawned = 0
     var goldEarned = 0f
 
+    // Liczniki osiągnięć: tylko proste operacje podczas symulacji.
+    var elitesTrained = 0
+    var elitesLost = 0
+    var turretsBuilt = 0
+    var barragesCast = 0
+    var erasAdvanced = 0
+    var baseDamageTaken = 0f
+
     fun turretCost(era: Int = this.era): Int = (Defs.eras[era].turret.cost * turretCostMul).toInt()
 }
 
@@ -154,6 +162,7 @@ class Battle(val cfg: BattleConfig) {
     var wave = 0
     var waveTimer = 12f
     var serialCounter = 0
+    internal var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
     val fog = Modifier.FOG_OF_WAR in cfg.modifiers
     val rangedHorde = Modifier.RANGED_HORDE in cfg.modifiers
@@ -249,6 +258,7 @@ class Battle(val cfg: BattleConfig) {
         side.xp -= Defs.evolveXp[side.era]
         val ratio = side.baseHp / side.baseMaxHp
         side.era++
+        side.erasAdvanced++
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index)
@@ -323,6 +333,7 @@ class Battle(val cfg: BattleConfig) {
         side.gold -= cost
         side.turretEra[slot] = side.era
         side.turretCd[slot] = 0.5f
+        side.turretsBuilt++
         return true
     }
 
@@ -377,6 +388,7 @@ class Battle(val cfg: BattleConfig) {
             p.siegeMul = 0.25f
         }
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
+        side.barragesCast++
         return true
     }
 
@@ -516,6 +528,7 @@ class Battle(val cfg: BattleConfig) {
         f.moving = false
         f.serial = ++serialCounter
         s.spawned++
+        if (def.role == Role.ELITE) s.elitesTrained++
         s.aliveCount++
         return true
     }
@@ -694,6 +707,7 @@ class Battle(val cfg: BattleConfig) {
             v.xp += cost * 0.25f * v.xpMul
             k.kills++
             k.killValue += cost
+            if (u.def.role == Role.ELITE) v.elitesLost++
             v.aliveCount--
             fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size)
         }
@@ -701,7 +715,9 @@ class Battle(val cfg: BattleConfig) {
 
     private fun damageBase(s: Side, d: Float, attacker: Int) {
         if (endless && s.index == 1) return
-        s.baseHp -= d * siegePressure()
+        val damage = d * siegePressure()
+        s.baseHp -= damage
+        if (damage > 0f) s.baseDamageTaken += damage
         s.baseFlash = 0.15f
         val k = sides[attacker]
         k.xp += d * 0.12f * k.xpMul
