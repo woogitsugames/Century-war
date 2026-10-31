@@ -492,7 +492,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val def = Defs.allUnits[wdef[i]]
             val x = sx(wx[i])
             val margin = 130f * k * def.size
-            if (x >= -margin && x <= viewW + margin) {
+            // Podczas pierwszych 0,8 s sylwetkę rysuje jeszcze żywy Fighter.
+            if (wage[i] >= 0.8f && x >= -margin && x <= viewW + margin) {
                 c.save()
                 c.translate(x, groundY)
                 c.scale(k * def.size * b.sides[wside[i]].dir, k * def.size)
