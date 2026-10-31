@@ -382,7 +382,8 @@ class Profile(private val file: File) {
         o.put("globalRanking", globalRanking)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
-        o.put("vibration", vibrationLevel)
+        o.put("vibration", vibration) // zgodność ze starszą wersją v3
+        o.put("vibrationLevel", vibrationLevel)
         o.put("screenShake", screenShake.coerceIn(0, 2))
         o.put("palette", palette)
         o.put("teamMarkers", teamMarkers)
@@ -565,6 +566,8 @@ class Profile(private val file: File) {
             // Stare profile v3 miały Boolean, nowe mają liczbę 0..2.
             if (json.opt("vibration") !is Boolean && json.opt("vibration") !is Number)
                 error("Niepoprawna wartość wibracji")
+            if (json.has("vibrationLevel") && json.opt("vibrationLevel") !is Number)
+                error("Niepoprawny poziom wibracji")
         }
         fun obj(key: String): JSONObject? {
             if (!json.has(key) || json.isNull(key)) return null
@@ -711,7 +714,7 @@ class Profile(private val file: File) {
         globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
-        vibrationLevel = when (val stored = json.opt("vibration")) {
+        vibrationLevel = when (val stored = if (json.has("vibrationLevel")) json.opt("vibrationLevel") else json.opt("vibration")) {
             is Boolean -> if (stored) 2 else 0
             is Number -> stored.toInt().coerceIn(0, 2)
             else -> 2
