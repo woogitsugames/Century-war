@@ -21,14 +21,36 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 15 | [Przypomnienie o wyzwaniu dnia (powiadomienia)](15-notifications.md) | `gpt/15-notifications` | — |
 | 16 | [Ulepszenia jednostek w obrębie epoki](16-unit-upgrades.md) | `gpt/16-unit-upgrades` | — |
 | 17 | [Nowa epoka: Epoka żelaza + szablon kolejnych](17-new-era.md) | `gpt/17-new-era` | po 16 lub równolegle |
-| 18 | [Rozgałęzienia epok (Diesel/Tesla, Cyber/Bio)](18-era-branches.md) | `gpt/18-era-branches` | po 17 |
+| 18 | ~~Rozgałęzienia epok (Diesel/Tesla, Cyber/Bio)~~ – odrzucone, zastąpione przez 28 | `gpt/18-era-branches` (nie scalać) | — |
 | 19 | [Liczba mnoga w tekstach (formy liczebników w 10 językach)](19-plural-forms.md) | `gpt/19-plural-forms` | — (dotyka `L.kt`, scalać przed 21 i 23 albo rozwiązać konflikty w `L.kt`) |
 | 20 | [Aktualizacja materiałów sklepu i prywatności po Play Games i powiadomieniach](20-store-privacy-update.md) | `gpt/20-store-privacy-update` | po scaleniu int-meta (01, 15); ponowić po 23 |
 | 21 | [Celowanie ostrzału dotykiem dla gracza](21-aimed-barrage.md) | `gpt/21-aimed-barrage` | — |
 | 22 | [Wyraźne różnice osobowości AI z miarami](22-ai-personalities.md) | `gpt/22-ai-personalities` | po 16–18 (dotyka `Ai.kt`); przed 04 |
 | 23 | [Integracja klienta z serwerem rankingu globalnego](23-global-ranking-client.md) | `gpt/23-global-ranking-client` | po int-infra (08); najlepiej po 16–18 i 22 (zmiany `:sim` zmieniają powtórki) |
 | 24 | [Poprawki z przeglądu: configChanges locale i predictive back](24-back-locale-fixes.md) | `gpt/24-back-locale-fixes` | — |
+| 25 | [Animacja trafień i śmierci](25-hit-death-anim.md) | `gpt/25-hit-death-anim` | najlepiej po 27 (wspólne `drawUnit`, `drawUnitPose`, `Machines.kt`) |
+| 26 | [Pociski, ostrzały, eksplozje i potrząsanie ekranem](26-projectile-fx.md) | `gpt/26-projectile-fx` | po 21 (`worldX` i wstrząs w `BattleRenderer`); po 25 (cząsteczki w `consumeFx`) |
+| 27 | [Płynny ruch maszyn i zwierząt](27-machine-motion.md) | `gpt/27-machine-motion` | — (pierwsze z 25–27) |
+| 28 | [Warianty epok (od nowa, zamiast 18)](28-era-variants.md) | `gpt/28-era-variants` | po 19, 21, 22 i 25–27; przed 23 i ponownym 04 |
+| 29 | [Odtwarzacz powtórek bitew](29-replay-viewer.md) | `gpt/29-replay-viewer` | najlepiej po 23 (oba zmieniają `BattleScreen.onFinished`); wydziela `BattleSfx` używane przez 38 |
+| 30 | [Historia bitew i ekran statystyk](30-battle-history.md) | `gpt/30-battle-history` | po 29 (przycisk „Powtórka” w szczegółach; bez 29 pominąć), po 19 (formy „%d dni temu”) |
+| 31 | [Dostępność: palety barw, rozmiar tekstu, mniej potrząsania i błysków](31-accessibility.md) | `gpt/31-accessibility` | po 25–27 (renderer, `Pen`, efekty muszą czytać flagi); przed 32 i 38 (`SettingsScreen`) |
+| 32 | [Podpowiedzi kontekstowe i powtórka samouczka](32-contextual-hints.md) | `gpt/32-contextual-hints` | po 21 (`TutorialOverlay`), po 31 (układ ustawień) |
+| 33 | [Pogoda i pora dnia na polu bitwy](33-weather.md) | `gpt/33-weather` | po 26 i 28 (`BattleRenderer`, `Battle.kt`, `Modes.kt`); przed 35 i 36 (korzystają z `Weather`) |
+| 34 | [Oblężenie bez końca: nowi bossowie i tematy fal](34-endless-bosses.md) | `gpt/34-endless-bosses` | po 25 i 27 (rysowanie jednostek), po 33 (kolejka `Battle.kt`/`BattleSnapshot`) |
+| 35 | [Potyczka konfigurowalna](35-custom-skirmish.md) | `gpt/35-custom-skirmish` | po 22 (opisy osobowości), 23 (ranking online potyczki) i 33 (wybór pogody; bez 33 sekcja pominięta) |
+| 36 | [Oblężenie tygodnia z progami nagród](36-weekly-siege.md) | `gpt/36-weekly-siege` | po 33 i 34 (pogoda, bossowie w konfiguracji tygodnia); część serwerowa po 08/23 |
+| 37 | [Wydajność: budżet klatki, auto-jakość, testy kroków/s i alokacji](37-performance-budget.md) | `gpt/37-performance-budget` | na końcu (po 25–36): testy identyczności i wydajności mierzą gotową symulację i renderer |
+| 38 | [Dźwięki epok i miks z muzyką](38-era-sound.md) | `gpt/38-era-sound` | po 26 (`FxBuffer`, `playSounds`), 29 (`BattleSfx`), 31/32 (`SettingsScreen`) |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 
 Zlecenia 19, 21, 23 dotykają `engine/L.kt`; 21, 23 dotykają `screens/BattleScreen.kt`; 22 dotyka `sim/.../Ai.kt` (kolejka z 05–18); 23 zmienia `:sim` i `:server` (każda późniejsza zmiana balansu wymaga podbicia `CW_GAME_VERSION`). Niezależne: 20, 24.
+
+Zlecenia 25, 26, 27 są czysto wizualne (bez zmian `BattleSnapshot.VERSION` i `Replay.VERSION`; 25 dodaje w `Fighter` tylko pola tylko-wizualne `hitStep`/`hitPow`), ale wszystkie dotykają `game/BattleRenderer.kt` i `ArtGalleryTest.kt`, a 25 i 27 także `art/Machines.kt` i `art/Soldiers.kt`. Można je robić równolegle, scalać po kolei: 27 → 25 → 26. 26 dotyka też `engine/L.kt`, `meta/Profile.kt` i `screens/SettingsScreen.kt` (konflikty z 19, 21, 23 w `L.kt`) oraz miejsca wstrząsu ekranu, z którego korzysta celowanie z 21 (`worldX`), więc scalać po 21.
+
+Zlecenie 28 zastępuje 18 i dotyka prawie wszystkiego w `:sim` (`Defs.kt`, `Battle.kt`, `Ai.kt`, `BattleController.kt`, `Replay.kt`, `BattleSnapshot.kt`, `Modes.kt`) oraz `BattleScreen.kt`, `CodexScreen.kt`, `L.kt`, renderera i `art/*`. Kolejność: 19 → 21 → 22 → (25–27) → 28 → 23 → 04. Podbija `Replay.VERSION` (3 → 4) i `BattleSnapshot.VERSION` (7 → 8); serwer rankingu wymaga potem podbicia `CW_GAME_VERSION`. Jeśli 23 zostanie scalone wcześniej, 28 musi dodatkowo przejść `:server:test`.
+
+Zlecenia 29–38 prawie wszystkie dotykają `engine/L.kt` (poza 37) i `meta/Profile.kt` (29, 30, 31, 32, 35, 36, 38). `screens/BattleScreen.kt`: `onFinished` zmieniają 29, 30, 35, 36; HUD 33, 34, 37; `playSounds` 29 i 38. `game/BattleRenderer.kt`: 31, 33, 34, 37 (oraz 25–27). `sim/.../Battle.kt`: 33, 34, 36, 37 i addytywnie 38 (`FxBuffer`); `BattleSnapshot.kt` podbijają 33, 34, 36 (każde osobno, scalać po kolei i pilnować jednej rosnącej `VERSION`), 29 tylko udostępnia kodek konfiguracji. `sim/.../Modes.kt`: 33, 36, opcjonalnie 35 (oraz 28). `SettingsScreen.kt`: 31, 32, 38. `ModeScreen.kt`: 32, 33, 35, 36. `RankingsScreen.kt`: 29, 30, 36, 37. `CodexScreen.kt`: 33, 34. Zmiany przebiegu symulacji w 33, 34, 36 wymagają podbicia `CW_GAME_VERSION`, jeśli 23 jest już scalone. Najlepsza kolejność: 29 → 30 równolegle z 31 → 32 → 38 i z kolejką symulacji 33 → 34 → 36 → 35; 37 na końcu.
+
+Kolejność wysyłki i polecenia startowe: [DISPATCH.md](DISPATCH.md).
