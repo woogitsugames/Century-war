@@ -88,6 +88,17 @@ jobs:
             done
           } | tee build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Zezwól emulatorowi na akcelerację KVM
+        shell: bash
+        run: |
+          if test -e /dev/kvm; then
+            sudo chmod 0666 /dev/kvm
+            ls -l /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+          else
+            echo "::warning::Brak /dev/kvm: emulator zadziała bez akceleracji"
+          fi
+
       - name: Uruchom wydanie release na emulatorze
         uses: reactivecircus/android-emulator-runner@v2
         with:
