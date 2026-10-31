@@ -21,6 +21,8 @@ import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
 import com.centurywar.meta.Profile
+import com.centurywar.meta.PlayGamesLeaderboards
+import com.google.android.gms.games.PlayGamesSdk
 import java.io.File
 
 /**
@@ -33,6 +35,7 @@ class MainActivity : Activity(), Host {
     private lateinit var game: Game
     private lateinit var view: GameView
     private var vibrator: Vibrator? = null
+    private var playGames: PlayGamesLeaderboards? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +43,17 @@ class MainActivity : Activity(), Host {
         game = Game(this, profile, Quality.detect(this))
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
+
+        if (PlayGamesLeaderboards.isConfigured(this)) {
+            try {
+                PlayGamesSdk.initialize(applicationContext)
+                playGames = PlayGamesLeaderboards(this, game)
+                game.online = playGames!!
+            } catch (_: RuntimeException) {
+                // Bez PGS gra pozostaje w trybie lokalnym.
+            }
+        }
+
         view = GameView(this, game)
         setContentView(view)
 
@@ -105,6 +119,7 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         view.onResume()
+        playGames?.refreshSignIn()
     }
 
     override fun onPause() {
@@ -116,6 +131,7 @@ class MainActivity : Activity(), Host {
 
     /** Tylko Android < 13; nowsze używają OnBackInvokedCallback zarejestrowanego w onCreate. */
     override fun onDestroy() {
+        playGames?.close()
         game.sound?.release()
         super.onDestroy()
     }
@@ -156,11 +172,11 @@ class MainActivity : Activity(), Host {
     }
 
     override fun applyRenderScale(scale: Float) {
-        runOnUiThread { view.setRenderScale(scale) }
+        runOnUiThread { if (::view.isInitialized) view.setRenderScale(scale) }
     }
 
     override fun applyFrameRate(fps: Int) {
-        runOnUiThread { view.setFrameRate(fps) }
+        runOnUiThread { if (::view.isInitialized) view.setFrameRate(fps) }
     }
 
     override fun exit() {
