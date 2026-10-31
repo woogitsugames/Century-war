@@ -54,23 +54,25 @@ class EndlessWaveTest {
         assertEquals(1f, b.enemy.speedMul, 0f)
     }
 
-    @Test fun bossAtSkirmisherWaveHasNeitherPenalty() {
-        val b = newBattle()
-        for (w in 1..10) {
-            if (b.pendingCards != null) b.chooseEndlessCard(0)
-            for (u in b.units) u.active = false
-            b.enemy.aliveCount = 0
-            b.enemy.queueSize = 0
-            b.nextWaveTheme = if (w == 10) EndlessWaveTheme.SKIRMISHERS else EndlessWaveTheme.MIXED
-            b.waveTimer = 0f
-            b.step()
+    @Test fun bossesIgnoreHpAndSpeedPenaltiesAtThemedWave() {
+        for (theme in arrayOf(EndlessWaveTheme.SKIRMISHERS, EndlessWaveTheme.SIEGE_TRAIN)) {
+            val b = newBattle()
+            for (w in 1..10) {
+                if (b.pendingCards != null) b.chooseEndlessCard(0)
+                for (u in b.units) u.active = false
+                b.enemy.aliveCount = 0
+                b.enemy.queueSize = 0
+                b.nextWaveTheme = if (w == 10) theme else EndlessWaveTheme.MIXED
+                b.waveTimer = 0f
+                b.step()
+            }
+            val boss = b.currentBoss()!!
+            val expected = boss.def.hp * b.enemy.hpMul * (3f + 0.45f) *
+                Defs.tierStatMul(boss.tier)
+            assertEquals("HP bossa w $theme", expected, boss.maxHp, 0.05f)
+            assertEquals("Prędkość bossa w $theme", 1f, boss.waveSpeedMul, 0f)
+            assertEquals(10, b.wave)
         }
-        val boss = b.currentBoss()!!
-        val expected = boss.def.hp * b.enemy.hpMul * (3f + 0.45f) *
-            Defs.tierStatMul(boss.tier)
-        assertEquals(expected, boss.maxHp, 0.05f)
-        assertEquals(1f, boss.waveSpeedMul, 0f)
-        assertEquals(10, b.wave)
     }
 
     @Test fun enemyAiChoosesBothVariantsDeterministicallyInEndless() {
