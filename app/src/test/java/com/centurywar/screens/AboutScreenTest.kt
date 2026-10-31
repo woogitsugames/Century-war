@@ -20,8 +20,10 @@ class AboutScreenTest {
         val entries = LicenseCatalog.app
         assertTrue(entries.isNotEmpty())
         assertEquals(entries.size, entries.map { it.name }.toSet().size)
+        assertEquals(entries.size, entries.map { it.module }.toSet().size)
         entries.forEach {
             assertTrue(it.name.isNotBlank())
+            assertTrue(it.module.count { c -> c == ':' } == 2)
             assertTrue(it.owner.isNotBlank())
             assertTrue(it.license.isNotBlank())
             assertTrue(SecureLinks.isHttps(it.url))

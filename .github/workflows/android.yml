@@ -47,6 +47,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
           ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
+          python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'

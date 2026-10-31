@@ -101,7 +101,7 @@ Przy każdej zmianie wersji zależności:
 4. W razie nowych licencji dołączyć wymagane notice/copyright. Sam link nie zawsze zastępuje obowiązek dołączenia pełnego notice.
 5. Uruchomić testy `AboutScreenTest`, `LTest`, `ScreenshotTest.menus` i `:app:assembleDebug`.
 
-Workflow `.github/workflows/android.yml` zapisuje oba drzewa Gradle jako artefakt **`release-runtime-dependencies`**, również gdy podstawowe testy kończą się niepowodzeniem. **Do czasu uzyskania i audytu artefaktów nie należy oznaczać inwentarza jako w pełni zweryfikowanego prawnie.**
+Skrypt `scripts/check_license_inventory.py` porównuje rozstrzygnięte moduły aplikacji z `LicenseCatalog.app` i `docs/LICENSES.md`, a serwera z `docs/LICENSES.md`. Brak dowolnego modułu przerywa CI. Lista nie jest uważana za sprawdzoną, dopóki kontrola rzeczywiście się nie wykona.\n\nWorkflow `.github/workflows/android.yml` zapisuje oba drzewa Gradle jako artefakt **`release-runtime-dependencies`**, również gdy podstawowe testy kończą się niepowodzeniem. **Do czasu uzyskania i audytu artefaktów nie należy oznaczać inwentarza jako w pełni zweryfikowanego prawnie.**
 
 ## 4. Źródła licencji i deklaracji modułów
 
