@@ -27,7 +27,7 @@ data class SkirmishSetup(
             var mask = 0
             for (m in cfg.modifiers) mask = mask or (1 shl m.ordinal)
             return SkirmishSetup(
-                cfg.startEra, cfg.maxEra, AiPersonality.values().indexOf(cfg.aiPersonality),
+                cfg.startEra, cfg.maxEra, (cfg.aiPersonality?.ordinal ?: -1),
                 kotlin.math.round(cfg.aiPower * 100f).toInt(), mask,
             ).sanitized()
         }
