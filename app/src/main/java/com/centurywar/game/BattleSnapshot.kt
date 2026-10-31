@@ -26,7 +26,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 2
+    const val VERSION = 3
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -39,11 +39,19 @@ object BattleSnapshot {
         for (u in Defs.allUnits) {
             mix(u.id); mix(u.era); mix(u.role.ordinal); mix(u.cost); mixF(u.hp); mixF(u.dmg); mixF(u.range)
             mixF(u.cooldown); mixF(u.speed); mixF(u.trainTime); mixF(u.size); mixF(u.splash); mix(u.projectile); mixF(u.siegeMul)
+            mix(u.variant); mixF(u.chain); mixF(u.regen)
         }
         for (e in Defs.eras) {
             val t = e.turret
             mix(e.evolveXp); mix(t.cost); mixF(t.dmg); mixF(t.range); mixF(t.cooldown); mixF(t.splash); mix(t.projectile)
             mixF(Defs.baseHp(e.index)); mixF(Defs.income(e.index)); mixF(Defs.abilityDmg(e.index)); mixF(Defs.costScale(e.index))
+            for (v in e.variants) {
+                val vt = v.turret
+                mix(v.index); mix(v.abilityProjectile); mix(v.abilityCount)
+                mixF(v.abilitySplash); mixF(v.abilityChain); mixF(v.abilityDmgMul)
+                mix(vt.cost); mixF(vt.dmg); mixF(vt.range); mixF(vt.cooldown); mixF(vt.splash)
+                mix(vt.projectile); mixF(vt.chain)
+            }
         }
         h
     }
@@ -67,6 +75,8 @@ object BattleSnapshot {
         val pc = b.pendingChoice
         o.writeByte(pc?.size ?: -1)
         pc?.forEach { o.writeByte(it.ordinal) }
+        o.writeByte(b.pendingVariantEra)
+        o.writeBoolean(b.pendingVariantOffersDoctrine)
         for (s in b.sides) writeSide(o, s)
         writeAi(o, b.ai)
         writeAi(o, b.playerAi)
@@ -87,7 +97,7 @@ object BattleSnapshot {
             o.writeByte(p.side); o.writeByte(p.type); o.writeByte(p.era)
             o.writeFloat(p.x); o.writeFloat(p.h); o.writeFloat(p.vx); o.writeFloat(p.vh); o.writeFloat(p.g)
             o.writeFloat(p.tx); o.writeFloat(p.t); o.writeFloat(p.dur); o.writeFloat(p.delay)
-            o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul)
+            o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul); o.writeFloat(p.chain)
         }
         o.flush()
         val payload = bo.toByteArray()
@@ -118,11 +128,12 @@ object BattleSnapshot {
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
-        o.writeByte(s.era); o.writeFloat(s.gold); o.writeFloat(s.xp); o.writeFloat(s.baseHp); o.writeFloat(s.baseMaxHp)
+        o.writeByte(s.era); o.writeByte(s.eraVariant)
+        o.writeFloat(s.gold); o.writeFloat(s.xp); o.writeFloat(s.baseHp); o.writeFloat(s.baseMaxHp)
         o.writeByte(s.queueSize); o.writeByte(s.queueMax)
         for (i in 0 until s.queueSize) o.writeShort(s.queue[i])
         o.writeFloat(s.trainT)
-        for (i in 0 until Defs.MAX_TURRET_SLOTS) { o.writeByte(s.turretEra[i]); o.writeFloat(s.turretCd[i]); o.writeFloat(s.turretFire[i]) }
+        for (i in 0 until Defs.MAX_TURRET_SLOTS) { o.writeByte(s.turretEra[i]); o.writeByte(s.turretVariant[i]); o.writeFloat(s.turretCd[i]); o.writeFloat(s.turretFire[i]) }
         o.writeByte(s.slots)
         o.writeFloat(s.abilityCd[0]); o.writeFloat(s.abilityCd[1])
         o.writeFloat(s.rallyT); o.writeBoolean(s.hold); o.writeShort(s.aliveCount); o.writeFloat(s.front); o.writeFloat(s.baseFlash)
@@ -175,8 +186,13 @@ object BattleSnapshot {
         b.waveTimer = i.readFloat()
         b.serialCounter = i.readInt()
         val pcn = i.readByte().toInt()
+        require(pcn in -1..3)
         b.pendingChoice = if (pcn < 0) null else Array(pcn) { enumAt(Doctrine.values(), i.readByte().toInt()) }
+        b.pendingVariantEra = i.readByte().toInt().also { require(it == EraBranches.NONE || EraBranches.available(it)) }
+        b.pendingVariantOffersDoctrine = i.readBoolean()
+        require(!(b.pendingVariantEra != EraBranches.NONE && b.pendingChoice != null))
         for (s in b.sides) readSide(i, s)
+        require(b.pendingVariantEra == EraBranches.NONE || b.player.era == b.pendingVariantEra)
         if (!readAi(i, b.ai)) return null
         if (i.readBoolean()) {
             val pa = Ai(b, 0)
@@ -207,7 +223,7 @@ object BattleSnapshot {
             p.side = side(i.readByte().toInt()); p.type = i.readByte().toInt(); p.era = era(i.readByte().toInt())
             p.x = i.readFloat(); p.h = i.readFloat(); p.vx = i.readFloat(); p.vh = i.readFloat(); p.g = i.readFloat()
             p.tx = i.readFloat(); p.t = i.readFloat(); p.dur = i.readFloat(); p.delay = i.readFloat()
-            p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat()
+            p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat(); p.chain = i.readFloat()
         }
         return RestoredBattle(b, ranked, camX)
     }
@@ -233,13 +249,18 @@ object BattleSnapshot {
     }
 
     private fun readSide(i: DataInputStream, s: Side) {
-        s.era = era(i.readByte().toInt()); s.gold = i.readFloat(); s.xp = i.readFloat(); s.baseHp = i.readFloat(); s.baseMaxHp = i.readFloat()
+        s.era = era(i.readByte().toInt())
+        s.eraVariant = variant(s.era, i.readByte().toInt())
+        s.gold = i.readFloat(); s.xp = i.readFloat(); s.baseHp = i.readFloat(); s.baseMaxHp = i.readFloat()
         s.queueSize = i.readByte().toInt(); s.queueMax = i.readByte().toInt()
         require(s.queueSize in 0..Battle.QUEUE_CAP && s.queueMax in 0..Battle.QUEUE_CAP)
         for (k in 0 until s.queueSize) s.queue[k] = i.readShort().toInt().also { require(it in Defs.allUnits.indices) }
         s.trainT = i.readFloat()
         for (k in 0 until Defs.MAX_TURRET_SLOTS) {
             s.turretEra[k] = i.readByte().toInt().also { require(it in -1 until Defs.ERA_COUNT) }
+            val te = s.turretEra[k]
+            s.turretVariant[k] = if (te < 0) i.readByte().toInt().also { require(it == EraBranches.NONE) }
+                else variant(te, i.readByte().toInt())
             s.turretCd[k] = i.readFloat(); s.turretFire[k] = i.readFloat()
         }
         s.slots = i.readByte().toInt().also { require(it in 0..Defs.MAX_TURRET_SLOTS) }
@@ -274,6 +295,10 @@ object BattleSnapshot {
     }
 
     private fun era(v: Int): Int { require(v in 0 until Defs.ERA_COUNT); return v }
+    private fun variant(era: Int, v: Int): Int {
+        require(v == EraBranches.NONE || v in Defs.eras[era].variants.indices)
+        return v
+    }
     private fun side(v: Int): Int { require(v == 0 || v == 1); return v }
 }
 
