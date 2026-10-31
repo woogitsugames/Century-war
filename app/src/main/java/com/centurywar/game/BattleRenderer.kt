@@ -2,18 +2,17 @@ package com.centurywar.game
 
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Picture
 import android.graphics.PorterDuff
 import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Shader
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Palette
 import com.centurywar.engine.Ui
+import com.centurywar.game.art.Backdrops
 import com.centurywar.game.art.Bases
 import com.centurywar.game.art.Machines
 import com.centurywar.game.art.Pen
@@ -74,7 +73,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
-    private val sky = Paint()
     private val textP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
     private val path = Path()
     private val rect = RectF()
@@ -85,9 +83,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
-    private var skyEra = -1
-    private var skyH = 0f
-    private var skyWeather = Weather.CLEAR
     // Deszcz i pył: stałe współrzędne cząstek, bez alokacji i RNG podczas renderowania.
     private val rainX = FloatArray(128) { ((it * 73 + 31) % 127) / 127f }
     private val rainY = FloatArray(128) { ((it * 89 + 17) % 131) / 131f }
@@ -156,6 +151,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     // rysowanie szczegółowe (art/*): wspólny pisak + moduły
     private val pen = Pen()
+    private val backdrops = Backdrops(g, b)
     private val men = Soldiers(pen)
     private val mach = Machines(pen, men)
     private var poseOverride = false
@@ -179,7 +175,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         k = min(visibleH / 360f, w / worldW).coerceAtLeast(0.1f)
         val excess = visibleH - 360f * k
         if (excess > 0f) groundY -= excess * 0.4f
-        skyEra = -1
+        backdrops.invalidate()
         clampCam()
     }
 
@@ -278,11 +274,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         shakeX = sin(time * 16.3f) * cos(time * 9.7f) * strength * 7f * g.ui.dp
         shakeY = sin(time * 13.1f + 1.4f) * cos(time * 7.7f) * strength * 4f * g.ui.dp
 
-        drawSky(c, w, h)
+        backdrops.drawSky(c, w, h, groundY, time)
         c.save()
         c.translate(shakeX, shakeY)
-        drawBackdrop(c, w, h)
-        drawGround(c, w, h)
+        backdrops.drawLandscape(c, w, groundY, camX, k)
+        backdrops.drawGround(c, w, h, groundY, camX, k)
         if (b.weather == Weather.NIGHT) drawNight(c, w)
         drawScars(c, dt)
         drawBarrageMarkers(c)
@@ -315,184 +311,6 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         drawTexts(c, dt)
         if (b.fog) drawFog(c, w, h)
         c.restore()
-    }
-
-    // ---------------------------------------------------------------- tło
-
-    // Kolory krajobrazu są częścią EraSpec, brak równoległych tablic.
-
-    private fun themeEra() = b.player.era
-
-    private fun drawSky(c: Canvas, w: Float, h: Float) {
-        val e = themeEra()
-        val weather = b.weather
-        if (e != skyEra || skyH != groundY || weather != skyWeather) {
-            skyEra = e; skyH = groundY; skyWeather = weather
-            val palette = Defs.spec(e).palette
-            val upper = when (weather) {
-                Weather.NIGHT -> Ui.blend(palette[0], Color.rgb(8, 17, 44), 0.88f)
-                Weather.RAIN -> Ui.blend(palette[0], Color.rgb(65, 82, 105), 0.62f)
-                else -> palette[0]
-            }
-            val lower = when (weather) {
-                Weather.NIGHT -> Ui.blend(palette[1], Color.rgb(17, 32, 60), 0.82f)
-                Weather.RAIN -> Ui.blend(palette[1], Color.rgb(91, 105, 120), 0.58f)
-                else -> palette[1]
-            }
-            sky.shader = LinearGradient(0f, 0f, 0f, groundY, upper, lower, Shader.TileMode.CLAMP)
-        }
-        c.drawRect(0f, 0f, w, h, sky)
-        if (Defs.spec(e).art == EraArt.ORBITAL) { // gwiazdy
-            fill.color = Color.argb(200, 255, 255, 255)
-            for (i in 0 until 60) {
-                val x = ((i * 977) % 1000) / 1000f * w
-                val y = ((i * 613) % 1000) / 1000f * groundY * 0.7f
-                val tw = 0.6f + 0.4f * sin(time * 2f + i)
-                c.drawCircle(x, y, (1f + (i % 3)) * g.ui.dp * 0.6f * tw, fill)
-            }
-        }
-        if (g.quality.clouds && Defs.spec(e).art != EraArt.ORBITAL) {
-            val cloud = if (Defs.spec(e).terrain == Terrain.INDUSTRIAL) Color.argb(110, 90, 85, 80) else Color.argb(150, 255, 255, 255)
-            for (i in 0 until 5) {
-                val span = w + 400f * g.ui.dp
-                val wind = if (b.weather == Weather.WIND) 27f * b.windDirection() else 0f
-                val x = ((i * 397f + time * (8f + i * 3f + wind) * g.ui.dp) % span + span) % span - 200f * g.ui.dp
-                val y = groundY * (0.12f + 0.09f * (i % 3))
-                val s = (40f + 18f * (i % 3)) * g.ui.dp
-                f(cloud)
-                c.drawCircle(x, y, s * 0.6f, fill)
-                c.drawCircle(x + s * 0.6f, y + s * 0.1f, s * 0.5f, fill)
-                c.drawCircle(x - s * 0.6f, y + s * 0.15f, s * 0.45f, fill)
-                rect.set(x - s, y, x + s, y + s * 0.4f)
-                c.drawRoundRect(rect, s * 0.2f, s * 0.2f, fill)
-            }
-        }
-    }
-
-    private fun drawBackdrop(c: Canvas, w: Float, h: Float) {
-        val e = themeEra()
-        val layers = g.quality.parallaxLayers
-        if (layers >= 3) ridge(c, w, 0.15f, 300f, 220f, Defs.spec(e).palette[2], 1)
-        if (layers >= 2) ridge(c, w, 0.35f, 190f, 140f, Defs.spec(e).palette[3], 2)
-        props(c, w, 0.7f, Defs.spec(e).palette[4], e)
-    }
-
-    /** Pasmo wzgórz/gór z paralaksą. Kształt jest deterministyczny (z indeksu), bez losowania w klatce. */
-    private fun ridge(c: Canvas, w: Float, par: Float, height: Float, amp: Float, color: Int, seed: Int) {
-        val e = themeEra()
-        val off = camX * par
-        val step = 140f
-        path.reset()
-        path.moveTo(0f, groundY)
-        val first = (off / step).toInt() - 1
-        val count = (w / (step * k)).toInt() + 3
-        for (i in first..first + count) {
-            val hx = (i * step - off) * k
-            val hash = (((i * 7349 + seed * 1597) and 0x7fffffff) % 1000) / 1000f
-            val hh = if (Defs.spec(e).terrain == Terrain.CITY && seed == 2) (height * (0.4f + hash)) else height * 0.5f + amp * hash
-            if (Defs.spec(e).terrain == Terrain.CITY && seed == 2) { // panorama miasta: prostokąty
-                path.lineTo(hx, groundY - hh * k * 0.8f)
-                path.lineTo(hx + step * k * 0.8f, groundY - hh * k * 0.8f)
-                path.lineTo(hx + step * k * 0.8f, groundY - 40f * k)
-            } else if (seed == 1) {
-                path.lineTo(hx, groundY - hh * k * 0.75f)
-                path.lineTo(hx + step * k * 0.5f, groundY - hh * k * 0.35f)
-            } else {
-                path.quadTo(hx - step * k * 0.5f, groundY - hh * k * 0.6f, hx, groundY - hh * k * 0.45f)
-            }
-        }
-        path.lineTo(w, groundY)
-        path.close()
-        c.drawPath(path, f(color))
-    }
-
-    /** Najbliższa warstwa: drzewa (epoki dawne), słupy i ruiny (przemysł), wieżowce/anteny (przyszłość). */
-    private fun props(c: Canvas, w: Float, par: Float, color: Int, e: Int) {
-        val off = camX * par
-        val step = 260f
-        val first = (off / step).toInt() - 1
-        val count = (w / (step * k)).toInt() + 3
-        val dark = Ui.blend(color, Color.BLACK, 0.25f)
-        for (i in first..first + count) {
-            val hash = (((i * 9137 + 77) and 0x7fffffff) % 1000) / 1000f
-            val x = (i * step + hash * 120f - off) * k
-            val s = (0.7f + hash * 0.6f) * k
-            when {
-                (Defs.spec(e).terrain == Terrain.WOODS || Defs.spec(e).terrain == Terrain.DESERT || Defs.spec(e).terrain == Terrain.PAVED_HILLS || Defs.spec(e).terrain == Terrain.PINES) -> {
-                    if (Defs.spec(e).terrain == Terrain.DESERT && hash > 0.5f) { // palma
-                        c.drawRect(x - 4 * s, groundY - 110 * s, x + 4 * s, groundY, f(0xFF7A5A3A.toInt()))
-                        for (j in 0 until 5) {
-                            val a = -2.6f + j * 0.55f
-                            c.drawLine(x, groundY - 110 * s, x + cos(a) * 45 * s, groundY - 110 * s + sin(a) * 30 * s + 20 * s, l(color, 9 * s))
-                        }
-                    } else if (Defs.spec(e).terrain == Terrain.PINES || hash < 0.4f) { // świerk
-                        c.drawRect(x - 4 * s, groundY - 30 * s, x + 4 * s, groundY, f(0xFF5A3F28.toInt()))
-                        for (j in 0..2) {
-                            path.reset()
-                            val yy = groundY - (30 + j * 30) * s
-                            path.moveTo(x - (40 - j * 9) * s, yy)
-                            path.lineTo(x + (40 - j * 9) * s, yy)
-                            path.lineTo(x, yy - 55 * s)
-                            path.close()
-                            c.drawPath(path, f(if (j % 2 == 0) color else dark))
-                        }
-                    } else { // liściaste
-                        c.drawRect(x - 5 * s, groundY - 60 * s, x + 5 * s, groundY, f(0xFF6A4A30.toInt()))
-                        c.drawCircle(x, groundY - 80 * s, 34 * s, f(color))
-                        c.drawCircle(x - 22 * s, groundY - 64 * s, 24 * s, f(dark))
-                        c.drawCircle(x + 24 * s, groundY - 68 * s, 26 * s, f(color))
-                    }
-                }
-                Defs.spec(e).terrain == Terrain.INDUSTRIAL -> {
-                    if (hash < 0.5f) { // słup telegraficzny
-                        c.drawLine(x, groundY, x, groundY - 120 * s, l(0xFF4A3A2A.toInt(), 5 * s))
-                        c.drawLine(x - 18 * s, groundY - 110 * s, x + 18 * s, groundY - 110 * s, l(0xFF4A3A2A.toInt(), 4 * s))
-                    } else { // ruina / komin
-                        c.drawRect(x - 20 * s, groundY - 90 * s, x + 20 * s, groundY, f(dark))
-                        c.drawRect(x + 6 * s, groundY - 140 * s, x + 18 * s, groundY - 90 * s, f(color))
-                    }
-                }
-                else -> {
-                    if (hash < 0.5f) { // antena / pylon
-                        c.drawLine(x, groundY, x, groundY - 150 * s, l(dark, 4 * s))
-                        val blink = if (sin(time * 3f + i) > 0f) 0xFFFF4040.toInt() else 0xFF601010.toInt()
-                        c.drawCircle(x, groundY - 150 * s, 4 * s, f(if (Defs.spec(e).art == EraArt.ORBITAL) 0xFF60F0FF.toInt() else blink))
-                    } else {
-                        rect.set(x - 26 * s, groundY - 120 * s, x + 26 * s, groundY)
-                        c.drawRoundRect(rect, 6 * s, 6 * s, f(color))
-                        for (yy in 0 until 4) for (xx in 0 until 2) {
-                            if (((i + yy + xx) % 3) == 0) continue
-                            c.drawRect(x - 18 * s + xx * 20 * s, groundY - 108 * s + yy * 26 * s, x - 8 * s + xx * 20 * s, groundY - 96 * s + yy * 26 * s,
-                                f(if (Defs.spec(e).art == EraArt.ORBITAL) 0xFF9060FF.toInt() else 0xFFFFE08A.toInt()))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun drawGround(c: Canvas, w: Float, h: Float) {
-        val e = themeEra()
-        c.drawRect(-8f * g.ui.dp, groundY, w + 8f * g.ui.dp, h + 8f * g.ui.dp, f(Defs.spec(e).palette[5]))
-        c.drawRect(0f, groundY, w, groundY + 5f * k, f(Ui.blend(Defs.spec(e).palette[5], Color.WHITE, 0.15f)))
-        // kamyki / kępki trawy przewijane z polem
-        val step = 90f
-        val first = (camX / step).toInt() - 1
-        val count = (w / (step * k)).toInt() + 3
-        val dark = Ui.blend(Defs.spec(e).palette[5], Color.BLACK, 0.2f)
-        for (i in first..first + count) {
-            val hash = (((i * 4049 + 13) and 0x7fffffff) % 1000) / 1000f
-            val x = sx(i * step + hash * 50f)
-            val y = groundY + (10f + hash * 40f) * k
-            if (y > h) continue
-            if (Defs.spec(e).terrain == Terrain.PAVED_HILLS) {
-                // Kamienie brukowej drogi i spoiny na wzgórzach Epoki żelaza.
-                val bx = sx(i * step)
-                c.drawRect(bx, groundY + 12f * k, bx + 68f * k, groundY + 22f * k, f(if (i % 2 == 0) 0xFFAAA28F.toInt() else 0xFF978E80.toInt()))
-                c.drawRect(bx + 12f * k, groundY + 24f * k, bx + 70f * k, groundY + 30f * k, f(0xFF756E62.toInt()))
-            }
-            c.drawCircle(x, y, (2f + hash * 3f) * k, f(dark))
-        }
     }
 
     // ---------------------------------------------------------------- bazy

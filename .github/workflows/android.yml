@@ -171,6 +171,7 @@ jobs:
             --tests '*HintOverlayTest*' \
             --tests '*ScreenshotTest*' \
             --tests '*ArtGalleryTest*' \
+            --tests '*BackdropsTest*' \
             --tests '*RendererStressTest*' \
             --console=plain --no-configuration-cache
       - name: Zapisz zrzuty PNG
