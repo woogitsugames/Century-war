@@ -55,7 +55,6 @@ class ReplayScreen(
     private val markStep = IntArray(Replay.MAX_COMMANDS + 256)
     private val markKind = IntArray(Replay.MAX_COMMANDS + 256)
     private var markCount = 0
-    private var lastBosses = 0
     private var timeKey = -1
     private var timeText = ""
     private var statusKey = -1
@@ -78,7 +77,9 @@ class ReplayScreen(
             state = OLD
             return
         }
-        val replay = ReplayPlayer(record.cfg, record.log)
+        val replay = try { ReplayPlayer(record.cfg, record.log) } catch (_: Exception) {
+            state = BROKEN; return
+        }
         if (replay.broken) { state = BROKEN; return }
         player = replay
         for (cmd in record.log.commands) {
@@ -90,7 +91,6 @@ class ReplayScreen(
             }
             if (type >= 0) addMark(cmd.step, type)
         }
-        lastBosses = 0
         state = READY
         rebuildRenderer()
         if (g.current === this) layout()
@@ -150,13 +150,7 @@ class ReplayScreen(
             acc += dt * speed
             var n = 0
             while (acc >= Battle.STEP && n < 20 && !p.finished && !p.broken) {
-                val oldBosses = p.battle.bossesSpawned
                 p.advance(1, keepEffects = speed == 1)
-                if (p.battle.bossesSpawned > oldBosses &&
-                    p.battle.bossesSpawned > lastBosses) {
-                    addMark(p.step, 3)
-                    lastBosses = p.battle.bossesSpawned
-                }
                 acc -= Battle.STEP
                 n++
             }
@@ -261,6 +255,12 @@ class ReplayScreen(
                 else -> Ui.GOOD
             }
             c.drawRect(x - dp, progressBar.top - 3 * dp, x + dp, progressBar.bottom + 3 * dp, ui.fill)
+        }
+        ui.fill.color = Ui.GOOD
+        for (i in 0 until p.bossMarkerCount) {
+            val xBoss = progressBar.left + p.bossMarkerStep(i) * span
+            c.drawRect(xBoss - 2 * dp, progressBar.top - 4 * dp,
+                xBoss + 2 * dp, progressBar.bottom + 4 * dp, ui.fill)
         }
         val x = progressBar.left + p.progress * progressBar.width()
         ui.fill.color = Ui.TEXT
