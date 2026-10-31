@@ -540,4 +540,24 @@ class ProfileTest {
         assertTrue(old.hintsEnabled)
     }
 
+
+    @Test
+    fun rapidGameThreadSavesKeepLatestSnapshotAndWriteOffThread() {
+        val file = tmpFile()
+        val profile = Profile(file)
+        val writerThread = java.util.concurrent.atomic.AtomicReference<String>()
+        profile.onSaved = { writerThread.set(Thread.currentThread().name) }
+        val gameThread = Thread({
+            repeat(120) { i ->
+                profile.medals = i + 1
+                profile.save()
+            }
+        }, "game-loop")
+        gameThread.start()
+        gameThread.join()
+        assertTrue(profile.awaitWrites(10_000))
+        assertEquals("cw-profile-io", writerThread.get())
+        assertEquals(120, Profile(file).also { it.load() }.medals)
+        assertFalse(profile.awaitWrites(0))
+    }
 }
