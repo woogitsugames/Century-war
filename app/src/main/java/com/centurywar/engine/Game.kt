@@ -15,6 +15,7 @@ import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.Missions
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
+import com.centurywar.screens.ReplayScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
 interface Host {
@@ -58,7 +59,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun applyMusicVolume() { music?.setVolume(profile.musicVolume) }
 
     private fun syncMusicScreen(s: Screen) {
-        if (s !is BattleScreen) {
+        if (s !is BattleScreen && s !is ReplayScreen) {
             music?.setEra(Music.MENU)
             music?.setIntensity(0f)
         }
