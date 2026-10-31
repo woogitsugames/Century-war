@@ -214,7 +214,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             val hx = (i * step - off) * k
             val hash = (((i * 7349 + seed * 1597) and 0x7fffffff) % 1000) / 1000f
             val hh = if (Defs.spec(e).terrain == Terrain.CITY && seed == 2) (height * (0.4f + hash)) else height * 0.5f + amp * hash
-            if (e == 6 && seed == 2) { // panorama miasta: prostokąty
+            if (Defs.spec(e).terrain == Terrain.CITY && seed == 2) { // panorama miasta: prostokąty
                 path.lineTo(hx, groundY - hh * k * 0.8f)
                 path.lineTo(hx + step * k * 0.8f, groundY - hh * k * 0.8f)
                 path.lineTo(hx + step * k * 0.8f, groundY - 40f * k)
@@ -489,7 +489,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun unitHeight(d: UnitDef) = when (d.body) {
         Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (Defs.spec(d.era).art == EraArt.BRONZE) 120f else 92f) else 80f
-        Body.MECH -> if (d.era == 7) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
     }
 
     // ---------------------------------------------------------------- pociski
