@@ -157,7 +157,8 @@ class Ai(
     private fun managePosture() {
         if (personality == AiPersonality.SIEGER) {
             val launch = me.aliveCount >= personality.pushArmySize ||
-                (danger >= 3 && ownPower < enemyPower * 1.1f)
+                (danger >= 3 && me.aliveCount >= personality.pushArmySize - 2 &&
+                    ownPower < enemyPower * 1.1f)
             if (me.hold) {
                 if (launch) {
                     stance(false)
