@@ -518,7 +518,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val y0 = viewTop - scroll
         val hasEra = page <= PAGE_ABILITIES
         if (hasEra) drawEraHeader(c, y0)
-        val gridTop = y0 + if (hasEra) headerH else 0f
+        val gridTop = y0 + (if (hasEra) headerH else 0f)
         for (slot in 0 until activeCards) {
             val i = when (page) {
                 PAGE_TOWERS -> TURRET
@@ -692,13 +692,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     override fun onClick(b: Button) {
         when {
             b.id == -1 -> g.pop()
-            b.id == -2 -> { withResearch = !withResearch; rebuild() }
+            b.id == -2 -> { withResearch = !withResearch; layout() }
             b.id == -3 || b.id == -4 -> {
                 selectedVariant = -3 - b.id
                 scroll = 0f
-                rebuild()
+                layout()
             }
-            b.id >= 100 -> {
+            b.id in 200 until 200 + CATEGORY_KEYS.size -> showCategory(b.id - 200)
+            b.id in 100 until 100 + Defs.ERA_COUNT -> {
                 val e = b.id - 100
                 if (e != era) {
                     era = e
@@ -709,4 +710,5 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             }
         }
     }
+
 }
