@@ -19,6 +19,7 @@ import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.ReplayPlayer
 import com.centurywar.game.ReplayRecord
+import com.centurywar.meta.Missions
 
 /** Odtwarzacz bez komend gracza; całe sterowanie dotyczy wyłącznie osi czasu i kamery. */
 class ReplayScreen(
@@ -39,6 +40,8 @@ class ReplayScreen(
     private var acc = 0f
     private var frameDt = 0f
     private var draggingTime = false
+    private var watchedSeconds = 0f
+    private var watchedClaimed = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
     private var preparedPlayerVariant = -2
@@ -196,6 +199,14 @@ class ReplayScreen(
             if (n == 20) acc = 0f
         }
         if (p.broken) { state = BROKEN; return }
+        // Nie zaliczaj samego otwarcia, przewijania ani odtwarzania błędnego pliku.
+        if (!watchedClaimed && !paused && !p.seeking && !draggingTime) {
+            watchedSeconds += dt.coerceIn(0f, 0.25f)
+            if (watchedSeconds >= 5f) {
+                watchedClaimed = true
+                Missions(g.profile).onReplayWatched()
+            }
+        }
         if (p.finished) paused = true
         val r = renderer ?: return
         prepareEras(p.battle)
