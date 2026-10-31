@@ -47,7 +47,7 @@ class AdminCliTest {
                 listOf("delete-score", player, "endless", todayUtc(now).toString()),
                 store, StringBuilder(), StringBuilder()
             ))
-            assertEquals(1, store.exportCsv(StringBuilder()).let { it - it + 1 }) // eksport pusty
+            assertEquals(0, store.exportCsv(StringBuilder()))
         }
     }
 
