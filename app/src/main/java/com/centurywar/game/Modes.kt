@@ -88,14 +88,31 @@ object Campaign {
             setOf(Modifier.FOG_OF_WAR),
             setOf(Modifier.DOUBLE_INCOME, Modifier.ARMORED_FOE),
         )
+        // Mnożniki zmierzone na 20 seedach dla trzech profili badań.
+        // aiPower wpływa wyłącznie na przychód złota i XP przeciwnika.
+        val powerByStage = floatArrayOf(
+            0.20f, 0.22f, 0.35f, 0.35f,
+            0.35f, 0.50f, 1.20f, 1.32f,
+            2.30f, 1.80f, 1.80f, 1.80f,
+            1.80f, 2.40f, 2.60f, 1.80f,
+            2.00f, 2.60f, 1.80f, 1.80f,
+            5.80f, 6.90f, 4.20f, 4.40f,
+            4.50f, 4.50f, 5.00f, 5.80f,
+            7.00f, 4.70f, 5.20f, 4.50f,
+        )
         for (i in 0 until 32) {
             val era = i / 4
             val sub = i % 4
             val start = if (sub == 3) maxOf(0, era - 2) else era
             val max = minOf(Defs.ERA_COUNT - 1, era + if (sub >= 2) 1 else 0)
-            val power = 0.72f + i * 0.028f + sub * 0.03f
-            val mods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
-            add(Stage(i, "stage_${i + 1}", start, max, power, mods))
+            val baseMods = if (i < 2) emptySet() else modsCycle[(i * 3 + sub) % modsCycle.size]
+            // Bez wież pierwsze etapy nie kończą się patem przy braku elit.
+            val mods = when {
+                i < 6 -> baseMods + Modifier.NO_TURRETS + Modifier.FRAGILE_BASES
+                i == 28 -> baseMods - Modifier.FRAGILE_BASES
+                else -> baseMods
+            }
+            add(Stage(i, "stage_${i + 1}", start, max, powerByStage[i], mods))
         }
     }
 
