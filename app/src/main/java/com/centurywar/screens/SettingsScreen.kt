@@ -99,8 +99,8 @@ class SettingsScreen(g: Game) : Screen(g) {
         lastAvailable = g.online.available
         playGames.visible = lastAvailable
         val avail = h - chrome.top - g.insetB - 20 * dp
-        // Dwie kolumny na szerokich ekranach; wąski telefon przewija pełne wiersze.
-        val columns = if (pw >= 470 * dp) 2 else 1
+        // Powiększony tekst na wąskim Foldzie potrzebuje miejsca na długie etykiety.
+        val columns = if (pw >= 470 * dp && (ui.textScale <= 1.15f || pw >= 600 * dp)) 2 else 1
         rowsPerColumn = (rows.size + columns - 1) / columns
         columnWidth = (pw - 24 * dp) / columns
         val step = (if (ui.textScale > 1.15f) 58f else 54f) * dp
