@@ -65,16 +65,20 @@ class Profile(private val file: File) {
     var totalKills = 0L
     var playSeconds = 0L
 
+    val missionState = MissionState()
     val boards = HashMap<String, MutableList<ScoreEntry>>()
 
     fun level(key: String) = levels[key] ?: 0
 
     fun canBuy(def: ResearchDef): Boolean = level(def.key) < def.max && medals >= def.cost(level(def.key))
 
-    fun buy(def: ResearchDef): Boolean {
+    fun buy(def: ResearchDef): Boolean = buy(def, System.currentTimeMillis())
+
+    fun buy(def: ResearchDef, nowMillis: Long): Boolean {
         if (!canBuy(def)) return false
         medals -= def.cost(level(def.key))
         levels[def.key] = level(def.key) + 1
+        Missions(this).onResearchBought(nowMillis, persist = false)
         save()
         return true
     }
@@ -139,6 +143,7 @@ class Profile(private val file: File) {
             o.put("wins", wins)
             o.put("totalKills", totalKills)
             o.put("playSeconds", playSeconds)
+            o.put("missions", missionState.toJson())
             val b = JSONObject()
             for ((k, list) in boards) {
                 // Stare tablice dzienne (starsze niż tydzień) nie są potrzebne.
@@ -180,6 +185,7 @@ class Profile(private val file: File) {
             wins = o.optInt("wins", 0)
             totalKills = o.optLong("totalKills", 0L)
             playSeconds = o.optLong("playSeconds", 0L)
+            missionState.fromJson(o.optJSONObject("missions"))
             o.optJSONObject("boards")?.let { b ->
                 b.keys().forEach { k ->
                     val a = b.getJSONArray(k)
@@ -206,6 +212,7 @@ class Profile(private val file: File) {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
         tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
+        missionState.reset()
         name = keepName
         save()
     }
