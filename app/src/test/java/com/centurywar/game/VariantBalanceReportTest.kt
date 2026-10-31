@@ -6,7 +6,7 @@ import kotlin.math.abs
 
 /**
  * Raport balansu 1 na 1: ten sam seed, dwie orientacje stron, bez badań.
- * Warianty rywalizują ze sobą; liczba punktów za remis wynosi 0,5.
+ * Warianty rywalizują ze sobą w 480 grach na epokę; remis liczy 0,5 pkt.
  */
 class VariantBalanceReportTest {
     private fun duel(era: Int, left: Int, right: Int, seed: Long): Int {
@@ -29,7 +29,7 @@ class VariantBalanceReportTest {
         for (era in intArrayOf(4, 6)) {
             var firstPoints = 0f
             var secondPoints = 0f
-            val seeds = 24
+            val seeds = 240
             var draws = 0
             for (n in 0 until seeds) {
                 // Zamiana stron neutralizuje przewagę pierwszego gracza.
