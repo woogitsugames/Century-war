@@ -287,7 +287,10 @@ class PlayGamesLeaderboards(
                 finishSync(false)
                 return
             }
-            val conflict = result.conflict
+            val conflict = result.conflict ?: run {
+                finishSync(false)
+                return
+            }
             val first = readJson(conflict.snapshot)
             val second = readJson(conflict.conflictingSnapshot)
             if (first == null && second == null) {
@@ -313,7 +316,10 @@ class PlayGamesLeaderboards(
             return
         }
 
-        val snapshot = result.data
+        val snapshot = result.data ?: run {
+            finishSync(false)
+            return
+        }
         val cloudJson = readJson(snapshot)
         if (cloudJson == null) {
             // Nieważne lub nieczytelne dane: nie nadpisujemy potencjalnego backupu.
