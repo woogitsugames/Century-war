@@ -48,6 +48,10 @@ class BattleScreen(
     private val r = BattleRenderer(g, battle)
     private var acc = 0f
     private var speed = 1
+    /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
+    private var effectiveSpeed = 1f
+    private var avgStepNs = 0f
+    private var sampledStepFrames = 0
     private var paused = restored != null
     /** Czas bitwy ostatniego autozapisu. */
     private var lastAutosave = battle.time
@@ -254,10 +258,27 @@ class BattleScreen(
         if (!paused && !finished) {
             tut?.update(dt)
             if (battle.pendingChoice == null && battle.pendingCards == null) {
-                acc += dt * speed * tutScale
+                // Zamiast porzucać czas przy ×3/×5, ograniczamy tempo do budżetu CPU.
+                val budgetMs = (g.cpuBudgetMs * 0.75f - g.frameMetrics.avgRenderMs).coerceAtLeast(1.5f)
+                val availableSteps = if (sampledStepFrames < 30 || avgStepNs <= 0f) 20f
+                    else (budgetMs * 1_000_000f / avgStepNs).coerceIn(1f, 20f)
+                val allowedSpeed = availableSteps * Battle.STEP / dt.coerceAtLeast(0.001f)
+                effectiveSpeed = min(speed.toFloat(), allowedSpeed.coerceAtLeast(1f))
+                acc += dt * effectiveSpeed * tutScale
                 var steps = 0
+                val startedNs = System.nanoTime()
                 while (acc >= Battle.STEP && steps < 20) { battle.step(); acc -= Battle.STEP; steps++ }
-                if (steps == 20) acc = 0f
+                if (steps > 0) {
+                    val sample = (System.nanoTime() - startedNs).toFloat() / steps
+                    avgStepNs = if (sampledStepFrames == 0) sample else avgStepNs * 0.9f + sample * 0.1f
+                    sampledStepFrames++
+                }
+                var discarded = 0
+                if (acc >= Battle.STEP) {
+                    discarded = (acc / Battle.STEP).toInt()
+                    acc -= discarded * Battle.STEP
+                }
+                g.reportSimSteps(steps, discarded)
             }
             if (battle.over) onFinished()
             else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
@@ -280,6 +301,7 @@ class BattleScreen(
             }
             music.setIntensity(threat)
         }
+        if (paused || finished || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
         playSounds()
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
@@ -382,13 +404,17 @@ class BattleScreen(
         stanceBtn.highlight = p.hold
         speedBtn.visible = !modal
         speedBtn.iconId = Icons.SPEED
-        speedBtn.label = speedLabels[speed]
+        val shownSpeed = effectiveSpeed.toInt().coerceIn(1, speed)
+        speedBtn.label = if (shownSpeed == speed) speedLabels[speed] else limitedSpeedLabels[speed][shownSpeed]
         evolveBtn.visible = !modal
         val canEvo = battle.canEvolve(p)
         evolveBtn.enabled = canEvo
         evolveBtn.highlight = canEvo
         evolveBtn.iconId = if (p.era >= cfg.maxEra) Icons.CHEVRONS else Icons.EVOLVE
-        evolveBtn.label = if (p.era >= cfg.maxEra) L.f("rank", p.rank) else L["evolve"]
+        if (shownRank != p.rank || shownRankLanguage != L.lang) {
+            shownRank = p.rank; shownRankLanguage = L.lang; shownRankText = L.f("rank", p.rank)
+        }
+        evolveBtn.label = if (p.era >= cfg.maxEra) shownRankText else L["evolve"]
         if (p.era >= cfg.maxEra) evolveBtn.enabled = false
         pauseBtn.visible = !finished
         pauseBtn.iconId = Icons.PAUSE
@@ -419,30 +445,53 @@ class BattleScreen(
             if (!active) continue
             val te = p.turretEra[i]
             if (te < 0) {
-                slotBuy[i].label = "${L["buy"]} ${p.turretCost()}"
+                val price = p.turretCost()
+                val key = price
+                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
+                    slotBuyKey[i] = key
+                    slotBuy[i].label = "${L["buy"]} $price"
+                }
                 slotBuy[i].iconId = Icons.COIN
-                slotBuy[i].enabled = p.gold >= p.turretCost()
+                slotBuy[i].enabled = p.gold >= price
                 slotBuy[i].highlight = slotBuy[i].enabled
             } else {
                 val uc = battle.upgradeCost(p, i)
-                slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                val key = -uc - 2
+                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
+                    slotBuyKey[i] = key
+                    slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                }
                 slotBuy[i].iconId = if (uc < 0) Icons.CHECK else Icons.EVOLVE
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
                 slotBuy[i].highlight = slotBuy[i].enabled
             }
-            slotSell[i].label = "${L["sell"]} ${if (te >= 0) p.turretCost(te) / 2 else 0}"
+            val sell = if (te >= 0) p.turretCost(te) / 2 else 0
+            if (slotSellKey[i] != sell || slotLabelLanguage != L.lang) {
+                slotSellKey[i] = sell
+                slotSell[i].label = "${L["sell"]} $sell"
+            }
             slotSell[i].iconId = Icons.COIN
             slotSell[i].color = Ui.BTN_RED
         }
         closeBtn.visible = tp
+        if (tp) slotLabelLanguage = L.lang
     }
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
     private val costCache = IntArray(6) { -1 }
     private val costText = Array(6) { "" }
     private var armoryLv = -1
+    private var shownRank = -1
+    private var shownRankLanguage = -1
+    private var shownRankText = ""
+    private val slotBuyKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    private val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    private var slotLabelLanguage = -1
     /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
     private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
+    private val limitedSpeedLabels = Array(6) { target ->
+        Array(6) { actual -> "×$target → ×$actual" }
+    }
 
     private fun costStr(slot: Int, v: Int): String {
         if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
@@ -664,7 +713,7 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * speed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
         drawTop(c)
         drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)

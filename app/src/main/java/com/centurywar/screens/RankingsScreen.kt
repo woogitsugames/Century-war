@@ -30,6 +30,22 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val day = Daily.dayNumber()
     private val tabIcons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
     private val podium = intArrayOf(Color.rgb(255, 200, 50), Color.rgb(200, 210, 222), Color.rgb(205, 127, 60))
+    private val podiumLabels = arrayOf("1", "2", "3")
+    private val rankLabels = Array(101) { "${it + 1}." }
+    private var entries = g.profile.top(Profile.BOARD_ENDLESS)
+    private var scoreLabels = entries.map { it.score.toString() }
+    private var statsText = ""
+    private var statsTimer = 0f
+
+    private fun refreshEntries() {
+        entries = g.profile.top(board(tab))
+        scoreLabels = entries.map { it.score.toString() }
+    }
+
+    private fun refreshStats() {
+        val pr = g.profile
+        statsText = "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(pr.playSeconds / 3600f)} h"
+    }
 
     private fun board(i: Int) = when (i) {
         0 -> Profile.BOARD_ENDLESS
@@ -39,6 +55,8 @@ class RankingsScreen(g: Game) : Screen(g) {
     }
 
     override fun layout() {
+        refreshEntries()
+        refreshStats()
         chrome.layoutBack(back)
         rename.label = L["name"]
         rename.iconId = Icons.PENCIL
@@ -70,6 +88,8 @@ class RankingsScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        statsTimer -= dt
+        if (statsTimer <= 0f) { statsTimer = 1f; refreshStats() }
         // Dostępność PGS może zmienić się w tle (zamknięcie Activity): układ liczymy na nowo.
         if (global.visible != g.online.available) layout()
         for (i in 0..3) { tabs[i].selected = i == tab; tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN }
@@ -84,7 +104,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         ui.button(c, achievementsButton, 13f)
         if (global.visible) ui.button(c, global, 14f)
         chrome.title(c, L["rankings"])
-        val list = g.profile.top(board(tab))
+        val list = entries
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
@@ -95,8 +115,9 @@ class RankingsScreen(g: Game) : Screen(g) {
             ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
         }
         val lh = 34 * dp
-        for ((i, e) in list.withIndex()) {
+        for (i in list.indices) {
             if (y + lh > bottomLimit) break
+            val e = list[i]
             val me = e.name == g.profile.name
             row.set(l, y, r, y + lh - 4 * dp)
             ui.fill.color = when {
@@ -110,21 +131,19 @@ class RankingsScreen(g: Game) : Screen(g) {
                 val rr = 12 * dp
                 ui.fill.color = Ui.OUTLINE; c.drawCircle(l + 22 * dp, cy, rr, ui.fill)
                 ui.fill.color = podium[i]; c.drawCircle(l + 22 * dp, cy, rr - 2 * dp, ui.fill)
-                ui.textO(c, (i + 1).toString(), l + 22 * dp, cy + 5 * dp, 13f, Ui.TEXT, Paint.Align.CENTER, 2f)
+                ui.textO(c, podiumLabels[i], l + 22 * dp, cy + 5 * dp, 13f, Ui.TEXT, Paint.Align.CENTER, 2f)
             } else {
-                ui.textO(c, "${i + 1}.", l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+                ui.textO(c, rankLabels[i.coerceAtMost(100)], l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
             val col = if (i == 0) Ui.GOLD else if (me) Ui.XP else Ui.TEXT
             if (me) Icons.draw(c, Icons.HELMET, l + 52 * dp, cy, 20 * dp, dp = dp)
             ui.textO(c, e.name, l + (if (me) 68 else 48) * dp, cy + 5 * dp, 15f, col, Paint.Align.LEFT, 1.8f)
-            ui.textO(c, e.score.toString(), r - 12 * dp, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
+            ui.textO(c, scoreLabels[i], r - 12 * dp, cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
-        val pr = g.profile
-        val hrs = pr.playSeconds / 3600f
         row.set(l, panel.bottom - 48 * dp, r, panel.bottom - 46 * dp)
         ui.fill.color = Color.argb(60, 255, 255, 255); c.drawRect(row, ui.fill)
-        ui.textO(c, "${L["stats"]}: ${pr.wins}/${pr.battles}  •  ${L["kills"]} ${pr.totalKills}  •  ${"%.1f".format(hrs)} h",
+        ui.textO(c, statsText,
             panel.centerX(), panel.bottom - 28 * dp, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)
         val onlineStatus = if (!global.visible) "online_note" else when (g.online.state) {
             OnlineState.CONNECTED -> "pgs_connected"
@@ -143,7 +162,7 @@ class RankingsScreen(g: Game) : Screen(g) {
             101 -> g.push(AchievementsScreen(g))
             -3 -> if (g.online.available) g.online.showUi(board(tab))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
-            in 0..3 -> tab = b.id
+            in 0..3 -> { tab = b.id; refreshEntries() }
         }
     }
 }

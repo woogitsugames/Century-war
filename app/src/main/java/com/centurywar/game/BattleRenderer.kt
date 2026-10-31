@@ -75,7 +75,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val tcol = IntArray(TMAX)
     private val tsize = FloatArray(TMAX)
 
-    private val goldStrings = HashMap<Int, String>()
+    /** Przyrosty złota bez boxingu Int ani budowania tekstów podczas efektów. */
+    private val goldExact = Array(256) { "+$it" }
+    private val goldBuckets = Array(401) { "+${it * 25}" }
+    private val goldOverflow = "+10000+"
+    private val rankLabels = Array(21) { "" }
+    private var rankLanguage = -1
 
     // rysowanie szczegółowe (art/*): wspólny pisak + moduły
     private val pen = Pen()
@@ -593,12 +598,21 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                         val a = j / 24f * 6.283f
                         spawnParticle(x - sd.dir * 150f, 150f, cos(a) * 260f, sin(a) * 260f, 1.0f, 7f, 0xFFFFE070.toInt(), 2)
                     }
-                    val label = if (fx.value[i] > 0f) L.f("rank", sd.rank) else L["next_era"]
+                    if (rankLanguage != L.lang) {
+                        for (rank in rankLabels.indices) rankLabels[rank] = L.f("rank", rank)
+                        rankLanguage = L.lang
+                    }
+                    val label = if (fx.value[i] > 0f) rankLabels[sd.rank.coerceIn(0, 20)] else L["next_era"]
                     addText(x - sd.dir * 150f, 360f, label, if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f)
                 }
                 FxBuffer.GOLD -> {
                     val v = fx.value[i].toInt()
-                    val s = goldStrings.getOrPut(v) { "+$v" }
+                    val s = when {
+                        v <= 0 -> goldExact[0]
+                        v < goldExact.size -> goldExact[v]
+                        v > 10_000 -> goldOverflow
+                        else -> goldBuckets[(v + 12) / 25]
+                    }
                     addText(x, h, s, Ui.GOLD, 13f)
                 }
                 FxBuffer.BARRAGE -> shake = min(1.2f, shake + 0.4f)
