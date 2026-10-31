@@ -96,8 +96,11 @@ class BattleSimTest {
         assertTrue(old.startEra != 2 && old.maxEra != 2)
         val fresh = Daily.config(Daily.ERA_EXPANSION_DAY, Bonuses())
         assertTrue(fresh.startEra in 0 until Defs.ERA_COUNT && fresh.maxEra in fresh.startEra until Defs.ERA_COUNT)
-        assertTrue(Daily.dayNumber(1_793_491_199_999L) == Daily.ERA_EXPANSION_DAY - 1)
-        assertTrue(Daily.dayNumber(1_793_491_200_000L) == Daily.ERA_EXPANSION_DAY)
+        val start = Daily.ERA_EXPANSION_DAY * 86_400_000L
+        assertTrue(Daily.dayNumber(start - 1) == Daily.ERA_EXPANSION_DAY - 1)
+        assertTrue(Daily.dayNumber(start) == Daily.ERA_EXPANSION_DAY)
+        // Dzisiejsze i niedawne wyzwania dnia nie mogą zależeć od nowej epoki.
+        assertTrue(Daily.ERA_EXPANSION_DAY > 20757L)
     }
 
     @Test

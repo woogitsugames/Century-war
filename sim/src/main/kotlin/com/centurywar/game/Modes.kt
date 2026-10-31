@@ -134,7 +134,9 @@ object Campaign {
 
 object Daily {
     /** Pierwszy dzień UTC, w którym losowanie uwzględnia nową epokę. */
-    const val ERA_EXPANSION_DAY = 20758L // 2026-11-01 00:00 UTC
+    // Data wydania jeszcze nieznana (31.10.2026): odległa data, do tego dnia wyzwanie dnia
+    // losuje jak przed Epoką żelaza. Przed wydaniem ustawić na faktyczny dzień (nigdy w przeszłości).
+    const val ERA_EXPANSION_DAY = 21153L // 2027-12-01 00:00 UTC
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
