@@ -59,7 +59,6 @@ class EndlessCardsTest {
         assertEquals(Defs.baseHp(1) * 0.8f, p.baseMaxHp, 0.01f)
         assertTrue(p.baseHp / p.baseMaxHp >= ratioBefore)
 
-        b.chooseDoctrine(0)
         b.applyEndlessCard(p, EndlessCard.FORTRESS)
         assertEquals(1f, p.baseHpMul, 0.001f)
     }
