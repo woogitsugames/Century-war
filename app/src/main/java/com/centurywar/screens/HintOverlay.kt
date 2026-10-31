@@ -14,6 +14,7 @@ import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import com.centurywar.game.Role
+import com.centurywar.game.Weather
 import kotlin.math.max
 import kotlin.math.min
 
@@ -38,6 +39,8 @@ class HintOverlay(
         val xp: RectF,
         val minimap: RectF,
         val field: RectF,
+        val weather: RectF,
+        val variants: Array<Button>,
     )
 
     private class HintDef(val id: Int, val key: String, val priority: Int)
@@ -60,6 +63,8 @@ class HintOverlay(
         const val MISSIONS = 14
         const val DAILY_MENU = 15
         const val ENDLESS_MENU = 16
+        const val VARIANT = 17
+        const val WEATHER = 18
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -76,6 +81,8 @@ class HintOverlay(
             HintDef(BOSS, "hint_boss_push", 98),
             HintDef(OLD_TURRET, "hint_old_turret", 82),
             HintDef(DAILY, "hint_daily_battle", 96),
+            HintDef(VARIANT, "hint_variant54", 110),
+            HintDef(WEATHER, "hint_weather54", 86),
         )
         private val SCREEN_KEYS = arrayOf(
             "hint_research", "hint_missions", "hint_daily_menu", "hint_endless_menu",
@@ -112,6 +119,7 @@ class HintOverlay(
     fun update(dt: Float, blocked: Boolean = false) {
         val b = battle
         val suppressed = blocked || b?.pendingChoice != null || b?.pendingCards != null
+        if (b?.pendingVariant != null && activeId >= 0 && activeId != VARIANT) dismiss()
         if (activeId >= 0) {
             elapsed += dt
             if (suppressed || !g.profile.hintsEnabled || elapsed >= DISPLAY_TIME) dismiss()
@@ -121,9 +129,11 @@ class HintOverlay(
         sinceCheck += dt
         if (sinceCheck < CHECK_EVERY) return
         sinceCheck = 0f
-        if (b.time - lastShownAt < GAP) return
+        // Okno wariantu zatrzymuje bitwę: pokaż objaśnienie od razu, nie po 20 s.
+        if (b.pendingVariant == null && b.time - lastShownAt < GAP) return
         var best: HintDef? = null
         for (def in DEFINITIONS) {
+            if (b.pendingVariant != null && def.id != VARIANT) continue
             if (g.profile.hintsSeen and (1L shl def.id) != 0L) continue
             if (best != null && def.priority <= best.priority) continue
             if (eligible(def.id)) best = def
@@ -172,6 +182,8 @@ class HintOverlay(
             BOSS -> b.endless && b.currentBoss() != null
             OLD_TURRET -> p.era > b.cfg.startEra && p.turretEra.any { it >= 0 && it < p.era }
             DAILY -> b.cfg.mode == Mode.DAILY && rankedDaily && b.time < 18f
+            VARIANT -> b.pendingVariant != null
+            WEATHER -> b.weather != Weather.CLEAR
             else -> false
         }
     }
@@ -236,6 +248,8 @@ class HintOverlay(
             FOG -> t.field
             CARD, THEME, BOSS -> if (t.minimap.width() > 0f) t.minimap else t.field
             OLD_TURRET -> t.turrets.r
+            VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
+            WEATHER -> t.weather
             else -> null
         }
     }
