@@ -153,7 +153,7 @@ class StatsScreen(g: Game) : Screen(g) {
         val content = when {
             selected >= 0 -> detailNames.size * 34 * dp + 38 * dp
             tab == 1 -> history.size * 66 * dp + 24 * dp
-            else -> (4 * 34 + 5 * 29 + 4 * 29 + 5 * 29 + 322) * dp
+            else -> 970 * dp // sekcje, dwa wykresy i pięć wierszy AI
         }
         maxScroll = max(0f, content - panel.height() + 26 * dp)
         scroll = scroll.coerceIn(0f, maxScroll)
