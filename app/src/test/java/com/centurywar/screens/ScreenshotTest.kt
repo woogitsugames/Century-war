@@ -191,6 +191,32 @@ class ScreenshotTest {
         }
     }
 
+    /** Układ modala i Kodeksu 720p / Fold, po polsku i po angielsku. */
+    @Test
+    fun variantScreens() {
+        val priorLang = com.centurywar.engine.L.lang
+        try {
+            val steam = Defs.eraOf(com.centurywar.game.EraArt.STEAM)
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "foldLandscape" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f, Quality.HIGH)
+                for (lang in arrayOf("pl", "en")) {
+                    com.centurywar.engine.L.setCode(lang)
+                    g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 9900L, 1f,
+                        startEra = steam, maxEra = steam)))
+                    shot(g, "variant_modal_${tag}_${lang}")
+                    g.setScreen(CodexScreen(g, steam))
+                    shot(g, "variant_codex_${tag}_${lang}")
+                }
+            }
+        } finally {
+            com.centurywar.engine.L.lang = priorLang
+        }
+    }
+
     @Test
     fun screens() {
         for ((tag, dims) in mapOf(

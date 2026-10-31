@@ -75,3 +75,21 @@ Przed strojeniem (6 seedów): nowy gracz 1–2: 33% wygranych i 67% patów; od e
 - Weteran z 80% badań nadal wygrywa niektóre późne etapy w 1–2 minuty (28, 33). Uznane za akceptowalne: to gracz z prawie pełnymi badaniami.
 - Etapy 11–18 dla gracza z 10% badań: ok. 50% wygranych. W praktyce gracz ma wtedy zwykle więcej badań.
 - Wyniki przy 8 seedach mają rozrzut ±15 pp; przed wydaniem warto puścić 20 seedów.
+
+## Warianty epok – procedura i stan pomiarów (zlecenie 28)
+
+Dwie pary wariantów epok odnajdywane są po `EraArt.STEAM` i `EraArt.SILICON`.
+Lustrzane pojedynki obejmują **200 seedów dla każdej epoki, z zamianą stron**
+(400 pojedynków na epokę); porównuje się odsetki zwycięstw wariantów A i B.
+Dodatkowy pomiar porównuje dwa warianty z AI wybierającą wariant
+na dwóch już istniejących etapach kampanii danej epoki. Kryterium A/B:
+**różnica zwycięstw nie większa niż 10 punktów procentowych** i brak patów.
+
+```bash
+BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.variantReport*' --console=plain --no-configuration-cache
+```
+
+Plik wynikowy: `app/build/balance/variants.md`. Po uruchomieniu pomiaru należy
+włączyć wynik do tego dokumentu i porównać wyniki etapów z wcześniejszymi
+progami kampanii. **Pomiar nie został jeszcze wykonany w tej gałęzi;
+nie ma podstaw, by deklarować spełnienie progu 10 pp.**

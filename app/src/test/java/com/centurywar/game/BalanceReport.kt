@@ -209,6 +209,96 @@ class BalanceReport {
         }
     }
 
+    /** Jeden pojedynek wariantów: bez globalnej losowości przy wskazaniu strony. */
+    private fun variantDuel(era: Int, seed: Long, first: Int, second: Int): Battle {
+        val cfg = BattleConfig(Mode.SKIRMISH, seed, 1f, startEra = era, maxEra = era,
+            playerBonuses = Bonuses(eliteUnlocked = true, rallyUnlocked = true))
+        val b = Battle(cfg)
+        check(b.chooseVariant(first))
+        b.enemy.eraVariant = second
+        b.playerAi = Ai(b, 0, AiPersonality.BALANCED)
+        val limit = (30f * 60f / Battle.STEP).toInt()
+        var ticks = 0
+        while (!b.over && ticks < limit) {
+            b.step()
+            b.fx.count = 0
+            ticks++
+        }
+        return b
+    }
+
+    /**
+     * Raport A/B: 200 seedów × dwa kierunki, a potem dwa etapy kampanii × dwa warianty.
+     * Uruchomienie tylko z BALANCE_RUN=true; plik build/balance/variants.md.
+     */
+    @Test
+    fun variantReport() {
+        val runs = (System.getenv("BALANCE_VARIANT_RUNS")?.toIntOrNull() ?: 200).coerceAtLeast(200)
+        val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
+        dir.mkdirs()
+        val out = StringBuilder("# Raport wariantów epok\n\n")
+            .append("Seedów na epokę: $runs, z zamianą stron (łącznie ${runs * 2} bitew).\n\n")
+            .append("| Epoka | Wygrane A | Wygrane B | Remisy/paty | Różnica A–B [pp] |\n")
+            .append("|---|---:|---:|---:|---:|\n")
+        for (style in arrayOf(EraArt.STEAM, EraArt.SILICON)) {
+            val era = Defs.eraOf(style)
+            var winsA = 0
+            var winsB = 0
+            var stalemates = 0
+            for (seed in 0 until runs) {
+                for (swap in 0..1) {
+                    val a = if (swap == 0) 0 else 1
+                    val b = variantDuel(era, 200_003L + seed * 997L + era * 11_113L, a, 1 - a)
+                    when {
+                        !b.over -> stalemates++
+                        b.winner == 0 && a == 0 -> winsA++
+                        b.winner == 1 && a == 1 -> winsA++
+                        else -> winsB++
+                    }
+                }
+            }
+            val matches = (runs * 2).toDouble()
+            val diff = kotlin.math.abs(winsA - winsB) * 100.0 / matches
+            out.append("| ${style.name} | $winsA | $winsB | $stalemates | ${fmt(diff)} |\n")
+            println("VARIANT ${style.name}: A=$winsA B=$winsB pats=$stalemates diff=${fmt(diff)}pp")
+            assertEquals("Remisy/paty w epoce ${style.name}", 0, stalemates)
+            assertTrue("Warianty ${style.name}: różnica ${fmt(diff)} pp > 10 pp", diff <= 10.0)
+
+            out.append("\n## Kampania ${style.name}\n\n")
+                .append("| Etap | Wariant | N | Zwycięstwa | Odsetek [%] | Timeout |\n")
+                .append("|---:|---:|---:|---:|---:|---:|\n")
+            val stages = Campaign.stages.filter { it.startEra == era && it.maxEra >= era }.take(2)
+            for (stage in stages) {
+                for (variant in 0..1) {
+                    var wins = 0
+                    var timeout = 0
+                    for (seed in 0 until runs) {
+                        val cfg = Campaign.config(stage,
+                            Bonuses(eliteUnlocked = true, rallyUnlocked = true),
+                            800_003L + seed * 997L + stage.index * 11_113L)
+                        val battle = Battle(cfg)
+                        check(battle.chooseVariant(variant))
+                        battle.playerAi = Ai(battle, 0, AiPersonality.BALANCED)
+                        var ticks = 0
+                        val limit = (30f * 60f / Battle.STEP).toInt()
+                        while (!battle.over && ticks < limit) {
+                            battle.step()
+                            battle.fx.count = 0
+                            ticks++
+                        }
+                        if (!battle.over) timeout++
+                        if (battle.winner == 0 && battle.over) wins++
+                    }
+                    val pct = wins * 100.0 / runs
+                    out.append("| ${stage.index + 1} | $variant | $runs | $wins | ${fmt(pct)} | $timeout |\n")
+                    println("VARIANT CAMPAIGN stage=${stage.index + 1} v=$variant wins=${fmt(pct)}%")
+                    assertEquals("Timeout etapu ${stage.index + 1} wariant $variant", 0, timeout)
+                }
+            }
+        }
+        File(dir, "variants.md").writeText(out.toString())
+    }
+
     /** Lustrzane pojedynki bez badań, z tą samą siłą i możliwością elit obu stron. */
     @Test
     fun mirrorReport() {
