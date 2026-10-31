@@ -70,6 +70,7 @@ object Icons {
     const val PERSON = 49
     const val CODEX = 50
     const val HEART = 51
+    const val SPEAKER = 52
 
     val OUTLINE = Color.rgb(26, 22, 32)
     private val GOLD = Color.rgb(255, 200, 50)
@@ -168,6 +169,7 @@ object Icons {
             PERSON -> person(c)
             CODEX -> codex(c)
             HEART -> heart(c)
+            SPEAKER -> speaker(c)
         }
         c.restoreToCount(save)
     }
@@ -821,6 +823,14 @@ object Icons {
         plainLine(c, 0.65f, -0.35f, 0.65f, 0.35f, ow * 1.1f, WHITE)
         plainLine(c, -0.85f, -0.2f, -0.85f, 0.2f, ow * 1.1f, WHITE)
         plainLine(c, 0.85f, -0.2f, 0.85f, 0.2f, ow * 1.1f, WHITE)
+    }
+
+    private fun speaker(c: Canvas) {
+        p.reset(); p.moveTo(-0.8f, -0.28f); p.lineTo(-0.38f, -0.28f); p.lineTo(0.12f, -0.72f); p.lineTo(0.12f, 0.72f); p.lineTo(-0.38f, 0.28f); p.lineTo(-0.8f, 0.28f); p.close()
+        shape(c, STEEL)
+        plainLine(c, 0.38f, -0.3f, 0.38f, 0.3f, ow * 1.1f, WHITE)
+        plainLine(c, 0.62f, -0.5f, 0.62f, 0.5f, ow * 1.1f, WHITE)
+        plainLine(c, 0.86f, -0.68f, 0.86f, 0.68f, ow * 1.1f, WHITE)
     }
 
     private fun monitor(c: Canvas) {
