@@ -213,6 +213,8 @@ class BalanceReport {
                 else (t[runs / 2 - 1] + t[runs / 2]) / 2.0
             out.append("| $era | $runs | ${results.count { it.first }} | ${fmt(median)} |\n")
             println("MIRROR era=$era timeouts=${results.count { it.first }}/$runs median=${fmt(median)}m")
+            // Każda lustrzana bitwa musi skończyć się przed limitem 30 minut.
+            assertEquals("Pat w epoce $era", 0, results.count { it.first })
         }
         File(dir, "mirror.md").writeText(out.toString())
     }
