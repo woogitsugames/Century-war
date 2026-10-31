@@ -16,6 +16,7 @@ import com.centurywar.game.art.Bases
 import com.centurywar.game.art.Machines
 import com.centurywar.game.art.Pen
 import com.centurywar.game.art.Soldiers
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -65,6 +66,17 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val pcol = IntArray(PMAX)
     private val ptype = IntArray(PMAX) // 0 kropka, 1 pierścień, 2 błysk, 3 dym
     private var pcount = 0
+
+    // Wraki poza symulacją; slot śmierci rozpoznajemy po numerze serial jednostki.
+    private val seenDeaths = IntArray(Battle.MAX_UNITS)
+    private val WMAX = 12
+    private val wx = FloatArray(WMAX)
+    private val wside = IntArray(WMAX)
+    private val wdef = IntArray(WMAX)
+    private val wtier = IntArray(WMAX)
+    private val wage = FloatArray(WMAX)
+    private val wsmoke = FloatArray(WMAX)
+    private var wcount = 0
 
     // pływające napisy
     private val TMAX = 24
@@ -137,19 +149,21 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.cv = c
         pen.setAntiAlias(q.antialias)
         pen.detail = q.level
-        pen.alpha = 1f; pen.flash = false
+        pen.alpha = 1f; pen.flash = false; pen.char = 0f; pen.tintAmt = 0f
         mach.time = time; bases.time = time
         if (shake > 0f) {
             shake = max(0f, shake - dt * 3f)
             shakeX = sin(time * 70f) * shake * 6f * g.ui.dp
         } else shakeX = 0f
 
+        detectDeaths()
         consumeFx()
         drawSky(c, w, h)
         drawBackdrop(c, w, h)
         drawGround(c, w, h)
         drawBase(c, b.sides[0])
         drawBase(c, b.sides[1])
+        drawWrecks(c, dt)
         for (u in b.units) if (u.active && u.side == 1) drawUnit(c, u)
         for (u in b.units) if (u.active && u.side == 0) drawUnit(c, u)
         alpha = 1f
@@ -405,6 +419,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun mix(a: Float, b: Float) = a + (b - a) * lerp
 
+    private fun deathFade(dying: Float): Float =
+        if (dying < 0f || dying <= 0.55f) 1f else ((0.8f - dying) / 0.25f).coerceIn(0f, 1f)
+
+    private fun motorBody(body: Int) = body == Body.VEHICLE || body == Body.MECH || body == Body.HOVER
+
     private fun drawUnit(c: Canvas, u: Fighter) {
         val fresh = u.prevX.isNaN()
         val x = sx(if (fresh) u.x else mix(u.prevX, u.x))
@@ -412,8 +431,9 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         if (x < -margin || x > viewW + margin) return
         if (b.fog && u.side == 1 && u.x - b.player.front > 650f) return
         val s = b.sides[u.side]
-        alpha = if (u.dying >= 0f) max(0f, 1f - u.dying / 0.8f) else 1f
         val def = u.def
+        val dying = if (u.dying >= 0f) u.dying + lerp * Battle.STEP else -1f
+        alpha = deathFade(dying)
         if (g.quality.shadows) {
             fill.color = col(Color.argb(70, 0, 0, 0))
             val sw = shadowW(def) * k * def.size
@@ -424,23 +444,22 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         c.translate(x, groundY)
         val sc = k * def.size
         c.scale(sc * s.dir, sc)
-        if (u.dying >= 0f) c.rotate(-min(80f, u.dying * 200f))
         val team = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
         val stride = if (fresh) u.stride else mix(u.prevStride, u.stride)
         val walk = if (stride > 0.01f) (if (fresh) u.anim else mix(u.prevAnim, u.anim)) else 0f
         val attack = if (fresh) u.attackAnim else mix(u.prevAttack, u.attackAnim)
         val atk = if (attack > 0f) attack / 0.25f else 0f
-        men.stride = stride
+        men.stride = if (dying >= 0f) 0f else stride
         // Przygotowanie ataku w trakcie odnowienia (tylko w walce: stoi i ma odnowienie).
         val cool = def.cooldown
-        men.windup = if (!u.moving && u.cd > 0f && cool > 0.3f)
+        men.windup = if (dying < 0f && !u.moving && u.cd > 0f && cool > 0.3f)
             ((cool - u.cd - 0.25f) / (cool - 0.25f)).coerceIn(0f, 1f) else -1f
-        pen.alpha = alpha
-        pen.flash = u.flash > 0f
-        drawBody(def, team, walk, atk, u.tier)
-        pen.flash = false
+        val hitAge = if (u.hitStep >= 0) (b.stepCount - u.hitStep + lerp) * Battle.STEP else -1f
+        drawAnimatedBody(c, def, team, walk, atk, u.tier, hitAge, u.hitPow, dying,
+            u.flash > 0f, u.burnLeft > 0f)
         c.restore()
-        // pasek HP, gdy ranny
+        alpha = 1f
+        // Pasek HP tylko żywej jednostki.
         if (u.dying < 0f && u.hp < u.maxHp) {
             val bw = 36f * k * def.size
             val top = groundY - unitHeight(def) * k * def.size - 12f * k
@@ -452,6 +471,68 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             fill.color = Color.argb(90, 255, 255, 255)
             c.drawRect(x - bw / 2, top, x - bw / 2 + bw * (u.hp / u.maxHp), top + bh * 0.4f, fill)
         }
+    }
+
+    /** Jedno źródło póz dla bitwy, ikon i galerii; nie modyfikuje stanu symulacji. */
+    private fun drawAnimatedBody(
+        c: Canvas, def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int,
+        hitAge: Float, hitPow: Float, dying: Float, directFlash: Boolean, burning: Boolean,
+    ) {
+        val dead = dying >= 0f
+        val t = if (dead) (dying / 0.62f).coerceIn(0f, 1f) else 0f
+        val remaining = 1f - t
+        val eased = 1f - remaining * remaining * remaining
+        val phase = if (!dead && hitAge >= 0f && hitAge < 0.18f) 1f - hitAge / 0.18f else 0f
+        val recoil = phase * phase * hitPow.coerceIn(0f, 1f)
+        val motor = motorBody(def.body)
+        pen.alpha = if (dead) deathFade(dying) else 1f
+        pen.flash = if (dead) motor && dying < 0.085f else directFlash && phase > 0f
+        pen.char = if (dead && motor) (dying / 0.36f).coerceIn(0f, 1f) else 0f
+        pen.tintAmt = if (burning && !dead && !pen.flash)
+            0.13f + (0.5f + 0.5f * sin(time * 13f)) * 0.12f else 0f
+        men.recoil = if (def.body == Body.HUMAN) recoil else 0f
+        men.collapse = if (dead && def.body == Body.HUMAN) eased else 0f
+        mach.recoil = if (def.body == Body.BEAST) (if (dead) eased else recoil) else 0f
+        mach.crashed = if (dead && def.body == Body.HOVER) eased else 0f
+
+        c.save()
+        if (dead) {
+            when (def.body) {
+                Body.HUMAN -> {
+                    // Łuk upadku: szybki początek, wyhamowanie i drobne odbicie.
+                    val bounce = if (t > 0.6f) sin((t - 0.6f) * 7.853981f) * 3f else 0f
+                    c.rotate(-88f * eased - bounce)
+                }
+                Body.BEAST -> {
+                    c.translate(-6f * eased, 19f * eased)
+                    c.rotate(-21f * eased)
+                }
+                Body.SIEGE, Body.CANNON -> {
+                    c.translate(-5f * eased, 13f * eased)
+                    c.rotate(-24f * eased)
+                }
+                Body.VEHICLE -> {
+                    c.translate(-3f * eased, 10f * eased)
+                    c.scale(1f, 1f - 0.12f * eased)
+                }
+                Body.MECH -> {
+                    c.translate(-6f * eased, 14f * eased)
+                    c.scale(1f, 1f - 0.26f * eased)
+                }
+                Body.HOVER -> c.translate(0f, 27f * eased)
+            }
+        } else if (recoil > 0f) {
+            if (motor) c.translate(-2.5f * recoil, 1.2f * recoil)
+            else {
+                c.translate(-2.5f * recoil, 0f)
+                c.rotate(-4f * recoil)
+            }
+        }
+        drawBody(def, team, if (dead) 0f else walk, if (dead) 0f else atk, tier)
+        c.restore()
+
+        pen.alpha = 1f; pen.flash = false; pen.char = 0f; pen.tintAmt = 0f
+        men.recoil = 0f; men.collapse = 0f; mach.recoil = 0f; mach.crashed = 0f
     }
 
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
@@ -481,26 +562,29 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     fun drawUnitPose(
         c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int,
         walk: Float, stride: Float, atk: Float, windup: Float,
+        hitAge: Float = -1f, dying: Float = -1f,
     ) {
-        men.stride = stride; men.windup = windup
-        drawUnitIcon(c, def, cx, bottom, height, team, 1, walk, atk)
+        men.stride = if (dying >= 0f) 0f else stride
+        men.windup = if (dying >= 0f) -1f else windup
+        drawUnitIcon(c, def, cx, bottom, height, team, 1, walk, atk, hitAge, dying)
         men.stride = 1f; men.windup = -1f
     }
 
     fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1,
-                     walk: Float = 0f, atk: Float = 0f) {
+                     walk: Float = 0f, atk: Float = 0f, hitAge: Float = -1f, dying: Float = -1f) {
         val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
         val save = alpha
         alpha = 1f
         val savedCv = if (pen.cvReady()) pen.cv else null
         pen.cv = c
-        pen.alpha = 1f; pen.flash = false
+        pen.alpha = 1f; pen.flash = false; pen.char = 0f; pen.tintAmt = 0f
         pen.detail = g.quality.level
         pen.setAntiAlias(true)
         c.save()
         c.translate(cx - iconShift(def) * sc * def.size, bottom)
         c.scale(sc * def.size, sc * def.size)
-        drawBody(def, team, walk, atk, tier)
+        drawAnimatedBody(c, def, team, walk, atk, tier, hitAge, 1f, dying,
+            hitAge >= 0f && hitAge < 0.12f, false)
         c.restore()
         pen.setAntiAlias(g.quality.antialias)
         if (savedCv != null) pen.cv = savedCv
