@@ -104,7 +104,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 y += ui.wrap(c, L["daily_info"], x, y, tw, 14f)
                 y += 8 * dp
                 y += line(c, Icons.TOWER, L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]]), x, y, Ui.TEXT, 14f)
-                y += line(c, Icons.SKULL, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, Ui.BAD, 14f)
+                y += line(c, if (cfg.aiPower > 1f) Icons.SKULL else Icons.CHECK, L.f("ai_power", (cfg.aiPower * 100).toInt()), x, y, if (cfg.aiPower > 1f) Ui.BAD else Ui.GOOD, 14f)
                 val isz = 22 * dp
                 Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
                 y += ui.wrap(c, dailyMods, x + isz + 10 * dp, y, tw - isz - 10 * dp, 14f, Ui.GOLD)
