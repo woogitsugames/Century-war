@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.centurywar.crash.CrashReports
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
@@ -57,6 +58,7 @@ class BattleScreen(
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val achievementEvents = AchievementBattleTracker(battle)
+    init { CrashReports.battleStarted(if (cfg.mode == Mode.CAMPAIGN) cfg.stageIndex + 1 else 0) }
     private val commands = battle.commandController ?: BattleController(battle)
     private val haptics = BattleHaptics(g, battle)
     private val r = BattleRenderer(g, battle)

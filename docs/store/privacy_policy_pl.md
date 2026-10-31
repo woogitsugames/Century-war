@@ -27,11 +27,18 @@ Gra zapisuje w prywatnej pamięci aplikacji:
 - etapy kampanii, gwiazdki, medale, badania, misje, osiągnięcia i lokalne rekordy;
 - statystyki (np. liczbę bitew, zwycięstw, pokonanych jednostek i czas gry);
 - ustawienia gry (np. język, jakość grafiki, dźwięk, wibracje, przypomnienia i ich godzinę);
-- tymczasowy zapis przerwanej bitwy do wznowienia (plik battle.snap).
+- tymczasowy zapis przerwanej bitwy do wznowienia (plik battle.snap);
+- do 10 lokalnych raportów awarii i błędów (katalog files/crash).
 
 Podstawowa rozgrywka, lokalne rankingi i zapisywanie postępu **działają bez internetu**. Gra nie wymaga zakładania konta u wydawcy. Nie prosi o dostęp do lokalizacji, kontaktów, mikrofonu ani aparatu. Nie ma reklam, zakupów w aplikacji ani czatu.
 
 Plik battle.snap służy wyłącznie lokalnemu wznowieniu bitwy, nie jest wysyłany w zapisie chmurowym Play Games i nie jest objęty regułami systemowej kopii zapasowej.
+
+### Lokalne raportowanie problemów
+
+Po awarii aplikacja zapisuje lokalnie raport techniczny: wersję gry, model urządzenia, wersję Androida, nazwę ekranu, ostatnie 30 zdarzeń technicznych (np. otwarcie ekranu, etap bitwy) i stos wywołań. Zapis nie obejmuje pseudonimu, identyfikatora gracza, treści wyjątków ani danych profilu. Przechowywanych jest maksymalnie 10 raportów; starsze są automatycznie usuwane. Raporty nie są synchronizowane z Play Games ani obejmowane systemową kopią zapasową.
+
+Przy kolejnym uruchomieniu po awarii gra **jednorazowo pyta**, czy udostępnić raport. Można też wybrać **Ustawienia → O grze → Zgłoś problem**. W obu przypadkach aplikacja wyłącznie otwiera systemowe okno udostępniania tekstu (np. e-mail); **nie wysyła raportów automatycznie ani do wydawcy, ani do zewnętrznej usługi**. Użytkownik decyduje, czy i komu go przekazać. Zapisane raporty można usunąć przez wyczyszczenie danych aplikacji.
 
 ## 3. Google Play Games — konto i uwierzytelnianie
 
@@ -95,7 +102,7 @@ Okres przechowywania danych przez Google jest określany przez Google i ustawien
 
 ## 9. Ochrona danych i dzieci
 
-Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Nie udostępnia czatu, wiadomości między graczami, własnego mechanizmu wymiany plików ani lokalizacji. Rankingi PGS mogą jednak pokazywać nazwy profili Google i wyniki zgodnie z wybraną widocznością. Klasyfikacja wieku jest ustalana na podstawie ankiety IARC, a nie stanowi automatycznej deklaracji kierowania produktu do dzieci.
+Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Nie udostępnia czatu, wiadomości między graczami ani lokalizacji. Jedynie raport techniczny można ręcznie udostępnić przez systemowe okno Androida. Rankingi PGS mogą jednak pokazywać nazwy profili Google i wyniki zgodnie z wybraną widocznością. Klasyfikacja wieku jest ustalana na podstawie ankiety IARC, a nie stanowi automatycznej deklaracji kierowania produktu do dzieci.
 
 ## 10. Zmiany polityki
 

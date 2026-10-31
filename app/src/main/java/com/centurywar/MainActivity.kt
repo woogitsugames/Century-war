@@ -28,6 +28,7 @@ import android.widget.TextView
 import android.graphics.Color
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import com.centurywar.crash.CrashReports
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
 import com.centurywar.engine.HapticGate
@@ -98,8 +99,12 @@ class MainActivity : Activity(), Host {
             profile.pruneDailyBoards(Daily.dayNumber())
             val snapshots = SnapshotStore(File(root, "battle.snap"))
             val restored = snapshots.loadBattle()
+            val pendingFatal = CrashReports.pendingFatal(app)
             runOnUiThread {
-                if (!isFinishing && !isDestroyed) finishStartup(root, profile, snapshots, restored)
+                if (!isFinishing && !isDestroyed) {
+                    finishStartup(root, profile, snapshots, restored)
+                    if (pendingFatal != null) offerCrashReport(pendingFatal)
+                }
             }
         }, "startup-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
     }
@@ -209,6 +214,7 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         resumed = true
+        CrashReports.resumed()
         if (::game.isInitialized) resumeGame()
     }
 
@@ -226,6 +232,7 @@ class MainActivity : Activity(), Host {
 
     override fun onPause() {
         resumed = false
+        CrashReports.paused()
         if (!::game.isInitialized) {
             super.onPause()
             return
@@ -356,6 +363,47 @@ class MainActivity : Activity(), Host {
             if (isFinishing || isDestroyed) return@runOnUiThread
             runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
         }
+    }
+
+    /** Jednorazowa propozycja po awarii; sam dialog niczego nie przesyła. */
+    private fun offerCrashReport(name: String) {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(L["report_prompt_title"])
+            .setMessage(L["report_prompt_desc"])
+            .setPositiveButton(L["report_send"]) { _, _ -> sendProblemReport(name) }
+            .setNegativeButton(L["report_cancel"], null)
+            .setOnDismissListener { hideSystemBars() }
+            .show()
+        if (dialog.isShowing) CrashReports.markOffered(this, name)
+    }
+
+    override fun shareProblemReport() {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            AlertDialog.Builder(this)
+                .setTitle(L["report_problem"])
+                .setMessage(L["report_share_desc"])
+                .setPositiveButton(L["report_send"]) { _, _ -> sendProblemReport(null) }
+                .setNegativeButton(L["report_cancel"], null)
+                .setOnDismissListener { hideSystemBars() }
+                .show()
+        }
+    }
+
+    /** Plik czyta tylko wątek I/O; Androidowy arkusz udostępniania nie wysyła nic sam. */
+    private fun sendProblemReport(preferredName: String?) {
+        Thread({
+            val body = CrashReports.sharingText(preferredName)
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, L["report_subject"])
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                runCatching { startActivity(Intent.createChooser(send, L["report_share_title"])) }
+            }
+        }, "crash-share").apply { isDaemon = true; start() }
     }
 
     override fun showApacheLicense() {

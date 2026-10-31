@@ -2,6 +2,7 @@ package com.centurywar
 
 import android.app.Application
 import android.util.Log
+import com.centurywar.crash.CrashReports
 import com.centurywar.meta.PlayGamesLeaderboards
 import com.google.android.gms.games.PlayGamesSdk
 
@@ -12,6 +13,7 @@ class CenturyWarApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReports.install(this)
         if (!PlayGamesLeaderboards.isConfigured(this)) return
         try {
             PlayGamesSdk.initialize(this)

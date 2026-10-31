@@ -21,6 +21,7 @@ class AboutScreen(g: Game) : Screen(g) {
     private val back = btn(-1)
     private val privacy = btn(1)
     private val fullLicense = btn(2)
+    private val report = btn(3)
     private val entries = LicenseCatalog.app
     private val links = Array(entries.size) { i -> btn(100 + i).apply { iconId = Icons.GLOBE } }
     private val privacyUrl = BuildConfig.CW_PRIVACY_URL
@@ -47,6 +48,8 @@ class AboutScreen(g: Game) : Screen(g) {
         back.label = L["back"]
         privacy.label = L["about_privacy"]
         privacy.iconId = Icons.GLOBE
+        report.label = L["report_problem"]
+        report.iconId = Icons.BOOK
         fullLicense.label = L["about_apache_full"]
         fullLicense.iconId = Icons.BOOK
         versionText = L["about_version"] + ": " + version
@@ -75,7 +78,7 @@ class AboutScreen(g: Game) : Screen(g) {
         panel.set(left, chrome.top + 7 * dp, left + pw, h - g.insetB - 11 * dp)
         contentTop = panel.top + 11 * dp
         contentBottom = panel.bottom - 11 * dp
-        val introDp = if (hasPrivacy) 174f else 139f
+        val introDp = if (hasPrivacy) 222f else 174f
         val step = 103 * dp
         val fullHeight = (introDp + 24 + 70) * dp + entries.size * step
         maxScroll = max(0f, fullHeight - (contentBottom - contentTop))
@@ -85,6 +88,9 @@ class AboutScreen(g: Game) : Screen(g) {
         footerTop = firstRow + entries.size * step + 12 * dp
         privacy.set(panel.left + 20 * dp, textStart + 98 * dp, min(250 * dp, pw - 40 * dp), 39 * dp)
         privacy.visible = hasPrivacy && privacy.r.bottom > contentTop && privacy.r.top < contentBottom
+        report.set(panel.left + 20 * dp, textStart + (if (hasPrivacy) 141 else 98) * dp,
+            min(250 * dp, pw - 40 * dp), 39 * dp)
+        report.visible = report.r.bottom > contentTop && report.r.top < contentBottom
         fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 42 * dp)
         fullLicense.visible = fullLicense.r.bottom > contentTop && fullLicense.r.top < contentBottom
         for (i in entries.indices) {
@@ -110,6 +116,7 @@ class AboutScreen(g: Game) : Screen(g) {
         ui.textO(c, creditText, tx, textStart + 84 * dp,
             ui.fit(creditText, 15f, textWidth, 10f), Ui.TEXT)
         if (privacy.visible) ui.button(c, privacy, 13f)
+        if (report.visible) ui.button(c, report, 13f)
         ui.textO(c, licenseTitle, tx, firstRow - 18 * dp, 19f, Ui.GOLD)
         val step = 103 * dp
         for (i in entries.indices) {
@@ -143,6 +150,7 @@ class AboutScreen(g: Game) : Screen(g) {
             -1 -> g.pop()
             1 -> if (hasPrivacy) g.host.openExternalUrl(privacyUrl)
             2 -> g.host.showApacheLicense()
+            3 -> g.host.shareProblemReport()
             else -> if (b.id >= 100) entries.getOrNull(b.id - 100)?.let {
                 if (SecureLinks.isHttps(it.url)) g.host.openExternalUrl(it.url)
             }

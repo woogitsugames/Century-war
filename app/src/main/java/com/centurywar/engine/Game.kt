@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
+import com.centurywar.crash.CrashReports
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.AchievementDef
@@ -35,6 +36,7 @@ interface Host {
     fun requestGlobalRankingConsent(onAccepted: () -> Unit) {}
     fun openExternalUrl(url: String) {}
     fun showApacheLicense() {}
+    fun shareProblemReport() {}
 }
 
 /**
@@ -332,6 +334,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         previous?.onPause()
         stack.clear()
         screen = s
+        CrashReports.screenChanged(s.javaClass.simpleName)
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -342,6 +345,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val previous = screen
         previous?.let { stack.add(it) }
         screen = s
+        CrashReports.screenChanged(s.javaClass.simpleName)
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -353,6 +357,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val previous = screen
         val restored = stack.removeAt(stack.size - 1)
         screen = restored
+        CrashReports.screenChanged(restored.javaClass.simpleName)
         syncMusicScreen(restored)
         restored.layout()
         startScreenTransition(previous, restored, -1f)

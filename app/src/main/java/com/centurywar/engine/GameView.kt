@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.os.Build
 import android.os.StrictMode
 import com.centurywar.BuildConfig
+import com.centurywar.crash.CrashReports
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -134,7 +135,8 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                     rendered = true
                 }
             } catch (e: Exception) {
-                android.util.Log.e("CenturyWar", "frame error", e)
+                CrashReports.frameError(e)
+                android.util.Log.e("CenturyWar", "frame error: " + e.javaClass.name)
             } finally {
                 if (c != null) try {
                     holder.unlockCanvasAndPost(c)
