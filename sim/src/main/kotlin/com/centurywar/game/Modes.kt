@@ -157,9 +157,6 @@ object Weekly {
     private val MEDAL_REWARDS = intArrayOf(25, 60, 120)
 
     fun weekNumber(day: Long): Long = Math.floorDiv(day + 3L, 7L)
-    fun currentWeek(nowMillis: Long = System.currentTimeMillis()): Long =
-        weekNumber(Math.floorDiv(nowMillis, 86_400_000L))
-
     fun threshold(index: Int): Int = WAVE_THRESHOLDS[index]
     fun medalReward(index: Int): Int = MEDAL_REWARDS[index]
     const val TIER_COUNT = 3

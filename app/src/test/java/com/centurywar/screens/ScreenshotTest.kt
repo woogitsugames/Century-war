@@ -130,7 +130,7 @@ class ScreenshotTest {
             g.setScreen(ResearchScreen(g)); shot(g, "${tag}_research")
             g.setScreen(ModeScreen(g, Mode.ENDLESS)); shot(g, "${tag}_mode_endless")
             g.setScreen(ModeScreen(g, Mode.DAILY)); shot(g, "${tag}_mode_daily")
-            val weeklyWeek = Weekly.currentWeek()
+            val weeklyWeek = Weekly.weekNumber(Daily.dayNumber())
             g.profile.claimWeekly(weeklyWeek, 20, weeklyWeek)
             g.profile.submit(Profile.weeklyBoard(weeklyWeek), 17890, Daily.dayNumber())
             g.profile.submit(Profile.weeklyBoard(weeklyWeek - 1), 16200, Daily.dayNumber() - 7L)

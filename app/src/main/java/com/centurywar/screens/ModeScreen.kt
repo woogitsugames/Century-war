@@ -284,7 +284,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                     Mode.ENDLESS -> g.setScreen(BattleScreen(g, BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = pr.bonuses())))
                     Mode.DAILY -> {
                         if (weeklySelected) {
-                            val currentWeek = Weekly.currentWeek()
+                            val currentWeek = Weekly.weekNumber(Daily.dayNumber())
                             g.setScreen(BattleScreen(g, Weekly.config(currentWeek)))
                         } else {
                             val today = Daily.dayNumber()

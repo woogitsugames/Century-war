@@ -585,7 +585,7 @@ class BattleScreen(
             }
             Mode.ENDLESS -> {
                 if (cfg.weekly >= 0L) {
-                    val currentWeek = Weekly.currentWeek()
+                    val currentWeek = Weekly.weekNumber(day)
                     // Tydzień wyniku pochodzi z konfiguracji, nie z chwili zakończenia.
                     val bonus = pr.claimWeekly(cfg.weekly, battle.wave, currentWeek)
                     reward = (battle.wave * 3 + battle.player.kills / 10) / 2 + bonus
