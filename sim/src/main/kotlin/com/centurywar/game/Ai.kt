@@ -168,6 +168,21 @@ class Ai(
             }
             return
         }
+        // Gospodarz nie wysyła zebranej w końcowej epoce elity pojedynczo.
+        if (personality == AiPersonality.ECONOMIST && me.era == b.cfg.maxEra &&
+            b.time >= 90f
+        ) {
+            val ready = me.aliveCount >= personality.pushArmySize
+            if (me.hold) {
+                if (ready || danger >= 2) {
+                    stance(false)
+                    nextHoldAt = b.time + 18f
+                }
+            } else if (!ready && danger < 2 && b.time >= nextHoldAt) {
+                stance(true)
+            }
+            return
+        }
         if (personality == AiPersonality.ENGINEER) {
             if (me.hold) {
                 if ((me.aliveCount >= personality.pushArmySize &&
