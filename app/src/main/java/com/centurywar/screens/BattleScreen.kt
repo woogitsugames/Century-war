@@ -573,6 +573,7 @@ class BattleScreen(
                 if (won) pr.tutorialDone = true
             }
             Mode.SKIRMISH -> {
+                pr.recordSkirmish(cfg, score, day, won)
                 reward = SkirmishSetup.reward(cfg, won, battle.time, battle.player.kills)
                 if (won && SkirmishSetup.isRanked(cfg)) {
                     newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
