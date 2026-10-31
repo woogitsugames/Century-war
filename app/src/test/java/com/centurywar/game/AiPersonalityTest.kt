@@ -25,8 +25,9 @@ class AiPersonalityTest {
         var totalSeconds = 0f
         for (personality in AiPersonality.entries) {
             val battle = autoplay(BattleConfig(
-                Mode.SKIRMISH, 1408L, 1f, startEra = 2, maxEra = 2,
+                Mode.SKIRMISH, 1408L, 1.35f, startEra = 2, maxEra = 2,
                 modifiers = setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
+                playerBonuses = Bonuses(baseHpMul = 0.7f, unitHpMul = 0.9f),
                 aiPersonality = personality,
             ))
             val roles = battle.enemy.spawnedByRole.joinToString("/")
