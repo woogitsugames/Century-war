@@ -18,6 +18,7 @@ import com.centurywar.game.BattleController
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.BattleSnapshot
+import com.centurywar.game.ReplayRecord
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
@@ -59,6 +60,8 @@ class BattleScreen(
     private var showUpgrade = -1
     private var finished = false
     private var resultTime = 0f
+    private var replayBytes: ByteArray? = null
+    private var replayId: String? = null
 
 
     // wynik
@@ -85,6 +88,7 @@ class BattleScreen(
         const val RESTART = 21
         const val QUIT = 22
         const val CONTINUE = 23
+        const val WATCH_REPLAY = 24
         const val DOCTRINE0 = 30 // 30..32
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
@@ -116,6 +120,7 @@ class BattleScreen(
     private val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
+    private val replayEnd = btn(WATCH_REPLAY)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
@@ -212,10 +217,11 @@ class BattleScreen(
         val rw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
         val rh = min(h - g.insetT - g.insetB - 40 * dp, 400 * dp)
         resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp, w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
-        val bw = (rw - 66 * dp) / 2
+        val bw = (rw - 56 * dp) / 3
         val bh = 50 * dp
-        restartEnd.set(resultPanel.left + 24 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
-        continueBtn.set(resultPanel.right - 24 * dp - bw, resultPanel.bottom - bh - 22 * dp, bw, bh)
+        restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
+        replayEnd.set(restartEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
+        continueBtn.set(replayEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
     }
 
     private fun layoutUpgradePanel() {
@@ -280,38 +286,10 @@ class BattleScreen(
             }
             music.setIntensity(threat)
         }
-        playSounds()
+        BattleSfx.play(g, battle.fx, r.camX, r.worldVisible)
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
-    }
-
-    /** Dźwięki ze zdarzeń symulacji. Renderer czyta ten sam bufor w render() i go czyści. */
-    private fun playSounds() {
-        val fx = battle.fx
-        if (fx.count == 0 || g.sound == null) return
-        val center = r.camX + r.worldVisible / 2
-        val range = r.worldVisible * 0.9f
-        for (i in 0 until fx.count) {
-            val vol = (1f - kotlin.math.abs(fx.x[i] - center) / range).coerceIn(0.15f, 1f)
-            when (fx.type[i]) {
-                FxBuffer.HIT -> g.sfx(Sound.HIT, vol * 0.5f, 60)
-                FxBuffer.DEATH -> g.sfx(Sound.DEATH, vol * 0.6f, 90)
-                FxBuffer.EXPLOSION -> g.sfx(Sound.EXPLOSION, vol * min(1f, fx.value[i]), 120)
-                FxBuffer.MUZZLE -> {
-                    val p = fx.value[i].toInt()
-                    when (p) {
-                        Proj.BEAM, Proj.PLASMA -> g.sfx(Sound.LASER, vol * 0.5f, 70)
-                        Proj.BULLET, Proj.SHELL, Proj.BALL, Proj.ROCKET -> g.sfx(Sound.SHOT, vol * 0.55f, 55)
-                        else -> g.sfx(Sound.ARROW, vol * 0.45f, 70)
-                    }
-                }
-                FxBuffer.BASE_HIT -> g.sfx(Sound.THUMP, vol * 0.6f, 120)
-                FxBuffer.EVOLVE -> g.sfx(Sound.EVOLVE, if (fx.side[i] == 0) 1f else 0.5f, 300)
-                FxBuffer.GOLD -> g.sfx(Sound.COIN, 0.35f, 110)
-                FxBuffer.BARRAGE -> g.sfx(Sound.EXPLOSION, 0.8f, 200, 0.8f)
-            }
-        }
     }
 
     private var turretSlotsLaid = -1
@@ -405,6 +383,9 @@ class BattleScreen(
         restartEnd.visible = finished && resultTime > 0.8f
         restartEnd.label = L["restart"]
         restartEnd.iconId = Icons.RESTART
+        replayEnd.visible = finished && resultTime > 0.8f && replayBytes != null
+        replayEnd.label = L["replay"]
+        replayEnd.iconId = Icons.PLAY
 
         val choiceOpen = battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
@@ -479,6 +460,7 @@ class BattleScreen(
             }
             QUIT -> { paused = false; commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
+            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, it)) }
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 if (battle.pendingCards != null) commands.card(b.id - DOCTRINE0)
                 else commands.doctrine(b.id - DOCTRINE0)
@@ -552,6 +534,20 @@ class BattleScreen(
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
+        // Wynik oraz log kodujemy tylko raz, po zakończeniu bitwy (także wznowionej).
+        try {
+            val id = g.replays?.newId()
+            val now = System.currentTimeMillis()
+            val bytes = ReplayRecord.encode(battle.cfg, commands.log(),
+                ReplayRecord.Meta(battle.cfg.mode, battle.cfg.stageIndex, battle.winner,
+                    score, battle.time, battle.wave, now, pr.name.take(32)))
+            replayBytes = bytes
+            replayId = id
+            if (id != null) g.replays?.saveAsync(id, bytes)
+        } catch (_: IllegalArgumentException) {
+            replayBytes = null
+            replayId = null
+        }
         var earnedStars = 0
         // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
         // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
@@ -565,7 +561,7 @@ class BattleScreen(
                 if (st > old) {
                     earnedStars = st - old
                     pr.stars[stage] = st
-                    newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day)
+                    newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day, replayId)
                     g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
                 }
                 if (won) pr.tutorialDone = true
@@ -573,23 +569,27 @@ class BattleScreen(
             Mode.SKIRMISH -> {
                 reward = if (won) 15 + pr.skirmishDiff * 14 else (4 * effort).toInt() + battle.player.kills / 12
                 if (won) {
-                    newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day)
+                    newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day, replayId)
                     g.online.submit(Profile.BOARD_SKIRMISH, score)
                 }
             }
             Mode.ENDLESS -> {
                 reward = battle.wave * 3 + battle.player.kills / 10
                 if (battle.wave > pr.bestWave) pr.bestWave = battle.wave
-                newRecord = pr.submit(Profile.BOARD_ENDLESS, score, day)
+                newRecord = pr.submit(Profile.BOARD_ENDLESS, score, day, replayId)
                 g.online.submit(Profile.BOARD_ENDLESS, score)
             }
             Mode.DAILY -> {
                 if (rankedDaily) {
                     reward = min(90, (score / 350).toInt()) + 10
-                    newRecord = pr.submit(Profile.dailyBoard(cfg.seed), score, day)
+                    newRecord = pr.submit(Profile.dailyBoard(cfg.seed), score, day, replayId)
                     g.online.submit("daily", score)
                 } else reward = (5 * effort).toInt()
             }
+        }
+        // Przypinamy tylko wynik, który pozostał w lokalnym TOP 20.
+        replayId?.let { id ->
+            if (pr.boards.values.any { list -> list.any { it.replay == id } }) g.replays?.pinAsync(id)
         }
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         Missions(pr).onBattleEnd(battle, System.currentTimeMillis(), persist = false, newStars = earnedStars)
@@ -1017,5 +1017,6 @@ class BattleScreen(
         c.restore()
         ui.button(c, continueBtn, 17f)
         ui.button(c, restartEnd, 17f)
+        if (replayEnd.visible) ui.button(c, replayEnd, 15f)
     }
 }
