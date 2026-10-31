@@ -14,17 +14,21 @@ import com.centurywar.game.BattleConfig
 import com.centurywar.game.Daily
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
+import com.centurywar.game.Weekly
 import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
+import java.util.Locale
 
 /** Ekran przed bitwą dla trybów: bez końca, wyzwanie dnia, potyczka. */
-class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
+class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Boolean = false) : Screen(g) {
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val start = btn(-2)
     private val diff = Array(4) { btn(it) }
+    private val dailyTab = btn(10)
+    private val weeklyTab = btn(11)
     private val panel = RectF()
     private val row = RectF()
     private var dt = 0f
@@ -32,6 +36,20 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
     private var day = Daily.dayNumber()
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
+    private var week = -1L
+    private var weeklyCfg: BattleConfig? = null
+    private var weeklyLang = -1
+    private var weeklySecond = -1L
+    private var weeklyInfo = ""
+    private var weeklyEras = ""
+    private var weeklyMods = ""
+    private var weeklyCard = ""
+    private var weeklyBest = ""
+    private var weeklyCountdown = ""
+    private val tierNames = Array(3) { "" }
+    private val tierColors = intArrayOf(
+        Color.rgb(191, 117, 62), Color.rgb(184, 194, 211), Color.rgb(236, 193, 62),
+    )
 
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
@@ -46,6 +64,15 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         start.set(w / 2 - 110 * dp, panel.bottom - 70 * dp, 220 * dp, 52 * dp)
         start.highlight = true
         start.iconId = Icons.PLAY
+        val tabWidth = min(118 * dp, (pw - 42 * dp) / 2f)
+        dailyTab.set(panel.centerX() - tabWidth - 4 * dp, panel.top + 35 * dp, tabWidth, 32 * dp)
+        weeklyTab.set(panel.centerX() + 4 * dp, panel.top + 35 * dp, tabWidth, 32 * dp)
+        dailyTab.label = L["weekly_day_tab"]
+        weeklyTab.label = L["weekly_week_tab"]
+        dailyTab.iconId = Icons.CALENDAR
+        weeklyTab.iconId = Icons.MEDAL
+        dailyTab.visible = mode == Mode.DAILY
+        weeklyTab.visible = mode == Mode.DAILY
         val gap = 8 * dp
         val dw = (pw - 44 * dp - gap * 3) / 4
         for (i in 0..3) {
@@ -60,8 +87,83 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         this.dt = dt
         val today = Daily.dayNumber()
         if (today != day) { day = today; dailyCfg = null }
+        if (mode == Mode.DAILY) {
+            if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
+            val second = System.currentTimeMillis() / 1000L
+            if (second != weeklySecond) {
+                weeklySecond = second
+                val remaining = ((week * 7L + 4L) * 86_400L - second).coerceAtLeast(0L)
+                val clock = String.format(Locale.ROOT, "%dd %02d:%02d:%02d",
+                    remaining / 86_400L, remaining / 3600L % 24L,
+                    remaining / 60L % 60L, remaining % 60L)
+                weeklyCountdown = L.f("weekly_ends", clock)
+            }
+        }
+        dailyTab.selected = !weeklySelected
+        weeklyTab.selected = weeklySelected
         start.label = L["play"]
         for (i in 0..3) diff[i].selected = g.profile.skirmishDiff == i
+    }
+
+    /** Odświeżenie opisów wyłącznie przy zmianie tygodnia lub języka. */
+    private fun rebuildWeekly(today: Long) {
+        week = Weekly.weekNumber(today)
+        weeklyLang = L.lang
+        weeklySecond = -1L
+        g.profile.syncWeekly(week)
+        val cfg = Weekly.config(week)
+        weeklyCfg = cfg
+        weeklyInfo = L["weekly_info"]
+        weeklyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
+        weeklyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
+        weeklyCard = L["weekly_start_card"] + ": " + L[cfg.weeklyCard!!.textKey]
+        val score = g.profile.top(Profile.weeklyBoard(week)).firstOrNull()?.score
+        weeklyBest = L["best"] + ": " + (score?.toString() ?: L["no_scores"])
+        for (i in 0 until Weekly.TIER_COUNT) {
+            tierNames[i] = L.f("weekly_tier", L[when (i) {
+                0 -> "weekly_bronze"; 1 -> "weekly_silver"; else -> "weekly_gold"
+            }], Weekly.threshold(i), Weekly.medalReward(i))
+        }
+    }
+
+    /** Karta tygodnia ma zwartą siatkę, by zmieścić się także na 720p. */
+    private fun drawWeekly(c: Canvas, pr: Profile) {
+        val x = panel.left + 20 * dp
+        val full = panel.width() - 40 * dp
+        val colWidth = (full - 16 * dp) / 2f
+        var y = panel.top + 81 * dp
+        y += ui.wrap(c, weeklyInfo, x, y, full, 13f)
+        y += 11 * dp
+        val leftX = x
+        val rightX = x + colWidth + 16 * dp
+        val leftTop = y
+        Icons.draw(c, Icons.TOWER, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, weeklyEras, leftX + 23 * dp, y, ui.fit(weeklyEras, 13f, colWidth - 23 * dp), Ui.TEXT)
+        y += 28 * dp
+        Icons.draw(c, Icons.CROWN, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, weeklyCard, leftX + 23 * dp, y, ui.fit(weeklyCard, 13f, colWidth - 23 * dp), Ui.GOLD)
+        y += 28 * dp
+        Icons.draw(c, Icons.HOURGLASS, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, weeklyCountdown, leftX + 23 * dp, y, ui.fit(weeklyCountdown, 13f, colWidth - 23 * dp), Ui.TEXT)
+
+        var ry = leftTop
+        Icons.draw(c, Icons.FLAG, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
+        ry += ui.wrap(c, weeklyMods, rightX + 23 * dp, ry, colWidth - 23 * dp, 12f, Ui.TEXT)
+        ry += 8 * dp
+        Icons.draw(c, Icons.TROPHY, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
+        ui.textO(c, weeklyBest, rightX + 23 * dp, ry, ui.fit(weeklyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
+
+        val medalY = start.r.top - 42 * dp
+        val mask = pr.weeklyClaimedFor(week)
+        for (i in 0 until Weekly.TIER_COUNT) {
+            val centerX = x + (i + 0.5f) * full / Weekly.TIER_COUNT
+            val claimed = mask and (1 shl i) != 0
+            Icons.draw(c, Icons.MEDAL, centerX - 38 * dp, medalY - 1 * dp,
+                24 * dp, tint = if (claimed) tierColors[i] else Ui.DIM, dp = dp)
+            ui.textO(c, tierNames[i], centerX - 23 * dp, medalY + 4 * dp,
+                ui.fit(tierNames[i], 11f, full / 3f - 35 * dp),
+                if (claimed) tierColors[i] else Ui.DIM)
+        }
     }
 
     private fun line(c: Canvas, icon: Int, s: String, x: Float, y: Float, color: Int = Ui.TEXT, size: Float = 15f): Float {
@@ -77,14 +179,24 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
         ui.panel(c, panel)
         val pr = g.profile
         val title = when (mode) { Mode.ENDLESS -> L["endless"]; Mode.DAILY -> L["daily"]; else -> L["skirmish"] }
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, title, 22f, Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() * 0.9f)
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, if (mode == Mode.DAILY && weeklySelected) L["weekly"] else title, 22f, Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() * 0.9f)
+        if (mode == Mode.DAILY) {
+            ui.button(c, dailyTab, 13f)
+            ui.button(c, weeklyTab, 13f)
+        }
+        if (mode == Mode.DAILY && weeklySelected) {
+            drawWeekly(c, pr)
+            for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f)
+            ui.button(c, start, 20f)
+            return
+        }
 
         val mr = 42 * dp
         val mx = panel.left + 26 * dp + mr
-        val my = panel.top + 52 * dp + mr
+        val my = panel.top + (if (mode == Mode.DAILY) 87 else 52) * dp + mr
         ui.medallion(c, mx, my, mr, Ui.ERA[when (mode) { Mode.ENDLESS -> 3; Mode.DAILY -> Defs.ERA_COUNT - 1; else -> 2 }], modeIcon)
         val x = mx + mr + 18 * dp
-        var y = panel.top + 58 * dp
+        var y = panel.top + (if (mode == Mode.DAILY) 93 else 58) * dp
         val tw = panel.right - 24 * dp - x
         val lowLimit = if (mode == Mode.SKIRMISH) diff[0].r.top - 26 * dp else start.r.top - 10 * dp
         when (mode) {
@@ -125,7 +237,7 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 ui.textO(c, L["difficulty"], panel.centerX(), diff[0].r.top - 10 * dp, 14f, Ui.GOLD, Paint.Align.CENTER)
             }
         }
-        for (b in buttons) if (b !== start) ui.button(c, b, if (b === back) 16f else 14f)
+        for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, if (b === back) 16f else 14f)
         ui.button(c, start, 20f)
     }
 
@@ -144,14 +256,22 @@ class ModeScreen(g: Game, private val mode: Mode) : Screen(g) {
                 when (mode) {
                     Mode.ENDLESS -> g.setScreen(BattleScreen(g, BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = pr.bonuses())))
                     Mode.DAILY -> {
-                        val ranked = pr.lastRankedDaily != day
-                        if (ranked) { pr.lastRankedDaily = day; pr.save() }
-                        g.setScreen(BattleScreen(g, Daily.config(day, pr.bonuses()), ranked))
+                        if (weeklySelected) {
+                            val currentWeek = Weekly.currentWeek()
+                            g.setScreen(BattleScreen(g, Weekly.config(currentWeek)))
+                        } else {
+                            val today = Daily.dayNumber()
+                            val ranked = pr.lastRankedDaily != today
+                            if (ranked) { pr.lastRankedDaily = today; pr.save() }
+                            g.setScreen(BattleScreen(g, Daily.config(today, pr.bonuses()), ranked))
+                        }
                     }
                     else -> g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, aiPower(), playerBonuses = pr.bonuses())))
                 }
             }
             in 0..3 -> { pr.skirmishDiff = b.id; pr.save() }
+            10 -> weeklySelected = false
+            11 -> weeklySelected = true
         }
     }
 }
