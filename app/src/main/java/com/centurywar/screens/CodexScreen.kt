@@ -51,12 +51,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val toggle = btn(-2)
+    private val variantBtn = Array(2) { btn(-3 - it) }
     private val tabs = Array(Defs.ERA_COUNT) { btn(100 + it) }
 
     /** Atrapa bitwy tylko po to, by użyć proceduralnych sylwetek jednostek z renderera. */
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
 
     private var era = startEra.coerceIn(0, Defs.ERA_COUNT - 1)
+    private var selectedVariant = if (Defs.spec(era).variants.isNotEmpty()) 0 else -1
     private var withResearch = false
     private var dt = 0f
 
@@ -121,6 +123,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         val rows = (tabs.size + perRow - 1) / perRow
         viewTop = tabTop + rows * tabH + (rows - 1) * tabGap + 10 * dp
+        val variants = Defs.spec(era).variants
+        val vbW = (contentW - 10 * dp) / 2f
+        for (i in variantBtn.indices) {
+            val b = variantBtn[i]
+            b.visible = i in variants.indices
+            if (b.visible) b.set(left + i * (vbW + 10 * dp), viewTop, vbW, 40 * dp)
+        }
+        if (variants.isNotEmpty()) viewTop += 50 * dp
 
         cols = (contentW / ((if (ui.textScale > 1.15f) 340f else 280f) * dp)).toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
@@ -140,6 +150,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private fun rebuild() {
         val b = if (withResearch) g.profile.bonuses() else Bonuses()
         val e = Defs.eras[era]
+        val variant = Defs.spec(era).variants.getOrNull(selectedVariant)
         eraName = L[e.nameKey]
         eraNum = L.f("cx_era_n", era + 1, Defs.ERA_COUNT)
         evolveText = if (e.evolveXp == Int.MAX_VALUE) L["cx_final"] else L.f("cx_evolve", num(e.evolveXp.toFloat()))
@@ -148,7 +159,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         val textW = cw - previewW - 3 * 12 * dp
         for (i in 0 until 4) {
-            val u = e.units[i]
+            val u = Defs.unit(era, Role.entries[i], selectedVariant)
             titles[i] = L[u.nameKey]
             roles[i] = L[when (u.role) { Role.MELEE -> "cx_melee"; Role.RANGED -> "cx_ranged"; Role.HEAVY -> "cx_heavy"; Role.ELITE -> "cx_elite" }]
             counterHints[i] = L[when (u.role) {
@@ -173,7 +184,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             statN[i] = n
         }
 
-        val t = e.turret
+        val t = Defs.turret(era, selectedVariant)
         titles[TURRET] = L[t.nameKey]
         roles[TURRET] = L["cx_turret"]
         counterHints[TURRET] = if (era >= 4) L["cx_counter_turret"] else null
@@ -189,13 +200,16 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         n = stat(TURRET, n, Icons.BOMB, "cx_splash", if (t.splash > 0f) num(t.splash) else "—", false)
         statN[TURRET] = n
 
-        titles[BARRAGE] = L[e.abilityKey]
+        titles[BARRAGE] = if (variant == null) L[e.abilityKey] else L["ab_" + variant.key]
         roles[BARRAGE] = L["cx_barrage"]
         counterHints[BARRAGE] = null
-        wrapInto(BARRAGE, L["cx_barrage_d"], textW)
+        wrapInto(BARRAGE, if (variant == null) L["cx_barrage_d"] else L[variant.descKey], textW)
         n = 0
         n = stat(BARRAGE, n, Icons.METEOR, "cx_hit", num(Defs.abilityDmg(era) * b.unitDmgMul), b.unitDmgMul != 1f)
         n = stat(BARRAGE, n, Icons.HOURGLASS, "cx_cd", sec(Battle.BARRAGE_CD * b.abilityCdMul), b.abilityCdMul != 1f)
+        val volley = Defs.barrage(era, selectedVariant)
+        n = stat(BARRAGE, n, Icons.METEOR, "cx_count", volley.count.toString(), false)
+        n = stat(BARRAGE, n, Icons.BOMB, "cx_splash", num(volley.splash), false)
         statN[BARRAGE] = n
 
         for (i in tabs.indices) {
@@ -206,6 +220,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         toggle.label = L["cx_research"]
         toggle.sub = if (withResearch) L["on"] else L["off"]
         toggle.highlight = withResearch
+        for (i in variantBtn.indices) {
+            val vb = variantBtn[i]
+            if (i < Defs.spec(era).variants.size) vb.label = L[Defs.spec(era).variants[i].nameKey]
+            vb.selected = i == selectedVariant
+            vb.highlight = vb.selected
+        }
     }
 
     private fun stat(card: Int, n: Int, icon: Int, key: String, value: String, up: Boolean): Int {
@@ -258,6 +278,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         bg.draw(c, w, h, dt)
         chrome.dim(c, 130)
         for (i in tabs.indices) ui.button(c, tabs[i], 14f)
+        for (b in variantBtn) if (b.visible) ui.button(c, b, 13f)
 
         c.save()
         c.clipRect(0f, viewTop - 4 * dp, w, h)
@@ -381,7 +402,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             TURRET -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, col, Icons.TOWER)
             BARRAGE -> ui.medallion(c, box.centerX(), box.top + box.height() * 0.43f, box.height() * 0.33f, ROLE_COL[BARRAGE], Icons.METEOR)
             else -> {
-                val def = Defs.eras[era].units[i]
+                val def = Defs.unit(era, Role.entries[i], selectedVariant)
                 val k = when (def.body) {
                     Body.HUMAN -> 0.8f
                     Body.MECH -> 0.7f
@@ -400,9 +421,19 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         when {
             b.id == -1 -> g.pop()
             b.id == -2 -> { withResearch = !withResearch; rebuild() }
+            b.id == -3 || b.id == -4 -> {
+                selectedVariant = -3 - b.id
+                scroll = 0f
+                rebuild()
+            }
             b.id >= 100 -> {
                 val e = b.id - 100
-                if (e != era) { era = e; scroll = 0f; rebuild() }
+                if (e != era) {
+                    era = e
+                    selectedVariant = if (Defs.spec(e).variants.isEmpty()) -1 else 0
+                    scroll = 0f
+                    layout()
+                }
             }
         }
     }

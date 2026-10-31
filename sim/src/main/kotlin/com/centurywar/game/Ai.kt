@@ -107,7 +107,7 @@ class Ai(
         val full = me.aliveCount + me.queueSize >= me.cap
         if (!full && me.era < b.cfg.maxEra &&
             me.xp > Defs.evolveXp[me.era] * personality.upgradeXpLimit) return
-        val meleeCost = Defs.unit(me.era, Role.MELEE).cost
+        val meleeCost = me.unit(Role.MELEE).cost
         val reserve = meleeCost * (if (full) 2f else 5f) * personality.upgradeReserve
         for (role in upgradeOrder) {
             if (role == Role.ELITE && !me.eliteUnlocked) continue
@@ -266,7 +266,7 @@ class Ai(
 
     private fun manageTurrets(saving: Boolean) {
         if (me.slots == 0) return
-        if (danger >= 2 && me.gold < Defs.unit(me.era, Role.MELEE).cost && me.era >= 2) {
+        if (danger >= 2 && me.gold < me.unit(Role.MELEE).cost && me.era >= 2) {
             for (i in 0 until me.slots) {
                 if (me.turretEra[i] >= 0 && me.turretEra[i] <= me.era - 2 &&
                     b.upgradeCost(me, i) > me.gold
@@ -278,7 +278,7 @@ class Ai(
         if (saving || b.time < personality.turretDelay) return
 
         val budget = me.gold * personality.turretBudget
-        val reserve = Defs.unit(me.era, Role.HEAVY).cost
+        val reserve = me.unit(Role.HEAVY).cost
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
             if (cost >= 0 && cost <= budget && me.gold > cost + reserve * 0.5f) {
@@ -294,7 +294,7 @@ class Ai(
 
     private fun trainUnits(saving: Boolean) {
         if (me.aliveCount + me.queueSize >= me.cap) {
-            val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2f * personality.armoryBias
+            val reserve = me.unit(Role.HEAVY).cost * 2f * personality.armoryBias
             if (!saving && me.gold > b.armoryCost(me) + reserve) armory()
             return
         }
@@ -314,7 +314,7 @@ class Ai(
             plannedRole = null
         } else if (danger >= 2 && queue(Role.MELEE)) {
             plannedRole = null
-        } else if (me.gold > Defs.unit(me.era, role).cost * 0.5f && b.rng.nextAiInt(me.index, 10) == 0) {
+        } else if (me.gold > me.unit(role).cost * 0.5f && b.rng.nextAiInt(me.index, 10) == 0) {
             plannedRole = null
         }
     }
@@ -338,10 +338,10 @@ class Ai(
         if (heavy * 3 < melee + ranged) wh += 20
 
         // Nie planuj drogich formacji zbyt wcześnie: oszczędzanie jest świadomą decyzją.
-        if (me.gold < Defs.unit(me.era, Role.HEAVY).cost * 0.65f) wh = 0
+        if (me.gold < me.unit(Role.HEAVY).cost * 0.65f) wh = 0
         if (me.eliteUnlocked &&
             (profile.eliteBeforeLastEra || me.era == b.cfg.maxEra) &&
-            me.gold >= Defs.unit(me.era, Role.ELITE).cost * profile.eliteCommitment
+            me.gold >= me.unit(Role.ELITE).cost * profile.eliteCommitment
         ) {
             we = profile.eliteWeight
             if (b.time >= 175f && me.era == b.cfg.maxEra && heavy < 3) {
@@ -358,6 +358,27 @@ class Ai(
             roll < wm + wr + wh -> Role.HEAVY
             else -> Role.ELITE
         }
+    }
+
+    /** Warianty nie pobierają losowań z głównego RNG ani nie zmieniają starych epok. */
+    fun chooseVariant(era: Int): Int {
+        val variants = Defs.spec(era).variants
+        if (variants.isEmpty()) return -1
+        val armored = variants.indexOfFirst {
+            it.art == EraArt.COMBUSTION || it.art == EraArt.BIOTECH
+        }.let { if (it < 0) 0 else it }
+        var weight = when (personality) {
+            AiPersonality.SIEGER -> 72
+            AiPersonality.ENGINEER -> 70
+            AiPersonality.ECONOMIST -> 60
+            AiPersonality.ASSAULT -> 35
+            AiPersonality.BALANCED -> 50
+        }
+        val opponent = b.sides[1 - me.index]
+        if (opponent.era == era && opponent.eraVariant >= 0) {
+            if (opponent.eraVariant == armored) weight -= 8 else weight += 8
+        }
+        return if (b.rng.nextAiInt(me.index, 100) < weight) armored else 1 - armored
     }
 
     /** Wybór karty Oblężenia bez końca (AI gracza w testach); własny strumień RNG. */
@@ -400,4 +421,4 @@ class Ai(
 /** AI uwzględnia wyłącznie własny próg XP i stan wyboru doktryny gracza. */
 fun Battle.canEvolveSide(side: Side): Boolean =
     !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] &&
-        (side.index == 1 || pendingChoice == null)
+        (side.index == 1 || (pendingVariant == null && pendingChoice == null))

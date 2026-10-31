@@ -63,6 +63,8 @@ class BattleConfig(
     val tutorial: Boolean = false,
     /** Brak wyboru: osobowość deterministyczna z seeda. */
     val aiPersonality: AiPersonality? = null,
+    /** Historyczne wyzwania dnia pozostają bez wariantów. */
+    val variantsEnabled: Boolean = true,
 )
 
 class Stage(
@@ -137,6 +139,9 @@ object Daily {
     // Data wydania jeszcze nieznana (31.10.2026): odległa data, do tego dnia wyzwanie dnia
     // losuje jak przed Epoką żelaza. Przed wydaniem ustawić na faktyczny dzień (nigdy w przeszłości).
     const val ERA_EXPANSION_DAY = 21153L // 2027-12-01 00:00 UTC
+    /** Data włączenia wariantów: nie przesuwać wstecz ani przed ERA_EXPANSION_DAY. */
+    // Zastępcza data wydania; przed premierą ustawić dzień pierwszego udostępnienia wariantów.
+    const val VARIANTS_DAY = ERA_EXPANSION_DAY
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
@@ -154,7 +159,7 @@ object Daily {
         val rolledMax = if (historical) minOf(7, rolledStart + 3) else minOf(Defs.ERA_COUNT - 1, rolledStart + 3)
         val maxEra = if (historical && rolledMax >= 2) rolledMax + 1 else rolledMax
         return BattleConfig(Mode.DAILY, day, 1.1f + rng.nextFloat() * 0.25f,
-            start, maxEra, mods, normalizedBonuses())
+            start, maxEra, mods, normalizedBonuses(), variantsEnabled = day >= VARIANTS_DAY)
     }
 
     private fun normalizedBonuses() = Bonuses(

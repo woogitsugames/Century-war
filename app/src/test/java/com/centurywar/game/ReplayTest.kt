@@ -187,6 +187,43 @@ class ReplayTest {
     }
 
     @Test
+    fun humanVariantAtStartIsLoggedAndVerified() {
+        val era = Defs.eraOf(EraArt.STEAM)
+        val cfg = BattleConfig(Mode.SKIRMISH, 9900L, 0.8f, startEra = era, maxEra = era)
+        val b = Battle(cfg)
+        val commands = BattleController(b)
+        assertEquals(era, b.pendingVariant)
+        assertFalse(commands.queue(Role.HEAVY))
+        assertFalse(commands.variant(2))
+        assertTrue(commands.variant(1))
+        assertNull(b.pendingVariant)
+        assertFalse(commands.variant(0))
+        repeat(120) { if (!b.over) b.step() }
+        assertTrue(commands.surrender())
+        val log = commands.log()
+        assertEquals(Replay.Kind.VARIANT, log.commands.first().kind)
+        assertEquals(0, log.commands.first().step)
+        val result = Replay.verify(cfg, Replay.encode(log))
+        assertEquals(b.stepCount, result.steps)
+        assertEquals(b.score(), result.score)
+    }
+
+    @Test
+    fun playerAiVariantIsLoggedAndVerified() {
+        val era = Defs.eraOf(EraArt.SILICON)
+        val cfg = BattleConfig(Mode.SKIRMISH, 9901L, 0.9f, startEra = era, maxEra = era)
+        val b = Battle(cfg)
+        val commands = BattleController(b)
+        b.playerAi = Ai(b, 0, AiPersonality.SIEGER)
+        repeat(200) { if (!b.over) b.step() }
+        assertTrue(commands.log().commands.any { it.kind == Replay.Kind.VARIANT && it.step == 0 })
+        if (!b.over) assertTrue(commands.surrender())
+        val result = Replay.verify(cfg, Replay.encode(commands.log()))
+        assertEquals(b.score(), result.score)
+        assertEquals(b.winner, result.winner)
+    }
+
+    @Test
     fun illegalCommandsAndArgumentsAreRejected() {
         val cfg = BattleConfig(Mode.SKIRMISH, 42L, 1f)
         mustReject {
@@ -203,6 +240,9 @@ class ReplayTest {
         }
         mustReject {
             Replay.encode(Replay.Log(1, listOf(Replay.Command(0, Replay.Kind.STANCE, 2))))
+        }
+        mustReject {
+            Replay.encode(Replay.Log(0, listOf(Replay.Command(0, Replay.Kind.VARIANT, 2))))
         }
     }
 

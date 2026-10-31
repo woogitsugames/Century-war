@@ -21,7 +21,7 @@ class BattleSnapshotTest {
     /** Prosty, deterministyczny "gracz" bez AI (żeby wybór doktryny czekał na gracza). */
     private fun scripted(b: Battle) {
         val p = b.player
-        if (b.pendingChoice != null || b.pendingCards != null) return
+        if (b.pendingVariant != null || b.pendingChoice != null || b.pendingCards != null) return
         if (b.canEvolve(p)) b.evolve(p)
         val role = Role.values()[(b.serialCounter + p.queueSize) % 3]
         b.queueUnit(p, role)
@@ -34,6 +34,7 @@ class BattleSnapshotTest {
         var i = 0
         while (i < n && !b.over) {
             if (script) scripted(b)
+            if (b.pendingVariant != null) b.chooseVariant((b.wave + b.player.era) % 2)
             if (b.pendingChoice != null) b.chooseDoctrine((b.wave + b.player.era) % 3)
             if (b.pendingCards != null) b.chooseEndlessCard((b.wave + b.player.era) % 3)
             b.step(); b.fx.count = 0; i++
@@ -64,6 +65,8 @@ class BattleSnapshotTest {
             assertEquals(x.gold, y.gold)
             assertEquals(x.xp, y.xp)
             assertEquals(x.era, y.era)
+            assertEquals(x.eraVariant, y.eraVariant)
+            assertArrayEquals(x.turretVariant, y.turretVariant)
             assertArrayEquals(x.unitTier, y.unitTier)
             assertEquals(x.kills, y.kills)
             assertEquals(x.spawned, y.spawned)
@@ -382,6 +385,50 @@ class BattleSnapshotTest {
         a.player.ralliesUsed = 1
         val restored = roundTrip(a)
         assertSame(a, restored)
+    }
+
+    @Test
+    fun variantPendingAndSelectedWithQueueAndFightersSurvive() {
+        val steam = Defs.eraOf(EraArt.STEAM)
+        val cfg = BattleConfig(Mode.SKIRMISH, 6161L, 0.9f, startEra = steam, maxEra = steam)
+        val a = Battle(cfg)
+        assertEquals(steam, a.pendingVariant)
+        val waiting = roundTrip(a)
+        assertEquals(steam, waiting.pendingVariant)
+        val now = waiting.stepCount
+        waiting.step()
+        assertEquals(now, waiting.stepCount)
+        assertTrue(a.chooseVariant(1))
+        assertTrue(waiting.chooseVariant(1))
+        for (battle in arrayOf(a, waiting)) {
+            battle.player.gold = 10000f
+            assertTrue(battle.queueUnit(battle.player, Role.HEAVY))
+            assertTrue(battle.spawn(battle.player, battle.player.unit(Role.ELITE)))
+            assertTrue(battle.buyTurret(battle.player, 0))
+        }
+        assertEquals(1, a.player.eraVariant)
+        assertEquals(1, a.player.turretVariant[0])
+        assertEquals(1, Defs.allUnits[a.player.queue[0]].variant)
+        assertTrue(a.units.any { it.active && it.def.variant == 1 })
+        val restored = roundTrip(a)
+        assertSame(a, restored)
+        steps(a, 60 * 30)
+        steps(restored, 60 * 30)
+        assertSame(a, restored)
+    }
+
+    @Test
+    fun biomechanicalRegenerationAfterRestore() {
+        val silicon = Defs.eraOf(EraArt.SILICON)
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 223344L, 0.7f, startEra = silicon, maxEra = silicon))
+        assertTrue(b.chooseVariant(1))
+        assertTrue(b.spawn(b.player, b.player.unit(Role.HEAVY)))
+        val u = b.units.first { it.active && it.side == 0 }
+        u.hp *= 0.5f
+        val restored = roundTrip(b)
+        steps(b, 60 * 10)
+        steps(restored, 60 * 10)
+        assertSame(b, restored)
     }
 
     @Test

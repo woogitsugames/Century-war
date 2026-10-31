@@ -146,7 +146,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private var poseOverride = false
     private val bases = Bases(pen)
     /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
-    private val basePics = arrayOfNulls<Picture>(Defs.ERA_COUNT * 2)
+    private val basePics = arrayOfNulls<Picture>(EraArt.entries.size * 2)
     private var basePicDetail = -1
     private var basePicPalette = -1
     private val PIC_OX = 420f
@@ -469,13 +469,13 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     // ---------------------------------------------------------------- bazy
 
     /** Korpus bazy nagrany raz do Picture (tekstury nie kosztują w kolejnych klatkach). */
-    private fun basePicture(side: Int, era: Int, team: Int): Picture {
+    private fun basePicture(side: Int, art: EraArt, team: Int): Picture {
         if (basePicDetail != pen.detail || basePicPalette != Palette.selected) {
             for (i in basePics.indices) basePics[i] = null
             basePicDetail = pen.detail
             basePicPalette = Palette.selected
         }
-        val idx = side * Defs.ERA_COUNT + era
+        val idx = side * EraArt.entries.size + art.ordinal
         basePics[idx]?.let { return it }
         val pic = Picture()
         val rc = pic.beginRecording((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
@@ -484,7 +484,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         pen.cv = rc
         pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
         pen.setAntiAlias(true)
-        bases.body(era, team)
+        bases.body(art, team)
         pic.endRecording()
         pen.cv = saved
         pen.setAntiAlias(g.quality.antialias)
@@ -498,7 +498,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         if (s.index == 1 && bx > viewW + 400 * k) return
         val team = if (s.index == 0) Ui.PLAYER else Ui.ENEMY
         val e = s.era
-        val pic = basePicture(s.index, e, team)
+        val art = Defs.sideArt(e, s.eraVariant)
+        val pic = basePicture(s.index, art, team)
         c.save()
         c.translate(bx, groundY)
         c.scale(k * s.dir, k)
@@ -523,11 +524,11 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             c.restore()
         } else c.drawPicture(pic)
         c.restore()
-        bases.live(e, team)
+        bases.live(art, team)
 
         // flaga drużyny
-        val fx0 = bases.flagX(e)
-        val flagTop = bases.flagTop(e)
+        val fx0 = bases.flagX(art)
+        val flagTop = bases.flagTop(art)
         val wave = sin(time * 5f + s.index) * 6f
         val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
         val fp = pen.path
@@ -543,12 +544,12 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         // wieża z platformami na wieżyczki
         if (s.slots > 0) {
             val top = b.turretHeight(s.slots - 1) + 20f
-            bases.tower(e, team, top)
+            bases.tower(art, team, top)
             for (i in 0 until s.slots) {
                 val hh = b.turretHeight(i)
-                bases.platform(e, -hh + 8f)
+                bases.platform(art, -hh + 8f)
                 val te = s.turretEra[i]
-                if (te >= 0) bases.turret(te, -40f, -hh + 8f, s.turretFire[i] > 0f, team)
+                if (te >= 0) bases.turret(Defs.sideArt(te, s.turretVariant[i]), -40f, -hh + 8f, s.turretFire[i] > 0f, team)
             }
         }
         c.restore()
@@ -821,8 +822,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
         pen.ow = 1.5f / def.size
         mach.size = def.size
-        when (def.body) {
-            Body.HUMAN -> men.draw(def.era, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
+        if (def.variant >= 0 && (def.role == Role.HEAVY || def.role == Role.ELITE)) {
+            mach.variantMachine(def.art, def.role == Role.ELITE, team, walk, atk)
+        } else when (def.body) {
+            Body.HUMAN -> men.draw(def.art, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
             Body.BEAST -> mach.beast(def.era, def.role == Role.ELITE, team, walk, atk)
             Body.SIEGE -> if (Defs.spec(def.era).art == EraArt.IRON) mach.scorpion(team, walk, atk) else mach.trebuchet(team, walk, atk)
             Body.CANNON -> mach.cannon(team, walk, atk)
@@ -893,8 +896,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun unitWidth(d: UnitDef) = when (d.body) {
         Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
-        Body.VEHICLE -> if (d.role == Role.ELITE && Defs.spec(d.era).art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
-        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+        Body.VEHICLE -> if (d.role == Role.ELITE && d.art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
+        Body.MECH -> if (d.art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
     }
 
     private fun iconShift(d: UnitDef) = when (d.body) {
@@ -902,8 +905,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     private fun unitHeight(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (Defs.spec(d.era).art == EraArt.BRONZE) 120f else 92f) else 80f
-        Body.MECH -> if (Defs.spec(d.era).art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.art == EraArt.BRONZE) 120f else 92f) else 80f
+        Body.MECH -> if (d.art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
     }
 
     // ---------------------------------------------------------------- pociski
@@ -1051,7 +1054,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private fun emitAmbient(dt: Float) {
         val step = dt.coerceIn(0f, 0.12f)
         for (s in b.sides) {
-            if (Defs.spec(s.era).art != EraArt.STEAM) { baseSmoke[s.index] = 0f; continue }
+            if (Defs.sideArt(s.era, s.eraVariant) != EraArt.STEAM) { baseSmoke[s.index] = 0f; continue }
             val interval = if (g.quality.level == 1) 0.7f else 0.22f
             baseSmoke[s.index] = min(1f, baseSmoke[s.index] + step)
             while (baseSmoke[s.index] >= interval) {
@@ -1066,7 +1069,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
                 (u.def.body != Body.VEHICLE && u.def.body != Body.MECH)) {
                 motorSmoke[i] = 0f; continue
             }
-            val art = Defs.spec(u.def.era).art
+            val art = u.def.art
             if (art == EraArt.ORBITAL || art == EraArt.BRONZE) continue
             val interval = (if (u.moving) 0.12f else 0.28f) * if (g.quality.level == 1) 2.5f else 1f
             motorSmoke[i] = min(1f, motorSmoke[i] + step)
@@ -1152,7 +1155,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
 
     private fun emitExplosion(x: Float, h: Float, size: Float, side: Int) {
         val scale = size.coerceIn(0.25f, 3.5f)
-        val art = Defs.spec(b.sides[side.coerceIn(0, 1)].era).art
+        val es = b.sides[side.coerceIn(0, 1)]
+        val art = Defs.sideArt(es.era, es.eraVariant)
         val ancient = art == EraArt.TRIBAL || art == EraArt.BRONZE ||
             art == EraArt.IRON || art == EraArt.FEUDAL
         val orbital = art == EraArt.ORBITAL
