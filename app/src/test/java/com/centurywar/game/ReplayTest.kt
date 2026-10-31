@@ -290,6 +290,24 @@ class ReplayTest {
     }
 
     @Test
+    fun armoryTutorialGoldCanBeReplayed() {
+        val cfg = BattleConfig(Mode.CAMPAIGN, 54L, 0.8f, stageIndex = 0, tutorial = true)
+        val b = Battle(cfg)
+        val commands = BattleController(b)
+        val price = b.armoryCost(b.player)
+        while (b.player.gold >= price && b.player.queueSize < 5) {
+            assertTrue(commands.queue(Role.MELEE))
+        }
+        assertTrue(b.player.gold < price.toFloat())
+        assertTrue(commands.tutorialGold(price))
+        assertTrue(commands.armory())
+        assertEquals(1, b.player.armory)
+        assertTrue(commands.surrender())
+        val result = Replay.verify(cfg, Replay.decode(Replay.encode(commands.log())))
+        assertEquals(b.score(), result.score)
+    }
+
+    @Test
     fun illegalCommandsAtFinishedStepAreRejected() {
         val cfg = BattleConfig(Mode.SKIRMISH, 15L, 1f)
         mustReject {

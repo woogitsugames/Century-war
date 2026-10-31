@@ -172,7 +172,8 @@ class BattleController(
             battle.cfg.stageIndex != 0 || !canAct() || cost <= 0 || cost > 1_000_000) return false
         val p = battle.player
         val valid = cost == Defs.unit(p.era, Role.MELEE).cost ||
-            cost == Defs.unit(p.era, Role.RANGED).cost || cost == p.turretCost()
+            cost == Defs.unit(p.era, Role.RANGED).cost || cost == p.turretCost() ||
+            cost == battle.armoryCost(p)
         if (!valid || p.gold >= cost) return false
         p.gold = cost.toFloat()
         append(Replay.Kind.TUTORIAL_GOLD, cost)

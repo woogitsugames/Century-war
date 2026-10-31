@@ -525,6 +525,7 @@ class ProfileTest {
         assertTrue(p.hintsEnabled)
         assertEquals(0L, p.hintsSeen)
         assertTrue(p.markHintSeen(0))
+        assertTrue(p.markHintSeen(Profile.HINT_COUNT - 2))
         assertTrue(p.markHintSeen(Profile.HINT_COUNT - 1))
         assertFalse(p.markHintSeen(0))
         assertFalse(p.markHintSeen(Profile.HINT_COUNT))
@@ -535,7 +536,8 @@ class ProfileTest {
         Profile.awaitHintWrites()
         val loaded = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertFalse(loaded.hintsEnabled)
-        assertEquals(1L or (1L shl (Profile.HINT_COUNT - 1)), loaded.hintsSeen)
+        assertEquals(1L or (1L shl (Profile.HINT_COUNT - 2)) or
+            (1L shl (Profile.HINT_COUNT - 1)), loaded.hintsSeen)
         loaded.replayHints()
         Profile.awaitHintWrites()
         assertEquals(0L, Profile(f).also { Profile.awaitHintWrites(); it.load() }.hintsSeen)
@@ -546,6 +548,9 @@ class ProfileTest {
         assertFalse(negative.hintsEnabled)
         f.writeText("""{"hintsSeen":9223372036854775807}""")
         assertEquals(Profile.HINT_VALID_MASK, Profile(f).also { Profile.awaitHintWrites(); it.load() }.hintsSeen)
+        // Stary profil z 17 podpowiedziami zachowuje dotychczasowe bity.
+        f.writeText("""{"hintsSeen":131071}""")
+        assertEquals(131071L, Profile(f).also { Profile.awaitHintWrites(); it.load() }.hintsSeen)
         f.writeText("""{"tutorialDone":true}""")
         val old = Profile(f).also { Profile.awaitHintWrites(); it.load() }
         assertEquals(0L, old.hintsSeen)

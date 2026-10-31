@@ -28,15 +28,17 @@ Wymagania: JDK 17+, Android SDK z platformą 36 (`sdk.dir` w `local.properties` 
 ## Samouczek
 
 Pierwsze uruchomienie etapu 1 kampanii prowadzi interaktywny samouczek
-(`screens/TutorialOverlay.kt`): 9 kroków sterowanych stanem bitwy (szkolenie, złoto i teren,
-strzelcy, zabójstwa i XP, Awans, doktryna, wieże, ostrzał, kamera), z podświetleniem elementu,
+(`screens/TutorialOverlay.kt`): 12 kroków sterowanych stanem bitwy (szkolenie, złoto i teren,
+strzelcy, zabójstwa i XP, Awans, doktryna, wieże, Zbrojownia, postawa, Zryw,
+celowany ostrzał i kamera), z podświetleniem elementu,
 pauzą/spowolnieniem symulacji, limitem czasu w każdym kroku i przyciskiem „Pomiń samouczek”.
 Bitwa samouczka jest łagodniejsza (`BattleConfig.tutorial`: AI ×0,8, startuje po 25 s, połowa
 złota na start, gracz +50% XP, etap dopuszcza jeden awans epoki).
 Ukończenie lub pominięcie ustawia `Profile.tutorialDone`. Powtórka: **Ustawienia → Podpowiedzi i samouczek → Powtórz samouczek**.
 Po potwierdzeniu samouczek rozpocznie się przy kolejnym uruchomieniu etapu 1 kampanii.
 
-Podpowiedzi kontekstowe: 13 jednorazowych dymków podczas bitew i 4 przy pierwszych
+Podpowiedzi kontekstowe: 15 jednorazowych dymków podczas bitew (w tym warianty epoki
+przy wyborze i pogoda przy pierwszych zmiennych warunkach) i 4 przy pierwszych
 wejściach do Badań, Misji, Endless i wyzwania dnia. Dymki nie zatrzymują symulacji,
 po 8 s znikają automatycznie, a między wskazówkami bitwy jest 20 s przerwy.
 W tym samym menu można je wyłączyć lub wyświetlić ponownie. Wybory kart,
