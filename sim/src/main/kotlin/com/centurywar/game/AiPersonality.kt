@@ -46,7 +46,7 @@ enum class AiPersonality(
     ECONOMIST(
         23, 22, 17, 38,
         185f, 0.07f, 0f, 0.73f, 14f, 5f,
-        4, 5, 6, false, 0.80f, 3,
+        4, 5, 6, false, 0.80f, 6,
         0.90f, 0.52f, 0.60f, 55,
     ),
     SIEGER(
