@@ -46,7 +46,7 @@ class EndlessBossTest {
             assertEquals(if (w >= 60) n % 5 + 1 else 0, u.bossSecondaryKind)
             assertEquals(u.bossKind, EndlessBosses.kindAtWave(w))
             assertEquals(u.bossSecondaryKind, EndlessBosses.secondaryAtWave(w))
-            assertEquals(1, b.bossesSpawned) // Jedna fala bossa w izolowanym teście.
+            assertEquals(n, b.bossesSpawned)
         }
     }
 
