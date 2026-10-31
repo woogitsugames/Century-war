@@ -100,6 +100,18 @@ class BattleHistoryTest {
     }
 
     @Test
+    fun resettingHistoryPersistsAnEmptyList() {
+        val f = file()
+        val h = BattleHistory(f)
+        h.add(entry(1))
+        h.awaitWrites()
+        h.clear()
+        h.awaitWrites()
+        val fresh = BattleHistory(f).also { it.load() }
+        try { assertTrue(fresh.snapshot().isEmpty()) } finally { h.close(); fresh.close() }
+    }
+
+    @Test
     fun malformedFileAndUnsupportedVersionDoNotCrash() {
         val f = file()
         f.writeText("{\"v\":1,\"entries\":[broken")
