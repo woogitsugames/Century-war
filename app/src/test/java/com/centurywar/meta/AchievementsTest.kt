@@ -206,9 +206,9 @@ class AchievementsTest {
         val cfg = BattleConfig(Mode.SKIRMISH, 65L, 1f)
         val b = Battle(cfg)
         assertTrue(b.castBarrage(b.player))
-        assertEquals(1, b.player.barragesCast)
+        assertEquals(1, b.player.barragesUsed)
         assertFalse(b.castBarrage(b.player))
-        assertEquals(1, b.player.barragesCast)
+        assertEquals(1, b.player.barragesUsed)
 
         b.player.xp = Defs.evolveXp[0].toFloat()
         assertTrue(b.evolve(b.player))

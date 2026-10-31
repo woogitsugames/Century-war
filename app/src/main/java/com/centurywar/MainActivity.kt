@@ -115,6 +115,8 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         view.onResume()
+        // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
+        game.post { game.checkDailyLogin() }
     }
 
     override fun onPause() {

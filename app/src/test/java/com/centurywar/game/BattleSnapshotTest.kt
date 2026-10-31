@@ -68,9 +68,13 @@ class BattleSnapshotTest {
             assertEquals(x.elitesTrained, y.elitesTrained)
             assertEquals(x.elitesLost, y.elitesLost)
             assertEquals(x.turretsBuilt, y.turretsBuilt)
-            assertEquals(x.barragesCast, y.barragesCast)
+            assertEquals(x.barragesUsed, y.barragesUsed)
             assertEquals(x.erasAdvanced, y.erasAdvanced)
             assertEquals(x.baseDamageTaken, y.baseDamageTaken)
+            assertArrayEquals(x.trainedByRole, y.trainedByRole)
+            assertEquals(x.turretsBuilt, y.turretsBuilt)
+            assertEquals(x.barragesUsed, y.barragesUsed)
+            assertEquals(x.ralliesUsed, y.ralliesUsed)
             assertEquals(x.doctrines, y.doctrines)
         }
         for (k in a.units.indices) {
@@ -208,7 +212,7 @@ class BattleSnapshotTest {
         a.achievementsRecorded = true
         val b = roundTrip(a)
         assertEquals(1, b.player.turretsBuilt)
-        assertEquals(1, b.player.barragesCast)
+        assertEquals(1, b.player.barragesUsed)
         assertEquals(1, b.player.elitesTrained)
         assertEquals(1, b.player.elitesLost)
         assertEquals(1, b.player.erasAdvanced)
@@ -217,6 +221,18 @@ class BattleSnapshotTest {
         steps(a, 60 * 60, true)
         steps(b, 60 * 60, true)
         assertSame(a, b)
+    }
+
+    @Test
+    fun missionCountersSurviveResume() {
+        val a = Battle(BattleConfig(Mode.SKIRMISH, 1234L, 1.0f))
+        a.player.trainedByRole[Role.ELITE.ordinal] = 7
+        a.player.trainedByRole[Role.RANGED.ordinal] = 4
+        a.player.turretsBuilt = 3
+        a.player.barragesUsed = 2
+        a.player.ralliesUsed = 1
+        val restored = roundTrip(a)
+        assertSame(a, restored)
     }
 
     @Test

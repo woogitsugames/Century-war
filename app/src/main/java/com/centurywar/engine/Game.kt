@@ -11,6 +11,7 @@ import com.centurywar.meta.AchievementDef
 import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
+import com.centurywar.meta.Missions
 import com.centurywar.screens.MenuScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -69,21 +70,41 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var fps = 60f
         private set
     private val fpsPaint = Paint().apply { color = Color.YELLOW }
-    private val achievementQueue = ArrayDeque<AchievementDef>()
+    /** Gotowe teksty powiadomień (budowane przy zdarzeniu, nie w renderze) i ich ikony. */
+    private val noticeQueue = ArrayDeque<String>()
+    private val noticeIcons = ArrayDeque<Int>()
+    private var noticeIcon = Icons.MEDAL
     private val achievementBanner = RectF()
     private var achievementMessage = ""
     private var achievementSeconds = 0f
 
     /** Kolejka powiadomień; tekst jest przygotowany przy odblokowaniu, nie w renderze. */
     fun showAchievements(unlocked: List<AchievementDef>) {
-        for (a in unlocked) achievementQueue.addLast(a)
+        for (a in unlocked) showNotice(L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")", Icons.CROWN)
+    }
+
+    fun showNotice(message: String, icon: Int = Icons.MEDAL) {
+        if (noticeQueue.size >= 8) return // zalew powiadomień: resztę widać na ekranie osiągnięć
+        noticeQueue.addLast(message); noticeIcons.addLast(icon)
+    }
+
+    /**
+     * Seria logowań: odświeża misje i przyznaje dzienną nagrodę (raz na dzień UTC). Wołane przy
+     * starcie i po powrocie aplikacji z tła (MainActivity.onResume przez [post]), bo proces
+     * potrafi przeżyć w tle północ i nagroda kolejnego dnia nie zostałaby przyznana.
+     */
+    fun checkDailyLogin(nowMillis: Long = System.currentTimeMillis()) {
+        val m = Missions(profile)
+        m.refresh(nowMillis)
+        val reward = m.claimLogin(nowMillis)
+        if (reward > 0) showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7: " + L.f("ms_login_paid", reward), Icons.CALENDAR)
     }
 
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
         achievementSeconds -= dt
-        if (achievementSeconds <= 0f && achievementQueue.isNotEmpty()) {
-            val a = achievementQueue.removeFirst()
-            achievementMessage = L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")"
+        if (achievementSeconds <= 0f && noticeQueue.isNotEmpty()) {
+            achievementMessage = noticeQueue.removeFirst()
+            noticeIcon = noticeIcons.removeFirst()
             achievementSeconds = 2.9f
         }
         if (achievementSeconds <= 0f) return
@@ -92,7 +113,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val py = insetT + 72 * ui.dp
         achievementBanner.set(px, py, px + pw, py + 50 * ui.dp)
         ui.card(c, achievementBanner, Color.rgb(42, 74, 64), 12f, Ui.GOLD)
-        Icons.draw(c, Icons.MEDAL, px + 23 * ui.dp, py + 25 * ui.dp, 26 * ui.dp, dp = ui.dp)
+        Icons.draw(c, noticeIcon, px + 23 * ui.dp, py + 25 * ui.dp, 26 * ui.dp, dp = ui.dp)
         val size = ui.fit(achievementMessage, 14f, pw - 61 * ui.dp)
         ui.textO(c, achievementMessage, px + 45 * ui.dp, py + 30 * ui.dp, size, Ui.TEXT)
     }
@@ -101,6 +122,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         applyLanguage()
         if (profile.name.isBlank()) profile.name = L["default_name"]
         setQuality(effectiveQualityLevel())
+        checkDailyLogin()
     }
 
     fun applyLanguage() {

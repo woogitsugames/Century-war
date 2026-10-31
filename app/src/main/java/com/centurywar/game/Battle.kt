@@ -94,11 +94,16 @@ class Side(val index: Int) {
     var spawned = 0
     var goldEarned = 0f
 
-    // Liczniki wyłącznie statystyczne, nie zmieniają decyzji ani losowości symulacji.
-    var elitesTrained = 0
+    // Liczniki misji i osiągnięć: wyłącznie statystyczne, nie zmieniają decyzji ani losowości
+    // symulacji (zapisywane w BattleSnapshot). Elita liczona raz, w trainedByRole.
+    val trainedByRole = IntArray(Role.values().size)
+    var elitesTrained: Int
+        get() = trainedByRole[Role.ELITE.ordinal]
+        set(v) { trainedByRole[Role.ELITE.ordinal] = v }
     var elitesLost = 0
     var turretsBuilt = 0
-    var barragesCast = 0
+    var barragesUsed = 0
+    var ralliesUsed = 0
     var erasAdvanced = 0
     var baseDamageTaken = 0f
 
@@ -391,8 +396,8 @@ class Battle(val cfg: BattleConfig) {
             p.splash = 60f
             p.siegeMul = 0.25f
         }
-        side.barragesCast++
         fx.add(FxBuffer.BARRAGE, side.baseFront, 0f, side.index)
+        side.barragesUsed++
         return true
     }
 
@@ -405,6 +410,7 @@ class Battle(val cfg: BattleConfig) {
         if (!abilityReady(side, 1)) return false
         side.abilityCd[1] = RALLY_CD * side.abilityCdMul
         side.rallyT = RALLY_TIME
+        side.ralliesUsed++
         return true
     }
 
@@ -532,7 +538,7 @@ class Battle(val cfg: BattleConfig) {
         f.moving = false
         f.serial = ++serialCounter
         s.spawned++
-        if (def.role == Role.ELITE) s.elitesTrained++
+        s.trainedByRole[def.role.ordinal]++
         s.aliveCount++
         return true
     }

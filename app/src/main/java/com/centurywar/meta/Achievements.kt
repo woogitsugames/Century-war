@@ -160,7 +160,7 @@ object Achievements {
         if (won && battle.time <= 300f) add(profile, AchievementMetric.FAST_WINS)
 
         add(profile, AchievementMetric.TURRETS_BUILT, player.turretsBuilt.toLong())
-        add(profile, AchievementMetric.BARRAGES_CAST, player.barragesCast.toLong())
+        add(profile, AchievementMetric.BARRAGES_CAST, player.barragesUsed.toLong())
         add(profile, AchievementMetric.ELITES_TRAINED, player.elitesTrained.toLong())
         add(profile, AchievementMetric.EVOLUTIONS, player.erasAdvanced.toLong())
         for (doctrine in player.doctrines) {

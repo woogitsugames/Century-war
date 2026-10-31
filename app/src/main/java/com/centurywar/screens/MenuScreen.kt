@@ -24,9 +24,10 @@ class MenuScreen(g: Game) : Screen(g) {
     private val skirmish = btn(4)
     private val research = btn(5)
     private val rankings = btn(6)
+    private val missions = btn(9)
     private val settings = btn(7)
     private val codex = btn(8)
-    private val achievements = btn(9)
+    private val achievements = btn(10)
     // pytanie o wznowienie przerwanej bitwy (g.resumeOffer)
     private val resumeYes = btn(RESUME_YES)
     private val resumeNo = btn(RESUME_NO)
@@ -55,6 +56,7 @@ class MenuScreen(g: Game) : Screen(g) {
         skirmish.label = L["skirmish"]; research.label = L["research"]; rankings.label = L["rankings"]; settings.label = ""
         campaign.iconId = Icons.MAP; endless.iconId = Icons.TOWER; daily.iconId = Icons.CALENDAR
         skirmish.iconId = Icons.CROSSED_SWORDS; research.iconId = Icons.FLASK; rankings.iconId = Icons.TROPHY
+        missions.label = L["ms_missions"]; missions.iconId = Icons.CALENDAR
         settings.iconId = Icons.GEAR
         codex.label = ""; codex.iconId = Icons.CODEX
         achievements.label = ""; achievements.iconId = Icons.CROWN
@@ -66,7 +68,8 @@ class MenuScreen(g: Game) : Screen(g) {
         val gap = 12 * dp
         val bw = min(min(260 * dp, w * 0.36f), (availW - gap) / 2)
         val bh = min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
-        val gridH = bh * 3 + gap * 2
+        val mh = min(44 * dp, bh * 0.8f)
+        val gridH = bh * 3 + gap * 3 + mh
 
         // logo: wielkość wg szerokości i wysokości ekranu
         logoFill.typeface = ui.heavy; logoLine.typeface = ui.heavy
@@ -96,6 +99,7 @@ class MenuScreen(g: Game) : Screen(g) {
         skirmish.set(cx + gap / 2, top + bh + gap, bw, bh)
         research.set(cx - bw - gap / 2, top + (bh + gap) * 2, bw, bh)
         rankings.set(cx + gap / 2, top + (bh + gap) * 2, bw, bh)
+        missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw * 2 + gap, mh)
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         codex.set(settings.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
@@ -260,7 +264,8 @@ class MenuScreen(g: Game) : Screen(g) {
             6 -> g.push(RankingsScreen(g))
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
-            9 -> g.push(AchievementsScreen(g))
+            10 -> g.push(AchievementsScreen(g))
+            9 -> g.push(MissionsScreen(g))
         }
     }
 }

@@ -72,6 +72,7 @@ class Profile(private val file: File) {
     val achievementDailySeeds = HashSet<Long>()
     var achievementDoctrineMask = 0
 
+    val missionState = MissionState()
     val boards = HashMap<String, MutableList<ScoreEntry>>()
 
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
@@ -81,10 +82,13 @@ class Profile(private val file: File) {
 
     fun canBuy(def: ResearchDef): Boolean = level(def.key) < def.max && medals >= def.cost(level(def.key))
 
-    fun buy(def: ResearchDef): Boolean {
+    fun buy(def: ResearchDef): Boolean = buy(def, System.currentTimeMillis())
+
+    fun buy(def: ResearchDef, nowMillis: Long): Boolean {
         if (!canBuy(def)) return false
         medals -= def.cost(level(def.key))
         levels[def.key] = level(def.key) + 1
+        Missions(this).onResearchBought(nowMillis, persist = false)
         save()
         return true
     }
@@ -163,6 +167,7 @@ class Profile(private val file: File) {
             o.put("unlockedAchievements", JSONArray().apply { unlockedAchievements.sorted().forEach { put(it) } })
             o.put("achievementDailySeeds", JSONArray().apply { achievementDailySeeds.sorted().forEach { put(it) } })
             o.put("achievementDoctrineMask", achievementDoctrineMask)
+            o.put("missions", missionState.toJson())
             val b = JSONObject()
             for ((k, list) in boards) {
                 // Stare tablice dzienne (starsze niż tydzień) nie są potrzebne.
@@ -239,6 +244,7 @@ class Profile(private val file: File) {
                 }
             }
             achievementDoctrineMask = o.optInt("achievementDoctrineMask", 0) and ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
+            missionState.fromJson(o.optJSONObject("missions"))
             // Wartości spoza zakresu (ręczna edycja, stara wersja) wywracały np. ModeScreen.aiPower().
             medals = medals.coerceAtLeast(0)
             for (i in stars.indices) stars[i] = stars[i].coerceIn(0, 3)
@@ -276,6 +282,7 @@ class Profile(private val file: File) {
         tutorialDone = false; battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         achievementCounters.clear(); unlockedAchievements.clear()
         achievementDailySeeds.clear(); achievementDoctrineMask = 0
+        missionState.reset()
         name = keepName
         save()
     }

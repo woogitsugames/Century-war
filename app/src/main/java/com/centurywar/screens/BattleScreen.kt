@@ -25,6 +25,7 @@ import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.meta.Achievements
 import com.centurywar.meta.Profile
+import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
 
@@ -457,6 +458,7 @@ class BattleScreen(
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
+        var earnedStars = 0
         // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
         // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
         val effort = (battle.time / 240f).coerceIn(0f, 1f)
@@ -467,6 +469,7 @@ class BattleScreen(
                 val st = battle.stars()
                 reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
                 if (st > old) {
+                    earnedStars = st - old
                     pr.stars[stage] = st
                     newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day)
                     g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
@@ -492,6 +495,7 @@ class BattleScreen(
             }
         }
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        Missions(pr).onBattleEnd(battle, System.currentTimeMillis(), persist = false, newStars = earnedStars)
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements))
         tipKey = if (won) "" else when {
             battle.enemy.era > battle.player.era -> "tip_era"

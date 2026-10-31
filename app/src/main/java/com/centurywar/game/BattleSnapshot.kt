@@ -135,8 +135,10 @@ object BattleSnapshot {
         for (d in s.doctrines) o.writeByte(d.ordinal)
         o.writeShort(s.rank); o.writeShort(s.armory)
         o.writeInt(s.kills); o.writeInt(s.killValue); o.writeInt(s.spawned); o.writeFloat(s.goldEarned)
-        o.writeInt(s.elitesTrained); o.writeInt(s.elitesLost); o.writeInt(s.turretsBuilt)
-        o.writeInt(s.barragesCast); o.writeInt(s.erasAdvanced); o.writeFloat(s.baseDamageTaken)
+        // liczniki misji i osiągnięć (v3)
+        for (count in s.trainedByRole) o.writeInt(count)
+        o.writeInt(s.turretsBuilt); o.writeInt(s.barragesUsed); o.writeInt(s.ralliesUsed)
+        o.writeInt(s.elitesLost); o.writeInt(s.erasAdvanced); o.writeFloat(s.baseDamageTaken)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -259,10 +261,11 @@ object BattleSnapshot {
         repeat(dn) { s.doctrines.add(enumAt(Doctrine.values(), i.readByte().toInt())) }
         s.rank = i.readShort().toInt(); s.armory = i.readShort().toInt()
         s.kills = i.readInt(); s.killValue = i.readInt(); s.spawned = i.readInt(); s.goldEarned = i.readFloat()
-        s.elitesTrained = i.readInt(); s.elitesLost = i.readInt(); s.turretsBuilt = i.readInt()
-        s.barragesCast = i.readInt(); s.erasAdvanced = i.readInt(); s.baseDamageTaken = i.readFloat()
-        require(s.elitesTrained >= 0 && s.elitesLost >= 0 && s.turretsBuilt >= 0)
-        require(s.barragesCast >= 0 && s.erasAdvanced >= 0 && s.baseDamageTaken >= 0f)
+        for (k in s.trainedByRole.indices) s.trainedByRole[k] = i.readInt().also { require(it >= 0) }
+        s.turretsBuilt = i.readInt(); s.barragesUsed = i.readInt(); s.ralliesUsed = i.readInt()
+        s.elitesLost = i.readInt(); s.erasAdvanced = i.readInt(); s.baseDamageTaken = i.readFloat()
+        require(s.turretsBuilt >= 0 && s.barragesUsed >= 0 && s.ralliesUsed >= 0)
+        require(s.elitesLost >= 0 && s.erasAdvanced >= 0 && s.baseDamageTaken >= 0f)
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */
