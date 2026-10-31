@@ -15,7 +15,7 @@ class LTest {
     /** Klucze, które celowo mogą nie mieć przekładu (zastępuje je angielski). */
     private val allowedFallback = emptySet<String>()
 
-    private val spec = Regex("%(\\.\\d+)?[dsf]")
+    private val spec = Regex("%(?:\\d+\\$)?(?:\\.\\d+)?[dsf]")
 
     @Test
     fun everyKeyHasAllLanguages() {
@@ -41,6 +41,15 @@ class LTest {
         val dups = keys.groupingBy { it }.eachCount().filter { it.value > 1 }.keys
         assertTrue("Powtórzone klucze w L.kt: $dups", dups.isEmpty())
         assertEquals(keys.size, L.keys.size)
+    }
+
+    @Test
+    fun placeholderRegexSupportsPositionalArguments() {
+        val samples = "%1\$s %2\$d %.1f %%"
+        assertEquals(
+            listOf("%1\$s", "%2\$d", "%.1f"),
+            spec.findAll(samples.replace("%%", "")).map { it.value }.toList()
+        )
     }
 
     @Test
@@ -152,6 +161,98 @@ class LTest {
                 val args = specs.map<String, Any> { when (it.last()) { 'd' -> 7; 's' -> "x"; else -> 1.5f } }.toTypedArray()
                 val out = L.f(k, *args)
                 assertTrue("$k/${L.CODES[i]}: '$out'", !out.contains("%d") && !out.contains("%s") && !out.contains('|'))
+            }
+        }
+    }
+
+
+    /** Krótkie etykiety interakcji; tytuły i dłuższe opisy mogą się zawijać. */
+    @Test
+    fun buttonLabelsFitWithin18Characters() {
+        val buttonKeys = setOf(
+            "back",
+            "play",
+            "start",
+            "campaign",
+            "daily",
+            "weekly",
+            "skirmish",
+            "research",
+            "rankings",
+            "settings",
+            "accessibility",
+            "replay",
+            "replay_list",
+            "replay_pin",
+            "replay_delete",
+            "replay_pause",
+            "replay_play",
+            "replay_follow",
+            "replay_camera",
+            "q_auto",
+            "q_low",
+            "q_med",
+            "q_high",
+            "fps_max",
+            "on",
+            "off",
+            "show_fps",
+            "reset",
+            "global_allow",
+            "global_cancel",
+            "global_new_id",
+            "global_local",
+            "global_period_day",
+            "global_period_week",
+            "global_period_all",
+            "global_top",
+            "global_around",
+            "pgs_sign_in",
+            "pgs_sync",
+            "evolve",
+            "turrets",
+            "armory",
+            "hold",
+            "advance",
+            "rally",
+            "resume",
+            "quit",
+            "restart",
+            "continue",
+            "sell",
+            "upgrade",
+            "choose_card",
+            "tut_skip",
+            "tut_next",
+            "tut_go",
+            "ms_claim",
+            "ms_claimed",
+            "hint_ok",
+            "hint_replay",
+            "hint_reset",
+            "hint_confirm",
+            "sk_defaults",
+            "sk_shuffle",
+            "sk_random",
+            "sk_classic",
+            "sk_custom",
+            "sk_start",
+            "sk_end",
+            "sk_none",
+            "sk_win",
+            "sk_loss",
+            "resume_yes",
+            "resume_no"
+        )
+        for (key in buttonKeys) {
+            val translations = L.raw(key)
+            assertTrue("Brak etykiety przycisku: $key", translations != null)
+            for (lang in L.CODES.indices) {
+                val value = translations!![lang]
+                assertTrue(
+                    "$key/${L.CODES[lang]}: $value (${value.length} > 18)",
+                    value.length <= 18
+                )
             }
         }
     }
