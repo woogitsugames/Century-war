@@ -243,7 +243,9 @@ class Battle(val cfg: BattleConfig) {
     var bossesDefeated = 0
     var nextBossToSpawn = 10
     var bossRewardsPending = 0
-    private var bossAuraX = -10_000f
+    /** Aktywne aury w bieżącym kroku; pomocnicze dane, odtwarzane po wczytaniu. */
+    private val bossAuraXs = FloatArray(MAX_UNITS)
+    private var bossAuraCount = 0
 
     var ai: Ai? = if (endless) null else Ai(this, 1)
     /** Tylko testy/autoplay: AI sterujące graczem. */
@@ -642,9 +644,9 @@ class Battle(val cfg: BattleConfig) {
         if (endless) director(dt)
         if (!cfg.tutorial || time >= TUTORIAL_AI_DELAY) ai?.update(dt)
         if (controller == null) playerAi?.update(dt)
-        bossAuraX = -10_000f
+        bossAuraCount = 0
         if (endless) for (u in units) if (u.alive && u.hasBossAbility(EndlessBosses.AURA)) {
-            bossAuraX = u.x; break
+            bossAuraXs[bossAuraCount++] = u.x
         }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
@@ -847,7 +849,12 @@ class Battle(val cfg: BattleConfig) {
         if (u.flash > 0f) u.flash -= dt
         if (u.attackAnim > 0f) u.attackAnim -= dt
         var rally = if (s.rallyT > 0f) 1.4f else 1f
-        if (endless && u.side == 1 && abs(bossAuraX - u.x) < EndlessBosses.AURA_RANGE) rally *= 1.25f
+        if (endless && u.side == 1) {
+            for (i in 0 until bossAuraCount) if (abs(bossAuraXs[i] - u.x) < EndlessBosses.AURA_RANGE) {
+                rally *= 1.25f
+                break // Aury nie kumulują się.
+            }
+        }
         val attackRate = rally * (if (u.bossRageActive) 1.3f else 1f)
         if (u.cd > 0f) u.cd -= dt * attackRate
 
