@@ -1072,7 +1072,8 @@ class Battle(val cfg: BattleConfig) {
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f) *
             (if (currentWaveTheme == EndlessWaveTheme.SKIRMISHERS) 0.8f else 1f)
         e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f)
-        e.speedMul = if (currentWaveTheme == EndlessWaveTheme.SIEGE_TRAIN) 0.85f else 1f
+        e.speedMul = (if (Modifier.FAST_UNITS in cfg.modifiers) 1.5f else 1f) *
+            (if (currentWaveTheme == EndlessWaveTheme.SIEGE_TRAIN) 0.85f else 1f)
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f) *
             when (currentWaveTheme) {
                 EndlessWaveTheme.SIEGE_TRAIN -> 1.15f
