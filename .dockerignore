@@ -1,0 +1,14 @@
+# Kontekst obrazu server/Dockerfile: tylko to, czego potrzebuje :server i :sim.
+.git
+.github
+.gradle
+.idea
+.claude
+**/build
+app
+docs
+local.properties
+*.jks
+*.keystore
+*.apk
+*.aab
