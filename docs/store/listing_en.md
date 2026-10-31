@@ -50,3 +50,5 @@ strategy without internet; Android strategy; era warfare; army progression; tact
 - **Do not promise Google Play Games achievements** until the adapter is implemented: local achievements work, but Google submissions are not connected.
 - Reminders are **local**, start after the first win with system permission, and are not push notifications.
 - Do not advertise unimplemented ads, purchases, multiplayer, or publisher-hosted leaderboards. Check copy against the final AAB and privacy policy.
+
+**Release condition:** The app also contains a separate optional publisher-hosted global leaderboard, disabled by default and requiring explicit Settings consent and an operational HTTPS server. Do not advertise it as available in the public listing before deployment and privacy review.
