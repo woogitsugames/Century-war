@@ -34,7 +34,7 @@ jobs:
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Android SDK 36
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Zbuduj APK i uruchom BattleSimTest
@@ -75,7 +75,7 @@ jobs:
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Android SDK 36
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Cache Robolectric
@@ -126,7 +126,7 @@ jobs:
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Android SDK 36
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Wykonaj Lint
@@ -159,7 +159,7 @@ jobs:
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Android SDK 36
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Odtworz keystore z sekretow
