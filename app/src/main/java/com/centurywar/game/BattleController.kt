@@ -1,5 +1,8 @@
 package com.centurywar.game
 
+import java.io.DataInputStream
+import java.io.DataOutputStream
+
 /**
  * Jedyna ścieżka rejestrowanych rozkazów gracza. Stare metody Battle pozostają
  * dostępne dla AI przeciwnika i kodu, który nie zapisuje powtórki.
@@ -26,8 +29,8 @@ class BattleController(
 
     private fun append(kind: Replay.Kind, argument: Int = 0) {
         if (!record) return
-        events[count++] = (battle.stepCount.toLong() shl 16) or
-            (kind.ordinal.toLong() shl 8) or argument.toLong()
+        events[count++] = (battle.stepCount.toLong() shl 40) or
+            (kind.ordinal.toLong() shl 32) or (argument.toLong() and 0xffffffffL)
     }
 
     fun queue(role: Role): Boolean {
@@ -93,7 +96,7 @@ class BattleController(
     }
 
     fun stance(hold: Boolean): Boolean {
-        if (!canAct()) return false
+        if (!canAct() || battle.player.hold == hold) return false
         battle.player.hold = hold
         append(Replay.Kind.STANCE, if (hold) 1 else 0)
         return true
@@ -105,6 +108,27 @@ class BattleController(
             battle.stepCount >= Replay.MAX_STEPS || !capacity()) return false
         battle.chooseDoctrine(index)
         append(Replay.Kind.DOCTRINE, index)
+        return true
+    }
+
+    /** Poddanie może zakończyć bitwę przed krokiem N, nawet przy wyborze doktryny. */
+    fun surrender(): Boolean {
+        if (battle.over || !capacity() || battle.stepCount > Replay.MAX_STEPS) return false
+        append(Replay.Kind.SURRENDER)
+        battle.surrender()
+        return true
+    }
+
+    /** Deterministyczna pomoc samouczka; niedostępna poza samouczkiem. */
+    fun tutorialGold(cost: Int): Boolean {
+        if (!battle.cfg.tutorial || battle.cfg.mode != Mode.CAMPAIGN ||
+            battle.cfg.stageIndex != 0 || !canAct() || cost <= 0 || cost > 1_000_000) return false
+        val p = battle.player
+        val valid = cost == Defs.unit(p.era, Role.MELEE).cost ||
+            cost == Defs.unit(p.era, Role.RANGED).cost || cost == p.turretCost()
+        if (!valid || p.gold >= cost) return false
+        p.gold = cost.toFloat()
+        append(Replay.Kind.TUTORIAL_GOLD, cost)
         return true
     }
 
@@ -124,12 +148,45 @@ class BattleController(
             val packed = events[i]
             commands.add(
                 Replay.Command(
-                    step = (packed ushr 16).toInt(),
-                    kind = kinds[((packed ushr 8) and 255).toInt()],
-                    argument = (packed and 255).toInt(),
+                    step = (packed ushr 40).toInt(),
+                    kind = kinds[((packed ushr 32) and 255).toInt()],
+                    argument = packed.toInt(),
                 ),
             )
         }
         return Replay.Log(battle.stepCount, commands)
+    }
+    /** Zapis surowych wpisów jest możliwy także przed wykonaniem następnego kroku. */
+    internal fun writeSnapshot(o: DataOutputStream) {
+        check(record)
+        o.writeInt(count)
+        for (i in 0 until count) o.writeLong(events[i])
+    }
+
+    internal fun readSnapshot(i: DataInputStream, currentStep: Int) {
+        check(record && count == 0)
+        val n = i.readInt()
+        require(n in 0..Replay.MAX_COMMANDS)
+        val kinds = Replay.Kind.values()
+        var previous = 0
+        repeat(n) {
+            val packed = i.readLong()
+            val step = (packed ushr 40).toInt()
+            val code = ((packed ushr 32) and 255).toInt()
+            val argument = packed.toInt()
+            require(step >= previous && step <= currentStep && code in kinds.indices)
+            val valid = when (kinds[code]) {
+                Replay.Kind.QUEUE -> argument in 0 until Role.values().size
+                Replay.Kind.BUY_TURRET, Replay.Kind.UPGRADE_TURRET, Replay.Kind.SELL_TURRET ->
+                    argument in 0 until Defs.MAX_TURRET_SLOTS
+                Replay.Kind.STANCE -> argument == 0 || argument == 1
+                Replay.Kind.DOCTRINE -> argument in 0..2
+                Replay.Kind.TUTORIAL_GOLD -> argument in 1..1_000_000
+                else -> argument == 0
+            }
+            require(valid)
+            events[count++] = packed
+            previous = step
+        }
     }
 }

@@ -25,7 +25,6 @@ jobs:
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: APK debug
         run: ./gradlew :app:assembleDebug --console=plain
-      - name: Testy bazowe
-        run: ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
-      - name: Testy powtórek
-        run: ./gradlew :app:testDebugUnitTest --tests '*ReplayTest*' --console=plain
+      - name: Testy symulacji, zapisu, języków i powtórek
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*ReplayTest*' --console=plain --no-configuration-cache

@@ -140,8 +140,55 @@ class ReplayTest {
         val cfg = BattleConfig(Mode.SKIRMISH, 123L, 1f)
         mustReject { Replay.verify(cfg, Replay.Log(1, emptyList())) }
         mustReject { Replay.decode("!!!") }
-        mustReject { Replay.decode("AgEA") } // wersja formatu 2
+        mustReject { Replay.decode("AQEA") } // wersja formatu 1
         val valid = Replay.encode(Replay.Log(2, listOf(Replay.Command(0, Replay.Kind.STANCE, 1))))
         mustReject { Replay.decode(valid + "!!") }
+    }
+    @Test
+    fun surrenderIsReplayedWithoutAdvancingTime() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 2026L, 1f)
+        val battle = Battle(cfg)
+        val controller = BattleController(battle)
+        assertTrue(controller.queue(Role.MELEE))
+        repeat(20) { battle.step() }
+        val originalStep = battle.stepCount
+        assertTrue(controller.surrender())
+        assertEquals(originalStep, battle.stepCount)
+        val replayed = Replay.verify(cfg, Replay.decode(Replay.encode(controller.log())))
+        assertEquals(battle.score(), replayed.score)
+        assertEquals(1, replayed.winner)
+        assertEquals(originalStep, replayed.steps)
+    }
+
+    @Test
+    fun tutorialSupportIsLoggedAndBlockedElsewhere() {
+        val cfg = BattleConfig(Mode.CAMPAIGN, 1L, 0.8f, stageIndex = 0, tutorial = true)
+        val battle = Battle(cfg)
+        val controller = BattleController(battle)
+        assertTrue(controller.tutorialGold(Defs.unit(0, Role.MELEE).cost).not())
+        battle.player.gold = 0f
+        assertTrue(controller.tutorialGold(Defs.unit(0, Role.MELEE).cost))
+        assertEquals(Replay.Kind.TUTORIAL_GOLD, controller.log().commands.last().kind)
+
+        val regular = Battle(BattleConfig(Mode.SKIRMISH, 1L, 0.8f))
+        val regularController = BattleController(regular)
+        assertFalse(regularController.tutorialGold(Defs.unit(0, Role.MELEE).cost))
+        mustReject {
+            Replay.verify(regular.cfg, Replay.Log(0, listOf(Replay.Command(0, Replay.Kind.TUTORIAL_GOLD, 15))))
+        }
+    }
+
+    @Test
+    fun illegalCommandsAtFinishedStepAreRejected() {
+        val cfg = BattleConfig(Mode.SKIRMISH, 15L, 1f)
+        mustReject {
+            Replay.verify(cfg, Replay.Log(0, listOf(Replay.Command(0, Replay.Kind.QUEUE, 0))))
+        }
+        mustReject {
+            Replay.verify(cfg, Replay.Log(3, listOf(
+                Replay.Command(3, Replay.Kind.SURRENDER),
+                Replay.Command(3, Replay.Kind.QUEUE, 0),
+            )))
+        }
     }
 }

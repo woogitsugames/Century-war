@@ -8,15 +8,15 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 1
-    const val MAX_STEPS = 216_000 // Najwyżej godzina symulacji.
+    const val VERSION = 2
+    const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
 
     // Numery i kolejność typów są częścią wersjonowanego formatu.
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
-        ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE,
+        ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -62,7 +62,7 @@ object Replay {
         require(version == VERSION) { "Nieobsługiwana wersja powtórki: $version" }
         val steps = input.varint()
         val count = input.varint()
-        require(steps in 1..MAX_STEPS && count in 0..MAX_COMMANDS) { "Przekroczono limity powtórki" }
+        require(steps in 0..MAX_STEPS && count in 0..MAX_COMMANDS) { "Przekroczono limity powtórki" }
         val commands = ArrayList<Command>(count)
         val kinds = Kind.values()
         var step = 0
@@ -92,9 +92,9 @@ object Replay {
         battle.playerAi = null
         val controller = BattleController(battle, record = false)
         var index = 0
-        while (battle.stepCount < log.steps) {
+        while (!battle.over) {
             val step = battle.stepCount
-            while (index < log.commands.size && log.commands[index].step == step) {
+            while (index < log.commands.size && log.commands[index].step == step && !battle.over) {
                 val command = log.commands[index]
                 val accepted = when (command.kind) {
                     Kind.QUEUE -> controller.queue(Role.values()[command.argument])
@@ -108,16 +108,21 @@ object Replay {
                     Kind.RALLY -> controller.rally()
                     Kind.STANCE -> controller.stance(command.argument == 1)
                     Kind.DOCTRINE -> controller.doctrine(command.argument)
+                    Kind.SURRENDER -> controller.surrender()
+                    Kind.TUTORIAL_GOLD -> controller.tutorialGold(command.argument)
                 }
                 require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
             }
-            require(!battle.over) { "Zapis zawiera kroki po zakończeniu bitwy" }
+            if (battle.over) break
+            require(step < log.steps) { "Bitwa nie zakończyła się w zadanym kroku" }
             battle.step()
             require(battle.stepCount == step + 1) { "Brak decyzji doktryny w kroku $step" }
             battle.fx.count = 0
         }
-        require(index == log.commands.size && battle.over) { "Niekompletna lub przedłużona bitwa" }
+        require(index == log.commands.size && battle.over && battle.stepCount == log.steps) {
+            "Niekompletna lub przedłużona bitwa"
+        }
         return Result(
             score = battle.score(),
             winner = battle.winner,
@@ -131,17 +136,17 @@ object Replay {
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
         Kind.QUEUE, Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET,
-        Kind.STANCE, Kind.DOCTRINE -> true
+        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD -> true
         else -> false
     }
 
     private fun validate(log: Log) {
         require(log.version == VERSION) { "Nieobsługiwana wersja powtórki" }
-        require(log.steps in 1..MAX_STEPS) { "Nieprawidłowa liczba kroków" }
+        require(log.steps in 0..MAX_STEPS) { "Nieprawidłowa liczba kroków" }
         require(log.commands.size <= MAX_COMMANDS) { "Przekroczony limit komend" }
         var previousStep = 0
         for (command in log.commands) {
-            require(command.step >= previousStep && command.step < log.steps) { "Komenda spoza zakresu kroków" }
+            require(command.step >= previousStep && command.step <= log.steps) { "Komenda spoza zakresu kroków" }
             val arg = command.argument
             val correct = when (command.kind) {
                 Kind.QUEUE -> arg in 0 until Role.values().size
@@ -149,6 +154,7 @@ object Replay {
                     arg in 0 until Defs.MAX_TURRET_SLOTS
                 Kind.STANCE -> arg == 0 || arg == 1
                 Kind.DOCTRINE -> arg in 0..2
+                Kind.TUTORIAL_GOLD -> arg in 1..1_000_000
                 else -> arg == 0
             }
             require(correct) { "Niedozwolony argument komendy" }
