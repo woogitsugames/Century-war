@@ -216,7 +216,7 @@ class ScoreClient(
         }
         queue.entries.removeFirst()
         persistQueue()
-        status = if (code in 200..299) ScoreSendStatus.SENT else ScoreSendStatus.REJECTED
+        status = if (code in 200..299 || code == 409) ScoreSendStatus.SENT else ScoreSendStatus.REJECTED
         worker.execute { sendNext(token) }
     }
 
