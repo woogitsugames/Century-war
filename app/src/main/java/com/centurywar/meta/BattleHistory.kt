@@ -78,7 +78,9 @@ class BattleHistory(private val file: File) {
             val endlessNewest = ArrayList<Long>(20)
             val today = dayNumber(nowMillis)
             for (record in records) {
-                for (i in roles.indices) roles[i] += record.roles.getOrElse(i) { 0 }.coerceAtLeast(0)
+                for (i in roles.indices) roles[i] = (roles[i].toLong() +
+                    record.roles.getOrElse(i) { 0 }.coerceAtLeast(0).toLong())
+                    .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 for (i in doctrines.indices) if ((record.doctrines and (1 shl i)) != 0) doctrines[i]++
                 if (record.personality in aiBattles.indices) {
                     aiBattles[record.personality]++
@@ -210,7 +212,7 @@ class BattleHistory(private val file: File) {
         entries.clear()
         val tmp = File(file.parentFile, file.name + ".tmp")
         for (candidate in listOf(file, tmp)) {
-            if (!candidate.exists()) continue
+            if (!candidate.exists() || candidate.length() > 1_000_000L) continue
             try {
                 val root = JSONObject(candidate.readText(Charsets.UTF_8))
                 if (root.optInt("v") != VERSION) continue
