@@ -14,6 +14,7 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
+import com.centurywar.game.Weather
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
@@ -188,6 +189,46 @@ class ScreenshotTest {
             shot(g, "${tag}_endless_boss_with_cards")
             endless.chooseEndlessCard(0)
             shot(g, "${tag}_endless_boss")
+        }
+    }
+
+    /** Wszystkie warunki pogody na czterech formatach ekranu, także noc na LOW. */
+    @Test
+    fun weatherScreens() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone20x9" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+            for (weather in Weather.entries) {
+                val era = when (weather) {
+                    Weather.CLEAR -> 0
+                    Weather.RAIN -> 2
+                    Weather.WIND -> 5
+                    Weather.NIGHT -> 8
+                }
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 5L + weather.ordinal, 1f,
+                    startEra = era, maxEra = era, weather = weather))
+                g.setScreen(bs)
+                val battle = field(bs, "battle").get(bs) as Battle
+                battle.player.gold = 200000f
+                battle.enemy.gold = 200000f
+                battle.spawn(battle.player, Defs.unit(era, Role.RANGED))
+                battle.spawn(battle.enemy, Defs.unit(era, Role.HEAVY))
+                battle.player.turretEra[0] = era
+                battle.enemy.turretEra[0] = era
+                if (weather == Weather.NIGHT) battle.player.baseFlash = 0.13f
+                shot(g, "${tag}_weather_${weather.name.lowercase()}")
+            }
+
+            val cs = CampaignScreen(g)
+            g.setScreen(cs)
+            field(cs, "selected").set(cs, Campaign.stages[4])
+            shot(g, "${tag}_weather_stage_info")
         }
     }
 
