@@ -42,6 +42,10 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Testy listy kontrolnej wydania
+        run: |
+          chmod +x ./gradlew
+          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
       - name: Zbuduj APK i uruchom krytyczne testy
         env:
           PERF_REPORT: 'true'
