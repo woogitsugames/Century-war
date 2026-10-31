@@ -4,7 +4,7 @@ Workflow: [`.github/workflows/android.yml`](../.github/workflows/android.yml).
 
 ## Automatyczne budowanie
 
-- Push i pull request skierowany do `main`, `claude/**` lub `gpt/**` uruchamiaja job `build-and-test` (JDK 17 Temurin, Gradle, Android SDK 36). Powstaje debug APK oraz raporty JUnit (`BattleSimTest`).
+- Push i pull request skierowany do `main`, `claude/**` lub `gpt/**` uruchamiaja job `build-and-test` (JDK 17 Temurin, Gradle, Android SDK 36). Powstaje debug APK oraz raporty JUnit (`BattleSimTest`, `BattleRulesTest`, `BattleSnapshotTest`, `LTest`).
 - `lint` uruchamia `:app:lintDebug`. To job nieblokujacy, ale jego wynik i raport HTML/XML nalezy sprawdzic.
 - W zakladce **Actions** wybierz run i na dole strony pobierz artefakty: `century-war-debug-apk`, `battle-sim-test-reports`, `android-lint-report`.
 - `ScreenshotTest` nie jest uruchamiany przy kazdym pushu (wolny i kosztowny). Aby go uruchomic, otworz **Actions > Android CI > Run workflow**, wybierz galaz i uruchom workflow. Osobny job `screenshots` zapisuje PNG jako `century-war-screenshots` oraz raport testow. Cache obejmuje `~/.m2/repository/org/robolectric`.
@@ -65,6 +65,6 @@ Przy czesciowo ustawionych zmiennych konfiguracja Gradle zwroci blad zamiast nie
 ## Diagnostyka
 
 - Kod buduje sie na JDK 17 i Android SDK z `platforms;android-36` oraz `build-tools;36.0.0`.
-- `BattleSimTest` dziala w JVM; nie wymaga emulatora. `ScreenshotTest` uzywa Robolectric (SDK 35) i moze pobierac duze artefakty, dlatego jest uruchamiany recznie.
+- Testy symulacji, reguł, zrzutów bitwy i lokalizacji dzialaja w JVM; nie wymagaja emulatora. `ScreenshotTest` uzywa Robolectric (SDK 35) i moze pobierac duze artefakty, dlatego jest uruchamiany recznie.
 - Artefakty z jobow debug/lint/screenshot sa przechowywane przez 14 dni, a release przez 90 dni.
 - Raport z nieudanego kroku oraz diagnostyka `lint` znajduja sie na stronie uruchomienia workflow w zakladce **Actions**.
