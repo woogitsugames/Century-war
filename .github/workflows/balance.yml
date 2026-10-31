@@ -5,6 +5,10 @@ on:
     branches: [claude/bold-sagan-vwz5gm]
   workflow_dispatch:
 
+concurrency:
+  group: balance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   balance:
     name: Etapy ${{ matrix.from }}-${{ matrix.to }}
@@ -40,6 +44,7 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Budowanie i testy podstawowe
+        if: matrix.from == 1
         run: |
           ./gradlew :app:assembleDebug --console=plain
           ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
