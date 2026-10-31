@@ -66,11 +66,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     fun applyLanguage() {
-        L.polish = when (profile.lang) {
-            "pl" -> true
-            "en" -> false
-            else -> java.util.Locale.getDefault().language == "pl"
-        }
+        L.setCode(profile.lang)
     }
 
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality

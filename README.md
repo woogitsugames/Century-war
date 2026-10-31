@@ -17,6 +17,6 @@ Wymagania: JDK 17+, Android SDK z platformą 36 (`sdk.dir` w `local.properties` 
 ## Struktura
 
 - `game/`: symulacja (czysty Kotlin, deterministyczna), dane balansu, AI, renderer bitwy
-- `engine/`: pętla gry na SurfaceView, UI, jakość grafiki, teksty PL/EN
+- `engine/`: pętla gry na SurfaceView, UI, jakość grafiki, teksty w 10 językach (engine/L.kt)
 - `meta/`: profil gracza, badania, rankingi
 - `screens/`: menu, kampania, badania, rankingi, ustawienia, bitwa

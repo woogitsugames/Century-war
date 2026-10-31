@@ -56,7 +56,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         back.label = L["back"]
         quality.label = when (p.quality) { 1 -> L["q_low"]; 2 -> L["q_med"]; 3 -> L["q_high"]; else -> "${L["q_auto"]} (${g.quality.level})" }
         fps.label = when (p.fpsCap) { 30 -> "30"; 60 -> "60"; else -> L["fps_max"] }
-        lang.label = when (p.lang) { "pl" -> "Polski"; "en" -> "English"; else -> "Auto" }
+        lang.label = L.indexOf(p.lang).let { if (it >= 0) L.NAMES[it] else "Auto" }
         snd.label = if (p.sound) L["on"] else L["off"]
         snd.color = if (p.sound) Ui.BTN_GREEN else Ui.BTN
         vib.label = if (p.vibration) L["on"] else L["off"]
@@ -95,7 +95,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             -1 -> { p.save(); g.pop() }
             1 -> { p.quality = (p.quality + 1) % 4; g.setQuality(g.effectiveQualityLevel()) }
             2 -> { p.fpsCap = when (p.fpsCap) { 0 -> 60; 60 -> 30; else -> 0 }; g.applyFrameRate() }
-            3 -> { p.lang = when (p.lang) { "" -> "pl"; "pl" -> "en"; else -> "" }; g.applyLanguage() }
+            3 -> { val i = L.indexOf(p.lang); p.lang = if (p.lang.isEmpty()) L.CODES[0] else if (i in 0 until L.CODES.size - 1) L.CODES[i + 1] else ""; g.applyLanguage() }
             4 -> p.vibration = !p.vibration
             8 -> p.sound = !p.sound
             5 -> p.showFps = !p.showFps

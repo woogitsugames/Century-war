@@ -56,7 +56,7 @@ class Profile(private val file: File) {
     var vibration = true
     var sound = true
     var showFps = false
-    var lang = ""            // "" = systemowy, "pl", "en"
+    var lang = ""            // "" = systemowy, inaczej kod z L.CODES ("pl", "en", "de"...)
     var skirmishDiff = 1
 
     // statystyki
