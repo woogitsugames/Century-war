@@ -130,7 +130,17 @@ class ScreenshotTest {
             g.setScreen(ModeScreen(g, Mode.DAILY)); shot(g, "${tag}_mode_daily")
             g.setScreen(ModeScreen(g, Mode.SKIRMISH)); shot(g, "${tag}_mode_skirmish")
             g.setScreen(RankingsScreen(g)); shot(g, "${tag}_rankings")
-            g.setScreen(SettingsScreen(g)); shot(g, "${tag}_settings")
+            val settings = SettingsScreen(g)
+            g.setScreen(settings)
+            if (tag == "phone720" || tag == "foldPortrait") {
+                val sound = field(settings, "sfxLevel").get(settings) as com.centurywar.engine.Button
+                val music = field(settings, "music").get(settings) as com.centurywar.engine.Button
+                check(sound.r.width() > 50 * g.ui.dp && music.r.width() > 50 * g.ui.dp)
+                check(sound.r.left >= g.insetL && sound.r.right <= g.width - g.insetR)
+                check(sound.r.top > 0f && sound.r.bottom <= g.height - g.insetB)
+                shot(g, "${tag}_sfx_settings")
+            }
+            shot(g, "${tag}_settings")
             g.setScreen(CodexScreen(g, 0)); shot(g, "${tag}_codex_era0")
             g.profile.levels["r_unitDmg"] = 5; g.profile.levels["r_unitHp"] = 4; g.profile.levels["r_train"] = 3
             val cx = CodexScreen(g, 6)
