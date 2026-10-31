@@ -114,16 +114,31 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                 game.resize(bufW, bufH, width.coerceAtLeast(1), height.coerceAtLeast(1))
             }
             val frameStart = System.nanoTime()
-            val dt = (frameStart - last) / 1_000_000_000f
+            val frameIntervalNs = frameStart - last
+            val dt = frameIntervalNs / 1_000_000_000f
             last = frameStart
+            val lockStart = System.nanoTime()
             var c: Canvas? = null
+            var rendered = false
             try {
                 c = try { holder.lockHardwareCanvas() } catch (_: Exception) { holder.lockCanvas() }
-                if (c != null) game.frame(c, dt)
+                if (c != null) {
+                    game.frame(c, dt)
+                    rendered = true
+                }
             } catch (e: Exception) {
                 android.util.Log.e("CenturyWar", "frame error", e)
             } finally {
-                if (c != null) try { holder.unlockCanvasAndPost(c) } catch (_: Exception) { }
+                if (c != null) try {
+                    holder.unlockCanvasAndPost(c)
+                    if (rendered) {
+                        // Pomiar obejmuje oczekiwanie na bufor, rysowanie i publikację.
+                        game.frameMetrics.addPresentation(
+                            System.nanoTime() - lockStart, frameIntervalNs,
+                            display?.refreshRate ?: 60f
+                        )
+                    }
+                } catch (_: Exception) { }
             }
             val cap = frameCapFps
             if (cap > 0) {
