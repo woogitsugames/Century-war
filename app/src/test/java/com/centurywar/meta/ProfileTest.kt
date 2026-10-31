@@ -115,7 +115,11 @@ class ProfileTest {
     fun replayIdIsOptionalBackwardCompatibleAndSurvivesJson() {
         val f = tmpFile()
         val board = Profile.BOARD_ENDLESS
-        f.writeText("""{"v":3,"boards":{"endless":[{"n":"Stary","s":90,"d":12}]}}""")
+        // Pełny profil v3 (ścisły odczyt) z wpisem rankingu sprzed pola "r".
+        Profile(f).save()
+        val json = org.json.JSONObject(f.readText())
+        json.put("boards", org.json.JSONObject("""{"endless":[{"n":"Stary","s":90,"d":12}]}"""))
+        f.writeText(json.toString())
         val old = Profile(f).also { it.load() }
         assertEquals(null, old.top(board).single().replay)
         assertTrue(old.submit(board, 200L, 13L, "battle_001"))
