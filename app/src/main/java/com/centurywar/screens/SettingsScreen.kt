@@ -9,6 +9,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import com.centurywar.meta.OnlineState
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,9 +25,12 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val snd = btn(8)
     private val name = btn(6)
     private val reset = btn(7)
-    private val rows = listOf(quality, fps, lang, snd, vib, showFps, name, reset)
-    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.SPEAKER, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.RESTART)
-    private val labelKeys = arrayOf("quality", "fps", "language", "sound", "vibration", "show_fps", "name")
+    private val playGames = btn(9)
+    private val localRows = listOf(quality, fps, lang, snd, vib, showFps, name, reset)
+    private val onlineRows = listOf(quality, fps, lang, snd, vib, showFps, name, playGames, reset)
+    private fun rows() = if (g.online.available) onlineRows else localRows
+    private val icons = intArrayOf(Icons.MONITOR, Icons.STOPWATCH, Icons.GLOBE, Icons.SPEAKER, Icons.VIBRATE, Icons.BOLT, Icons.PENCIL, Icons.GLOBE)
+    private val labelKeys = arrayOf("quality", "fps", "language", "sound", "vibration", "show_fps", "name", "play_games")
     private val panel = RectF()
     private val rowR = RectF()
     private var resetArmed = 0f
@@ -35,13 +39,15 @@ class SettingsScreen(g: Game) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val rows = rows()
+        playGames.visible = g.online.available
         val avail = h - chrome.top - g.insetB - 20 * dp
         val step = min(54 * dp, (avail - 44 * dp) / rows.size)
         val ph = step * rows.size + 44 * dp
         val top = chrome.top + 10 * dp + max(0f, (avail - ph) * 0.35f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
         val bw = min(250 * dp, pw * 0.46f)
-        for ((i, b) in rows.withIndex()) {
+        for ((i, b) in rows().withIndex()) {
             val y = panel.top + 24 * dp + i * step
             if (b === reset) b.set(panel.left + 24 * dp, y + 4 * dp, pw - 48 * dp, step - 10 * dp)
             else b.set(panel.right - 22 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
@@ -64,6 +70,15 @@ class SettingsScreen(g: Game) : Screen(g) {
         showFps.label = if (p.showFps) L["on"] else L["off"]
         showFps.color = if (p.showFps) Ui.BTN_GREEN else Ui.BTN
         name.label = p.name
+        playGames.label = L[when (g.online.state) {
+            OnlineState.CONNECTED -> "pgs_connected"
+            OnlineState.SYNCING -> "pgs_syncing"
+            OnlineState.CHECKING -> "pgs_checking"
+            OnlineState.ERROR -> "pgs_error"
+            OnlineState.SIGNED_OUT -> "pgs_signed_out"
+            else -> "pgs_disabled"
+        }]
+        playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
         reset.label = if (resetArmed > 0f) L["reset_confirm"] else L["reset"]
         reset.color = if (resetArmed > 0f) Color.rgb(200, 60, 40) else Ui.BTN_RED
     }
@@ -101,6 +116,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             5 -> p.showFps = !p.showFps
             6 -> g.host.requestText(L["name"], p.name) { n -> p.name = n; p.save() }
             7 -> if (resetArmed > 0f) { p.reset(); resetArmed = 0f } else resetArmed = 3f
+            9 -> { g.push(PlayGamesScreen(g)); return }
         }
         p.save()
     }

@@ -57,6 +57,8 @@ class PlayGamesLeaderboards(
     )
 
     @Volatile private var authenticated = false
+    @Volatile private var statusValue = OnlineState.CHECKING
+    override val state: OnlineState get() = statusValue
     @Volatile private var closed = false
     private var checkingAuth = false
     private var cloudBusy = false
@@ -78,7 +80,7 @@ class PlayGamesLeaderboards(
 
     private val delayedSave = Runnable { syncCloud() }
 
-    override val available: Boolean get() = !closed && authenticated
+    override val available: Boolean get() = !closed
 
     init {
         game.profile.onSaved = { json ->
@@ -100,22 +102,26 @@ class PlayGamesLeaderboards(
         handler.post {
             if (closed || checkingAuth) return@post
             checkingAuth = true
+            statusValue = OnlineState.CHECKING
             try {
                 signInClient.isAuthenticated().addOnCompleteListener { task ->
                     checkingAuth = false
                     if (closed) return@addOnCompleteListener
                     authenticated = task.isSuccessful && task.result.isAuthenticated
                     if (authenticated) onAuthenticated()
+                    else statusValue = if (task.isSuccessful) OnlineState.SIGNED_OUT else OnlineState.ERROR
                 }
             } catch (e: RuntimeException) {
                 checkingAuth = false
                 authenticated = false
+                statusValue = OnlineState.ERROR
                 Log.w(TAG, "Nie można sprawdzić logowania PGS", e)
             }
         }
     }
 
     private fun onAuthenticated() {
+        statusValue = OnlineState.CONNECTED
         // Konto mogło zmienić się w ustawieniach Google między wznowieniami.
         sentScores.clear()
         refreshDailyDay()
@@ -125,18 +131,35 @@ class PlayGamesLeaderboards(
     }
 
     /** Ręczne logowanie uruchamiaj tylko w odpowiedzi na wybór gracza. */
-    private fun signInAndOpen(board: String) {
+    private fun signInAndOpen(board: String?) {
         try {
             signInClient.signIn().addOnCompleteListener { task ->
                 if (closed) return@addOnCompleteListener
                 authenticated = task.isSuccessful && task.result.isAuthenticated
                 if (authenticated) {
                     onAuthenticated()
-                    openBoard(board)
-                }
+                    if (board != null) openBoard(board)
+                } else statusValue = if (task.isSuccessful) OnlineState.SIGNED_OUT else OnlineState.ERROR
             }
         } catch (e: RuntimeException) {
+            statusValue = OnlineState.ERROR
             Log.w(TAG, "Nie można uruchomić logowania PGS", e)
+        }
+    }
+
+    /** Ręczne logowanie wywołane z ekranu ustawień. */
+    override fun signIn() {
+        handler.post {
+            if (closed) return@post
+            if (authenticated) syncCloud() else signInAndOpen(null)
+        }
+    }
+
+    /** Wymuszona synchronizacja: odczytujemy obie wersje przed zapisem. */
+    override fun syncNow() {
+        handler.post {
+            if (closed) return@post
+            if (authenticated) syncCloud() else signInAndOpen(null)
         }
     }
 
@@ -248,6 +271,7 @@ class PlayGamesLeaderboards(
     private fun syncCloud() {
         if (!authenticated || closed || cloudBusy) return
         cloudBusy = true
+        statusValue = OnlineState.SYNCING
         handler.removeCallbacks(delayedSave)
         try {
             snapshotsClient.open(
@@ -402,6 +426,7 @@ class PlayGamesLeaderboards(
 
     private fun finishSync(success: Boolean) {
         cloudBusy = false
+        statusValue = if (closed) OnlineState.OFFLINE else if (!authenticated) OnlineState.SIGNED_OUT else if (success) OnlineState.CONNECTED else OnlineState.ERROR
         initialCloudChecked = true
         if (!closed && success) {
             publishSavedScores(latestLocalJson)
@@ -412,6 +437,7 @@ class PlayGamesLeaderboards(
 
     fun close() {
         closed = true
+        statusValue = OnlineState.OFFLINE
         authenticated = false
         handler.removeCallbacks(delayedSave)
         game.profile.onSaved = null

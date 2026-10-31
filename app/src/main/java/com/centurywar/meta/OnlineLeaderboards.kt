@@ -15,8 +15,14 @@ package com.centurywar.meta
  * Symulacja jest deterministyczna, więc własny backend może odtworzyć bitwę
  * z seeda + listy komend gracza i odrzucić sfałszowane wyniki (anty-cheat).
  */
+/** Stan PGS odczytywany przez ekran ustawień. */
+enum class OnlineState { OFFLINE, CHECKING, SIGNED_OUT, CONNECTED, SYNCING, ERROR }
+
 interface OnlineLeaderboards {
     val available: Boolean
+    val state: OnlineState get() = OnlineState.OFFLINE
+    fun signIn() {}
+    fun syncNow() {}
     fun submit(board: String, score: Long)
     fun showUi(board: String) {}
 
