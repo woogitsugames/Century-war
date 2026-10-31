@@ -88,6 +88,17 @@ class Ai(private val b: Battle, sideIndex: Int) {
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < 35) return Role.ELITE
         if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
         if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
+        // Preferuj kontrę na czołową jednostkę wroga, jeśli pozwala na nią budżet.
+        if (r < 65) {
+            val foeRole = b.frontUnit(1 - me.index)?.def?.role
+            val counter = when (foeRole) {
+                Role.MELEE -> Role.HEAVY
+                Role.RANGED -> Role.MELEE
+                Role.HEAVY -> Role.RANGED
+                else -> null
+            }
+            if (counter != null && me.gold >= Defs.unit(me.era, counter).cost) return counter
+        }
         if (heavy * 3 < melee + ranged && r < 45) return Role.HEAVY
         return if (ranged < melee) Role.RANGED else Role.MELEE
     }
