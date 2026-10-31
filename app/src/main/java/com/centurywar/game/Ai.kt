@@ -54,7 +54,7 @@ class Ai(private val b: Battle, sideIndex: Int) {
 
     private fun manageTurrets() {
         if (me.slots == 0 || b.time < 35f) return
-        val unitReserve = Defs.unit(me.era, Role.HEAVY).cost
+        val unitReserve = me.unit(Role.HEAVY).cost
         for (i in 0 until me.slots) {
             val cost = b.upgradeCost(me, i)
             if (cost >= 0 && me.gold > cost + unitReserve * 2) { b.upgradeTurret(me, i); return }
@@ -66,7 +66,7 @@ class Ai(private val b: Battle, sideIndex: Int) {
     private fun trainUnits(danger: Int) {
         if (me.aliveCount + me.queueSize >= me.cap) {
             // Armia pełna: nadwyżkę złota zamień w ulepszenia, zamiast ją trzymać.
-            val reserve = Defs.unit(me.era, Role.HEAVY).cost * 2
+            val reserve = me.unit(Role.HEAVY).cost * 2
             if (me.gold > b.armoryCost(me) + reserve) b.buyArmory(me)
             return
         }
@@ -85,14 +85,14 @@ class Ai(private val b: Battle, sideIndex: Int) {
             plannedRole = null
         } else if (danger >= 2 && b.queueUnit(me, Role.MELEE)) {
             plannedRole = null
-        } else if (me.gold > Defs.unit(me.era, role).cost * 0.5f && b.rng.nextInt(10) == 0) {
+        } else if (me.gold > me.unit(role).cost * 0.5f && b.rng.nextInt(10) == 0) {
             plannedRole = null // zmień plan, jeśli długo nie stać nas na wybraną jednostkę
         }
     }
 
     private fun pickRole(melee: Int, ranged: Int, heavy: Int, danger: Int): Role {
         val r = b.rng.nextInt(100)
-        val eliteCost = Defs.unit(me.era, Role.ELITE).cost
+        val eliteCost = me.unit(Role.ELITE).cost
         if (me.eliteUnlocked && me.gold >= eliteCost * 1.2f && r < 35) return Role.ELITE
         if (b.rangedHorde && me.index == 1 && r < 55) return Role.RANGED
         if (melee == 0 || (danger >= 3 && r < 50)) return Role.MELEE
@@ -109,4 +109,4 @@ class Ai(private val b: Battle, sideIndex: Int) {
 
 /** Wersja canEvolve dla AI, która ignoruje oczekujący wybór doktryny gracza. */
 fun Battle.canEvolveSide(side: Side): Boolean =
-    !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && (side.index == 1 || pendingChoice == null)
+    !over && side.era < cfg.maxEra && side.xp >= Defs.evolveXp[side.era] && (side.index == 1 || (pendingChoice == null && pendingVariantEra == EraBranches.NONE))
