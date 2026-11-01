@@ -38,7 +38,7 @@ jobs:
             --tests '*BattleSnapshotTest*' \
             --tests '*ScreenshotTest*' \
             --console=plain --no-configuration-cache
-      - name: Zrzuty: stary i nowy blysk, ekrany
+      - name: 'Zrzuty: stary i nowy blysk, ekrany'
         if: always()
         uses: actions/upload-artifact@v4
         with:
