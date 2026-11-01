@@ -36,9 +36,24 @@ class ReplayScreen(
     constructor(g: Game, id: String?, bytes: ByteArray) : this(g, id,
         try { ReplayRecord.decode(bytes) } catch (_: Exception) { null })
 
+    /** Wykres z właśnie zakończonej bitwy nie wymaga ponownej symulacji. */
+    internal constructor(g: Game, id: String?, bytes: ByteArray, samples: BattleSummarySamples) : this(g, id, bytes) {
+        battleSummary = samples
+        timelineReady = true
+        resultChart.prepare(battleSummary, chartArea, dp)
+    }
+
     private var player: ReplayPlayer? = null
     private var renderer: BattleRenderer? = null
     private var renderedBattle: Battle? = null
+    private var battleSummary = BattleSummarySamples()
+    private val resultChart = BattleSummaryChart()
+    private val chartArea = RectF()
+    private var showChart = false
+    private var timelineReady = false
+    private var timelineFailed = false
+    private var timelineReplay: ReplayPlayer? = null
+    private var chartLoadingText = L["bs104_loading"]
     private var state = LOADING
     private var paused = false
     private var follow = true
@@ -62,7 +77,8 @@ class ReplayScreen(
     private val backward = btn(5)
     private val forward = btn(6)
     private val camera = btn(7)
-    private val controls = arrayOf(backward, slower, pause, faster, forward, camera)
+    private val graph = btn(8)
+    private val controls = arrayOf(backward, slower, pause, faster, forward, camera, graph)
     private val progressBar = RectF()
     private val minimap = RectF()
     private val hud = RectF()
@@ -172,16 +188,19 @@ class ReplayScreen(
         progressBar.set(left + 12 * dp, footer.top + 18 * dp, right - 12 * dp, footer.top + 29 * dp)
         val gap = 5 * dp
         val y = footer.top + 47 * dp
-        val six = minOf(100 * dp, (right - left - 5 * gap) / 6f)
-        val start = (left + right - (6 * six + 5 * gap)) / 2f
-        for (i in controls.indices) controls[i].set(start + i * (six + gap), y, six, 43 * dp)
+        val seven = minOf(100 * dp, (right - left - 6 * gap) / 7f)
+        val start = (left + right - (7 * seven + 6 * gap)) / 2f
+        for (i in controls.indices) controls[i].set(start + i * (seven + gap), y, seven, 43 * dp)
         backward.label = "-10s"; backward.iconId = Icons.BACK
         forward.label = "+10s"; forward.iconId = Icons.PLAY
         slower.label = "−"; slower.iconId = -1
         faster.label = "+"; faster.iconId = -1
         pause.label = L["replay_pause"]; pause.iconId = Icons.PAUSE
         camera.label = L["replay_follow"]; camera.iconId = Icons.CROSSHAIR
+        graph.label = L["bs104_chart"]
         minimap.set(right - 172 * dp, top + 4 * dp, right - 53 * dp, top + 20 * dp)
+        chartArea.set(left, hud.bottom + 10 * dp, right, footer.top - 10 * dp)
+        resultChart.prepare(battleSummary, chartArea, dp)
         renderer?.layout(w, h, g.insetT + 63 * dp, 114 * dp + g.insetB)
     }
 
@@ -207,6 +226,7 @@ class ReplayScreen(
             if (n == 20) acc = 0f
         }
         if (p.broken) { state = BROKEN; return }
+        if (showChart) rebuildSummarySamples()
         // Samo otwarcie ani przewinięcie osi czasu nie oznacza obejrzenia (misja po 5 s, osiągnięcie po 10 s).
         if (!imported && (!watchedClaimed || !replayAchievementChecked) &&
             !paused && !p.seeking && !draggingTime &&
@@ -230,6 +250,29 @@ class ReplayScreen(
         if (!p.seeking && !paused && speed == 1) BattleSfx.play(g, p.battle, r.camX, r.worldVisible)
         else p.battle.fx.count = 0
         refreshLabels(p, dt)
+    }
+
+    /** Budowa próbek z oryginalnych komend jest niezależna od przewijania oglądanej powtórki. */
+    private fun rebuildSummarySamples() {
+        val sampler = timelineReplay ?: return
+        val started = System.nanoTime()
+        var batches = 0
+        while (!sampler.broken && !sampler.finished && batches < 8 &&
+            (batches == 0 || System.nanoTime() - started < 3_000_000L)) {
+            // Kończ porcję dokładnie na granicy następnej sekundy symulacji.
+            val amount = 60 - sampler.step % 60
+            val moved = sampler.advance(amount)
+            battleSummary.capture(sampler.battle)
+            batches++
+            if (moved == 0) break
+        }
+        if (sampler.finished || sampler.broken) {
+            timelineReady = sampler.finished && !sampler.broken
+            timelineFailed = !timelineReady
+            if (timelineReady) battleSummary.finish(sampler.battle)
+            timelineReplay = null
+        }
+        resultChart.prepare(battleSummary, chartArea, dp)
     }
 
     private fun refreshLabels(p: ReplayPlayer, dt: Float) {
@@ -279,6 +322,7 @@ class ReplayScreen(
         pause.label = if (paused) L["replay_play"] else L["replay_pause"]
         pause.iconId = if (paused) Icons.PLAY else Icons.PAUSE
         camera.label = if (follow) L["replay_follow"] else L["replay_camera"]
+        graph.label = if (showChart) L["bs104_battle"] else L["bs104_chart"]
         if (p.seeking) {
             val percent = (100f * p.progress).toInt()
             if (percent != lastProgress) {
@@ -320,6 +364,13 @@ class ReplayScreen(
             footer.top + 13 * dp, 11f, Ui.GOLD, Paint.Align.RIGHT)
         if (p.seeking) ui.textO(c, loadingText, footer.centerX(), footer.top - 12 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
         drawMini(c, p, r)
+        if (showChart) {
+            ui.panel(c, chartArea, Color.argb(247, 26, 32, 48), 12f)
+            resultChart.draw(c, ui, battleSummary, chartArea)
+            if (!timelineReady) ui.textO(c,
+                if (timelineFailed) L["replay_broken"] else chartLoadingText,
+                chartArea.centerX(), chartArea.bottom - 22 * dp, 11f, Ui.GOLD, Paint.Align.CENTER)
+        }
         // Lista doktryn i kart jest buforowana przy zmianie stanu, a nie składana na klatkę.
         if (doctrineState.isNotEmpty()) {
             ui.text(c, doctrineState, g.insetL + 14 * dp, footer.top - 12 * dp,
@@ -404,6 +455,17 @@ class ReplayScreen(
             5 -> p?.let { it.requestSeek(it.step - 600); paused = true; acc = 0f; rebuildRenderer() }
             6 -> p?.let { it.requestSeek(it.step + 600); paused = true; acc = 0f; rebuildRenderer() }
             7 -> follow = !follow
+            8 -> {
+                showChart = !showChart
+                if (showChart && !timelineReady && !timelineFailed && timelineReplay == null && p != null) {
+                    val rebuild = ReplayPlayer(p.cfg, p.log)
+                    if (rebuild.broken) timelineFailed = true else {
+                        timelineReplay = rebuild
+                        battleSummary.capture(rebuild.battle)
+                        resultChart.prepare(battleSummary, chartArea, dp)
+                    }
+                }
+            }
         }
     }
 
@@ -417,6 +479,8 @@ class ReplayScreen(
         statusPlayerEra = -1
         doctrineHash = -1
         lastProgress = -1
+        chartLoadingText = L["bs104_loading"]
+        resultChart.refreshLanguage()
         super.onLanguageChanged()
     }
 
