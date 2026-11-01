@@ -105,6 +105,33 @@ class BattleSummaryScreenshotTest {
         }
     }
 
+    /** Powiadomienie (np. seria dni) czeka w kolejce i nie zasłania zakładek wyników. */
+    @Test fun noticesWaitWhileBattleSummaryIsShown() {
+        val g = game(1600, 720, 1.8f, Quality.LOW)
+        val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 104L, 1f))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        val tiny = Canvas(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888))
+        g.frame(tiny, 1f / 60f)
+        val commands = field(screen, "commands") as BattleController
+        assertTrue(commands.surrender())
+        repeat(70) { g.frame(tiny, 1f / 60f) }
+        assertTrue("Ekran wyników musi być widoczny", (field(screen, "resultStatsTab") as Button).visible)
+        val queue = field(g, "noticeQueue") as Collection<*>
+        queue.size.let { before ->
+            g.showNotice("Seria dni 3/7")
+            repeat(240) { g.frame(tiny, 1f / 60f) }
+            assertTrue("Podsumowanie bitwy blokuje powiadomienia", screen.blocksNotices)
+            assertEquals("Powiadomienie nie może zostać pobrane z kolejki", before + 1, queue.size)
+            assertTrue("Baner nie może być rysowany", (field(g, "achievementSeconds") as Float) <= 0f)
+        }
+        val menu = MenuScreen(g)
+        g.setScreen(menu)
+        g.finishScreenTransition()
+        repeat(3) { g.frame(tiny, 1f / 60f) }
+        assertTrue("Po wyjściu z wyników baner się pokazuje", (field(g, "achievementSeconds") as Float) > 0f)
+    }
+
     /** Najdłuższa lista wyników (tygodniowy Endless z nagrodą) na 720p: nic nie znika. */
     @Test fun weeklyEndlessResultRowsFitPhone720() {
         val g = game(1600, 720, 1.8f, Quality.LOW)

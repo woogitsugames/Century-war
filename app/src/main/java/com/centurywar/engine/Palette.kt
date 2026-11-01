@@ -14,6 +14,9 @@ object Palette {
     const val HIGH_CONTRAST = 3
     const val COUNT = 4
 
+    // Standard zachowuje dawne barwy drużyn, stanów i paneli. Wyjątek (zlecenie 111): zielony
+    // przycisk 0xFF409646 -> 0xFF187566, bo jasny tekst miał na nim tylko ok. 3,3:1 (WCAG AA
+    // wymaga 4,5:1, pilnuje ColorBlindTest).
     private val presets = arrayOf(
         PaletteColors(0xFF408CEB.toInt(), 0xFFDC463C.toInt(), 0xFF76E278.toInt(), 0xFFF05C50.toInt(),
             0xEE1A2030.toInt(), 0xFF1A1620.toInt(), 0xFF4E5870.toInt(), 0xFF187566.toInt(), 0xFFB0382E.toInt()),

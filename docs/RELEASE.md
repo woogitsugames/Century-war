@@ -61,13 +61,31 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
 
 ## Języki i backup
 
-- `android:localeConfig` (`res/xml/locales_config.xml`) deklaruje 10 języków gry:
-  `pl, en, de, es, fr, it, pt, uk, nl, tr` — dokładnie `L.CODES` z `engine/L.kt`
-  (sprawdza to `ReleaseConfigTest`). Dodając język, dopisz go w obu miejscach.
-- `android:fullBackupContent` (Android 11 i starsze) oraz `android:dataExtractionRules`
-  (Android 12+) obejmują wyłącznie `filesDir/profile.json`. `battle.snap` (zrzut
-  przerwanej bitwy) jest przejściowy i celowo pominięty — w kopii w chmurze i przy
-  przenoszeniu na nowe urządzenie. Pliki `.tmp` i `.corrupt` również.
+**Języki.** `android:localeConfig` (`res/xml/locales_config.xml`) deklaruje 10 języków gry:
+`pl, en, de, es, fr, it, pt, uk, nl, tr` — dokładnie `L.CODES` z `engine/L.kt`
+(sprawdza to `ReleaseConfigTest`). Dodając język, dopisz go w obu miejscach i uzupełnij
+wszystkie klucze tabeli (`LTest` wymaga kompletu 10 języków i zgodnych placeholderów).
+Dzięki `localeConfig` Android 13+ pokazuje grę w ustawieniach języka aplikacji.
+
+**Backup.** `android:allowBackup="true"`; kopia Androida obejmuje **wyłącznie**
+`filesDir/profile.json` (postęp, ustawienia, sekret rankingu) i `filesDir/history.json`
+(historia bitew). Reguły `include` wyłączają całą resztę: kolejkę wyników
+(`score-queue.json*`), `crash/`, `battle.snap` (przerwana bitwa — przejściowa),
+`replays/` (rozmiar), `profile-backups/`, pliki `.tmp`/`.corrupt` i SharedPreferences.
+
+- Android 12+ (`android:dataExtractionRules` → `res/xml/data_extraction_rules.xml`):
+  `<cloud-backup disableIfNoEncryptionCapabilities="true">` — kopia w chmurze powstaje
+  tylko, gdy urządzenie potrafi ją zaszyfrować end-to-end (ustawiona blokada ekranu);
+  `<device-transfer>` (przeniesienie kablem/Wi-Fi na nowy telefon) obejmuje te same dwa
+  pliki bez wymogu szyfrowania.
+- Android 6–11 (`android:fullBackupContent` → `res/xml/backup_rules.xml`): oba pliki mają
+  `requireFlags="clientSideEncryption"` (respektowane od Androida 9) — bez szyfrowania po
+  stronie klienta nie trafiają do kopii.
+- Wymóg szyfrowania wynika z tego, że `profile.json` zawiera sekret rankingu
+  (`docs/SECURITY.md`); przywrócenie go na nowym telefonie tego samego konta Google jest
+  zamierzone. `adb backup` dla aplikacji niedebugowalnej z targetSdk 31+ i tak pomija dane.
+- Konfigurację pilnuje `ReleaseConfigTest` (manifest, reguły obu formatów). Dodając nowy
+  plik z postępem, dopisz go w obu XML-ach i w tym opisie.
 
 ## Pomiar wydania i R8 (zlecenie 66)
 

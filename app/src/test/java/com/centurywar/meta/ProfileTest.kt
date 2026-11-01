@@ -366,7 +366,8 @@ class ProfileTest {
         assertEquals(0xFFF05C50.toInt(), Ui.BAD)
         assertEquals(0xEE1A2030.toInt(), Ui.PANEL)
         assertEquals(0xFF1A1620.toInt(), Ui.OUTLINE)
-        assertEquals(0xFF409646.toInt(), Ui.BTN_GREEN)
+        // Zielony przycisk przyciemniony w zleceniu 111 (WCAG AA: dawny 0xFF409646 dawał ok. 3,3:1).
+        assertEquals(0xFF187566.toInt(), Ui.BTN_GREEN)
         Palette.select(Palette.DEUTAN_PROTAN)
         assertTrue(Ui.PLAYER != Ui.ENEMY)
         assertTrue(Ui.GOOD != Ui.BAD)

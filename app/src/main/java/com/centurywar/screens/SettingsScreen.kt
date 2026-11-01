@@ -193,6 +193,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
         access.label = L["access_open"]
+        hintSettings.label = L["access_open"]
         about.label = L["about_link"]
         advanced.label = L["settings_advanced"]
         advanced.selected = advancedExpanded

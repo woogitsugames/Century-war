@@ -124,7 +124,9 @@ class CampaignScreen(g: Game) : Screen(g) {
             max(310 * dp, viewportW * 0.54f)
         }
         // Węzeł (z większym węzłem co czwarty) nie może być szerszy niż odstęp między etapami.
-        nodeR = min(nodeR, regionSpan / 4f / 3.3f)
+        // W pionie pole dotyku ma 3,1 r wysokości, a para „duży + zwykły” zajmuje 3,31 r,
+        // więc na wąskich ekranach (zewnętrzny ekran Folda) potrzebny jest większy zapas.
+        nodeR = min(nodeR, regionSpan / 4f / if (portraitMap) 3.45f else 3.3f)
         val visibleSpan = if (portraitMap) viewportH else viewportW
         val previousMax = maxScroll
         val previousScroll = scroll
