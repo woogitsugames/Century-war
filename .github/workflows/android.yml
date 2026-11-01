@@ -123,7 +123,6 @@ jobs:
           path: app/build/sfx/*.wav
           if-no-files-found: warn
           retention-days: 14
-      - name: Zapisz debug APK
       - name: Debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -281,12 +280,6 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gradlew
-          ./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
-      - name: Zapisz raporty serwera
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: cw-tests-server-results
           started=$(date +%s)
           set +e
           ./gradlew balanceTest --console=plain --no-configuration-cache -PtestForks=2 > ci-test-balance.log 2>&1

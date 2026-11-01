@@ -35,10 +35,18 @@ class CiToolsTest(unittest.TestCase):
                 "}\n",
                 encoding="utf-8",
             )
+            (folder / "LowEndScreensPerformanceTest.kt").write_text(
+                "package com.example\n@RunWith(RobolectricTestRunner::class)\n"
+                "class LowEndScreensPerformanceTest {\n  @Test fun measured() {}\n}\n",
+                encoding="utf-8",
+            )
             groups = selectors(discover(folder))
             self.assertEqual(["com.example.SimTest"], groups["jvm"])
             self.assertEqual(["com.example.RoboTest"], groups["robolectric"])
-            self.assertEqual([SCREENSHOTS + ".menus"], groups["visual"])
+            self.assertCountEqual(
+                [SCREENSHOTS + ".menus", "com.example.LowEndScreensPerformanceTest"],
+                groups["visual"],
+            )
             self.assertEqual(
                 [SCREENSHOTS + ".screens", SCREENSHOTS + ".tutorial"],
                 groups["screen-device"],

@@ -17,6 +17,7 @@ VISUAL_CLASSES = {
     "BackdropsTest",
     "RendererStressTest",
     "StoreGraphicsTest",
+    "LowEndScreensPerformanceTest",
 }
 GROUPS = ("jvm", "robolectric", "visual", "screen-device")
 
