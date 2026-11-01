@@ -1796,10 +1796,7 @@ class BattleScreen(
                 if (battle.fog && !p.fogSight && u.side == 1 && u.x - p.front > 650f) continue
                 val x = r.worldToMini(u.x, mini.left, mini.width())
                 val rad = 2.6f * dp * u.def.size.coerceAtMost(1.4f)
-                ui.fill.color = Ui.OUTLINE
-                c.drawCircle(x, mini.centerY(), rad + 1 * dp, ui.fill)
-                ui.fill.color = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
-                c.drawCircle(x, mini.centerY(), rad, ui.fill)
+                ui.miniTeamMarker(c, x, mini.centerY(), rad, u.side, g.profile.teamMarkers)
             }
             val pi = p.baseHp.toInt()
             if (pi != hpP) { hpP = pi; hpPText = pi.toString() }
