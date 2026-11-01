@@ -78,8 +78,7 @@ zbierane podczas bitwy bez alokacji w pętli. Wynik tygodniowy liczy się
 również wtedy, gdy oblężenie kończy się porażką po osiągnięciu progu.
 
 **Integracja online:** `OnlineAchievements` udostępnia logiczne klucze
-`cw_*` i bezpieczny adapter `NoOp`. W obecnej wersji
-mapowania `cw_*` na zasoby odpowiada `PlayGamesIds.kt`. Po pełnej konfiguracji
+`cw_*` i bezpieczny adapter `NoOp`. Za mapowanie `cw_*` na zasoby odpowiada `PlayGamesIds.kt`. Po pełnej konfiguracji
 `PlayGamesLeaderboards` implementuje `OnlineAchievements`, wysyła odblokowania
 przez `AchievementsClient` i ponawia lokalne osiągnięcia po zalogowaniu i
 odtworzeniu chmury. Bez konfiguracji działa `NoOp`, a osiągnięcia lokalne

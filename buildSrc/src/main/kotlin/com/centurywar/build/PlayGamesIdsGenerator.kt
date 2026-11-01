@@ -83,6 +83,18 @@ object PlayGamesIdsGenerator {
         val props = Properties()
         if (source != null) props.load(StringReader(source))
         val values = requiredKeys.associateWith { props.getProperty(it)?.trim().orEmpty() }
+        val unexpected = props.stringPropertyNames() - requiredKeys.toSet()
+        require(unexpected.isEmpty()) {
+            "Nieznane klucze w play_games_ids.properties: " + unexpected.sorted().joinToString(", ")
+        }
+        val invalid = requiredKeys.filter { key ->
+            val value = values.getValue(key)
+            value.isNotEmpty() && !value.contains("REPLACE_ME", ignoreCase = true) &&
+                (if (key == "app_id") !validAppId(value) else !validServiceId(value))
+        }
+        require(invalid.isEmpty()) {
+            "Niepoprawny format Play Games ID: " + invalid.joinToString(", ")
+        }
         val missing = requiredKeys.filter {
             values.getValue(it).isEmpty() || values.getValue(it).contains("REPLACE_ME", ignoreCase = true)
         }
@@ -91,17 +103,6 @@ object PlayGamesIdsGenerator {
                 "Brak konfiguracji Play Games dla release: " + missing.joinToString(", ")
             }
             return xml(null)
-        }
-        val unexpected = props.stringPropertyNames() - requiredKeys.toSet()
-        require(unexpected.isEmpty()) {
-            "Nieznane klucze w play_games_ids.properties: " + unexpected.sorted().joinToString(", ")
-        }
-        val invalid = requiredKeys.filter { key ->
-            val value = values.getValue(key)
-            if (key == "app_id") !validAppId(value) else !validServiceId(value)
-        }
-        require(invalid.isEmpty()) {
-            "Niepoprawny format Play Games ID: " + invalid.joinToString(", ")
         }
         val serviceIds = requiredKeys.drop(1).map { values.getValue(it) }
         require(serviceIds.size == serviceIds.toSet().size) {

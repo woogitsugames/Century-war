@@ -43,6 +43,14 @@ class PlayGamesIdsGeneratorTest {
         }
     }
 
+    @Test fun invalidNonPlaceholderFailsAlsoInIncompleteDebug() {
+        val incomplete = "app_id=123456789012\nleaderboard_endless=bad\nleaderboard_daily=REPLACE_ME"
+        var rejected = false
+        try { PlayGamesIdsGenerator.render(incomplete, release = false) }
+        catch (e: IllegalArgumentException) { rejected = true }
+        assertTrue(rejected)
+    }
+
     @Test fun rejectsWrongIdsAndDuplicateId() {
         val valid = complete()
         val invalid = listOf(
