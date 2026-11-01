@@ -1,0 +1,75 @@
+name: Symulacja 82 - limity i balans
+
+on:
+  push:
+    branches: ['gpt/82-sim-balance-caps']
+  pull_request:
+    branches: ['claude/**']
+    paths:
+      - 'sim/**'
+      - 'app/src/main/java/com/centurywar/engine/L.kt'
+      - 'app/src/main/java/com/centurywar/screens/BattleScreen.kt'
+      - 'app/src/test/java/com/centurywar/game/SimBalanceCaps82Test.kt'
+      - 'app/src/test/java/com/centurywar/game/DoctrineBalance82Test.kt'
+      - '.github/workflows/sim-balance-82.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app-and-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: APK debug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Regresja symulacji i wersji 82
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*SimBalanceCaps82Test*' \
+            --tests '*DoctrineBalance82Test*' \
+            --tests '*Doctrine69*' \
+            --tests '*Endless*' \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*AiPersonality*' \
+            --tests '*LTest*' \
+            --console=plain --no-configuration-cache
+      - name: Lustrzane wyniki doktryn
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+          for filename in glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml'):
+              root = ET.parse(filename).getroot()
+              for node in root.iter('system-out'):
+                  for line in (node.text or '').splitlines():
+                      if 'DOCTRINE_82 ' in line or 'DOKTRYNA_69 ' in line:
+                          print(line)
+          PY
+      - name: Raport testów
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-balance-82-tests
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
