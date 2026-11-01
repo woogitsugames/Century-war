@@ -23,7 +23,9 @@ internal class RecordsTabs(private val owner: Screen, private val active: Int) {
 
     fun layout() {
         val d = owner.dp
-        val width = min(950 * d, owner.w - owner.g.insetL - owner.g.insetR - 24 * d)
+        val physicalDp = (owner.w - owner.g.insetL - owner.g.insetR) / owner.g.density
+        val width = min((if (physicalDp >= 960f) 620 else 950) * d,
+            owner.w - owner.g.insetL - owner.g.insetR - 24 * d)
         val left = (owner.w + owner.g.insetL - owner.g.insetR - width) / 2f
         val gap = 6 * d
         val tw = (width - gap * 3) / tabs.size
