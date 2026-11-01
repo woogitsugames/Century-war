@@ -101,10 +101,11 @@ class MenuScreen(g: Game) : Screen(g) {
         // Wąski ekran zewnętrzny Folda: pełna, pojedyncza kolumna zamiast miniaturowej siatki.
         val singleColumn = w - g.insetL - g.insetR < 420 * dp &&
             h - g.insetT - g.insetB > 620 * dp
-        val gap = (if (singleColumn) 9f else 12f) * dp
+        val gap = (if (singleColumn) 16f else 12f) * dp
         val bw = if (singleColumn) min(310 * dp, availW)
             else min(min(260 * dp, w * 0.36f), (availW - gap) / 2)
-        val bh = if (singleColumn) 56 * dp else min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
+        val bh = if (singleColumn) min(64 * dp, (h - g.insetT - g.insetB) * 0.09f)
+            else min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
         val mh = 48 * dp
         val gridH = if (singleColumn) 6 * (bh + gap) + mh else bh * 3 + gap * 3 + mh
 
@@ -125,7 +126,8 @@ class MenuScreen(g: Game) : Screen(g) {
         val freeTop = g.insetT + 8 * dp
         val bottomPad = g.insetB + 22 * dp
         val total = headerH + gridH + 14 * dp
-        val startY = freeTop + max(0f, (h - freeTop - bottomPad - total) * 0.3f)
+        val startY = freeTop + max(0f, (h - freeTop - bottomPad - total) *
+            (if (singleColumn) 0.45f else 0.3f))
         logoY = startY + logoSize * 1.75f
         subY = logoY + logoSize * 0.62f
         val top = startY + headerH + 14 * dp
