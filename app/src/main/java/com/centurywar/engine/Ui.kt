@@ -110,7 +110,7 @@ class Ui {
         val GOLD = Color.rgb(255, 205, 64)
         val XP = Color.rgb(110, 200, 255)
         val TEXT = Color.rgb(244, 242, 236)
-        val DIM = Color.rgb(160, 168, 184)
+        val DIM = Color.rgb(182, 190, 204)
         val GOOD: Int get() = Palette.active.good
         val BAD: Int get() = Palette.active.bad
         val PLAYER: Int get() = Palette.active.player
