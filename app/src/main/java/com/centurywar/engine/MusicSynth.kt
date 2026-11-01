@@ -384,9 +384,9 @@ class MusicSynth(seed: Int = 0x43A72F19) {
             } else 0f
             val menuGain = if (era == MENU) 0.37f else 1f
             return (lead * (0.11f + 0.05f * calm + 0.055f * clash) +
-                response * (0.026f + 0.062f * clash) +
-                bassFilter * bassLevel * (0.064f + 0.038f * clash + 0.024f * danger) +
-                padFilter * padLevel * (0.115f * calm + 0.060f * clash) +
+                response * (0.026f + 0.085f * clash) +
+                bassFilter * bassLevel * (0.064f + 0.050f * clash + 0.024f * danger) +
+                padFilter * padLevel * (0.115f * calm + 0.115f * clash) +
                 percussion * (0.018f * calm + 0.066f * clash + 0.072f * danger) +
                 wave(TRIANGLE, tensionPhase) * tensionLevel * 0.048f * danger) * menuGain
         }
