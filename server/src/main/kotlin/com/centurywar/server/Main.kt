@@ -4,6 +4,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import com.centurywar.game.SimVersion
 import java.io.File
+import java.nio.file.Path
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -16,6 +17,11 @@ fun main(args: Array<String>) {
     }
     val ids = PublicPlayerIds(idKeyText.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
     if (args.firstOrNull() == "admin") {
+        if (args.getOrNull(1) == "restore") {
+            val code = runRestore(args.drop(1), Path.of(dbPath))
+            if (code != 0) exitProcess(code)
+            return
+        }
         require(File(dbPath).isFile) { "Nie znaleziono bazy rankingu: $dbPath" }
         SqliteStore("jdbc:sqlite:" + dbPath, ids).use { store ->
             val code = runAdmin(args.drop(1), store)
@@ -30,7 +36,6 @@ fun main(args: Array<String>) {
     val port = (System.getenv("PORT") ?: "8080").toInt().also { require(it in 1..65535) }
     val gameVersion = SimVersion.PROTOCOL
     File(dbPath).absoluteFile.parentFile?.mkdirs()
-    val store = SqliteStore("jdbc:sqlite:" + dbPath, ids)
     val trustedProxies = (System.getenv("CW_TRUSTED_PROXY_IPS") ?: "127.0.0.1")
         .split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     fun limit(name: String, fallback: Int): Int = (System.getenv(name)?.toInt() ?: fallback)
@@ -42,9 +47,22 @@ fun main(args: Array<String>) {
         reportIp = limit("CW_RATE_REPORT_IP", 5),
         postPlayer = limit("CW_RATE_POST_PLAYER", 6),
     )
-    Runtime.getRuntime().addShutdownHook(Thread { store.close() })
-    embeddedServer(Netty, port = port, host = "0.0.0.0") {
-        leaderboardModule(store, secret, supportedVersion = gameVersion,
-            trustedProxies = trustedProxies, limits = rateLimits)
-    }.start(wait = true)
+    val metricsToken = System.getenv("CW_METRICS_TOKEN")?.takeIf { it.isNotEmpty() }
+    if (metricsToken != null) {
+        require(metricsToken.length >= 32 && metricsToken.none { it.isWhitespace() }) {
+            "CW_METRICS_TOKEN must have at least 32 non-whitespace characters"
+        }
+    }
+    DatabaseMaintenance.acquireLock(Path.of(dbPath)).use { processLock ->
+        SqliteStore("jdbc:sqlite:" + dbPath, ids).use { store ->
+            Runtime.getRuntime().addShutdownHook(Thread {
+                runCatching { store.close() }
+                runCatching { processLock.close() }
+            })
+            embeddedServer(Netty, port = port, host = "0.0.0.0") {
+                leaderboardModule(store, secret, supportedVersion = gameVersion,
+                    trustedProxies = trustedProxies, limits = rateLimits, metricsToken = metricsToken)
+            }.start(wait = true)
+        }
+    }
 }
