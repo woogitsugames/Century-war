@@ -163,6 +163,42 @@ object L {
         "campaign126_hard" to t("Trudny", "Hard", "Schwer", "Difícil", "Difficile", "Difficile", "Difícil", "Складний", "Moeilijk", "Zor"),
         "ach_campaign_hard" to t("Mistrz trudnej kampanii", "Hard Campaign Master", "Meister der schweren Kampagne", "Maestro de campaña difícil", "Maître de la campagne difficile", "Maestro della campagna difficile", "Mestre da campanha difícil", "Майстер складної кампанії", "Meester van de moeilijke campagne", "Zor sefer ustası"),
         "ach_campaign_hard_d" to t("Wygraj wszystkie etapy kampanii na Trudnym.", "Win every campaign stage on Hard.", "Gewinne alle Kampagnenstufen auf Schwer.", "Gana todas las etapas en Difícil.", "Gagnez toutes les étapes en Difficile.", "Vinci tutte le tappe a Difficile.", "Vence todas as fases no Difícil.", "Переможи на всіх етапах на Складному.", "Win alle campagnelevels op Moeilijk.", "Tüm sefer bölümlerini Zor'da kazan."),
+        putAll(part124())
+        }
+    }
+
+    /** Kosmetyka sztandarów, bez wpływu na symulację i ranking. */
+    private fun part124(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "banner_title" to t("Sztandary", "Banners", "Banner", "Estandartes", "Bannières", "Stendardi", "Estandartes", "Стяги", "Vaandels", "Sancaklar"),
+        "banner_open" to t("Wybierz", "Choose", "Wählen", "Elegir", "Choisir", "Scegli", "Escolher", "Обрати", "Kiezen", "Seç"),
+        "banner_equip" to t("Ustaw", "Equip", "Anlegen", "Equipar", "Équiper", "Equipaggia", "Equipar", "Встановити", "Instellen", "Kuşan"),
+        "banner_equipped" to t("Wybrany", "Equipped", "Ausgewählt", "Equipado", "Équipé", "Selezionato", "Equipado", "Обрано", "Gekozen", "Seçili"),
+        "banner_unlocked" to t("Odblokowany", "Unlocked", "Freigeschaltet", "Desbloqueado", "Débloqué", "Sbloccato", "Desbloqueado", "Відкрито", "Ontgrendeld", "Açıldı"),
+        "banner_locked" to t("Zablokowany", "Locked", "Gesperrt", "Bloqueado", "Verrouillé", "Bloccato", "Bloqueado", "Заблоковано", "Vergrendeld", "Kilitli"),
+        "banner_name_0" to t("Straż przednia", "Vanguard", "Vorhut", "Vanguardia", "Avant-garde", "Avanguardia", "Vanguarda", "Авангард", "Voorhoede", "Öncü"),
+        "banner_req_0" to t("Od początku", "Available from the start", "Von Anfang an", "Desde el inicio", "Dès le début", "Disponibile da subito", "Desde o início", "Доступно від початку", "Vanaf het begin", "Başlangıçtan itibaren"),
+        "banner_name_1" to t("Strzała", "Arrow", "Pfeil", "Flecha", "Flèche", "Freccia", "Flecha", "Стріла", "Pijl", "Ok"),
+        "banner_req_1" to t("Zdobądź 12 gwiazdek", "Earn 12 stars", "Erreiche 12 Sterne", "Consigue 12 estrellas", "Obtiens 12 étoiles", "Ottieni 12 stelle", "Obtém 12 estrelas", "Здобудь 12 зірок", "Behaal 12 sterren", "12 yıldız kazan"),
+        "banner_name_2" to t("Kryształ", "Crystal", "Kristall", "Cristal", "Cristal", "Cristallo", "Cristal", "Кристал", "Kristal", "Kristal"),
+        "banner_req_2" to t("Zdobądź 36 gwiazdek", "Earn 36 stars", "Erreiche 36 Sterne", "Consigue 36 estrellas", "Obtiens 36 étoiles", "Ottieni 36 stelle", "Obtém 36 estrelas", "Здобудь 36 зірок", "Behaal 36 sterren", "36 yıldız kazan"),
+        "banner_name_3" to t("Bastion", "Bastion", "Bastion", "Bastión", "Bastion", "Bastione", "Bastião", "Бастіон", "Bastion", "Tabya"),
+        "banner_req_3" to t("Zdobądź 72 gwiazdki", "Earn 72 stars", "Erreiche 72 Sterne", "Consigue 72 estrellas", "Obtiens 72 étoiles", "Ottieni 72 stelle", "Obtém 72 estrelas", "Здобудь 72 зірки", "Behaal 72 sterren", "72 yıldız kazan"),
+        "banner_name_4" to t("Gwiazda", "Star", "Stern", "Estrella", "Étoile", "Stella", "Estrela", "Зірка", "Ster", "Yıldız"),
+        "banner_req_4" to t("Zdobądź 108 gwiazdek", "Earn 108 stars", "Erreiche 108 Sterne", "Consigue 108 estrellas", "Obtiens 108 étoiles", "Ottieni 108 stelle", "Obtém 108 estrelas", "Здобудь 108 зірок", "Behaal 108 sterren", "108 yıldız kazan"),
+        "banner_name_5" to t("Ostrza", "Blades", "Klingen", "Hojas", "Lames", "Lame", "Lâminas", "Клинки", "Klingen", "Kılıçlar"),
+        "banner_req_5" to t("Osiągnięcie: 10 zwycięstw", "Achievement: 10 wins", "Erfolg: 10 Siege", "Logro: 10 victorias", "Succès : 10 victoires", "Obiettivo: 10 vittorie", "Conquista: 10 vitórias", "Досягнення: 10 перемог", "Prestatie: 10 zeges", "Başarım: 10 zafer"),
+        "banner_name_6" to t("Diament", "Diamond", "Diamant", "Diamante", "Diamant", "Diamante", "Diamante", "Діамант", "Diamant", "Elmas"),
+        "banner_req_6" to t("Osiągnięcie: fala 25", "Achievement: wave 25", "Erfolg: Welle 25", "Logro: oleada 25", "Succès : vague 25", "Obiettivo: ondata 25", "Conquista: onda 25", "Досягнення: хвиля 25", "Prestatie: golf 25", "Başarım: dalga 25"),
+        "banner_name_7" to t("Skrzydła", "Wings", "Flügel", "Alas", "Ailes", "Ali", "Asas", "Крила", "Vleugels", "Kanatlar"),
+        "banner_req_7" to t("Osiągnięcie: era orbitalna", "Achievement: orbital era", "Erfolg: Orbitalära", "Logro: era orbital", "Succès : ère orbitale", "Obiettivo: era orbitale", "Conquista: era orbital", "Досягнення: орбітальна ера", "Prestatie: orbitaal tijdperk", "Başarım: yörünge çağı"),
+        "banner_name_8" to t("Błyskawica", "Lightning", "Blitz", "Rayo", "Éclair", "Fulmine", "Relâmpago", "Блискавка", "Bliksem", "Şimşek"),
+        "banner_req_8" to t("Osiągnięcie: bez wieżyczek", "Achievement: no turrets", "Erfolg: ohne Türme", "Logro: sin torretas", "Succès : sans tourelles", "Obiettivo: senza torrette", "Conquista: sem torres", "Досягнення: без башт", "Prestatie: zonder torens", "Başarım: taretsiz"),
+        "banner_name_9" to t("Księżyc", "Moon", "Mond", "Luna", "Lune", "Luna", "Lua", "Місяць", "Maan", "Ay"),
+        "banner_req_9" to t("3 wyzwania dnia z rzędu", "3 daily challenges in a row", "3 Tagesherausforderungen in Folge", "3 desafíos diarios seguidos", "3 défis du jour de suite", "3 sfide giornaliere di fila", "3 desafios diários seguidos", "3 щоденні виклики поспіль", "3 daguitdagingen op rij", "3 günlük görev art arda"),
+        "banner_name_10" to t("Tarcza", "Shield", "Schild", "Escudo", "Bouclier", "Scudo", "Escudo", "Щит", "Schild", "Kalkan"),
+        "banner_req_10" to t("7 wyzwań dnia z rzędu", "7 daily challenges in a row", "7 Tagesherausforderungen in Folge", "7 desafíos diarios seguidos", "7 défis du jour de suite", "7 sfide giornaliere di fila", "7 desafios diários seguidos", "7 щоденних викликів поспіль", "7 daguitdagingen op rij", "7 günlük görev art arda"),
+        "banner_name_11" to t("Korona", "Crown", "Krone", "Corona", "Couronne", "Corona", "Coroa", "Корона", "Kroon", "Taç"),
+        "banner_req_11" to t("14 wyzwań dnia z rzędu", "14 daily challenges in a row", "14 Tagesherausforderungen in Folge", "14 desafíos diarios seguidos", "14 défis du jour de suite", "14 sfide giornaliere di fila", "14 desafios diários seguidos", "14 щоденних викликів поспіль", "14 daguitdagingen op rij", "14 günlük görev art arda"),
     )
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */

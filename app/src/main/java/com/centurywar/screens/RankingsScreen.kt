@@ -12,6 +12,7 @@ import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Daily
 import com.centurywar.game.Weekly
+import com.centurywar.game.art.Banners
 import com.centurywar.meta.OnlineState
 import com.centurywar.meta.Profile
 import kotlin.math.min
@@ -21,6 +22,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     override val blocksNotices: Boolean get() = true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
+    private val banners = Banners()
     private val recordsTabs = RecordsTabs(this, 0)
     private val back = btn(-1)
     private val rename = btn(-2)
@@ -205,7 +207,9 @@ class RankingsScreen(g: Game) : Screen(g) {
                 ui.textO(c, rankLabels[i], l + 22 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
             val col = if (i == 0) Ui.GOLD else Ui.TEXT
-            ui.textO(c, cachedDates[i], l + 48 * dp, cy + 5 * dp, 14f, col, Paint.Align.LEFT, 1.8f)
+            banners.draw(c, e.bannerId, l + 49 * dp, cy - 9 * dp, 24 * dp, 18 * dp)
+            ui.textO(c, cachedDates[i], l + 81 * dp, cy + 5 * dp,
+                ui.fit(cachedDates[i], 14f, (r - l) * 0.45f), col, Paint.Align.LEFT, 1.8f)
             val hasReplay = e.replay in existingReplayIds
             if (hasReplay) Icons.draw(c, Icons.PLAY, r - 15 * dp, cy, 17 * dp, Ui.GOLD, dp = dp)
             ui.textO(c, cachedScores[i], r - (if (hasReplay) 33 else 12) * dp,

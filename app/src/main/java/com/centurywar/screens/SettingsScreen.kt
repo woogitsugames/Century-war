@@ -37,6 +37,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val playGames = btn(11)
     private val access = btn(14)
     private val hintSettings = btn(15)
+    private val banners = btn(124)
     private val globalRank = btn(16)
     private val newIdentity = btn(17)
     private val about = btn(19)
@@ -47,7 +48,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var advancedExpanded = false
     private val visibleRows = ArrayList<Button>(25)
     private val soundRows = listOf(snd, music, sfxLevel, lang, vib, shakeBtn)
-    private val personalRows = listOf(name, notifications, notifyHour)
+    private val personalRows = listOf(name, banners, notifications, notifyHour)
     private val navigationRows = listOf(access, hintSettings, about)
     private val technicalRows = listOf(quality, fps, showFps, backupExport, backupImport, backupRestore)
 
@@ -72,13 +73,13 @@ class SettingsScreen(g: Game) : Screen(g) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; sfxLevel -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; access -> Icons.PERSON; hintSettings -> Icons.BOOK
-        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; about -> Icons.BOOK
+        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; about -> Icons.BOOK; banners -> Icons.FLAG
         backupExport -> Icons.CHEST; backupImport -> Icons.BOOK; backupRestore -> Icons.RESTART; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; sfxLevel -> "sfx_volume"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
-        access -> "accessibility"; hintSettings -> "hint_settings"
+        access -> "accessibility"; hintSettings -> "hint_settings"; banners -> "banner_title"
         globalRank -> "global_ranking"; newIdentity -> "global_identity"; about -> "about"
         backupExport -> "profile_backup_export"; backupImport -> "profile_backup_import"
         backupRestore -> "profile_backup_restore_prev"
@@ -197,6 +198,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             else -> "pgs_disabled"
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
+        banners.label = L["banner_open"]
         access.label = L["access_open"]
         hintSettings.label = L["access_open"]
         about.label = L["about_link"]
@@ -319,6 +321,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             11 -> { g.push(PlayGamesScreen(g)); return }
             14 -> { g.push(AccessibilityScreen(g)); return }
             15 -> { g.push(HintSettingsScreen(g)); return }
+            124 -> { g.push(BannerScreen(g)); return }
             16 -> {
                 if (p.globalRanking) {
                     p.disableGlobalRanking()

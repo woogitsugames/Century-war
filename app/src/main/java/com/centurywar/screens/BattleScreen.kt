@@ -1119,6 +1119,9 @@ class BattleScreen(
         }
         if (!won) collectDefeatReasons()
         pr.recordBattle(cfg.mode, won, battle.time.toInt())
+        if (cfg.mode == Mode.DAILY && rankedDaily && battle.stepCount >= 60 && !surrendered)
+            pr.recordRankedDailyStreak(cfg.seed)
+        pr.refreshBanners()
         g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
         tipIcon = when (tipKey) {
             "tip_siege" -> Icons.HOURGLASS
