@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: profile-backup-107
+  cancel-in-progress: true
+
 jobs:
   profile-backup:
     runs-on: ubuntu-latest
