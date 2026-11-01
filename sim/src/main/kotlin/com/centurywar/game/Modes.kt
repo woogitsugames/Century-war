@@ -14,6 +14,10 @@ enum class Doctrine(val key: String) {
     ARSENAL("d_arsenal"),      // +1 slot wieży (do limitu) i -20% kosztu wież
     TACTICS("d_tactics"),      // -25% odnowienia zdolności
     PLUNDER("d_plunder"),      // +35% złota za zabójstwa
+    BANNER("d_banner"),       // -15% obrażeń podczas Zrywu
+    SUPPLY("d_supply"),       // +30% złota za zabójstwa przez 60 s
+    SIEGE_MASTERS("d_siege_masters"), // +18% ciężkich przeciw bazom
+    VIGILANCE("d_vigilance"), // +18% zasięgu wież, zwiad przez mgłę
 }
 
 /** Modyfikatory bitwy: kampania i wyzwanie dnia zmieniają nimi zasady. */

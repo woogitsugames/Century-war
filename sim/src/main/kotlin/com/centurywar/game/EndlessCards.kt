@@ -41,6 +41,10 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     ELITE_SCHOOL(EndlessRarity.RARE),
     LAST_STAND(EndlessRarity.RARE),
     REPAIR_CREW(EndlessRarity.UNCOMMON),
+    BANNER(EndlessRarity.COMMON, Doctrine.BANNER),
+    SUPPLY(EndlessRarity.COMMON, Doctrine.SUPPLY),
+    SIEGE_MASTERS(EndlessRarity.UNCOMMON, Doctrine.SIEGE_MASTERS),
+    VIGILANCE(EndlessRarity.UNCOMMON, Doctrine.VIGILANCE),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }

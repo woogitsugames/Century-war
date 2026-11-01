@@ -110,6 +110,7 @@ object L {
         putAll(part67())
         putAll(part61())
         putAll(part65())
+        putAll(part69())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1292,5 +1293,17 @@ object L {
         "report_cancel" to t("Nie teraz", "Not now", "Nicht jetzt", "Ahora no", "Pas maintenant", "Non ora", "Agora não", "Не зараз", "Niet nu", "Şimdi değil"),
         "report_share_title" to t("Udostępnij raport", "Share report", "Bericht teilen", "Compartir informe", "Partager le rapport", "Condividi rapporto", "Partilhar relatório", "Поділитися звітом", "Rapport delen", "Raporu paylaş"),
         "report_subject" to t("Century War - raport błędu", "Century War - error report", "Century War - Fehlerbericht", "Century War - informe de error", "Century War - rapport d'erreur", "Century War - rapporto errore", "Century War - relatório de erro", "Century War - звіт про помилку", "Century War - foutrapport", "Century War - hata raporu"),
+    )
+
+    /** Zlecenie 69: cztery doktryny i opisy w 10 językach. */
+    private fun part69(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "d_banner" to t("Sztandar", "War Banner", "Kampfbanner", "Estandarte", "Bannière", "Stendardo", "Estandarte", "Бойовий стяг", "Strijdvaandel", "Savaş Sancağı"),
+        "d_banner_d" to t("Zryw: jednostki otrzymują o 15% mniej obrażeń", "Rally: units take 15% less damage", "Ansturm: Einheiten erleiden 15% weniger Schaden", "Impulso: las unidades reciben un 15% menos de daño", "Élan : les unités subissent 15 % de dégâts en moins", "Slancio: le unità subiscono il 15% di danni in meno", "Ímpeto: unidades sofrem menos 15% de dano", "Ривок: бійці отримують на 15% менше шкоди", "Stormloop: troepen krijgen 15% minder schade", "Hücum: birlikler %15 daha az hasar alır"),
+        "d_supply" to t("Zaopatrzenie", "Supply Lines", "Nachschub", "Suministros", "Ravitaillement", "Rifornimenti", "Abastecimento", "Постачання", "Bevoorrading", "İkmal"),
+        "d_supply_d" to t("+30% złota za zabójstwa przez 60 s od wyboru", "+30% kill gold for 60 s after selection", "+30% Tötungsgold für 60 s nach der Wahl", "+30% de oro por baja durante 60 s tras elegir", "+30% d’or par élimination pendant 60 s après le choix", "+30% oro per uccisione per 60 s dalla scelta", "+30% ouro por abate durante 60 s após a escolha", "+30% золота за вбивства протягом 60 с після вибору", "+30% goud per verslagen vijand gedurende 60 s na keuze", "Seçimden sonra 60 sn boyunca öldürme altını +%30"),
+        "d_siege_masters" to t("Mistrzowie oblężeń", "Siege Masters", "Belagerungsmeister", "Maestros del asedio", "Maîtres de siège", "Maestri d'assedio", "Mestres do cerco", "Майстри облоги", "Belegeringsmeesters", "Kuşatma Ustaları"),
+        "d_siege_masters_d" to t("+18% obrażeń ciężkich jednostek przeciw bazom", "+18% heavy-unit damage to bases", "+18% Basisschaden durch schwere Einheiten", "+18% de daño de tropas pesadas a bases", "+18% de dégâts aux bases par les unités lourdes", "+18% danni alle basi dalle unità pesanti", "+18% dano de unidades pesadas contra bases", "+18% шкоди базам від важких бійців", "+18% schade aan bases door zware eenheden", "Ağır birliklerin üslere hasarı +%18"),
+        "d_vigilance" to t("Czujność", "Vigilance", "Wachsamkeit", "Vigilancia", "Vigilance", "Vigilanza", "Vigilância", "Пильність", "Waakzaamheid", "Teyakkuz"),
+        "d_vigilance_d" to t("+18% zasięgu wież; wrogowie widoczni we mgle", "+18% turret range; enemies visible in fog", "+18% Turmreichweite; Gegner im Nebel sichtbar", "+18% alcance de torres; enemigos visibles en niebla", "+18% de portée des tours ; ennemis visibles dans le brouillard", "+18% portata torri; nemici visibili nella nebbia", "+18% alcance de torres; inimigos visíveis no nevoeiro", "+18% дальності веж; ворогів видно в тумані", "+18% torenbereik; vijanden zichtbaar in mist", "Kule menzili +%18; sisten düşmanlar görünür"),
     )
 }

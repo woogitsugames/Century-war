@@ -27,7 +27,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 12
+    const val VERSION = 13
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -186,6 +186,8 @@ object BattleSnapshot {
         // liczniki misji i osiągnięć (v4)
         o.writeInt(s.turretsBuilt); o.writeInt(s.barragesUsed); o.writeInt(s.ralliesUsed)
         o.writeInt(s.elitesLost); o.writeInt(s.erasAdvanced); o.writeFloat(s.baseDamageTaken)
+        o.writeFloat(s.rallyArmorMul); o.writeFloat(s.supplyUntil)
+        o.writeFloat(s.heavyBaseDmgMul); o.writeFloat(s.turretRangeMul); o.writeBoolean(s.fogSight)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -367,6 +369,10 @@ object BattleSnapshot {
         for (k in s.spawnedByRole.indices) s.spawnedByRole[k] = i.readInt().also { require(it >= 0) }
         s.turretsBuilt = i.readInt(); s.barragesUsed = i.readInt(); s.ralliesUsed = i.readInt()
         s.elitesLost = i.readInt(); s.erasAdvanced = i.readInt(); s.baseDamageTaken = i.readFloat()
+        s.rallyArmorMul = i.readFloat(); s.supplyUntil = i.readFloat()
+        s.heavyBaseDmgMul = i.readFloat(); s.turretRangeMul = i.readFloat(); s.fogSight = i.readBoolean()
+        require(s.rallyArmorMul in 0.01f..1f && s.supplyUntil >= 0f && s.supplyUntil.isFinite())
+        require(s.heavyBaseDmgMul in 1f..10f && s.turretRangeMul in 1f..10f)
         require(s.turretsBuilt >= 0 && s.barragesUsed >= 0 && s.ralliesUsed >= 0)
         require(s.elitesLost >= 0 && s.erasAdvanced >= 0 && s.baseDamageTaken >= 0f)
     }

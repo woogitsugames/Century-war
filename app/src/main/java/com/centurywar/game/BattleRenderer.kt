@@ -229,7 +229,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val tx = worldTargetX.coerceIn(near, far)
         for (u in b.units) {
             if (!u.alive || u.side != 1 || abs(u.x - tx) > 120f) continue
-            if (b.fog && u.x - b.player.front > 650f) continue
+            if (b.fog && !b.player.fogSight && u.x - b.player.front > 650f) continue
             val ux = sx(u.x)
             val uy = groundY - unitHeight(u.def) * k * u.def.size - 14f * d
             aimFill.color = Ui.OUTLINE
@@ -525,7 +525,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val x = sx(if (fresh) u.x else mix(u.prevX, u.x))
         val margin = 130f * k * u.def.size
         if (x < -margin || x > viewW + margin) return
-        if (b.fog && u.side == 1 && u.x - b.player.front > 650f) return
+        if (b.fog && !b.player.fogSight && u.side == 1 && u.x - b.player.front > 650f) return
         val s = b.sides[u.side]
         val def = u.def
         val dying = if (u.dying >= 0f) u.dying + lerp * Battle.STEP else -1f

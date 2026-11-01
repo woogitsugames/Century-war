@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import com.centurywar.game.Doctrine
 import com.centurywar.game.Weather
 import kotlin.math.cos
 import kotlin.math.max
@@ -78,6 +79,26 @@ object Icons {
     const val WIND = 56
     const val MOON = 57
     const val SUN = 58
+    const val BANNER = 59
+    const val SUPPLY_CRATE = 60
+    const val SIEGE_HAMMER = 61
+    const val WATCH_EYE = 62
+
+    fun doctrineIcon(doctrine: Doctrine): Int = when (doctrine) {
+        Doctrine.ECONOMY -> COINS
+        Doctrine.SIEGE -> BOMB
+        Doctrine.BULWARK -> SHIELD
+        Doctrine.SWIFT -> BOLT
+        Doctrine.VETERAN -> CHEVRONS
+        Doctrine.FURY -> FLAME
+        Doctrine.ARSENAL -> TOWER
+        Doctrine.TACTICS -> HOURGLASS
+        Doctrine.PLUNDER -> BAG
+        Doctrine.BANNER -> BANNER
+        Doctrine.SUPPLY -> SUPPLY_CRATE
+        Doctrine.SIEGE_MASTERS -> SIEGE_HAMMER
+        Doctrine.VIGILANCE -> WATCH_EYE
+    }
 
     fun weatherIcon(weather: Weather): Int = when (weather) {
         Weather.CLEAR -> SUN
@@ -190,6 +211,10 @@ object Icons {
             WIND -> wind(c)
             MOON -> moon(c)
             SUN -> sun(c)
+            BANNER -> banner(c)
+            SUPPLY_CRATE -> supplyCrate(c)
+            SIEGE_HAMMER -> siegeHammer(c)
+            WATCH_EYE -> watchEye(c)
         }
         c.restoreToCount(save)
     }
@@ -954,6 +979,45 @@ object Icons {
             stroke(c, dx * 0.65f, dy * 0.65f, dx * 0.94f, dy * 0.94f, 0.12f, GOLD)
         }
         circle(c, 0f, 0f, 0.53f, GOLD)
+    }
+
+    private fun banner(c: Canvas) {
+        stroke(c, -0.72f, -0.91f, -0.72f, 0.89f, 0.11f, WOOD)
+        p.reset()
+        p.moveTo(-0.64f, -0.8f); p.lineTo(0.77f, -0.8f)
+        p.lineTo(0.45f, -0.18f); p.lineTo(0.77f, 0.41f)
+        p.lineTo(-0.64f, 0.41f); p.close()
+        shape(c, BLUE)
+        circle(c, -0.03f, -0.18f, 0.23f, GOLD)
+    }
+
+    private fun supplyCrate(c: Canvas) {
+        rect(c, -0.86f, -0.53f, 0.86f, 0.77f, WOOD, 0.06f)
+        rect(c, -0.86f, -0.53f, 0.86f, -0.24f, WOOD_D, 0.04f)
+        stroke(c, -0.56f, -0.32f, 0.56f, 0.59f, 0.12f, GOLD_D)
+        stroke(c, 0.56f, -0.32f, -0.56f, 0.59f, 0.12f, GOLD_D)
+        coin(c, 0f, -0.55f, 0.34f)
+    }
+
+    private fun siegeHammer(c: Canvas) {
+        c.save()
+        c.rotate(-38f)
+        stroke(c, 0f, -0.11f, 0f, 0.91f, 0.19f, WOOD)
+        rect(c, -0.76f, -0.71f, 0.76f, -0.12f, STEEL_D, 0.08f)
+        rect(c, -0.53f, -0.67f, 0.53f, -0.18f, STEEL, 0.06f)
+        c.restore()
+    }
+
+    private fun watchEye(c: Canvas) {
+        p.reset()
+        p.moveTo(-0.94f, 0f)
+        p.quadTo(0f, -1f, 0.94f, 0f)
+        p.quadTo(0f, 1f, -0.94f, 0f)
+        p.close()
+        shape(c, WHITE)
+        circle(c, 0f, 0f, 0.37f, BLUE)
+        circle(c, 0f, 0f, 0.17f, OUTLINE, false)
+        shine(c, -0.14f, -0.13f, 0.09f)
     }
 
     private fun heart(c: Canvas) {

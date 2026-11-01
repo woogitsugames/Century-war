@@ -22,8 +22,8 @@
 | Jednostki | **36** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
 | Wieże | **9** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
 | Ostrzały specjalne | **9** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
-| Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki poza Endless |
-| Karty Endless | **30**: 9 doktryn i 21 nowych efektów, cztery rzadkości |
+| Doktryny | **13**: wybór 1 z 3 przy każdym awansie epoki poza Endless |
+| Karty Endless | **34**: 13 doktryn i 21 dodatkowych efektów, cztery rzadkości |
 | Modyfikatory bitew | **10**, np. Mgła wojny, Kruche bazy, Horda strzelców |
 | Etapy kampanii | **36** (4 na epokę), po 3 gwiazdki = **108 gwiazdek** |
 | Badania | **13** drzew, łącznie **110 poziomów** |
