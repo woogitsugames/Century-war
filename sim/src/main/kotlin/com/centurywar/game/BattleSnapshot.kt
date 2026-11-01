@@ -27,7 +27,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 12
+    const val VERSION = 13
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -156,6 +156,7 @@ object BattleSnapshot {
         o.writeByte(c.weather.ordinal)
         o.writeLong(c.weekly)
         o.writeByte(c.weeklyCard?.ordinal ?: -1)
+        o.writeByte(c.dailyEvent?.ordinal ?: -1)
     }
 
     private fun writeSide(o: DataOutputStream, s: Side) {
@@ -321,11 +322,14 @@ object BattleSnapshot {
         val weather = enumAt(Weather.values(), i.readByte().toInt())
         val weekly = i.readLong()
         val cardId = i.readByte().toInt()
+        val eventId = i.readByte().toInt()
         if (startEra > maxEra || weekly < -1L ||
-            (weekly >= 0L) != (cardId >= 0) || (weekly >= 0L && mode != Mode.ENDLESS)) return null
+            (weekly >= 0L) != (cardId >= 0) || (weekly >= 0L && mode != Mode.ENDLESS) ||
+            (eventId >= 0 && mode != Mode.DAILY)) return null
         val weeklyCard = if (cardId < 0) null else enumAt(EndlessCard.values(), cardId)
+        val event = if (eventId < 0) null else enumAt(DailyEvent.values(), eventId)
         return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial,
-            personality, enabled, weather, weekly, weeklyCard)
+            personality, enabled, weather, weekly, weeklyCard, event)
     }
 
     private fun readSide(i: DataInputStream, s: Side) {
