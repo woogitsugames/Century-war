@@ -118,7 +118,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val ph = min(avail, 440 * dp)
         val top = chrome.top + 14 * dp + max(0f, (avail - ph) * 0.4f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
-        start.set(w / 2 - 110 * dp, panel.bottom - 70 * dp, 220 * dp, 52 * dp)
+        start.set(w / 2 - 110 * dp, panel.bottom - 76 * dp, 220 * dp, 52 * dp)
         start.highlight = true
         start.iconId = Icons.PLAY
         val tabWidth = min(118 * dp, (pw - 42 * dp) / 2f)

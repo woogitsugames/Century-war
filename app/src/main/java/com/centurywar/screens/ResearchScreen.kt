@@ -104,7 +104,15 @@ class ResearchScreen(g: Game) : Screen(g) {
         }
     }
 
-    override fun update(dt: Float) { this.dt = dt; place(); hints.update(dt) }
+    override fun update(dt: Float) {
+        this.dt = dt
+        glowTime = (glowTime + dt) % 1000f
+        place()
+        hints.update(dt)
+    }
+    private var glowTime = 0f
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val tmp2 = android.graphics.RectF()
     override fun onDrag(dx: Float, dy: Float) { hints.onAction(); scroll = (scroll - dy).coerceIn(0f, maxScroll) }
 
     override fun render(c: Canvas) {
@@ -136,6 +144,15 @@ class ResearchScreen(g: Game) : Screen(g) {
             else -> Color.rgb(38, 44, 60)
         }
         ui.card(c, tmp, body, 14f, if (can) Ui.GOLD else 0)
+        // Zlecenie 141: Doktryna elit podświetlona, gdy gracza na nią stać, a jej nie ma.
+        if (can && lv == 0 && d === EliteUnlock.def) {
+            val s = (kotlin.math.sin(glowTime * 4f) + 1f) * 0.5f
+            glow.color = Color.argb((110 + 120 * s).toInt(), 255, 214, 92)
+            glow.strokeWidth = (2.5f + 2f * s) * dp
+            tmp2.set(tmp)
+            tmp2.inset(-3 * dp, -3 * dp)
+            c.drawRoundRect(tmp2, 16 * dp, 16 * dp, glow)
+        }
         val r = tmp
         val mr = min(32 * dp, r.height() * 0.3f)
         val mx = r.left + 12 * dp + mr

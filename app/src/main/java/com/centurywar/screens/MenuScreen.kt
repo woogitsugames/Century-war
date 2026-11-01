@@ -39,6 +39,12 @@ class MenuScreen(g: Game) : Screen(g) {
     private val resumeYes = btn(RESUME_YES)
     private val resumeNo = btn(RESUME_NO)
     private val resumePanel = RectF()
+    /** Zlecenie 141: jednorazowy dymek prowadzący do Doktryny elit. */
+    private val hints = HintOverlay(g)
+    init { buttons.add(0, hints.okBtn) }
+    /** Stać gracza na Doktrynę elit, a jej nie ma: plakietka „!” na Badaniach. */
+    internal var eliteReady = false
+        private set
     private var resumeInfo = ""
     private val resumeDescLines = arrayOfNulls<String>(5)
     private var resumeDescCount = 0
@@ -218,6 +224,10 @@ class MenuScreen(g: Game) : Screen(g) {
         }
         updateResumeVisibility()
         val pr = g.profile
+        eliteReady = EliteUnlock.affordable(pr)
+        hints.update(dt)
+        if (eliteReady && g.resumeOffer == null && research.visible && research.r.width() > 0f)
+            hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber()
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
@@ -252,9 +262,18 @@ class MenuScreen(g: Game) : Screen(g) {
         // Pętla po indeksie: iterator ArrayList byłby alokacją na każdą klatkę.
         for (i in buttons.indices) {
             val b = buttons[i]
-            if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
+            if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
         }
         drawPlayer(c)
+        if (eliteReady) {
+            val bx = research.r.right - 15 * dp
+            val by = research.r.top + 6 * dp
+            ui.fill.color = Ui.OUTLINE
+            c.drawCircle(bx, by, 15 * dp, ui.fill)
+            ui.fill.color = Color.rgb(210, 59, 52)
+            c.drawCircle(bx, by, 12.5f * dp, ui.fill)
+            ui.textO(c, "!", bx, by + 5 * dp, 15f, Ui.TEXT, Paint.Align.CENTER)
+        }
         if (claimableMissions > 0) {
             val bx = missions.r.right - 15 * dp
             val by = missions.r.top + 6 * dp
@@ -269,6 +288,7 @@ class MenuScreen(g: Game) : Screen(g) {
             ui.fit(L["codex"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
         ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
             ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
+        if (g.resumeOffer == null) hints.draw(c)
         drawHeldTooltip(c)
         if (g.resumeOffer != null) drawResume(c)
     }
@@ -365,6 +385,8 @@ class MenuScreen(g: Game) : Screen(g) {
             }
             return // okno pytania blokuje resztę menu
         }
+        if (hints.onClick(b)) return
+        hints.onAction()
         when (b.id) {
             1 -> if (firstTutorialReady()) {
                 // Pierwsza epoka nie zasłania powrotu z samouczka zapowiedzią.
