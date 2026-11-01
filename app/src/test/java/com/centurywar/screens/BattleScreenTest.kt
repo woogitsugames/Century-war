@@ -473,4 +473,104 @@ class BattleScreenTest {
         assertEquals(Replay.Kind.BARRAGE_AT, controller.log().commands.last().kind)
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
     }
+
+    /** Pięć formatów: duża minimapa, niekolidujące paski HP i cele dotyku. */
+    @Test
+    fun battle84TouchTargetsAndHudFitFiveFormats() {
+        for ((width, height, density) in listOf(
+            Triple(1600, 720, 1.8f),
+            Triple(1280, 720, 1.8f),
+            Triple(2400, 1080, 2.7f),
+            Triple(2184, 1968, 2.7f),
+            Triple(1968, 2184, 2.7f),
+        )) {
+            val g = game(width, height, density)
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 840L, 1f))
+            g.setScreen(bs)
+            g.frame(canvas, 1f / 60f)
+            val dp = g.ui.dp
+            val mini = field(bs, "mini").get(bs) as RectF
+            val bar = field(bs, "topBar").get(bs) as RectF
+            assertTrue("$width x $height: minimapa za wąska: $mini", mini.width() >= 190 * dp)
+            assertTrue("$width x $height: HP pod paskiem górnym", mini.bottom + 20 * dp <= bar.bottom)
+            for (key in arrayOf("evolveBtn", "pauseBtn", "closeBtn",
+                "upgradeClose", "upgradeBuy", "queueInfoBtn")) {
+                val b = field(bs, key).get(bs) as Button
+                val effectiveWidth = b.r.width() + b.hitSlop * 2f
+                val effectiveHeight = b.r.height() + b.hitSlop * 2f
+                assertTrue("$width x $height $key: $effectiveWidth", effectiveWidth >= 48 * dp - 0.1f)
+                assertTrue("$width x $height $key: $effectiveHeight", effectiveHeight >= 48 * dp - 0.1f)
+            }
+            val arrows = field(bs, "unitUpgrade").get(bs) as Array<*>
+            for (raw in arrows) {
+                val b = raw as Button
+                assertTrue(b.r.width() + b.hitSlop * 2f >= 48 * dp - 0.1f)
+                assertTrue(b.r.height() + b.hitSlop * 2f >= 48 * dp - 0.1f)
+                assertTrue(b.contains(b.r.left - b.hitSlop + 1f, b.r.centerY()))
+            }
+            val buys = field(bs, "slotBuy").get(bs) as Array<*>
+            val sells = field(bs, "slotSell").get(bs) as Array<*>
+            for (raw in buys + sells) {
+                val b = raw as Button
+                assertTrue(b.r.height() >= 48 * dp - 0.1f)
+            }
+            val p = field(bs, "pauseBtn").get(bs) as Button
+            assertTrue(p.r.right <= width - g.insetR)
+            val enemyEra = field(bs, "enemyEraText").get(bs) as String
+            val battle = field(bs, "battle").get(bs) as Battle
+            assertEquals(com.centurywar.engine.L.f("battle84_enemy_era",
+                com.centurywar.engine.L[Defs.eraKeys[battle.enemy.era]]), enemyEra)
+            assertEquals(com.centurywar.engine.L["battle84_barrage_short"],
+                (field(bs, "barrageBtn").get(bs) as Button).label)
+            assertEquals(com.centurywar.engine.L["battle84_rally_short"],
+                (field(bs, "rallyBtn").get(bs) as Button).label)
+        }
+    }
+
+    /** Tap na wyłączonym awansie informuje o brakujących XP bez komendy w powtórce. */
+    @Test
+    fun battle84DisabledEvolveTapShowsMissingXp() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 841L, 1f))
+        g.setScreen(bs)
+        val battle = field(bs, "battle").get(bs) as Battle
+        battle.player.xp = 0f
+        g.frame(canvas, 1f / 60f)
+        val evolve = field(bs, "evolveBtn").get(bs) as Button
+        assertFalse(evolve.enabled)
+        tap(g, evolve.r.centerX(), evolve.r.centerY())
+        assertTrue(field(bs, "missingXpRemaining").getFloat(bs) > 0f)
+        val bubble = field(bs, "missingXpTooltip").get(bs) as com.centurywar.engine.TooltipBubble
+        assertEquals(com.centurywar.engine.L.f("battle84_missing_xp",
+            Defs.evolveXp[battle.player.era]), bubble.body)
+        assertTrue((field(bs, "commands").get(bs) as BattleController).log().commands.isEmpty())
+        repeat(250) { bs.update(1f / 60f) }
+        assertEquals(0f, field(bs, "missingXpRemaining").getFloat(bs), 0.001f)
+    }
+
+    /** Porażka wskazuje konkretne dane i zachowuje statystyki przy zerowej nagrodzie. */
+    @Test
+    fun battle84DefeatShowsReasonsAndRetainedProgress() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+        val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 842L, 1f))
+        g.setScreen(bs)
+        val battle = field(bs, "battle").get(bs) as Battle
+        battle.player.gold = 5000f
+        battle.player.kills = 7
+        battle.surrender()
+        g.frame(canvas, 1f / 60f)
+        val progress = field(bs, "retainedProgressText").get(bs) as String
+        assertTrue(progress.contains("7"))
+        assertTrue(field(bs, "defeatReasonCount").getInt(bs) in 1..2)
+        val reasons = field(bs, "tipText").get(bs) as String
+        assertTrue("Nie ma informacji o niewydanym złocie: $reasons", reasons.contains("5000"))
+        assertTrue(field(bs, "resultTipCount").getInt(bs) >= 1)
+        val replay = field(bs, "replayEnd").get(bs) as Button
+        val restart = field(bs, "restartEnd").get(bs) as Button
+        assertEquals(com.centurywar.engine.L["battle84_watch_replay"], replay.label)
+        assertEquals(com.centurywar.engine.Icons.WATCH_EYE, replay.iconId)
+        assertEquals(com.centurywar.engine.Icons.RESTART, restart.iconId)
+    }
 }
