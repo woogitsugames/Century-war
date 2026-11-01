@@ -79,7 +79,7 @@ class AboutScreen(g: Game) : Screen(g) {
         panel.set(left, chrome.top + 7 * dp, left + pw, h - g.insetB - 11 * dp)
         contentTop = panel.top + 11 * dp
         contentBottom = panel.bottom - 11 * dp
-        val introDp = if (hasPrivacy) 222f else 174f
+        val introDp = if (hasPrivacy) 242f else 190f
         val step = 103 * dp
         val fullHeight = (introDp + 24 + 70) * dp + entries.size * step
         maxScroll = max(0f, fullHeight - (contentBottom - contentTop))
@@ -87,16 +87,16 @@ class AboutScreen(g: Game) : Screen(g) {
         textStart = panel.top + 24 * dp - scroll
         firstRow = textStart + introDp * dp
         footerTop = firstRow + entries.size * step + 12 * dp
-        privacy.set(panel.left + 20 * dp, textStart + 98 * dp, min(250 * dp, pw - 40 * dp), 39 * dp)
+        privacy.set(panel.left + 20 * dp, textStart + 98 * dp, min(250 * dp, pw - 40 * dp), 48 * dp)
         privacy.visible = hasPrivacy && inContent(privacy)
-        report.set(panel.left + 20 * dp, textStart + (if (hasPrivacy) 141 else 98) * dp,
-            min(250 * dp, pw - 40 * dp), 39 * dp)
+        report.set(panel.left + 20 * dp, textStart + (if (hasPrivacy) 154 else 98) * dp,
+            min(250 * dp, pw - 40 * dp), 48 * dp)
         report.visible = inContent(report)
-        fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 42 * dp)
+        fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 48 * dp)
         fullLicense.visible = inContent(fullLicense)
         for (i in entries.indices) {
             val y = firstRow + i * step
-            links[i].set(panel.right - 114 * dp, y + 5 * dp, 96 * dp, 33 * dp)
+            links[i].set(panel.right - 114 * dp, y + 5 * dp, 96 * dp, 48 * dp)
             links[i].visible = inContent(links[i])
         }
     }
@@ -139,7 +139,7 @@ class AboutScreen(g: Game) : Screen(g) {
             ui.textO(c, e.name, x, y + 22 * dp,
                 ui.fit(e.name, 17f, width - 110 * dp, 11f), Ui.GOLD)
             ui.textO(c, e.owner, x, y + 44 * dp,
-                ui.fit(e.owner, 13f, width, 10f), Ui.TEXT)
+                ui.fit(e.owner, 13f, width - 110 * dp, 10f), Ui.TEXT)
             ui.textO(c, e.license, x, y + 65 * dp,
                 ui.fit(e.license, 13f, width, 10f), Ui.TEXT)
             ui.textO(c, e.url, x, y + 84 * dp,
