@@ -41,12 +41,14 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val newIdentity = btn(17)
     private val about = btn(19)
     private val advanced = btn(20)
+    private val backupExport = btn(21)
+    private val backupImport = btn(22)
     private var advancedExpanded = false
-    private val visibleRows = ArrayList<Button>(22)
+    private val visibleRows = ArrayList<Button>(24)
     private val soundRows = listOf(snd, music, sfxLevel, lang, vib, shakeBtn)
     private val personalRows = listOf(name, notifications, notifyHour)
     private val navigationRows = listOf(access, hintSettings, about)
-    private val technicalRows = listOf(quality, fps, showFps)
+    private val technicalRows = listOf(quality, fps, showFps, backupExport, backupImport)
 
     /** Kolejność jest stała na klatkę; lista zmienia się tylko przy przebudowie układu. */
     private fun rows(): List<Button> = visibleRows
@@ -69,13 +71,15 @@ class SettingsScreen(g: Game) : Screen(g) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; sfxLevel -> Icons.SPEAKER; music -> Icons.NOTE
         vib -> Icons.VIBRATE; shakeBtn -> Icons.BOMB; showFps -> Icons.BOLT; name -> Icons.PENCIL; notifications -> Icons.CALENDAR
         notifyHour -> Icons.HOURGLASS; playGames -> Icons.TROPHY; access -> Icons.PERSON; hintSettings -> Icons.BOOK
-        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; about -> Icons.BOOK; else -> Icons.RESTART
+        globalRank -> Icons.GLOBE; newIdentity -> Icons.RESTART; about -> Icons.BOOK
+        backupExport -> Icons.CHEST; backupImport -> Icons.BOOK; else -> Icons.RESTART
     }
     private fun labelKeyOf(b: Button) = when (b) {
         quality -> "quality"; fps -> "fps"; lang -> "language"; snd -> "sound"; sfxLevel -> "sfx_volume"; music -> "music_volume"; vib -> "vibration"; shakeBtn -> "screen_shake"
         showFps -> "show_fps"; name -> "name"; notifications -> "notifications"; notifyHour -> "notify_hour"
         access -> "accessibility"; hintSettings -> "hint_settings"
         globalRank -> "global_ranking"; newIdentity -> "global_identity"; about -> "about"
+        backupExport -> "profile_backup_export"; backupImport -> "profile_backup_import"
         else -> "play_games"
     }
     private val hourLabels = Array(24) { String.format(java.util.Locale.ROOT, "%02d:00", it) }
@@ -190,6 +194,8 @@ class SettingsScreen(g: Game) : Screen(g) {
         about.label = L["about_link"]
         advanced.label = L["settings_advanced"]
         advanced.selected = advancedExpanded
+        backupExport.label = L["profile_export_action"]
+        backupImport.label = L["profile_import_action"]
         globalRank.label = if (p.globalRanking) L["on"] else L["off"]
         globalRank.color = if (p.globalRanking) Ui.BTN_GREEN else Ui.BTN
         newIdentity.label = if (identityArmed > 0f) L["reset_confirm"] else L["global_new_id"]
@@ -318,6 +324,8 @@ class SettingsScreen(g: Game) : Screen(g) {
             }
             19 -> { g.push(AboutScreen(g)); return }
             20 -> { advancedExpanded = !advancedExpanded; layout(); return }
+            21 -> { g.host.requestProfileExport(); return }
+            22 -> { g.host.requestProfileImport(); return }
             17 -> {
                 if (p.playerId.isNotEmpty()) {
                     if (identityArmed > 0f) {
