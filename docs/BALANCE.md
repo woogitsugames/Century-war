@@ -459,3 +459,5 @@ powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
 **Wniosek dla pomiaru przed końcowym strojeniem:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
 
 - 2026-11-01 — regeneracja złotych powtórek: scalenie paczek 80–91 (limity 82, natychmiastowe złoto Zaopatrzenia obniżone do 15).
+
+- 2026-11-01 — regeneracja złotych powtórek: Nowe karty i motywy Endless, format zrzutu v14.
