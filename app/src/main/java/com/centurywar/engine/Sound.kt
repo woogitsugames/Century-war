@@ -91,7 +91,7 @@ class Sound(private val ctx: Context) {
     /** 0 = niezamówiony, 1 = zamówiony, 2 = obsłużony, 3 = błąd. */
     private val requested = AtomicIntegerArray(SAMPLE_COUNT)
     private val wake = java.lang.Object()
-    private val lastPlay = LongArray(COUNT)
+    private val gate = SfxRateGate(COUNT)
     private val pending = PendingSfx(COUNT)
     @Volatile private var released = false
     @Volatile var enabled = true
@@ -99,8 +99,7 @@ class Sound(private val ctx: Context) {
     private var budget = 0f
     private var lastBudgetAt = 0L
     private val variantCounter = IntArray(COUNT)
-    private val busyUntil = LongArray(10)
-    private var busyCursor = 0
+    private val mixer = SfxMix(10, SystemClock.elapsedRealtimeNanos().toInt())
 
     init {
         pool.setOnLoadCompleteListener { _, sampleId, status ->
@@ -169,33 +168,46 @@ class Sound(private val ctx: Context) {
         playLoaded(id, sid, vol, minGapMs, pitch, pan, priority, now)
     }
 
-    /** Wywołuj wyłącznie pod zamkiem Sound: także callback ładowania może zagrać próbkę. */
+    /** Wspólny budżet głosów i miękki limiter szczytów, bez alokacji i I/O. */
     private fun playLoaded(
         id: Int, sid: Int, vol: Float, minGapMs: Long,
         pitch: Float, pan: Float, priority: Int, now: Long,
     ) {
-        if (released || !enabled || now - lastPlay[id] < minGapMs) return
-        lastPlay[id] = now
-        variantCounter[id] = (variantCounter[id] + 1) and Int.MAX_VALUE
+        if (released || !enabled || !gate.allowed(id, now, minGapMs)) return
 
-        // Krótkie okno obciążeń miksu: tłumimy drobne dźwięki zamiast ścinać wybuchy.
         budget = (budget - (now - lastBudgetAt).coerceIn(0L, 500L) * 0.02f).coerceAtLeast(0f)
         lastBudgetAt = now
         val quiet = if (priority >= 3) 1f else (1f - budget / 3.4f).coerceIn(0.26f, 1f)
-        // Oszacowanie głosów już wybrzmiewających; nowy głos oddaje im zapas miksu.
-        var overlapping = 0
-        for (until in busyUntil) if (until > now) overlapping++
-        val gain = (vol * volume * quiet * 0.42f / (1f + 0.55f * overlapping)).coerceIn(0f, 0.38f)
+        val gain = (vol * volume * quiet * 0.42f).coerceIn(0f, 0.38f)
         if (gain < 0.01f) return
+
+        // Ziarno pochodzi z zegara audio, a nie z symulacji ani powtórek.
+        val speed = (pitch * mixer.pitchJitter()).coerceIn(0.5f, 2f)
+        val duration = (SoundSynth.duration(id) * 1_000f / speed).toLong().coerceAtLeast(1L)
+        val slot = mixer.reserve(now, duration, gain, pan, priority)
+        if (slot < 0) return
+
+        val displaced = mixer.displacedStream
+        if (displaced > 0) pool.stop(displaced)
+        updatePlayingVolumes()
+        val stream = pool.play(sid, mixer.left(slot), mixer.right(slot), priority, 0, speed)
+        if (stream <= 0) {
+            mixer.cancel(slot)
+            updatePlayingVolumes()
+            return
+        }
+        mixer.attach(slot, stream)
+        gate.played(id, now)
+        variantCounter[id] = (variantCounter[id] + 1) and Int.MAX_VALUE
         budget = (budget + gain * (if (priority >= 3) 0.65f else 1f)).coerceAtMost(5f)
-        val jitter = 1f + ((variantCounter[id] % 5) - 2) * 0.006f
-        val lr = pan.coerceIn(-1f, 1f)
-        val left = gain * (1f - lr.coerceAtLeast(0f))
-        val right = gain * (1f + lr.coerceAtMost(0f))
-        val speed = (pitch * jitter).coerceIn(0.5f, 2f)
-        busyUntil[busyCursor] = now + (SoundSynth.duration(id) * 1_000f / speed).toLong()
-        busyCursor = (busyCursor + 1) % busyUntil.size
-        pool.play(sid, left, right, priority, 0, speed)
+    }
+
+    /** Aktualizuje również wcześniej uruchomione strumienie przy pojawieniu się wybuchu. */
+    private fun updatePlayingVolumes() {
+        for (i in 0 until mixer.capacity) {
+            val stream = mixer.stream(i)
+            if (stream > 0) pool.setVolume(stream, mixer.left(i), mixer.right(i))
+        }
     }
 
     fun release() {
@@ -240,13 +252,13 @@ class Sound(private val ctx: Context) {
                         if (sid > 0) ids.set(next, sid)
                         else {
                             requested.set(next, 3)
-                            pending.clear(next)
+                            pending.clear(next / VARIANTS)
                         }
                     }
                 } catch (e: Exception) {
                     synchronized(this) {
                         requested.set(next, 3)
-                        pending.clear(next)
+                        pending.clear(next / VARIANTS)
                     }
                     android.util.Log.w("CenturyWar", "sfx sample $next failed", e)
                 }
