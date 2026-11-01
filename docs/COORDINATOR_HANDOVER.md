@@ -148,3 +148,12 @@ Wersja release (R8) sprawdzona na telefonie, Play Games z prawdziwymi ID, wdroż
 - Potem: pełne testy, push na `main` + `claude/bold-sagan-vwz5gm`, APK dla właściciela, zip fali 2 (140 stopnie wież + 135 sklep), następnie fala 3 (125 dowódca), fala 4 (136 tłumaczenia).
 - Środowisko: init Gradle musi dodać mirror GCS na początek `pluginManagement` + `gradlePluginPortal()` (buildSrc); pełne testy app trwają teraz ok. 7 min (`forkEvery=0` z 131).
 - Pytanie otwarte do właściciela: muzyka z Suno (zaproponowano próbkę: menu + jedna epoka w wersji spokojnej i bojowej, ścieżki stem lub dwie wersje; licencja płatnego planu).
+
+## Decyzje właściciela (1.11.2026, wieczór) i tryb nocny
+- Tura 8 po zielonych testach: wolno wypchnąć na `main` i `claude/bold-sagan-vwz5gm` bez pytania.
+- Ostrzał: celownik gracza omija własną linię (zlecone agentowi UI jako G). Symulacja i tak nie rani swoich (`BarrageFriendlyFireTest`).
+- Limit armii wroga zostaje 12.
+- Elity: w kampanii/potyczce wróg ma elity tylko gdy gracz (zlecone agentowi balansu); gra ma tłumaczyć, jak odblokować elity (agent UI, F, `part141()`); baner awansu (C, `part139()`).
+- Muzyka: opisy Suno dla wszystkich epok w `docs/music/SUNO_PROMPTS.md`; zlecenie 142 (wgranie) czeka na pliki w `music-src/`.
+- Stopnie wież: zlecenie 140 (fala 2 razem z 135), dowódca 125 w fali 3, tłumaczenia 136 w fali 4.
+- Zaplanowane zadanie „Century War: nocne wznawianie pracy” co godzinę wznawia tę sesję (wyłączyć rano, gdy niepotrzebne).
