@@ -394,8 +394,8 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         val wave = sin(time * 5f + s.index) * 6f
         val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
         val flagDir = if (b.weather == Weather.WIND) b.windDirection() * s.dir else 1f
-        if (s.index == 0) {
-            // Sztandar zatrzaśnięty przy tworzeniu renderera; powtórki używają wariantu 0.
+        if (s.index == 0 && bannerId != 0) {
+            // Wariant 0 zachowuje dotychczasową flagę oraz wzorce zrzutów.
             banners.draw(c, bannerId, fx0, flagTop, 70f, 40f, flagDir, wave, wave2, team)
         } else {
             val fp = pen.path
