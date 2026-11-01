@@ -795,10 +795,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         d.variant >= 0 && (d.role == Role.HEAVY || d.role == Role.ELITE)
 
     private fun variantMachineWidth(d: UnitDef) = when (d.art) {
-        EraArt.COMBUSTION -> if (d.role == Role.ELITE) 136f else 118f
-        EraArt.GALVANIC -> if (d.role == Role.ELITE) 118f else 120f
-        EraArt.SWARM -> if (d.role == Role.ELITE) 132f else 112f
-        EraArt.BIOTECH -> if (d.role == Role.ELITE) 122f else 114f
+        EraArt.COMBUSTION -> if (d.role == Role.ELITE) 134f else 96f
+        EraArt.GALVANIC -> if (d.role == Role.ELITE) 118f else 94f
+        EraArt.SWARM -> if (d.role == Role.ELITE) 96f else 112f
+        EraArt.BIOTECH -> if (d.role == Role.ELITE) 96f else 114f
         else -> 104f
     }
 
