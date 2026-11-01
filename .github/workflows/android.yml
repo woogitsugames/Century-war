@@ -100,6 +100,9 @@ jobs:
             exit 1
           fi
       - name: Testy szybkie i pomiar czasu
+        env:
+          SFX_PREVIEW: 'true'
+          MUSIC_PREVIEW: 'true'
         run: |
           set -euo pipefail
           started=$(date +%s)
@@ -123,6 +126,17 @@ jobs:
             server/build/test-results/test/
             ci-test-fast.duration
             ci-test-fast.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Podglądy dźwięków i muzyki
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cw-fast-audio-previews
+          path: |
+            app/build/music/*.wav
+            app/build/sfx/*.wav
           if-no-files-found: warn
           retention-days: 14
 
