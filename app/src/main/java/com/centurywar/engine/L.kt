@@ -1308,6 +1308,8 @@ object L {
         "replay_from_friend" to t("Od znajomego", "From a friend", "Von Freunden", "De un amigo", "D'un ami", "Da un amico", "De um amigo", "Від друга", "Van een vriend", "Arkadaştan"),
         "replay_import_ok" to t("Powtórka od znajomego została dodana", "Friend's replay imported", "Wiederholung importiert", "Repetición importada", "Replay importé", "Replay importato", "Repetição importada", "Повтор друга імпортовано", "Herhaling geïmporteerd", "Arkadaşın tekrarı aktarıldı"),
         "replay_import_failed" to t("Powtórka jest nieprawidłowa lub niezgodna z wersją gry", "Replay is invalid or incompatible", "Wiederholung ungültig oder inkompatibel", "Repetición dañada o incompatible", "Replay invalide ou incompatible", "Replay non valido o incompatibile", "Repetição inválida ou incompatível", "Повтор пошкоджено або несумісний", "Herhaling ongeldig of incompatibel", "Tekrar geçersiz veya uyumsuz"),
+    )
+
     /** Zlecenie 68: zapowiedzi dziewięciu epok w dziesięciu językach. */
     private fun part68(): Array<Pair<String, Array<out String>>> = arrayOf(
         "era_intro_enabled" to t("Pokazuj zapowiedzi epok", "Show era introductions", "Epochen-Einführungen zeigen", "Mostrar introducciones de eras", "Afficher les introductions des ères", "Mostra introduzioni delle epoche", "Mostrar introduções das eras", "Показувати вступи до епох", "Toon tijdperkintroducties", "Çağ tanıtımlarını göster"),
@@ -1337,6 +1339,8 @@ object L {
         "d_siege_masters_d" to t("+18% obrażeń ciężkich jednostek przeciw bazom", "+18% heavy-unit damage to bases", "+18% Basisschaden durch schwere Einheiten", "+18% de daño de tropas pesadas a bases", "+18% de dégâts aux bases par les unités lourdes", "+18% danni alle basi dalle unità pesanti", "+18% dano de unidades pesadas contra bases", "+18% шкоди базам від важких бійців", "+18% schade aan bases door zware eenheden", "Ağır birliklerin üslere hasarı +%18"),
         "d_vigilance" to t("Czujność", "Vigilance", "Wachsamkeit", "Vigilancia", "Vigilance", "Vigilanza", "Vigilância", "Пильність", "Waakzaamheid", "Teyakkuz"),
         "d_vigilance_d" to t("+18% zasięgu wież; wrogowie widoczni we mgle", "+18% turret range; enemies visible in fog", "+18% Turmreichweite; Gegner im Nebel sichtbar", "+18% alcance de torres; enemigos visibles en niebla", "+18% de portée des tours ; ennemis visibles dans le brouillard", "+18% portata torri; nemici visibili nella nebbia", "+18% alcance de torres; inimigos visíveis no nevoeiro", "+18% дальності веж; ворогів видно в тумані", "+18% torenbereik; vijanden zichtbaar in mist", "Kule menzili +%18; sisten düşmanlar görünür"),
+    )
+
     // --- zlecenie 71: dodatkowe karty Endless
     private fun part71(): Array<Pair<String, Array<out String>>> = arrayOf(
         "ec_supply_line" to t("Szlaki zaopatrzenia", "Supply routes", "Nachschublinien", "Rutas de suministro", "Routes de ravitaillement", "Vie di rifornimento", "Rotas de abastecimento", "Шляхи постачання", "Aanvoerlijnen", "İkmal yolları"),
@@ -1355,6 +1359,8 @@ object L {
         "ec_ember_forge_d" to t("Wieże +10% obrażeń, kolejne +10% przeciw podpalonym.", "Turrets +10% damage; another +10% vs burning foes.", "Türme +10% Schaden, weitere +10% gegen Brennende.", "Torretas +10% daño, otro +10% contra enemigos en llamas.", "Tourelles +10% dégâts, encore +10% contre les ennemis brûlés.", "Torri +10% danni, altri +10% contro bersagli in fiamme.", "Torres +10% dano, mais +10% contra inimigos em chamas.", "Вежі +10% шкоди, ще +10% по палаючих ворогах.", "Torens +10% schade, nog +10% tegen brandende vijanden.", "Kuleler %10 hasar, yanan düşmanlara ek %10."),
         "ec_citadel_heart" to t("Serce cytadeli", "Citadel heart", "Herz der Zitadelle", "Corazón de la ciudadela", "Cœur de la citadelle", "Cuore della cittadella", "Coração da cidadela", "Серце цитаделі", "Hart van de citadel", "Hisarın kalbi"),
         "ec_citadel_heart_d" to t("Co falę +1% napraw, +1% za Bastion, Fortecę i Ekipy naprawcze.", "Repair +1% per wave, +1% per Bulwark, Fortress or Repair Crew.", "+1% Reparatur je Welle, +1% je Bollwerk, Festung oder Reparaturteam.", "+1% reparación por oleada, +1% por Bastión, Fortaleza o Reparadores.", "+1% réparation par vague, +1% par Bastion, Forteresse ou Réparateurs.", "+1% riparazione per ondata, +1% per Bastione, Fortezza o Riparatori.", "+1% reparação por onda, +1% por Bastião, Fortaleza ou Reparadores.", "+1% ремонту за хвилю, +1% за Бастіон, Фортецю чи Ремонтників.", "+1% herstel per golf, +1% per Bolwerk, Vesting of Reparatieploeg.", "Dalga başına %1 onarım, Siper, Kale veya Onarım Ekibi başına %1."),
+    )
+
     // --- zlecenie 70: reguły bitew
     private fun part70(): Array<Pair<String, Array<out String>>> = arrayOf(
         "m_shortday" to t("8 minut", "8 minutes", "8 Minuten", "8 minutos", "8 minutes", "8 minuti", "8 minutos", "8 хвилин", "8 minuten", "8 dakika"),
@@ -1369,6 +1375,8 @@ object L {
         "sk_moddesc_11" to t("Obie strony zaczynają z rangą weteranów 2.", "Both sides start with veteran rank 2.", "Beide Seiten starten mit Veteranenrang 2.", "Ambos bandos empiezan con rango veterano 2.", "Les deux camps commencent au rang vétéran 2.", "Entrambe le parti iniziano al grado veterano 2.", "Ambos os lados começam com patente veterana 2.", "Обидві сторони починають із рангом ветерана 2.", "Beide kanten beginnen met veteranenrang 2.", "İki taraf da gazi rütbesi 2 ile başlar."),
         "sk_moddesc_12" to t("Wieże kosztują +60%, ale zadają +40% obrażeń.", "Towers cost 60% more but deal 40% more damage.", "Türme kosten 60 % mehr, verursachen 40 % mehr Schaden.", "Las torres cuestan un 60 % más y dañan un 40 % más.", "Tours : coût +60 %, dégâts +40 %.", "Torri: costo +60 %, danni +40 %.", "Torres: custo +60 %, dano +40 %.", "Вежі дорожчі на 60 %, але завдають на 40 % більше шкоди.", "Torens kosten 60 % meer en doen 40 % meer schade.", "Kuleler %60 pahalı, %40 daha çok hasar verir."),
         "sk_moddesc_13" to t("Co 60 s obie strony dostają darmową losową jednostkę.", "Every 60 s both sides get a free random unit.", "Alle 60 s erhalten beide Seiten eine zufällige Einheit gratis.", "Cada 60 s ambos bandos reciben una unidad aleatoria gratis.", "Toutes les 60 s, chaque camp reçoit une unité aléatoire gratuite.", "Ogni 60 s, entrambi ricevono un'unità casuale gratis.", "A cada 60 s, ambos os lados ganham uma unidade aleatória.", "Кожні 60 с обидві сторони отримують випадкового бійця.", "Elke 60 s krijgen beide kanten een gratis willekeurige eenheid.", "Her 60 sn iki taraf da rastgele ücretsiz birlik alır."),
+    )
+
     /** Nazwy i opisy sześciu zdarzeń wyzwania dnia (10 języków). */
     private fun part72(): Array<Pair<String, Array<out String>>> = arrayOf(
         "day_marksmen" to t("Dzień strzelców", "Marksmen Day", "Tag der Schützen", "Día de tiradores", "Jour des tireurs", "Giorno dei tiratori", "Dia dos atiradores", "День стрільців", "Schuttersdag", "Nişancı Günü"),

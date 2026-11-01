@@ -135,7 +135,7 @@ object BattleSnapshot {
         return out.toByteArray()
     }
 
-    internal fun writeConfig(o: DataOutputStream, c: BattleConfig) {
+    fun writeConfig(o: DataOutputStream, c: BattleConfig) {
         o.writeByte(c.mode.ordinal)
         o.writeLong(c.seed)
         o.writeFloat(c.aiPower)
