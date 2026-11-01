@@ -40,10 +40,11 @@ def discover(root: Path = TEST_ROOT) -> list[Source]:
             code,
         )
         methods = re.findall(
-            r"@Test(?:\([^)]*\))?\s+(?:(?:internal|public)\s+)?fun\s+([A-Za-z_]\w*)\s*\(",
+            r"@Test(?:\([^)]*\))?\s*(?:@[^\n]*\n\s*)*(?:(?:internal|public)\s+)?fun\s+([A-Za-z_]\w*)\s*\(",
             code,
         )
-        if package is None or len(classes) != 1 or not methods:
+        annotation_count = len(re.findall(r"(?m)^\\s*@Test\\b", code))
+        if package is None or len(classes) != 1 or len(methods) != annotation_count:
             raise ValueError(f"Nie można odczytać klasy/metod @Test: {path}")
         name = f"{package.group(1)}.{classes[0]}"
         if any(source.name == name for source in result):
