@@ -122,7 +122,7 @@ class SimBalanceCaps82Test {
         val p = b.player
         val before = p.gold
         b.applyDoctrine(p, Doctrine.SUPPLY)
-        assertEquals(before + 250f * Defs.costScale(p.era), p.gold, 0.0001f)
+        assertEquals(before + Battle.SUPPLY_INSTANT_GOLD * Defs.costScale(p.era), p.gold, 0.0001f)
         assertEquals(60f, p.supplyUntil, 0.0001f)
     }
 
