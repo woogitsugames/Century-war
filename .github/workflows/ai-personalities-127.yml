@@ -169,6 +169,10 @@ jobs:
     needs: campaign
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -221,6 +225,15 @@ jobs:
           if abs(delta) > 5:
               raise SystemExit('Średnia trudność poza tolerancją ±5 pp')
           PY
+      - name: Opublikuj pełną tabelę kampanii w PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s ai127-balance-comparison.md ]; then
+            cat ai127-balance-comparison.md >> "$GITHUB_STEP_SUMMARY"
+            gh pr comment 127 --repo "${{ github.repository }}" --body-file ai127-balance-comparison.md
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
