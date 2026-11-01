@@ -1,53 +1,53 @@
-# Century War — kwestionariusz klasyfikacji treści IARC
+# Century War — odpowiedzi do ankiety klasyfikacji treści IARC
 
-**Audyt:** 31 października 2026 r. Dotyczy obecnej zawartości gry, lokalnych przypomnień i kodu integracji Google Play Games. **Ostateczna klasyfikacja wieku jest nadawana przez IARC**, a brzmienie pytań może się zmieniać. W kodzie bazowym identyfikatory PGS pozostają REPLACE_ME — udostępnienie tablic sieciowych wymaga konfiguracji.
+**Stan przygotowania:** 1 listopada 2026 r. **Osoba odpowiedzialna za zatwierdzenie formularza i danych wydawcy:** [OWNER_INPUT.md](OWNER_INPUT.md). Wiek docelowy i wynik klasyfikacji (PEGI, ESRB i inne) ustala ankieta IARC; nie wpisujemy z góry konkretnej kategorii.
 
-## Przemoc i zawartość
+## Charakter gry i przedstawienie przemocy
 
-Century War to kreskówkowa strategia 2D, w której armie walczą o jeden front. Postacie używają broni białej, dystansowej, wież i ostrzałów specjalnych. Jednostki giną, a bazy mogą zostać zniszczone. Grafika jest stylizowana; brak krwi, okaleczeń i realistycznych obrażeń **trzeba potwierdzić w końcowym buildzie**.
+Century War jest kreskówkową strategią 2D, w której stylizowane armie walczą na jednym froncie. Jednostki używają broni białej i dystansowej, dział, wież oraz ataków specjalnych. Giną wojownicy i niszczone są bazy, ale grafika nie ma realistycznego charakteru. **W ankiecie zaznacz obecność przemocy:** regularna walka nie staje się „brakiem przemocy” tylko z powodu stylu rysunkowego.
 
-**Nie wybieraj „brak przemocy”**: regularne walki postaci i niszczenie baz stanowią przemoc również bez krwi.
-
-## Odpowiedzi robocze
-
-| Zagadnienie IARC | Odpowiedź i uzasadnienie |
+| Kategoria pytania | Odpowiedź przygotowana dla opisanego wydania |
 |---|---|
-| Rodzaj aplikacji | **Gra** — strategia |
-| Przemoc / walka | **Tak** — regularne starcia armii |
-| Rodzaj przemocy | **Stylizowana, kreskówkowa** — elementy historyczne i futurystyczne |
-| Postacie przypominające ludzi | **Tak** — część jednostek to stylizowani wojownicy |
-| Broń i ataki | **Tak** — broń biała, dystansowa, wieże i ataki specjalne |
-| Krew, gore, okaleczenia | **Nie**, jeśli końcowe animacje nie dodają takich elementów |
-| Horror / sceny przerażające | **Nie**, do kontroli w finalnym wydaniu |
-| Seks, nagość, erotyka | **Nie** |
-| Wulgaryzmy / mowa nienawiści w treściach gry | **Nie**, po kontroli tłumaczeń; **pseudonimy Google** mogą pochodzić spoza gry |
-| Narkotyki, alkohol, tytoń | **Nie**, po kontroli elementów wszystkich epok |
-| Hazard i loot boxy | **Nie** w aktualnym projekcie |
-| Czat, wiadomości między użytkownikami, wymiana plików | **Nie** — brak takich funkcji w grze |
-| Multiplayer / wspólna rozgrywka | **Nie** — wyniki mogą być porównywane, ale bitwy nie są rozgrywane między graczami |
-| Rankingi z widocznymi pseudonimami | **Tak, warunkowo:** po uruchomieniu PGS na jego tablicach wyników mogą być widoczne **nazwy graczy z profili Google**, awatary i wyniki, zgodnie z ustawieniami widoczności kont; gracz nie wysyła wiadomości ani swobodnych tekstów przez Century War |
-| „Users Interact” / interakcje użytkowników | **[DO DECYZJI]** Dla samego czatu/komunikacji odpowiedź brzmi **Nie**. Jeśli bieżąca ankieta uwzględnia możliwość oglądania nazw i wyników innych graczy lub niekontrolowane treści profili jako interakcję/UGC, należy ujawnić taką funkcję. Nie wpisywać automatycznie „Nie” bez sprawdzenia dokładnego pytania i wytycznych IARC/ESRB |
-| Publiczne treści tworzone przez użytkowników | **Ograniczone do profilu Google i wyników PGS, jeśli funkcja włączona**; brak postów, komentarzy, czatu i publikowania własnych materiałów przez aplikację. **[DO DECYZJI]** Czy publiczny pseudonim/awatar PGS wymaga zaznaczenia konkretnego pola UGC w obecnej ankiecie |
-| Udostępnianie lokalizacji innym użytkownikom („Shares Location”) | **Nie** — brak udostępniania lokalizacji, brak mapy graczy, brak uprawnienia lokalizacyjnego i brak funkcji wysyłania współrzędnych |
-| Swobodny dostęp do internetu / wbudowana przeglądarka | **Nie** — połączenie PGS nie umożliwia przeglądania dowolnych stron |
-| Reklamy w aplikacji | **Nie** — brak mechanizmu reklam w kodzie |
-| Zakupy w aplikacji | **Nie** — brak Play Billing |
+| Rodzaj produktu | Gra — strategia czasu rzeczywistego, rozgrywka w pojedynczym pasie |
+| Przemoc / walka | Tak — walki armii w każdej bitwie |
+| Forma przemocy | Kreskówkowa, stylizowana, wobec postaci przypominających ludzi i fantastycznych jednostek |
+| Broń | Tak — broń biała, dystansowa, wieże i ataki specjalne |
+| Krew, gore, okaleczenia | Nie w opisanej obecnej oprawie; upewnij się, że końcowe animacje nie dodają krwi ani realistycznych obrażeń |
+| Horror / przerażające sceny | Nie w opisanej zawartości gry |
+| Seks, nagość, erotyka | Nie |
+| Wulgaryzmy we własnych tekstach gry | Nie; **zewnętrzne pseudonimy** mogą zawierać niedozwolone słowa i nie są tworzone przez redakcję gry |
+| Alkohol, tytoń, narkotyki | Nie w przedstawionej zawartości, sprawdź nowe epoki przed wysłaniem ankiety |
+| Hazard, zakłady, loot boxy | Nie w aktualnej wersji |
+| Reklamy w aplikacji | Nie — brak integracji reklamowej |
+| Zakupy w aplikacji | Nie — brak Play Billing |
+| Bezpośrednia rozgrywka wieloosobowa | Nie — bitwy są rozgrywane lokalnie, a wynik można porównywać online |
+| Czat, prywatne wiadomości, wymiana plików | Nie — brak tych funkcji |
+| Publiczne treści użytkowników | **Tak, ograniczone**: nazwy/awatary profili Play Games i wyniki; po uruchomieniu własnego rankingu także nicki samodzielnie wybrane przez graczy |
+| Interakcje użytkowników / „Users Interact” | **Ujawnij możliwość zobaczenia treści innych graczy** (pseudonimów i wyników). Gdy pytanie rozróżnia komunikację bezpośrednią, wskaż brak czatu i wiadomości. Nie zaznaczaj automatycznie „brak interakcji”, bo nicki są publiczne |
+| Zgłaszanie obraźliwych nicków | **Po wdrożeniu zlecenia 80:** przytrzymanie wpisu własnego rankingu otwiera „Zgłoś nick”; formularz przesyła publiczne ID wpisu i powód zgłoszenia. Zgłoszenia są przeznaczone dla moderatora, nie są publicznym czatem |
+| Udostępnianie lokalizacji innym użytkownikom („Shares Location”) | Nie — gra nie udostępnia współrzędnych ani lokalizacji graczy |
+| Swobodny dostęp do internetu / przeglądanie stron | Nie — usługi rankingu i zapisów chmurowych nie są przeglądarką internetową |
 
-**Ważne rozróżnienie:** internetowy ranking porównawczy jest funkcją społecznościową, ale **nie jest automatycznie czatem**. ESRB opisuje „Users Interact” w kontekście narażenia na niefiltrowane treści użytkowników i komunikacji. Nie da się rozstrzygnąć tej etykiety wyłącznie na podstawie faktu użycia SDK; sprawdź dokładny wariant ankiety pokazany w Play Console. Pseudonim lokalny w kopii chmurowej nie staje się przez to publicznym pseudonimem na tablicy PGS.
+## Zasady oceny funkcji społecznościowych
+
+**Dwie odrębne usługi rankingowe:**
+
+1. **Google Play Games:** po konfiguracji ID i uwierzytelnieniu widoczne są wyniki oraz nazwa/awatar publicznego profilu Google zgodnie z ustawieniami widoczności. Lokalny pseudonim zapisywany w chmurze nie jest automatycznie publicznym pseudonimem Play Games.
+2. **Własny ranking wydawcy:** przy skonfigurowanym serwerze i zgodzie użytkownika możliwe jest wyświetlanie pseudonimu wybranego w grze. Po realizacji zlecenia 80 do publicznego API nie powinien trafiać surowy UUID, a gracze mają mieć możliwość zgłoszenia obraźliwego pseudonimu. Brak integracji zadania 80 w finalnym AAB wymaga przeprowadzenia ankiety według funkcji rzeczywiście dostępnych — nie deklaruj nieistniejącego przycisku zgłaszania.
+
+**Rozróżnienie:** publiczne pseudonimy są ograniczoną treścią tworzoną przez użytkownika, lecz nie oznaczają istnienia czatu. Jeśli aktualny formularz IARC/ESRB pokazuje odrębne pola „Users Interact”, „User Generated Content” lub „Shares Location”, wypełnij je zgodnie z dosłownymi definicjami; zgłoś pseudonimy i możliwość ich moderacji tam, gdzie formularz obejmuje widoczność treści innych graczy.
 
 ## Kontrola przed wysłaniem ankiety
 
-1. Obejrzyj rozgrywkę ze **wszystkich 9 epok**, animacje obrażeń, śmierci, ataków specjalnych, bossów i niszczenia baz — również w aktualizacji po pracach graficznych.
-2. Skontroluj etykiety i teksty w 10 językach, a także zewnętrzne elementy PGS (profil gracza, tablice, widoczność pseudonimów).
-3. Potwierdź konfigurację PGS w finalnym AAB. Jeśli wydanie nie ma działających rankingów Google, odpowiedzi dotyczące ich publiczności muszą odpowiadać **faktycznie dystrybuowanej wersji**.
-4. Przejrzyj bieżące pytania o komunikację, interakcje, treści użytkowników i lokalizację. W razie niejasności zakresu „Users Interact” wybierz interpretację zgodną z wytycznymi IARC i odnotuj uzasadnienie. Sam fakt braku czatu nie eliminuje publicznych nazw profilowych.
-5. Nie zakładaj z góry PEGI 3, PEGI 7, ESRB Everyone ani innego wyniku. Zapisz przyznane kategorie dla rynków docelowych i porównaj je z materiałami sklepowymi.
-6. **Ponów ankietę po zleceniu 23**, gdy zostanie włączony własny serwer rankingu; ponów też po wdrożeniu czatu, PvP, swobodnej treści od graczy, zmian przemocy, reklam lub zakupów.
-
-**IARC to odrębny proces od wyboru grupy docelowej** i obowiązków dotyczących dzieci w Google Play. Ewentualne reklamy i ograniczenia programu Families należy ocenić osobno, jeśli zostaną wprowadzone.
+1. Obejrzyj najnowszą rozgrywkę ze wszystkich epok, w tym walki, animacje śmierci, bossów i niszczenie baz. Zweryfikuj brak krwi, realistycznych ran, treści wulgarnych i narkotyków.
+2. Sprawdź polskie i obcojęzyczne teksty oraz elementy dostarczane przez PGS (nazwa i awatar gracza, publiczne rankingi).
+3. W finalnym AAB potwierdź, czy działają PGS i własny ranking. Po scaleniu zlecenia 80 sprawdź faktyczne działanie zgłaszania nicków i moderacji, nie tylko obecność endpointu w repo.
+4. Odpowiedz zgodnie z faktycznym zakresem komunikacji i treści użytkowników, także jeśli nie ma wiadomości bezpośrednich.
+5. Zapisz rzeczywiste wyniki klasyfikacji dla rynków docelowych i porównaj je z opisem w sklepie. Klasyfikacja IARC nie zastępuje oceny odbiorców dziecięcych i deklaracji Google Play Families.
+6. Ponów ankietę po włączeniu własnego rankingu, czatu, PvP, możliwości publikacji swobodnych tekstów, reklam, zakupów albo zmianie zawartości przemocy.
 
 ## Źródła
 
-- IARC i wymogi Google Play: https://support.google.com/googleplay/android-developer/answer/9859655
-- Przewodnik ESRB — „Users Interact” i „Shares Location”: https://www.esrb.org/ratings-guide/
-- PGS — publiczność profilu i udostępnianie danych: https://developer.android.com/games/pgs/data-collection
+- Google Play — klasyfikacja treści: https://support.google.com/googleplay/android-developer/answer/9859655
+- ESRB — „Users Interact”, „Shares Location”: https://www.esrb.org/ratings-guide/
+- Google PGS — widoczność profilu i zbieranie danych: https://developer.android.com/games/pgs/data-collection
