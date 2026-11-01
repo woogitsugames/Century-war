@@ -757,14 +757,19 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1,
-                     walk: Float = 0f, atk: Float = 0f, hitAge: Float = -1f, dying: Float = -1f) {
+                     walk: Float = 0f, atk: Float = 0f, hitAge: Float = -1f, dying: Float = -1f,
+                     widthLimit: Float = Float.POSITIVE_INFINITY) {
         if (!poseOverride) {
             val intensity = if (walk == 0f) 0f else 1f
             men.stride = intensity; men.windup = -1f
             mach.stride = intensity; mach.windup = -1f
             mach.phase = (def.era * 41 + def.role.ordinal * 67) * 0.017453293f
         }
-        val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
+        val preferredScale = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
+        // W czterech slotach karty maszynę ogranicza także szerokość, nie tylko wysokość.
+        val sc = if (widthLimit.isFinite() && widthLimit > 0f)
+            min(preferredScale, widthLimit / (unitWidth(def) * def.size + 8f))
+        else preferredScale
         val save = alpha
         alpha = 1f
         val savedCv = if (pen.cvReady()) pen.cv else null
@@ -785,19 +790,47 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         alpha = save
     }
 
-    private fun unitWidth(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
-        Body.VEHICLE -> if (d.role == Role.ELITE && d.art == EraArt.STEEL) 130f else 104f; Body.HOVER -> 96f
-        Body.MECH -> if (d.art == EraArt.ORBITAL) 100f else 74f; Body.SIEGE -> 100f; else -> 92f
+    /** Rzeczywiste obrysy ośmiu maszyn, łącznie z lufą i poświatą ataku. */
+    private fun isVariantMachine(d: UnitDef) =
+        d.variant >= 0 && (d.role == Role.HEAVY || d.role == Role.ELITE)
+
+    private fun variantMachineWidth(d: UnitDef) = when (d.art) {
+        EraArt.COMBUSTION -> if (d.role == Role.ELITE) 136f else 118f
+        EraArt.GALVANIC -> if (d.role == Role.ELITE) 118f else 120f
+        EraArt.SWARM -> if (d.role == Role.ELITE) 132f else 112f
+        EraArt.BIOTECH -> if (d.role == Role.ELITE) 122f else 114f
+        else -> 104f
     }
 
-    private fun iconShift(d: UnitDef) = when (d.body) {
+    private fun unitWidth(d: UnitDef): Float {
+        if (isVariantMachine(d)) return variantMachineWidth(d)
+        return when (d.body) {
+            Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
+            Body.VEHICLE -> if (d.role == Role.ELITE && d.art == EraArt.STEEL) 130f else 104f
+            Body.HOVER -> 96f
+            Body.MECH -> if (d.art == EraArt.ORBITAL) 100f else 74f
+            Body.SIEGE -> 100f; else -> 92f
+        }
+    }
+
+    private fun iconShift(d: UnitDef) = if (isVariantMachine(d)) 0f else when (d.body) {
         Body.HUMAN -> 4f; Body.VEHICLE -> 6f; Body.SIEGE -> 4f; Body.CANNON -> 0f; else -> 8f
     }
 
-    private fun unitHeight(d: UnitDef) = when (d.body) {
-        Body.HUMAN -> 68f; Body.BEAST -> if (d.role == Role.ELITE) (if (d.art == EraArt.BRONZE) 120f else 92f) else 80f
-        Body.MECH -> if (d.art == EraArt.ORBITAL) 120f else 96f; Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+    private fun unitHeight(d: UnitDef): Float {
+        if (isVariantMachine(d)) return when (d.art) {
+            EraArt.COMBUSTION -> if (d.role == Role.ELITE) 90f else 77f
+            EraArt.GALVANIC -> if (d.role == Role.ELITE) 77f else 100f
+            EraArt.SWARM -> 78f
+            EraArt.BIOTECH -> if (d.role == Role.ELITE) 115f else 86f
+            else -> 96f
+        }
+        return when (d.body) {
+            Body.HUMAN -> 68f
+            Body.BEAST -> if (d.role == Role.ELITE) (if (d.art == EraArt.BRONZE) 120f else 92f) else 80f
+            Body.MECH -> if (d.art == EraArt.ORBITAL) 120f else 96f
+            Body.VEHICLE -> 66f; Body.HOVER -> 54f; Body.SIEGE -> 92f; else -> 46f
+        }
     }
 
     // ---------------------------------------------------------------- pociski
