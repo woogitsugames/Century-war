@@ -123,6 +123,7 @@ object L {
         putAll(part89())
         putAll(part84())
         putAll(part87())
+        putAll(part107())
     }
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
@@ -1470,4 +1471,19 @@ object L {
         "battle84_cause_eco" to t("Zdobyto %d złota, wróg %d", "Gold earned: %d, enemy: %d", "Gold verdient: %d, Feind: %d", "Oro ganado: %d, enemigo: %d", "Or gagné : %d, ennemi : %d", "Oro guadagnato: %d, nemico: %d", "Ouro ganho: %d, inimigo: %d", "Здобуто золота: %d, ворог: %d", "Goud verdiend: %d, vijand: %d", "Kazanılan altın: %d, düşman: %d"),
     )
 
+
+    /** Zlecenie 107: kopie profilu w 10 językach. */
+    private fun part107(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "profile_backup_export" to t("Zapis profilu do pliku", "Save profile to file", "Profil in Datei speichern", "Guardar perfil en archivo", "Enregistrer le profil", "Salva profilo su file", "Guardar perfil em ficheiro", "Зберегти профіль у файл", "Profiel opslaan als bestand", "Profili dosyaya kaydet"),
+        "profile_backup_import" to t("Odczyt profilu z pliku", "Load profile from file", "Profil aus Datei laden", "Cargar perfil desde archivo", "Charger le profil", "Carica profilo da file", "Carregar perfil de ficheiro", "Завантажити профіль із файлу", "Profiel uit bestand laden", "Profili dosyadan yükle"),
+        "profile_export_action" to t("Eksport", "Export", "Export", "Exportar", "Exporter", "Esporta", "Exportar", "Експорт", "Export", "Dışa aktar"),
+        "profile_import_action" to t("Import", "Import", "Import", "Importar", "Importer", "Importa", "Importar", "Імпорт", "Import", "İçe aktar"),
+        "profile_export_ok" to t("Profil zapisany do pliku", "Profile saved to file", "Profil gespeichert", "Perfil guardado", "Profil enregistré", "Profilo salvato", "Perfil guardado", "Профіль збережено", "Profiel opgeslagen", "Profil kaydedildi"),
+        "profile_export_failed" to t("Nie udało się wyeksportować profilu", "Profile export failed", "Profilexport fehlgeschlagen", "Error al exportar el perfil", "Échec de l’export du profil", "Esportazione profilo non riuscita", "Falha ao exportar o perfil", "Не вдалося експортувати профіль", "Profiel exporteren mislukt", "Profil dışa aktarılamadı"),
+        "profile_import_ok" to t("Profil przywrócony z pliku", "Profile restored from file", "Profil wiederhergestellt", "Perfil restaurado", "Profil restauré", "Profilo ripristinato", "Perfil restaurado", "Профіль відновлено", "Profiel hersteld", "Profil geri yüklendi"),
+        "profile_import_failed" to t("Import profilu nie powiódł się", "Profile import failed", "Profilimport fehlgeschlagen", "Error al importar el perfil", "Échec de l’import du profil", "Importazione profilo non riuscita", "Falha ao importar o perfil", "Не вдалося імпортувати профіль", "Profiel importeren mislukt", "Profil içe aktarılamadı"),
+        "profile_import_backup_failed" to t("Nie zapisano kopii bezpieczeństwa. Import anulowany.", "Safety copy failed. Import cancelled.", "Sicherung fehlgeschlagen. Import abgebrochen.", "Falló la copia de seguridad. Importación cancelada.", "Échec de la sauvegarde. Import annulé.", "Copia di sicurezza non riuscita. Importazione annullata.", "Falha na cópia de segurança. Importação cancelada.", "Не вдалося зберегти копію. Імпорт скасовано.", "Veiligheidskopie mislukt. Import geannuleerd.", "Güvenlik kopyası oluşturulamadı. İçe aktarma iptal edildi."),
+        "profile_import_title" to t("Zastąpić postęp?", "Replace progress?", "Fortschritt ersetzen?", "¿Sustituir el progreso?", "Remplacer la progression ?", "Sostituire i progressi?", "Substituir progresso?", "Замінити прогрес?", "Voortgang vervangen?", "İlerleme değiştirilsin mi?"),
+        "profile_import_confirm" to t("Import zastąpi lokalne medale, badania i postęp. Najpierw powstanie prywatna kopia bieżącego profilu na tym urządzeniu. Kontynuować?", "Import replaces local medals, research and progress. A private safety copy of the current profile will be saved on this device first. Continue?", "Der Import ersetzt lokale Medaillen, Forschung und Fortschritt. Zuvor wird eine private Sicherung auf diesem Gerät erstellt. Fortfahren?", "La importación sustituye medallas, investigaciones y progreso local. Antes se guardará una copia privada en este dispositivo. ¿Continuar?", "L’import remplace les médailles, recherches et progrès locaux. Une copie privée sera d’abord enregistrée sur cet appareil. Continuer ?", "L’importazione sostituisce medaglie, ricerche e progressi locali. Prima verrà salvata una copia privata sul dispositivo. Continuare?", "A importação substitui medalhas, pesquisas e progresso local. Primeiro será guardada uma cópia privada neste dispositivo. Continuar?", "Імпорт замінить місцеві медалі, дослідження та прогрес. Спочатку тут буде створено приватну резервну копію. Продовжити?", "Import vervangt lokale medailles, onderzoek en voortgang. Eerst wordt op dit apparaat een privékopie opgeslagen. Doorgaan?", "İçe aktarma yerel madalyaları, araştırmaları ve ilerlemeyi değiştirir. Önce bu cihazda özel bir yedek oluşturulur. Devam edilsin mi?"),
+    )
 }
