@@ -85,6 +85,27 @@ class Localization120ScreenshotTest {
             g.ui.measure(label, size) <= available + 1.5f * g.ui.dp)
     }
 
+    private fun assertBackupLabelsFit(g: Game, screen: SettingsScreen, tag: String) {
+        val panel = field(screen, "panel").get(screen) as RectF
+        for ((id, key) in listOf(
+            21 to "profile_backup_export",
+            22 to "profile_backup_import",
+            23 to "profile_backup_restore_prev",
+        )) {
+            val button = screen.buttons.first { it.id == id }
+            assertTrue("$tag/$key: przycisk poza obszarem przewijania", button.visible)
+            val dp = g.ui.dp
+            // Równanie z SettingsScreen.render(): ikona (24 dp) i odstęp przed przyciskiem.
+            val textX = panel.left + 12f * dp + 20f * dp +
+                minOf(24f * dp, button.r.height() * 0.7f)
+            val available = button.r.left - textX - 6f * dp
+            val value = L[key]
+            val size = g.ui.fit(value, 15f, available)
+            assertTrue("$tag/$key: tekst wykracza poza etykietę: $value",
+                g.ui.measure(value, size) <= available + 1.5f * dp)
+        }
+    }
+
     @Test
     fun reviewedScreensOnPortraitPhoneAndOuterFold() {
         val previousLanguage = L.lang
@@ -102,6 +123,10 @@ class Localization120ScreenshotTest {
                 val access = AccessibilityScreen(g)
                 g.setScreen(access)
                 shot(g, tag, language, "accessibility")
+                access.onDrag(0f, -100000f)
+                shot(g, tag, language, "accessibility_bottom")
+                assertTrue(tag + "/" + language + ": przełącznik poza widokiem",
+                    access.buttons.first { it.id == 43 }.visible)
                 assertLeftHandedLabel(g, access, tag + "/" + language)
 
                 val settings = SettingsScreen(g)
@@ -110,6 +135,7 @@ class Localization120ScreenshotTest {
                 settings.onClick(settings.buttons.first { it.id == 20 })
                 settings.onDrag(0f, -100000f)
                 shot(g, tag, language, "settings_backup")
+                assertBackupLabelsFit(g, settings, tag + "/" + language)
 
                 g.setScreen(PlayGamesScreen(g))
                 shot(g, tag, language, "play_games")
