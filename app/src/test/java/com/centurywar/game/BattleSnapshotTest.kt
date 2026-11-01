@@ -496,6 +496,36 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun cards71AndActiveSlowSurviveSnapshotAndFurtherSteps() {
+        val a = Battle(BattleConfig(Mode.ENDLESS, 71_071L, 1f))
+        val p = a.player
+        for (card in arrayOf(EndlessCard.SUPPLY_LINE, EndlessCard.ECONOMY,
+            EndlessCard.IRON_CURTAIN, EndlessCard.TOWER_NETWORK, EndlessCard.TOWER_SLOT,
+            EndlessCard.MUSTER_BANNER, EndlessCard.MOBILIZATION, EndlessCard.LAST_BASTION,
+            EndlessCard.EMBER_FORGE, EndlessCard.CITADEL_HEART, EndlessCard.FORTRESS)) {
+            a.applyEndlessCard(p, card)
+        }
+        assertTrue(a.buyTurret(p, 0))
+        assertTrue(a.spawn(a.enemy, Defs.unit(a.enemy.era, Role.HEAVY)))
+        val foe = a.units.first { it.alive && it.side == 1 }
+        foe.x = p.baseFront + 170f
+        a.waveTimer = 900f
+        var slowed = false
+        for (step in 0 until 140) {
+            a.step()
+            a.fx.count = 0
+            if (foe.slowLeft > 0f) { slowed = true; break }
+        }
+        assertTrue("Wieża powinna nałożyć spowolnienie przed zapisem", slowed)
+        val b = roundTrip(a)
+        assertEquals(foe.slowLeft, b.units.first { it.active && it.side == 1 }.slowLeft)
+        assertArrayEquals(p.cardStacks, b.player.cardStacks)
+        steps(a, 180)
+        steps(b, 180)
+        assertSame(a, b)
+    }
+
+    @Test
     fun rejectsWrongVersionAndCorruption() {
         val a = Battle(BattleConfig(Mode.SKIRMISH, 3L, 1f)); a.playerAi = Ai(a, 0)
         steps(a, 60 * 60)
