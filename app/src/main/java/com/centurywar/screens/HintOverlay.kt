@@ -251,7 +251,7 @@ class HintOverlay(
             var longest = 0f
             for (i in 0 until lineCount) longest = max(longest, g.ui.measure(lines[i] ?: "", hintFont))
             hintWidth = (longest + 2f * padding).coerceIn(min(188f * dp, maxW), maxW)
-            hintHeight = (54f + (lineCount - 1) * 18f * scale) * dp
+            hintHeight = (53f + hintFont * scale * 0.5f + 4f * scale + (lineCount - 1) * 17f * scale) * dp
         }
     }
 
@@ -308,13 +308,13 @@ class HintOverlay(
     fun draw(c: Canvas) {
         if (activeId < 0 || !g.profile.hintsEnabled || hintWidth <= 0f) return
         val dp = g.ui.dp
-        val safeL = g.insetL + 9f * dp
-        val safeR = g.width - g.insetR - 9f * dp
-        val safeT = g.insetT + 9f * dp
-        val safeB = g.height - g.insetB - 9f * dp
+        val safeL = g.insetL + 4f * dp
+        val safeR = g.width - g.insetR - 4f * dp
+        val safeT = g.insetT + 4f * dp
+        val safeB = g.height - g.insetB - 4f * dp
         val target = focus()
         if (!HintFrame.place(target, safeL, safeT, safeR, safeB,
-                hintWidth, hintHeight, 5f * dp, panel, connector)) return
+                hintWidth, hintHeight, 4f * dp, panel, connector)) return
 
         // Wskaźnik kończy się na krawędzi celu; nie przesłania samych przycisków.
         if (target != null && target.width() > 0f && target.height() > 0f) {
@@ -350,10 +350,10 @@ class HintOverlay(
             g.ui.text(c, lines[0] ?: "", panel.left + 12f * dp, baseline, hintFont, Ui.TEXT)
             okBtn.set(panel.right - 59f * dp, panel.centerY() - 14f * dp, 49f * dp, 28f * dp)
         } else {
-            var y = panel.top + (21f + (g.ui.textScale - 1f) * 5f) * dp
+            var y = panel.top + (14f + hintFont * g.ui.textScale * 0.5f) * dp
             for (i in 0 until lineCount) {
                 g.ui.text(c, lines[i] ?: "", panel.left + 12f * dp, y, hintFont, Ui.TEXT)
-                y += 18f * dp * g.ui.textScale
+                y += 17f * dp * g.ui.textScale
             }
             okBtn.set(panel.right - 65f * dp, panel.bottom - 34f * dp, 53f * dp, 28f * dp)
         }
