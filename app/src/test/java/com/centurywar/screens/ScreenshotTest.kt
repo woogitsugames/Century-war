@@ -1449,4 +1449,93 @@ class ScreenshotTest {
             shot(g, "${tag}_pause_quick_settings")
         }
     }
+
+    /** Zlecenie 89: cztery formaty, 130% tekstu, obie pozycje przewijania i kolizje. */
+    @Test
+    fun settingsCodexUx89() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in screenshotDevices(mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            ))) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "en"
+                g.profile.textScale = 130
+                g.onLanguageChanged()
+                g.applyAccessibility()
+
+                val settings = SettingsScreen(g)
+                g.setScreen(settings)
+                assertTrue("$tag: techniczne opcje powinny być zwinięte",
+                    settings.buttons.first { it.id == 1 }.visible.not())
+                val sound = settings.buttons.first { it.id == 8 }
+                val music = settings.buttons.first { it.id == 12 }
+                val effects = settings.buttons.first { it.id == 18 }
+                val language = settings.buttons.first { it.id == 3 }
+                assertTrue("$tag: kolejność najważniejszych ustawień",
+                    sound.r.top < music.r.top && music.r.top < effects.r.top &&
+                        effects.r.top < language.r.top)
+                assertNoCollisions(g, settings, "settings89", "settings")
+                shot(g, "${tag}_89_settings", 1)
+                settings.onClick(settings.buttons.first { it.id == 20 })
+                assertNoCollisions(g, settings, "settings89_advanced", "settings")
+                shot(g, "${tag}_89_settings_advanced", 1)
+                settings.onDrag(0f, -100000f)
+                assertNoCollisions(g, settings, "settings_bottom", "settings")
+                shot(g, "${tag}_89_settings_bottom", 1)
+
+                val skirmish = SkirmishSetupScreen(g)
+                g.setScreen(skirmish)
+                assertTrue("$tag: ikona losowania", skirmish.buttons.first { it.id == -4 }.iconId ==
+                    com.centurywar.engine.Icons.DICE)
+                assertNoCollisions(g, skirmish, "skirmish89", null)
+                shot(g, "${tag}_89_skirmish", 1)
+                skirmish.onDrag(0f, -100000f)
+                assertNoCollisions(g, skirmish, "skirmish89_bottom", null)
+                shot(g, "${tag}_89_skirmish_bottom", 1)
+
+                val codex = CodexScreen(g, 4)
+                g.setScreen(codex)
+                val categories = codex.buttons.filter { it.id in 200..209 && it.visible }
+                assertTrue("$tag: widoczna listwa zakładek", categories.size >= 2)
+                assertTrue("$tag: zakładki w jednym rzędzie",
+                    categories.all { kotlin.math.abs(it.r.top - categories[0].r.top) < g.ui.dp })
+                assertTrue("$tag: poziome przewijanie kategorii",
+                    field(codex, "maxCategoryScroll").getFloat(codex) > 0f)
+                assertNoCollisions(g, codex, "codex89", "codex")
+                shot(g, "${tag}_89_codex", 1)
+
+                val touch = TouchEvent().apply {
+                    action = TouchEvent.DOWN
+                    x = g.width / 2f
+                    y = field(codex, "categoryRailTop").getFloat(codex) + 12 * g.ui.dp
+                }
+                codex.onTouch(touch)
+                codex.onDrag(-100000f, 0f)
+                touch.action = TouchEvent.UP
+                codex.onTouch(touch)
+                assertTrue("$tag: gest przewija listwę", field(codex, "categoryScroll").getFloat(codex) > 0f)
+                assertNoCollisions(g, codex, "codex89_scrolled", "codex")
+                shot(g, "${tag}_89_codex_tabs_end", 1)
+                codex.showCategory(8)
+                assertNoCollisions(g, codex, "codex89_cards", "codex")
+                shot(g, "${tag}_89_codex_cards", 1)
+
+                val about = AboutScreen(g)
+                g.setScreen(about)
+                for (button in about.buttons.filter { it.visible && it.id >= 0 }) {
+                    assertTrue("$tag: link ${button.id} mniejszy od 48 dp",
+                        button.r.height() + 0.01f >= 48 * g.ui.dp)
+                }
+                assertNoCollisions(g, about, "about89", "about")
+                shot(g, "${tag}_89_about", 1)
+            }
+        } finally {
+            L.lang = originalLang
+        }
+    }
 }
