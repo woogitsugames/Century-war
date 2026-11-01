@@ -14,6 +14,7 @@ import com.centurywar.engine.Quality
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Mode
+import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
 
@@ -33,8 +34,6 @@ class MenuScreen(g: Game) : Screen(g) {
     private val missions = btn(9)
     private val settings = btn(7)
     private val codex = btn(8)
-    private val achievements = btn(10)
-    private val stats = btn(11)
     // pytanie o wznowienie przerwanej bitwy (g.resumeOffer)
     private val resumeYes = btn(RESUME_YES)
     private val resumeNo = btn(RESUME_NO)
@@ -46,6 +45,24 @@ class MenuScreen(g: Game) : Screen(g) {
     private var resumeDescScale = -1f
     private var resumeDescLanguage = -1
     private var dt = 0f
+    private val missionManager = Missions(g.profile)
+    private var missionBadgePoll = 0f
+    internal var claimableMissions = 0
+        private set
+    private var missionBadgeText = ""
+
+    private fun refreshMissionBadge() {
+        val now = System.currentTimeMillis()
+        val state = g.profile.missionState
+        if (state.dailyDay != Missions.utcDay(now) || state.weeklyWeek != Missions.utcWeek(now))
+            missionManager.refresh(now)
+        val count = if (state.dailyDay == Missions.utcDay(now))
+            Missions.pendingClaims(state) else 0
+        if (count != claimableMissions) {
+            claimableMissions = count
+            missionBadgeText = count.toString()
+        }
+    }
 
     private companion object {
         const val RESUME_YES = 20
@@ -68,14 +85,14 @@ class MenuScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         campaign.label = L["campaign"]; endless.label = L["endless"]; daily.label = L["daily"]
-        skirmish.label = L["skirmish"]; research.label = L["research"]; rankings.label = L["rankings"]; settings.label = ""
+        skirmish.label = L["skirmish"]; research.label = L["research"]; rankings.label = L["records"]; settings.label = ""
         campaign.iconId = Icons.MAP; endless.iconId = Icons.TOWER; daily.iconId = Icons.CALENDAR
         skirmish.iconId = Icons.CROSSED_SWORDS; research.iconId = Icons.FLASK; rankings.iconId = Icons.TROPHY
-        missions.label = L["ms_missions"]; missions.iconId = Icons.CALENDAR
+        missions.label = L["ms_missions"]; missions.iconId = Icons.MISSIONS
         settings.iconId = Icons.GEAR
         codex.label = ""; codex.iconId = Icons.CODEX
-        achievements.label = ""; achievements.iconId = Icons.CROWN
-        stats.label = ""; stats.iconId = Icons.CHART
+        settings.tooltipTitle = L["settings"]; settings.tooltipBody = ""
+        codex.tooltipTitle = L["codex"]; codex.tooltipBody = ""
         campaign.subIcon = Icons.STAR
         research.subIcon = Icons.MEDAL
         campaign.highlight = true
@@ -123,10 +140,9 @@ class MenuScreen(g: Game) : Screen(g) {
         missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw * 2 + gap, mh)
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
-        codex.set(settings.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
-        achievements.set(codex.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
-        stats.set(achievements.r.left - sb - 10 * dp, g.insetT + 10 * dp, sb, sb)
+        codex.set(settings.r.left - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         layoutResume(cx)
+        refreshMissionBadge()
     }
 
     private fun layoutResume(cx: Float) {
@@ -171,6 +187,11 @@ class MenuScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        missionBadgePoll -= dt
+        if (missionBadgePoll <= 0f) {
+            missionBadgePoll = 10f
+            refreshMissionBadge()
+        }
         updateResumeVisibility()
         val pr = g.profile
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber()
@@ -209,6 +230,21 @@ class MenuScreen(g: Game) : Screen(g) {
             if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
         }
         drawPlayer(c)
+        if (claimableMissions > 0) {
+            val bx = missions.r.right - 15 * dp
+            val by = missions.r.top + 6 * dp
+            ui.fill.color = Ui.OUTLINE
+            c.drawCircle(bx, by, 15 * dp, ui.fill)
+            ui.fill.color = Color.rgb(210, 59, 52)
+            c.drawCircle(bx, by, 12.5f * dp, ui.fill)
+            ui.textO(c, missionBadgeText, bx, by + 5 * dp, 15f,
+                Ui.TEXT, Paint.Align.CENTER)
+        }
+        ui.textO(c, L["codex"], codex.r.centerX(), codex.r.bottom + 13 * dp,
+            ui.fit(L["codex"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
+        ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
+            ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
+        drawHeldTooltip(c)
         ui.textO(c, "v0.2", w - g.insetR - 12 * dp, h - g.insetB - 10 * dp, 10f, Ui.DIM, Paint.Align.RIGHT, 1.5f)
         if (g.resumeOffer != null) drawResume(c)
     }
@@ -314,8 +350,6 @@ class MenuScreen(g: Game) : Screen(g) {
             6 -> g.push(RankingsScreen(g))
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
-            10 -> g.push(AchievementsScreen(g))
-            11 -> g.push(StatsScreen(g))
             9 -> g.push(MissionsScreen(g))
         }
     }
