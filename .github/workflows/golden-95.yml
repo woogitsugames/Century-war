@@ -25,6 +25,15 @@ jobs:
           git status --short
           git diff --stat -- sim/src/test/resources/golden docs/BALANCE.md
           sha256sum sim/src/test/resources/golden/*.json
+      - name: Pomiar 100 seedow po zmianach zadania 108
+        run: |
+          set -o pipefail
+          git fetch origin gpt/108-endless-cards-2
+          echo "ENDLESS108_COMMIT=$(git rev-parse FETCH_HEAD)"
+          git worktree add --detach "$RUNNER_TEMP/cw-108" FETCH_HEAD
+          cp server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt "$RUNNER_TEMP/cw-108/server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt"
+          (cd "$RUNNER_TEMP/cw-108" && chmod +x ./gradlew && ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest.veteranHundredSeeds' --console=plain --no-configuration-cache --rerun-tasks) | tee "$RUNNER_TEMP/108.log"
+          grep -E 'ENDLESS100_(MEAN|FAILURES|DEFEAT_MEDIAN|SURVIVE_[0-9]+|DISTRIBUTION)=' "$RUNNER_TEMP/108.log"
       - name: Zachowaj regenerowane wzorce
         uses: actions/upload-artifact@v4
         with:
