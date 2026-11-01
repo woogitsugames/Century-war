@@ -154,6 +154,26 @@ val quickCheckRequested = gradle.startParameter.taskNames.any {
     it.substringAfterLast(':') == "quickCheck"
 }
 
+
+// Jedna kategoria na wywołanie: filtry działają na oryginalnym teście AGP,
+// dzięki czemu Robolectric zachowuje zasoby i konfigurację Androida.
+val requestedTestCategories = gradle.startParameter.taskNames
+    .map { it.substringAfterLast(':') }
+    .filter { it in setOf("fastTest", "screenshotTest", "balanceTest") }
+    .distinct()
+require(requestedTestCategories.size <= 1) {
+    "Uruchom fastTest, screenshotTest i balanceTest w osobnych wywołaniach Gradle."
+}
+val requestedTestCategory = requestedTestCategories.singleOrNull()
+val testCategories = Properties().apply {
+    rootProject.file("gradle/test-categories.properties").inputStream().use { load(it) }
+}
+fun categoryPatterns(category: String): List<String> =
+    testCategories.getProperty(category)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+        ?: error("Brak kategorii testów: $category")
+val screenshotTestPatterns = categoryPatterns("screenshots")
+val balanceTestPatterns = categoryPatterns("balance")
+
 // Limit dwóch procesów JVM i pamięci, również na komputerach z 8 GB RAM.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
@@ -161,6 +181,17 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     forkEvery = 15L
     maxHeapSize = "1024m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
+
+    if (name == "testDebugUnitTest") {
+        filter {
+            when (requestedTestCategory) {
+                "fastTest" -> (screenshotTestPatterns + balanceTestPatterns)
+                    .forEach { excludeTestsMatching(it) }
+                "screenshotTest" -> screenshotTestPatterns.forEach { includeTestsMatching(it) }
+                "balanceTest" -> balanceTestPatterns.forEach { includeTestsMatching(it) }
+            }
+        }
+    }
 
     if (quickCheckRequested && name == "testDebugUnitTest") {
         filter {
@@ -185,6 +216,30 @@ tasks.register("quickCheck") {
     group = "verification"
     description = "Buduje debug APK i wykonuje szybki zestaw testów symulacji oraz UI."
     dependsOn("assembleDebug", "testDebugUnitTest", ":sim:test")
+}
+
+// Domyślne :app:test obejmuje wyłącznie wariant debug. Release sprawdza osobna
+// lista kontrolna; konfiguracja testReleaseUnitTest nie uruchamia jej przypadkiem.
+tasks.matching { it.name == "test" }.configureEach {
+    setDependsOn(listOf("testDebugUnitTest"))
+}
+
+tasks.register("fastTest") {
+    group = "verification"
+    description = "Wszystkie testy aplikacji bez ciężkich zrzutów i raportów balansu."
+    dependsOn("testDebugUnitTest")
+}
+
+tasks.register("screenshotTest") {
+    group = "verification"
+    description = "Testy graficzne i zrzuty ekranu Robolectric."
+    dependsOn("testDebugUnitTest")
+}
+
+tasks.register("balanceTest") {
+    group = "verification"
+    description = "Testy balansu, długie symulacje i raporty."
+    dependsOn("testDebugUnitTest")
 }
 
 
