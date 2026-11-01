@@ -231,7 +231,8 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         chrome.dim(c, 125)
         ui.panel(c, panel)
         ui.panel(c, footer)
-        ui.ribbon(c, w / 2 + (g.insetL - g.insetR) / 2, g.insetT + 31 * dp,
+        ui.ribbon(c, w / 2 + (g.insetL - g.insetR) / 2,
+            g.insetT + (if (w - g.insetL - g.insetR < 560 * dp) 82 else 31) * dp,
             L["sk_setup"], 20f, Ui.RIBBON, 175 * dp, Ui.GOLD, min(w * 0.58f, 480 * dp))
         ui.button(c, back, 14f)
 
