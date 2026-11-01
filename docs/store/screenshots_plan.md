@@ -1,58 +1,41 @@
-# Century War — plan ośmiu zrzutów Google Play i filmu 30 s
+# Century War — plan aktualnych zrzutów Google Play (75)
 
-**Cel:** osiem prawdziwych, atrakcyjnych ujęć gry na telefon w orientacji poziomej, z podpisami PL/EN. Zdjęcia należy wykonać **z działającego finalnego buildu**, nie z makiet. Obecna wersja ma rankingi lokalne i nie ma reklam ani globalnego multiplayera.
+Celem jest **8 autentycznych kadrów PL i 8 EN** na każdy typ urządzenia, wygenerowanych przez `StoreGraphicsTest` z produkcyjnych ekranów lub renderera gry. Wrzucamy do Play Console najwyżej osiem na typ. Nakładki marketingowe są osobne dla PL/EN i nie udają elementów interfejsu.
 
-## Zrzuty ekranu — kolejność publikacji
+## Kolejność i podpisy
 
-| Nr | Plik roboczy | Co pokazać na autentycznym ekranie | Podpis PL | Caption EN |
-|---|---|---|---|---|
-| 1 | 01-frontline.png | Główna bitwa: dwie armie, baza, HUD, walka na jednym pasie; maksymalnie czytelny moment starcia. | **Przejmij kontrolę nad frontem** | **Take control of the front line** |
-| 2 | 02-eight-eras.png | Bitwa w zaawansowanej epoce, najlepiej widoczne różnice w uzbrojeniu; nie sklejać odrębnych interfejsów udających jedną rozgrywkę. | **Walcz przez 8 epok** | **Battle through 8 eras** |
-| 3 | 03-units.png | Wybór jednostek w trakcie bitwy: karta zakupów i kilka różnych rodzajów armii na mapie. | **Dowodź 32 jednostkami** | **Command 32 unique units** |
-| 4 | 04-campaign.png | Ekran kampanii z etapami, gwiazdkami i wyróżnioną kolejną misją. | **Pokonaj 32 etapy kampanii** | **Conquer a 32-stage campaign** |
-| 5 | 05-research.png | Ekran badań z kilkoma ulepszeniami, kosztami i widocznym saldem medali. | **Rozwijaj armię po każdej bitwie** | **Upgrade your army after battle** |
-| 6 | 06-endless.png | Oblężenie bez końca w późniejszej fali, widoczny numer fali i zagrożenie bazy. | **Wytrwaj w oblężeniu bez końca** | **Survive the Endless Siege** |
-| 7 | 07-daily.png | Ekran wyzwania dnia: zakres epok, modyfikatory i informacja o jednym podejściu rankingowym. | **Podejmij wyzwanie każdego dnia** | **Take on a new daily challenge** |
-| 8 | 08-codex.png | Kodeks: wybrana epoka z podglądem 4 jednostek, statystykami, wieżą i ostrzałem specjalnym (najlepiej późna epoka, by pokazać szczegółową grafikę). | **Poznaj każdą epokę w Kodeksie** | **Explore every era in the Codex** |
+| Nr | Plik | Autentyczna scena | Hasło PL | Caption EN |
+| --- | --- | --- | --- | --- |
+| 01 | `01-menu.png` | Menu z aktualnym emblematem, złotym logo i trybami gry | Dowódź przez epoki | Command across the eras |
+| 02 | `02-campaign.png` | Mapa 36 etapów, postęp i gwiazdki testowego profilu | Odkryj kampanię 36 etapów | Explore 36 campaign stages |
+| 03 | `03-endless-boss.png` | Boss 10. fali Endless z oddziałami i efektami prawdziwego renderera | Zmierz się z bossami Endless | Face the Endless bosses |
+| 04 | `04-night-barrage.png` | Nocna pogoda i celowany ostrzał; faktyczne efekty bitwy | Noc zmienia przebieg bitwy | Battle through the night |
+| 05 | `05-era-variants.png` | Dwie prawdziwe karty wariantów epoki pary po wykonanym awansie | Wybierz wariant epoki | Choose your era variant |
+| 06 | `06-pause-summary.png` | Panel pauzy z czasem, złotem, statystykami i ustawieniami | Planuj w każdej chwili | Pause and plan your next move |
+| 07 | `07-weekly-siege.png` | Zakładka oblężenia tygodnia z zasadami i progami nagród | Podejmij oblężenie tygodnia | Take on the Weekly Siege |
+| 08 | `08-custom-skirmish.png` | Konfigurator potyczki z zakresem epok, AI i modyfikatorami | Ustaw własną potyczkę | Customize your skirmish |
 
-**Dane do zdjęć:** dla plansz kampanii/badań/rankingu użyj ręcznie przygotowanego stanu testowego w profilu gry, ale nie manipuluj grafiką tak, aby pokazywała nieistniejące funkcje. Dla bitew wykonaj nagranie autentycznej rozgrywki i wybierz czytelną klatkę. Nie pokazuj prawdziwych danych osobowych ani identyfikatorów kont.
+**Powtórki:** są funkcją opisywaną na karcie Google Play, lecz w obecnych ośmiu ujęciach priorytet mają nowe elementy taktyczne i tryby. Nie generujemy zmyślonej listy nagrań. Można wymienić dowolny kadr na autentyczny ekran odtwarzacza po nagraniu bitwy w finalnym buildzie.
 
-## Specyfikacja eksportu i kontrola jakości
+## Eksport
 
-- **Telefon:** 8 × obraz z oryginalnego buildu, krajobraz 16:9; zalecana rozdzielczość 1920 × 1080 px albo wyższa, w granicach wymagań Google Play.
-- **Format:** PNG 24-bit bez alfa albo JPEG. Zrzuty obrazu z telefonu nie mogą być rozciągane, deformowane ani sztucznie poprawiane. Unikaj przepełnienia tekstem.
-- **Pierwsze 3:** wyraźna akcja i mechanika, ponieważ będą najważniejsze dla zainteresowania gracza.
-- **Nakładki:** jeśli dodajesz podpis poza interfejsem gry, zastosuj bardzo krótki tekst PL lub EN zgodny z wersją językową sklepu; nie zasłaniaj kluczowego HUD. Przed exportem sprawdź, czy taka stylizacja nadal odpowiada aktualnym zasadom Google Play.
-- **Języki:** gra ma 10 języków (pl, en, de, es, fr, it, pt, uk, nl, tr). Minimum: osobne zestawy PL i EN z właściwymi tekstami interfejsu; pozostałe języki opcjonalnie, zrzucone z gry przełączonej w Ustawieniach. Nie symuluj tłumaczenia w edytorze.
-- **Duże ekrany / Fold:** osobny test i dodatkowe autentyczne ujęcia z tabletu oraz urządzenia składanego. Nie zastępuj zrzutów telefonu obrazami z rozciągniętym HUD.
-- **Tekst alternatywny:** do każdej grafiki dodaj krótki opis tego, co rzeczywiście przedstawia (preferencyjnie do 140 znaków). Nie powtarzaj samego hasła marketingowego.
+- `phone/`: 1920 × 1080 (16:9), `tablet7/`: 1920 × 1200 (8:5), `tablet10/`: 2560 × 1600 (8:5). Render jest natywny, bez rozciągania.
+- Każdy zestaw językowy: 24 zrzuty urządzeń, ikona 512 × 512 RGBA, feature graphic 1024 × 500 RGB oraz dodatkowy `preview_contact.png` **wyłącznie do przeglądu**, nie do Play Console.
+- Krótkie hasła i teksty alternatywne: `app/src/test/resources/store/graphics_{pl,en}.properties`. Alt maks. 140 znaków.
+- Overlay poza kluczowym HUD. Nie dodawać ocen, cudzych logo, nawiązań do innych gier ani nieistniejących mechanik.
+- Weryfikować kadry PL/EN osobno, szczególnie łamanie tekstu, ekran wariantu, pauzę, nocny ostrzał, mapę i tablet.
+- Data tygodniowego wyzwania jest rzeczywista i zależy od zegara UTC w chwili generowania; przed publikacją warto wygenerować zestaw ponownie.
+- Ujęcia wymagają potwierdzenia w **finalnym AAB** i podglądzie Play Console. Obrazy wygenerowane przez Robolectric nie zastępują kontroli na fizycznym telefonie ani Foldzie.
 
-## Propozycja filmu promocyjnego: 30 sekund, 16:9
+## Kontrola jakości
 
-Bez narracji zależnej od dźwięku (Google Play może automatycznie odtwarzać film bez dźwięku). Dwie wersje napisów: polska i angielska. Muzyka oryginalna/licencjonowana, z jasno określonymi prawami do użycia.
+1. Uruchom `STORE_GRAPHICS=true ./gradlew :app:testDebugUnitTest --tests '*StoreGraphicsTest*' --no-configuration-cache --console=plain`.
+2. Przejrzyj `app/build/store/pl/preview_contact.png` i `app/build/store/en/preview_contact.png`, następnie pełne PNG.
+3. Potwierdź w `manifest.tsv`: 8 plików `phone`, 8 `tablet7`, 8 `tablet10`, ikona i feature graphic dla każdego języka.
+4. Zweryfikuj wartości metadanych Google Play: 30 znaków tytułu, 80 krótkiego, 4000 pełnego opisu.
+5. Porównaj wersję builda z wersją publikowaną i sprawdź obrazy w Play Console.
 
-| Czas | Obraz / akcja z rzeczywistej gry | Tekst ekranowy PL / EN |
-|---|---|---|
-| **0–4 s** | Dynamiczne wejście do bitwy w epoce plemiennej; na pierwszym planie główny front. | **Jedna linia frontu. Wiele strategii.** / **One front line. Endless tactics.** |
-| **4–8 s** | Szkolenie pierwszych jednostek, walka, zdobywanie złota i XP. | **Dowodź armią** / **Lead your army** |
-| **8–12 s** | Autentyczne awansowanie epoki; widoczne nowe oddziały i uzbrojenie. | **8 epok • 32 jednostki** / **8 eras • 32 units** |
-| **12–16 s** | Szybkie przejście z ekranu podsumowania bitwy do badań; zakup ulepszenia. | **Rozwijaj strategię** / **Build your strategy** |
-| **16–20 s** | Ekran kampanii, wybór etapu i gwiazdki. | **32 etapy kampanii** / **32 campaign stages** |
-| **20–24 s** | Intensywne starcie Endless Siege i zbliżenie na wybór wyzwania dnia. | **Oblężenie i wyzwania dnia** / **Endless Siege & Daily Challenges** |
-| **24–27 s** | Kodeks (przewijanie epok) i przełączanie języka w Ustawieniach; szybka klatka z Foldem tylko jeśli realnie nagrana. | **Graj offline • 10 języków** / **Play offline • 10 languages** |
-| **27–30 s** | Tytuł Century War na tle kadru z bitwy, proste wygaszenie. | **Century War — Wojna epok** / **Century War — Era Strategy** |
-
-**Montaż:** krótkie cięcia, bez pseudo-gameplayu; najważniejszy komunikat zrozumiały bez dźwięku. Unikaj elementów interfejsu Google Play, ocen gwiazdkowych, fałszywych opinii, ikon innych gier i materiałów z cudzych marek.
-
-## Kontrola przed przesłaniem do Play Console
-
-1. Zweryfikuj każdy z ośmiu ekranów w wydaniu, które będzie publikowane.
-2. Sprawdź poprawność polskich i angielskich etykiet, kadrowanie oraz brak uciętego HUD na małych i dużych ekranach.
-3. Zweryfikuj formaty i wymiary zasobów; Google Play dopuszcza do 8 screenów na typ urządzenia.
-4. Film umieść na YouTube zgodnie z wymogami Play Console i **wyłącz reklamy na filmie**. Dodaj jego adres w karcie aplikacji; sam plan nie publikuje filmu.
-5. Podstawowa rozgrywka działa offline, ale aplikacja ma opcjonalne Play Games (jeśli wydanie jest skonfigurowane) i osobny ranking globalny uruchamiany tylko za zgodą i z serwerem HTTPS. Nie reklamuj ich jako dostępnych, dopóki nie działają w finalnym wydaniu. Pakiet premium i reklamy nie zostały wdrożone.
-
-## Źródła Google Play
+## Źródła
 
 - https://support.google.com/googleplay/android-developer/answer/9866151
 - https://support.google.com/googleplay/android-developer/answer/9859152
