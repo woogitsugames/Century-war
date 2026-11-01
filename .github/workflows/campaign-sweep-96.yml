@@ -1,0 +1,45 @@
+name: Strojenie kampanii 96 - zakres mocy AI
+on:
+  push:
+    branches: ['gpt/96-campaign-remeasure']
+    paths: ['.github/workflows/campaign-sweep-96.yml']
+permissions:
+  contents: read
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Pomiar skali mocy dla odchylonych etapow
+        env:
+          BALANCE_RUN: 'true'
+          BALANCE_RUNS: '20'
+          BALANCE_PROFILE: target
+          BALANCE_STAGES: '2,3,12,19,24,27'
+        run: |
+          chmod +x ./gradlew
+          for scale in 0.70 0.80 0.90 1.00 1.10 1.20 1.30; do
+            export BALANCE_POWER_SCALE="$scale"
+            export BALANCE_TAG="scale-$scale"
+            echo "=== POWER_SCALE=$scale ==="
+            ./gradlew :app:testDebugUnitTest --rerun-tasks \
+              --tests '*BalanceReport.campaignReport*' \
+              --console=plain --no-configuration-cache
+            cat app/build/balance/report-1-36-scale-"$scale".csv
+          done
+      - name: Wyniki sweep
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-sweep-96
+          path: app/build/balance/report-*-scale-*.csv
+          if-no-files-found: warn
