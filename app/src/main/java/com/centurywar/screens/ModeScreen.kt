@@ -203,10 +203,19 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val full = panel.width() - 40 * dp
         val colWidth = (full - 16 * dp) / 2f
         val event = cfg.dailyEvent
-        dailyInfoLines = if (event == null) cachedWrap(L["daily_info"], full, 13f) else emptyArray()
-        dailyEventTitle = if (event == null) "" else L[event.key]
-        dailyEventLines = if (event == null) emptyArray()
-            else cachedWrap(L[event.descriptionKey], full - 23 * dp, 12f)
+        val rule = Daily.ruleSet(day)
+        dailyInfoLines = if (event == null && rule == null)
+            cachedWrap(L["daily_info"], full, 13f) else emptyArray()
+        dailyEventTitle = when {
+            event != null -> L[event.key]
+            rule != null -> L[rule.key]
+            else -> ""
+        }
+        dailyEventLines = when {
+            event != null -> cachedWrap(L[event.descriptionKey], full - 23 * dp, 12f)
+            rule != null -> cachedWrap(L[rule.descriptionKey], full - 23 * dp, 12f)
+            else -> emptyArray()
+        }
         dailyEventIcon = when (event) {
             DailyEvent.MARKSMEN -> Icons.CROSSHAIR
             DailyEvent.RAPID_ABILITIES -> Icons.STOPWATCH
@@ -214,9 +223,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             DailyEvent.FORTIFIED_BASES -> Icons.SHIELD
             DailyEvent.GOLD_RUSH -> Icons.CHEST
             DailyEvent.MIRROR_ARMY -> Icons.CROSSED_SWORDS
-            null -> Icons.CALENDAR
+            null -> if (rule == null) Icons.CALENDAR else Icons.FLAG
         }
-        dailyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
+        dailyMods = (if (event != null && rule != null) L[rule.key] + " · " else "") +
+            L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
         dailyModsLines = cachedWrap(dailyMods, colWidth - 23 * dp, 12f)
         dailyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
         dailyPower = L.f("ai_power", (cfg.aiPower * 100).toInt())
@@ -293,7 +303,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyClaimMask = g.profile.weeklyClaimedFor(week)
         val cfg = Weekly.config(week)
         weeklyCfg = cfg
-        weeklyInfo = L["weekly_info"]
+        weeklyInfo = Weekly.ruleSet(week)?.let { L[it.key] + ". " + L["weekly_info"] }
+            ?: L["weekly_info"]
         weeklyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
         weeklyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
         weeklyCard = L["weekly_start_card"] + ": " + L[cfg.weeklyCard!!.textKey]
