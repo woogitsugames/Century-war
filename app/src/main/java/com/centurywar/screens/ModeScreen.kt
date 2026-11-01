@@ -122,8 +122,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         start.highlight = true
         start.iconId = Icons.PLAY
         val tabWidth = min(118 * dp, (pw - 42 * dp) / 2f)
-        dailyTab.set(panel.centerX() - tabWidth - 4 * dp, panel.top + 35 * dp, tabWidth, 32 * dp)
-        weeklyTab.set(panel.centerX() + 4 * dp, panel.top + 35 * dp, tabWidth, 32 * dp)
+        dailyTab.set(panel.centerX() - tabWidth - 4 * dp, panel.top + 27 * dp, tabWidth, 48 * dp)
+        weeklyTab.set(panel.centerX() + 4 * dp, panel.top + 27 * dp, tabWidth, 48 * dp)
         dailyTab.label = L["weekly_day_tab"]
         weeklyTab.label = L["weekly_week_tab"]
         dailyTab.iconId = Icons.CALENDAR
@@ -135,7 +135,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val gap = 8 * dp
         val dw = (pw - 44 * dp - gap * 3) / 4
         for (i in 0..3) {
-            diff[i].set(panel.left + 22 * dp + i * (dw + gap), start.r.top - 58 * dp, dw, 44 * dp)
+            diff[i].set(panel.left + 22 * dp + i * (dw + gap), start.r.top - 62 * dp, dw, 48 * dp)
             diff[i].label = L["diff_$i"]
             diff[i].iconId = diffIcons[i]
             diff[i].visible = mode == Mode.SKIRMISH
