@@ -13,6 +13,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.meta.Missions
 import kotlin.math.max
@@ -64,6 +65,9 @@ class MenuScreen(g: Game) : Screen(g) {
         }
     }
 
+    private fun firstTutorialReady(): Boolean = !g.profile.tutorialDone &&
+        g.profile.battles == 0 && g.profile.unlockedStage() == 0
+
     private companion object {
         const val RESUME_YES = 20
         const val RESUME_NO = 21
@@ -84,7 +88,8 @@ class MenuScreen(g: Game) : Screen(g) {
     private var plateRight = 0f
 
     override fun layout() {
-        campaign.label = L["campaign"]; endless.label = L["endless"]; daily.label = L["daily"]
+        campaign.label = L[if (firstTutorialReady()) "first_play" else "campaign"]
+        endless.label = L["endless"]; daily.label = L["daily"]
         skirmish.label = L["skirmish"]; research.label = L["research"]; rankings.label = L["records"]; settings.label = ""
         campaign.iconId = Icons.MAP; endless.iconId = Icons.TOWER; daily.iconId = Icons.CALENDAR
         skirmish.iconId = Icons.CROSSED_SWORDS; research.iconId = Icons.FLASK; rankings.iconId = Icons.TROPHY
@@ -93,7 +98,7 @@ class MenuScreen(g: Game) : Screen(g) {
         codex.label = ""; codex.iconId = Icons.CODEX
         settings.tooltipTitle = L["settings"]; settings.tooltipBody = ""
         codex.tooltipTitle = L["codex"]; codex.tooltipBody = ""
-        campaign.subIcon = Icons.STAR
+        campaign.subIcon = if (firstTutorialReady()) -1 else Icons.STAR
         research.subIcon = Icons.MEDAL
         campaign.highlight = true
 
@@ -221,7 +226,8 @@ class MenuScreen(g: Game) : Screen(g) {
         if (key != subKey || research.sub.isEmpty()) {
             subKey = key
             research.sub = L.plural("medals_n", pr.medals.toLong())
-            campaign.sub = "${pr.totalStars()}/${pr.stars.size * 3}"
+            campaign.sub = if (firstTutorialReady()) L["first_goal"] else
+                "${pr.totalStars()}/${pr.stars.size * 3}"
             endless.sub = if (pr.bestWave > 0) "${L["best"]}: ${pr.bestWave}" else ""
         }
     }
@@ -360,7 +366,12 @@ class MenuScreen(g: Game) : Screen(g) {
             return // okno pytania blokuje resztę menu
         }
         when (b.id) {
-            1 -> g.push(CampaignScreen(g))
+            1 -> if (firstTutorialReady()) {
+                // Pierwsza epoka nie zasłania powrotu z samouczka zapowiedzią.
+                g.profile.markEraIntroSeen(0)
+                g.setScreen(BattleScreen(g, Campaign.config(Campaign.stages[0],
+                    g.profile.bonuses(), System.nanoTime(), tutorial = true)))
+            } else g.push(CampaignScreen(g))
             2 -> g.push(ModeScreen(g, Mode.ENDLESS))
             3 -> g.push(ModeScreen(g, Mode.DAILY))
             4 -> g.push(SkirmishSetupScreen(g))
