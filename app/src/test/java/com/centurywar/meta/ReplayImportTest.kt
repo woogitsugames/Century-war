@@ -16,6 +16,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -97,10 +98,23 @@ class ReplayImportTest {
         assertEquals(0, count)
     }
 
-    @Test fun inputStreamHasStrictTwoMegabyteLimit() {
+    @Test fun inputStreamHasStrictStoreCompatibleLimit() {
+        assertEquals(ReplayStore.MAX_RECORD_BYTES, ReplayImport.MAX_BYTES)
+        assertNull(ReplayImport.readLimited(ByteArrayInputStream(ByteArray(0))))
+        assertNull(ReplayImport.readLimited(ByteArrayInputStream(ByteArray(23))))
         assertNotNull(ReplayImport.readLimited(ByteArrayInputStream(ByteArray(24))))
+        assertNotNull(ReplayImport.readLimited(
+            ByteArrayInputStream(ByteArray(ReplayImport.MAX_BYTES))))
         assertNull(ReplayImport.readLimited(
             ByteArrayInputStream(ByteArray(ReplayImport.MAX_BYTES + 1))))
         assertFalse(ReplayStore.isImportedId("normal-1"))
+    }
+
+    @Test fun brokenInputStreamReturningZeroIsRejected() {
+        val stalled = object : InputStream() {
+            override fun read(): Int = 0
+            override fun read(bytes: ByteArray, offset: Int, length: Int): Int = 0
+        }
+        assertNull(ReplayImport.readLimited(stalled))
     }
 }
