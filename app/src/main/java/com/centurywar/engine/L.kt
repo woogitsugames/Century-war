@@ -123,7 +123,22 @@ object L {
         putAll(part89())
         putAll(part84())
         putAll(part87())
+        putAll(part104())
     }
+
+    /** Zlecenie 104: raport bitwy i wykresy. */
+    private fun part104(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "bs104_player" to t("Gracz", "Player", "Spieler", "Jugador", "Joueur", "Giocatore", "Jogador", "Гравець", "Speler", "Oyuncu"),
+        "bs104_enemy" to t("Wróg", "Enemy", "Gegner", "Enemigo", "Ennemi", "Nemico", "Inimigo", "Ворог", "Vijand", "Rakip"),
+        "bs104_evolution" to t("Awans epoki", "Era advance", "Epochenwechsel", "Cambio de era", "Changement d'ère", "Cambio d'epoca", "Mudança de era", "Перехід епохи", "Tijdperkwissel", "Çağ atlama"),
+        "bs104_gold" to t("Złoto", "Gold", "Gold", "Oro", "Or", "Oro", "Ouro", "Золото", "Goud", "Altın"),
+        "bs104_army" to t("Liczebność armii", "Army size", "Armeegröße", "Tamaño del ejército", "Effectifs", "Dimensione esercito", "Tamanho do exército", "Чисельність війська", "Legergrootte", "Ordu büyüklüğü"),
+        "bs104_hp" to t("HP baz", "Base HP", "Basis-LP", "PV de bases", "PV des bases", "PV delle basi", "PV das bases", "Міцність баз", "Basis-HP", "Üs canı"),
+        "bs104_stats" to t("Wynik", "Results", "Ergebnis", "Resultado", "Résultat", "Risultato", "Resultado", "Підсумок", "Uitslag", "Sonuç"),
+        "bs104_chart" to t("Wykres", "Chart", "Verlauf", "Gráfico", "Graphique", "Grafico", "Gráfico", "Графік", "Grafiek", "Grafik"),
+        "bs104_battle" to t("Bitwa", "Battle", "Schlacht", "Batalla", "Bataille", "Battaglia", "Batalha", "Битва", "Gevecht", "Savaş"),
+        "bs104_loading" to t("Odtwarzanie wykresu…", "Building chart…", "Verlauf wird erstellt…", "Generando gráfico…", "Création du graphique…", "Creazione grafico…", "A gerar gráfico…", "Побудова графіка…", "Grafiek maken…", "Grafik hazırlanıyor…"),
+    )
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
     private fun part80(): Array<Pair<String, Array<out String>>> = arrayOf(
