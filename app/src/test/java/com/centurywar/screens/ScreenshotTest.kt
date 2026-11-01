@@ -26,6 +26,7 @@ import com.centurywar.game.BattleRenderer
 import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
@@ -262,6 +263,12 @@ class ScreenshotTest {
 
             field(screen, "selected").set(screen, Campaign.stages[12])
             shot(g, tag + "_campaign_journey_info")
+            if (tag == "phone720" || tag == "foldOpen") {
+                for (difficulty in listOf(CampaignDifficulty.EASY, CampaignDifficulty.HARD)) {
+                    g.profile.campaignDifficulty = difficulty
+                    shot(g, tag + "_campaign_difficulty_" + difficulty.name.lowercase())
+                }
+            }
             field(screen, "selected").set(screen, null)
             field(screen, "scroll").setFloat(screen, field(screen, "maxScroll").getFloat(screen))
             shot(g, tag + "_campaign_journey_final", 1)

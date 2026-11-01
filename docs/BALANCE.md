@@ -771,3 +771,16 @@ Wygenerowano aktualny wzorzec przez `:sim:regenerateGolden`
 z `-PgoldenReason="122 ARMORED_FOE w Endless"`.
 Pozostałe wzorce bez zmian. Nie zmieniano kampanii,
 `Daily.RELEASE_DAY` ani wersji protokołów; wersję rankingu aktualizuje koordynator.
+
+
+## Poziomy trudności kampanii — zlecenie 126 (1.11.2026)
+
+- **Łatwy:** siła AI ×0,80, medale ×0,75 (wynik zaokrąglany w dół).
+- **Normalny:** siła AI ×1,00, medale ×1,00; jedyny poziom kampanii do rankingów lokalnych, Play Games i serwera.
+- **Trudny:** siła AI ×1,20, medale ×1,30; ukończenie każdego z 36 etapów zapisuje postęp do osiągnięcia „Mistrz trudnej kampanii” (600 medali).
+- **Gwiazdki:** wspólny postęp odblokowuje etapy i osiągnięcia podstawowe. Osobna tablica `normalStars` rejestruje wyłącznie wyniki z Normalnego i stanowi źródło rankingu. Stare profile migrują gwiazdki do `normalStars`.
+- **Powtórki:** wybrana trudność jest już zawarta w `BattleConfig.aiPower` zapisanym przez `BattleSnapshot.writeConfig` do lokalnego `ReplayRecord`; nie trzeba zmieniać wersji `Replay` (aktualna: 5). Serwer odtwarza tylko Normalny na podstawie etapu i seeda; klient nie wysyła wyników z innych poziomów. Samouczek nie daje wyniku rankingowego ani postępu do osiągnięcia Trudnego.
+- **Balans:** `BalanceReport.campaignDifficultyReport` mierzy 36 etapów × 20 identycznych seedów × trzy poziomy = **2160 bitew AI kontra AI**; profil badań dobierany zależnie od etapu. Maksimum 30 min symulacji, źródło `app/build/balance/campaign-difficulty-126.csv` oraz `.md`.
+- **Uruchomienie:** `BALANCE_RUN=true BALANCE_RUNS=20 ./gradlew :app:testDebugUnitTest --rerun-tasks --tests '*BalanceReport.campaignDifficultyReport*' --console=plain --no-configuration-cache`. Można dzielić na grupy przez `BALANCE_STAGES="1,2,3,4,5,6"`.
+
+**Wyniki:** pozostają do uzupełnienia na podstawie rzeczywiście wykonanego pomiaru; dane liczbowe nie są szacowane ani dopisywane bez uruchomienia 2160 symulacji.

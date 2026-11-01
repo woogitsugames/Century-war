@@ -4,6 +4,7 @@ import com.centurywar.engine.Palette
 import com.centurywar.engine.Ui
 import org.junit.Assert.assertEquals
 import com.centurywar.game.Mode
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.GameIoCounter
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,6 +21,48 @@ import java.nio.file.Files
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ProfileTest {
+
+    @Test
+    fun campaignDifficultyUsesLegacyStarsAndClampsCorruptData() {
+        val source = Profile(tmpFile())
+        source.stars[0] = 3
+        source.stars[12] = 2
+        val legacy = JSONObject(source.toJson())
+            .remove("normalStars").remove("campaignDifficulty").remove("hardStageWins")
+        val migrated = Profile(tmpFile())
+        migrated.fromJson(legacy.toString())
+        assertEquals(CampaignDifficulty.NORMAL, migrated.campaignDifficulty)
+        assertEquals(5, migrated.normalStarTotal())
+        assertEquals(0, migrated.hardStagesCleared())
+
+        val changed = JSONObject(migrated.toJson())
+            .put("campaignDifficulty", 999)
+            .put("normalStars", JSONArray().put(20).put(-11))
+            .put("hardStageWins", -1L)
+        migrated.fromJson(changed.toString())
+        assertEquals(CampaignDifficulty.NORMAL, migrated.campaignDifficulty)
+        assertEquals(3, migrated.normalStars[0])
+        assertEquals(0, migrated.normalStars[1])
+        assertEquals(migrated.stars.size, migrated.hardStagesCleared())
+    }
+
+    @Test
+    fun hardWinsAndNormalStarsSurviveReloadWithoutDuplicates() {
+        val file = tmpFile()
+        val p = Profile(file)
+        p.campaignDifficulty = CampaignDifficulty.HARD
+        p.stars[0] = 3
+        p.normalStars[0] = 1
+        p.recordHardVictory(0)
+        p.recordHardVictory(0)
+        p.recordHardVictory(35)
+        p.save()
+        Profile.awaitHintWrites()
+        val loaded = Profile(file).also { it.load() }
+        assertEquals(CampaignDifficulty.HARD, loaded.campaignDifficulty)
+        assertEquals(1, loaded.normalStarTotal())
+        assertEquals(2, loaded.hardStagesCleared())
+    }
 
     private fun tmpFile(): File = File(Files.createTempDirectory("cw").toFile(), "profile.json")
 

@@ -1004,7 +1004,9 @@ class Profile(private val file: File) {
     @Synchronized
     fun reset() {
         val keepName = name
-        medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
+        medals = 0; levels.clear(); stars.fill(0); normalStars.fill(0)
+        campaignDifficulty = CampaignDifficulty.NORMAL; hardStageWins = 0L
+        bestWave = 0; lastRankedDaily = -1L
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
