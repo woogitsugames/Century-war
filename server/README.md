@@ -16,9 +16,12 @@ implementacji reguł walki — większe ryzyko różnic oraz błędów anty-chea
   Aplikacja ma opcjonalny klient HTTPS w `meta/ScoreClient.kt`, aktywowany
   tylko po zgodzie użytkownika i podaniu poprawnej konfiguracji.
 - Baza: `players` (UUID i pseudonim), `scores` (wynik i skrót SHA-256 zgłoszenia),
-  `used_nonces` (przeciw ponownemu przesłaniu POST) oraz `blocked_players` (blokady UUID).
-  **Nie zapisujemy logu bitwy,
-  emaila ani adresu IP**. Nick i UUID są jednak danymi pseudonimowymi, mogą podlegać RODO.
+  `used_nonces` (przeciw ponownemu przesłaniu POST), `blocked_players` (blokady UUID)
+  i `score_submit_quotas` (dzienne liczniki nadużyć).
+  **Nie zapisujemy logu bitwy, emaila ani surowego adresu IP**. Liczniki IP
+  używają dziennego HMAC prywatnym kluczem serwera, a instalacji — SHA-256 jej
+  sekretu. Liczniki z poprzednich dni są kasowane przy kolejnym zgłoszeniu.
+  Te pseudonimowe identyfikatory, nick i UUID mogą podlegać RODO.
 
 ## Lokalnie
 
@@ -256,12 +259,15 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
   Przed wydaniem sprawdź identyczne odtwarzanie Android/JVM (Float).
 - Komenda `Replay.Kind.VARIANT` pozostaje częścią formatu; `Daily.config`
   utrzymuje historyczne reguły przed `Daily.RELEASE_DAY`.
-- Ograniczenia: POST 20/min/IP i 6/min/UUID; GET 120/min/IP,
-  maks. 2 równoczesne weryfikacje; nonce POST trwały w SQLite
-  (10 minut). Rate limiter IP jest **w pamięci jednej instancji**.
-  Nie ufamy nagłówkowi `X-Forwarded-For`; stosujemy adres połączenia.
-  **Uwaga:** za reverse proxy wszyscy klienci mają adres proxy, więc limit
-  per-IP serwera staje się limitem globalnym — właściwy limit per-IP ustaw na proxy.
+- Ograniczenia: POST 20/min/IP i 6/min/UUID, maksymalnie 100 zgłoszeń
+  dziennie/instalację i 400 zgłoszeń dziennie/IP (UTC); GET 120/min/IP.
+  Dzienny limit obejmuje także prawidłowo podpisane, ale sfałszowane lub
+  niezweryfikowane wyniki i przetrwa restart SQLite. HTTP 429 zwraca
+  `daily_quota_exceeded` i `Retry-After` do północy UTC. Limity minutowe
+  pozostają **w pamięci jednej instancji**. Nonce POST są trwałe przez 10 minut.
+  Nie ufamy `X-Forwarded-For` spoza zaufanego proxy. Jeśli adres proxy nie
+  jest zaufany i rozpoznany, limity IP stają się wspólne dla jego klientów;
+  właściwą ochronę ustaw także na reverse proxy.
 - Konieczny jest HTTPS/TLS na reverse proxy oraz limit body 1 MiB także w proxy
   (serwer czyta najwyżej 1 MiB + 1 bajt, również przy `Transfer-Encoding: chunked`),
   per-IP limit również na proxy, nadzór logów, kopie bazy.
@@ -346,6 +352,18 @@ Testy Androida i symulacji uruchamia osobny workflow `android.yml`.
 - Limity na minutę: `CW_RATE_POST_IP=20`, `CW_RATE_DELETE_IP=20`,
   `CW_RATE_READ_IP=120`, `CW_RATE_REPORT_IP=5`, `CW_RATE_POST_PLAYER=6`.
   Limity są w pamięci instancji; pozostaw również ochronę na brzegu proxy.
-- Weryfikacja powtórek: 2 pracowników, maksymalnie 16 oczekujących.
-  Brak miejsca albo timeout: HTTP 503, `Retry-After: 30`.
-  Nie zmieniano zasad `Replay.verify`.
+- Dzienny limit zgłoszeń: `CW_RATE_POST_INSTALL_DAY=100`,
+  `CW_RATE_POST_IP_DAY=400`; liczniki są atomowe i trwałe w SQLite.
+  Każdy podpisany, poprawny strukturalnie POST zajmuje miejsce nawet przy
+  późniejszym błędzie 422/503. Limit jest liczony od UTC, a IP jest zastępowany
+  dziennym HMAC kluczem `CW_PUBLIC_ID_KEY`. Zachowaj ten klucz między restartami.
+- Weryfikacja: pula `min(liczba rdzeni, 8)` wątków i maks. 16 oczekujących,
+  timeout 15 sekund liczony od wejścia do kolejki oraz limit 108 000 kroków
+  pojedynczej powtórki (30 minut symulacji przy 60 Hz).
+  Drugi przebieg normalizacji korzysta z **tego samego** limitu czasu.
+  Przepełnienie lub timeout: HTTP 503 z `Retry-After: 30`.
+  Przekroczenie liczby kroków: HTTP 422 (`invalid_replay`).
+  Kontrola czasu działa co 64 kroki; przerwanie wątku jest obsługiwane
+  w punktach kontrolnych. Bez osobnego procesu nie da się wymusić zatrzymania
+  kodu, który ignorowałby przerwania i bez końca wykonywał pojedynczy krok.
+  Format powtórek i logika walki nie uległy zmianie.
