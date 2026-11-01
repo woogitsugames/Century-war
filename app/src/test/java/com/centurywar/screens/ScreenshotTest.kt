@@ -1449,4 +1449,39 @@ class ScreenshotTest {
             shot(g, "${tag}_pause_quick_settings")
         }
     }
+
+    /** Zlecenie 84: ekran bitwy, dymek awansu i porażka na pięciu proporcjach. */
+    @Test
+    fun battleUx84() {
+        val oldLang = L.lang
+        try {
+            L.lang = L.PL
+            val devices = linkedMapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone1280" to intArrayOf(1280, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )
+            for ((tag, dimensions) in screenshotDevices(devices)) {
+                val g = game(dimensions[0], dimensions[1], dimensions[2] * 0.9f,
+                    if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 84084L, 1f,
+                    startEra = 1, maxEra = 3))
+                g.setScreen(bs)
+                val battle = field(bs, "battle").get(bs) as Battle
+                battle.player.gold = 5000f
+                shot(g, tag + "_battle84_hud")
+                val evolve = field(bs, "evolveBtn").get(bs) as Button
+                bs.onTap(evolve.r.centerX(), evolve.r.centerY())
+                shot(g, tag + "_battle84_missing_xp")
+                battle.player.kills = 7
+                battle.surrender()
+                shot(g, tag + "_battle84_defeat", 90)
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
 }
