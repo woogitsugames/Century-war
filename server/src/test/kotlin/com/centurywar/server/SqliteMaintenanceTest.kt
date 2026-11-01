@@ -62,6 +62,15 @@ class SqliteMaintenanceTest {
         val rescue = restoreOutput.lines().first { it.startsWith("previous-files:") }
             .substringAfter("previous-files: ").trim()
         assertTrue(Files.isRegularFile(Path.of(rescue).resolve("leaderboards.db")))
+        // Na VPS operator przekazuje plik przez stdin, bez udostępniania katalogu hosta.
+        Files.newInputStream(backup).use { stream ->
+            assertEquals(0, runRestore(
+                listOf("restore", "-"), db, StringBuilder(), StringBuilder(), stream,
+            ))
+        }
+        SqliteStore("jdbc:sqlite:$db").use { store ->
+            assertEquals(1L, store.countScores())
+        }
     }
 
     @Test fun invalidBackupDoesNotReplaceExistingDatabase() {
