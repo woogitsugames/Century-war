@@ -128,7 +128,8 @@ Kolejność języków to `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. 
 | Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Złoto (`gold`) | Złoto | Gold | Gold | Oro | Or | Oro | Ouro | Золото | Goud | Altın |
-| Doświadczenie (`xp`) | XP | XP | XP | XP | XP | XP | XP | XP | XP | XP |
+| Doświadczenie (`xp`) | XP | XP | XP | XP | XP | XP | XP | ОД | XP | XP |
+| Punkty zdrowia (`cx_hp`) | HP | HP | LP | PV | PV | PS | PV | ОЗ | HP | Can |
 | Medale (`medals`) | Medale | Medals | Medaillen | Medallas | Médailles | Medaglie | Medalhas | Медалі | Medailles | Madalyalar |
 | Gwiazdki (`stars`) | Gwiazdki | Stars | Sterne | Estrellas | Étoiles | Stelle | Estrelas | Зірки | Sterren | Yıldızlar |
 
@@ -217,6 +218,22 @@ Nie dodawaj tego terminu do ekranu ani tabeli L.kt bez osobnego zlecenia i ustal
 Dla kluczy ms_weather_wins, ms_custom_skirmish, ms_endless_bosses, ms_unit_upgrades, ms_replays_watched i ms_endless_cards obowiązują trzy warianty po polsku i ukraińsku, dwa w pozostałych językach poza tureckim (jeden). Kontroluj formy dla **1, 2, 5, 21, 22, 25**, a także zachowanie separatora pionowego. Klucz ms_weekly_waves podaje numer fali, a nie liczbę rzeczownika, więc nie wymaga wariantów.
 
 W języku tureckim znak procentu jest **przed** liczbą (np. +%8); w sformatowanych tekstach cx62_* odpowiada temu składnia +%%%d lub −%%%d. Nie należy automatycznie jej zamieniać na format innych języków.
+
+## Terminologia i formatowanie — audyt 88
+
+- **EN:** budowle obronne to *turrets* (liczba pojedyncza *turret*) we wszystkich opisach, w tym w nazwach kart i wież epokowych. *Advance* oznacza postawę armii (`advance`); przejście do następnej epoki to *Evolve* (`evolve`, `tip53_evolve`, `ms_evolutions`). W nazwach własnych epok obowiązuje *Age*: **Steam Age**, **Silicon Age**.
+- **DE:** przycisk ekranowy to *Schaltfläche*, nie fizyczna *Taste*. Oddzielaj liczbę i znak procentu spacją: **+30 %**, **−10 %**; w łańcuchach `String.format` zapis `+%d %%` wyświetla `+7 %`.
+- **UK:** **ОД** to *очки досвіду* (doświadczenie, klucz `xp`), a **ОЗ** to *очки здоров’я* (punkty zdrowia, `cx_hp`). Nie są to zamienne zasoby. Nazwy epok to **Доба пари**, **Доба кремнію**; w zdaniach stosuj ich poprawną odmianę (*Доби пари*, *Доби кремнію*).
+- **NL:** nazwy epok to **Stoomtijd** i **Siliciumtijd**, również w opisach osiągnięć.
+- **TR:** przycisk zmiany epoki to **Çağ atla**; postawa ofensywna to **İlerle**. Nie stosuj w tym znaczeniu **Evrim**. Turecki procent pozostaje przed liczbą, zgodnie z powyższymi regułami.
+- **Seria logowań:** w `ms_login_paid` nie stawiaj drugiego dwukropka przed nagrodą; `ms_login_day` podaje numer dnia osobno. Zachowuj `%s` dla liczby medali.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Awans epoki (`evolve`) | Awans | Evolve | Aufstieg | Evolucionar | Évoluer | Evolvi | Evoluir | Розвиток | Evolueren | Çağ atla |
+| Postawa ofensywna (`advance`) | Naprzód | Advance | Vorrücken | Avanzar | Avancer | Avanza | Avançar | Уперед | Oprukken | İlerle |
+| Seria dni (`ms_streak`) | Seria dni | Daily streak | Tages-Serie | Racha diaria | Série quotidienne | Serie giornaliera | Sequência diária | Щоденна серія | Dagreeks | Günlük seri |
+| Nagroda dnia (`ms_login_paid`) | Dziś +%s | Today +%s | Heute +%s | Hoy +%s | Aujourd’hui +%s | Oggi +%s | Hoje +%s | Сьогодні +%s | Vandaag +%s | Bugün +%s |
 
 ## Reguły utrzymania
 
