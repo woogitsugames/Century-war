@@ -333,3 +333,33 @@ Zlecenie 42 nie zawierało pomiaru; ten przebieg go uzupełnia (profil docelowy,
 | 28 | weteran | 2.14 | 60% | 60% | 11.1 |
 | 29 | weteran | 2.44 | 90% (2,6 min) | 75% | 4.4 |
 | 30 | weteran | 2.45 | 65% | 65% | 4.7 |
+
+## Zlecenie 71 — osiem nowych kart Endless (1.11.2026)
+
+Karty dopisano po dotychczasowych identyfikatorach, bez zmiany ich kolejności.
+Dwa nowe efekty bojowe: spowalnianie przez wieże (2 s, −15% ruchu za stos,
+maksymalnie −45%) i premia +30% obrażeń jednostek przy HP bazy poniżej 25%.
+Pozostałe efekty: synergie ekonomii, ruchu, liczebności, wież i napraw.
+Naprawy są ograniczone do 30% bazowego HP na falę.
+
+**Powtarzalny pomiar A/B:** `EndlessBalanceReportTest.veteranTwentySeeds`
+z `server/src/test/kotlin/com/centurywar/server/` uruchamiany na obu
+wersjach przez `.github/workflows/endless-balance.yml`.
+Ustawienia: seedy **1001–1020**, 80% badań weterana, kontrola przez
+`Ai`, maksymalnie fala 60 lub 90 000 kroków. Punktem odniesienia jest
+`merge-base` względem **`claude/bold-sagan-vwz5gm`**, a nie `main`.
+Wynik testu to `ENDLESS_MEAN` = średnia osiągnięta fala (fala porażki,
+lub 60 dla ocalałych).
+
+**Warunek akceptacji:** wzrost średniej względem bazy najwyżej **+10%**
+`(nowa / bazowa − 1) × 100`. Ulepszono regułę GitHub Actions, aby
+zwracała błąd, gdy przekroczony zostanie ten próg.
+
+**Wynik liczbowy:** wymaga zakończonego przebiegu GitHub Actions.
+Nie wpisano wartości szacowanych — wartości bazową, nową i procentową
+należy przepisać bezpośrednio z logu kroku „Porównanie średniej”,
+a w razie przekroczenia progu dostroić nowe karty.
+
+**Zgodność:** zmiana symulacji wymaga od koordynatora aktualizacji wersji
+rankingu w aplikacji i serwerze. `BattleSnapshot.VERSION` podniesiono do 13
+z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
