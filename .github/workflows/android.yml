@@ -123,7 +123,6 @@ jobs:
           path: app/build/sfx/*.wav
           if-no-files-found: warn
           retention-days: 14
-      - name: Debug APK
       - name: Zapisz debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
