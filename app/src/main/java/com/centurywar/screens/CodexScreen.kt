@@ -517,7 +517,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     override fun onDrag(dx: Float, dy: Float) { scroll = (scroll - dy).coerceIn(0f, maxScroll) }
 
     override fun render(c: Canvas) {
-        bg.draw(c, w, h, dt)
+        bg.draw(c, w, h, dt, g.quality.menuAnimated && !g.profile.reduceFlash, g.quality.menuDetail)
         chrome.dim(c, 130)
         for (b in categories) ui.button(c, b, 12.5f)
         for (b in tabs) if (b.visible) ui.button(c, b, 13.5f)
