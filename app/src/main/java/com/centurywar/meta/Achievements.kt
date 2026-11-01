@@ -260,8 +260,9 @@ object Achievements {
             }
             if (cfg.mode == Mode.SKIRMISH && cfg.modifiers.size == 3)
                 add(profile, AchievementMetric.CUSTOM_THREE)
-            if (cfg.mode == Mode.DAILY && cfg.dailyEvent != null)
-                rememberMask(profile, AchievementMetric.DAILY_EVENTS, 1 shl cfg.dailyEvent.ordinal)
+            val dailyEvent = cfg.dailyEvent
+            if (cfg.mode == Mode.DAILY && dailyEvent != null)
+                rememberMask(profile, AchievementMetric.DAILY_EVENTS, 1 shl dailyEvent.ordinal)
             var modifierMask = 0
             for (modifier in cfg.modifiers) modifierMask = modifierMask or (1 shl modifier.ordinal)
             rememberMask(profile, AchievementMetric.MODIFIER_VICTORIES, modifierMask)
