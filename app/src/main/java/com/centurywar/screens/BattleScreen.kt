@@ -110,6 +110,8 @@ class BattleScreen(
     private var newRecord = false
     private var tipKey = ""
     private var tipText = ""
+    private var resultReasonText1 = ""
+    private var resultReasonText2 = ""
     private var tipIcon = Icons.BOLT
     private var weeklyResultLabel = ""
     private var weeklyResultKey = ""
@@ -2104,11 +2106,15 @@ class BattleScreen(
         rewardText = "+" + L.plural("medals_n", totalMedalsGained.toLong())
         retainedProgressText = L.f("battle84_kept", battle.player.kills, missionsAdvanced)
         if (defeatReasonCount > 0) {
-            val first = defeatReasonText(defeatReasons[0]!!)
-            val second = if (defeatReasonCount > 1) defeatReasonText(defeatReasons[1]!!) else ""
-            tipText = L["why_lost"] + ": " + first +
-                (if (second.isNotEmpty()) "; " + second else "")
-        } else tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+            resultReasonText1 = defeatReasonText(defeatReasons[0]!!)
+            resultReasonText2 = if (defeatReasonCount > 1) defeatReasonText(defeatReasons[1]!!) else ""
+            tipText = L["why_lost"] + ": " + resultReasonText1 +
+                (if (resultReasonText2.isNotEmpty()) "; " + resultReasonText2 else "")
+        } else {
+            resultReasonText1 = ""
+            resultReasonText2 = ""
+            tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        }
         prepareResultTipLines()
     }
 
@@ -2203,7 +2209,17 @@ class BattleScreen(
             ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
-        if (tipText.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
+        if (resultReasonText1.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
+            // Dwa konkretne powody zawsze w osobnych wierszach; bez obcięcia drugiego przez zawijanie.
+            val lx = rp.left + 53 * dp
+            val reasonWidth = rp.right - 15 * dp - lx
+            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
+            ui.textO(c, resultReasonText1, lx, y + 16 * dp,
+                ui.fit(resultReasonText1, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
+            if (resultReasonText2.isNotEmpty() && y + 39 * dp < restartEnd.r.top)
+                ui.textO(c, resultReasonText2, lx, y + 34 * dp,
+                    ui.fit(resultReasonText2, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
+        } else if (tipText.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
             Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
             val available = ((restartEnd.r.top - y - 14 * dp) /
                 (13f * dp * ui.textScale * 1.3f)).toInt().coerceAtLeast(0)

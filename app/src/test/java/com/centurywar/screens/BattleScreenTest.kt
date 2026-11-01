@@ -575,6 +575,7 @@ class BattleScreenTest {
         val progress = field(bs, "retainedProgressText").get(bs) as String
         assertTrue(progress.contains("7"))
         assertTrue(field(bs, "defeatReasonCount").getInt(bs) in 1..2)
+        assertTrue((field(bs, "resultReasonText1").get(bs) as String).isNotBlank())
         val reasons = field(bs, "tipText").get(bs) as String
         assertTrue("Nie ma informacji o niewydanym złocie: $reasons", reasons.contains("5000"))
         assertTrue(field(bs, "resultTipCount").getInt(bs) >= 1)
