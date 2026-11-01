@@ -53,6 +53,67 @@ jobs:
           ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
           python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Debug APK
+      - name: Testy listy kontrolnej wydania
+        run: |
+          chmod +x ./gradlew
+          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
+      - name: Zbuduj APK i uruchom krytyczne testy
+        env:
+          PERF_REPORT: 'true'
+          SFX_PREVIEW: 'true'
+          MUSIC_PREVIEW: 'true'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*WeatherTest*' \
+            --tests '*DailyTest*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
+            --tests '*MotionTest*' \
+            --tests '*ScoreClientTest*' \
+            --tests '*ScoreQueueTest*' \
+            --tests '*LTest*' \
+            --tests '*AchievementsTest*' \
+            --tests '*Achievement60Test*' \
+          --tests '*HapticGateTest*' \
+          --tests '*BattleHapticsTest*' \
+            --tests '*CrashReportsTest*' \
+            --tests '*SoundSynthTest*' \
+            --tests '*SfxPreviewTest*' \
+            --tests '*MusicSynthTest*' \
+            --tests '*MusicThreadPerformanceTest*' \
+            --tests '*MenuQualityTest*' \
+            --tests '*MusicArrangementTest*' \
+            --tests '*MusicPreviewTest*' \
+            --tests '*AllocationTest*' \
+            --tests '*SimPerformanceTest*' \
+            --tests '*BattleIndexTest*' \
+            --tests '*QualityGovernorTest*' \
+            --tests '*FrameMetricsTest*' \
+            --tests '*ReleaseConfigTest*' \
+            --console=plain --no-configuration-cache
+      - name: Zapisz podglądy muzyki WAV
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-music-preview
+          path: app/build/music/*.wav
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zapisz podglądy WAV
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: era-sfx-preview
+          path: app/build/sfx/*.wav
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zapisz debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -171,6 +232,24 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
       - name: Raport serwera
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*ProfileTest*' \
+            --tests '*AchievementPersistenceTest*' \
+            --tests '*ProfileCloudTest*' \
+            --tests '*BattleHistoryTest*' \
+            --tests '*StartupTest*' \
+            --tests '*SkirmishSetupTest*' \
+            --tests '*MissionsTest*' \
+            --tests '*BattleScreenTest*' \
+            --tests '*BackLocaleTest*' \
+            --tests '*HintOverlayTest*' \
+            --tests '*LowEndScreensPerformanceTest*' \
+            --tests '*ScreenshotTest*' \
+            --tests '*ArtGalleryTest*' \
+            --tests '*BackdropsTest*' \
+            --tests '*RendererStressTest*' \
+            --console=plain --no-configuration-cache
+      - name: Zapisz zrzuty PNG
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:

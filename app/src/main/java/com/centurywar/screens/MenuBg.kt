@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import com.centurywar.engine.Quality
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
@@ -75,7 +76,8 @@ class MenuBg {
     private var tile = 1f
 
     /** [dt] jest ignorowane, jeśli w tej klatce czas już przesunięto (wspólny zegar). */
-    fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean = true): Float {
+    fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean = true,
+             detail: Int = Quality.HIGH): Float {
         if (animated) {
             val now = System.nanoTime()
             if (now - lastFrameNanos > 4_000_000L) { time += dt; lastFrameNanos = now }
@@ -83,25 +85,50 @@ class MenuBg {
         if (w != lw || h != lh) build(w, h)
         val t = if (animated) time else 0f
         c.drawRect(0f, 0f, w, h, sky)
-        drawStars(c, w, h, t)
-        drawSun(c, w, h, t)
-        drawClouds(c, w, h, t, 0)
+        if (detail >= Quality.MED) drawStars(c, w, h, t)
+        drawSun(c, w, h, t, detail == Quality.HIGH)
+        if (detail >= Quality.MED) drawClouds(c, w, h, t, 0)
         scroll(c, far, t * 5f * k, MOUNT, MOUNT_D, 1.6f)
-        scrollFill(c, farSnow, t * 5f * k, SNOW)
-        drawClouds(c, w, h, t, 1)
-        scroll(c, mid, t * 11f * k, HILL, Color.rgb(44, 58, 78), 1.8f)
-        drawBirds(c, w, h, t)
+        if (detail == Quality.HIGH) {
+            scrollFill(c, farSnow, t * 5f * k, SNOW)
+            drawClouds(c, w, h, t, 1)
+        }
+        if (detail >= Quality.MED) scroll(c, mid, t * 11f * k, HILL, Color.rgb(44, 58, 78), 1.8f)
+        if (detail == Quality.HIGH) drawBirds(c, w, h, t)
         scroll(c, near, t * 18f * k, NEAR, OUT, 2.2f)
         val gy = h * 0.8f
-        castle(c, w * 0.13f, gy + 4 * k, t)
-        bastion(c, w * 0.87f, gy + 4 * k, t)
-        // pierwszy plan
+        if (detail == Quality.LOW) drawLowFortresses(c, w, gy + 4 * k)
+        else {
+            castle(c, w * 0.13f, gy + 4 * k, t)
+            bastion(c, w * 0.87f, gy + 4 * k, t)
+        }
+        // Pierwszy plan na LOW bez drobnych, kosztownych detali.
         fill.color = GROUND; c.drawPath(ground, fill)
         line.color = OUT; line.strokeWidth = 2.4f * k; c.drawPath(ground, line)
-        fill.color = GRASS; c.drawPath(tufts, fill)
-        foreground(c, w, h, t)
+        if (detail >= Quality.MED) {
+            fill.color = GRASS; c.drawPath(tufts, fill)
+            foreground(c, w, h, t)
+        }
         c.drawRect(0f, h * 0.45f, w, h, shade)
         return t
+    }
+
+    /** Zamiast dziesiątek cegieł, nitów i dymu na urządzeniach z małą mocą. */
+    private fun drawLowFortresses(c: Canvas, w: Float, y: Float) {
+        val left = w * 0.13f
+        val right = w * 0.87f
+        fill.color = STONE
+        c.drawRect(left - 62 * k, y - 54 * k, left + 62 * k, y, fill)
+        c.drawRect(left - 25 * k, y - 110 * k, left + 25 * k, y - 54 * k, fill)
+        fill.color = BLUE
+        c.drawRect(left - 69 * k, y - 96 * k, left - 52 * k, y - 54 * k, fill)
+        c.drawRect(left + 52 * k, y - 96 * k, left + 69 * k, y - 54 * k, fill)
+        fill.color = STEEL
+        c.drawRect(right - 76 * k, y - 52 * k, right + 76 * k, y, fill)
+        c.drawRect(right - 22 * k, y - 112 * k, right + 22 * k, y - 52 * k, fill)
+        fill.color = RED
+        c.drawRect(right - 72 * k, y - 85 * k, right - 52 * k, y - 52 * k, fill)
+        c.drawRect(right + 52 * k, y - 85 * k, right + 72 * k, y - 52 * k, fill)
     }
 
     // ---------------------------------------------------------------- budowa warstw
@@ -249,12 +276,13 @@ class MenuBg {
         }
     }
 
-    private fun drawSun(c: Canvas, w: Float, h: Float, t: Float) {
+    private fun drawSun(c: Canvas, w: Float, h: Float, t: Float, rays: Boolean) {
         val sx = w * 0.6f
         val sy = h * 0.56f
         val sr = h * 0.11f
         c.drawCircle(sx, sy, h * 0.42f, glow)
-        // obracające się promienie
+        // Promienie zostają tylko na HIGH.
+        if (rays) {
         c.save()
         c.translate(sx, sy)
         c.rotate(t * 3f)
@@ -270,6 +298,7 @@ class MenuBg {
             c.rotate(30f)
         }
         c.restore()
+        }
         fill.color = Color.argb(90, 255, 230, 160)
         c.drawCircle(sx, sy, sr * 1.25f, fill)
         fill.color = Color.rgb(255, 222, 140)

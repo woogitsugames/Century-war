@@ -54,14 +54,14 @@ internal class MenuBattleScene {
 
         val scale = min(h / 450f, w / 880f).coerceAtLeast(0.5f)
         val floor = h * 0.875f
-        val count = if (quality == Quality.HIGH) 3 else 2
+        val count = when (quality) { Quality.LOW -> 1; Quality.MED -> 2; else -> 3 }
         for (team in 0..1) {
             val color = if (team == 0) Ui.PLAYER else Ui.ENEMY
             for (i in 0 until count) {
                 val drift = if (animated) sin(t * 0.8f + i * 0.7f) * 12f * scale else 0f
                 val x = if (team == 0) w * 0.075f + i * 46f * scale + drift
                     else w * 0.925f - i * 46f * scale - drift
-                val ranged = i == count - 1
+                val ranged = count > 1 && i == count - 1
                 val weapon = spec.weapons[if (ranged) 1 else 0]
                 shadow.color = Color.argb((55f * alpha).toInt(), 20, 22, 28)
                 shadowRect.set(x - 19f * scale, floor - 3f * scale,
