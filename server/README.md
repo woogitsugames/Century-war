@@ -45,7 +45,7 @@ Testy kompatybilności aplikacji:
 ### API v1
 
 Podpisy wymagane dla `/v1/score`, `/v1/player/delete`, `/v1/top`, `/v1/around`.
-`/v1/report` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
+`/v1/report`, `/health` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
 
 Każde podpisane żądanie musi mieć nagłówki:
 
@@ -286,6 +286,8 @@ Pusta wartość wyłącza `/metrics` (404); skonfigurowana wymaga nagłówka
 `Authorization: Bearer <token>` (brak lub zły token: 401). Przykład z serwera VPS:
 
 ~~~bash
+# Docker Compose czyta .env, ale nie eksportuje z niego zmiennych do powłoki.
+export CW_METRICS_TOKEN="$(sed -n 's/^CW_METRICS_TOKEN=//p' .env)"
 curl -fsS -H "Authorization: Bearer $CW_METRICS_TOKEN" \
   http://127.0.0.1:8080/metrics
 ~~~
@@ -313,6 +315,12 @@ sudo env CW_BACKUP_DIR=/var/backups/century-war \
 ~~~
 
 Zaplanuj skrypt w cron/systemd timer, codziennie po godzinach szczytu.
+Przykładowy wpis cron po dostosowaniu `/srv/century-war` do katalogu wdrożenia:
+
+~~~cron
+0 3 * * * cd /srv/century-war && /usr/bin/bash server/backup-sqlite.sh >> /var/log/cw-backup.log 2>&1
+~~~
+
 Utrzymuj też **kopię poza VPS**: backup na tym samym dysku nie zabezpiecza
 przed awarią dysku. Rotacja dotyczy tylko plików `cw-backup-*.sqlite`
 w katalogu `CW_BACKUP_DIR`; katalog `cw-data` nie jest miejscem docelowym
