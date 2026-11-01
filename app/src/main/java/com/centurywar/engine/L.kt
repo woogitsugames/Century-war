@@ -1564,8 +1564,8 @@ object L {
 
     /** Zlecenie 107: kopie profilu w 10 językach. */
     private fun part107(): Array<Pair<String, Array<out String>>> = arrayOf(
-        "profile_backup_export" to t("Zapis profilu do pliku", "Save profile to file", "Profil in Datei speichern", "Guardar perfil en archivo", "Exporter le profil vers un fichier", "Salva profilo su file", "Guardar perfil em ficheiro", "Зберегти профіль у файл", "Profiel opslaan als bestand", "Profili dosyaya kaydet"),
-        "profile_backup_import" to t("Odczyt profilu z pliku", "Load profile from file", "Profil aus Datei laden", "Cargar perfil desde archivo", "Importer le profil depuis un fichier", "Carica profilo da file", "Carregar perfil de ficheiro", "Завантажити профіль із файлу", "Profiel uit bestand laden", "Profili dosyadan yükle"),
+        "profile_backup_export" to t("Zapis profilu do pliku", "Save profile to file", "Profil in Datei speichern", "Guardar perfil en archivo", "Exporter le profil", "Salva profilo su file", "Guardar perfil em ficheiro", "Зберегти профіль", "Profiel opslaan als bestand", "Profili dosyaya kaydet"),
+        "profile_backup_import" to t("Odczyt profilu z pliku", "Load profile from file", "Profil aus Datei laden", "Cargar perfil desde archivo", "Importer le profil", "Carica profilo da file", "Carregar perfil de ficheiro", "Завантажити профіль", "Profiel uit bestand laden", "Profili dosyadan yükle"),
         "profile_export_action" to t("Eksport", "Export", "Exportieren", "Exportar", "Exporter", "Esporta", "Exportar", "Експорт", "Exporteren", "Dışa aktar"),
         "profile_import_action" to t("Import", "Import", "Importieren", "Importar", "Importer", "Importa", "Importar", "Імпорт", "Importeren", "İçe aktar"),
         "profile_export_ok" to t("Profil zapisany do pliku", "Profile saved to file", "Profil gespeichert", "Perfil guardado", "Profil enregistré", "Profilo salvato", "Perfil guardado", "Профіль збережено", "Profiel opgeslagen", "Profil kaydedildi"),
