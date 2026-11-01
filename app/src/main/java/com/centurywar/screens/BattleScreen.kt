@@ -1839,11 +1839,15 @@ class BattleScreen(
                 tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
             val imgH = min(72 * dp, tmpR.height() * 0.32f)
             val iy = tmpR.bottom - 28 * dp
+            // Szerokie maszyny (np. czołg) nie wychodzą poza kartę wariantu.
+            c.save()
+            c.clipRect(tmpR.left + 6 * dp, tmpR.top, tmpR.right - 6 * dp, tmpR.bottom - 4 * dp)
             for (role in 0..3) {
                 val def = Defs.unit(era, roles[role], i)
                 val xx = tmpR.left + (role + 0.5f) * tmpR.width() / 4f
                 r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
             }
+            c.restore()
         }
         variantDescLanguage = L.lang
         variantDescWidth = variantBtn[0].r.width() - 18 * dp
