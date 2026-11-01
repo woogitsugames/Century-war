@@ -122,6 +122,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var eraRailTop = 0f
     private var eraRailHeight = 0f
     private var activeRail = 0
+    private var initialEraReveal = true
     private val categoryOffsets = FloatArray(CATEGORY_KEYS.size)
     private val categoryWidths = FloatArray(CATEGORY_KEYS.size)
     private val eraOffsets = FloatArray(Defs.ERA_COUNT)
@@ -229,6 +230,10 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             maxEraScroll = max(0f, used - 8 * dp - railWidth)
             eraScroll = eraScroll.coerceIn(0f, maxEraScroll)
             positionEraTabs()
+            if (initialEraReveal) {
+                revealEra(era)
+                initialEraReveal = false
+            }
             viewTop += eraRailHeight + 10 * dp
         } else {
             for (b in tabs) b.visible = false
