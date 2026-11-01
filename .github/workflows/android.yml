@@ -81,6 +81,8 @@ jobs:
             --tests '*SoundSynthTest*' \
             --tests '*SfxPreviewTest*' \
             --tests '*MusicSynthTest*' \
+            --tests '*MusicThreadPerformanceTest*' \
+            --tests '*MenuQualityTest*' \
             --tests '*MusicArrangementTest*' \
             --tests '*MusicPreviewTest*' \
             --tests '*AllocationTest*' \
@@ -176,6 +178,7 @@ jobs:
             --tests '*BattleScreenTest*' \
             --tests '*BackLocaleTest*' \
             --tests '*HintOverlayTest*' \
+            --tests '*LowEndScreensPerformanceTest*' \
             --tests '*ScreenshotTest*' \
             --tests '*ArtGalleryTest*' \
             --tests '*BackdropsTest*' \
