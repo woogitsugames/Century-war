@@ -1279,10 +1279,15 @@ class ScreenshotTest {
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
                 "foldInner" to intArrayOf(1802, 2000, 4),
                 "foldOuter" to intArrayOf(904, 2316, 3),
+                "tablet4x3" to intArrayOf(2048, 1536, 2),
+                "phone21x9" to intArrayOf(2520, 1080, 3),
             ))) {
-                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                val density = if (tag == "tablet4x3" || tag == "phone21x9")
+                    dims[2].toFloat() else dims[2] * 0.9f
+                val g = game(dims[0], dims[1], density,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
                 if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+                if (tag == "phone21x9") g.setInsets(110, 0, 70, 65)
                 val scoreFile = File.createTempFile("cw-layout-scores", ".json").apply { delete() }
                 val scores = ScoreClient(scoreFile, "https://scores.example.invalid",
                     "testing-key-at-least-32-characters-long", g.profile)
@@ -1914,6 +1919,162 @@ class ScreenshotTest {
             }
         } finally {
             L.lang = originalLang
+        }
+    }
+
+    /**
+     * Zlecenie 132: rzeczywiste 2048x1536 @2 i 2520x1080 @3.
+     * Trzy języki, nowe ekrany, kopia/import, HUD, pauza i wykres wyników.
+     * Nazwy PNG nie pokrywają się z zatwierdzonymi wzorcami zlecenia 100.
+     */
+    @Test
+    fun tabletAudit132() {
+        val oldLang = L.lang
+        val requested = System.getenv("CW_SCREENSHOT_DEVICE")?.trim().orEmpty()
+        try {
+            for ((tag, dims) in linkedMapOf(
+                "tablet4x3" to intArrayOf(2048, 1536, 2),
+                "phone21x9" to intArrayOf(2520, 1080, 3),
+            )) {
+                // Równoległy CI może przypisać testowi tylko jeden format.
+                if (requested.isNotEmpty() && requested != tag) continue
+                for (lang in arrayOf("pl", "de", "uk")) {
+                    val g = game(dims[0], dims[1], dims[2].toFloat(), Quality.HIGH)
+                    val historyFile = File.createTempFile("cw-audit132", ".json").apply { delete() }
+                    val history = BattleHistory(historyFile)
+                    try {
+                        if (tag == "phone21x9") g.setInsets(110, 0, 70, 65)
+                        g.profile.lang = lang
+                        g.profile.textScale = 100
+                        g.profile.hintsEnabled = false
+                        g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                        g.onLanguageChanged()
+                        g.applyAccessibility()
+                        g.profile.stars[0] = 3
+                        g.profile.stars[1] = 2
+                        for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
+                        (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+                        (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+                        field(g, "achievementSeconds").setFloat(g, 0f)
+                        g.online = object : OnlineLeaderboards {
+                            override val available = true
+                            override val state = OnlineState.SIGNED_OUT
+                            override fun submit(board: String, score: Long) {}
+                        }
+                        val now = System.currentTimeMillis()
+                        repeat(14) { i ->
+                            history.add(BattleHistory.Record(
+                                date = now - i * 86_400_000L,
+                                mode = if (i % 3 == 0) Mode.ENDLESS.ordinal else Mode.SKIRMISH.ordinal,
+                                result = if (i % 4 == 0) BattleHistory.LOSS else BattleHistory.WIN,
+                                seconds = 130 + i * 12,
+                                score = 1500L + i * 90L,
+                                wave = 2 + i,
+                            ))
+                        }
+                        g.history = history
+                        g.historyLoaded = true
+
+                        fun capture(name: String, screen: Screen, title: String? = null) {
+                            g.setScreen(screen)
+                            screen.update(0f)
+                            assertNoCollisions(g, screen, "audit132_" + name, title)
+                            shot(g, "audit132_" + tag + "_" + lang + "_" + name, 1)
+                        }
+
+                        capture("stats", StatsScreen(g), "records")
+                        capture("whats_new", WhatsNewScreen(g), "wn_history")
+                        capture("whats_new_auto", WhatsNewScreen(g, true), "wn_title")
+                        capture("play_games", PlayGamesScreen(g), "play_games")
+
+                        val settings = SettingsScreen(g)
+                        g.setScreen(settings)
+                        settings.onClick(settings.buttons.first { it.id == 20 })
+                        val maxScroll = field(settings, "maxScroll").getFloat(settings)
+                        field(settings, "scroll").setFloat(settings,
+                            (maxScroll - 30 * g.ui.dp).coerceAtLeast(0f))
+                        settings.layout()
+                        settings.update(0f)
+                        assertNoCollisions(g, settings, "audit132_backup", "settings")
+                        for (id in intArrayOf(21, 22)) {
+                            val button = settings.buttons.first { it.id == id }
+                            assertTrue("132 " + tag + "/" + lang + ": kopia/import ukryty " + id,
+                                button.visible)
+                        }
+                        shot(g, "audit132_" + tag + "_" + lang + "_backup_import", 1)
+
+                        capture("accessibility", AccessibilityScreen(g), "accessibility")
+                        val accessBottom = AccessibilityScreen(g)
+                        g.setScreen(accessBottom)
+                        field(accessBottom, "scroll").setFloat(accessBottom,
+                            field(accessBottom, "maxScroll").getFloat(accessBottom))
+                        accessBottom.layout()
+                        accessBottom.update(0f)
+                        assertNoCollisions(g, accessBottom, "audit132_access_bottom", "accessibility")
+                        shot(g, "audit132_" + tag + "_" + lang + "_access_bottom", 1)
+
+                        capture("hints", HintSettingsScreen(g), "hint_settings")
+                        capture("campaign", CampaignScreen(g), "campaign")
+
+                        val battleScreen = BattleScreen(g,
+                            BattleConfig(Mode.SKIRMISH, 132132L, 1f, startEra = 2, maxEra = 7))
+                        g.setScreen(battleScreen)
+                        val safe = RectF(g.insetL, g.insetT,
+                            g.width - g.insetR, g.height - g.insetB)
+                        val pauseButton = field(battleScreen, "pauseBtn").get(battleScreen) as Button
+                        assertTrue("132 " + tag + "/" + lang + ": pauza poza ekranem",
+                            safe.contains(pauseButton.r))
+                        shot(g, "audit132_" + tag + "_" + lang + "_battle_hud", 2)
+                        battleScreen.onClick(pauseButton)
+                        assert74Pause(g, battleScreen, "132 " + tag + "/" + lang)
+                        shot(g, "audit132_" + tag + "_" + lang + "_battle_pause", 2)
+
+                        val results = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 132133L, 1f))
+                        g.setScreen(results)
+                        val battle = field(results, "battle").get(results) as Battle
+                        val samples = field(results, "battleSummary").get(results) as BattleSummarySamples
+                        repeat(240) {
+                            if (!battle.over) {
+                                battle.step()
+                                samples.capture(battle)
+                            }
+                        }
+                        if (!battle.over) {
+                            val commands = field(results, "commands").get(results) as BattleController
+                            assertTrue("132: nie udalo sie zakonczyc bitwy", commands.surrender())
+                        }
+                        val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                        try {
+                            val tinyCanvas = Canvas(tiny)
+                            repeat(70) { g.frame(tinyCanvas, 1f / 60f) }
+                        } finally {
+                            tiny.recycle()
+                        }
+                        val panel = field(results, "resultPanel").get(results) as RectF
+                        val area = field(results, "resultChartArea").get(results) as RectF
+                        val chartButton = field(results, "resultChartTab").get(results) as Button
+                        val nextButton = field(results, "continueBtn").get(results) as Button
+                        assertTrue("132 " + tag + "/" + lang + ": wyniki poza wcieciami",
+                            safe.contains(panel))
+                        assertTrue("132 " + tag + "/" + lang + ": wykres koliduje z przyciskami",
+                            area.height() >= 95 * g.ui.dp &&
+                                area.bottom < nextButton.r.top &&
+                                area.top > chartButton.r.bottom)
+                        assertTrue("132 " + tag + "/" + lang + ": brak zakladki wykresu",
+                            chartButton.visible)
+                        shot(g, "audit132_" + tag + "_" + lang + "_battle_results", 1)
+                        assertTrue("132 " + tag + "/" + lang + ": obciete wiersze",
+                            field(results, "resultRowsClipped").getInt(results) == 0)
+                        results.onClick(chartButton)
+                        shot(g, "audit132_" + tag + "_" + lang + "_battle_chart", 1)
+                    } finally {
+                        history.awaitWrites()
+                        history.close()
+                    }
+                }
+            }
+        } finally {
+            L.lang = oldLang
         }
     }
 }
