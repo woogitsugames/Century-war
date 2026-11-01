@@ -85,6 +85,10 @@ object Icons {
     const val WATCH_EYE = 62
     const val DICE = 63
     const val MISSIONS = 64
+    const val FIELD_MEDICS = 65
+    const val FINAL_SPARK = 66
+    const val FIRST_GUARD = 67
+    const val BOSS_RECALL = 68
 
     fun doctrineIcon(doctrine: Doctrine): Int = when (doctrine) {
         Doctrine.ECONOMY -> COINS
@@ -219,6 +223,10 @@ object Icons {
             WATCH_EYE -> watchEye(c)
             DICE -> dice(c)
             MISSIONS -> missionScroll(c)
+            FIELD_MEDICS -> fieldMedics(c)
+            FINAL_SPARK -> finalSpark(c)
+            FIRST_GUARD -> firstGuard(c)
+            BOSS_RECALL -> bossRecall(c)
         }
         c.restoreToCount(save)
     }
@@ -1045,6 +1053,34 @@ object Icons {
         stroke(c, -0.04f, 0f, 0.48f, 0f, 0.055f, WOOD_D)
         stroke(c, -0.04f, 0.40f, 0.48f, 0.40f, 0.055f, WOOD_D)
         circle(c, 0.58f, 0.70f, 0.22f, GOLD)
+    }
+
+    /** Symbole czterech kart Endless: czytelne przy rozmiarze pojedynczego przycisku. */
+    private fun fieldMedics(c: Canvas) {
+        rect(c, -0.78f, -0.6f, 0.78f, 0.77f, PAPER, 0.13f)
+        rect(c, -0.2f, -0.45f, 0.2f, 0.58f, RED, 0.04f)
+        rect(c, -0.53f, -0.12f, 0.53f, 0.26f, RED, 0.04f)
+    }
+
+    private fun finalSpark(c: Canvas) {
+        flame(c)
+        circle(c, 0f, 0.4f, 0.28f, GOLD)
+        stroke(c, -0.83f, -0.74f, -0.54f, -0.48f, 0.11f, GOLD_L)
+        stroke(c, 0.83f, -0.74f, 0.54f, -0.48f, 0.11f, GOLD_L)
+    }
+
+    private fun firstGuard(c: Canvas) {
+        shield(c, BLUE)
+        star(c, 0f, -0.09f, 0.35f, GOLD_L, true)
+    }
+
+    private fun bossRecall(c: Canvas) {
+        stopwatch(c)
+        c.save()
+        c.translate(0.34f, 0.41f)
+        c.scale(0.47f, 0.47f)
+        crown(c)
+        c.restore()
     }
 
     private fun heart(c: Canvas) {
