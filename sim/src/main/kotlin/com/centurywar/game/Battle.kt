@@ -232,6 +232,7 @@ class Battle(val cfg: BattleConfig) {
         const val QUEUE_CAP = 32
         const val HOLD_DIST = 430f
         const val MIN_ABILITY_CD_MUL = 0.35f
+        const val SUPPLY_INSTANT_GOLD = 250f
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
@@ -719,7 +720,7 @@ class Battle(val cfg: BattleConfig) {
             Doctrine.PLUNDER -> side.killGoldMul *= 1f + 0.35f * power
             Doctrine.BANNER -> side.rallyArmorMul *= 1f - 0.15f * power
             Doctrine.SUPPLY -> {
-                side.gold += 250f * Defs.costScale(side.era) * power
+                side.gold += SUPPLY_INSTANT_GOLD * Defs.costScale(side.era) * power
                 side.supplyUntil = max(side.supplyUntil, time + 60f)
             }
             Doctrine.SIEGE_MASTERS -> side.heavyBaseDmgMul *= 1f + 0.18f * power
