@@ -45,6 +45,7 @@ jobs:
         run: |
           ./gradlew :app:testDebugUnitTest \
             --tests '*ScreenshotTest.foldAudit98*' \
+            --tests '*ScreenshotTest.layoutCollisions*' \
             --tests '*ScreenshotTest.menus*' \
             --tests '*LTest*' \
             --console=plain --no-configuration-cache -PtestForks=1
