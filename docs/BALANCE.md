@@ -320,3 +320,16 @@ Zlecenie 42 nie zawierało pomiaru; ten przebieg go uzupełnia (profil docelowy,
 | 34 | weteran | 3.00 | 8–8 | 50.00% | 9.05 | 0.00% | 8.00 |
 | 35 | weteran | 3.01 | 8–8 | 55.00% | 9.01 | 0.00% | 8.00 |
 | 36 | weteran | 2.99 | 6–8 | 35.00% | 12.97 | 0.00% | 7.75 |
+
+## Korekta etapów 11 i 29 (1.11.2026, noc, 20 seedów)
+
+`Campaign.stageRamp`: etap 11 ×1,03 → ×0,97, etap 29 ×1,03 → ×1,12.
+
+| Etap | Profil | AI | Wygrane przed | Wygrane po | Mediana po [min] |
+|---:|---|---:|---:|---:|---:|
+| 10 | początkujący | 0.97 | 60% | 60% | 11.6 |
+| 11 | początkujący | 1.00 | 35% | 70% | 10.3 |
+| 12 | początkujący | 1.04 | 65% | 65% | 10.2 |
+| 28 | weteran | 2.14 | 60% | 60% | 11.1 |
+| 29 | weteran | 2.44 | 90% (2,6 min) | 75% | 4.4 |
+| 30 | weteran | 2.45 | 65% | 65% | 4.7 |
