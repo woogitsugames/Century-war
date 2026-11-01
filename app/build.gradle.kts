@@ -45,7 +45,8 @@ fun quotedBuildValue(value: String): String = "\"" +
     value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\""
 val scoreServerUrl = scoreSetting("CW_SERVER_URL").trim()
 val scoreHmacKey = scoreSetting("CW_HMAC_KEY")
-val scorePrivacyUrl = scoreSetting("CW_PRIVACY_URL").trim()
+val scorePrivacyUrl = (providers.gradleProperty("CW_PRIVACY_URL").orNull
+    ?: scoreSetting("CW_PRIVACY_URL")).trim()
 
 // ---- Podpis release ------------------------------------------------------------------------
 // Klucz upload wyłącznie ze środowiska (CI: sekrety GitHub, patrz docs/CI.md).
@@ -95,6 +96,7 @@ android {
         buildConfigField("String", "CW_SERVER_URL", quotedBuildValue(scoreServerUrl))
         buildConfigField("String", "CW_HMAC_KEY", quotedBuildValue(scoreHmacKey))
         buildConfigField("String", "CW_PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
+        buildConfigField("String", "PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
     }
 
     buildFeatures { buildConfig = true }
@@ -111,6 +113,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // W debug zawsze jest dostępny wbudowany skrót polityki.
+            buildConfigField("String", "PRIVACY_URL", "\"\"")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
