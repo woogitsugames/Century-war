@@ -72,7 +72,9 @@ class ResearchScreen(g: Game) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         val avail = w - g.insetL - g.insetR - 32 * dp
-        cols = max(if (ui.textScale > 1.15f) 1 else 2, (avail / ((if (ui.textScale > 1.15f) 280f else 250f) * dp)).toInt())
+        // Karty w dwóch kolumnach były nieczytelne przy 904 px na zewnętrznym Foldzie.
+        cols = if (avail < 460 * dp || ui.textScale > 1.15f) 1
+            else max(2, (avail / (250f * dp)).toInt())
         cw = (avail - (cols - 1) * 12 * dp) / cols
         ch = (if (ui.textScale > 1.15f) 128f else 108f) * dp
         top = chrome.top + 6 * dp
