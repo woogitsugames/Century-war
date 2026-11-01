@@ -236,7 +236,16 @@ class Ui {
     fun fit(s: String, sizeDp: Float, width: Float, minDp: Float = 8f): Float {
         if (width <= 0f) return sizeDp
         val m = measure(s, sizeDp, true)
-        return if (m <= width) sizeDp else max(minDp / textScale, sizeDp * width / m)
+        if (m <= width) return sizeDp
+        val floor = minDp / textScale
+        var size = max(floor, sizeDp * width / m)
+        // Szerokość nie skaluje się idealnie liniowo (hinting, czcionki zastępcze dla cyrylicy):
+        // dociskamy kilkoma krokami, bez alokacji.
+        var guard = 0
+        while (size > floor && measure(s, size, true) > width && guard++ < 6) {
+            size = max(floor, size * 0.96f)
+        }
+        return size
     }
 
     /** Tekst zawijany do szerokości; zwraca wysokość. */

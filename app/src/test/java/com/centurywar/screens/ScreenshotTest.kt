@@ -262,6 +262,10 @@ class ScreenshotTest {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
             for (i in 0 until 12) g.profile.stars[i] = (i % 3) + 1
+            // Zapowiedź epoki (68) i baner serii logowania przechwytywały dotknięcia przycisków
+            // trudności (126); test dotyczy mapy, więc wyłączamy obie nakładki.
+            for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
+            clear74Notices(g)
             val screen = CampaignScreen(g)
             g.setScreen(screen)
             val pictures = field(screen, "regionPictures").get(screen) as Array<*>
