@@ -1723,9 +1723,20 @@ class ScreenshotTest {
                 (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
                 field(g, "achievementSeconds").setFloat(g, 0f)
 
-                fun capture(scene: String, frames: Int = 3) {
+                fun capture(scene: String, frames: Int = 2) {
                     val name = "${tag}_reg100_$scene"
-                    shot(g, name, frames)
+                    // dt=0 zamraża chmury i animacje niezależnie od System.nanoTime().
+                    g.finishScreenTransition()
+                    val bitmap = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+                    try {
+                        val canvas = Canvas(bitmap)
+                        repeat(frames) { g.frame(canvas, 0f) }
+                        File(out, "$name.png").outputStream().use {
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
                     ScreenshotGolden.verify(name)
                 }
 
