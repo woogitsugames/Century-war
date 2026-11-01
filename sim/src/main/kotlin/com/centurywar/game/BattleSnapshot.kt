@@ -300,7 +300,7 @@ object BattleSnapshot {
         return RestoredBattle(b, ranked, camX)
     }
 
-    internal fun readConfig(i: DataInputStream): BattleConfig? {
+    internal fun readConfig(i: DataInputStream, hasDailyEvent: Boolean = true): BattleConfig? {
         val mode = enumAt(Mode.values(), i.readByte().toInt())
         val seed = i.readLong()
         val aiPower = i.readFloat()
@@ -322,7 +322,7 @@ object BattleSnapshot {
         val weather = enumAt(Weather.values(), i.readByte().toInt())
         val weekly = i.readLong()
         val cardId = i.readByte().toInt()
-        val eventId = i.readByte().toInt()
+        val eventId = if (hasDailyEvent) i.readByte().toInt() else -1
         if (startEra > maxEra || weekly < -1L ||
             (weekly >= 0L) != (cardId >= 0) || (weekly >= 0L && mode != Mode.ENDLESS) ||
             (eventId >= 0 && mode != Mode.DAILY)) return null
