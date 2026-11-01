@@ -7,6 +7,7 @@ import android.graphics.RectF
 import com.centurywar.crash.CrashReports
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
+import com.centurywar.engine.BattleMusicIntensity
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
@@ -61,7 +62,10 @@ class BattleScreen(
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val achievementEvents = AchievementBattleTracker(battle)
-    init { CrashReports.battleStarted(if (cfg.mode == Mode.CAMPAIGN) cfg.stageIndex + 1 else 0) }
+    init {
+        CrashReports.battleStarted(if (cfg.mode == Mode.CAMPAIGN) cfg.stageIndex + 1 else 0)
+        g.music?.setThemeSeed((cfg.seed xor (cfg.seed ushr 32)).toInt())
+    }
     private val commands = battle.commandController ?: BattleController(battle)
     private val haptics = BattleHaptics(g, battle)
     private val r = BattleRenderer(g, battle)
@@ -604,19 +608,29 @@ class BattleScreen(
             preparedEnemyEra = battle.enemy.era
             preparedEnemyVariant = battle.enemy.eraVariant
         }
-        // Muzyka śledzi faktyczną epokę gracza i zagrożenie przy jego bazie.
+        // Jeden parametr 0..1 steruje spokój / starcie / zagrożenie bazy.
         val music = g.music
         if (music != null) {
             music.setEra(battle.player.era)
-            var threat = 0f
-            if (!paused && !finished && battle.pendingChoice == null) {
+            var tension = 0f
+            if (!paused && !finished && !battle.over &&
+                battle.pendingChoice == null && battle.pendingCards == null &&
+                battle.pendingVariant == null) {
+                var allyFront = Float.NEGATIVE_INFINITY
+                var enemyFront = Float.POSITIVE_INFINITY
                 for (u in battle.units) {
-                    if (!u.alive || u.side != 1) continue
-                    val near = (1f - (u.x - battle.player.baseFront) / (Defs.LANE * 0.35f)).coerceIn(0f, 1f)
-                    if (near > threat) threat = near
+                    if (!u.alive) continue
+                    if (u.side == 0) {
+                        if (u.x > allyFront) allyFront = u.x
+                    } else if (u.x < enemyFront) enemyFront = u.x
                 }
+                val hp = battle.player
+                val hpRatio = if (hp.baseMaxHp > 0f) hp.baseHp / hp.baseMaxHp else 1f
+                tension = BattleMusicIntensity.level(
+                    allyFront, enemyFront, hp.baseFront, Defs.LANE, hpRatio
+                )
             }
-            music.setIntensity(threat)
+            music.setIntensity(tension)
         }
         BattleSfx.play(g, battle, r.camX, r.worldVisible)
         if (finished) resultTime += dt

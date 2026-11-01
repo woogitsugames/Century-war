@@ -10,7 +10,7 @@ import kotlin.math.abs
 class MusicArrangementTest {
     @Test fun allStylesAndSectionsStayFiniteAndUnclipped() {
         val buffer = FloatArray(2048)
-        for (era in MusicSynth.MENU..7) {
+        for (era in MusicSynth.MENU..8) {
             val synth = MusicSynth(55)
             synth.setEra(era)
             synth.skipFade()

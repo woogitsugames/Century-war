@@ -10,7 +10,7 @@ class MusicSynthTest {
     @Test fun allErasProduceFiniteUnclippedSamples() {
         val synth = MusicSynth(42)
         val buffer = FloatArray(2048)
-        for (era in MusicSynth.MENU..7) {
+        for (era in MusicSynth.MENU..8) {
             synth.setEra(era)
             synth.setIntensity(1f)
             repeat(48) {
