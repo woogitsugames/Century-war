@@ -1,4 +1,4 @@
-name: Test balansu Endless (20 seedów)
+name: Test balansu Endless (20 i 100 seedów)
 on:
   pull_request:
     branches: ['claude/**']
@@ -27,7 +27,7 @@ jobs:
         run: |
           set -o pipefail
           chmod +x ./gradlew
-          ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache | tee "$RUNNER_TEMP/new.log"
+          ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks | tee "$RUNNER_TEMP/new.log"
       - name: Kod bazowy
         run: |
           set -o pipefail
@@ -36,16 +36,20 @@ jobs:
           echo "ENDLESS_BASE=$base"
           git worktree add --detach "$RUNNER_TEMP/cw-baseline" "$base"
           cp server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt "$RUNNER_TEMP/cw-baseline/server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt"
-          (cd "$RUNNER_TEMP/cw-baseline" && chmod +x ./gradlew && ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache) | tee "$RUNNER_TEMP/old.log"
+          (cd "$RUNNER_TEMP/cw-baseline" && chmod +x ./gradlew && ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks) | tee "$RUNNER_TEMP/old.log"
       - name: Porównanie średniej
         run: |
           old=$(grep -oE 'ENDLESS_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/old.log" | tail -1 | cut -d= -f2)
           new=$(grep -oE 'ENDLESS_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/new.log" | tail -1 | cut -d= -f2)
-          test -n "$old" && test -n "$new"
-          awk -v old="$old" -v now="$new" 'BEGIN {
-            if (old <= 0) exit 2;
+          old100=$(grep -oE 'ENDLESS100_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/old.log" | tail -1 | cut -d= -f2)
+          new100=$(grep -oE 'ENDLESS100_MEAN=[0-9]+([.][0-9]+)?' "$RUNNER_TEMP/new.log" | tail -1 | cut -d= -f2)
+          test -n "$old" && test -n "$new" && test -n "$old100" && test -n "$new100"
+          awk -v old="$old" -v now="$new" -v old100="$old100" -v new100="$new100" 'BEGIN {
+            if (old <= 0 || old100 <= 0) exit 2;
             diff = (now-old)/old*100;
-            printf "Endless 20 seedów (weteran): baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
+            diff100 = (new100-old100)/old100*100;
+            printf "Endless 20 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
+            printf "Endless 100 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old100, new100, diff100;
             if (diff > 10) exit 1;
           }'
       - name: Logi balansu
