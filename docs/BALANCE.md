@@ -355,10 +355,26 @@ lub 60 dla ocalałych).
 `(nowa / bazowa − 1) × 100`. Ulepszono regułę GitHub Actions, aby
 zwracała błąd, gdy przekroczony zostanie ten próg.
 
-**Wynik liczbowy:** wymaga zakończonego przebiegu GitHub Actions.
-Nie wpisano wartości szacowanych — wartości bazową, nową i procentową
-należy przepisać bezpośrednio z logu kroku „Porównanie średniej”,
-a w razie przekroczenia progu dostroić nowe karty.
+**Wyniki uruchomionego pomiaru A/B:** [GitHub Actions — 20 seedów](https://github.com/woogitsugames/Century-war/actions/runs/41291746749)
+(pomiar 1.11.2026, baza `0893892872e964f97e9c51c34ecfda29911763e1`).
+
+| Wskaźnik | Baza | Nowe karty |
+|---|---:|---:|
+| Średnia osiągnięta fala (`ENDLESS_MEAN`) | 53,05 | 52,20 |
+| Różnica względem bazy | — | **−1,60%** |
+| Porażki przed falą 60 | 10/20 | 15/20 |
+| Mediana fali porażki | 54 | 53 |
+| Żywa baza przy fali 20 | 20/20 | 20/20 |
+| Żywa baza przy fali 30 | 19/20 | 20/20 |
+| Żywa baza przy fali 40 | 16/20 | 18/20 |
+| Żywa baza przy fali 50 | 16/20 | 15/20 |
+| Żywa baza przy fali 60 | 10/20 | 5/20 |
+
+**Wniosek:** wymagany limit wzrostu średniej o maksymalnie +10% spełniono.
+Równocześnie większa liczba porażek przed falą 60 (15 zamiast 10)
+wskazuje na zmianę rozkładu przeżywalności. Kryterium średniej nie
+gwarantuje identycznego poziomu trudności w późniejszych falach;
+przed wydaniem warto sprawdzić większą próbę seedów.
 
 **Zgodność:** zmiana symulacji wymaga od koordynatora aktualizacji wersji
 rankingu w aplikacji i serwerze. `BattleSnapshot.VERSION` podniesiono do 13
