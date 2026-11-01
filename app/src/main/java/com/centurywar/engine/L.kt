@@ -116,7 +116,15 @@ object L {
         putAll(part71())
         putAll(part70())
         putAll(part72())
+        putAll(part80())
     }
+
+    /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
+    private fun part80(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "global_report_nick" to t("Zgłoś nick", "Report name", "Namen melden", "Denunciar nombre", "Signaler le pseudo", "Segnala nome", "Denunciar nome", "Поскаржитись", "Naam melden", "Adı bildir"),
+        "global_report_sent" to t("Zgłoszono do moderacji", "Report submitted", "Meldung gesendet", "Denuncia enviada", "Signalement envoyé", "Segnalazione inviata", "Denúncia enviada", "Скаргу надіслано", "Melding verzonden", "Bildirim gönderildi"),
+        "global_report_failed" to t("Nie udało się zgłosić", "Report failed", "Meldung fehlgeschlagen", "Error al denunciar", "Échec du signalement", "Segnalazione non riuscita", "Falha na denúncia", "Не вдалося надіслати", "Melden mislukt", "Bildirim başarısız"),
+    )
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
     private fun part60(): Array<Pair<String, Array<out String>>> = arrayOf(
