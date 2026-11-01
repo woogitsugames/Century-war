@@ -47,7 +47,7 @@ Otwórz **Monitor and improve → Policy and programs → App content** (lub ana
 | **Target audience and content** | Propozycja: **16–17 oraz 18+**, jeśli faktycznie do tych grup zaprojektowano marketing i grę; nie deklaruj automatycznie odbiorców młodszych niż 13. | Ostateczna decyzja wydawcy po obejrzeniu finalnych materiałów; Google ostrzega, że 16–17 w części jurysdykcji to nadal dzieci i mogą pojawić się obowiązki Families. [Google: Target audience](https://support.google.com/googleplay/android-developer/answer/9867159). |
 | **Content rating (IARC)** | **Game**, przemoc **Tak**, stylizowana/kreskówkowa walka z postaciami i bronią; bez zakładania z góry PEGI 7/12/16. | [content_rating.md](content_rating.md) i finałowy ekran bitwy. Weryfikuj każdą odpowiedź; rating nadaje IARC. [Google: klasyfikacja](https://support.google.com/googleplay/android-developer/answer/9859655). |
 
-### 3.1. Ankieta IARC — odpowiedzi do skopiowania sensu (nie dosłownego układu pól)
+### 3.1. Ankieta IARC — sugerowane odpowiedzi (nie dosłowny układ pól)
 
 - **Przemoc / broń:** **tak**, regularna walka kreskówkowych wojowników, broni białej, dystansowej, artylerii, wież, zniszczenie baz i śmierć jednostek. Nie zaznaczaj „brak przemocy” tylko dlatego, że grafika jest rysowana.
 - **Realizm, krew/gore, rany:** według [content_rating.md](content_rating.md) brak realistycznej krwi/gore; **przed wysłaniem obejrzyj animacje ze wszystkich epok i bossów**. Jeśli zawartość się zmieni, odpowiedź należy zaktualizować.
@@ -67,7 +67,7 @@ Przepisz kategorie i warunki z [data_safety.md](data_safety.md). Przy skonfiguro
 
 | Typ danych do rozważenia | Faktyczny kanał w projekcie |
 |---|---|
-| **User IDs; Name / pseudonim** | Identifikator profilu PGS oraz nazwa/awatar; w wariancie z własnym serwerem także lokalny UUID i publiczny pseudonim. |
+| **User IDs; Name / pseudonim** | Identyfikator profilu PGS oraz nazwa/awatar; w wariancie z własnym serwerem także lokalny UUID i publiczny pseudonim. |
 | **App activity / inne działania** | Wyniki rankingów, stan postępu, kopia profilu Saved Games; przy własnym serwerze metadane i weryfikacja powtórki. |
 | **User-generated content** | Pseudonimy rankingów i ewentualne zgłoszenia nicków po integracji zlecenia 80. |
 | **App interactions, diagnostics, crash logs, device IDs** | Sprawdź deklarację zbierania danych SDK Play Games **22.1.0** i finalny AAB. Crash logi własnej aplikacji w obecnym opisie są lokalne do momentu ręcznego udostępnienia. |
