@@ -140,20 +140,21 @@ object L {
         putAll(part87())
         putAll(part92())
         putAll(part93())
-        }
+        putAll(part104())
         putAll(part105())
         putAll(part106())
         putAll(part107())
         putAll(part109())
         putAll(part108())
+        }
     }
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
     private fun part92(): Array<Pair<String, Array<out String>>> = arrayOf(
         "pgs_unavailable_version" to t("Niedostępne w tej wersji", "Unavailable in this version", "In dieser Version nicht verfügbar", "No disponible en esta versión", "Indisponible dans cette version", "Non disponibile in questa versione", "Indisponível nesta versão", "Недоступно в цій версії", "Niet beschikbaar in deze versie", "Bu sürümde kullanılamıyor"),
         "pgs_local_only" to t("Gra działa lokalnie. Nie wymaga konta Google.", "Local play works without a Google account.", "Lokal spielen ohne Google-Konto.", "Puedes jugar sin cuenta de Google.", "Jouez en local sans compte Google.", "Puoi giocare senza un account Google.", "Jogue sem uma conta Google.", "Можна грати локально без облікового запису Google.", "Lokaal spelen zonder Google-account.", "Google hesabı olmadan oynayabilirsiniz."),
-        putAll(part104())
-    }
+    )
+
 
     /** Zlecenie 104: raport bitwy i wykresy. */
     private fun part104(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1533,6 +1534,8 @@ object L {
         "privacy93_saving" to t("Trwa zapisywanie żądania usunięcia…", "Saving deletion request…", "Löschanfrage wird gespeichert…", "Guardando solicitud de borrado…", "Enregistrement de la demande de suppression…", "Salvataggio richiesta di eliminazione…", "A guardar pedido de eliminação…", "Збереження запиту на видалення…", "Verwijderverzoek opslaan…", "Silme isteği kaydediliyor…"),
         "privacy93_queued" to t("Żądanie zapisane; usunięcie na serwerze nie jest jeszcze potwierdzone.", "Request queued; server deletion is still pending.", "Anfrage gespeichert; Serverlöschung steht noch aus.", "Solicitud en cola; el borrado del servidor aún está pendiente.", "Demande enregistrée ; suppression du serveur en attente.", "Richiesta in coda; eliminazione dal server ancora in sospeso.", "Pedido em fila; eliminação no servidor ainda pendente.", "Запит у черзі; видалення на сервері ще очікується.", "Verzoek in wachtrij; serververwijdering volgt nog.", "İstek sırada; sunucuda silme işlemi henüz bekliyor."),
         "privacy93_failed" to t("Nie zapisano żądania. Dane nie zostały usunięte — spróbuj ponownie.", "Request not saved. Data was not deleted; try again.", "Anfrage nicht gespeichert. Daten nicht gelöscht; erneut versuchen.", "Solicitud no guardada. Datos no borrados; inténtalo de nuevo.", "Demande non enregistrée. Données non supprimées ; réessayez.", "Richiesta non salvata. Dati non eliminati; riprova.", "Pedido não guardado. Dados não eliminados; tenta novamente.", "Запит не збережено. Дані не видалені; спробуйте знову.", "Verzoek niet opgeslagen. Gegevens niet gewist; probeer opnieuw.", "İstek kaydedilmedi. Veriler silinmedi; yeniden deneyin."),
+    )
+
     /** Zlecenie 105: wykresy lokalnych statystyk. */
     private fun part105(): Array<Pair<String, Array<out String>>> = arrayOf(
         "bh105_last30" to t("Wyniki ostatnich 30 bitew", "Last 30 battle results", "Ergebnisse der letzten 30 Kämpfe", "Resultados de las últimas 30 batallas", "Résultats des 30 derniers combats", "Risultati delle ultime 30 battaglie", "Resultados das últimas 30 batalhas", "Результати останніх 30 битв", "Uitslagen laatste 30 gevechten", "Son 30 savaşın sonuçları"),
@@ -1543,6 +1546,8 @@ object L {
         "bh105_max_wave" to t("Rekord: fala %d", "Record: wave %d", "Rekord: Welle %d", "Récord: oleada %d", "Record : vague %d", "Record: ondata %d", "Recorde: onda %d", "Рекорд: хвиля %d", "Record: golf %d", "Rekor: dalga %d"),
         "bh105_max_time" to t("Maksymalnie: %s", "Maximum: %s", "Maximum: %s", "Máximo: %s", "Maximum : %s", "Massimo: %s", "Máximo: %s", "Максимум: %s", "Maximum: %s", "En fazla: %s"),
         "bh105_13days" to t("13 dni temu", "13 days ago", "Vor 13 Tagen", "Hace 13 días", "Il y a 13 jours", "13 giorni fa", "Há 13 dias", "13 днів тому", "13 dagen geleden", "13 gün önce"),
+    )
+
 
     /** Zlecenie 106: historia zmian i ekran aktualizacji. */
     private fun part106(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1574,6 +1579,8 @@ object L {
         "profile_restore_title" to t("Przywrócić poprzedni profil?", "Restore previous profile?", "Vorheriges Profil laden?", "¿Restaurar el perfil anterior?", "Restaurer le profil précédent ?", "Ripristinare il profilo precedente?", "Restaurar perfil anterior?", "Відновити попередній профіль?", "Vorig profiel herstellen?", "Önceki profil geri yüklensin mi?"),
         "profile_restore_confirm" to t("Zostanie przywrócony profil zapisany przed poprzednim importem. Bieżący profil zostanie najpierw zabezpieczony kolejną kopią. Kontynuować?", "The profile saved before the last import will be restored. The current profile will be backed up first. Continue?", "Das vor dem letzten Import gespeicherte Profil wird wiederhergestellt. Zuvor wird das aktuelle Profil gesichert. Fortfahren?", "Se restaurará el perfil guardado antes de la última importación. Primero se guardará una copia del perfil actual. ¿Continuar?", "Le profil sauvegardé avant le dernier import sera restauré. Le profil actuel sera d’abord sauvegardé. Continuer ?", "Verrà ripristinato il profilo salvato prima dell'ultima importazione. Il profilo attuale sarà prima copiato. Continuare?", "O perfil guardado antes da última importação será restaurado. Primeiro será feita uma cópia do perfil atual. Continuar?", "Буде відновлено профіль до останнього імпорту. Спочатку буде створено копію поточного профілю. Продовжити?", "Het profiel van voor de laatste import wordt hersteld. Eerst wordt een kopie van het huidige profiel gemaakt. Doorgaan?", "Son içe aktarmadan önce kaydedilen profil geri yüklenecek. Önce mevcut profil yedeklenecek. Devam edilsin mi?"),
         "profile_restore_missing" to t("Brak poprzedniej poprawnej kopii", "No valid previous backup", "Keine gültige Sicherung", "No hay copia válida", "Aucune copie valide", "Nessuna copia valida", "Sem cópia válida", "Немає придатної копії", "Geen geldige kopie", "Geçerli yedek bulunamadı"),
+    )
+
 
     /** Zlecenie 109: sześć zestawów dnia i tygodnia (10 języków). */
     private fun part109(): Array<Pair<String, Array<out String>>> = arrayOf(

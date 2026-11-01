@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -54,7 +55,7 @@ require(requestedTestCategories.size <= 1) {
     "Uruchom kategorie testów w osobnych wywołaniach Gradle."
 }
 val requestedTestCategory = requestedTestCategories.singleOrNull()
-val categoryConfig = java.util.Properties().apply {
+val categoryConfig = Properties().apply {
     rootProject.file("gradle/test-categories.properties").inputStream().use { load(it) }
 }
 val balanceTestPatterns = categoryConfig.getProperty("balance")?.split(',')
