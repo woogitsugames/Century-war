@@ -399,9 +399,9 @@ class ScreenshotTestTranslation78Test {
     private fun capture(code: String) {
         val previous = L.lang
         try {
-            L.setCode(code)
             val g = game()
             g.profile.lang = code
+            L.setCode(code)
 
             val paused = com.centurywar.screens.BattleScreen(
                 g, com.centurywar.game.BattleConfig(
