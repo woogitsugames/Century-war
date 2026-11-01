@@ -130,7 +130,7 @@ object EndlessCards {
                 card == EndlessCard.IRON_CURTAIN || card == EndlessCard.TOWER_NETWORK ||
                 card == EndlessCard.EMBER_FORGE) && side.slots == 0) return false
         if (card == EndlessCard.BANNER && !side.rallyUnlocked) return false
-        if (card == EndlessCard.VIGILANCE && !fog && side.slots == 0) return false
+        if (card == EndlessCard.VIGILANCE && side.slots == 0 && (!fog || side.fogSight)) return false
         if (card == EndlessCard.CLONING && side.cloneChance >= 0.6f) return false
         if (card == EndlessCard.FREE_ELITE && side.freeElitesPerWave >= 4) return false
         if ((card == EndlessCard.REPAIR_CREW || card == EndlessCard.CITADEL_HEART) &&

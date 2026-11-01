@@ -60,6 +60,8 @@ class SimBalanceCaps82Test {
             assertFalse(c.name, EndlessCards.canOffer(c, p))
         }
         assertTrue(EndlessCards.canOffer(EndlessCard.VIGILANCE, p, fog = true))
+        p.fogSight = true
+        assertFalse(EndlessCards.canOffer(EndlessCard.VIGILANCE, p, fog = true))
         val picks = Array(3) { EndlessCard.ECONOMY }
         for (seed in 1L..60L) {
             EndlessCards.draw(Rng(seed), p, picks)
