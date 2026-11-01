@@ -1839,15 +1839,18 @@ class BattleScreen(
                 tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
             val imgH = min(72 * dp, tmpR.height() * 0.32f)
             val iy = tmpR.bottom - 28 * dp
-            // Szerokie maszyny (np. czołg) nie wychodzą poza kartę wariantu.
-            c.save()
-            c.clipRect(tmpR.left + 6 * dp, tmpR.top, tmpR.right - 6 * dp, tmpR.bottom - 4 * dp)
+            // Każda sylwetka ma własny obszar. Pojazdy skalujemy także po szerokości.
+            val slotW = tmpR.width() / 4f
             for (role in 0..3) {
                 val def = Defs.unit(era, roles[role], i)
-                val xx = tmpR.left + (role + 0.5f) * tmpR.width() / 4f
-                r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
+                val xx = tmpR.left + (role + 0.5f) * slotW
+                c.save()
+                c.clipRect(tmpR.left + role * slotW + 4 * dp, tmpR.top,
+                    tmpR.left + (role + 1) * slotW - 4 * dp, tmpR.bottom - 4 * dp)
+                r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER,
+                    maxWidth = slotW - 12 * dp)
+                c.restore()
             }
-            c.restore()
         }
         variantDescLanguage = L.lang
         variantDescWidth = variantBtn[0].r.width() - 18 * dp
