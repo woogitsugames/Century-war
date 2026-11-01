@@ -92,7 +92,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)
         val gap = 6 * dp
         val tw = (pw - gap * 4) / 5
-        val l = w / 2 - pw / 2
+        val l = (w + g.insetL - g.insetR - pw) / 2f
         for (i in 0..4) {
             tabs[i].label = chrome.tabLabel(L[keys[i]], L[shortKeys[i]], tw, 48 * dp)
             tabs[i].iconId = tabIcons[i]
@@ -169,8 +169,14 @@ class RankingsScreen(g: Game) : Screen(g) {
         }
         val bottomLimit = rowsBottom()
         if (list.isEmpty()) {
-            Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 50 * dp, 60 * dp, dp = dp)
-            ui.textO(c, L["no_scores"], panel.centerX(), y + 110 * dp, 17f, Ui.DIM, Paint.Align.CENTER)
+            val available = (bottomLimit - y).coerceAtLeast(0f)
+            if (available > 95 * dp)
+                Icons.draw(c, Icons.TROPHY, panel.centerX(), y + available * 0.37f,
+                    min(60 * dp, available * 0.54f), dp = dp)
+            if (available > 20 * dp)
+                ui.textO(c, L["no_scores"], panel.centerX(), y + available * 0.74f,
+                    ui.fit(L["no_scores"], 15f, panel.width() - 24 * dp),
+                    Ui.DIM, Paint.Align.CENTER)
         }
         val lh = 34 * dp
         for (i in list.indices) {
@@ -200,7 +206,7 @@ class RankingsScreen(g: Game) : Screen(g) {
             y += lh
         }
         // Stan usługi jest pokazywany wyłącznie po połączeniu.
-        if (g.online.available && g.online.state == OnlineState.CONNECTED)
+        if (g.online.available && g.online.state == OnlineState.CONNECTED && tab != 4)
             ui.text(c, L["pgs_connected"], panel.centerX(),
                 panel.bottom - 10 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
         drawHeldTooltip(c)
@@ -216,7 +222,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val top = rowsTop()
         if (y < top || y >= rowsBottom()) return
         val index = ((y - top) / (34 * dp)).toInt()
-        if (index !in cachedEntries.indices || y >= top + (index + 1) * 34 * dp) return
+        if (index !in cachedEntries.indices || top + (index + 1) * 34 * dp > rowsBottom()) return
         val id = cachedEntries[index].replay ?: return
         if (id in existingReplayIds) g.push(ReplayScreen(g, id))
     }
