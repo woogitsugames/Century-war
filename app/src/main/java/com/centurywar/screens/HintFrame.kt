@@ -42,8 +42,12 @@ internal object HintFrame {
         return n
     }
 
-    /** Łamie długie teksty wskazówek przed renderowaniem; nie zmienia samouczka. */
-    fun wrapHintInto(ui: Ui, s: String, width: Float, size: Float, out: Array<String?>): Int {
+    /**
+     * Łamie długie teksty wskazówek przed renderowaniem; nie zmienia samouczka.
+     * [hyphen] dzieli zbyt długie słowa (np. niemieckie złożenia) z dywizem na końcu wiersza.
+     */
+    fun wrapHintInto(ui: Ui, s: String, width: Float, size: Float, out: Array<String?>,
+                     hyphen: Boolean = false): Int {
         var n = 0
         var line = ""
         for (word in s.split(' ')) {
@@ -56,11 +60,12 @@ internal object HintFrame {
             }
             var remaining = word
             while (ui.measure(remaining, size) > width && remaining.length > 1) {
+                val mark = if (hyphen) "-" else ""
                 var length = 1
                 while (length < remaining.length &&
-                    ui.measure(remaining.substring(0, length + 1), size) <= width) length++
+                    ui.measure(remaining.substring(0, length + 1) + mark, size) <= width) length++
                 if (n == out.size) return n
-                out[n++] = remaining.substring(0, length)
+                out[n++] = remaining.substring(0, length) + mark
                 remaining = remaining.substring(length)
             }
             line = if (line.isEmpty()) remaining else "$line $remaining"

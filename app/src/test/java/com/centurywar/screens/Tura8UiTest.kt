@@ -1,0 +1,442 @@
+package com.centurywar.screens
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.RectF
+import com.centurywar.engine.Button
+import com.centurywar.engine.Game
+import com.centurywar.engine.Host
+import com.centurywar.engine.L
+import com.centurywar.engine.Quality
+import com.centurywar.engine.TouchEvent
+import com.centurywar.engine.Ui
+import com.centurywar.game.Battle
+import com.centurywar.game.BattleConfig
+import com.centurywar.game.BattleController
+import com.centurywar.game.Campaign
+import com.centurywar.game.Defs
+import com.centurywar.game.Mode
+import com.centurywar.game.Replay
+import com.centurywar.meta.Profile
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+
+/**
+ * Tura 8: baner awansu (139), dymki podpowiedzi poza HUD i odstęp przycisków od lamówki paneli.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35])
+class Tura8UiTest {
+    private val out = File("build/screenshots").apply { mkdirs() }
+
+    /** Telefon 720p, 20:9 w poziomie, Fold zewnętrzny (pion i poziom), Fold wewnętrzny (pion i poziom). */
+    private val devices = linkedMapOf(
+        "phone720" to floatArrayOf(1600f, 720f, 1.8f),
+        "phone20x9" to floatArrayOf(2400f, 1080f, 2.7f),
+        "foldOuter" to floatArrayOf(904f, 2316f, 2.7f),
+        "foldOuterLand" to floatArrayOf(2316f, 904f, 2.7f),
+        "foldInner" to floatArrayOf(1802f, 2000f, 3.6f),
+        "foldInnerLand" to floatArrayOf(2184f, 1968f, 2.7f),
+    )
+
+    private fun game(dims: FloatArray, leftHanded: Boolean = false, hints: Boolean = false): Game {
+        val host = object : Host {
+            override fun vibrate(ms: Long) {}
+            override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
+            override fun applyRenderScale(scale: Float) {}
+            override fun applyFrameRate(fps: Int) {}
+            override fun exit() {}
+        }
+        val f = File.createTempFile("tura8", ".json").apply { delete() }
+        val profile = Profile(f).apply {
+            lang = "pl"; tutorialDone = true; hintsEnabled = hints; eraIntrosEnabled = false
+            leftHandedHud = leftHanded
+        }
+        return Game(host, profile, Quality.LOW).apply {
+            density = dims[2]
+            resize(dims[0].toInt(), dims[1].toInt(), dims[0].toInt(), dims[1].toInt())
+        }
+    }
+
+    private fun field(o: Any, name: String): Any? =
+        o.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(o)
+
+    private fun frame(g: Game) {
+        val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+        try { g.frame(Canvas(bmp), 0f) } finally { bmp.recycle() }
+    }
+
+    private fun shot(g: Game, name: String) {
+        val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+        try {
+            g.frame(Canvas(bmp), 0f)
+            File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        } finally { bmp.recycle() }
+    }
+
+    private fun battle(g: Game, seed: Long = 13901L): BattleScreen {
+        val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, 1f, startEra = 0, maxEra = 3))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        return screen
+    }
+
+    /** Widoczne przyciski HUD (bez przycisków samego dymka i banera). */
+    private fun hudButtons(screen: BattleScreen, except: Set<Button>): List<Button> =
+        screen.buttons.filter { it.visible && it !in except && it.r.width() > 0f && it.r.height() > 0f }
+
+    @Test
+    fun evolveBannerAppearsOnceAndUsesEvolvePath() {
+        for ((tag, dims) in devices) for (left in listOf(false, true)) {
+            val g = game(dims, left)
+            val screen = battle(g)
+            val b = field(screen, "battle") as Battle
+            val banner = screen.evolveBanner
+            val where = "$tag/${if (left) "lewo" else "prawo"}"
+            b.player.xp = Defs.evolveXp[0].toFloat()
+            repeat(8) { screen.update(0.1f) }
+            assertTrue("$where: baner nie pojawił się", banner.active && banner.goBtn.visible)
+            assertEquals("$where: bitwa nie może stać", false, field(screen, "paused") as Boolean)
+            val dp = g.ui.dp
+            assertTrue("$where: przyciski < 48 dp",
+                banner.goBtn.r.height() + 0.5f >= 48 * dp && banner.waitBtn.r.height() + 0.5f >= 48 * dp)
+            val fieldRect = screen.fieldRect
+            assertTrue("$where: baner poza polem bitwy", fieldRect.contains(banner.rect))
+            for (other in hudButtons(screen, setOf(banner.goBtn, banner.waitBtn))) {
+                assertFalse("$where: baner zasłania przycisk ${other.id}", RectF.intersects(banner.rect, other.r))
+            }
+            if (!left && (tag == "phone720" || tag == "foldOuter")) shot(g, "tura8_evolve_banner_$tag")
+
+            // „Czekaj” zamyka bez awansu; baner nie wraca w tej epoce.
+            screen.onClick(banner.waitBtn)
+            assertFalse("$where: Czekaj nie zamknął", banner.active)
+            assertEquals(0, b.player.era)
+            repeat(20) { screen.update(0.1f) }
+            assertFalse("$where: baner pojawił się drugi raz", banner.active)
+            assertTrue("$where: Ewolucja powinna być dostępna", screen.evolveBtn.enabled)
+        }
+    }
+
+    private fun logAfter(useBanner: Boolean): Replay.Log {
+        val g = game(devices.getValue("phone720"))
+        val screen = battle(g, 13902L)
+        val b = field(screen, "battle") as Battle
+        b.player.xp = Defs.evolveXp[0].toFloat()
+        repeat(8) { screen.update(0.1f) }
+        assertTrue(screen.evolveBanner.active)
+        screen.onClick(if (useBanner) screen.evolveBanner.goBtn else screen.evolveBtn)
+        assertEquals(1, b.player.era)
+        assertFalse(screen.evolveBanner.active)
+        return (field(screen, "commands") as BattleController).log()
+    }
+
+    @Test
+    fun advanceButtonRecordsSameCommandAsEvolve() {
+        val banner = logAfter(true)
+        val direct = logAfter(false)
+        assertEquals(direct.commands, banner.commands)
+        assertEquals(Replay.encode(direct), Replay.encode(banner))
+    }
+
+    @Test
+    fun bannerWaitsForModalAndFadesOut() {
+        val g = game(devices.getValue("phone720"))
+        val screen = battle(g)
+        val b = field(screen, "battle") as Battle
+        screen.onClick(screen.pauseBtn)
+        b.player.xp = Defs.evolveXp[0].toFloat()
+        repeat(10) { screen.update(0.1f) }
+        assertFalse("Baner nie może startować pod pauzą", screen.evolveBanner.active)
+        screen.onClick(screen.pauseMenu[0])
+        repeat(8) { screen.update(0.1f) }
+        assertTrue(screen.evolveBanner.active)
+        repeat(100) { screen.update(0.1f) }
+        assertFalse("Baner powinien zniknąć po ok. 8 s", screen.evolveBanner.active)
+        assertEquals(0, b.player.era)
+    }
+
+    /** Dymek w bitwie nigdy nie przecina przycisku HUD, w każdym układzie paska. */
+    @Test
+    fun battleHintNeverCoversHudButtons() {
+        val ids = intArrayOf(HintOverlay.UPGRADE, HintOverlay.CAP, HintOverlay.RALLY, HintOverlay.HOLD,
+            HintOverlay.VETERAN, HintOverlay.SIEGE, HintOverlay.MODIFIERS, HintOverlay.FOG,
+            HintOverlay.OLD_TURRET, HintOverlay.WEATHER)
+        val keys = arrayOf("hint_upgrade", "hint_cap", "hint_rally", "hint_hold", "hint_veteran",
+            "hint_siege", "hint_modifiers", "hint_fog", "hint_old_turret", "hint_weather54")
+        val bmp = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        var drawn = 0
+        for ((tag, dims) in devices) for (left in listOf(false, true)) {
+            val g = game(dims, left, hints = true)
+            val screen = battle(g)
+            frame(g)
+            val hints = field(screen, "hints") as HintOverlay
+            val activate = HintOverlay::class.java.getDeclaredMethod("activate",
+                Int::class.javaPrimitiveType, String::class.java).apply { isAccessible = true }
+            for (i in ids.indices) {
+                hints.dismiss()
+                activate.invoke(hints, ids[i], keys[i])
+                hints.draw(canvas)
+                val panel = hints.panelRect
+                val where = "$tag/${if (left) "lewo" else "prawo"}/${keys[i]}"
+                assertTrue("$where: dymek się nie zmieścił", hints.activeId < 0 || !panel.isEmpty)
+                if (panel.isEmpty) continue
+                drawn++
+                if (!left && ids[i] == HintOverlay.UPGRADE) shot(g, "tura8_hint_upgrade_$tag")
+                assertTrue("$where: dymek poza polem bitwy", screen.fieldRect.contains(panel))
+                for (b in hudButtons(screen, setOf(hints.okBtn))) {
+                    assertFalse("$where: dymek zasłania przycisk ${b.id}", RectF.intersects(panel, b.r))
+                }
+            }
+        }
+        bmp.recycle()
+        assertTrue("Za mało narysowanych dymków: $drawn", drawn >= devices.size * 2 * 6)
+    }
+
+    /** Dymek menu nie zasłania przycisku, na który wskazuje (Endless: „Graj”). */
+    @Test
+    fun menuHintDoesNotCoverTarget() {
+        for ((tag, dims) in devices) {
+            val g = game(dims, hints = true)
+            val screen = ModeScreen(g, Mode.ENDLESS)
+            g.setScreen(screen)
+            g.finishScreenTransition()
+            frame(g)
+            frame(g)
+            val hints = field(screen, "hints") as HintOverlay
+            if (hints.activeId < 0) continue
+            val start = field(screen, "start") as Button
+            assertFalse("$tag: dymek zasłania Graj", RectF.intersects(hints.panelRect, start.r))
+        }
+    }
+
+    private fun assertInsideTrim(g: Game, where: String, panel: RectF, buttons: List<Button>) {
+        val dp = g.ui.dp
+        val inner = g.ui.panelInner(panel, RectF())
+        for (b in buttons) {
+            if (!b.visible && b.r.isEmpty) continue
+            val r = b.r
+            assertTrue("$where: przycisk ${b.id} za blisko lewej lamówki (${(r.left - inner.left) / dp} dp)",
+                r.left - inner.left >= 8 * dp - 0.5f)
+            assertTrue("$where: przycisk ${b.id} za blisko prawej lamówki (${(inner.right - r.right) / dp} dp)",
+                inner.right - r.right >= 8 * dp - 0.5f)
+            assertTrue("$where: przycisk ${b.id} na dolnej lamówce (${(inner.bottom - r.bottom) / dp} dp)",
+                inner.bottom - r.bottom >= Ui.PANEL_BUTTON_MARGIN * dp - 0.5f)
+            assertTrue("$where: przycisk ${b.id} nad lamówką", r.top >= inner.top)
+        }
+    }
+
+    /** Przyciski paneli mieszczą się w złotej lamówce z marginesem (pauza, ulepszenie, wyniki, kampania, tryby). */
+    @Test
+    fun panelButtonsStayInsideTrim() {
+        for ((tag, dims) in devices) {
+            val g = game(dims)
+            val screen = battle(g)
+            frame(g)
+            @Suppress("UNCHECKED_CAST")
+            assertInsideTrim(g, "$tag/pauza", field(screen, "pausePanel") as RectF,
+                screen.pauseMenu)
+            assertInsideTrim(g, "$tag/ulepszenie", field(screen, "upgradePanel") as RectF,
+                listOf(screen.upgradeBuy))
+            assertInsideTrim(g, "$tag/wyniki", field(screen, "resultPanel") as RectF,
+                listOf(screen.restartEnd, screen.replayEnd, screen.continueBtn,
+                    screen.resultStatsTab, screen.resultChartTab))
+
+            val campaign = CampaignScreen(g)
+            g.setScreen(campaign)
+            g.finishScreenTransition()
+            campaign.javaClass.getDeclaredField("selected").apply { isAccessible = true }
+                .set(campaign, Campaign.stages[2])
+            frame(g)
+            val start = field(campaign, "start") as Button
+            @Suppress("UNCHECKED_CAST")
+            val diff = (field(campaign, "difficultyButtons") as Array<Button>).toList()
+            assertInsideTrim(g, "$tag/kampania", field(campaign, "info") as RectF, diff + start)
+            for (b in diff + start) assertTrue("$tag/kampania: przycisk ${b.id} < 48 dp",
+                b.r.height() + 0.5f >= 48 * g.ui.dp)
+
+            for (mode in listOf(Mode.ENDLESS, Mode.SKIRMISH)) {
+                val ms = ModeScreen(g, mode)
+                g.setScreen(ms)
+                g.finishScreenTransition()
+                frame(g)
+                assertInsideTrim(g, "$tag/${mode.name}", field(ms, "panel") as RectF,
+                    listOf(field(ms, "start") as Button))
+            }
+        }
+        L.lang = L.PL
+    }
+
+    private fun touch(screen: BattleScreen, action: Int, x: Float, y: Float) {
+        screen.handle(TouchEvent().also { it.action = action; it.x = x; it.y = y; it.pointer = 0 })
+    }
+
+    /** Gest zaczęty na HUD (odstęp między przyciskami) albo na pasku górnym nie przesuwa kamery. */
+    @Test
+    fun hudGestureDoesNotMoveCamera() {
+        for ((tag, dims) in devices) {
+            val g = game(dims)
+            val screen = battle(g)
+            frame(g)
+            val dp = g.ui.dp
+            val gapX = (screen.unitBtn[0].r.right + screen.unitBtn[1].r.left) / 2f
+            val starts = listOf(
+                gapX to screen.unitBtn[0].r.centerY(),
+                g.width / 2f to (screen.fieldRect.top - 4 * dp),
+            )
+            for ((x, y) in starts) {
+                val before = screen.r.camX
+                touch(screen, TouchEvent.DOWN, x, y)
+                touch(screen, TouchEvent.MOVE, x - 30 * dp, y)
+                touch(screen, TouchEvent.MOVE, x - 90 * dp, y)
+                touch(screen, TouchEvent.UP, x - 90 * dp, y)
+                assertEquals("$tag: gest z HUD przesunął kamerę", before, screen.r.camX, 0.001f)
+            }
+            // Kontrola: gest na polu bitwy nadal przesuwa widok.
+            val fx = g.width / 2f
+            val fy = screen.fieldRect.centerY()
+            screen.r.camX = 400f
+            screen.r.clampCam()
+            val before = screen.r.camX
+            touch(screen, TouchEvent.DOWN, fx, fy)
+            touch(screen, TouchEvent.MOVE, fx + 30 * dp, fy)
+            touch(screen, TouchEvent.MOVE, fx + 90 * dp, fy)
+            touch(screen, TouchEvent.UP, fx + 90 * dp, fy)
+            assertTrue("$tag: przeciąganie pola bitwy nie działa", screen.r.camX < before)
+        }
+    }
+
+    /** Starcie blisko własnej bazy: kamera pokazuje bazę i front wroga, a zbiegły żołnierz jej nie ciągnie. */
+    @Test
+    fun cameraFollowsClashNearBase() {
+        for ((tag, dims) in devices) {
+            val g = game(dims)
+            val screen = battle(g)
+            frame(g)
+            val b = field(screen, "battle") as Battle
+            val r = screen.r
+            val p = b.player
+            val e = b.enemy
+            p.aliveCount = 5
+            e.aliveCount = 6
+            p.front = p.baseFront + r.worldVisible * 1.4f // jeden żołnierz daleko z przodu
+            e.front = p.baseFront + r.worldVisible * 0.45f // główne starcie przy bazie
+            r.camX = Defs.LANE.toFloat()
+            r.clampCam()
+            var last = r.camX
+            var maxJump = 0f
+            repeat(200) {
+                r.follow(1f / 30f)
+                maxJump = maxOf(maxJump, kotlin.math.abs(r.camX - last))
+                last = r.camX
+            }
+            assertTrue("$tag: baza poza kadrem (camX=${r.camX})", r.camX <= p.baseFront)
+            assertTrue("$tag: front wroga poza kadrem", e.front <= r.camX + r.worldVisible)
+            assertTrue("$tag: skok kamery $maxJump", maxJump <= r.worldVisible * 0.9f / 30f + 0.01f)
+        }
+    }
+
+    /** Zablokowana elita: dymek i tap podają nazwę badania i koszt z Research; „Stać cię!” przy medalach. */
+    @Test
+    fun lockedEliteExplainsResearch() {
+        for (tag in listOf("phone720", "foldOuter")) {
+            val g = game(devices.getValue(tag))
+            g.profile.medals = 10
+            val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 14101L, 1f,
+                playerBonuses = g.profile.bonuses()))
+            g.setScreen(screen)
+            g.finishScreenTransition()
+            frame(g)
+            val b = field(screen, "battle") as Battle
+            assertFalse("$tag: elita powinna być zablokowana", b.player.eliteUnlocked)
+            val elite = screen.unitBtn[3]
+            val name = L[EliteUnlock.def.key]
+            val cost = EliteUnlock.def.cost(0).toString()
+            assertTrue(screen.onLongPress(elite))
+            assertTrue("$tag: brak nazwy badania: ${elite.tooltipBody}",
+                elite.tooltipBody.contains(name) && elite.tooltipBody.contains(cost))
+            assertEquals(EliteUnlock.text("elite141_locked", g.profile), elite.tooltipBody)
+            screen.onTap(elite.r.centerX(), elite.r.centerY())
+            assertTrue("$tag: tap nie pokazał dymka", screen.lockedRemaining > 0f)
+            assertTrue(screen.lockedTooltip.body.contains(name) && screen.lockedTooltip.body.contains(cost))
+            shot(g, "tura8_elite_locked_$tag")
+            g.profile.medals = 500
+            screen.onTap(elite.r.centerX(), elite.r.centerY())
+            assertEquals(EliteUnlock.text("elite141_afford", g.profile), screen.lockedTooltip.body)
+        }
+    }
+
+    /** Plakietka „!” na Badaniach i jednorazowy dymek, gdy stać gracza na Doktrynę elit. */
+    @Test
+    fun menuBadgeWhenEliteAffordable() {
+        for (tag in listOf("phone720", "foldOuter", "foldInner")) {
+            val g = game(devices.getValue(tag), hints = true)
+            g.profile.medals = 30
+            val menu = MenuScreen(g)
+            g.setScreen(menu)
+            g.finishScreenTransition()
+            frame(g)
+            assertFalse("$tag: plakietka bez medali", menu.eliteReady)
+            g.profile.medals = EliteUnlock.def.cost(0)
+            frame(g)
+            frame(g)
+            assertTrue("$tag: brak plakietki", menu.eliteReady)
+            val hints = field(menu, "hints") as HintOverlay
+            assertEquals(HintOverlay.ELITE_RESEARCH, hints.activeId)
+            val research = field(menu, "research") as Button
+            assertFalse("$tag: dymek zasłania Badania", RectF.intersects(hints.panelRect, research.r))
+            shot(g, "tura8_menu_elite_$tag")
+            g.profile.levels["r_elite"] = 1
+            frame(g)
+            assertFalse("$tag: plakietka po zakupie", menu.eliteReady)
+        }
+    }
+
+    /** G: cel ostrzału nie wypada bliżej niż rozrzut (120) od własnej jednostki, gdy jest wolne miejsce. */
+    @Test
+    fun barrageTargetAvoidsOwnUnits() {
+        val g = game(devices.getValue("phone720"))
+        val screen = battle(g, 14201L)
+        val b = field(screen, "battle") as Battle
+        val p = b.player
+        p.gold = 5000f
+        repeat(4) { (field(screen, "commands") as BattleController).queue(com.centurywar.game.Role.MELEE) }
+        var steps = 0
+        while (b.units.count { it.alive && it.side == 0 } < 3 && steps++ < 4000) b.step()
+        val own = b.units.filter { it.alive && it.side == 0 }
+        assertTrue("Za mało własnych jednostek: ${own.size}", own.size >= 3)
+        val near = p.baseFront + 220f
+        val far = p.baseFront + 1370f
+        // Własne jednostki w środku zasięgu; za nimi jest wolne miejsce.
+        val positions = floatArrayOf(near + 80f, near + 260f, near + 430f)
+        for (i in positions.indices) own[i].x = positions[i]
+        for (k in own.indices) if (k >= positions.size) own[k].x = p.baseFront + 10f
+        var x = near
+        while (x <= far) {
+            val t = screen.barrageView.snapBarrageTarget(x)
+            assertTrue("Cel poza zasięgiem: $t", t in near..far)
+            for (u in b.units) if (u.alive && u.side == 0) {
+                assertTrue("Cel $t za blisko własnej jednostki ${u.x} (palec $x)", kotlin.math.abs(u.x - t) >= 120f)
+            }
+            x += 25f
+        }
+        // Cały zasięg zajęty: najdalszy możliwy punkt.
+        var pos = near - 100f
+        var idx = 0
+        while (pos <= far + 100f) {
+            if (idx >= own.size) break
+            own[idx++].x = pos
+            pos += 180f
+        }
+        if (idx == own.size && pos <= far + 100f) return // za mało jednostek, by zapełnić zasięg
+        assertEquals(far, screen.barrageView.snapBarrageTarget(near + 300f), 0.01f)
+    }
+}

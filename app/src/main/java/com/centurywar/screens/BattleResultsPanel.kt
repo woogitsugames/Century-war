@@ -61,15 +61,16 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             .coerceIn(g.insetT, h - g.insetB - rh)
         resultPanel.set(cx - rw * 0.5f, top, cx + rw * 0.5f, top + rh)
         val gap = 5 * dp
-        val usable = rw - 32 * dp - gap * 2
+        // Przyciski i zakładki z odstępem od złotej lamówki ramki (Ui.PANEL_TRIM_INSET).
+        val usable = rw - 40 * dp - gap * 2
         val bh = 50 * dp
         val first = usable * 0.26f
         val middle = usable * 0.44f
-        restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, first, bh)
+        restartEnd.set(resultPanel.left + 20 * dp, resultPanel.bottom - bh - 24 * dp, first, bh)
         replayEnd.set(restartEnd.r.right + gap, restartEnd.r.top, middle, bh)
         continueBtn.set(replayEnd.r.right + gap, restartEnd.r.top, usable - first - middle, bh)
-        val tw = (rw - 36 * dp - gap) / 2f
-        resultStatsTab.set(resultPanel.left + 16 * dp, resultPanel.top + 39 * dp, tw, 30 * dp)
+        val tw = (rw - 40 * dp - gap) / 2f
+        resultStatsTab.set(resultPanel.left + 20 * dp, resultPanel.top + 39 * dp, tw, 30 * dp)
         resultChartTab.set(resultStatsTab.r.right + gap, resultStatsTab.r.top, tw, 30 * dp)
         resultChartArea.set(resultPanel.left + 15 * dp, resultPanel.top + 73 * dp,
             resultPanel.right - 15 * dp, restartEnd.r.top - 7 * dp)
@@ -118,6 +119,10 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             resultReasonText1 = ""
             resultReasonText2 = ""
             tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        }
+        // Zlecenie 141: po bitwie wyraźnie wskazujemy Doktrynę elit, gdy gracza na nią stać.
+        if (tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
+            tipText = EliteUnlock.text("elite141_afford", g.profile)
         }
         prepareResultTipLines()
         }

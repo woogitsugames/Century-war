@@ -26,6 +26,7 @@ import com.centurywar.game.BattleRenderer
 import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Stage
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
@@ -261,12 +262,17 @@ class ScreenshotTest {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
             for (i in 0 until 12) g.profile.stars[i] = (i % 3) + 1
+            // Zapowiedź epoki (68) i baner serii logowania przechwytywały dotknięcia przycisków
+            // trudności (126); test dotyczy mapy, więc wyłączamy obie nakładki.
+            for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
+            clear74Notices(g)
             val screen = CampaignScreen(g)
             g.setScreen(screen)
             val pictures = field(screen, "regionPictures").get(screen) as Array<*>
             assertTrue("Dziewięć buforowanych regionów", pictures.size == Defs.ERA_COUNT)
             assertTrue("Każde tło nagrane", pictures.all { it != null })
-            assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.id >= 0 } == 36)
+            // Przycisk "OK" wskazówki (HintOverlay.OK_ID) też ma nieujemne id, więc liczymy kafelki etapów.
+            assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.tag is Stage } == 36)
             assertTrue("Orientacja mapy", field(screen, "portraitMap").getBoolean(screen) == (g.height > g.width))
             shot(g, tag + "_campaign_journey", 90)
 

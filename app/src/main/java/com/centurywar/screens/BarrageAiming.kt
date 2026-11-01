@@ -147,7 +147,49 @@ internal class BarrageAiming(private val owner: BattleScreen) {
             val d = kotlin.math.abs(cx - x)
             if (n > bestCount || (n == bestCount && d < bestDist)) { bestCount = n; bestX = cx; bestDist = d }
         }
-        return bestX.coerceIn(near, far)
+        return avoidOwnUnits(bestX.coerceIn(near, far), near, far)
         }
+    }
+
+    /**
+     * Zlecenie G: rozrzut ostrzału (±[SPREAD]) nie może pokrywać własnych jednostek, bo wygląda
+     * to na ostrzał własnych wojsk. Cel dociągamy w stronę wroga (za własną jednostkę + rozrzut);
+     * gdy za nią brak miejsca w zasięgu — szukamy wolnego miejsca bliżej bazy; gdy cały zasięg
+     * jest zajęty — najdalszy punkt. Tylko wybór celu w UI, bez alokacji; symulacja bez zmian.
+     */
+    fun avoidOwnUnits(x: Float, near: Float, far: Float): Float {
+        with(owner) {
+        val forward = pushClear(x, near, far, 1f)
+        if (!forward.isNaN()) return forward
+        val back = pushClear(x, near, far, -1f)
+        if (!back.isNaN()) return back
+        return far
+        }
+    }
+
+    /** Przesuwa [x] w kierunku [dir], aż żadna własna jednostka nie leży bliżej niż rozrzut; NaN = brak miejsca. */
+    private fun pushClear(x: Float, near: Float, far: Float, dir: Float): Float {
+        with(owner) {
+        var t = x
+        var guard = 0
+        while (guard++ < 256) {
+            if (t < near || t > far) return Float.NaN
+            var moved = false
+            for (u in battle.units) {
+                if (!u.alive || u.side != 0) continue
+                if (kotlin.math.abs(u.x - t) < SPREAD) {
+                    t = u.x + dir * SPREAD
+                    moved = true
+                }
+            }
+            if (!moved) return t
+        }
+        return Float.NaN
+        }
+    }
+
+    companion object {
+        /** Promień rozrzutu ostrzału w świecie (jak w symulacji) plus margines. */
+        const val SPREAD = 121f
     }
 }

@@ -90,6 +90,10 @@ class BattleScreen(
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
+    /** Gest zaczął się na polu bitwy; tylko wtedy przeciąganie przesuwa kamerę. */
+    private var dragStartedInField = false
+    /** Narastanie śledzenia po ręcznym przesunięciu (0..1): łagodny powrót zamiast skoku. */
+    private var followRamp = 1f
     /** Stan wyłącznie interfejsu, nie wchodzi do zapisu bitwy. */
     internal var aimingBarrage = false
     internal var aimWorldX = 0f
@@ -239,9 +243,13 @@ class BattleScreen(
     internal val closeBtn = btn(CLOSE)
     /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
     internal val queueInfoBtn = btn(90)
+    /** Zlecenie 139: baner dostępnego awansu (prealokowane przyciski). */
+    internal val evolveBanner = EvolveBanner(this, btn(EvolveBanner.GO), btn(EvolveBanner.WAIT))
     private val introTooltip = TooltipBubble()
     private val missingXpTooltip = TooltipBubble()
     private var missingXpRemaining = 0f
+    internal val lockedTooltip = TooltipBubble()
+    internal var lockedRemaining = 0f
     private var introDelay = 0f
     private var introRemaining = 0f
     private var introChecked = false
@@ -285,7 +293,7 @@ class BattleScreen(
     private val bottomHudView = BattleBottomHud(this)
     private val resultsView = BattleResultsPanel(this)
     internal val upgradesView = BattleUpgradePanel(this)
-    private val barrageView = BarrageAiming(this)
+    internal val barrageView = BarrageAiming(this)
 
     init {
         // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.
@@ -333,7 +341,7 @@ class BattleScreen(
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(
         unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
-        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn,
+        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn, unitBtn[3],
     ), rankedDaily)
 
     /** Plansza nie zapisuje komend i nie wykonuje kroków symulacji. */
@@ -387,6 +395,7 @@ class BattleScreen(
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
         layoutPause()
+        evolveBanner.layout()
         pauseModifierWidth = -1f
         resultsView.layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
@@ -432,8 +441,10 @@ class BattleScreen(
         val cy = (g.insetT + h - g.insetB) * 0.5f
         pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
 
-        val buttonH = if (ph < 380 * dp) 38 * dp else 42 * dp
-        val buttonTop = pausePanel.bottom - 12 * dp - buttonH
+        // Pełne 48 dp i wyraźny odstęp od złotej lamówki ramki (zgłoszenie z Folda).
+        val buttonH = 48 * dp
+        val buttonTop = pausePanel.bottom -
+            (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp - buttonH
         val contentTop = pausePanel.top + 48 * dp
         val contentBottom = buttonTop - 10 * dp
         val avail = contentBottom - contentTop
@@ -476,9 +487,10 @@ class BattleScreen(
         pauseSpeedBtn.hitSlop = pauseVibrationBtn.hitSlop
 
         val buttonGap = 12 * dp
-        val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
+        val side = (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp
+        val buttonW = (pw - side * 2 - buttonGap * 2) / 3f
         for (i in pauseMenu.indices) {
-            pauseMenu[i].set(pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
+            pauseMenu[i].set(pausePanel.left + side + i * (buttonW + buttonGap),
                 buttonTop, buttonW, buttonH)
             pauseMenu[i].hitSlop = (48 * dp - buttonH).coerceAtLeast(0f) / 2f
         }
@@ -504,6 +516,7 @@ class BattleScreen(
         variantDescLanguage = -1
         choiceDescLanguage = -1
         enemyEraLanguage = -1
+        if (evolveBanner.active) evolveBanner.refreshTexts()
         resultChart.refreshLanguage()
         if (missingXpRemaining > 0f && battle.player.era < cfg.maxEra) {
             val missing = kotlin.math.ceil(
@@ -614,8 +627,14 @@ class BattleScreen(
         }
         BattleSfx.play(g, battle, r.camX, r.worldVisible)
         if (finished) resultTime += dt
-        if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
+        if (manualCam > 0f) manualCam -= dt else if (!finished) {
+            followRamp = (followRamp + dt * 0.8f).coerceAtMost(1f)
+            r.follow(dt, followRamp)
+        }
         bottomHudView.refreshButtons()
+        if (lockedRemaining > 0f) {
+            lockedRemaining = if (finished || paused) 0f else (lockedRemaining - dt).coerceAtLeast(0f)
+        }
         if (missingXpRemaining > 0f) {
             if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
             else missingXpRemaining = (missingXpRemaining - dt).coerceAtLeast(0f)
@@ -637,11 +656,16 @@ class BattleScreen(
                 }
             }
         }
+        evolveBanner.update(dt, battle.player.era, cfg.maxEra, evolveBtn.enabled && evolveBtn.visible,
+            finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
+                battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null ||
+                showTurrets || showUpgrade >= 0 || aimingBarrage || hints.activeId >= 0)
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
         hints.update(dt, finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
-            showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f)
+            showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f ||
+            evolveBanner.goBtn.visible)
 
     }
 
@@ -689,7 +713,8 @@ class BattleScreen(
                 val i = b.id - UNIT0
                 val def = p.unit(roles[i])
                 title = L[def.tierNameKeys[(p.unitTier[i] - 1).coerceIn(0, 2)]]
-                body = if (i == 3) L.f("tip53_unit_elite", def.cost, p.queueSize)
+                body = if (i == 3 && !p.eliteUnlocked) EliteUnlock.lockedText(g.profile)
+                    else if (i == 3) L.f("tip53_unit_elite", def.cost, p.queueSize)
                     else L.f("tip53_unit", L["bh_role_" + i],
                         L["bh_role_" + when (i) { 0 -> 1; 1 -> 2; else -> 0 }],
                         def.cost, p.queueSize)
@@ -802,7 +827,11 @@ class BattleScreen(
                 g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
                 g.profile.save()
             }
+            // „Awansuj” z banera: dokładnie ta sama ścieżka co przycisk Ewolucji.
+            EvolveBanner.GO -> { evolveBanner.dismiss(); onClick(evolveBtn) }
+            EvolveBanner.WAIT -> evolveBanner.dismiss()
             EVOLVE -> if (commands.evolve()) {
+                evolveBanner.dismiss()
                 missingXpRemaining = 0f
                 haptics.onEvolve()
                 maybeShowEraIntro()
@@ -875,6 +904,8 @@ class BattleScreen(
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
+        // Kamera rusza się tylko w geście zaczętym na polu bitwy (nie z HUD ani paska górnego).
+        if (e.action == TouchEvent.DOWN) dragStartedInField = fieldRect.contains(e.x, e.y)
         if (eraIntro?.active == true) {
             if (e.action == TouchEvent.UP) eraIntro?.dismiss()
             return true
@@ -918,6 +949,9 @@ class BattleScreen(
         if (finished || paused) return
         // Podczas celowania palec przesuwa celownik, a nie kamerę.
         if (aimingBarrage && aimStartedInField) return
+        // Drobny ruch palca przy tapnięciu w odstęp między przyciskami HUD nie przesuwa widoku.
+        if (!dragStartedInField) return
+        followRamp = 0f
         r.camX -= dx / r.k
         r.clampCam()
         if (aimingBarrage) aimWorldX = barrageView.snapBarrageTarget(r.worldX(aimScreenX))
@@ -926,6 +960,15 @@ class BattleScreen(
     }
 
     override fun onTap(x: Float, y: Float) {
+        // Zlecenie 141: tap zablokowanej elity mówi wprost, gdzie ją odblokować.
+        val elite = unitBtn[3]
+        if (!paused && !finished && !aimingBarrage && elite.visible && !battle.player.eliteUnlocked &&
+            (tut == null || tut.finished) && elite.contains(x, y)) {
+            lockedTooltip.set(L[battle.player.unit(roles[3]).tierNameKeys[0]],
+                EliteUnlock.lockedText(g.profile))
+            lockedRemaining = 4f
+            return
+        }
         // Krótki tap wyłączonego awansu nie wydaje komendy i podaje brakujące XP.
         if (!paused && !finished && !aimingBarrage && evolveBtn.visible &&
             !evolveBtn.enabled && battle.player.era < cfg.maxEra &&
@@ -952,7 +995,7 @@ class BattleScreen(
         }
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
             r.camX = (x - mini.left) / mini.width() * Defs.LANE - r.worldVisible / 2
-            r.clampCam(); manualCam = 5f
+            r.clampCam(); manualCam = 5f; followRamp = 0f
             tut?.onCamera()
             return
         }
@@ -1377,10 +1420,12 @@ class BattleScreen(
         for (b in unitUpgrade) ui.button(c, b, 9f)
         bottomHudView.drawQueue(c)
         ui.button(c, evolveBtn, 15f)
+        evolveBanner.drawEvolveGlow(c, evolveBtn, evolveBtn.enabled)
         ui.button(c, pauseBtn, 15f)
         if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawTurretPanel(c)
         if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawUpgradePanel(c)
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
+        if (!finished && !paused) evolveBanner.draw(c, ui)
         if (!finished) {
             tut?.draw(c)
             hints.draw(c)
@@ -1395,6 +1440,10 @@ class BattleScreen(
         if (!paused && !finished && eraIntro?.active != true && missingXpRemaining > 0f &&
             hints.activeId < 0 && !isTooltipHeld) {
             ui.tooltip(c, evolveBtn.r, missingXpTooltip, g.insetL, g.insetT,
+                w - g.insetR, h - g.insetB)
+        }
+        if (!paused && !finished && eraIntro?.active != true && lockedRemaining > 0f && !isTooltipHeld) {
+            ui.tooltip(c, unitBtn[3].r, lockedTooltip, g.insetL, g.insetT,
                 w - g.insetR, h - g.insetB)
         }
         if (!paused && !finished && eraIntro?.active != true) drawHeldTooltip(c)
@@ -1556,8 +1605,9 @@ class BattleScreen(
             if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
                 choiceDescWidth != wrapWidth || choiceDescScale != ui.textScale) {
                 choiceDescKey[i] = choiceKey
-                choiceDescCount[i] = HintFrame.wrapInto(ui, L[descKey],
-                    wrapWidth, 12f, choiceDescLines[i])
+                // Wąskie karty (zewnętrzny ekran Folda): długie złożenia dzielone z dywizem.
+                choiceDescCount[i] = HintFrame.wrapHintInto(ui, L[descKey],
+                    wrapWidth, 12f, choiceDescLines[i], hyphen = true)
             }
             drawWrappedLines(c, choiceDescLines[i], choiceDescCount[i],
                 tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,

@@ -512,7 +512,7 @@ class TutorialOverlay(
                         if (withCounter == 1 && counter.isEmpty()) continue
                         val showCount = withCounter == 1
                         val fixed = (30 + (if (showCount) 14 else 0) +
-                            (if (hasNext()) 60 else 0)) * dp
+                            (if (hasNext()) 72 else 0)) * dp
                         val ph = fixed + lineCount[i][si] * lh
                         if (ph > rect.height()) continue
                         // Czytelność przed zapasem miejsca; pionowy panel jest bliżej celu.
@@ -615,7 +615,7 @@ class TutorialOverlay(
             confirmCount = HintFrame.wrapInto(ui, text, tw, 15f, confirmLines)
         }
         val lh = 20 * dp
-        val ph = (102 * dp + confirmCount * lh).coerceAtMost(sb - st - 8 * dp)
+        val ph = (114 * dp + confirmCount * lh).coerceAtMost(sb - st - 8 * dp)
         val top = (st + (sb - st - ph) / 2).coerceIn(st, max(st, sb - ph))
         panel.set((sl + sr - pw) / 2, top, (sl + sr + pw) / 2, top + ph)
         HintFrame.chrome(c, ui, panel, L["tut85_skip_title"], dp)
@@ -624,12 +624,13 @@ class TutorialOverlay(
             y += lh
             ui.text(c, confirmLines[i]!!, panel.centerX(), y, 15f, Ui.TEXT, Paint.Align.CENTER, false, true)
         }
-        val bw = min(190 * dp, (pw - 56 * dp) / 2)
-        val by = panel.bottom - 58 * dp
+        // Przyciski z odstępem od złotej lamówki ramki (Ui.PANEL_TRIM_INSET + margines).
+        val bw = min(190 * dp, (pw - 64 * dp) / 2)
+        val by = panel.bottom - 70 * dp
         nextBtn.visible = true
         skipBtn.visible = true
-        nextBtn.set(panel.left + 14 * dp, by, bw, 48 * dp)
-        skipBtn.set(panel.right - 14 * dp - bw, by, bw, 48 * dp)
+        nextBtn.set(panel.left + 22 * dp, by, bw, 48 * dp)
+        skipBtn.set(panel.right - 22 * dp - bw, by, bw, 48 * dp)
         ui.button(c, nextBtn, 14f)
         ui.button(c, skipBtn, 14f)
     }
@@ -695,7 +696,7 @@ class TutorialOverlay(
         // Przy skrajnie małym miejscu nie rysuj opisu na przyciskach ani na celu.
         val saved = c.save()
         c.clipRect(panel.left + 8 * dp, panel.top + 18 * dp,
-            panel.right - 8 * dp, panel.bottom - (if (hasNext()) 60 * dp else 5 * dp))
+            panel.right - 8 * dp, panel.bottom - (if (hasNext()) 72 * dp else 5 * dp))
         for (i in 0 until count) {
             y += lh
             ui.text(c, words[i]!!, panel.centerX(), y - lh * 0.25f,
@@ -704,10 +705,10 @@ class TutorialOverlay(
         c.restoreToCount(saved)
         nextBtn.visible = hasNext()
         if (nextBtn.visible) {
-            val bw = min(160 * dp, panel.width() - 28 * dp)
+            val bw = min(160 * dp, panel.width() - 44 * dp)
             nextBtn.enabled = phaseT > 0.5f
-            nextBtn.set(if (step == S_DONE) panel.centerX() - bw / 2 else panel.right - 14 * dp - bw,
-                panel.bottom - 58 * dp, bw, 48 * dp)
+            nextBtn.set(if (step == S_DONE) panel.centerX() - bw / 2 else panel.right - 22 * dp - bw,
+                panel.bottom - 70 * dp, bw, 48 * dp)
             ui.button(c, nextBtn, 15f)
         }
         skipBtn.visible = step != S_DONE

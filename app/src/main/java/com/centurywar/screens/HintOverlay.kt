@@ -41,6 +41,8 @@ class HintOverlay(
         val field: RectF,
         val weather: RectF,
         val variants: Array<Button>,
+        /** Przycisk jednostki elitarnej (podpowiedź o elicie wroga). */
+        val eliteUnit: Button? = null,
     )
 
     private class HintDef(val id: Int, val key: String, val priority: Int)
@@ -66,6 +68,10 @@ class HintOverlay(
         const val VARIANT = 18
         const val WEATHER = 19
         const val FIRST_BATTLE = 20
+        /** Zlecenie 141: stać gracza na Doktrynę elit (menu, przycisk Badań). */
+        const val ELITE_RESEARCH = 21
+        /** Zlecenie 141: pierwsza elita wroga, gdy gracz nie ma własnej. */
+        const val ENEMY_ELITE = 22
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -84,6 +90,7 @@ class HintOverlay(
             HintDef(DAILY, "hint_daily_battle", 96),
             HintDef(VARIANT, "hint_variant54", 110),
             HintDef(WEATHER, "hint_weather54", 86),
+            HintDef(ENEMY_ELITE, "elite141_enemy_hint", 92),
         )
         private val SCREEN_KEYS = arrayOf(
             "hint_research", "hint_missions", "hint_daily_menu", "hint_endless_menu",
@@ -156,12 +163,19 @@ class HintOverlay(
         val key = when (id) {
             in RESEARCH..ENDLESS_MENU -> SCREEN_KEYS[id - RESEARCH]
             FIRST_BATTLE -> "first_next_steps"
+            ELITE_RESEARCH -> "elite141_menu_hint"
             else -> return
         }
         if (battle != null || activeId >= 0 ||
             !g.profile.hintsEnabled || g.profile.hintsSeen and (1L shl id) != 0L) return
         screenFocus = focus
         activate(id, key)
+    }
+
+    private fun enemyHasElite(): Boolean {
+        val b = battle ?: return false
+        for (unit in b.units) if (unit.alive && unit.side == 1 && unit.def.role == Role.ELITE) return true
+        return false
     }
 
     private fun nearEnemyCount(): Int {
@@ -199,6 +213,7 @@ class HintOverlay(
             DAILY -> b.cfg.mode == Mode.DAILY && rankedDaily && b.time < 18f
             VARIANT -> b.pendingVariant != null
             WEATHER -> b.weather != Weather.CLEAR
+            ENEMY_ELITE -> !p.eliteUnlocked && enemyHasElite()
             else -> false
         }
     }
@@ -215,6 +230,7 @@ class HintOverlay(
         body = when (id) {
             BOSS -> L[if (battle?.currentBoss()?.bossKind == 2) "hint_boss_aura" else key]
             MODIFIERS -> modifierDescription()
+            ELITE_RESEARCH, ENEMY_ELITE -> EliteUnlock.text(key, g.profile)
             else -> L[key]
         }
         prepareLayout()
@@ -308,8 +324,54 @@ class HintOverlay(
             OLD_TURRET -> t.turrets.r
             VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
             WEATHER -> t.weather
+            ENEMY_ELITE -> t.eliteUnit?.r
             else -> null
         }
+    }
+
+    /** Ostatnio narysowany dymek (pusty, gdy niewidoczny); do testów geometrii. */
+    internal val panelRect: RectF get() = panel
+
+    /**
+     * W bitwie dymek mieszka wyłącznie na polu bitwy (między paskiem górnym a dolnym HUD),
+     * więc nigdy nie zasłania przycisków. Cel w dolnym HUD: dymek stoi tuż nad paskiem, na pasie
+     * ziemi, ze strzałką w dół; cel w pasku górnym: dymek pod paskiem ze strzałką w górę.
+     */
+    private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
+                           dp: Float): Boolean {
+        val f = targets?.field
+        if (battle == null || f == null || f.height() <= 0f || activeId == VARIANT) {
+            return HintFrame.place(target, safeL, safeT, safeR, safeB,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        val gap = 6f * dp
+        val top = max(safeT, f.top + gap)
+        val bottom = min(safeB, f.bottom - gap)
+        val left = max(safeL, f.left)
+        val right = min(safeR, f.right)
+        if (hintWidth > right - left || hintHeight > bottom - top) {
+            panel.setEmpty(); connector.setEmpty()
+            return false
+        }
+        if (target == null || target === f || target.height() >= (bottom - top) * 0.6f) {
+            // Cel obejmuje pole bitwy (np. mgła): dymek na środku, bez wskaźnika.
+            return HintFrame.place(null, left, top, right, bottom,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        if (target.width() <= 0f || target.height() <= 0f ||
+            (target.top >= f.top - 0.5f && target.bottom <= f.bottom + 0.5f)) {
+            return HintFrame.place(target, left, top, right, bottom,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        val below = target.centerY() > f.centerY()
+        val x = (target.centerX() - hintWidth * 0.5f).coerceIn(left, right - hintWidth)
+        val y = if (below) bottom - hintHeight else top
+        panel.set(x, y, x + hintWidth, y + hintHeight)
+        val inset = min(14f * dp, hintWidth * 0.2f)
+        val ax = target.centerX().coerceIn(x + inset, x + hintWidth - inset)
+        connector.set(ax, if (below) panel.bottom else panel.top,
+            target.centerX(), if (below) target.top - 3f * dp else target.bottom + 3f * dp)
+        return true
     }
 
     fun draw(c: Canvas) {
@@ -320,8 +382,7 @@ class HintOverlay(
         val safeT = g.insetT + 4f * dp
         val safeB = g.height - g.insetB - 4f * dp
         val target = focus()
-        if (!HintFrame.place(target, safeL, safeT, safeR, safeB,
-                hintWidth, hintHeight, 4f * dp, panel, connector)) return
+        if (!placePanel(target, safeL, safeT, safeR, safeB, dp)) return
 
         // Wskaźnik kończy się na krawędzi celu; nie przesłania samych przycisków.
         if (target != null && target.width() > 0f && target.height() > 0f) {

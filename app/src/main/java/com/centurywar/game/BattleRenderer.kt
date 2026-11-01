@@ -192,10 +192,34 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         camX = if (maxCam < -120f) (Defs.LANE - worldVisible) / 2f else camX.coerceIn(-120f, maxCam)
     }
 
-    fun follow(dt: Float) {
-        // Delikatnie śledź własną linię frontu, gdy gracz nie przesuwa widoku.
-        val target = b.player.front - worldVisible * 0.45f
-        camX += (target - camX) * min(1f, dt * 1.5f)
+    /** Cel automatycznej kamery (lewa krawędź widoku w świecie); bez alokacji, tylko odczyt stanu. */
+    fun followTarget(): Float {
+        val p = b.player
+        val e = b.enemy
+        val wv = worldVisible
+        val own = if (p.aliveCount > 0) p.front else p.baseFront
+        if (e.aliveCount <= 0 || e.front - own > wv * 0.9f) {
+            // Bez wrogów w pobliżu: własny front ok. 60% szerokości kadru.
+            return p.front - wv * 0.6f
+        }
+        // Miejsce starcia: środek między frontami (bez własnych jednostek — między bazą a wrogiem).
+        val clash = (own + e.front) * 0.5f
+        var target = clash - wv * 0.5f
+        // Starcie blisko własnej bazy: baza zostaje w kadrze.
+        val baseEdge = p.baseFront - wv * 0.14f
+        if (target > baseEdge && e.front - p.baseFront < wv * 0.8f) target = baseEdge
+        return target
+    }
+
+    /**
+     * Łagodnie śledzi miejsce starcia, gdy gracz nie przesuwa widoku. [ramp] (0..1) po ręcznym
+     * przesunięciu stopniowo zwiększa siłę śledzenia; prędkość kamery jest ograniczona (bez skoków).
+     */
+    fun follow(dt: Float, ramp: Float = 1f) {
+        val target = followTarget()
+        val rate = min(1f, dt * 1.5f * (0.15f + 0.85f * ramp * ramp))
+        val maxStep = worldVisible * 0.9f * dt
+        camX += ((target - camX) * rate).coerceIn(-maxStep, maxStep)
         clampCam()
     }
 
