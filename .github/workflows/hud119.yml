@@ -39,6 +39,19 @@ jobs:
             --tests '*Endless*' \
             --tests '*AiPersonality*' \
             --console=plain --no-configuration-cache
+      - name: Zrzuty PRZED z gałęzi bazowej
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin claude/bold-sagan-vwz5gm
+          base="$RUNNER_TEMP/hud119-before"
+          git worktree add --detach "$base" FETCH_HEAD
+          # Ten sam test zrzutów i te same urządzenia; wyłącznie stary kod HUD.
+          cp app/src/test/java/com/centurywar/screens/LeftHandedHudScreenshotTest.kt \
+            "$base/app/src/test/java/com/centurywar/screens/LeftHandedHudScreenshotTest.kt"
+          (cd "$base" && chmod +x gradlew && ./gradlew :app:testDebugUnitTest \
+            --tests '*LeftHandedHudScreenshotTest*' --console=plain --no-configuration-cache)
+          mkdir -p app/build/screenshots/before
+          cp "$base"/app/build/screenshots/hud119_*.png app/build/screenshots/before/
       - name: APK debug do testów na telefonie
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,6 +68,7 @@ jobs:
           path: |
             app/build/screenshots/hud110_*.png
             app/build/screenshots/hud119_*.png
+            app/build/screenshots/before/hud119_*.png
             app/build/screenshots/*reg100*.png
             app/build/test-results/testDebugUnitTest/
             app/build/reports/tests/testDebugUnitTest/
