@@ -148,6 +148,7 @@ object L {
         putAll(part108())
         putAll(part110())
         putAll(part127())
+        putAll(part134())
         }
     }
 
@@ -1668,6 +1669,15 @@ object L {
             "Стежить за ворожим військом і добирає протидію: ближній бій проти стрільців, стрільці проти важких, важкі проти ближнього бою.",
             "Leest het vijandelijke leger: nabij tegen afstand, afstand tegen zwaar, zwaar tegen nabij.",
             "Düşman ordusunu izler: yakın birliklerle menzillilere, menzillilerle ağırlara, ağırlarla yakın birliklere karşı koyar."),
+    /** Zlecenie 134: zestawienie jednostek i macierz kontr. */
+    private fun part134(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "cx134_tab" to t("Porównaj", "Compare", "Vergleich", "Comparar", "Comparer", "Confronta", "Comparar", "Порівняти", "Vergelijk", "Karşılaştır"),
+        "cx134_compare" to t("Porównanie jednostek", "Unit comparison", "Einheitenvergleich", "Comparación de unidades", "Comparaison des unités", "Confronto unità", "Comparação de unidades", "Порівняння бійців", "Eenheden vergelijken", "Birim karşılaştırma"),
+        "cx134_legend" to t("↑ lepiej · ↓ gorzej · = remis (niższy koszt jest lepszy)", "↑ better · ↓ worse · = equal (lower cost is better)", "↑ besser · ↓ schlechter · = gleich (weniger Kosten sind besser)", "↑ mejor · ↓ peor · = igual (menor coste es mejor)", "↑ mieux · ↓ moins bien · = égalité (coût moindre = mieux)", "↑ meglio · ↓ peggio · = pari (costo minore = meglio)", "↑ melhor · ↓ pior · = igual (menor custo é melhor)", "↑ краще · ↓ гірше · = рівність (нижча ціна краща)", "↑ beter · ↓ slechter · = gelijk (lagere kosten zijn beter)", "↑ daha iyi · ↓ daha kötü · = eşit (düşük maliyet daha iyi)"),
+        "cx134_counter" to t("Kontry ról", "Role counters", "Rollen-Konter", "Ventajas entre roles", "Contres des rôles", "Contrasti tra ruoli", "Vantagens entre papéis", "Контрдії ролей", "Rollen en tegenzetten", "Rol karşıtlıkları"),
+        "cx134_axis" to t("Wiersz atakuje · kolumna się broni", "Row attacks · column defends", "Zeile greift an · Spalte verteidigt", "Fila ataca · columna defiende", "Ligne attaque · colonne défend", "Riga attacca · colonna difende", "Linha ataca · coluna defende", "Рядок атакує · стовпець захищає", "Rij valt aan · kolom verdedigt", "Satır saldırır · sütun savunur"),
+        "cx134_growth" to t("Rozwój DPS", "DPS growth", "DPS-Entwicklung", "Evolución de DPS", "Évolution du DPS", "Crescita DPS", "Evolução do DPS", "Зростання шкоди/с", "DPS-groei", "DPS gelişimi"),
+        "cx134_chart_axis" to t("Numer epoki · skala liniowa", "Era number · linear scale", "Epochennummer · lineare Skala", "Número de era · escala lineal", "Numéro d'ère · échelle linéaire", "Numero epoca · scala lineare", "Número da era · escala linear", "Номер епохи · лінійна шкала", "Tijdperknummer · lineaire schaal", "Çağ numarası · doğrusal ölçek"),
     )
 
 }

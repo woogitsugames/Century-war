@@ -22,6 +22,7 @@ import com.centurywar.game.EndlessBosses
 import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.game.UnitDef
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
@@ -55,12 +56,13 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         const val PAGE_MODIFIERS = 7
         const val PAGE_CARDS = 8
         const val PAGE_BOSSES = 9
+        const val PAGE_COMPARE = 10
         const val MAX_GUIDE = 64
         const val MAX_GUIDE_LINES = 32
         val CATEGORY_KEYS = arrayOf(
             "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
             "cx62_abilities", "cx62_doctrines", "cx62_weather",
-            "cx62_modifiers", "cx62_cards", "cx62_bosses",
+            "cx62_modifiers", "cx62_cards", "cx62_bosses", "cx134_tab",
         )
         val ROLE_COL = intArrayOf(
             Color.rgb(170, 60, 50), Color.rgb(54, 128, 84), Color.rgb(60, 104, 170), Color.rgb(110, 76, 170),
@@ -91,6 +93,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     /** Atrapa bitwy tylko po to, by użyć proceduralnych sylwetek jednostek z renderera. */
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
+    private val compare = CodexComparePanel(this, startEra)
 
     private var era = startEra.coerceIn(0, Defs.ERA_COUNT - 1)
     private var selectedVariant = if (Defs.spec(era).variants.isNotEmpty()) 0 else -1
@@ -211,7 +214,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         viewTop = categoryRailTop + categoryRailHeight + 12 * dp
 
         val hasEra = page <= PAGE_ABILITIES
-        toggle.visible = hasEra
+        toggle.visible = hasEra || page == PAGE_COMPARE
         toggle.iconId = Icons.FLASK
         val compact = w - g.insetL - g.insetR < 700 * dp
         val tw = if (compact) 48 * dp else min(210 * dp, w * 0.24f)
@@ -249,6 +252,21 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             if (b.visible) b.set(left + i * (vbW + 10 * dp), viewTop, vbW, 48 * dp)
         }
         if (page == PAGE_VARIANTS && variants.isNotEmpty()) viewTop += 58 * dp
+
+        if (page == PAGE_COMPARE) {
+            for (button in variantBtn) button.visible = false
+            compare.layout(left, viewTop, contentW, withResearch)
+            viewTop += compare.controlHeight
+            activeCards = 0
+            val compactToggle = w - g.insetL - g.insetR < 700 * dp
+            toggle.label = if (compactToggle) "" else L["cx_research"]
+            toggle.sub = if (compactToggle) "" else if (withResearch) L["on"] else L["off"]
+            toggle.highlight = withResearch
+            maxScroll = max(0f, compare.contentHeight - (h - g.insetB - viewTop) + 8 * dp)
+            scroll = scroll.coerceIn(0f, maxScroll)
+            return
+        }
+        compare.hide()
 
         cols = (contentW / ((if (ui.textScale > 1.15f) 375f else 380f) * dp))
             .toInt().coerceIn(1, 3)
@@ -667,28 +685,33 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 eraRailTop + eraRailHeight / 2f, eraScroll, maxEraScroll, dp)
         }
         for (b in variantBtn) if (b.visible) ui.button(c, b, 13f)
+        if (page == PAGE_COMPARE) compare.drawSelectors(c)
 
         c.save()
         c.clipRect(0f, viewTop - 4 * dp, w, h - g.insetB)
         val y0 = viewTop - scroll
-        val hasEra = page <= PAGE_ABILITIES
-        if (hasEra) drawEraHeader(c, y0)
-        val gridTop = y0 + (if (hasEra) headerH else 0f)
-        for (slot in 0 until activeCards) {
-            val i = when (page) {
-                PAGE_TOWERS -> TURRET
-                PAGE_ABILITIES -> BARRAGE
-                else -> slot
+        if (page == PAGE_COMPARE) {
+            compare.drawContent(c, y0, h - g.insetB)
+        } else {
+            val hasEra = page <= PAGE_ABILITIES
+            if (hasEra) drawEraHeader(c, y0)
+            val gridTop = y0 + (if (hasEra) headerH else 0f)
+            for (slot in 0 until activeCards) {
+                val i = when (page) {
+                    PAGE_TOWERS -> TURRET
+                    PAGE_ABILITIES -> BARRAGE
+                    else -> slot
+                }
+                val x = left + (slot % cols) * (cw + gap)
+                val y = gridTop + (slot / cols) * (ch + gap)
+                if (y > h - g.insetB || y + ch < viewTop - 10 * dp) continue
+                card.set(x, y, x + cw, y + ch)
+                drawCard(c, i)
             }
-            val x = left + (slot % cols) * (cw + gap)
-            val y = gridTop + (slot / cols) * (ch + gap)
-            if (y > h - g.insetB || y + ch < viewTop - 10 * dp) continue
-            card.set(x, y, x + cw, y + ch)
-            drawCard(c, i)
+            val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
+            val guideY = if (hasEra) gridTop + gridH + 12 * dp else y0
+            drawGuide(c, guideY)
         }
-        val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
-        val guideY = if (hasEra) gridTop + gridH + 12 * dp else y0
-        drawGuide(c, guideY)
         c.restore()
         scrollCue.vertical(c, w - g.insetR - 15 * dp, viewTop,
             h - g.insetB, scroll, maxScroll, dp)
@@ -846,7 +869,16 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         c.restore()
     }
 
+    /** Zastany renderer sylwetek jest używany też przez widok porównania. */
+    internal fun drawCompareIcon(c: Canvas, unit: UnitDef, x: Float, y: Float, size: Float) {
+        renderer.drawUnitIcon(c, unit, x, y, size, Ui.PLAYER)
+    }
+
     override fun onClick(b: Button) {
+        if (page == PAGE_COMPARE && compare.onClick(b)) {
+            layout()
+            return
+        }
         when {
             b.id == -1 -> g.pop()
             b.id == -2 -> { withResearch = !withResearch; layout() }
