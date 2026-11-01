@@ -1,0 +1,42 @@
+name: Battle 118 verification
+on:
+  push:
+    branches:
+      - gpt/118-battle-verify
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  battle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Assemble debug
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Battle tests and screenshot regression
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*BattleScreen*' \
+            --tests '*LeftHandedHud*' \
+            --tests '*BattleSummary*' \
+            --tests '*Barrage*' \
+            --tests '*ScreenshotTest*' \
+            --console=plain --no-configuration-cache
+      - name: Upload screenshots on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-118-screenshot-diffs
+          path: app/build/screenshots/
+          if-no-files-found: ignore
