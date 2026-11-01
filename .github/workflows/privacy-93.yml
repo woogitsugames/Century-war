@@ -1,0 +1,53 @@
+name: Zlecenie 93 - prywatność i dane rankingu
+
+on:
+  pull_request:
+    branches:
+      - 'claude/**'
+    paths:
+      - 'app/build.gradle.kts'
+      - 'app/src/main/java/com/centurywar/engine/L.kt'
+      - 'app/src/main/java/com/centurywar/screens/AboutScreen.kt'
+      - 'app/src/main/java/com/centurywar/screens/PrivacySummaryScreen.kt'
+      - 'app/src/test/java/com/centurywar/screens/Privacy93ScreenshotTest.kt'
+      - '.github/workflows/privacy-93.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj debug APK i przetestuj prywatność
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*Privacy93ScreenshotTest*' \
+            --tests '*AboutScreenTest*' \
+            --tests '*ScoreClientTest*' \
+            --tests '*LTest*' \
+            --console=plain --no-configuration-cache
+      - name: Kadry 720p / Fold i raporty
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy93-screenshots-and-tests
+          path: |
+            app/build/screenshots/*privacy93*.png
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
