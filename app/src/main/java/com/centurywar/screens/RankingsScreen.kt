@@ -18,6 +18,7 @@ import kotlin.math.min
 
 class RankingsScreen(g: Game) : Screen(g) {
     override val crashName get() = "RankingsScreen"
+    override val blocksNotices: Boolean get() = true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val recordsTabs = RecordsTabs(this, 0)

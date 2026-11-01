@@ -69,6 +69,7 @@ class RecordsUxTest {
             g.setScreen(menu)
             menu.onClick(menu.buttons.first { it.id == 6 })
             assertTrue(g.current is RankingsScreen)
+            assertTrue(g.current!!.blocksNotices)
             for ((target, klass) in listOf(
                 201 to StatsScreen::class.java,
                 202 to ReplayListScreen::class.java,
@@ -85,6 +86,7 @@ class RecordsUxTest {
                 }
                 s.onClick(buttons.first { it.id == target })
                 assertTrue("Wybrana zakładka", klass.isInstance(g.current))
+                assertTrue("Powiadomienia nie zasłaniają zakładek", g.current!!.blocksNotices)
             }
             g.back()
             assertTrue("Wstecz wraca do menu po zmianach zakładek", g.current is MenuScreen)

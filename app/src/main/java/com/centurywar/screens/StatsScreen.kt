@@ -26,6 +26,7 @@ import kotlin.math.min
 /** Dwie zakładki: podsumowanie całego profilu i lokalna historia 100 bitew. */
 class StatsScreen(g: Game) : Screen(g) {
     override val crashName get() = "StatsScreen"
+    override val blocksNotices: Boolean get() = true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val recordsTabs = RecordsTabs(this, 1)

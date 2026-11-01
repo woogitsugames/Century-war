@@ -245,7 +245,6 @@ class MenuScreen(g: Game) : Screen(g) {
         ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
             ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
         drawHeldTooltip(c)
-        ui.textO(c, "v0.2", w - g.insetR - 12 * dp, h - g.insetB - 10 * dp, 10f, Ui.DIM, Paint.Align.RIGHT, 1.5f)
         if (g.resumeOffer != null) drawResume(c)
     }
 

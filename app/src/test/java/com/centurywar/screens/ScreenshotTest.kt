@@ -1463,6 +1463,12 @@ class ScreenshotTest {
             ))) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "pl"
+                L.setCode("pl")
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+                (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+                field(g, "achievementSeconds").setFloat(g, 0f)
                 val state = Missions(g.profile).refresh(System.currentTimeMillis())
                 state.daily.firstOrNull()?.let { it.progress = it.target }
                 g.setScreen(MenuScreen(g))

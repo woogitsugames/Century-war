@@ -231,6 +231,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
         achievementSeconds -= dt
+        // Powiadomienie nie może zasłaniać nawigacji ani okien modalnych.
+        if (screen?.blocksNotices == true) return
         if (achievementSeconds <= 0f && noticeQueue.isNotEmpty() && screen?.blocksNotices != true) {
             achievementMessage = noticeQueue.removeFirst()
             noticeIcon = noticeIcons.removeFirst()
