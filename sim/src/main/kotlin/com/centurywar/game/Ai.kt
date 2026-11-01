@@ -382,15 +382,145 @@ class Ai(
         return if (b.rng.nextAiInt(me.index, 100) < weight) armored else 1 - armored
     }
 
-    /** Wybór karty Oblężenia bez końca (AI gracza w testach); własny strumień RNG. */
-    fun chooseCard(options: Array<EndlessCard>): Int = b.rng.nextAiInt(me.index, options.size)
+    /** Marginalny zysk z redukcji odnowienia, z uwzględnieniem twardego minimum. */
+    private fun cooldownValue(reduction: Float): Float {
+        val full = me.abilityCdMul * reduction
+        if (full <= 0f) return 0f
+        val next = maxOf(Battle.MIN_ABILITY_CD_MUL, me.abilityCdMul * (1f - reduction))
+        return ((me.abilityCdMul - next) / full).coerceIn(0f, 1f)
+    }
+
+    /** Doktryna może być legalna w ofercie, ale praktycznie bezwartościowa przy limicie. */
+    private fun doctrineValue(d: Doctrine, power: Float): Float = when (d) {
+        Doctrine.TACTICS -> cooldownValue(0.25f * power)
+        Doctrine.ARSENAL -> if (me.slots in 1 until Defs.MAX_TURRET_SLOTS &&
+            Modifier.NO_TURRETS !in b.cfg.modifiers) 1f else 0f
+        Doctrine.BANNER -> if (me.rallyUnlocked) 1f else 0f
+        Doctrine.VIGILANCE -> if (me.slots > 0 || (b.fog && !me.fogSight)) 1f else 0f
+        else -> 1f
+    }
+
+    private fun doctrinePreference(d: Doctrine): Float = 100f - doctrineRank(d) * 8f
+
+    /** Wartość dodatkowej karty w zależności od profilu; bez modyfikacji jej efektu. */
+    private fun cardPreference(card: EndlessCard): Float {
+        val doctrine = card.doctrine
+        if (doctrine != null) return doctrinePreference(doctrine)
+        var value = 72f
+        value += when (personality) {
+            AiPersonality.ASSAULT -> when (card) {
+                EndlessCard.BERSERK, EndlessCard.MARCH, EndlessCard.WAR_DRUMS,
+                EndlessCard.LAST_STAND, EndlessCard.DRILL_SERGEANT -> 24f
+                else -> 0f
+            }
+            AiPersonality.ENGINEER -> when (card) {
+                EndlessCard.BURNING_TOWERS, EndlessCard.RAPID_TOWERS,
+                EndlessCard.TOWER_NETWORK, EndlessCard.IRON_CURTAIN,
+                EndlessCard.EMBER_FORGE, EndlessCard.REPAIR_CREW -> 24f
+                else -> 0f
+            }
+            AiPersonality.ECONOMIST -> when (card) {
+                EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD,
+                EndlessCard.SCAVENGER, EndlessCard.SUPPLY_LINE,
+                EndlessCard.MOBILIZATION -> 24f
+                else -> 0f
+            }
+            AiPersonality.SIEGER -> when (card) {
+                EndlessCard.FRONTLINE_PLATE, EndlessCard.SHARPSHOOTERS,
+                EndlessCard.ELITE_SCHOOL, EndlessCard.FORTRESS,
+                EndlessCard.FREE_ELITE, EndlessCard.MUSTER_BANNER -> 24f
+                else -> 0f
+            }
+            AiPersonality.BALANCED -> when (card) {
+                EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
+                EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE -> 12f
+                else -> 0f
+            }
+        }
+        value += when (card) {
+            EndlessCard.SUPPLY_LINE -> {
+                var total = 0
+                for (economic in EndlessCards.economicSynergyCards) total += me.cardStacks[economic.ordinal]
+                if (total > 0) 12f else 0f
+            }
+            EndlessCard.WAR_DRUMS ->
+                if (me.cardStacks[EndlessCard.MARCH.ordinal] > 0 ||
+                    me.cardStacks[EndlessCard.SWIFT.ordinal] > 0) 12f else 0f
+            EndlessCard.TOWER_NETWORK ->
+                if (me.cardStacks[EndlessCard.TOWER_SLOT.ordinal] > 0 ||
+                    me.cardStacks[EndlessCard.ARSENAL.ordinal] > 0) 12f else 0f
+            EndlessCard.MUSTER_BANNER ->
+                if (me.cardStacks[EndlessCard.MOBILIZATION.ordinal] > 0) 12f else 0f
+            else -> 0f
+        }
+        return value
+    }
+
+    /** Udział rzeczywistego efektu następnej karty w jej pełnej mocy. */
+    private fun cardValue(card: EndlessCard): Float {
+        val stacks = me.cardStacks[card.ordinal]
+        val power = if (EndlessCards.persistent(card))
+            EndlessCards.stackPower(stacks + 1) else 1f
+        val marginal = when (card) {
+            EndlessCard.TACTICS -> doctrineValue(Doctrine.TACTICS, power)
+            EndlessCard.RALLY_MASTER -> cooldownValue(0.2f * power)
+            EndlessCard.CLONING -> ((0.6f - me.cloneChance) / 0.1f).coerceIn(0f, 1f)
+            EndlessCard.FREE_ELITE -> if (me.freeElitesPerWave < 4) 1f else 0f
+            EndlessCard.AUTO_BARRAGE -> if (me.autoBarrageInterval <= 0f) 1f
+                else ((me.autoBarrageInterval - maxOf(15f, me.autoBarrageInterval - 5f)) / 5f)
+                    .coerceIn(0f, 1f)
+            EndlessCard.MEDIC -> if (me.baseMaxHp <= 0f) 0f else
+                ((me.baseMaxHp - me.baseHp) / (0.25f * me.baseMaxHp)).coerceIn(0f, 1f)
+            EndlessCard.MOBILIZATION ->
+                ((Battle.MAX_UNITS - me.cap) / 3f).coerceIn(0f, 1f)
+            EndlessCard.MUSTER_BANNER ->
+                if (me.cap < Battle.MAX_UNITS) 1f else 0f
+            EndlessCard.REPAIR_CREW -> ((0.3f - me.repairPerWave) / 0.06f).coerceIn(0f, 1f)
+            EndlessCard.CITADEL_HEART -> {
+                val defenses = me.cardStacks[EndlessCard.BULWARK.ordinal] +
+                    me.cardStacks[EndlessCard.FORTRESS.ordinal] +
+                    me.cardStacks[EndlessCard.REPAIR_CREW.ordinal]
+                val full = 0.01f * (1 + defenses)
+                ((0.3f - me.repairPerWave) / full).coerceIn(0f, 1f)
+            }
+            // Spowolnienie tej karty jest liniowe do trzeciego stosu, bez wygaszania.
+            EndlessCard.IRON_CURTAIN -> {
+                val before = minOf(0.45f, 0.15f * stacks)
+                val after = minOf(0.45f, 0.15f * (stacks + 1))
+                ((after - before) / 0.15f).coerceIn(0f, 1f)
+            }
+            else -> card.doctrine?.let { doctrineValue(it, power) } ?: 1f
+        }
+        val stackValue = if (card == EndlessCard.IRON_CURTAIN) 1f else power
+        return cardPreference(card) * stackValue * marginal
+    }
+
+    /** Wybór największego realnego przyrostu; oferty puste lub wyczerpane są pomijane. */
+    fun chooseCard(options: Array<EndlessCard>): Int {
+        var best = 0
+        var bestScore = -1f
+        for (i in options.indices) {
+            val card = options[i]
+            if (!EndlessCards.canOffer(card, me, b.fog)) continue
+            val score = cardValue(card) + b.rng.nextAiInt(me.index, 3)
+            if (score > bestScore) {
+                bestScore = score
+                best = i
+            }
+        }
+        return best
+    }
 
     fun chooseDoctrine(options: Array<Doctrine>): Doctrine {
         var best = options[0]
-        var score = Int.MAX_VALUE
+        var bestScore = -1f
         for (option in options) {
-            val v = doctrineRank(option) * 3 + b.rng.nextAiInt(me.index, 3)
-            if (v < score) { score = v; best = option }
+            val score = doctrinePreference(option) * doctrineValue(option, 1f) +
+                b.rng.nextAiInt(me.index, 3)
+            if (score > bestScore) {
+                bestScore = score
+                best = option
+            }
         }
         return best
     }
