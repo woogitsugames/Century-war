@@ -67,6 +67,17 @@ internal object PlayGamesIds {
         "cw_weekly_gold" to R.string.achievement_weekly_gold,
         "cw_custom_three" to R.string.achievement_custom_three,
         "cw_replay_record" to R.string.achievement_replay_record,
+        "cw_card_medics_30" to R.string.achievement_card_medics_30,
+        "cw_card_spark_30" to R.string.achievement_card_spark_30,
+        "cw_card_guard_30" to R.string.achievement_card_guard_30,
+        "cw_card_recall_30" to R.string.achievement_card_recall_30,
+        "cw_card_new_50" to R.string.achievement_card_new_50,
+        "cw_weekly_rules_3" to R.string.achievement_weekly_rules_3,
+        "cw_weekly_rules_6" to R.string.achievement_weekly_rules_6,
+        "cw_hard_perfect" to R.string.achievement_hard_perfect,
+        "cw_daily_events_6" to R.string.achievement_daily_events_6,
+        "cw_modifier_victories_10" to R.string.achievement_modifier_victories_10,
+        "cw_doctrine_victories_13" to R.string.achievement_doctrine_victories_13,
     )
 
     private val appIdPattern = Regex("[1-9][0-9]*")
