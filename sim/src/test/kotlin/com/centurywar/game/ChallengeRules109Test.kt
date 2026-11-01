@@ -15,7 +15,7 @@ class ChallengeRules109Test {
     fun all365DailyChallengesHaveAtLeast14DaysBetweenRepeatedRules() {
         val lastDay = HashMap<String, Long>()
         val themes = HashSet<String>()
-        val start = Daily.RULES_V2_DAY
+        val start = Daily.RELEASE_DAY
         for (day in start until start + 365L) {
             val c = Daily.config(day, Bonuses())
             val signature = c.modifiers.map { it.ordinal }.sorted().joinToString(",") +
@@ -25,7 +25,7 @@ class ChallengeRules109Test {
                 assertTrue("Powtórka zestawu po ${day - previous} dniach: $signature",
                     day - previous >= 14L)
             }
-            assertEquals("Dzień $day", 2, c.modifiers.size)
+            if (day >= Daily.RULES_V2_DAY) assertEquals("Dzień $day", 2, c.modifiers.size)
             assertFalse(Modifier.NO_TURRETS in c.modifiers &&
                 Modifier.EXPENSIVE_TOWERS in c.modifiers)
             Daily.ruleSet(day)?.let {
