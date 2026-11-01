@@ -122,7 +122,9 @@ class MenuScreen(g: Game) : Screen(g) {
         logoSize = max(26 * dp, layoutLogoSize * (if (compact) 0.65f else 0.83f))
         logoFill.textSize = logoSize; logoLine.textSize = logoSize
 
-        val headerH = layoutLogoSize * 2.75f
+        // Odrębny pas na komunikat logowania; nie zasłania pierwszych przycisków.
+        val headerH = layoutLogoSize * 2.75f +
+            (if (w - g.insetL - g.insetR < 560 * dp) 24 * dp else 0f)
         val freeTop = g.insetT + 8 * dp
         val bottomPad = g.insetB + 22 * dp
         val total = headerH + gridH + 14 * dp
