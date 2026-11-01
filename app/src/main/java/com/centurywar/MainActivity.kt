@@ -42,6 +42,7 @@ import com.centurywar.game.SnapshotStore
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
 import com.centurywar.meta.Profile
+import com.centurywar.meta.ProfileBackup
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
@@ -70,6 +71,8 @@ class MainActivity : Activity(), Host {
     companion object {
         /** Od tej najmniejszej szerokości (dp) ekran jest „duży”: rozłożony Fold, tablet. */
         const val LARGE_SCREEN_DP = 600
+        private const val REQUEST_PROFILE_EXPORT = 1071
+        private const val REQUEST_PROFILE_IMPORT = 1072
     }
 
     private lateinit var game: Game
@@ -83,6 +86,7 @@ class MainActivity : Activity(), Host {
     private var resumed = false
     private var pendingReplayUri: Uri? = null
     private val replayImportRunning = AtomicBoolean(false)
+    private val profileImportRunning = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -427,6 +431,161 @@ class MainActivity : Activity(), Host {
             .setOnDismissListener { hideSystemBars() }
             .show()
         if (dialog.isShowing) CrashReports.markOffered(this, name)
+    }
+
+
+    // Dokumenty wybiera system; aplikacja nie prosi o dostęp do pamięci urządzenia.
+    @Suppress("DEPRECATION")
+    override fun requestProfileExport() {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            val choose = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = ProfileBackup.MIME
+                putExtra(Intent.EXTRA_TITLE, ProfileBackup.FILE_NAME)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            try {
+                startActivityForResult(choose, REQUEST_PROFILE_EXPORT)
+            } catch (_: Exception) {
+                game.post { game.showNotice(L["profile_export_failed"], Icons.CLOSE) }
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun requestProfileImport() {
+        runOnUiThread {
+            if (isFinishing || isDestroyed || profileImportRunning.get()) return@runOnUiThread
+            val choose = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*" // różni dostawcy plików podają różny MIME dla .cwprofile
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            try {
+                startActivityForResult(choose, REQUEST_PROFILE_IMPORT)
+            } catch (_: Exception) {
+                game.post { game.showNotice(L["profile_import_failed"], Icons.CLOSE) }
+            }
+        }
+    }
+
+    @Deprecated("Wybór dokumentu przez system bez dodatkowych bibliotek")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        when (requestCode) {
+            REQUEST_PROFILE_EXPORT -> exportProfile(uri)
+            REQUEST_PROFILE_IMPORT -> importProfile(uri)
+        }
+    }
+
+    private fun exportProfile(uri: Uri) {
+        game.post {
+            val snapshot = game.profile.toCloudJson()
+            Thread({
+                val ok = runCatching {
+                    val bytes = ProfileBackup.encode(snapshot)
+                    val output = contentResolver.openOutputStream(uri, "wt")
+                        ?: error("Nie można otworzyć pliku do zapisu")
+                    output.use {
+                        it.write(bytes)
+                        it.flush()
+                    }
+                    true
+                }.getOrDefault(false)
+                game.post {
+                    game.showNotice(
+                        L[if (ok) "profile_export_ok" else "profile_export_failed"],
+                        if (ok) Icons.CHECK else Icons.CLOSE)
+                }
+            }, "profile-export").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+        }
+    }
+
+    private fun importProfile(uri: Uri) {
+        if (!profileImportRunning.compareAndSet(false, true)) return
+        Thread({
+            val content = runCatching {
+                contentResolver.openInputStream(uri)?.use { ProfileBackup.decode(it) }
+                    ?: error("Nie można odczytać kopii")
+            }.getOrNull()
+            runOnUiThread {
+                if (isFinishing || isDestroyed || !::game.isInitialized) {
+                    profileImportRunning.set(false)
+                    return@runOnUiThread
+                }
+                if (content == null) {
+                    profileImportRunning.set(false)
+                    game.post { game.showNotice(L["profile_import_failed"], Icons.CLOSE) }
+                    return@runOnUiThread
+                }
+                AlertDialog.Builder(this)
+                    .setTitle(L["profile_import_title"])
+                    .setMessage(L["profile_import_confirm"])
+                    .setPositiveButton(L["profile_import_action"]) { _, _ -> applyProfileImport(content) }
+                    .setNegativeButton(L["global_cancel"]) { _, _ -> profileImportRunning.set(false) }
+                    .setOnCancelListener { profileImportRunning.set(false) }
+                    .setOnDismissListener { hideSystemBars() }
+                    .show()
+            }
+        }, "profile-validate").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    /** Kopia bieżącego profilu musi istnieć na dysku przed zmianą stanu w pamięci. */
+    private fun applyProfileImport(json: String) {
+        game.post {
+            val previous = game.profile.toJson()
+            Thread({
+                val safeCopy = runCatching {
+                    if (!game.profile.awaitWrites(5_000L)) error("Niezapisane zmiany profilu")
+                    ProfileBackup.saveSafetyCopy(File(filesDir, "profile-backups"), previous)
+                }.getOrNull()
+                if (safeCopy == null) {
+                    game.post {
+                        profileImportRunning.set(false)
+                        game.showNotice(L["profile_import_backup_failed"], Icons.CLOSE)
+                    }
+                    return@Thread
+                }
+                game.post {
+                    try {
+                        game.profile.fromJson(json)
+                        game.profile.save()
+                        val expected = game.profile.toJson()
+                        Thread({
+                            val persisted = game.profile.awaitWrites(5_000L) && runCatching {
+                                File(filesDir, "profile.json").readText(Charsets.UTF_8) == expected
+                            }.getOrDefault(false)
+                            game.post {
+                                if (persisted) {
+                                    game.onLanguageChanged()
+                                    game.applyAccessibility()
+                                    game.setQuality(game.effectiveQualityLevel())
+                                    game.applyFrameRate()
+                                    game.applySfxVolume()
+                                    game.applyMusicVolume()
+                                    game.host.onNotificationSettingsChanged()
+                                    game.showNotice(L["profile_import_ok"], Icons.CHECK)
+                                } else {
+                                    // Stan lokalny wraca do poprzedniego, jeśli zapis nowego zawiódł.
+                                    runCatching { game.profile.fromJson(previous); game.profile.save() }
+                                    game.showNotice(L["profile_import_failed"], Icons.CLOSE)
+                                }
+                                profileImportRunning.set(false)
+                            }
+                        }, "profile-import-save").apply {
+                            isDaemon = true; priority = Thread.MIN_PRIORITY; start()
+                        }
+                    } catch (_: Exception) {
+                        runCatching { game.profile.fromJson(previous); game.profile.save() }
+                        profileImportRunning.set(false)
+                        game.showNotice(L["profile_import_failed"], Icons.CLOSE)
+                    }
+                }
+            }, "profile-safety-copy").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+        }
     }
 
     override fun shareReplay(id: String) {
