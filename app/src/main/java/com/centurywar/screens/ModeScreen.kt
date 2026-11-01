@@ -13,6 +13,7 @@ import com.centurywar.engine.Ui
 import com.centurywar.game.Skirmish
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Daily
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Weekly
@@ -22,7 +23,8 @@ import kotlin.math.min
 import java.util.Locale
 
 /** Ekran przed bitwą dla trybów: bez końca, wyzwanie dnia, potyczka. */
-class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Boolean = false) : Screen(g) {
+class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Boolean = false,
+                 private val previewDailyDay: Long? = null) : Screen(g) {
     override val crashName get() = "ModeScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
@@ -38,10 +40,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     init { buttons.add(0, hints.okBtn) }
     private var dt = 0f
     /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
-    private var day = Daily.dayNumber()
+    private var day = previewDailyDay ?: Daily.dayNumber()
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
     private var dailyWeather = ""
+    private var dailyEventTitle = ""
+    private var dailyEventIcon = Icons.CALENDAR
+    private var dailyEventLines = emptyArray<String>()
     private var dailyLang = -1
     private var dailyInfoLines = emptyArray<String>()
     private var dailyModsLines = emptyArray<String>()
@@ -137,7 +142,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     override fun update(dt: Float) {
         hints.update(dt)
         this.dt = dt
-        val today = Daily.dayNumber()
+        val today = previewDailyDay ?: Daily.dayNumber()
         if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
         labelTimer -= dt
         if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
@@ -182,7 +187,20 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         dailyCfg = cfg
         val full = panel.width() - 40 * dp
         val colWidth = (full - 16 * dp) / 2f
-        dailyInfoLines = cachedWrap(L["daily_info"], full, 13f)
+        val event = cfg.dailyEvent
+        dailyInfoLines = if (event == null) cachedWrap(L["daily_info"], full, 13f) else emptyArray()
+        dailyEventTitle = if (event == null) "" else L[event.key]
+        dailyEventLines = if (event == null) emptyArray()
+            else cachedWrap(L[event.descriptionKey], full - 23 * dp, 12f)
+        dailyEventIcon = when (event) {
+            DailyEvent.MARKSMEN -> Icons.CROSSHAIR
+            DailyEvent.RAPID_ABILITIES -> Icons.STOPWATCH
+            DailyEvent.FREE_BARRAGE -> Icons.BOMB
+            DailyEvent.FORTIFIED_BASES -> Icons.SHIELD
+            DailyEvent.GOLD_RUSH -> Icons.CHEST
+            DailyEvent.MIRROR_ARMY -> Icons.CROSSED_SWORDS
+            null -> Icons.CALENDAR
+        }
         dailyMods = L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }
         dailyModsLines = cachedWrap(dailyMods, colWidth - 23 * dp, 12f)
         dailyEras = L.f("eras_range", L[Defs.eraKeys[cfg.startEra]], L[Defs.eraKeys[cfg.maxEra]])
@@ -199,11 +217,24 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val full = panel.width() - 40 * dp
         val colWidth = (full - 16 * dp) / 2f
         var y = panel.top + 81 * dp
-        for (line in dailyInfoLines) {
-            ui.textO(c, line, x, y, 13f)
-            y += 17 * dp
+        if (dailyEventTitle.isNotEmpty()) {
+            Icons.draw(c, dailyEventIcon, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
+            ui.textO(c, dailyEventTitle, x + 23 * dp, y,
+                ui.fit(dailyEventTitle, 14f, full - 23 * dp), Ui.GOLD)
+            y += 18 * dp
+            for (line in dailyEventLines) {
+                ui.textO(c, line, x + 23 * dp, y, 12f, Ui.TEXT)
+                y += 15 * dp
+            }
+            y += 7 * dp
+        } else {
+            for (line in dailyInfoLines) {
+                ui.textO(c, line, x, y, 13f)
+                y += 17 * dp
+            }
+            y += 8 * dp
         }
-        y += 8 * dp
+        val rowGap = if (dailyEventTitle.isNotEmpty()) 26 * dp else 29 * dp
         val rightX = x + colWidth + 16 * dp
         Icons.draw(c, Icons.TOWER, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, dailyEras, x + 23 * dp, y,
@@ -214,7 +245,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             ui.textO(c, line, rightX + 23 * dp, modsY, 12f, Ui.GOLD)
             modsY += 16 * dp
         }
-        y += 29 * dp
+        y += rowGap
         Icons.draw(c, Icons.SKULL, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, dailyPower, x + 23 * dp, y,
             ui.fit(dailyPower, 13f, colWidth - 23 * dp), Ui.BAD)
@@ -223,14 +254,14 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             ui.textO(c, dailyBest, rightX + 23 * dp, modsY + 11 * dp,
                 ui.fit(dailyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
         }
-        y += 29 * dp
+        y += rowGap
         // Pogoda dnia (zlecenie 33) w lewej kolumnie, pod siłą AI.
         val cfg = dailyCfg
         if (cfg != null) {
             Icons.draw(c, Icons.weatherIcon(cfg.weather), x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
             ui.textO(c, dailyWeather, x + 23 * dp, y,
                 ui.fit(dailyWeather, 13f, colWidth - 23 * dp), Ui.TEXT)
-            y += 29 * dp
+            y += rowGap
         }
         val ranked = pr.lastRankedDaily != day
         Icons.draw(c, if (ranked) Icons.CHECK else Icons.LOCK, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
