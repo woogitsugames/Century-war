@@ -30,10 +30,12 @@ class MissionsScreen(g: Game) : Screen(g) {
     private val rewards = Array(6) { "" }
     private val rects = Array(6) { RectF() }
     private val loginRect = RectF()
+    private val streakCells = Array(7) { RectF() }
+    private val streakDayTexts = Array(7) { "" }
+    private val streakRewardTexts = Array(7) { "" }
     private val hints = HintOverlay(g)
 
     init { buttons.add(0, hints.okBtn) }
-    private val loginBar = RectF()
     private var left = 0f
     private var cardWidth = 0f
     private var contentTop = 0f
@@ -86,6 +88,11 @@ class MissionsScreen(g: Game) : Screen(g) {
         streakText = L.f("ms_login_day", missions.state.loginStreak)
         loginText = L.f("ms_login_paid",
             L.plural("medals_n", missions.state.loginRewardToday.toLong()))
+        val stars = g.profile.totalStars()
+        for (i in streakCells.indices) {
+            streakDayTexts[i] = L.f("records_day_short", i + 1)
+            streakRewardTexts[i] = "+" + Missions.loginRewardFor(i + 1, stars)
+        }
         place()
     }
 
@@ -93,10 +100,16 @@ class MissionsScreen(g: Game) : Screen(g) {
         val gap = 9 * dp
         val rowH = (if (ui.textScale > 1.15f) 96f else 79f) * dp
         val titleH = (if (ui.textScale > 1.15f) 37f else 29f) * dp
-        val loginH = (if (ui.textScale > 1.15f) 124f else 106f) * dp
+        val loginH = (if (ui.textScale > 1.15f) 172f else 150f) * dp
         val start = contentTop - scroll
         loginRect.set(left, start, left + cardWidth, start + loginH)
-        loginBar.set(left + 14 * dp, loginRect.bottom - 26 * dp, left + cardWidth - 14 * dp, loginRect.bottom - 18 * dp)
+        val dayGap = 5 * dp
+        val dayWidth = (cardWidth - 28 * dp - dayGap * 6) / 7
+        val dayY = loginRect.bottom - 56 * dp
+        for (i in streakCells.indices) {
+            val x = left + 14 * dp + i * (dayWidth + dayGap)
+            streakCells[i].set(x, dayY, x + dayWidth, loginRect.bottom - 9 * dp)
+        }
         dailyY = loginRect.bottom + 13 * dp
         weeklyY = dailyY + titleH + 3 * (rowH + gap) + 12 * dp
         val fullBottom = weeklyY + titleH + 3 * (rowH + gap) + 8 * dp + scroll
@@ -105,7 +118,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         if (start != contentTop - scroll) {
             val corrected = contentTop - scroll
             loginRect.offset(0f, corrected - start)
-            loginBar.offset(0f, corrected - start)
+            for (cell in streakCells) cell.offset(0f, corrected - start)
             dailyY += corrected - start
             weeklyY += corrected - start
         }
@@ -150,8 +163,22 @@ class MissionsScreen(g: Game) : Screen(g) {
             ui.fit(loginText, 13f, cardWidth * 0.56f), Ui.GOOD, Paint.Align.RIGHT)
         ui.textO(c, L["ms_streak_info"], tx, loginRect.top + 68 * dp,
             ui.fit(L["ms_streak_info"], 12f, cardWidth - 32 * dp), Ui.DIM)
-        ui.bar(c, loginBar.left, loginBar.top, loginBar.width(), loginBar.height(),
-            missions.state.loginStreak / 7f, Ui.GOLD)
+        for (i in streakCells.indices) {
+            val cell = streakCells[i]
+            val current = i + 1 == missions.state.loginStreak
+            val previous = i + 1 < missions.state.loginStreak
+            ui.card(c, cell, when {
+                current -> Color.rgb(94, 78, 39)
+                previous -> Color.rgb(41, 89, 62)
+                else -> Color.rgb(41, 49, 70)
+            }, 7f)
+            ui.textO(c, streakDayTexts[i], cell.centerX(), cell.top + 17 * dp,
+                ui.fit(streakDayTexts[i], 12f, cell.width() - 7 * dp),
+                if (current) Ui.GOLD else Ui.TEXT, Paint.Align.CENTER)
+            ui.textO(c, streakRewardTexts[i], cell.centerX(), cell.bottom - 8 * dp,
+                ui.fit(streakRewardTexts[i], 12f, cell.width() - 7 * dp),
+                if (previous || current) Ui.GOLD else Ui.DIM, Paint.Align.CENTER)
+        }
         ui.textO(c, L["ms_daily"], left + 10 * dp, dailyY + 22 * dp, 19f, Ui.GOLD)
         ui.textO(c, "UTC", left + cardWidth - 12 * dp, dailyY + 22 * dp, 12f, Ui.DIM, Paint.Align.RIGHT)
         ui.textO(c, L["ms_weekly"], left + 10 * dp, weeklyY + 22 * dp, 19f, Ui.GOLD)
