@@ -56,7 +56,8 @@ jobs:
       - uses: android-actions/setup-android@v4
       - run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Zrzuty wyboru trudnosci
-        env: { CW_SCREENSHOT_DEVICE: ${{ matrix.device }} }
+        env:
+          CW_SCREENSHOT_DEVICE: ${{ matrix.device }}
         run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.campaignJourneyMap*' --console=plain --no-configuration-cache
       - uses: actions/upload-artifact@v4
         if: always()
