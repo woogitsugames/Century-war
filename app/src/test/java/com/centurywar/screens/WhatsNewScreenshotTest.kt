@@ -90,15 +90,16 @@ class WhatsNewScreenshotTest {
     }
 
     @Test fun historyFromAboutDoesNotAlterSeenVersion() {
-        val p = Profile(file()).apply { whatsNewSeenVersion = "0.0.9" }
+        val p = Profile(file())
         val g = game(p)
+        p.whatsNewSeenVersion = "0.0.9"
         g.push(AboutScreen(g))
         val about = g.current as AboutScreen
         about.onClick(about.buttons.first { it.id == 4 })
         assertTrue(g.current is WhatsNewScreen)
         g.back()
         assertTrue(g.current === about)
-        assertEquals(BuildConfig.VERSION_NAME, p.whatsNewSeenVersion)
+        assertEquals("0.0.9", p.whatsNewSeenVersion)
     }
 
     @Test fun screenshotsOn720pAndFold() {
