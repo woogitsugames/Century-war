@@ -628,8 +628,7 @@ class Battle(val cfg: BattleConfig) {
     /** Synergie każdej pary stosów są symetryczne, niezależnie od kolejności kart. */
     private fun applyCard71Synergies(side: Side, card: EndlessCard, power: Float) {
         if (card == EndlessCard.SUPPLY_LINE) {
-            for (economic in arrayOf(EndlessCard.ECONOMY, EndlessCard.PLUNDER,
-                EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER)) {
+            for (economic in EndlessCards.economicSynergyCards) {
                 val n = min(side.cardStacks[economic.ordinal], EndlessCards.MAX_PERSISTENT_STACKS)
                 for (stack in 1..n) {
                     val economicPower = if (EndlessCards.persistent(economic))
@@ -647,8 +646,10 @@ class Battle(val cfg: BattleConfig) {
                 }
             }
         }
-        if ((card == EndlessCard.MARCH && side.cardStacks[EndlessCard.SWIFT.ordinal] == 0) ||
-            (card == EndlessCard.SWIFT && side.cardStacks[EndlessCard.MARCH.ordinal] == 0)) {
+        if ((card == EndlessCard.MARCH && side.cardStacks[EndlessCard.MARCH.ordinal] == 1 &&
+                side.cardStacks[EndlessCard.SWIFT.ordinal] == 0) ||
+            (card == EndlessCard.SWIFT && side.cardStacks[EndlessCard.SWIFT.ordinal] == 1 &&
+                side.cardStacks[EndlessCard.MARCH.ordinal] == 0)) {
             for (stack in 1..side.cardStacks[EndlessCard.WAR_DRUMS.ordinal]) {
                 side.speedMul *= 1f + 0.06f * EndlessCards.stackPower(stack)
             }
