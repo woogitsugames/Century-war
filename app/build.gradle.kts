@@ -254,7 +254,7 @@ tasks.matching {
     dependsOn(releaseChecklist)
 }
 
-    
+
 // Polityki przeznaczone do umieszczenia na stronie: dane z OWNER_INPUT.md.
 tasks.register("renderStorePolicies") {
     group = "publishing"
@@ -268,13 +268,17 @@ tasks.register("renderStorePolicies") {
         if (problems.isNotEmpty()) throw GradleException(problems.joinToString("\n"))
         val docs = privacyTemplates.associateWith { storeDocsDir.resolve(it).readText() }
         val errors = ReleaseChecklist.storeDocumentProblems(
-            docs + mapOf("data_safety.md" to "Dane rankingowe", "content_rating.md" to "IARC"),
+            storeDocsDir.listFiles()
+                ?.filter { it.isFile && it.extension == "md" }
+                ?.associate { it.name to it.readText() }.orEmpty(),
         )
         if (errors.isNotEmpty()) throw GradleException(errors.joinToString("\n"))
         val fields = ReleaseChecklist.ownerFields(ownerText)
         val out = destination.get().asFile.apply { mkdirs() }
         docs.forEach { (name, template) ->
             val published = ReleaseChecklist.renderOwnerTemplate(template, fields)
+                .replace(" (źródło: [OWNER_INPUT.md](OWNER_INPUT.md))", "")
+                .replace(" (source: [OWNER_INPUT.md](OWNER_INPUT.md))", "")
             check(!published.contains("{{OWNER.")) { "Nierozwiązany znacznik w " + name }
             out.resolve(name).writeText(published)
         }
