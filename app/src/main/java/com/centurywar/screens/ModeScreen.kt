@@ -74,6 +74,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
 
     private var labelTimer = 0f
     private var endlessBest = ""
+    private var endlessInfoLines = emptyArray<String>()
+    internal val cachedEndlessInfoLines: Array<String> get() = endlessInfoLines
     private var endlessScore = ""
     private var skirmishRange = ""
     private var skirmishPower = ""
@@ -128,6 +130,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             diff[i].label = L["diff_$i"]
             diff[i].iconId = diffIcons[i]
             diff[i].visible = mode == Mode.SKIRMISH
+        }
+        if (mode == Mode.ENDLESS) {
+            val x = panel.left + (26f + 42f + 42f + 18f) * dp
+            endlessInfoLines = cachedWrap(L["endless_info"], panel.right - 24 * dp - x, 15f)
         }
         if (mode == Mode.DAILY) hints.showScreen(HintOverlay.DAILY_MENU, start.r)
         if (mode == Mode.ENDLESS) hints.showScreen(HintOverlay.ENDLESS_MENU, start.r)
@@ -375,7 +381,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val lowLimit = if (mode == Mode.SKIRMISH) diff[0].r.top - 26 * dp else start.r.top - 10 * dp
         when (mode) {
             Mode.ENDLESS -> {
-                y += ui.wrap(c, L["endless_info"], x, y, tw, 15f)
+                for (line in endlessInfoLines) {
+                    ui.text(c, line, x, y, 15f)
+                    y += 15f * dp * ui.textScale * 1.3f
+                }
                 y += 12 * dp
                 y += line(c, Icons.TROPHY, endlessBest, x, y, Ui.GOLD, 16f)
                 if (endlessScore.isNotEmpty()) line(c, Icons.STAR, endlessScore, x, y)
