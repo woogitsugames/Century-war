@@ -18,7 +18,8 @@ import java.util.concurrent.TimeUnit
 
 typealias ResearchDef = com.centurywar.game.ResearchDef
 
-class ScoreEntry(val name: String, val score: Long, val day: Long, val replay: String? = null)
+class ScoreEntry(val name: String, val score: Long, val day: Long, val replay: String? = null,
+    val bannerId: Int = BannerCatalog.DEFAULT)
 
 /** Historia niezależna od tablic rankingowych; obejmuje również bitwy własne. */
 data class SkirmishResult(
@@ -121,6 +122,56 @@ class Profile(private val file: File) {
     var medals = 0
     val levels = HashMap<String, Int>()
     val stars = IntArray(Campaign.stages.size)
+
+    /** Identyfikator i trwała maska odblokowanych sztandarów (bez zakupów). */
+    var selectedBanner = BannerCatalog.DEFAULT
+        private set
+    var unlockedBanners = 1
+        private set
+
+    /** Tylko kolejne ukończone podejścia rankingowe do wyzwań dnia. */
+    var dailyChallengeStreak = 0
+        private set
+    var bestDailyChallengeStreak = 0
+        private set
+    var lastDailyChallengeStreakDay = -1L
+        private set
+
+    fun bannerUnlocked(id: Int): Boolean =
+        id in 0 until BannerCatalog.COUNT && unlockedBanners and (1 shl id) != 0
+
+    /** Odblokowanie pozostaje na stałe, nawet gdy wczytano starszy profil. */
+    fun refreshBanners(): Boolean {
+        var mask = unlockedBanners or 1
+        for (i in 1 until BannerCatalog.COUNT) {
+            if (BannerCatalog.eligible(this, i)) mask = mask or (1 shl i)
+        }
+        mask = mask and BannerCatalog.VALID_MASK
+        if (mask == unlockedBanners) return false
+        unlockedBanners = mask
+        return true
+    }
+
+    fun selectBanner(id: Int): Boolean {
+        refreshBanners()
+        if (!bannerUnlocked(id)) return false
+        selectedBanner = id
+        save()
+        return true
+    }
+
+    /** Nie zaliczamy powtórnego zakończenia tego samego dnia ani treningu. */
+    fun recordRankedDailyStreak(day: Long): Boolean {
+        if (day !in 0L..100_000L || day <= lastDailyChallengeStreakDay) return false
+        dailyChallengeStreak = if (day == lastDailyChallengeStreakDay + 1L) {
+            (dailyChallengeStreak + 1).coerceAtMost(100_000)
+        } else 1
+        lastDailyChallengeStreakDay = day
+        bestDailyChallengeStreak = maxOf(bestDailyChallengeStreak, dailyChallengeStreak)
+        refreshBanners()
+        return true
+    }
+
     var bestWave = 0
     var lastRankedDaily = -1L
     /** Maska brąz/srebro/złoto dla bieżącego tygodnia. */
@@ -328,7 +379,7 @@ class Profile(private val file: File) {
     fun submit(board: String, score: Long, day: Long, replay: String? = null): Boolean {
         val list = boards.getOrPut(board) { ArrayList() }
         val prevBest = list.maxOfOrNull { it.score } ?: -1L
-        list.add(ScoreEntry(name, score, day, replay?.takeIf { REPLAY_ID.matches(it) }))
+        list.add(ScoreEntry(name, score, day, replay?.takeIf { REPLAY_ID.matches(it) }, selectedBanner))
         list.sortByDescending { it.score }
         while (list.size > 20) list.removeAt(list.size - 1)
         return score > prevBest
@@ -344,7 +395,7 @@ class Profile(private val file: File) {
         for (list in boards.values) for (i in list.indices) {
             val entry = list[i]
             if (entry.replay != null && entry.replay in removedIds) {
-                list[i] = ScoreEntry(entry.name, entry.score, entry.day)
+                list[i] = ScoreEntry(entry.name, entry.score, entry.day, bannerId = entry.bannerId)
                 changed = true
             }
         }
@@ -413,6 +464,11 @@ class Profile(private val file: File) {
         o.put("medals", medals)
         o.put("levels", JSONObject(levels as Map<*, *>))
         o.put("stars", JSONArray().apply { stars.forEach { put(it) } })
+        o.put("selectedBanner", selectedBanner)
+        o.put("unlockedBanners", unlockedBanners and BannerCatalog.VALID_MASK)
+        o.put("dailyChallengeStreak", dailyChallengeStreak)
+        o.put("bestDailyChallengeStreak", bestDailyChallengeStreak)
+        o.put("lastDailyChallengeStreakDay", lastDailyChallengeStreakDay)
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("weeklyWeek", weeklyWeek)
@@ -478,6 +534,7 @@ class Profile(private val file: File) {
                 list.sortedByDescending { it.score }.take(20).forEach {
                     put(JSONObject().put("n", it.name).put("s", it.score).put("d", it.day).apply {
                         it.replay?.let { id -> put("r", id) }
+                        put("b", it.bannerId)
                     })
                 }
             })
@@ -681,7 +738,8 @@ class Profile(private val file: File) {
                     val score = e.optLong("s")
                     if (best.size >= 20 && score <= best[best.lastIndex].score) continue
                     val id = e.optString("r", "").takeIf { REPLAY_ID.matches(it) }
-                    val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"), id)
+                    val entry = ScoreEntry(e.optString("n"), score, e.optLong("d"), id,
+                        e.optInt("b", 0).coerceIn(0, BannerCatalog.COUNT - 1))
                     var pos = 0
                     while (pos < best.size && best[pos].score >= score) pos++
                     best.add(pos, entry)
@@ -862,6 +920,16 @@ class Profile(private val file: File) {
         achievementDailySeeds.clear(); achievementDailySeeds.addAll(newDailySeeds)
         achievementDoctrineMask = json.optInt("achievementDoctrineMask", 0) and
             ((1 shl com.centurywar.game.Doctrine.values().size) - 1)
+        dailyChallengeStreak = json.optInt("dailyChallengeStreak", 0).coerceIn(0, 100_000)
+        bestDailyChallengeStreak = json.optInt("bestDailyChallengeStreak", 0)
+            .coerceIn(dailyChallengeStreak, 100_000)
+        lastDailyChallengeStreakDay = json.optLong("lastDailyChallengeStreakDay", -1L)
+            .coerceIn(-1L, 100_000L)
+        if (lastDailyChallengeStreakDay < 0L) dailyChallengeStreak = 0
+        unlockedBanners = (json.optInt("unlockedBanners", 1) and BannerCatalog.VALID_MASK) or 1
+        refreshBanners()
+        selectedBanner = json.optInt("selectedBanner", 0).coerceIn(0, BannerCatalog.COUNT - 1)
+            .takeIf { bannerUnlocked(it) } ?: BannerCatalog.DEFAULT
         missionState.fromJson(missions)
         boards.clear(); boards.putAll(newBoards)
         skirmishHistory.clear(); skirmishHistory.addAll(newHistory)
@@ -870,6 +938,8 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        selectedBanner = 0; unlockedBanners = 1
+        dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L
         whatsNewSeenVersion = ""; hasExistingSave = false
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
@@ -974,6 +1044,8 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
+        selectedBanner = 0; unlockedBanners = 1
+        dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
