@@ -1991,8 +1991,14 @@ class ScreenshotTest {
                         g.setScreen(settings)
                         settings.onClick(settings.buttons.first { it.id == 20 })
                         val maxScroll = field(settings, "maxScroll").getFloat(settings)
-                        field(settings, "scroll").setFloat(settings,
-                            (maxScroll - 30 * g.ui.dp).coerceAtLeast(0f))
+                        // Przewiń dokładnie do pierwszej kontrolki kopii profilu.
+                        // Stały offset na bardzo niskim ekranie potrafił ją uciąć.
+                        val export = settings.buttons.first { it.id == 21 }
+                        val contentTop = field(settings, "contentTop").getFloat(settings)
+                        val currentScroll = field(settings, "scroll").getFloat(settings)
+                        val scrollToExport = (currentScroll + export.r.top - contentTop -
+                            12 * g.ui.dp).coerceIn(0f, maxScroll)
+                        field(settings, "scroll").setFloat(settings, scrollToExport)
                         settings.layout()
                         settings.update(0f)
                         assertNoCollisions(g, settings, "audit132_backup", "settings")
@@ -2014,7 +2020,10 @@ class ScreenshotTest {
                         shot(g, "audit132_" + tag + "_" + lang + "_access_bottom", 1)
 
                         capture("hints", HintSettingsScreen(g), "hint_settings")
-                        capture("campaign", CampaignScreen(g), "campaign")
+                        val campaign132 = CampaignScreen(g)
+                        capture("campaign", campaign132, "campaign")
+                        field(campaign132, "selected").set(campaign132, Campaign.stages[2])
+                        capture("campaign_info", campaign132, "campaign")
 
                         val battleScreen = BattleScreen(g,
                             BattleConfig(Mode.SKIRMISH, 132132L, 1f, startEra = 2, maxEra = 7))
