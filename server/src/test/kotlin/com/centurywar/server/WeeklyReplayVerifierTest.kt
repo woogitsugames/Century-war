@@ -21,6 +21,7 @@ class WeeklyReplayVerifierTest {
         val battle = Battle(cfg)
         val commands = BattleController(battle)
         while (battle.stepCount < 900 && !battle.over) {
+            if (battle.pendingVariant != null) commands.variant(0)
             if (battle.pendingCards != null) commands.card(0)
             if (battle.stepCount == 30) commands.queue(Role.MELEE)
             battle.step()
