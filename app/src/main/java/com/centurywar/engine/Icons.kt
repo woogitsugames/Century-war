@@ -83,6 +83,7 @@ object Icons {
     const val SUPPLY_CRATE = 60
     const val SIEGE_HAMMER = 61
     const val WATCH_EYE = 62
+    const val DICE = 63
 
     fun doctrineIcon(doctrine: Doctrine): Int = when (doctrine) {
         Doctrine.ECONOMY -> COINS
@@ -215,6 +216,7 @@ object Icons {
             SUPPLY_CRATE -> supplyCrate(c)
             SIEGE_HAMMER -> siegeHammer(c)
             WATCH_EYE -> watchEye(c)
+            DICE -> dice(c)
         }
         c.restoreToCount(save)
     }
@@ -295,6 +297,16 @@ object Icons {
     }
 
     // ------------------------------------------------------------ ikony
+
+    /** Kostka losowania — zamiast strzałki przypominającej przewijanie. */
+    private fun dice(c: Canvas) {
+        rect(c, -0.82f, -0.82f, 0.82f, 0.82f, PAPER, 0.20f)
+        circle(c, -0.45f, -0.45f, 0.13f, OUTLINE, false)
+        circle(c, 0.45f, -0.45f, 0.13f, OUTLINE, false)
+        circle(c, 0f, 0f, 0.13f, OUTLINE, false)
+        circle(c, -0.45f, 0.45f, 0.13f, OUTLINE, false)
+        circle(c, 0.45f, 0.45f, 0.13f, OUTLINE, false)
+    }
 
     /** Słupki i trend na małym ekranie; kontur zgodny z resztą ikon. */
     private fun chart(c: Canvas) {
