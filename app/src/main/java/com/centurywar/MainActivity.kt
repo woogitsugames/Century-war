@@ -1,6 +1,7 @@
 package com.centurywar
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.AlertDialog
 import android.app.TimePickerDialog
 import android.content.pm.ActivityInfo
@@ -14,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.SystemClock
+import android.util.Log
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -37,6 +39,7 @@ import com.centurywar.engine.HapticKind
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
+import com.centurywar.engine.StartupTimings
 import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.RestoredBattle
@@ -83,48 +86,78 @@ class MainActivity : Activity(), Host {
     private var resumed = false
     private var pendingReplayUri: Uri? = null
     private val replayImportRunning = AtomicBoolean(false)
+    private lateinit var startup: StartupTimings
+    private var startupFirstFrameShown = false
+    private var audioInitStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startup = (application as? CenturyWarApp)?.startupTimings
+            ?: StartupTimings(SystemClock.elapsedRealtimeNanos())
         pendingReplayUri = replayUri(intent)
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         }
         applyOrientation(resources.configuration)
+        val placeholderStart = SystemClock.elapsedRealtimeNanos()
         setContentView(TextView(this).apply {
-            text = L["bh_loading"]
+            text = L.startupText()
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             setPadding(0, 0, 0, (32f * resources.displayMetrics.density).toInt())
             setTextColor(Color.WHITE)
             // Tło startowe; gdyby zasób nie dał się wczytać (stare API, testy), wystarczy kolor.
             try { setBackgroundResource(R.drawable.bg_launch) } catch (_: Exception) { setBackgroundColor(0xFF13263E.toInt()) }
         })
-        // Profil i zrzut są potrzebne przed pierwszą klatką, ale nigdy nie czytamy ich na UI.
+        startup.record(StartupTimings.Phase.PLACEHOLDER,
+            placeholderStart, SystemClock.elapsedRealtimeNanos())
+        // Odczyt i ciężką tabelę tłumaczeń przygotowujemy poza wątkiem UI.
         val app = applicationContext
         Thread({
             val root = app.filesDir
+            var start = SystemClock.elapsedRealtimeNanos()
             val profile = Profile(File(root, "profile.json")).also { it.load() }
             profile.pruneDailyBoards(Daily.dayNumber())
+            startup.record(StartupTimings.Phase.PROFILE, start, SystemClock.elapsedRealtimeNanos())
+            start = SystemClock.elapsedRealtimeNanos()
             val snapshots = SnapshotStore(File(root, "battle.snap"))
             val restored = snapshots.loadBattle()
+            startup.record(StartupTimings.Phase.SNAPSHOT, start, SystemClock.elapsedRealtimeNanos())
+            start = SystemClock.elapsedRealtimeNanos()
             val pendingFatal = CrashReports.pendingFatal(app)
+            startup.record(StartupTimings.Phase.CRASH, start, SystemClock.elapsedRealtimeNanos())
+            start = SystemClock.elapsedRealtimeNanos()
+            val detectedQuality = Quality.detect(app)
+            val memoryClassMb = (app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager)
+                .memoryClass.coerceAtLeast(1)
+            startup.record(StartupTimings.Phase.QUALITY, start, SystemClock.elapsedRealtimeNanos())
+            start = SystemClock.elapsedRealtimeNanos()
+            L.keys.size // pierwsze odczytanie tworzy tablicę tekstów; nigdy na UI / w klatce
+            startup.record(StartupTimings.Phase.LANGUAGES, start, SystemClock.elapsedRealtimeNanos())
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
-                    finishStartup(root, profile, snapshots, restored)
+                    finishStartup(root, profile, snapshots, restored, detectedQuality, memoryClassMb)
                     if (pendingFatal != null) offerCrashReport(pendingFatal)
                 }
             }
         }, "startup-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
     }
 
-    private fun finishStartup(root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?) {
-        game = Game(this, profile, Quality.detect(this))
+    private fun finishStartup(
+        root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?,
+        detectedQuality: Int, memoryClassMb: Int
+    ) {
+        var start = SystemClock.elapsedRealtimeNanos()
+        game = Game(this, profile, detectedQuality)
+        game.bitmapCacheMemoryClassMb = memoryClassMb
+        startup.record(StartupTimings.Phase.GAME, start, SystemClock.elapsedRealtimeNanos())
+        start = SystemClock.elapsedRealtimeNanos()
         game.history = BattleHistory(File(root, "history.json")).also { history ->
             history.loadAsync { game.post { game.historyLoaded = true } }
         }
+        startup.record(StartupTimings.Phase.HISTORY, start, SystemClock.elapsedRealtimeNanos())
         game.density = resources.displayMetrics.density
-        game.sound = Sound(this)
+        // Synteza i prewarm SFX startują dopiero po pierwszej klatce menu, poza UI.
         // Nie wystawiamy zgody bez skonfigurowanego HTTPS i polityki prywatności.
         val privacyOk = runCatching {
             val policy = URI(BuildConfig.CW_PRIVACY_URL)
@@ -134,7 +167,7 @@ class MainActivity : Activity(), Host {
             game.scores = ScoreClient(File(root, "score-queue.json"),
                 BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY, profile)
         }
-        game.applySfxVolume()
+        start = SystemClock.elapsedRealtimeNanos()
         if ((application as? CenturyWarApp)?.playGamesReady == true) {
             try {
                 playGames = PlayGamesLeaderboards(this, game)
@@ -143,7 +176,10 @@ class MainActivity : Activity(), Host {
                 // Niepowodzenie PGS nie blokuje uruchomienia gry.
             }
         }
+        startup.record(StartupTimings.Phase.PLAY_GAMES, start, SystemClock.elapsedRealtimeNanos())
+        start = SystemClock.elapsedRealtimeNanos()
         game.music = Music().also { it.setVolume(profile.musicVolume) }
+        startup.record(StartupTimings.Phase.MUSIC, start, SystemClock.elapsedRealtimeNanos())
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         game.snapshots = snapshots
         game.replays = ReplayStore(File(root, "replays")).also { store ->
@@ -154,10 +190,28 @@ class MainActivity : Activity(), Host {
             }
         }
         game.resumeOffer = restored
+        start = SystemClock.elapsedRealtimeNanos()
         view = GameView(this, game)
+        view.onFirstMenuFrame = {
+            // Po publikacji ramki mierzony jest czas całego rozruchu, także Surface.
+            val firstFrameNs = SystemClock.elapsedRealtimeNanos()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) {
+                    startupFirstFrameShown = true
+                    if (BuildConfig.DEBUG) Log.i("CWStartup", startup.report(firstFrameNs))
+                    if (resumed) {
+                        DailyReminders.refresh(this)
+                        playGames?.refreshSignIn()
+                        game.music?.resume()
+                    }
+                    startAudioAfterMenu()
+                }
+            }
+        }
         if (!pendingRenderScale.isNaN()) view.setRenderScale(pendingRenderScale)
         if (pendingFrameRate >= 0) view.setFrameRate(pendingFrameRate)
         setContentView(view)
+        startup.record(StartupTimings.Phase.VIEW, start, SystemClock.elapsedRealtimeNanos())
 
         vibrator = if (Build.VERSION.SDK_INT >= 31) {
             (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
@@ -189,6 +243,26 @@ class MainActivity : Activity(), Host {
             pendingReplayUri = null
             importReplay(uri)
         }
+    }
+
+    /** SoundPool i prewarm WAV nie konkurują z pierwszym rysowaniem menu. */
+    private fun startAudioAfterMenu() {
+        if (audioInitStarted) return
+        audioInitStarted = true
+        val app = applicationContext
+        Thread({
+            val sound = try { Sound(app) } catch (e: RuntimeException) {
+                Log.w("CenturyWar", "Nie udało się zainicjalizować dźwięku", e)
+                return@Thread
+            }
+            runOnUiThread {
+                if (isFinishing || isDestroyed || !::game.isInitialized) sound.release()
+                else {
+                    game.sound = sound
+                    game.applySfxVolume()
+                }
+            }
+        }, "audio-init").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
     }
 
     private fun replayUri(next: Intent?): Uri? =
@@ -274,9 +348,11 @@ class MainActivity : Activity(), Host {
         view.onResume()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
-        DailyReminders.refresh(this)
-        playGames?.refreshSignIn()
-        game.music?.resume()
+        if (startupFirstFrameShown) {
+            DailyReminders.refresh(this)
+            playGames?.refreshSignIn()
+            game.music?.resume()
+        }
     }
 
     private fun remainingSaveMs(deadline: Long): Long =
