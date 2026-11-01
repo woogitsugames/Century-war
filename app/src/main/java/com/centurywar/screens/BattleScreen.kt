@@ -818,6 +818,7 @@ class BattleScreen(
             EvolveBanner.GO -> { evolveBanner.dismiss(); onClick(evolveBtn) }
             EvolveBanner.WAIT -> evolveBanner.dismiss()
             EVOLVE -> if (commands.evolve()) {
+                evolveBanner.dismiss()
                 missingXpRemaining = 0f
                 haptics.onEvolve()
                 maybeShowEraIntro()

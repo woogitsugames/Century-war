@@ -24,12 +24,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
  * Tura 8: baner awansu (139), dymki podpowiedzi poza HUD i odstęp przycisków od lamówki paneli.
  */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
 class Tura8UiTest {
     private val out = File("build/screenshots").apply { mkdirs() }
@@ -170,6 +172,7 @@ class Tura8UiTest {
             "hint_siege", "hint_modifiers", "hint_fog", "hint_old_turret", "hint_weather54")
         val bmp = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
+        var drawn = 0
         for ((tag, dims) in devices) for (left in listOf(false, true)) {
             val g = game(dims, left, hints = true)
             val screen = battle(g)
@@ -182,8 +185,11 @@ class Tura8UiTest {
                 activate.invoke(hints, ids[i], keys[i])
                 hints.draw(canvas)
                 val panel = hints.panelRect
-                if (panel.isEmpty) continue
                 val where = "$tag/${if (left) "lewo" else "prawo"}/${keys[i]}"
+                assertTrue("$where: dymek się nie zmieścił", hints.activeId < 0 || !panel.isEmpty)
+                if (panel.isEmpty) continue
+                drawn++
+                if (!left && ids[i] == HintOverlay.UPGRADE) shot(g, "tura8_hint_upgrade_$tag")
                 assertTrue("$where: dymek poza polem bitwy", screen.fieldRect.contains(panel))
                 for (b in hudButtons(screen, setOf(hints.okBtn))) {
                     assertFalse("$where: dymek zasłania przycisk ${b.id}", RectF.intersects(panel, b.r))
@@ -191,6 +197,7 @@ class Tura8UiTest {
             }
         }
         bmp.recycle()
+        assertTrue("Za mało narysowanych dymków: $drawn", drawn >= devices.size * 2 * 6)
     }
 
     /** Dymek menu nie zasłania przycisku, na który wskazuje (Endless: „Graj”). */

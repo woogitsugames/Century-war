@@ -336,7 +336,12 @@ class HintOverlay(
             panel.setEmpty(); connector.setEmpty()
             return false
         }
-        if (target == null || target.width() <= 0f || target.height() <= 0f ||
+        if (target == null || target === f || target.height() >= (bottom - top) * 0.6f) {
+            // Cel obejmuje pole bitwy (np. mgła): dymek na środku, bez wskaźnika.
+            return HintFrame.place(null, left, top, right, bottom,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        if (target.width() <= 0f || target.height() <= 0f ||
             (target.top >= f.top - 0.5f && target.bottom <= f.bottom + 0.5f)) {
             return HintFrame.place(target, left, top, right, bottom,
                 hintWidth, hintHeight, 4f * dp, panel, connector)
