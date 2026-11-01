@@ -80,6 +80,10 @@ object EndlessCards {
     // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
     private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)
     private val totalPowers = floatArrayOf(0f, 1f, 1.6f, 2f, 2.3f, 2.5f, 2.65f, 2.75f, 2.8f)
+    val economicSynergyCards = arrayOf(
+        EndlessCard.ECONOMY, EndlessCard.PLUNDER, EndlessCard.EXTRA_GOLD,
+        EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER,
+    )
     private val cards = EndlessCard.values()
     private val themes = EndlessWaveTheme.values()
 
