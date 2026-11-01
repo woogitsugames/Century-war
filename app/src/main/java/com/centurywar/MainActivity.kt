@@ -135,6 +135,7 @@ class MainActivity : Activity(), Host {
             try {
                 playGames = PlayGamesLeaderboards(this, game)
                 game.online = playGames!!
+                game.onlineAchievements = playGames!!
             } catch (_: RuntimeException) {
                 // Niepowodzenie PGS nie blokuje uruchomienia gry.
             }

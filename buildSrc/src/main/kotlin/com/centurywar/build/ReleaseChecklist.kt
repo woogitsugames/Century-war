@@ -91,7 +91,7 @@ object ReleaseChecklist {
     )
     private val ownerKeys = listOf(
         "publisher_name", "contact_email", "postal_address",
-        "privacy_policy_url", "release_date", "play_games_project_id",
+        "privacy_policy_url", "release_date",
     )
     private val forbiddenMarker = Regex(
         """\[(?:INSERT[^\]]*|DO DECYZJI[^\]]*|UZUPEŁNIJ[^\]]*)\]""",
@@ -167,10 +167,6 @@ object ReleaseChecklist {
         if (!day.contains("WYMAGA_DANYCH_WLASCICIELA") &&
             runCatching { LocalDate.parse(day) }.isFailure
         ) errors += "OWNER_INPUT.md: release_date ma format RRRR-MM-DD."
-        val projectId = fields["play_games_project_id"].orEmpty()
-        if (!projectId.contains("WYMAGA_DANYCH_WLASCICIELA") &&
-            !projectId.matches(Regex("""[1-9][0-9]*"""))
-        ) errors += "OWNER_INPUT.md: play_games_project_id musi być liczbą dodatnią."
         return errors
     }
 
