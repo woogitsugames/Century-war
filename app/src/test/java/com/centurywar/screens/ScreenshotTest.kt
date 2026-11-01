@@ -42,6 +42,7 @@ import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -88,13 +89,27 @@ class ScreenshotTest {
     }
 
     private fun shot(g: Game, name: String, frames: Int = 3) {
-        // Zrzuty dokumentują ekran docelowy, nie pośrednią klatkę nasunięcia.
+        // Liczba aktualizacji bez zmian; pełny raster powstaje tylko w ostatniej klatce.
+        require(frames > 0)
         g.finishScreenTransition()
         val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        repeat(frames) { g.frame(c, 1f / 60f) }
-        File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bmp.recycle()
+        try {
+            if (frames > 1) {
+                val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                try {
+                    val tickCanvas = Canvas(tiny)
+                    repeat(frames - 1) { g.frame(tickCanvas, 1f / 60f) }
+                } finally {
+                    tiny.recycle()
+                }
+            }
+            g.frame(Canvas(bmp), 1f / 60f)
+            File(out, "$name.png").outputStream().use {
+                check(bmp.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+        } finally {
+            bmp.recycle()
+        }
     }
 
     private fun tap(g: Game, x: Float, y: Float) {
@@ -324,7 +339,13 @@ class ScreenshotTest {
             shot(g, "${tag}_achievements_new")
             g.showAchievements(listOf(com.centurywar.meta.Achievements.all[1]))
             shot(g, "${tag}_achievements_toast", 20)
-            repeat(200) { g.frame(Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)), 1f / 60f) }
+            val idleBitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+            try {
+                val idleCanvas = Canvas(idleBitmap)
+                repeat(200) { g.frame(idleCanvas, 1f / 60f) }
+            } finally {
+                idleBitmap.recycle()
+            }
             // Misje: pierwsza dzienna ukończona (do odebrania).
             val ms = com.centurywar.meta.Missions(g.profile)
             ms.refresh(System.currentTimeMillis())
@@ -510,6 +531,37 @@ class ScreenshotTest {
     }
 
     @Test
+    fun intermediateFramesProduceTheSameBattleState() {
+        fun simulate(compact: Boolean): Battle {
+            val g = game(1600, 720, 1.8f, Quality.LOW)
+            val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 9_751L, 1f,
+                startEra = 0, maxEra = 2))
+            g.setScreen(screen)
+            val battle = field(screen, "battle").get(screen) as Battle
+            battle.playerAi = Ai(battle, 0)
+            val bitmap = Bitmap.createBitmap(
+                if (compact) 4 else g.width,
+                if (compact) 4 else g.height,
+                Bitmap.Config.ARGB_8888,
+            )
+            try {
+                val canvas = Canvas(bitmap)
+                repeat(90) { g.frame(canvas, 1f / 60f) }
+            } finally {
+                bitmap.recycle()
+            }
+            return battle
+        }
+
+        val full = simulate(false)
+        val tiny = simulate(true)
+        assertEquals(full.time, tiny.time, 0f)
+        assertEquals(full.player.gold, tiny.player.gold, 0f)
+        assertEquals(full.player.kills, tiny.player.kills)
+        assertEquals(full.enemy.kills, tiny.enemy.kills)
+    }
+
+    @Test
     fun screens() {
         for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
@@ -528,9 +580,18 @@ class ScreenshotTest {
                 val b = f.get(bs) as com.centurywar.game.Battle
                 b.playerAi = Ai(b, 0)
                 val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
-                val c = Canvas(bmp)
-                repeat(60 * 70) { g.frame(c, 1f / 60f) }
-                File(out, "${tag}_battle_era$era.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                try {
+                    val tickCanvas = Canvas(tiny)
+                    repeat(60 * 70 - 1) { g.frame(tickCanvas, 1f / 60f) }
+                    g.frame(Canvas(bmp), 1f / 60f)
+                    File(out, "${tag}_battle_era$era.png").outputStream().use {
+                        check(bmp.compress(Bitmap.CompressFormat.PNG, 100, it))
+                    }
+                } finally {
+                    tiny.recycle()
+                    bmp.recycle()
+                }
             }
         }
     }
@@ -555,8 +616,8 @@ class ScreenshotTest {
             val b = field(bs, "battle").get(bs) as Battle
             val tut = field(bs, "tut").get(bs) as TutorialOverlay
             val speed = field(bs, "speed")
-            val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
-            val c = Canvas(bmp)
+            // Klatki oczekiwania nie wymagają rasteryzacji całego ekranu.
+            val c = Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888))
             var frame = 0
             fun until(step: Int) {
                 var i = 0

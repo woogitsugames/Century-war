@@ -201,7 +201,9 @@ val balanceTestPatterns = categoryPatterns("balance")
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
     maxParallelForks = (configuredForks ?: 2).coerceIn(1, 2)
-    forkEvery = 15L
+    // Reużycie JVM ogranicza koszt wielokrotnego uruchamiania Robolectric.
+    // Przy małej pamięci wybierz -PtestForks=1.
+    forkEvery = 0L
     maxHeapSize = "1024m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
 
