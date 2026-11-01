@@ -194,9 +194,13 @@ class StoreGraphicsTest {
         check(battle.pendingVariant == 5) { "Nie pokazano wyboru wariantu" }
         val screen = BattleScreen(g, cfg, restored = RestoredBattle(battle, false, -120f))
         g.setScreen(screen)
-        check(screen.onBack()) // Wznowienie po odtworzeniu zapisanej bitwy.
+        screen.onBack() // Wznowienie po odtworzeniu zapisanej bitwy.
+        check(!isPaused(screen)) { "Bitwa nadal w pauzie: kadr zasłoniłby wybór wariantu" }
         g.frame(c, 0f)
     }
+
+    private fun isPaused(screen: BattleScreen): Boolean =
+        BattleScreen::class.java.getDeclaredField("paused").apply { isAccessible = true }.getBoolean(screen)
 
     /** Prawdziwa walka z HUD i dolnym paskiem, kamera na fotografowanym starciu. */
     private fun drawGameplay(c: Canvas, g: Game, scene: Int) {
@@ -205,7 +209,10 @@ class StoreGraphicsTest {
             restored = RestoredBattle(battle, false, 800f))
         g.setScreen(screen)
         g.finishScreenTransition()
-        check(screen.onBack()) // Wyjście z pauzy przy odtwarzaniu bitwy.
+        // onBack() zawsze zwraca true; liczy się, że wznowiona bitwa wyszła z pauzy.
+        check(isPaused(screen)) { "Wznowiona bitwa powinna startować w pauzie" }
+        screen.onBack()
+        check(!isPaused(screen)) { "Bitwa nadal w pauzie: kadr pokazałby menu pauzy" }
         g.frame(c, 0f)
     }
 
@@ -320,6 +327,8 @@ class StoreGraphicsTest {
             levels["r_unitHp"] = 3
             levels["r_income"] = 2
             levels["r_train"] = 2
+            // Kadr kampanii ma pokazać mapę 36 etapów, nie zapowiedź odblokowanej epoki.
+            for (era in 0 until Defs.ERA_COUNT) markEraIntroSeen(era)
         }
         val g = Game(host, profile, Quality.HIGH)
         g.density = device.density
