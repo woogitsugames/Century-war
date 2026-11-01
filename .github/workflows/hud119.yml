@@ -1,0 +1,42 @@
+name: Weryfikacja HUD 119
+on:
+  push:
+    branches:
+      - 'gpt/119-fold-cover-bottom-hud'
+permissions:
+  contents: read
+jobs:
+  hud119:
+    name: APK i testy HUD na Android SDK 36
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Testy 110/119 i Golden 100
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*LeftHandedHudTest*' --tests '*LeftHandedHudScreenshotTest*' --tests '*ScreenshotTest.regression100*' --tests '*ScreenshotGoldenTest*' --console=plain --no-configuration-cache
+      - name: Artefakty testów i zrzuty
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud119-testy-zrzuty
+          path: |
+            app/build/screenshots/hud110_*.png
+            app/build/screenshots/hud119_*.png
+            app/build/screenshots/*reg100*.png
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
