@@ -1,0 +1,49 @@
+name: Benchmark weryfikacji powtórek 121
+
+on:
+  push:
+    branches:
+      - gpt/121-server-verify-timing
+    paths:
+      - "server/**"
+      - ".github/workflows/server-benchmark.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Informacje o maszynie
+        run: |
+          lscpu | grep -E '^Model name:|^CPU\(s\):|^Thread\(s\) per core:'
+          free -m
+      - name: Pomiar na jednym logicznym procesorze
+        env:
+          SERVER_BENCH: "true"
+        run: |
+          cpu=$(awk '/^Cpus_allowed_list:/ {split($2, n, /[,-]/); print n[1]}' /proc/self/status)
+          test -n "$cpu"
+          echo "Przypięty procesor: $cpu"
+          taskset -c "$cpu" ./gradlew :server:test -PserverOnly=true \
+            --tests '*ServerReplayBenchmarkTest*' \
+            --console=plain --no-daemon --no-configuration-cache --stacktrace
+      - name: Zachowaj raport testowy
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-benchmark-121
+          path: |
+            server/build/test-results/test/
+            server/build/reports/tests/test/
+          if-no-files-found: warn
+          retention-days: 14
