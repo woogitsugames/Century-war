@@ -2,6 +2,7 @@ package com.centurywar.server
 
 import java.sql.Connection
 import java.sql.DriverManager
+import java.security.MessageDigest
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
@@ -19,9 +20,18 @@ data class AdminScore(
 )
 
 internal class BlockedPlayerException : IllegalStateException("blocked_player")
+internal class PlayerOwnershipException : IllegalStateException("invalid_player_credential")
+
+data class NickReportRow(
+    val id: Long, val player: String, val publicId: String, val nick: String,
+    val reason: String, val reportedAt: Long,
+)
 
 /** Jeden uchwyt JDBC, wszystkie operacje szeregowane; nadaje się dla jednej instancji. */
-class SqliteStore(jdbcUrl: String) : AutoCloseable {
+class SqliteStore(
+    jdbcUrl: String,
+    private val publicIds: PublicPlayerIds = PublicPlayerIds.temporary(),
+) : AutoCloseable {
     private val lock = Any()
     private val connection: Connection = DriverManager.getConnection(jdbcUrl)
 
@@ -89,7 +99,7 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                         check(rs.next()) { "missing_schema_version" }
                         rs.getInt(1)
                     }
-                    check(version in 0..1) { "unsupported_schema_version" }
+                    check(version in 0..2) { "unsupported_schema_version" }
                     if (version == 0) {
                         // Dwa kroki zapobiegają kolizji klucza 8->12, 12->16 itd.
                         val oldBoards = (8..31).joinToString(",") { "'campaign_" + it + "'" }
@@ -102,6 +112,37 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                         """.trimIndent())
                         s.execute("UPDATE schema_version SET version = 1 WHERE id = 1")
                     }
+                    // Stare instalacje nie miały poświadczenia ani publicznego ID.
+                    val columns = mutableSetOf<String>()
+                    s.executeQuery("PRAGMA table_info(players)").use { rs ->
+                        while (rs.next()) columns.add(rs.getString("name"))
+                    }
+                    if ("secret_hash" !in columns) s.execute("ALTER TABLE players ADD COLUMN secret_hash TEXT")
+                    if ("public_id" !in columns) s.execute("ALTER TABLE players ADD COLUMN public_id TEXT")
+                    val missingPublicIds = mutableListOf<String>()
+                    s.executeQuery("SELECT player_id FROM players WHERE public_id IS NULL").use { rs ->
+                        while (rs.next()) missingPublicIds.add(rs.getString(1))
+                    }
+                    connection.prepareStatement("UPDATE players SET public_id = ? WHERE player_id = ?").use { update ->
+                        for (player in missingPublicIds) {
+                            update.setString(1, publicIds.of(player))
+                            update.setString(2, player)
+                            update.executeUpdate()
+                        }
+                    }
+                    s.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_players_public_id ON players(public_id)")
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS nick_reports (
+                            report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            player_id TEXT NOT NULL,
+                            public_id TEXT NOT NULL,
+                            reported_nick TEXT NOT NULL,
+                            reason TEXT NOT NULL,
+                            reported_at INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("CREATE INDEX IF NOT EXISTS idx_reports_time ON nick_reports(reported_at)")
+                    if (version < 2) s.execute("UPDATE schema_version SET version = 2 WHERE id = 1")
                 }
                 connection.commit()
             } catch (e: Exception) {
@@ -113,10 +154,48 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         }
     }
 
+    /** Stare wpisy z NULL nie są dostępne przez /around ani /delete do pierwszego wyniku. */
+    fun isOwner(player: String, hash: String): Boolean = synchronized(lock) {
+        hasCredentialUnsafe(player, hash, allowMissing = false, allowLegacy = false)
+    }
+
+    fun mayClaim(player: String, hash: String): Boolean = synchronized(lock) {
+        hasCredentialUnsafe(player, hash, allowMissing = true, allowLegacy = true)
+    }
+
+    private fun hasCredentialUnsafe(
+        player: String, hash: String, allowMissing: Boolean, allowLegacy: Boolean,
+    ): Boolean = connection.prepareStatement("SELECT secret_hash FROM players WHERE player_id = ?").use { st ->
+        st.setString(1, player)
+        st.executeQuery().use { rs ->
+            if (!rs.next()) return@use allowMissing
+            val saved = rs.getString(1) ?: return@use allowLegacy
+            MessageDigest.isEqual(saved.toByteArray(Charsets.US_ASCII), hash.toByteArray(Charsets.US_ASCII))
+        }
+    }
+
+    fun publicIdFor(player: String): String? = synchronized(lock) {
+        connection.prepareStatement("SELECT public_id FROM players WHERE player_id = ?").use {
+            it.setString(1, player)
+            it.executeQuery().use { rs -> if (rs.next()) rs.getString(1) else null }
+        }
+    }
+
+    /** Usuwanie przez API wymaga klucza przypisanego do UUID. */
+    fun deleteOwnedPlayer(player: String, hash: String): Boolean = synchronized(lock) {
+        if (!hasCredentialUnsafe(player, hash, allowMissing = true, allowLegacy = false)) return@synchronized false
+        deletePlayer(player)
+        true
+    }
+
     /** Usuwa rekordy i pseudonim gracza (blokada zostaje); brak gracza nie jest błędem. */
     fun deletePlayer(player: String) = synchronized(lock) {
         connection.autoCommit = false
         try {
+            connection.prepareStatement("DELETE FROM nick_reports WHERE player_id = ?").use {
+                it.setString(1, player)
+                it.executeUpdate()
+            }
             connection.prepareStatement("DELETE FROM scores WHERE player_id = ?").use {
                 it.setString(1, player)
                 it.executeUpdate()
@@ -161,6 +240,7 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         replay: VerifiedReplay,
         nowMillis: Long,
         replayHash: String,
+        installationSecretHash: String? = null,
     ): SavedScore = synchronized(lock) {
         val day = todayUtc(nowMillis)
         val nowSeconds = Math.floorDiv(nowMillis, 1000L)
@@ -168,16 +248,25 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
         try {
             // Sprawdzamy ponownie po weryfikacji, aby uniknąć wyścigu z CLI.
             if (isBlockedUnsafe(input.player)) throw BlockedPlayerException()
-            connection.prepareStatement("""
-                INSERT INTO players(player_id, nick, updated_at) VALUES (?, ?, ?)
+            if (!hasCredentialUnsafe(input.player, installationSecretHash ?: "",
+                    allowMissing = true, allowLegacy = true)) throw PlayerOwnershipException()
+            val playerUpdated = connection.prepareStatement("""
+                INSERT INTO players(player_id, nick, updated_at, secret_hash, public_id)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(player_id) DO UPDATE SET
-                    nick=excluded.nick, updated_at=excluded.updated_at
+                    nick=excluded.nick, updated_at=excluded.updated_at,
+                    secret_hash=COALESCE(players.secret_hash, excluded.secret_hash),
+                    public_id=COALESCE(players.public_id, excluded.public_id)
+                WHERE players.secret_hash IS NULL OR players.secret_hash = excluded.secret_hash
             """.trimIndent()).use {
                 it.setString(1, input.player)
                 it.setString(2, NickModeration.publicNick(input.nick, input.player))
                 it.setLong(3, nowSeconds)
+                it.setString(4, installationSecretHash)
+                it.setString(5, publicIds.of(input.player))
                 it.executeUpdate()
             }
+            if (playerUpdated != 1) throw PlayerOwnershipException()
             val policy = if (replay.board == "daily") {
                 "INSERT OR IGNORE"
             } else {
@@ -274,11 +363,53 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
                 while (rs.next()) {
                     val playerId = rs.getString(2)
                     result.add(RankingEntry(
-                        rs.getLong(1), playerId,
+                        rs.getLong(1), publicIdFor(playerId) ?: publicIds.of(playerId),
                         NickModeration.publicNick(rs.getString(3), playerId), rs.getLong(4)
                     ))
                 }
                 result
+            }
+        }
+    }
+
+    /** Zgłoszenie jest powiązane z realnym kontem, ale nie ujawnia jego UUID. */
+    fun reportNick(publicId: String, reason: String, nowMillis: Long): Boolean = synchronized(lock) {
+        val target = connection.prepareStatement(
+            "SELECT player_id, nick FROM players WHERE public_id = ?"
+        ).use { st ->
+            st.setString(1, publicId)
+            st.executeQuery().use { rs ->
+                if (rs.next()) rs.getString(1) to rs.getString(2) else null
+            }
+        } ?: return@synchronized false
+        connection.prepareStatement("""
+            INSERT INTO nick_reports(player_id, public_id, reported_nick, reason, reported_at)
+            VALUES (?, ?, ?, ?, ?)
+        """.trimIndent()).use {
+            it.setString(1, target.first)
+            it.setString(2, publicId)
+            it.setString(3, NickModeration.publicNick(target.second, target.first))
+            it.setString(4, reason)
+            it.setLong(5, Math.floorDiv(nowMillis, 1000L))
+            it.executeUpdate()
+        }
+        true
+    }
+
+    fun recentReports(limit: Int = 50): List<NickReportRow> = synchronized(lock) {
+        require(limit in 1..200) { "invalid_limit" }
+        connection.prepareStatement("""
+            SELECT report_id, player_id, public_id, reported_nick, reason, reported_at
+            FROM nick_reports ORDER BY reported_at DESC, report_id DESC LIMIT ?
+        """.trimIndent()).use { st ->
+            st.setInt(1, limit)
+            st.executeQuery().use { rs ->
+                val rows = ArrayList<NickReportRow>()
+                while (rs.next()) rows.add(NickReportRow(
+                    rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
+                    rs.getString(5), rs.getLong(6)
+                ))
+                rows
             }
         }
     }
@@ -323,6 +454,13 @@ class SqliteStore(jdbcUrl: String) : AutoCloseable {
             }
             // Ostatni wpis usunięty: nick nie powinien pozostać osierocony.
             if (deleted) {
+                connection.prepareStatement("""
+                    DELETE FROM nick_reports WHERE player_id = ?
+                    AND NOT EXISTS (SELECT 1 FROM scores WHERE scores.player_id=nick_reports.player_id)
+                """.trimIndent()).use {
+                    it.setString(1, player)
+                    it.executeUpdate()
+                }
                 connection.prepareStatement("""
                     DELETE FROM players WHERE player_id = ?
                     AND NOT EXISTS (SELECT 1 FROM scores WHERE scores.player_id=players.player_id)
