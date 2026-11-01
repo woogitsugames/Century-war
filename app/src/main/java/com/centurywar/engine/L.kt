@@ -123,6 +123,7 @@ object L {
         putAll(part89())
         putAll(part84())
         putAll(part87())
+        putAll(part105())
     }
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
@@ -1468,6 +1469,18 @@ object L {
         "battle84_cause_turrets" to t("Nie zbudowano żadnej wieży", "No defensive turret was built", "Kein Verteidigungsturm gebaut", "No se construyeron torres", "Aucune tour défensive construite", "Nessuna torre difensiva costruita", "Nenhuma torre defensiva construída", "Не збудовано жодної вежі", "Geen verdedigingstoren gebouwd", "Savunma kulesi kurulmadı"),
         "battle84_cause_army" to t("Wysłano %d jednostek, wróg %d", "You deployed %d units, enemy %d", "Eigene Einheiten: %d, Gegner: %d", "Tus unidades: %d, enemigo: %d", "Vos unités : %d, ennemi : %d", "Unità schierate: %d, nemico: %d", "Unidades enviadas: %d, inimigo: %d", "Ваших бійців: %d, ворожих: %d", "Eigen troepen: %d, vijand: %d", "Birliklerin: %d, düşman: %d"),
         "battle84_cause_eco" to t("Zdobyto %d złota, wróg %d", "Gold earned: %d, enemy: %d", "Gold verdient: %d, Feind: %d", "Oro ganado: %d, enemigo: %d", "Or gagné : %d, ennemi : %d", "Oro guadagnato: %d, nemico: %d", "Ouro ganho: %d, inimigo: %d", "Здобуто золота: %d, ворог: %d", "Goud verdiend: %d, vijand: %d", "Kazanılan altın: %d, düşman: %d"),
+    )
+
+    /** Zlecenie 105: wykresy lokalnych statystyk. */
+    private fun part105(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "bh105_last30" to t("Wyniki ostatnich 30 bitew", "Last 30 battle results", "Ergebnisse der letzten 30 Kämpfe", "Resultados de las últimas 30 batallas", "Résultats des 30 derniers combats", "Risultati delle ultime 30 battaglie", "Resultados das últimas 30 batalhas", "Результати останніх 30 битв", "Uitslagen laatste 30 gevechten", "Son 30 savaşın sonuçları"),
+        "bh105_losses" to t("Przegrane", "Losses", "Niederlagen", "Derrotas", "Défaites", "Sconfitte", "Derrotas", "Поразки", "Nederlagen", "Yenilgiler"),
+        "bh105_old_new" to t("Od starszych do nowszych", "Oldest to newest", "Alt nach neu", "De antiguo a reciente", "Du plus ancien au récent", "Dal più vecchio al nuovo", "Do mais antigo ao recente", "Від давніших до новіших", "Oud naar nieuw", "Eskiden yeniye"),
+        "bh105_best_wave" to t("Rekord fal Endless w czasie", "Best Endless wave over time", "Endless-Wellenrekord im Verlauf", "Récord de oleadas Endless", "Record de vagues Endless", "Record delle ondate Endless", "Recorde de ondas Endless", "Рекорд хвиль Endless із часом", "Endless-golfrecord door de tijd", "Endless dalga rekoru"),
+        "bh105_day_time" to t("Czas gry dziennie (14 dni)", "Daily play time (14 days)", "Spielzeit pro Tag (14 Tage)", "Tiempo diario de juego (14 días)", "Temps de jeu par jour (14 jours)", "Tempo di gioco al giorno (14 giorni)", "Tempo diário de jogo (14 dias)", "Час гри за день (14 днів)", "Speeltijd per dag (14 dagen)", "Günlük oyun süresi (14 gün)"),
+        "bh105_max_wave" to t("Rekord: fala %d", "Record: wave %d", "Rekord: Welle %d", "Récord: oleada %d", "Record : vague %d", "Record: ondata %d", "Recorde: onda %d", "Рекорд: хвиля %d", "Record: golf %d", "Rekor: dalga %d"),
+        "bh105_max_time" to t("Maksymalnie: %s", "Maximum: %s", "Maximum: %s", "Máximo: %s", "Maximum : %s", "Massimo: %s", "Máximo: %s", "Максимум: %s", "Maximum: %s", "En fazla: %s"),
+        "bh105_13days" to t("13 dni temu", "13 days ago", "Vor 13 Tagen", "Hace 13 días", "Il y a 13 jours", "13 giorni fa", "Há 13 dias", "13 днів тому", "13 dagen geleden", "13 gün önce"),
     )
 
 }
