@@ -369,7 +369,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     Battle.RALLY_CD.roundToInt()))
             }
             PAGE_DOCTRINES -> for (d in com.centurywar.game.Doctrine.entries) {
-                addGuide(Icons.CROWN, L[d.key], L[d.key + "_d"])
+                addGuide(Icons.doctrineIcon(d), L[d.key], L[d.key + "_d"])
             }
             PAGE_WEATHER -> for (type in Weather.entries) {
                 val detail = when (type) {

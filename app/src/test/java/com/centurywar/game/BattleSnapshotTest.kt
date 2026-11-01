@@ -82,6 +82,11 @@ class BattleSnapshotTest {
             assertEquals(x.barragesUsed, y.barragesUsed)
             assertEquals(x.ralliesUsed, y.ralliesUsed)
             assertEquals(x.doctrines, y.doctrines)
+            assertEquals(x.rallyArmorMul, y.rallyArmorMul)
+            assertEquals(x.supplyUntil, y.supplyUntil)
+            assertEquals(x.heavyBaseDmgMul, y.heavyBaseDmgMul)
+            assertEquals(x.turretRangeMul, y.turretRangeMul)
+            assertEquals(x.fogSight, y.fogSight)
         }
         for (k in a.units.indices) {
             val u = a.units[k]; val v = b.units[k]

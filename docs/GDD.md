@@ -22,8 +22,8 @@
 | Jednostki | **36** (4 na epokę: wręcz, dystansowa, ciężka, elitarna) |
 | Wieże | **9** typów (1 na epokę), do 4 slotów, kupno, ulepszenie i sprzedaż |
 | Ostrzały specjalne | **9** wariantów (1 na epokę) plus Zryw (+40% tempa armii) |
-| Doktryny | **9**: wybór 1 z 3 przy każdym awansie epoki poza Endless |
-| Karty Endless | **30**: 9 doktryn i 21 nowych efektów, cztery rzadkości |
+| Doktryny | **13**: wybór 1 z 3 przy każdym awansie epoki poza Endless |
+| Karty Endless | **34**: 13 doktryn i 21 dodatkowych efektów, cztery rzadkości |
 | Modyfikatory bitew | **10**, np. Mgła wojny, Kruche bazy, Horda strzelców |
 | Etapy kampanii | **36** (4 na epokę), po 3 gwiazdki = **108 gwiazdek** |
 | Badania | **13** drzew, łącznie **110 poziomów** |
@@ -39,7 +39,7 @@
 
 ### Oblężenie bez końca
 - Fale co ~16–28 s. Co 6 fal wróg wchodzi w nową epokę, a od fali 48 jednostki wroga stają się coraz silniejsze.
-- Co 5 fal gracz wybiera jedną z trzech kart (30 rodzajów, cztery rzadkości); przy awansie epoki nie ma już osobnego wyboru doktryny.
+- Co 5 fal gracz wybiera jedną z trzech kart (34 rodzaje, cztery rzadkości); przy awansie epoki nie ma już osobnego wyboru doktryny.
 - Fale tematyczne są zapowiadane przed pojawieniem się; wśród ośmiu tematów są tabor oblężniczy (+15% budżetu, wolniejszy) i harcownicy (+30% budżetu, -20% HP). Co 10 fal przychodzi boss z pięciu typów (odrzut, aura tempa, tarczownik, werbownik, szał) w stałej rotacji; od fali 60 zyskuje drugą zdolność.
 - Pokonanie bossa zapewnia dodatkową kartę.
 - Wynik = fale × 250 + zabici × 12 + czas / 2 + pokonani bossowie × 1500.

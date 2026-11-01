@@ -333,3 +333,16 @@ Zlecenie 42 nie zawierało pomiaru; ten przebieg go uzupełnia (profil docelowy,
 | 28 | weteran | 2.14 | 60% | 60% | 11.1 |
 | 29 | weteran | 2.44 | 90% (2,6 min) | 75% | 4.4 |
 | 30 | weteran | 2.45 | 65% | 65% | 4.7 |
+
+## Doktryny 69 — pomiar lustrzanych walk AI (1.11.2026)
+
+Źródło: `Doctrine69BattleSimTest.mirroredAiMatchesRemainBelowSixtyPercent`, wykonane w [GitHub Actions](https://github.com/woogitsugames/Century-war/actions/runs/41291857294). Dla każdej doktryny wykonano **20 seedów × dwie strony = 40 bitew**. Jeden dowódca otrzymywał badaną doktrynę, drugi walczył bez niej; obaj byli sterowani przez AI `BALANCED`, z tym samym złotem, epoką (2), siłą i modyfikatorami `FRAGILE_BASES`, `RICH_START`. Bitwy ograniczono do 600 s czasu symulacji. Odsetek zwycięstw liczony jest wśród zakończonych meczów; test wymaga przynajmniej 24 rozstrzygnięć i maksimum 60% wygranych.
+
+| Doktryna | Seedy | Mecze | Wygrane | Przegrane | Nierozstrzygnięte | Skuteczność |
+|---|---:|---:|---:|---:|---:|---:|
+| Sztandar (`BANNER`) | 20 | 40 | 17 | 23 | 0 | **42,5%** |
+| Zaopatrzenie (`SUPPLY`) | 20 | 40 | 16 | 24 | 0 | **40,0%** |
+| Mistrzowie oblężeń (`SIEGE_MASTERS`) | 20 | 40 | 20 | 20 | 0 | **50,0%** |
+| Czujność (`VIGILANCE`) | 20 | 40 | 22 | 18 | 0 | **55,0%** |
+
+**Wynik:** wszystkie cztery doktryny mieszczą się w limicie 60% przy 20 seedach i zamianie stron; żadna bitwa nie zakończyła się timeoutem. To jest test krótkiego scenariusza porównawczego, nie pełne oszacowanie balansu całej kampanii.

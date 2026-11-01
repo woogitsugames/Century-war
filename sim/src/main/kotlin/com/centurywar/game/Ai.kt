@@ -126,7 +126,7 @@ class Ai(
     /** Dokładnie ten sam próg mgły, lecz mierzony od frontu sterowanej strony. */
     fun canSeeEnemy(u: Fighter): Boolean =
         u.alive && u.side != me.index &&
-            (!b.fog || (u.x - me.front) * me.dir <= 650f)
+            (!b.fog || me.fogSight || (u.x - me.front) * me.dir <= 650f)
 
     private fun observe() {
         danger = 0; barrageTargets = 0; closeContact = 0
@@ -396,24 +396,24 @@ class Ai(
 
     private fun doctrineRank(d: Doctrine): Int = when (personality) {
         AiPersonality.ASSAULT -> when (d) {
-            Doctrine.FURY -> 0; Doctrine.SWIFT -> 1; Doctrine.PLUNDER -> 2
-            Doctrine.TACTICS -> 3; else -> 5
+            Doctrine.FURY -> 0; Doctrine.SWIFT -> 1; Doctrine.BANNER -> 2
+            Doctrine.PLUNDER -> 3; Doctrine.TACTICS -> 4; else -> 5
         }
         AiPersonality.ENGINEER -> when (d) {
-            Doctrine.ARSENAL -> 0; Doctrine.BULWARK -> 1; Doctrine.ECONOMY -> 2
-            Doctrine.SIEGE -> 3; else -> 5
+            Doctrine.VIGILANCE -> 0; Doctrine.ARSENAL -> 1; Doctrine.BULWARK -> 2
+            Doctrine.ECONOMY -> 3; Doctrine.SIEGE -> 4; else -> 5
         }
         AiPersonality.ECONOMIST -> when (d) {
-            Doctrine.ECONOMY -> 0; Doctrine.VETERAN -> 1; Doctrine.PLUNDER -> 2
-            Doctrine.SWIFT -> 3; else -> 5
+            Doctrine.ECONOMY -> 0; Doctrine.SUPPLY -> 1; Doctrine.VETERAN -> 2
+            Doctrine.PLUNDER -> 3; Doctrine.SWIFT -> 4; else -> 5
         }
         AiPersonality.SIEGER -> when (d) {
             Doctrine.SIEGE -> 0; Doctrine.TACTICS -> 1; Doctrine.ARSENAL -> 2
-            Doctrine.FURY -> 3; else -> 5
+            Doctrine.FURY -> 3; Doctrine.SIEGE_MASTERS -> 4; else -> 5
         }
         AiPersonality.BALANCED -> when (d) {
-            Doctrine.FURY -> 0; Doctrine.ECONOMY -> 1; Doctrine.BULWARK -> 2
-            Doctrine.SWIFT -> 3; else -> 5
+            Doctrine.BANNER -> 0; Doctrine.FURY -> 1; Doctrine.ECONOMY -> 2
+            Doctrine.BULWARK -> 3; Doctrine.SWIFT -> 4; else -> 5
         }
     }
 }

@@ -116,6 +116,11 @@ class Side(val index: Int) {
     var abilityCdMul = 1f
     var siegeMul = 1f
     var killGoldMul = 1f
+    var rallyArmorMul = 1f
+    var supplyUntil = 0f
+    var heavyBaseDmgMul = 1f
+    var turretRangeMul = 1f
+    var fogSight = false
     var speedMul = 1f
     var turretCostMul = 1f
     var turretRateMul = 1f
@@ -577,6 +582,10 @@ class Battle(val cfg: BattleConfig) {
             }
             Doctrine.TACTICS -> side.abilityCdMul *= 0.75f
             Doctrine.PLUNDER -> side.killGoldMul *= 1.35f
+            Doctrine.BANNER -> side.rallyArmorMul *= 0.85f
+            Doctrine.SUPPLY -> side.supplyUntil = max(side.supplyUntil, time + 60f)
+            Doctrine.SIEGE_MASTERS -> side.heavyBaseDmgMul *= 1.18f
+            Doctrine.VIGILANCE -> { side.turretRangeMul *= 1.18f; side.fogSight = true }
         }
     }
 
@@ -970,7 +979,7 @@ class Battle(val cfg: BattleConfig) {
             if (s.turretCd[i] > 0f) { s.turretCd[i] -= dt; continue }
             val td = Defs.turret(te, s.turretVariant[i])
             val dist = (target.x - s.baseFront) * s.dir
-            if (dist > td.range * projectileRangeMul(s.index, turret = true)) continue
+            if (dist > td.range * projectileRangeMul(s.index, turret = true) * s.turretRangeMul) continue
             s.turretCd[i] = td.cooldown / s.turretRateMul
             s.turretFire[i] = 0.15f
             val h = turretHeight(i)
@@ -1062,7 +1071,7 @@ class Battle(val cfg: BattleConfig) {
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx,
                             eraId = target.def.era, bodyId = target.def.body)
                     } else {
-                        damageBase(e, attackDmg * def.siegeMul, u.side)
+                        damageBase(e, attackDmg * def.siegeMul, u.side, def.role)
                     }
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
@@ -1170,7 +1179,7 @@ class Battle(val cfg: BattleConfig) {
             fx.add(FxBuffer.HIT, best.x, 40f * best.def.size, best.side,
                 eraId = best.def.era, bodyId = best.def.body)
         } else if ((p.tx - e.baseFront) * -e.dir >= -50f) {
-            damageBase(e, p.dmg * p.siegeMul, p.side)
+            damageBase(e, p.dmg * p.siegeMul, p.side, p.shooterRole)
         }
     }
 
@@ -1198,7 +1207,7 @@ class Battle(val cfg: BattleConfig) {
             }
         }
         val e = sides[1 - attacker]
-        if ((cx - e.baseFront) * -e.dir >= -radius) damageBase(e, dmg * siegeMul, attacker)
+        if ((cx - e.baseFront) * -e.dir >= -radius) damageBase(e, dmg * siegeMul, attacker, shooterRole)
         fx.add(FxBuffer.EXPLOSION, cx, 20f, attacker, 0.6f + radius / 100f,
             eraId = sides[attacker].era)
     }
@@ -1217,7 +1226,8 @@ class Battle(val cfg: BattleConfig) {
             else Defs.turretCounterMultiplier(turretEra, u.def)
         val shield = projectile && u.hasBossAbility(EndlessBosses.SHIELD) &&
             u.hp > u.maxHp * EndlessBosses.SHIELD_HP
-        val dealt = d * multiplier * (if (shield) 0.5f else 1f)
+        val rallyArmor = if (sides[u.side].rallyT > 0f) sides[u.side].rallyArmorMul else 1f
+        val dealt = d * multiplier * rallyArmor * (if (shield) 0.5f else 1f)
         u.hp -= dealt
         if (direct) {
             u.hitStep = stepCount
@@ -1236,7 +1246,8 @@ class Battle(val cfg: BattleConfig) {
             val v = sides[u.side]
             val cost = u.def.cost
             if (!(endless && attacker == 1)) {
-                val g = cost * 1.1f * k.killGoldMul
+                val supply = if (time < k.supplyUntil) 1.3f else 1f
+                val g = cost * 1.1f * k.killGoldMul * supply
                 k.gold += g
                 k.goldEarned += g
                 if (attacker == 0) fx.add(FxBuffer.GOLD, u.x, 90f * u.def.size, 0, g)
@@ -1257,12 +1268,13 @@ class Battle(val cfg: BattleConfig) {
         }
     }
 
-    private fun damageBase(s: Side, d: Float, attacker: Int) {
+    private fun damageBase(s: Side, d: Float, attacker: Int, attackerRole: Role? = null) {
         if (endless && s.index == 1) return
         val k = sides[attacker]
         // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
         val before = s.baseHp
-        s.baseHp = (s.baseHp - d * k.siegeMul * siegePressure()).coerceIn(0f, s.baseMaxHp)
+        val heavyBonus = if (attackerRole == Role.HEAVY) k.heavyBaseDmgMul else 1f
+        s.baseHp = (s.baseHp - d * k.siegeMul * heavyBonus * siegePressure()).coerceIn(0f, s.baseMaxHp)
         val damage = before - s.baseHp
         if (damage > 0f) s.baseDamageTaken += damage
         s.baseFlash = 0.15f

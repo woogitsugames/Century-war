@@ -1052,7 +1052,7 @@ class BattleScreen(
         var bestDist = Float.MAX_VALUE
         for (u in battle.units) {
             if (!u.alive || u.side != 1) continue
-            if (battle.fog && u.x - p.front > 650f) continue
+            if (battle.fog && !p.fogSight && u.x - p.front > 650f) continue
             if (u.x < near || u.x > far || kotlin.math.abs(u.x - x) > 110f) continue
             var n = 0
             var sum = 0f
@@ -1409,18 +1409,7 @@ class BattleScreen(
     private var hpE = -1
     private var hpEText = ""
 
-    private fun doctrineIcon(d: Doctrine) = when (d) {
-        Doctrine.ECONOMY -> Icons.COINS
-        Doctrine.SIEGE -> Icons.BOMB
-        Doctrine.BULWARK -> Icons.SHIELD
-        Doctrine.SWIFT -> Icons.BOLT
-        Doctrine.VETERAN -> Icons.CHEVRONS
-        Doctrine.FURY -> Icons.FLAME
-        Doctrine.ARSENAL -> Icons.TOWER
-        Doctrine.TACTICS -> Icons.HOURGLASS
-        Doctrine.PLUNDER -> Icons.BAG
-    }
-
+    private fun doctrineIcon(d: Doctrine) = Icons.doctrineIcon(d)
 
     private fun endlessIcon(card: EndlessCard): Int = when (card) {
         EndlessCard.ECONOMY, EndlessCard.EXTRA_GOLD -> Icons.COINS
@@ -1438,6 +1427,10 @@ class BattleScreen(
         EndlessCard.MEDIC, EndlessCard.REPAIR_CREW -> Icons.HEART
         EndlessCard.SHARPSHOOTERS -> Icons.CROSSHAIR
         EndlessCard.LAST_STAND -> Icons.CROWN
+        EndlessCard.BANNER -> Icons.BANNER
+        EndlessCard.SUPPLY -> Icons.SUPPLY_CRATE
+        EndlessCard.SIEGE_MASTERS -> Icons.SIEGE_HAMMER
+        EndlessCard.VIGILANCE -> Icons.WATCH_EYE
     }
 
     private fun rarityLabel(r: EndlessRarity): String = L[when (r) {
@@ -1635,7 +1628,7 @@ class BattleScreen(
             c.drawRoundRect(max(mini.left, vl), mini.top + 1 * dp, min(mini.right, vr), mini.bottom - 1 * dp, 3 * dp, 3 * dp, ui.stroke)
             for (u in battle.units) {
                 if (!u.alive) continue
-                if (battle.fog && u.side == 1 && u.x - p.front > 650f) continue
+                if (battle.fog && !p.fogSight && u.side == 1 && u.x - p.front > 650f) continue
                 val x = r.worldToMini(u.x, mini.left, mini.width())
                 val rad = 2.6f * dp * u.def.size.coerceAtMost(1.4f)
                 ui.fill.color = Ui.OUTLINE
