@@ -55,6 +55,8 @@ class CampaignScreen(g: Game) : Screen(g) {
     private var dt = 0f
     private var time = 0f
     private var selected: Stage? = null
+    private var eraIntro: EraIntroOverlay? = null
+    private var lastUnlockedEra = -1
 
     private val info = RectF()
     private val tmp = RectF()
@@ -161,6 +163,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         start.set(info.centerX() - 90 * dp, info.bottom - 66 * dp, 180 * dp, 48 * dp)
         close.set(info.right - 30 * dp, info.top - 14 * dp, 42 * dp, 42 * dp)
         place()
+        eraIntro?.layout()
     }
 
     private fun place() {
@@ -183,6 +186,10 @@ class CampaignScreen(g: Game) : Screen(g) {
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
+        if (eraIntro?.active == true) {
+            if (e.action == TouchEvent.UP) eraIntro?.dismiss()
+            return true
+        }
         when (e.action) {
             TouchEvent.DOWN -> {
                 if (selected == null) {
@@ -213,6 +220,14 @@ class CampaignScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        eraIntro?.update(dt)
+        val unlockedEra = (g.profile.unlockedStage() / 4).coerceIn(0, Defs.ERA_COUNT - 1)
+        if (unlockedEra != lastUnlockedEra) {
+            lastUnlockedEra = unlockedEra
+            eraIntro = EraIntroOverlay.showIfFirst(g, unlockedEra)
+            eraIntro?.layout()
+        }
+        if (eraIntro?.active == true) return
         time += dt
         if (selected == null) {
             if (autoScroll) {
@@ -276,6 +291,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         chrome.title(c, L["campaign"])
         chrome.badges(c, g.profile.medals, g.profile.totalStars())
         selected?.let { drawInfo(c, it) }
+        eraIntro?.draw(c)
     }
 
     private fun drawRegionHeading(c: Canvas, era: Int, x: Float, y: Float) {
@@ -547,6 +563,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        if (eraIntro?.active == true) return
         when (b.id) {
             -1 -> g.pop()
             -2 -> selected?.let { s ->
@@ -566,6 +583,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     }
 
     override fun onBack(): Boolean {
+        if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (selected != null) { selected = null; return true }
         return false
     }
