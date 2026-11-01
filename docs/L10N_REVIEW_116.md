@@ -63,3 +63,9 @@ Przeczytano wszystkie 24 gałęzie zadaniowe i bezpośrednio przejrzano deklarac
 Długość privacy93_confirm przekracza 18 znaków w 7 językach. Jest to potencjalny problem tylko wtedy, gdy taki tekst rzeczywiście wyświetla się w przycisku o ograniczonej szerokości; należy sprawdzić układ, zamiast mechanicznie skracać komunikat.
 
 **Nie wprowadzono poprawek do gałęzi 92–115** — zlecenie nakazuje zmieniać wyłącznie własną gałąź. Brak tych nowych funkcji w bazie uniemożliwia bezkonfliktową edycję docelowego L.kt na gałęzi 116. Konkretne regresje zapisano w testach, które po dołączeniu tłumaczeń wskażą niespójności.
+
+## Test integracyjny bez scalania
+
+Workflow l10n-116.yml korzysta ze skryptu scripts/l10n116_collect.py: pobiera części part92/93/104/105/106/107/108/109/110 bezpośrednio z osobnych gałęzi i **tymczasowo** dopisuje je do L.kt wyłącznie w workspace GitHub Actions. Tworzy też raport commitów wejściowych collected-branches.txt. Żadna gałąź nie jest scalana, zmieniana ani pushowana poza gpt/116-l10n-review-4. Dzięki temu można wykonać kompilację, zrzuty 720p i testy terminologiczne na 85 nowych kluczach, nawet jeśli koordynator nie połączył jeszcze pracy równoległej.
+
+Są to **arkusze najdłuższych etykiet i pięć ekranów istniejących w bazie na język**; nie odwzorowują ekranów nowych funkcji z niezintegrowanych gałęzi (np. panelu prywatności). Celowe asercje regresyjne wykrywają opisane wyżej błędy, więc przed poprawieniem tłumaczeń część LTest może być czerwona. Kolejność workflow gwarantuje wykonanie testu zrzutów przed testami regresyjnymi, aby zachować PNG w artefakcie nawet przy błędnej terminologii.
