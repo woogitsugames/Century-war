@@ -83,6 +83,7 @@ object Icons {
     const val SUPPLY_CRATE = 60
     const val SIEGE_HAMMER = 61
     const val WATCH_EYE = 62
+    const val MISSIONS = 63
 
     fun doctrineIcon(doctrine: Doctrine): Int = when (doctrine) {
         Doctrine.ECONOMY -> COINS
@@ -215,6 +216,7 @@ object Icons {
             SUPPLY_CRATE -> supplyCrate(c)
             SIEGE_HAMMER -> siegeHammer(c)
             WATCH_EYE -> watchEye(c)
+            MISSIONS -> missionScroll(c)
         }
         c.restoreToCount(save)
     }
@@ -1018,6 +1020,19 @@ object Icons {
         circle(c, 0f, 0f, 0.37f, BLUE)
         circle(c, 0f, 0f, 0.17f, OUTLINE, false)
         shine(c, -0.14f, -0.13f, 0.09f)
+    }
+
+    /** Zwój misji z trzema punktami listy. */
+    private fun missionScroll(c: Canvas) {
+        rect(c, -0.70f, -0.85f, 0.71f, 0.82f, PAPER, 0.10f)
+        rect(c, -0.85f, -0.85f, -0.53f, 0.82f, PAPER_D, 0.17f)
+        circle(c, -0.26f, -0.40f, 0.09f, GOLD_D)
+        circle(c, -0.26f, 0f, 0.09f, GOLD_D)
+        circle(c, -0.26f, 0.40f, 0.09f, GOLD_D)
+        stroke(c, -0.04f, -0.40f, 0.48f, -0.40f, 0.055f, WOOD_D)
+        stroke(c, -0.04f, 0f, 0.48f, 0f, 0.055f, WOOD_D)
+        stroke(c, -0.04f, 0.40f, 0.48f, 0.40f, 0.055f, WOOD_D)
+        circle(c, 0.58f, 0.70f, 0.22f, GOLD)
     }
 
     private fun heart(c: Canvas) {
