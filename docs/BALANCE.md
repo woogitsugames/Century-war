@@ -514,3 +514,5 @@ wartości skalowania, pól stanu, `BattleSnapshot.VERSION` ani `Replay.VERSION`.
 było scalone z `claude/bold-sagan-vwz5gm`. Po jego scaleniu należy
 **ponownie uruchomić 100 seedów**; wcześniejszego wyniku nie wolno uważać
 za pomiar po zleceniu 108.
+
+- 2026-11-01 — regeneracja złotych powtórek: Zlecenie 95: audyt 100 seedow, bez zmiany skalowania.
