@@ -66,7 +66,9 @@ timestamp\nnonce\nMETHOD\n/uri?query=...\nbody
 
 Elementy oddzielone pojedynczym LF, bez dodatkowego LF na końcu; body jest
 pustym ciągiem dla GET. URI zawiera query string w takiej kolejności, w jakiej
-zostanie wysłany. Metoda to `GET` albo `POST`.
+zostanie wysłany. Metoda to `GET` albo `POST`. W `score`, `player/delete`
+oraz `around` podpis zawiera dodatkowy składnik na końcu:
+`timestamp\\nnonce\\nMETHOD\\nURI\\nbody\\ninstallationSecret`.
 
 #### POST /v1/player/delete
 
@@ -217,11 +219,12 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
 
 ### Bezpieczeństwo i ograniczenia
 
-- HMAC **nie jest silnym uwierzytelnieniem** w aplikacji mobilnej: klucz da
-  się wyodrębnić z APK. Znajomość sekretu pozwala podszyć się pod cudzy UUID.
-  To **weryfikacja możliwego przebiegu**, a nie dowód uczciwego gracza.
-  Do produkcji rozważ Google Play Integrity i token wydawany przez serwer
-  per instalacja / sesja, wraz z serwerowym seedem i ograniczeniem prób.
+- Sam klucz HMAC w APK nie stanowi uwierzytelnienia właściciela UUID.
+  Operacje na kontach wymagają dodatkowego sekretu instalacji (32 bajty),
+  którego skrót SHA-256 zapisuje serwer. Znajomość klucza z APK nie wystarcza
+  do przejęcia powiązanego wpisu. Sekret może jednak zostać skradziony
+  z urządzenia, a historyczny UUID może zostać przejęty przed pierwszym
+  przypisaniem sekretu. Rozważ Play Integrity i powiązanie z kontem.
 - Dowolny klient może generować wiele legalnych powtórek offline. Serwer
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
   Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.

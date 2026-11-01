@@ -340,10 +340,10 @@ class SqliteStore(
                 GROUP BY player_id
             ), ranked AS (
                 SELECT ROW_NUMBER() OVER (ORDER BY best.score DESC, best.player_id ASC) AS rank,
-                       best.player_id, players.nick, best.score
+                       best.player_id, players.nick, best.score, players.public_id
                 FROM best JOIN players ON players.player_id=best.player_id
             )
-            SELECT rank, player_id, nick, score FROM ranked
+            SELECT rank, player_id, nick, score, public_id FROM ranked
         """.trimIndent() + if (player == null) {
             " ORDER BY rank LIMIT ?"
         } else {
@@ -363,7 +363,7 @@ class SqliteStore(
                 while (rs.next()) {
                     val playerId = rs.getString(2)
                     result.add(RankingEntry(
-                        rs.getLong(1), publicIdFor(playerId) ?: publicIds.of(playerId),
+                        rs.getLong(1), rs.getString(5) ?: publicIds.of(playerId),
                         NickModeration.publicNick(rs.getString(3), playerId), rs.getLong(4)
                     ))
                 }
