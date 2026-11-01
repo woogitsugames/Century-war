@@ -35,6 +35,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private var tab = 0
     private val panel = RectF()
     private val row = RectF()
+    private val titleRect = RectF()
     private var dt = 0f
     private var existingReplayIds: Set<String> = emptySet()
     private var day = Daily.dayNumber()
@@ -70,11 +71,17 @@ class RankingsScreen(g: Game) : Screen(g) {
         refreshReplayIds()
         chrome.layoutBack(back)
         // Pionowy Fold: przycisk nazwiska nie może nachodzić na wstęgę.
-        val narrow = w - g.insetL - g.insetR < 700 * dp
-        rename.label = if (narrow) "" else L["name"]
         rename.iconId = Icons.PENCIL
-        val rw = if (narrow) 44 * dp else min(200 * dp, ui.measure(rename.label, 14f, true) + 70 * dp)
-        rename.set(w - g.insetR - rw - 12 * dp, g.insetT + 10 * dp, rw, 44 * dp)
+        rename.label = L["name"]
+        val fullW = min(200 * dp, ui.measure(rename.label, 14f, true) + 70 * dp)
+        rename.set(w - g.insetR - fullW - 12 * dp, g.insetT + 10 * dp, fullW, 44 * dp)
+        // Przy 130% tekstu wstęga tytułu rośnie: wtedy zostaje sama ikona ołówka.
+        chrome.titleBounds(L["rankings"], titleRect)
+        val narrow = w - g.insetL - g.insetR < 700 * dp || RectF.intersects(titleRect, rename.r)
+        if (narrow) {
+            rename.label = ""
+            rename.set(w - g.insetR - 56 * dp, g.insetT + 10 * dp, 44 * dp, 44 * dp)
+        }
         val keys = arrayOf("board_endless", "board_daily", "board_campaign", "board_skirmish", "board_weekly")
         val shortKeys = arrayOf("endless", "daily", "campaign", "skirmish", "board_weekly")
         val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)

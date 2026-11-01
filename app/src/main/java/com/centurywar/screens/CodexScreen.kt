@@ -54,7 +54,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         const val PAGE_MODIFIERS = 7
         const val PAGE_CARDS = 8
         const val PAGE_BOSSES = 9
-        const val MAX_GUIDE = 40
+        const val MAX_GUIDE = 64
         const val MAX_GUIDE_LINES = 8
         val CATEGORY_KEYS = arrayOf(
             "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
@@ -411,7 +411,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     /** Tekst i pozycje wiersza obliczane przy zmianie danych, nigdy na klatkę. */
     private fun addGuide(icon: Int, title: String, description: String, badge: String? = null) {
-        check(guideCount < MAX_GUIDE)
+        check(guideCount < MAX_GUIDE) { "Kodeks: za dużo wierszy przewodnika (limit $MAX_GUIDE)" }
         val i = guideCount++
         guideNames[i] = title
         guideBadges[i] = badge
