@@ -100,7 +100,8 @@ Na zewnętrznym ekranie Galaxy Folda (904×2316 px, gęstość ok. 2,7) przycisk
 2. Pole bitwy nadal widoczne w co najmniej ok. 55% wysokości ekranu.
 3. Działa w trybie praworęcznym i leworęcznym; inne ekrany (720p, 20:9, Fold wewnętrzny poziom/pion) **bez zmian** (wzorce z 100 dla nich nie mogą się zmienić; wzorce dla 904×2316 zaktualizuj przez `:app:updateScreenshots -PscreenReason="119: ..."`).
 4. Test: dla 904×2316 wszystkie prostokąty przycisków HUD ≥ 48 dp i bez kolizji (dopisz do `ScreenshotTest.layoutCollisions` albo nowy test).
-5. Zrzuty przed/po w PR.
+5. Ten sam problem dotyczy trybu praworęcznego na 720×1280 (`hud110_standard_narrow.png`): dolny pasek ma 11 przycisków w jednym rzędzie, napis „Armory” nachodzi na licznik, ikony jednostek są prawie niewidoczne. Tryb leworęczny używa już dwóch rzędów (jednostki nad akcjami) i wygląda dobrze — rozważ ten sam układ dwurzędowy dla trybu praworęcznego na wąskich ekranach (lustrzanie).
+6. Zrzuty przed/po w PR.
 
 ## Czego nie robić
 Nie zmieniaj paska górnego, minimapy ani celowania ostrzału. Nie zmieniaj symulacji.
