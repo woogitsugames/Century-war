@@ -112,7 +112,7 @@ class WhatsNewScreenshotTest {
                 Pair("foldOpen", intArrayOf(2184, 1968, 3, Quality.HIGH)),
             )
             for ((tag, dims) in cases) {
-                val p = Profile(file()).apply { tutorialDone = true }
+                val p = Profile(file()).apply { tutorialDone = true; lang = "pl" }
                 val g = game(p, dims[0], dims[1], dims[2].toFloat(), dims[3])
                 for (automatic in listOf(true, false)) {
                     g.setScreen(WhatsNewScreen(g, automatic))
