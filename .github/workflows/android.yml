@@ -186,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: century-war-screenshots
-          path: app/build/screenshots/**/*.png
+          path: app/build/screenshots/
           if-no-files-found: warn
           retention-days: 14
       - name: Zapisz raporty Robolectric
