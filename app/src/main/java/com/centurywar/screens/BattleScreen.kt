@@ -325,10 +325,13 @@ class BattleScreen(
         for (i in 0..3) {
             unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
             unitUpgrade[i].hitSlop = (48 * dp - arrow).coerceAtLeast(0f) / 2f
+            // 48 dp mieści się nad i po lewej od ikony; nie nachodzi na kolejną jednostkę.
+            unitUpgrade[i].hitOffsetX = -unitUpgrade[i].hitSlop
             unitUpgrade[i].hitOffsetY = -unitUpgrade[i].hitSlop
         }
         queueInfoBtn.set(unitBtn[0].r.left, y - 23 * dp, 92 * dp, 22 * dp)
         queueInfoBtn.hitSlop = 13 * dp
+        queueInfoBtn.hitOffsetX = queueInfoBtn.hitSlop
         queueInfoBtn.hitOffsetY = -queueInfoBtn.hitSlop
         x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }

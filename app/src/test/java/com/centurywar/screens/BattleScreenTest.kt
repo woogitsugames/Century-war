@@ -502,15 +502,21 @@ class BattleScreenTest {
                 assertTrue("$width x $height $key: $effectiveHeight", effectiveHeight >= 48 * dp - 0.1f)
             }
             val arrows = field(bs, "unitUpgrade").get(bs) as Array<*>
-            for (raw in arrows) {
-                val b = raw as Button
+            val units = field(bs, "unitBtn").get(bs) as Array<*>
+            for (i in arrows.indices) {
+                val b = arrows[i] as Button
                 assertTrue(b.r.width() + b.hitSlop * 2f >= 48 * dp - 0.1f)
                 assertTrue(b.r.height() + b.hitSlop * 2f >= 48 * dp - 0.1f)
                 if (b.visible) {
-                    assertTrue(b.contains(b.r.left - b.hitSlop + 1f, b.r.centerY()))
-                    val own = (field(bs, "unitBtn").get(bs) as Array<*>)[arrows.indexOf(raw)] as Button
+                    assertTrue(b.contains(b.r.left - b.hitSlop * 2f + 1f, b.r.centerY()))
+                    val own = units[i] as Button
                     assertFalse("strzałka nie może zasłaniać środka jednostki",
                         b.contains(own.r.centerX(), own.r.centerY()))
+                    if (i + 1 < units.size) {
+                        val next = units[i + 1] as Button
+                        assertFalse("strzałka nie może nachodzić na następną jednostkę",
+                            b.contains(next.r.left + 2 * dp, next.r.top + 10 * dp))
+                    }
                 }
             }
             val buys = field(bs, "slotBuy").get(bs) as Array<*>
