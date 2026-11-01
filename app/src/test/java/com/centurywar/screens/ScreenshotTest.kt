@@ -562,24 +562,58 @@ class ScreenshotTest {
                 repeat(40) { g.frame(c, 1f / 60f) } // animacja pierścienia, odblokowanie "Dalej"
                 assertTrue("$tag: krok $step (jest ${tut.step}, showing=${tut.showing}, over=${b.over})", tut.step == step && tut.showing)
             }
+            fun tutorialShot(name: String) {
+                shot(g, "${tag}_$name")
+                assertTrue("$tag/$name: panel poza ekranem",
+                    tut.panel.left >= g.insetL - 1f && tut.panel.right <= g.width - g.insetR + 1f &&
+                        tut.panel.top >= g.insetT - 1f && tut.panel.bottom <= g.height - g.insetB + 1f)
+                if (tut.hole.width() > 0f && tut.hole.height() > 0f && tut.step != TutorialOverlay.S_DONE)
+                    assertTrue("$tag/$name: panel zasłania cel", !RectF.intersects(tut.panel, tut.hole))
+                if (tut.skipBtn.visible) {
+                    assertTrue("$tag/$name: pomiń mniejsze niż 48 dp",
+                        tut.skipBtn.r.height() + 0.5f >= 48 * g.ui.dp)
+                    assertTrue("$tag/$name: pomiń na panelu",
+                        !RectF.intersects(tut.skipBtn.r, tut.panel))
+                    if (tut.hole.width() > 0f && tut.step != TutorialOverlay.S_DONE)
+                        assertTrue("$tag/$name: pomiń na celu",
+                            !RectF.intersects(tut.skipBtn.r, tut.hole))
+                }
+                if (tut.nextBtn.visible)
+                    assertTrue("$tag/$name: dalej mniejsze niż 48 dp",
+                        tut.nextBtn.r.height() + 0.5f >= 48 * g.ui.dp)
+            }
+
             fun tapHole() { tap(g, tut.hole.centerX(), tut.hole.centerY()); g.frame(c, 1f / 60f) }
             fun next() { tap(g, tut.nextBtn.r.centerX(), tut.nextBtn.r.centerY()); g.frame(c, 1f / 60f) }
 
-            until(TutorialOverlay.S_MELEE); shot(g, "${tag}_tut01_melee"); tapHole()
-            until(TutorialOverlay.S_INCOME); shot(g, "${tag}_tut02_income"); next()
-            until(TutorialOverlay.S_RANGED); shot(g, "${tag}_tut03_ranged"); tapHole()
-            until(TutorialOverlay.S_KILL); shot(g, "${tag}_tut04_kill"); next()
+            until(TutorialOverlay.S_MELEE); tutorialShot("tut01_melee")
+            val skipX = tut.skipBtn.r.centerX()
+            val skipY = tut.skipBtn.r.centerY()
+            tap(g, skipX, skipY); g.frame(c, 1f / 60f)
+            assertTrue("$tag: pierwsze kliknięcie tylko otwiera potwierdzenie",
+                tut.skipConfirmationVisible && !tut.finished && !g.profile.tutorialDone)
+            shot(g, "${tag}_tut85_skip_confirmation", 1)
+            assertTrue("$tag: przyciski potwierdzenia mają 48 dp",
+                tut.nextBtn.visible && tut.skipBtn.r.height() >= 48 * g.ui.dp &&
+                    tut.nextBtn.r.height() >= 48 * g.ui.dp)
+            tap(g, tut.nextBtn.r.centerX(), tut.nextBtn.r.centerY()); g.frame(c, 1f / 60f)
+            assertTrue("$tag: anulowanie nie kończy samouczka",
+                !tut.skipConfirmationVisible && !tut.finished && !g.profile.tutorialDone)
+            tapHole()
+            until(TutorialOverlay.S_INCOME); tutorialShot("tut02_income"); next()
+            until(TutorialOverlay.S_RANGED); tutorialShot("tut03_ranged"); tapHole()
+            until(TutorialOverlay.S_KILL); tutorialShot("tut04_kill"); next()
             b.player.xp = Defs.evolveXp[0] * 0.85f
-            until(TutorialOverlay.S_EVOLVE); shot(g, "${tag}_tut05_evolve_wait")
+            until(TutorialOverlay.S_EVOLVE); tutorialShot("tut05_evolve_wait")
             b.player.xp = Defs.evolveXp[0].toFloat()
             repeat(10) { g.frame(c, 1f / 60f) }
-            shot(g, "${tag}_tut05_evolve"); tapHole()
-            until(TutorialOverlay.S_DOCTRINE); shot(g, "${tag}_tut06_doctrine"); tapHole()
-            until(TutorialOverlay.S_TURRET); shot(g, "${tag}_tut07_turret"); tapHole()
+            tutorialShot("tut05_evolve"); tapHole()
+            until(TutorialOverlay.S_DOCTRINE); tutorialShot("tut06_doctrine"); tapHole()
+            until(TutorialOverlay.S_TURRET); tutorialShot("tut07_turret"); tapHole()
             repeat(5) { g.frame(c, 1f / 60f) }
-            shot(g, "${tag}_tut07_turret_buy"); tapHole()
+            tutorialShot("tut07_turret_buy"); tapHole()
             b.player.gold = maxOf(b.player.gold, b.armoryCost(b.player) * 2f)
-            until(TutorialOverlay.S_ARMORY); shot(g, "${tag}_tut08_armory"); tapHole()
+            until(TutorialOverlay.S_ARMORY); tutorialShot("tut08_armory"); tapHole()
             assertTrue("$tag: zbrojownia", b.player.armory > 0)
             // Bot wystawia przeciwników blisko bazy: oba kroki obronne dają się aktywować.
             fun enemyPush() {
@@ -591,13 +625,13 @@ class ScreenshotTest {
                 b.enemy.aliveCount = maxOf(b.enemy.aliveCount, 3)
             }
             enemyPush()
-            until(TutorialOverlay.S_STANCE); shot(g, "${tag}_tut09_stance"); tapHole()
+            until(TutorialOverlay.S_STANCE); tutorialShot("tut09_stance"); tapHole()
             assertTrue("$tag: postawa Trzymaj", b.player.hold)
             enemyPush()
-            until(TutorialOverlay.S_RALLY); shot(g, "${tag}_tut10_rally"); tapHole()
+            until(TutorialOverlay.S_RALLY); tutorialShot("tut10_rally"); tapHole()
             assertTrue("$tag: Zryw", b.player.abilityCd[1] > 0f)
-            until(TutorialOverlay.S_BARRAGE); shot(g, "${tag}_tut11_barrage"); tapHole()
-            shot(g, "${tag}_tut11_barrage_aim")
+            until(TutorialOverlay.S_BARRAGE); tutorialShot("tut11_barrage"); tapHole()
+            tutorialShot("tut11_barrage_aim")
             val startX = tut.hole.centerX() - tut.hole.width() * 0.2f
             val finishX = tut.hole.centerX() + tut.hole.width() * 0.2f
             val aimY = tut.hole.centerY()
@@ -605,14 +639,26 @@ class ScreenshotTest {
             g.pushTouch(TouchEvent.MOVE, finishX, aimY, 0)
             g.pushTouch(TouchEvent.UP, finishX, aimY, 0)
             g.frame(c, 1f / 60f)
-            shot(g, "${tag}_tut11_barrage_drag")
+            tutorialShot("tut11_barrage_drag")
             tapHole() // przeciągnięcie ustawia znacznik, dotknięcie zatwierdza ostrzał
             assertTrue("$tag: ostrzał samouczka", b.player.barragesUsed > 0)
-            until(TutorialOverlay.S_CAMERA); shot(g, "${tag}_tut12_camera"); next()
-            until(TutorialOverlay.S_DONE); shot(g, "${tag}_tut13_done"); next()
+            until(TutorialOverlay.S_CAMERA); tutorialShot("tut12_camera"); next()
+            until(TutorialOverlay.S_DONE); tutorialShot("tut13_done"); next()
             repeat(5) { g.frame(c, 1f / 60f) }
             assertTrue("$tag: samouczek zakończony", tut.finished && g.profile.tutorialDone)
             println("$tag tutorial ok: t=${b.time} era=${b.player.era} turrets=${b.player.turretEra.count { it >= 0 }} kills=${b.player.kills}")
+            val settings = HintSettingsScreen(g)
+            g.setScreen(settings)
+            shot(g, "${tag}_tut85_replay_settings")
+            val replay = field(settings, "tutorial").get(settings) as Button
+            assertTrue("$tag: powtórz samouczek jest widoczne",
+                replay.visible && replay.r.width() > 0f && replay.r.height() > 0f &&
+                    replay.r.left >= g.insetL && replay.r.right <= g.width - g.insetR)
+            tap(g, replay.r.centerX(), replay.r.centerY()); g.frame(c, 1f / 60f)
+            tap(g, replay.r.centerX(), replay.r.centerY()); g.frame(c, 1f / 60f)
+            assertTrue("$tag: ustawienia nie uruchomiły powtórki", !g.profile.tutorialDone)
+            val restart = BattleScreen(g, Campaign.config(Campaign.stages[0], Bonuses(), 12L, tutorial = true))
+            assertTrue("$tag: etap 1 nie odtwarza samouczka", field(restart, "tut").get(restart) != null)
         }
     }
 

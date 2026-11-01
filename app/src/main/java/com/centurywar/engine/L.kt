@@ -119,6 +119,7 @@ object L {
         putAll(part80())
         putAll(part81())
         putAll(part82())
+        putAll(part85())
     }
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
@@ -1428,4 +1429,11 @@ object L {
         ),
     )
 
+    /** Zlecenie 85: bezpieczne pomijanie samouczka. */
+    private fun part85(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "tut85_skip_title" to t("Pominąć samouczek?", "Skip tutorial?", "Tutorial überspringen?", "¿Saltar el tutorial?", "Passer le tutoriel ?", "Saltare il tutorial?", "Pular o tutorial?", "Пропустити навчання?", "Tutorial overslaan?", "Eğitimi atla?"),
+        "tut85_skip_body" to t("Możesz go powtórzyć w Ustawieniach.", "You can replay it from Settings.", "Du kannst es in den Einstellungen erneut starten.", "Puedes repetirlo desde Ajustes.", "Vous pourrez le relancer dans les Paramètres.", "Puoi ripeterlo dalle Impostazioni.", "Você pode repeti-lo nas Configurações.", "Ти можеш пройти його знову в Налаштуваннях.", "Je kunt hem opnieuw starten via Instellingen.", "Ayarlar'dan yeniden başlatabilirsin."),
+        "tut85_skip_yes" to t("Tak, pomiń", "Yes, skip", "Ja, überspringen", "Sí, saltar", "Oui, passer", "Sì, salta", "Sim, pular", "Так, пропустити", "Ja, overslaan", "Evet, atla"),
+        "tut85_cancel" to t("Wróć", "Go back", "Zurück", "Volver", "Retour", "Indietro", "Voltar", "Назад", "Terug", "Geri dön"),
+    )
 }

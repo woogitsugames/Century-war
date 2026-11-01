@@ -85,7 +85,7 @@ class TutorialOverlay(
             "tut_doctrine_t", "tut_turret_t", "tut_armory54_t", "tut_stance54_t",
             "tut_rally54_t", "tut_barrage_t", "tut_camera_t", "tut_done_t",
         )
-        private val SIZES = floatArrayOf(17f, 15.5f, 14f, 12.5f)
+        private val SIZES = floatArrayOf(17f, 15.5f, 14f, 12.5f, 11.5f)
         private const val MAX_LINES = 12
     }
 
@@ -121,10 +121,25 @@ class TutorialOverlay(
     private val tmp = RectF()
     private val barrageBins = IntArray(10)
 
-    private val lines = Array(SIZES.size) { arrayOfNulls<String>(MAX_LINES) }
-    private val lineCount = IntArray(SIZES.size)
-    private var wrapKey: String? = null
-    private var wrapW = -1f
+    // Osobny cache dla czterech położeń: brak alokacji podczas kolejnych klatek.
+    private val lines = Array(4) { Array(SIZES.size) { arrayOfNulls<String>(MAX_LINES) } }
+    private val lineCount = Array(4) { IntArray(SIZES.size) }
+    private val wrapKey = arrayOfNulls<String>(4)
+    private val wrapW = FloatArray(4) { -1f }
+    private val wrapLang = IntArray(4) { -1 }
+    private val wrapScale = FloatArray(4) { -1f }
+    private val regions = Array(4) { RectF() }
+    private val confirmLines = arrayOfNulls<String>(MAX_LINES)
+    private var confirmKey: String? = null
+    private var confirmW = -1f
+    private var confirmScale = -1f
+    private var confirmCount = 0
+    private var selectedRegion = 0
+    private var selectedFont = 0
+    private var selectedCounter = true
+    private var selectedHand = false
+    private var skipPending = false
+    val skipConfirmationVisible: Boolean get() = skipPending
     private var title = ""
     private var counter = ""
 
@@ -141,11 +156,13 @@ class TutorialOverlay(
 
     /** Aktualizuje teksty bieżącego kroku bez restartowania samouczka. */
     fun onLanguageChanged() {
-        wrapKey = null
+        wrapKey.fill(null)
+        confirmKey = null
         title = L[TITLES[step]]
         counter = if (step < STEPS) L.f("tut_step", step + 1, STEPS) else ""
-        nextBtn.label = if (step == S_DONE) L["tut_go"] else L["tut_next"]
-        skipBtn.label = L["tut_skip"]
+        nextBtn.label = if (skipPending) L["tut85_cancel"] else if (step == S_DONE) L["tut_go"] else L["tut_next"]
+        nextBtn.iconId = if (skipPending) -1 else Icons.PLAY
+        skipBtn.label = L[if (skipPending) "tut85_skip_yes" else "tut_skip"]
     }
 
     // ---------------------------------------------------------------- logika
@@ -153,7 +170,9 @@ class TutorialOverlay(
     /** Mnożnik tempa symulacji: 0 = stoi i czeka na gracza, < 1 = zwolnione na czas czytania. */
     val timeScale: Float
         get() {
-            if (finished || !showing) return 1f
+            if (finished) return 1f
+            if (skipPending) return 0f
+            if (!showing) return 1f
             // Każdy widoczny dymek zatrzymuje bitwę: gracz czyta we własnym tempie
             // i nie traci jednostek ani bazy, zanim przeczyta i wykona polecenie.
             return 0f
@@ -171,7 +190,8 @@ class TutorialOverlay(
         if (p.hold != previousHold) { previousHold = p.hold; stanceUsed = true }
         if (step == S_STANCE && showing && p.hold) stanceHeld = true
         if (finished) return
-        if (battle.over) { skipBtn.visible = false; nextBtn.visible = false; return }
+        if (battle.over) { skipPending = false; hideButtons(); return }
+        if (skipPending) return
         phaseT += dt
         if (!showing) {
             val waited = battle.time - waitStartSim
@@ -285,10 +305,28 @@ class TutorialOverlay(
         nextPressed = false
     }
 
-    fun skip() {
+    private fun skip() {
+        skipPending = false
         finished = true
         markDone()
         hideButtons()
+    }
+
+    private fun requestSkip() {
+        skipPending = true
+        skipBtn.label = L["tut85_skip_yes"]
+        skipBtn.color = Ui.BTN_RED
+        nextBtn.label = L["tut85_cancel"]
+        nextBtn.iconId = -1
+        nextBtn.enabled = true
+    }
+
+    private fun cancelSkip() {
+        skipPending = false
+        skipBtn.label = L["tut_skip"]
+        skipBtn.color = Ui.BTN
+        nextBtn.label = L[if (step == S_DONE) "tut_go" else "tut_next"]
+        nextBtn.iconId = Icons.PLAY
     }
 
     private fun hideButtons() { skipBtn.visible = false; nextBtn.visible = false }
@@ -324,6 +362,7 @@ class TutorialOverlay(
 
     /** Czy przycisk ekranu bitwy może teraz zadziałać (krok zadaniowy blokuje resztę HUD). */
     fun allows(b: Button): Boolean {
+        if (skipPending) return b === skipBtn || b === nextBtn
         if (!gating || b !in t.hud) return true
         return when (step) {
             S_MELEE -> b === t.unitBtn[0]
@@ -340,8 +379,17 @@ class TutorialOverlay(
 
     /** Obsługa własnych przycisków; true = kliknięcie zużyte. */
     fun onClick(b: Button): Boolean = when (b.id) {
-        SKIP_ID -> { skip(); true }
-        NEXT_ID -> { if (phaseT > 0.5f) nextPressed = true; true }
+        SKIP_ID -> {
+            if (!finished && !battle.over) {
+                if (skipPending) skip() else requestSkip()
+            }
+            true
+        }
+        NEXT_ID -> {
+            if (skipPending) cancelSkip()
+            else if (phaseT > 0.5f) nextPressed = true
+            true
+        }
         else -> false
     }
 
@@ -421,6 +469,171 @@ class TutorialOverlay(
         return true
     }
 
+    /** Prostokąty są rozłączne również po uwzględnieniu marginesu. */
+    private fun overlaps(l: Float, t0: Float, r: Float, b: Float, other: RectF, gap: Float): Boolean =
+        other.width() > 0f && l < other.right + gap && r > other.left - gap &&
+            t0 < other.bottom + gap && b > other.top - gap
+
+    /** Najpierw wybiera miejsce obok celu; tekst może przejść do mniejszej czcionki. */
+    private fun layoutPanel(sl: Float, sr: Float, st: Float, sb: Float, hasHole: Boolean, wantsHand: Boolean) {
+        val ui = g.ui
+        val padX = 22 * dp
+        val body = bodyKey()
+        val firstGap = if (wantsHand) 62 * dp else if (step == S_DOCTRINE) 12 * dp else 18 * dp
+        var best = -1
+        var bestFont = SIZES.lastIndex
+        var bestCounter = false
+        var bestWidth = 0f
+        var bestHeight = 0f
+        var bestScore = -1f
+        var handSpace = false
+
+        for (pass in 0..1) {
+            val gap = if (pass == 0) firstGap else 8 * dp
+            if (hasHole) {
+                regions[0].set(sl, st + 8 * dp, sr, hole.top - gap)
+                regions[1].set(sl, hole.bottom + gap, sr, sb)
+                regions[2].set(sl, st + 8 * dp, hole.left - gap, sb)
+                regions[3].set(hole.right + gap, st + 8 * dp, sr, sb)
+            } else {
+                regions[0].set(sl, max(st + 8 * dp, t.area.top + 8 * dp), sr,
+                    min(sb, t.area.bottom - 8 * dp))
+                for (i in 1..3) regions[i].setEmpty()
+            }
+            for (i in 0..3) {
+                val rect = regions[i]
+                val pw = min(560 * dp, rect.width())
+                // Bardzo wąskie kolumny nie nadają się na opis.
+                if (pw < 185 * dp || rect.height() < 44 * dp) continue
+                prepare(body, pw - padX * 2, i)
+                for (si in SIZES.indices) {
+                    val lh = SIZES[si] * dp * 1.32f
+                    for (withCounter in 1 downTo 0) {
+                        if (withCounter == 1 && counter.isEmpty()) continue
+                        val showCount = withCounter == 1
+                        val fixed = (30 + (if (showCount) 14 else 0) +
+                            (if (hasNext()) 60 else 0)) * dp
+                        val ph = fixed + lineCount[i][si] * lh
+                        if (ph > rect.height()) continue
+                        // Czytelność przed zapasem miejsca; pionowy panel jest bliżej celu.
+                        val score = (SIZES.size - si) * 1000f + (if (showCount) 100f else 0f) +
+                            (if (i < 2) 40f else 0f) + pw / dp * 0.05f +
+                            min(100f, (rect.height() - ph) / dp) * 0.1f
+                        if (score > bestScore) {
+                            bestScore = score
+                            best = i; bestFont = si; bestCounter = showCount
+                            bestWidth = pw; bestHeight = ph
+                            handSpace = pass == 0 && wantsHand && i < 2
+                        }
+                        break
+                    }
+                    if (best == i && bestFont == si) break
+                }
+            }
+            if (best >= 0) break
+        }
+
+        if (best < 0) {
+            // Ekstremalnie mały ekran / duża czcionka: pozostań poza celem.
+            best = 0
+            for (i in 1..3) if (regions[i].height() > regions[best].height() &&
+                regions[i].width() >= 185 * dp) best = i
+            val rect = regions[best]
+            bestWidth = min(560 * dp, max(0f, rect.width()))
+            prepare(body, max(1f, bestWidth - padX * 2), best)
+            bestFont = SIZES.lastIndex
+            bestCounter = false
+            bestHeight = max(0f, rect.height())
+        }
+
+        selectedRegion = best
+        selectedFont = bestFont
+        selectedCounter = bestCounter
+        selectedHand = handSpace
+        // Regiony z ostatniego przebiegu ponownie obliczamy dla wybranego odstępu.
+        val gap = if (handSpace) firstGap else if (hasHole) 8 * dp else 0f
+        if (hasHole) {
+            regions[0].set(sl, st + 8 * dp, sr, hole.top - gap)
+            regions[1].set(sl, hole.bottom + gap, sr, sb)
+            regions[2].set(sl, st + 8 * dp, hole.left - gap, sb)
+            regions[3].set(hole.right + gap, st + 8 * dp, sr, sb)
+        }
+        val r = regions[best]
+        val left = when (best) {
+            2 -> r.right - bestWidth
+            3 -> r.left
+            else -> ((if (hasHole) hole.centerX() else (sl + sr) / 2f) - bestWidth / 2)
+                .coerceIn(r.left, max(r.left, r.right - bestWidth))
+        }
+        val top = when {
+            !hasHole -> r.top + max(0f, (r.height() - bestHeight) / 2)
+            best == 0 -> r.bottom - bestHeight
+            best == 1 -> r.top
+            else -> (hole.centerY() - bestHeight / 2).coerceIn(r.top, max(r.top, r.bottom - bestHeight))
+        }
+        panel.set(left, top, left + bestWidth, top + bestHeight)
+    }
+
+    /** Pomijanie nie sąsiaduje z Dalej i nie przykrywa panelu ani podświetlenia. */
+    private fun layoutSkip(sl: Float, sr: Float, st: Float, sb: Float, hasHole: Boolean) {
+        val ui = g.ui
+        val bw = min(220 * dp, max(126 * dp, ui.measure(skipBtn.label, 13f, true) + 28 * dp))
+        val bh = 48 * dp
+        val left = sl
+        val right = sr - bw
+        val fieldTop = max(st + 8 * dp, t.area.top + 8 * dp)
+        val fieldBottom = min(sb - bh, t.area.bottom - bh - 8 * dp)
+        var chosenX = right
+        var chosenY = fieldTop
+        for (i in 0..7) {
+            val x = if (i % 2 == 0) right else left
+            val y = when (i / 2) {
+                0 -> fieldTop
+                1 -> sb - bh
+                2 -> st + 8 * dp
+                else -> max(fieldTop, fieldBottom)
+            }
+            if (hasHole && overlaps(x, y, x + bw, y + bh, hole, 8 * dp)) continue
+            if (overlaps(x, y, x + bw, y + bh, panel, 8 * dp)) continue
+            if (nextBtn.visible && overlaps(x, y, x + bw, y + bh, nextBtn.r, 30 * dp)) continue
+            chosenX = x; chosenY = y
+            break
+        }
+        skipBtn.set(chosenX, chosenY, bw, bh)
+    }
+
+    /** Dialog blokuje HUD i symulację; dopiero drugi, wyraźny wybór zapisuje pominięcie. */
+    private fun drawSkipConfirmation(c: Canvas, sl: Float, sr: Float, st: Float, sb: Float) {
+        val ui = g.ui
+        dimPaint.color = Color.argb(224, 4, 6, 14)
+        c.drawRect(0f, 0f, g.width.toFloat(), g.height.toFloat(), dimPaint)
+        val pw = min(500 * dp, sr - sl)
+        val text = L["tut85_skip_body"]
+        val tw = pw - 36 * dp
+        if (text != confirmKey || tw != confirmW || confirmScale != ui.textScale) {
+            confirmKey = text; confirmW = tw; confirmScale = ui.textScale
+            confirmCount = HintFrame.wrapInto(ui, text, tw, 15f, confirmLines)
+        }
+        val lh = 20 * dp
+        val ph = (102 * dp + confirmCount * lh).coerceAtMost(sb - st - 8 * dp)
+        val top = (st + (sb - st - ph) / 2).coerceIn(st, max(st, sb - ph))
+        panel.set((sl + sr - pw) / 2, top, (sl + sr + pw) / 2, top + ph)
+        HintFrame.chrome(c, ui, panel, L["tut85_skip_title"], dp)
+        var y = panel.top + 30 * dp
+        for (i in 0 until confirmCount) {
+            y += lh
+            ui.text(c, confirmLines[i]!!, panel.centerX(), y, 15f, Ui.TEXT, Paint.Align.CENTER, false, true)
+        }
+        val bw = min(190 * dp, (pw - 56 * dp) / 2)
+        val by = panel.bottom - 58 * dp
+        nextBtn.visible = true
+        skipBtn.visible = true
+        nextBtn.set(panel.left + 14 * dp, by, bw, 48 * dp)
+        skipBtn.set(panel.right - 14 * dp - bw, by, bw, 48 * dp)
+        ui.button(c, nextBtn, 14f)
+        ui.button(c, skipBtn, 14f)
+    }
+
     fun draw(c: Canvas) {
         if (finished || battle.over) return
         val ui = g.ui
@@ -428,20 +641,23 @@ class TutorialOverlay(
         val sr = g.width - g.insetR - 12 * dp
         val st = g.insetT + 8 * dp
         val sb = g.height - g.insetB - 8 * dp
+        if (skipPending) {
+            drawSkipConfirmation(c, sl, sr, st, sb)
+            return
+        }
         if (!showing) {
-            // czekamy na warunek kroku: tylko mały przycisk pominięcia w rogu
             nextBtn.visible = false
             skipBtn.visible = true
-            val bw = min(170 * dp, ui.measure(skipBtn.label, 13f, true) + 30 * dp)
-            skipBtn.set(sr - bw, t.area.top + 10 * dp, bw, 34 * dp)
+            panel.setEmpty()
+            layoutSkip(sl, sr, st, sb, false)
             ui.button(c, skipBtn, 13f)
             return
         }
         val hasHole = target()
         val big = hasHole && hole.height() > (sb - st) * 0.35f
-        val hand = hasHole && !big && step != S_DOCTRINE && !(step == S_BARRAGE && t.barrageAiming())
+        val wantsHand = hasHole && !big && step != S_DOCTRINE &&
+            !(step == S_BARRAGE && t.barrageAiming())
 
-        // 1. przyciemnienie z wycięciem
         val dimA = if (gating) 170 else if (step == S_DOCTRINE) 110 else 120
         dimPaint.color = Color.argb(dimA, 4, 6, 14)
         path.rewind()
@@ -450,7 +666,6 @@ class TutorialOverlay(
         if (hasHole) path.addRoundRect(hole, rad, rad, Path.Direction.CW)
         c.drawPath(path, dimPaint)
 
-        // 2. pulsujący pierścień wokół celu
         if (hasHole) {
             val pulse = (sin(clock * 6f) + 1f) * 0.5f
             val wave = (clock * 1.1f) % 1f
@@ -467,71 +682,41 @@ class TutorialOverlay(
             c.drawRoundRect(tmp, rad, rad, ringPaint)
         }
 
-        // 3. panel z tekstem: nad albo pod celem, tam gdzie jest więcej miejsca
-        val pw = min(560 * dp, sr - sl)
-        val padX = 26 * dp
-        prepare(bodyKey(), pw - padX * 2)
-        val fixed = 24 * dp + (if (counter.isEmpty()) 0f else 18 * dp) + 12 * dp + 40 * dp + 16 * dp
-        val ribbonOut = 18 * dp
-        // przy doktrynach zostaw miejsce na ich własną wstęgę nad kartami
-        val handGap = if (hand) 62 * dp else if (step == S_DOCTRINE) 52 * dp else 16 * dp
-        var top0 = st + ribbonOut
-        var bot0 = sb
-        var center = false
-        if (hasHole) {
-            val aboveB = hole.top - handGap
-            val belowT = hole.bottom + handGap + ribbonOut
-            if (aboveB - top0 >= sb - belowT) bot0 = aboveB else top0 = belowT
-        } else {
-            top0 = max(top0, t.area.top + ribbonOut + 6 * dp)
-            bot0 = min(bot0, t.area.bottom - 6 * dp)
-            center = true
-        }
-        val avail = bot0 - top0
-        var si = SIZES.size - 1
-        for (i in SIZES.indices) {
-            if (fixed + lineCount[i] * SIZES[i] * dp * 1.32f <= avail) { si = i; break }
-        }
-        val sz = SIZES[si]
-        val lh = sz * dp * 1.32f
-        val ph = fixed + lineCount[si] * lh
-        val cx = if (hasHole) hole.centerX() else g.width / 2f
-        val left = (cx - pw / 2).coerceIn(sl, max(sl, sr - pw))
-        val top = when {
-            center -> top0 + max(0f, (avail - ph) / 2)
-            hasHole && bot0 < hole.top -> max(st + ribbonOut, bot0 - ph)
-            else -> min(top0, sb - ph)
-        }
-        panel.set(left, top, left + pw, top + ph)
+        layoutPanel(sl, sr, st, sb, hasHole, wantsHand)
         HintFrame.chrome(c, ui, panel, title, dp)
-        var y = panel.top + 24 * dp
-        if (counter.isNotEmpty()) {
-            y += 13 * dp
-            ui.textO(c, counter, panel.centerX(), y, 11f, Ui.DIM, Paint.Align.CENTER, 1.6f)
-            y += 5 * dp
+        val lh = SIZES[selectedFont] * dp * 1.32f
+        var y = panel.top + 20 * dp
+        if (selectedCounter) {
+            ui.textO(c, counter, panel.centerX(), y + 10 * dp, 11f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            y += 14 * dp
         }
-        y += 6 * dp
-        val ln = lines[si]
-        for (i in 0 until lineCount[si]) {
+        val count = lineCount[selectedRegion][selectedFont]
+        val words = lines[selectedRegion][selectedFont]
+        // Przy skrajnie małym miejscu nie rysuj opisu na przyciskach ani na celu.
+        val saved = c.save()
+        c.clipRect(panel.left + 8 * dp, panel.top + 18 * dp,
+            panel.right - 8 * dp, panel.bottom - (if (hasNext()) 60 * dp else 5 * dp))
+        for (i in 0 until count) {
             y += lh
-            ui.text(c, ln[i]!!, panel.centerX(), y - lh * 0.28f, sz, Ui.TEXT, Paint.Align.CENTER, false, true)
+            ui.text(c, words[i]!!, panel.centerX(), y - lh * 0.25f,
+                SIZES[selectedFont], Ui.TEXT, Paint.Align.CENTER, false, true)
         }
-        // stopka: pominięcie po lewej, "Dalej" po prawej
-        val by = panel.bottom - 16 * dp - 38 * dp
-        val skipW = min(ui.measure(skipBtn.label, 13f, true) + 28 * dp, pw * 0.48f - padX)
-        skipBtn.visible = step != S_DONE
-        skipBtn.set(panel.left + 18 * dp, by + 3 * dp, skipW, 34 * dp)
-        if (skipBtn.visible) ui.button(c, skipBtn, 13f)
+        c.restoreToCount(saved)
         nextBtn.visible = hasNext()
         if (nextBtn.visible) {
-            val nw = min(150 * dp, pw * 0.42f)
+            val bw = min(160 * dp, panel.width() - 28 * dp)
             nextBtn.enabled = phaseT > 0.5f
-            nextBtn.set(if (step == S_DONE) panel.centerX() - nw / 2 else panel.right - 18 * dp - nw, by, nw, 40 * dp)
+            nextBtn.set(if (step == S_DONE) panel.centerX() - bw / 2 else panel.right - 14 * dp - bw,
+                panel.bottom - 58 * dp, bw, 48 * dp)
             ui.button(c, nextBtn, 15f)
         }
+        skipBtn.visible = step != S_DONE
+        if (skipBtn.visible) {
+            layoutSkip(sl, sr, st, sb, hasHole)
+            ui.button(c, skipBtn, 13f)
+        }
 
-        // 4. ręka wskazująca cel
-        if (hand) {
+        if (selectedHand) {
             val bob = (sin(clock * 5f) + 1f) * 4 * dp
             val down = panel.bottom <= hole.top
             val tipY = if (down) hole.top - 6 * dp - bob else hole.bottom + 6 * dp + bob
@@ -588,12 +773,15 @@ class TutorialOverlay(
         c.restore()
     }
 
-    /** Łamie tekst kroku dla wszystkich rozmiarów; tylko przy zmianie tekstu lub szerokości. */
-    private fun prepare(key: String, width: Float) {
-        if (key == wrapKey && width == wrapW) return
-        wrapKey = key; wrapW = width
+    /** Każde z czterech położeń ma osobny cache tekstu i skali. */
+    private fun prepare(key: String, width: Float, slot: Int) {
+        if (key == wrapKey[slot] && width == wrapW[slot] &&
+            wrapLang[slot] == L.lang && wrapScale[slot] == g.ui.textScale) return
+        wrapKey[slot] = key; wrapW[slot] = width
+        wrapLang[slot] = L.lang; wrapScale[slot] = g.ui.textScale
         val s = L[key]
-        for (i in SIZES.indices) lineCount[i] = HintFrame.wrapInto(g.ui, s, width, SIZES[i], lines[i])
+        for (i in SIZES.indices)
+            lineCount[slot][i] = HintFrame.wrapInto(g.ui, s, width, SIZES[i], lines[slot][i])
     }
 
 }
