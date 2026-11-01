@@ -1,5 +1,6 @@
 package com.centurywar.server
 
+import com.centurywar.game.SimVersion
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -37,7 +38,7 @@ fun Application.leaderboardModule(
     store: SqliteStore,
     secret: ByteArray,
     nowMillis: () -> Long = System::currentTimeMillis,
-    supportedVersion: String = "0.4.0",
+    supportedVersion: String = SimVersion.PROTOCOL,
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)

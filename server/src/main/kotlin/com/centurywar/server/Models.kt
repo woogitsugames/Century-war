@@ -21,7 +21,7 @@ data class ScoreSubmission(
     val research: List<Int> = emptyList(),
     /** 0..3 wyłącznie dla potyczki. */
     val difficulty: Int? = null,
-    /** Tylko samouczek pierwszego etapu kampanii. */
+    /** Stare pole protokołu: wyniki samouczka nigdy nie są rankingowe. */
     val tutorial: Boolean = false,
 )
 
@@ -96,7 +96,7 @@ internal fun validateSubmission(input: ScoreSubmission) {
     require(Research.valid(input.research)) { "invalid_research" }
     require(if (input.board == "skirmish") input.difficulty != null && input.difficulty in 0..3
             else input.difficulty == null) { "invalid_difficulty" }
-    require(!input.tutorial || (input.board == "campaign" && input.stage == 0)) { "invalid_tutorial" }
+    require(!input.tutorial) { "invalid_tutorial" }
     require((input.board != "daily" && input.board != "weekly") || input.research.all { it == 0 }) { "invalid_research" }
 }
 
