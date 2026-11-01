@@ -124,6 +124,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Debug APK
+      - name: Zapisz debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -280,6 +281,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gradlew
+          ./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
           started=$(date +%s)
           set +e
           ./gradlew balanceTest --console=plain --no-configuration-cache -PtestForks=2 > ci-test-balance.log 2>&1
@@ -290,6 +292,14 @@ jobs:
           printf '%s\n' "$elapsed" > ci-test-balance.duration
           printf 'Balance Gradle (2 seedy na etap): **%s s**\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
           exit "$result"
+      - name: Zapisz raporty serwera
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cw-tests-server-results
+          path: server/build/test-results/test/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Raporty testów i balansu
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

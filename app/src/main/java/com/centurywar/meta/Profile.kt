@@ -37,10 +37,10 @@ class Profile(private val file: File) {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         private val RELEASE_VERSION = Regex("[A-Za-z0-9._+-]{1,48}")
-        const val HINT_COUNT = 20
+        const val HINT_COUNT = 21
         const val HINT_LONG_PRESS = 17
-        // 20 bitów: 0–16 podpowiedzi, 17 przytrzymanie przycisku, 18 wariant epoki, 19 pogoda.
-        const val HINT_VALID_MASK = 1048575L
+        // 21 bitów: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie.
+        const val HINT_VALID_MASK = 2097151L
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
             Thread(task, "cw-profile-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
         }

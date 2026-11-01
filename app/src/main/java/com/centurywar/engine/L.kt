@@ -149,6 +149,7 @@ object L {
         putAll(part110())
         putAll(part127())
         putAll(part134())
+        putAll(part133())
         }
     }
 
@@ -1678,6 +1679,22 @@ object L {
         "cx134_axis" to t("Wiersz atakuje · kolumna się broni", "Row attacks · column defends", "Zeile greift an · Spalte verteidigt", "Fila ataca · columna defiende", "Ligne attaque · colonne défend", "Riga attacca · colonna difende", "Linha ataca · coluna defende", "Рядок атакує · стовпець захищає", "Rij valt aan · kolom verdedigt", "Satır saldırır · sütun savunur"),
         "cx134_growth" to t("Rozwój DPS", "DPS growth", "DPS-Entwicklung", "Evolución de DPS", "Évolution du DPS", "Crescita DPS", "Evolução do DPS", "Зростання шкоди/с", "DPS-groei", "DPS gelişimi"),
         "cx134_chart_axis" to t("Numer epoki · skala liniowa", "Era number · linear scale", "Epochennummer · lineare Skala", "Número de era · escala lineal", "Numéro d'ère · échelle linéaire", "Numero epoca · scala lineare", "Número da era · escala linear", "Номер епохи · лінійна шкала", "Tijdperknummer · lineaire schaal", "Çağ numarası · doğrusal ölçek"),
+    /** Zlecenie 133: szybki start i dalsza ścieżka po bitwie. */
+    private fun part133(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "first_play" to t("Zagraj", "Play now", "Jetzt spielen", "Jugar", "Jouer", "Gioca", "Jogar", "Грати", "Speel nu", "Oyna"),
+        "first_goal" to t("Zniszcz bazę wroga", "Destroy the enemy base", "Zerstöre die Feindbasis", "Destruye la base enemiga", "Détruisez la base ennemie", "Distruggi la base nemica", "Destrói a base inimiga", "Знищ базу ворога", "Vernietig de vijandelijke basis", "Düşman üssünü yok et"),
+        "first_next_steps" to t(
+            "Wybierz następny etap kampanii. W menu Badania wydaj medale na stałe ulepszenia.",
+            "Choose the next campaign stage. Spend medals on permanent upgrades in Research from the menu.",
+            "Wähle die nächste Kampagnenstufe. Gib Medaillen im Menü für dauerhafte Forschung aus.",
+            "Elige la siguiente fase de campaña. Gasta medallas en mejoras permanentes en Investigación desde el menú.",
+            "Choisissez la prochaine étape de campagne. Dépensez vos médailles en recherches permanentes depuis le menu.",
+            "Scegli la prossima fase della campagna. Spendi le medaglie in ricerche permanenti dal menu.",
+            "Escolhe a próxima fase da campanha. Gasta medalhas em melhorias permanentes na Pesquisa do menu.",
+            "Обери наступний етап кампанії. Витрать медалі на постійні покращення в Дослідженнях у меню.",
+            "Kies de volgende campagnefase. Besteed medailles aan blijvende upgrades bij Onderzoek in het menu.",
+            "Sonraki sefer bölümünü seç. Madalyalarını menüde Araştırma'daki kalıcı geliştirmelere harca."
+        ),
     )
 
 }
