@@ -1,2 +1,3 @@
 - 2026-11-01 UTC: Inicjalne wzorce 15 ekranów na dwóch urządzeniach
 - 2026-11-01 UTC: Tura 6: nowe wzorce po scaleniu (bez nakładki epoki, maski HUD; podpis przycisku podpowiedzi; zegar tła wyzerowany)
+- 2026-11-01 UTC: Tura 7: teksty 120

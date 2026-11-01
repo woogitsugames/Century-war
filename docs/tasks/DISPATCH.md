@@ -112,3 +112,15 @@ Tura 6 (92–117) scalona. Dwie fale; **drugą wysyłaj dopiero po scaleniu pier
 |---|---|
 | 1 | 118 podział `BattleScreen.kt` (mechaniczny), 121 pomiar weryfikacji na serwerze, 122 modyfikatory wroga w Endless |
 | 2 (po 118) | 119 dolny pasek bitwy na wąskich ekranach (Fold zewnętrzny, 720p), 120 przegląd tłumaczeń nowych ekranów |
+
+---
+
+# Wysyłka zleceń 123–136 (tura 8)
+
+Tura 7 (118–122) scalona. Repozytorium: `woogitsugames/century-war`, baza `claude/bold-sagan-vwz5gm`. Trzy fale; **następną wysyłaj po scaleniu poprzedniej**.
+
+| Fala | Paczki |
+|---|---|
+| 1 (11 naraz) | 123 nakładki na Foldzie, 124 sztandary, 126 poziomy trudności, 127 osobowości AI, 128 wersja release, 129 test klient–serwer, 130 osiągnięcia i misje, 131 szybsze testy, 132 tablet i 21:9, 133 pierwsze minuty, 134 Kodeks: porównanie |
+| 2 | 125 dowódca na polu bitwy, 135 karta sklepu i „Co nowego” |
+| 3 (na końcu) | 136 przegląd tłumaczeń |
