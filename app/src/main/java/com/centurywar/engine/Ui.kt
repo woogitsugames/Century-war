@@ -39,10 +39,12 @@ class Button(val id: Int) {
 
     /** Poszerzenie obszaru dotyku w pikselach bez zmiany rozmiaru rysowanej ikony. */
     var hitSlop = 0f
+    /** Przesunięcie powiększonego celu np. ponad ikonę, aby nie zasłaniał szkolenia. */
+    var hitOffsetY = 0f
     fun set(l: Float, t: Float, w: Float, h: Float): Button { r.set(l, t, l + w, t + h); return this }
     fun contains(x: Float, y: Float) = visible && r.width() > 0f && r.height() > 0f &&
         x >= r.left - hitSlop && x < r.right + hitSlop &&
-        y >= r.top - hitSlop && y < r.bottom + hitSlop
+        y >= r.top - hitSlop + hitOffsetY && y < r.bottom + hitSlop + hitOffsetY
 }
 
 /** Bufor dwóch wierszy opisu, przeliczany tylko po zmianie treści lub szerokości. */
