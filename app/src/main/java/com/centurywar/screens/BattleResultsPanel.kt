@@ -53,8 +53,13 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         with(owner) {
         val rw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
         val rh = min(h - g.insetT - g.insetB - 40 * dp, 430 * dp)
-        resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp,
-            w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
+        // Na ekranach z asymetrycznym wcięciem środek i dolny brzeg
+        // wyników muszą pozostać w bezpiecznym obszarze.
+        val cx = (w + g.insetL - g.insetR) * 0.5f
+        val cy = (h + g.insetT - g.insetB) * 0.5f
+        val top = (cy - rh * 0.5f + 16 * dp)
+            .coerceIn(g.insetT, h - g.insetB - rh)
+        resultPanel.set(cx - rw * 0.5f, top, cx + rw * 0.5f, top + rh)
         val gap = 5 * dp
         val usable = rw - 32 * dp - gap * 2
         val bh = 50 * dp

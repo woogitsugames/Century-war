@@ -33,6 +33,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
     private var contentBottom = 0f
     private var scroll = 0f
     private var maxScroll = 0f
+    private var linesHeight = 0f
     private var dt = 0f
 
     override fun layout() {
@@ -40,7 +41,10 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
         close.iconId = if (automatic) Icons.CHECK else Icons.BACK
         close.highlight = true
 
-        val width = min(760 * dp, w - g.insetL - g.insetR - 24 * dp).coerceAtLeast(1f)
+        // Wykrywanie tabletu bazuje na fizycznym dp, a nie powiększonym ui.dp.
+        val largeTablet = (w - g.insetL - g.insetR) / g.density >= 960f
+        val width = min((if (largeTablet) 620 else 760) * dp,
+            w - g.insetL - g.insetR - 24 * dp).coerceAtLeast(1f)
         val cx = (w + g.insetL - g.insetR) * 0.5f
         panel.set(cx - width * 0.5f, chrome.top + 8 * dp,
             cx + width * 0.5f, max(chrome.top + 90 * dp, h - g.insetB - 12 * dp))
@@ -51,6 +55,20 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
         contentTop = panel.top + 18 * dp
         contentBottom = close.r.top - 14 * dp
         rebuildLines()
+        // Na dużym tablecie krótka lista zmian nie wypełnia pustego panelu.
+        // Wymiary telefonów i Folda pozostają bez zmian.
+        if (largeTablet) {
+            val naturalHeight = max(205 * dp, linesHeight + 89 * dp)
+            if (naturalHeight < panel.height()) {
+                val newTop = panel.top + (panel.height() - naturalHeight) * 0.5f
+                panel.set(panel.left, newTop, panel.right, newTop + naturalHeight)
+                close.set(cx - buttonWidth * 0.5f, panel.bottom - 57 * dp,
+                    buttonWidth, 44 * dp)
+                contentTop = panel.top + 18 * dp
+                contentBottom = close.r.top - 14 * dp
+                rebuildLines()
+            }
+        }
     }
 
     private fun rebuildLines() {
@@ -78,6 +96,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
             }
         }
 
+        linesHeight = y
         maxScroll = max(0f, y - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
     }
