@@ -152,6 +152,7 @@ object L {
         putAll(part133())
         putAll(part130())
         putAll(part126())
+        putAll(part124())
         }
     }
 
@@ -163,9 +164,7 @@ object L {
         "campaign126_hard" to t("Trudny", "Hard", "Schwer", "Difícil", "Difficile", "Difficile", "Difícil", "Складний", "Moeilijk", "Zor"),
         "ach_campaign_hard" to t("Mistrz trudnej kampanii", "Hard Campaign Master", "Meister der schweren Kampagne", "Maestro de campaña difícil", "Maître de la campagne difficile", "Maestro della campagna difficile", "Mestre da campanha difícil", "Майстер складної кампанії", "Meester van de moeilijke campagne", "Zor sefer ustası"),
         "ach_campaign_hard_d" to t("Wygraj wszystkie etapy kampanii na Trudnym.", "Win every campaign stage on Hard.", "Gewinne alle Kampagnenstufen auf Schwer.", "Gana todas las etapas en Difícil.", "Gagnez toutes les étapes en Difficile.", "Vinci tutte le tappe a Difficile.", "Vence todas as fases no Difícil.", "Переможи на всіх етапах на Складному.", "Win alle campagnelevels op Moeilijk.", "Tüm sefer bölümlerini Zor'da kazan."),
-        putAll(part124())
-        }
-    }
+    )
 
     /** Kosmetyka sztandarów, bez wpływu na symulację i ranking. */
     private fun part124(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -1718,6 +1717,8 @@ object L {
             "Стежить за ворожим військом і добирає протидію: ближній бій проти стрільців, стрільці проти важких, важкі проти ближнього бою.",
             "Leest het vijandelijke leger: nabij tegen afstand, afstand tegen zwaar, zwaar tegen nabij.",
             "Düşman ordusunu izler: yakın birliklerle menzillilere, menzillilerle ağırlara, ağırlarla yakın birliklere karşı koyar."),
+    )
+
     /** Zlecenie 134: zestawienie jednostek i macierz kontr. */
     private fun part134(): Array<Pair<String, Array<out String>>> = arrayOf(
         "cx134_tab" to t("Porównaj", "Compare", "Vergleich", "Comparar", "Comparer", "Confronta", "Comparar", "Порівняти", "Vergelijk", "Karşılaştır"),
@@ -1727,6 +1728,8 @@ object L {
         "cx134_axis" to t("Wiersz atakuje · kolumna się broni", "Row attacks · column defends", "Zeile greift an · Spalte verteidigt", "Fila ataca · columna defiende", "Ligne attaque · colonne défend", "Riga attacca · colonna difende", "Linha ataca · coluna defende", "Рядок атакує · стовпець захищає", "Rij valt aan · kolom verdedigt", "Satır saldırır · sütun savunur"),
         "cx134_growth" to t("Rozwój DPS", "DPS growth", "DPS-Entwicklung", "Evolución de DPS", "Évolution du DPS", "Crescita DPS", "Evolução do DPS", "Зростання шкоди/с", "DPS-groei", "DPS gelişimi"),
         "cx134_chart_axis" to t("Numer epoki · skala liniowa", "Era number · linear scale", "Epochennummer · lineare Skala", "Número de era · escala lineal", "Numéro d'ère · échelle linéaire", "Numero epoca · scala lineare", "Número da era · escala linear", "Номер епохи · лінійна шкала", "Tijdperknummer · lineaire schaal", "Çağ numarası · doğrusal ölçek"),
+    )
+
     /** Zlecenie 133: szybki start i dalsza ścieżka po bitwie. */
     private fun part133(): Array<Pair<String, Array<out String>>> = arrayOf(
         "first_play" to t("Zagraj", "Play now", "Jetzt spielen", "Jugar", "Jouer", "Gioca", "Jogar", "Грати", "Speel nu", "Oyna"),
