@@ -58,13 +58,15 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var renderScale = 1f
     var viewW = 1
     var viewH = 1
+    /** Limit sterty z ActivityManager.memoryClass; testy mogą podstawić słaby telefon. */
+    var bitmapCacheMemoryClassMb = 128
     var quality = Quality(Quality.HIGH)
         private set
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
     var scores: ScoreClient? = null
     var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
     /** Null w testach; na urządzeniu ustawia MainActivity. */
-    var sound: Sound? = null
+    @Volatile var sound: Sound? = null
     /** Muzyka działa niezależnie od efektów SoundPool. */
     var music: Music? = null
 

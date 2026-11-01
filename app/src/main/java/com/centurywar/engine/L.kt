@@ -85,6 +85,20 @@ object L {
             else String.format(Locale.ROOT, form, *args)
     }
 
+    /** Krótki komunikat startowy bez inicjalizowania całej tabeli tłumaczeń. */
+    fun startupText(): String = when (lang) {
+        0 -> "Ładowanie…"
+        1 -> "Loading…"
+        2 -> "Wird geladen…"
+        3 -> "Cargando…"
+        4 -> "Chargement…"
+        5 -> "Caricamento…"
+        6 -> "Carregando…"
+        7 -> "Завантаження…"
+        8 -> "Laden…"
+        else -> "Yükleniyor…"
+    }
+
     /** Klucze tabeli (dla testów). */
     val keys: Set<String> get() = table.keys
 
@@ -95,7 +109,8 @@ object L {
 
     // kolejność kolumn: pl, en, de, es, fr, it, pt, uk, nl, tr
     // Tabela podzielona na części: jeden inicjalizator przekraczał limit 64 KB metody JVM.
-    private val table: HashMap<String, Array<out String>> = HashMap<String, Array<out String>>(2048).apply {
+    private val table: HashMap<String, Array<out String>> by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        HashMap<String, Array<out String>>(2048).apply {
         putAll(part0())
         putAll(part1())
         putAll(part2())
@@ -125,6 +140,7 @@ object L {
         putAll(part87())
         putAll(part92())
         putAll(part93())
+        }
     }
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
