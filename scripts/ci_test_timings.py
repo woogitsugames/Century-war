@@ -51,11 +51,11 @@ def markdown(classes: dict[str, float], methods: dict[str, tuple[float, int]],
         "|---|---:|",
     ]
     for name, duration in sorted(classes.items(), key=lambda x: (-x[1], x[0]))[:top]:
-        lines.append(f"| \`{name}\` | {seconds(duration)} |")
+        lines.append(f"| `{name}` | {seconds(duration)} |")
     lines += ["", f"## Top {top} metod", "",
               "| Metoda | Czas łączny | Uruchomienia |", "|---|---:|---:|"]
     for name, (duration, runs) in sorted(methods.items(), key=lambda x: (-x[1][0], x[0]))[:top]:
-        lines.append(f"| \`{name}\` | {seconds(duration)} | {runs} |")
+        lines.append(f"| `{name}` | {seconds(duration)} | {runs} |")
     return "\n".join(lines) + "\n"
 
 
