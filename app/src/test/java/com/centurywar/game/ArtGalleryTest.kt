@@ -263,6 +263,150 @@ class ArtGalleryTest {
         }
     }
 
+    /** Ciężka i elitarna z czterech wariantów, w stałej kolejności. */
+    private fun variantMachines(): List<Pair<String, UnitDef>> {
+        val steam = Defs.eraOf(EraArt.STEAM)
+        val silicon = Defs.eraOf(EraArt.SILICON)
+        return listOf(
+            "Spalanie - ciezka" to Defs.unit(steam, Role.HEAVY, 0),
+            "Spalanie - elita" to Defs.unit(steam, Role.ELITE, 0),
+            "Galwanika - ciezka" to Defs.unit(steam, Role.HEAVY, 1),
+            "Galwanika - elita" to Defs.unit(steam, Role.ELITE, 1),
+            "Roj - ciezka" to Defs.unit(silicon, Role.HEAVY, 0),
+            "Roj - elita" to Defs.unit(silicon, Role.ELITE, 0),
+            "Biotechnika - ciezka" to Defs.unit(silicon, Role.HEAVY, 1),
+            "Biotechnika - elita" to Defs.unit(silicon, Role.ELITE, 1),
+        )
+    }
+
+    /** Pięć póz każdego z ośmiu wariantów dla obu kolorów drużyn. */
+    @Test
+    fun variantMachinePoses() {
+        val rows = variantMachines()
+        check(rows.size == 8)
+        val expectedBodies = intArrayOf(Body.VEHICLE, Body.VEHICLE, Body.MECH, Body.HOVER,
+            Body.HOVER, Body.HOVER, Body.BEAST, Body.MECH)
+        for (i in rows.indices) check(rows[i].second.body == expectedBodies[i])
+        val labels = arrayOf("SPOCZYNEK", "RUCH", "ATAK", "TRAFIENIE", "SMIERC")
+        val cellW = 220
+        val cellH = 188
+        val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(28, 35, 46); textSize = 15f; isFakeBoldText = true
+        }
+        val g = game(1280, 720, Quality.HIGH)
+        val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 79L, 1f)))
+        for (side in 0..1) {
+            val bmp = Bitmap.createBitmap(labels.size * cellW, rows.size * cellH, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            c.drawColor(Color.rgb(196, 214, 228))
+            for (i in rows.indices) {
+                val (name, def) = rows[i]
+                val y = i * cellH.toFloat()
+                c.drawRect(0f, y + cellH * 0.88f, bmp.width.toFloat(), y + cellH, ground)
+                for (f in labels.indices) {
+                    val x = f * cellW.toFloat()
+                    val walk = if (f == 0) 0f else 2.1f
+                    val stride = if (f == 1) 1f else 0f
+                    val attack = if (f == 2) 0.65f else 0f
+                    val hit = if (f == 3) 0.045f else -1f
+                    val dying = if (f == 4) 0.28f else -1f
+                    c.save()
+                    c.clipRect(x, y, x + cellW, y + cellH)
+                    r.drawUnitPose(c, def, x + cellW / 2f, y + cellH * 0.88f,
+                        cellH * 0.76f, if (side == 0) Ui.PLAYER else Ui.ENEMY,
+                        walk, stride, attack, -1f, hit, dying)
+                    c.restore()
+                    c.drawText(name, x + 8f, y + 16f, text)
+                    c.drawText(labels[f], x + 8f, y + 34f, text)
+                }
+            }
+            save(bmp, if (side == 0) "gallery_variant_machines_player"
+                else "gallery_variant_machines_enemy")
+            bmp.recycle()
+        }
+    }
+
+    /** Cztery bitwy: obydwa warianty dwóch epok, w rozdzielczości 1280 × 720. */
+    @Test
+    fun variantMachineBattles720p() {
+        val tags = arrayOf("combustion", "galvanic", "swarm", "biotech")
+        val eras = intArrayOf(Defs.eraOf(EraArt.STEAM), Defs.eraOf(EraArt.STEAM),
+            Defs.eraOf(EraArt.SILICON), Defs.eraOf(EraArt.SILICON))
+        val positions = floatArrayOf(690f, 935f, 1220f, 1480f)
+        for (i in tags.indices) {
+            val era = eras[i]
+            val variant = i % 2
+            val battle = Battle(BattleConfig(Mode.SKIRMISH, 179L + i, 1f,
+                startEra = era, maxEra = era))
+            check(battle.chooseVariant(variant))
+            battle.enemy.eraVariant = variant
+            battle.stepCount = 3
+            for (j in positions.indices) {
+                val unit = battle.units[j]
+                val def = Defs.unit(era, if (j % 2 == 0) Role.HEAVY else Role.ELITE, variant)
+                unit.active = true
+                unit.side = if (j < 2) 0 else 1
+                unit.def = def
+                unit.x = positions[j]
+                unit.hp = def.hp * 0.8f
+                unit.maxHp = def.hp
+                unit.serial = j + 1
+                unit.anim = j * 1.25f
+                unit.stride = 1f
+                unit.moving = j == 0 || j == 2
+                unit.attackAnim = if (j == 1) 0.15f else 0f
+                unit.hitStep = if (j == 2) 0 else -1
+                unit.hitPow = 0.8f
+                unit.dying = if (j == 3) 0.18f else -1f
+            }
+            val g = game(1280, 720, Quality.HIGH)
+            val r = BattleRenderer(g, battle)
+            r.layout(1280f, 720f, 20f, 80f)
+            r.camX = 490f
+            r.clampCam()
+            val bmp = Bitmap.createBitmap(1280, 720, Bitmap.Config.ARGB_8888)
+            r.render(Canvas(bmp), 1f / 60f, 1280f, 720f)
+            save(bmp, "gallery_variant_battle_" + tags[i] + "_720p")
+            bmp.recycle()
+        }
+    }
+
+    /** Maszyna nie może przekroczyć szerokości jednego slotu karty (obu drużyn). */
+    @Test
+    fun variantMachineIconWidth() {
+        val bmp = Bitmap.createBitmap(170, 155, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val cx = 85f
+        val widthLimit = 72f
+        for (quality in intArrayOf(Quality.LOW, Quality.HIGH)) {
+            val g = game(1280, 720, quality)
+            val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 79L, 1f)))
+            for ((name, def) in variantMachines())
+                for (team in intArrayOf(Ui.PLAYER, Ui.ENEMY)) {
+                    bmp.eraseColor(Color.TRANSPARENT)
+                    r.drawUnitIcon(c, def, cx, 135f, 90f, team, widthLimit = widthLimit)
+                    var minX = bmp.width
+                    var maxX = -1
+                    var teamPixels = 0
+                    for (y in 0 until bmp.height) for (x in 0 until bmp.width) {
+                        val color = bmp.getPixel(x, y)
+                        if (Color.alpha(color) < 32) continue
+                        if (x < minX) minX = x
+                        if (x > maxX) maxX = x
+                        if (color == team) teamPixels++
+                    }
+                    check(maxX >= minX) { "$name: nic nie narysowano" }
+                    check(minX >= cx - widthLimit / 2f - 2f &&
+                        maxX <= cx + widthLimit / 2f + 2f) {
+                        "$name ($quality): obrys $minX..$maxX wychodzi poza slot"
+                    }
+                    check(teamPixels > 30) { "$name ($quality): kolor druzyny nie jest czytelny" }
+                }
+        }
+        bmp.recycle()
+    }
+
     /** Warianty w osobnych planszach galerii; nazwy PNG zawierają gallery_units_*. */
     @Test
     fun variantUnits() {
