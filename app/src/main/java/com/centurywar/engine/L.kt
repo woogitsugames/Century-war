@@ -147,6 +147,7 @@ object L {
         putAll(part109())
         putAll(part108())
         putAll(part110())
+        putAll(part127())
         }
     }
 
@@ -1617,6 +1618,56 @@ object L {
     /** Zlecenie 110: leworęczny układ sterowania bitwą. */
     private fun part110(): Array<Pair<String, Array<out String>>> = arrayOf(
         "access_left_handed_hud" to t("HUD dla leworęcznych", "Left-handed HUD", "HUD für Linkshänder", "HUD para zurdos", "HUD pour gauchers", "HUD per mancini", "HUD para canhotos", "Інтерфейс для шульг", "HUD voor linkshandigen", "Solak HUD"),
+    )
+
+
+    /** Zlecenie 127: opisy stylów dowódców w Kodeksie. */
+    private fun part127(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "cx127_ai" to t(
+            "Styl AI", "AI style", "KI-Stil", "Estilo IA", "Style IA",
+            "Stile IA", "Estilo IA", "Стиль ШІ", "AI-stijl", "YZ tarzı"),
+        "cx127_economist" to t(
+            "Gospodarz", "Economist", "Ökonom", "Economista", "Économe",
+            "Economista", "Economista", "Господарник", "Econoom", "Ekonomist"),
+        "cx127_economist_d" to t(
+            "Oszczędza na silne oddziały, częściej je ulepsza i zbiera większą falę przed atakiem.",
+            "Saves for stronger troops, upgrades them often and gathers a larger wave before attacking.",
+            "Spart für starke Truppen, verbessert sie oft und sammelt vor dem Angriff eine größere Welle.",
+            "Ahorra para tropas fuertes, las mejora a menudo y reúne una oleada mayor antes de atacar.",
+            "Économise pour des troupes puissantes, les améliore souvent et rassemble une vague avant d'attaquer.",
+            "Risparmia per truppe forti, le potenzia spesso e raduna un'ondata più grande prima dell'attacco.",
+            "Poupa para tropas fortes, melhora-as e reúne uma vaga maior antes de atacar.",
+            "Накопичує ресурси на сильні війська, поліпшує їх і збирає більшу хвилю перед атакою.",
+            "Spaart voor sterke troepen, verbetert ze vaak en verzamelt een grotere aanvalsgolf.",
+            "Güçlü birlikler için biriktirir, onları geliştirir ve saldırmadan önce büyük bir dalga toplar."),
+        "cx127_sieger" to t(
+            "Oblężnik", "Sieger", "Belagerer", "Asediador", "Assiégeant",
+            "Assediante", "Cerco", "Обложник", "Belegeraar", "Kuşatmacı"),
+        "cx127_sieger_d" to t(
+            "Wcześnie buduje wieże i osłania natarcie ostrzałem wysuniętych pozycji wroga.",
+            "Builds turrets early and supports advancing troops by bombarding forward enemy positions.",
+            "Baut früh Türme und unterstützt den Vorstoß mit Sperrfeuer auf feindliche Vorposten.",
+            "Levanta torretas pronto y apoya el avance bombardeando posiciones enemigas adelantadas.",
+            "Construit tôt des tours et appuie l'avancée par des tirs sur les positions ennemies avancées.",
+            "Costruisce presto torri e sostiene l'avanzata bombardando le posizioni nemiche avanzate.",
+            "Constrói torres cedo e apoia o avanço bombardeando posições inimigas avançadas.",
+            "Рано будує вежі й підтримує наступ обстрілом передових позицій ворога.",
+            "Bouwt vroeg torens en steunt de opmars met beschietingen van voorste vijandelijke posities.",
+            "Erken kule kurar ve ilerleyen birlikleri düşmanın ön mevzilerini bombalayarak destekler."),
+        "cx127_balanced" to t(
+            "Taktyk", "Balanced", "Taktiker", "Táctico", "Tacticien",
+            "Tattico", "Tático", "Тактик", "Tacticus", "Taktikçi"),
+        "cx127_balanced_d" to t(
+            "Obserwuje armię przeciwnika i kontruje: wręcz przeciw strzelcom, strzelcy przeciw ciężkim, ciężcy przeciw wręcz.",
+            "Reads the enemy army and counters: melee against ranged, ranged against heavy, heavy against melee.",
+            "Beobachtet den Feind und kontert: Nahkampf gegen Fernkampf, Fernkampf gegen Schwere, Schwere gegen Nahkampf.",
+            "Observa al enemigo y responde: cuerpo a cuerpo contra tiradores, tiradores contra pesados y pesados contra cuerpo a cuerpo.",
+            "Observe l'armée adverse et riposte : mêlée contre tireurs, tireurs contre lourds, lourds contre mêlée.",
+            "Osserva il nemico e risponde: mischia contro tiratori, tiratori contro pesanti, pesanti contro mischia.",
+            "Analisa o inimigo: corpo a corpo contra atiradores, atiradores contra pesados e pesados contra corpo a corpo.",
+            "Стежить за ворожим військом і добирає протидію: ближній бій проти стрільців, стрільці проти важких, важкі проти ближнього бою.",
+            "Leest het vijandelijke leger: nabij tegen afstand, afstand tegen zwaar, zwaar tegen nabij.",
+            "Düşman ordusunu izler: yakın birliklerle menzillilere, menzillilerle ağırlara, ağırlarla yakın birliklere karşı koyar."),
     )
 
 }
