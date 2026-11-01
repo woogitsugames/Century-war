@@ -1,6 +1,7 @@
 package com.centurywar.screens
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -13,6 +14,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Host
 import com.centurywar.engine.L
 import com.centurywar.engine.Quality
+import com.centurywar.engine.Screen
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
@@ -21,6 +23,7 @@ import com.centurywar.game.Defs
 import com.centurywar.game.FxBuffer
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
+import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Weather
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertEquals
@@ -54,8 +57,8 @@ class StoreGraphicsTest {
         Device("tablet10", 2560, 1600, 2f),
     )
     private val names = arrayOf(
-        "frontline", "barrage", "endless-boss", "night", "era-variants",
-        "campaign", "research", "daily-challenge",
+        "menu", "campaign", "endless-boss", "night-barrage", "era-variants",
+        "pause-summary", "weekly-siege", "custom-skirmish",
     )
     private val roles = Role.values()
 
@@ -77,28 +80,13 @@ class StoreGraphicsTest {
                         val image = File(folder, name)
                         writePng(image, device.width, device.height, false) { canvas ->
                             when (scene) {
-                                in 1..4 -> drawBattle(canvas, g, scene, device.width, device.height)
-                                5 -> {
-                                    val steam = 5
-                                    check(Defs.spec(steam).variants.size == 2)
-                                    g.setScreen(BattleScreen(g, BattleConfig(
-                                        Mode.SKIRMISH, 5050L, 1f, startEra = steam,
-                                        maxEra = Defs.ERA_COUNT - 1,
-                                    )))
-                                    g.frame(canvas, 0f)
-                                }
-                                6 -> {
-                                    g.setScreen(CampaignScreen(g))
-                                    g.frame(canvas, 0f)
-                                }
-                                7 -> {
-                                    g.setScreen(ResearchScreen(g))
-                                    g.frame(canvas, 0f)
-                                }
-                                8 -> {
-                                    g.setScreen(ModeScreen(g, Mode.DAILY))
-                                    g.frame(canvas, 0f)
-                                }
+                                1 -> renderScreen(canvas, g, MenuScreen(g))
+                                2 -> renderScreen(canvas, g, CampaignScreen(g))
+                                3, 4 -> drawBattle(canvas, g, scene, device.width, device.height)
+                                5 -> drawVariant(canvas, g)
+                                6 -> drawPauseSummary(canvas, g)
+                                7 -> renderScreen(canvas, g, ModeScreen(g, Mode.DAILY, true))
+                                8 -> renderScreen(canvas, g, SkirmishSetupScreen(g))
                             }
                             drawCaption(canvas, strings.getProperty("caption." + scene), scene,
                                 device.width.toFloat(), device.height.toFloat())
@@ -112,7 +100,7 @@ class StoreGraphicsTest {
                 val feature = File(langDir, "feature_1024x500.png")
                 writePng(feature, 1024, 500, false) { c ->
                     val g = game(Device("feature", 1024, 500, 1f), language)
-                    drawBattle(c, g, 1, 1024, 500, true)
+                    drawBattle(c, g, 4, 1024, 500, true)
                     drawFeatureTitle(c)
                 }
                 checkPng(feature, 1024, 500, false)
@@ -126,10 +114,119 @@ class StoreGraphicsTest {
                 manifest.append("icon_512.png\t512\t512\t")
                     .append(strings.getProperty("alt.icon")).append('\n')
                 File(langDir, "manifest.tsv").writeText(manifest.toString(), Charsets.UTF_8)
+                contactSheet(langDir, strings)
             }
         } finally {
             L.lang = previousLanguage
         }
+    }
+
+    /** Sekcje publikowane musza miescic sie w limitach Play Console. */
+    @Test
+    fun listingLimits() {
+        for (lang in listOf("pl", "en")) {
+            val content = File("../docs/store/listing_" + lang + ".md").readText(Charsets.UTF_8)
+            fun section(name: String): String {
+                val heading = "## " + name + "\n"
+                check(heading in content) { "Brak sekcji: " + name }
+                return content.substringAfter(heading).substringBefore("\n## ").trim()
+            }
+            val pl = lang == "pl"
+            val title = section(if (pl) "Tytuł" else "Title")
+            val short = section(if (pl) "Krótki opis" else "Short description")
+            val full = section(if (pl) "Pełny opis" else "Full description")
+            val keywords = section(if (pl) "ASO — pięć propozycji fraz" else
+                "ASO — five suggested search phrases").lines().filter { it.startsWith("- ") }
+            assertTrue("Tytuł " + lang + ": " + title.length, title.length <= 30)
+            assertTrue("Krótki opis " + lang + ": " + short.length, short.length <= 80)
+            assertTrue("Pełny opis " + lang + ": " + full.length, full.length <= 4000)
+            assertEquals("Pięć fraz ASO " + lang, 5, keywords.size)
+        }
+    }
+
+    /** Wykluczamy kadr przejscia, korzystamy z prawdziwego ekranu. */
+    private fun renderScreen(c: Canvas, g: Game, screen: Screen) {
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        g.frame(c, 0f)
+    }
+
+    /** Modal pojawia sie po autentycznym rozkazie awansu do epoki pary. */
+    private fun drawVariant(c: Canvas, g: Game) {
+        val cfg = BattleConfig(Mode.SKIRMISH, 5050L, 1f,
+            startEra = 4, maxEra = Defs.ERA_COUNT - 1)
+        val battle = Battle(cfg)
+        val orders = BattleController(battle)
+        check(Defs.spec(5).variants.size == 2)
+        battle.player.xp = Defs.evolveXp[4].toFloat()
+        check(orders.evolve()) { "Nie udalo sie awansowac epoki" }
+        check(battle.pendingVariant == 5) { "Nie pokazano wyboru wariantu" }
+        val screen = BattleScreen(g, cfg, restored = RestoredBattle(battle, false, -120f))
+        g.setScreen(screen)
+        check(screen.onBack()) // Wznowienie po odtworzeniu zapisanej bitwy.
+        g.frame(c, 0f)
+    }
+
+    /** Kadr pauzy ma statystyki z deterministycznie rozegranych krokow. */
+    private fun drawPauseSummary(c: Canvas, g: Game) {
+        val cfg = BattleConfig(Mode.SKIRMISH, 6060L, 0.85f,
+            startEra = 3, maxEra = Defs.ERA_COUNT - 1, weather = Weather.RAIN)
+        val battle = Battle(cfg)
+        val orders = BattleController(battle)
+        check(orders.queue(Role.MELEE))
+        orders.queue(Role.RANGED)
+        repeat(420) {
+            if (!battle.over && battle.pendingVariant == null && battle.pendingChoice == null)
+                battle.step()
+        }
+        check(!battle.over) { "Bitwa zakonczyla sie przed pauza" }
+        renderScreen(c, g, BattleScreen(g, cfg,
+            restored = RestoredBattle(battle, false, -120f)))
+    }
+
+    /** Osiem miniaturek telefonu do raportu, nie do przeslania do Play. */
+    private fun contactSheet(langDir: File, captions: Properties) {
+        val file = File(langDir, "preview_contact.png")
+        writePng(file, 1600, 960, false) { c ->
+            c.drawColor(Color.rgb(18, 27, 43))
+            val heading = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(244, 202, 103)
+                textSize = 37f
+                typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+            }
+            c.drawText("CENTURY WAR - " + langDir.name.uppercase(), 24f, 52f, heading)
+            val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(248, 245, 231)
+                textSize = 25f
+                typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            }
+            val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(230, 170, 75)
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+            }
+            val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            for (i in names.indices) {
+                val x = 18f + i.rem(4) * 395f
+                val y = 84f + (i / 4) * 415f
+                val filename = (i + 1).toString().padStart(2, '0') +
+                    "-" + names[i] + ".png"
+                val bitmap = BitmapFactory.decodeFile(
+                    File(langDir, "phone/" + filename).absolutePath
+                ) ?: error("Brak miniatury: " + filename)
+                val area = RectF(x, y, x + 376f, y + 211.5f)
+                try { c.drawBitmap(bitmap, null, area, bmpPaint) }
+                finally { bitmap.recycle() }
+                c.drawRect(area, border)
+                val label = (i + 1).toString().padStart(2, '0') +
+                    "  " + captions.getProperty("caption." + (i + 1))
+                text.textSize = 25f
+                if (text.measureText(label) > 376f)
+                    text.textSize *= 376f / text.measureText(label)
+                c.drawText(label, x, y + 249f, text)
+            }
+        }
+        checkPng(file, 1600, 960, false)
     }
 
     private fun captions(language: String): Properties {
@@ -139,10 +236,11 @@ class StoreGraphicsTest {
         InputStreamReader(stream, Charsets.UTF_8).use { props.load(it) }
         for (i in 1..8) {
             check(!props.getProperty("caption." + i).isNullOrBlank())
-            check(!props.getProperty("alt." + i).isNullOrBlank())
+            val alt = props.getProperty("alt." + i)
+            check(!alt.isNullOrBlank() && alt.length <= 140)
         }
-        check(!props.getProperty("alt.feature").isNullOrBlank())
-        check(!props.getProperty("alt.icon").isNullOrBlank())
+        check(props.getProperty("alt.feature")?.let { it.length in 1..140 } == true)
+        check(props.getProperty("alt.icon")?.let { it.length in 1..140 } == true)
         return props
     }
 
@@ -212,8 +310,8 @@ class StoreGraphicsTest {
 
     /** Jednostki są w ich własnej symulacji, w ustalonych pozycjach do fotografii. */
     private fun sceneBattle(scene: Int): Battle {
-        val era = when (scene) { 1 -> 2; 2 -> 6; 3 -> 4; 4 -> 8; else -> 2 }
-        val weather = when (scene) { 2 -> Weather.RAIN; 4 -> Weather.NIGHT; else -> Weather.CLEAR }
+        val era = if (scene == 3) 4 else 6
+        val weather = if (scene == 4) Weather.NIGHT else Weather.CLEAR
         val mode = if (scene == 3) Mode.ENDLESS else Mode.SKIRMISH
         val battle = Battle(BattleConfig(
             mode, 50000L + scene, 1f, startEra = era, maxEra = Defs.ERA_COUNT - 1,
@@ -239,16 +337,6 @@ class StoreGraphicsTest {
         }
 
         when (scene) {
-            1 -> {
-                battle.fx.add(FxBuffer.HIT, 1360f, 48f, 1)
-                battle.fx.add(FxBuffer.EXPLOSION, 1440f, 38f, 0, 24f)
-            }
-            2 -> {
-                val commands = BattleController(battle)
-                check(commands.barrage(1430f))
-                repeat(27) { battle.step() }
-                battle.fx.add(FxBuffer.EXPLOSION, 1440f, 65f, 1, 45f)
-            }
             3 -> {
                 battle.wave = 10
                 battle.waveTimer = 120f
@@ -257,11 +345,15 @@ class StoreGraphicsTest {
                 boss.x = 1485f
                 boss.prevX = boss.x
                 boss.attackAnim = 0.65f
-                battle.fx.add(FxBuffer.EXPLOSION, 1430f, 40f, 1, 24f)
+                battle.fx.add(FxBuffer.HIT, 1680f, 48f, 1)
             }
             4 -> {
+                val orders = BattleController(battle)
+                check(orders.barrage(1430f))
+                repeat(27) { battle.step() }
                 battle.fx.add(FxBuffer.MUZZLE, 1360f, 55f, 0, 0f)
                 battle.fx.add(FxBuffer.HIT, 1430f, 60f, 1)
+                battle.fx.add(FxBuffer.EXPLOSION, 1440f, 65f, 1, 45f)
             }
         }
         return battle
@@ -269,6 +361,8 @@ class StoreGraphicsTest {
 
     private fun drawBattle(c: Canvas, g: Game, scene: Int, width: Int, height: Int, feature: Boolean = false) {
         val battle = sceneBattle(scene)
+        // Na grafice promocyjnej pokazujemy wojska, nie zaslaniajacy je rozblysk.
+        if (feature) battle.fx.count = 0
         val renderer = BattleRenderer(g, battle)
         renderer.layout(width.toFloat(), height.toFloat(),
             if (feature) 12f else 92f * g.ui.dp,
@@ -287,10 +381,17 @@ class StoreGraphicsTest {
         }
         val maxWidth = width * 0.79f
         if (p.measureText(caption) > maxWidth) p.textSize *= maxWidth / p.measureText(caption)
-        val left = width * 0.047f
-        val top = height * (if (scene <= 4) 0.125f else 0.84f)
-        val rect = RectF(left, top, left + p.measureText(caption) + 72f,
-            top + p.textSize * 1.65f)
+        val labelWidth = p.measureText(caption) + 72f
+        // Wyzwania i potyczka: nie zaslaniamy przyciskow w dolnym panelu.
+        val rightAligned = scene == 7 || scene == 8
+        val left = if (rightAligned) width - labelWidth - width * 0.047f
+            else width * 0.047f
+        val top = height * when (scene) {
+            3, 4 -> 0.125f
+            7, 8 -> 0.015f
+            else -> 0.84f
+        }
+        val rect = RectF(left, top, left + labelWidth, top + p.textSize * 1.65f)
         val panel = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(226, 23, 34, 52) }
         c.drawRoundRect(rect, 15f, 15f, panel)
         panel.style = Paint.Style.STROKE
@@ -314,33 +415,41 @@ class StoreGraphicsTest {
         foreground.draw(c)
     }
 
-    /** Tylko napis Century War: scena i kolory są z właściwego renderera gry. */
+    /** Logo uzywa wspolnego emblematu menu z zadania 57. */
     private fun drawFeatureTitle(c: Canvas) {
         val shade = Paint().apply {
-            shader = LinearGradient(0f, 0f, 740f, 0f,
-                intArrayOf(0xFA172339.toInt(), 0xDA172339.toInt(), 0x00172339),
+            shader = LinearGradient(0f, 0f, 690f, 0f,
+                intArrayOf(0xFF172339.toInt(), 0xE8172339.toInt(), 0x00172339),
                 null, Shader.TileMode.CLAMP)
         }
-        c.drawRect(0f, 0f, 740f, 500f, shade)
+        c.drawRect(0f, 0f, 690f, 500f, shade)
+        MenuEmblem().draw(c, 192f, 118f, 161f)
         val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
             style = Paint.Style.STROKE
-            strokeWidth = 7f
-            color = Color.rgb(18, 24, 38)
+            strokeJoin = Paint.Join.ROUND
+            strokeWidth = 10f
+            color = Color.rgb(24, 23, 35)
         }
-        val text = Paint(outline).apply { style = Paint.Style.FILL; color = Color.rgb(246, 202, 93) }
+        val fill = Paint(outline).apply {
+            style = Paint.Style.FILL
+            shader = LinearGradient(0f, 240f, 0f, 398f,
+                intArrayOf(Color.rgb(255, 248, 196),
+                    Color.rgb(255, 206, 60), Color.rgb(232, 132, 28)),
+                null, Shader.TileMode.CLAMP)
+        }
         outline.textSize = 71f
-        text.textSize = 71f
-        c.drawText("CENTURY", 52f, 228f, outline)
-        c.drawText("CENTURY", 52f, 228f, text)
-        outline.textSize = 94f
-        text.textSize = 94f
-        c.drawText("WAR", 52f, 324f, outline)
-        c.drawText("WAR", 52f, 324f, text)
+        fill.textSize = 71f
+        c.drawText("CENTURY", 46f, 302f, outline)
+        c.drawText("CENTURY", 46f, 302f, fill)
+        outline.textSize = 96f
+        fill.textSize = 96f
+        c.drawText("WAR", 46f, 399f, outline)
+        c.drawText("WAR", 46f, 399f, fill)
         val trim = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(240, 177, 65)
             strokeWidth = 5f
         }
-        c.drawLine(52f, 348f, 385f, 348f, trim)
+        c.drawLine(46f, 420f, 372f, 420f, trim)
     }
 }

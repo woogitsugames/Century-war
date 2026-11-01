@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - 'gpt/50-store-graphics'
+      - 'gpt/75-store-refresh'
     paths:
       - 'app/src/test/java/com/centurywar/screens/StoreGraphicsTest.kt'
       - 'app/src/test/resources/store/**'
       - 'docs/store/STORE_GRAPHICS.md'
+      - 'docs/store/listing_*.md'
+      - 'docs/store/screenshots_plan.md'
       - '.github/workflows/store-graphics.yml'
   workflow_dispatch:
 
