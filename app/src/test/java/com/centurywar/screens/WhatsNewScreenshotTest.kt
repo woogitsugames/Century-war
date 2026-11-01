@@ -59,6 +59,8 @@ class WhatsNewScreenshotTest {
         val f = file()
         Profile(f).apply { tutorialDone = true; save() }
         Profile.awaitHintWrites()
+        // Symulujemy profil z wydania sprzed dodania znacznika aktualizacji.
+        f.writeText(JSONObject(f.readText()).apply { remove("whatsNewSeenVersion") }.toString())
         val p = Profile(f).also { it.load() }
         assertTrue(p.hasExistingSave)
         assertEquals("", p.whatsNewSeenVersion)
