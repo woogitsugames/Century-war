@@ -71,7 +71,7 @@ class WeeklyReplayVerifierTest {
         val nowMillis = (week * 7L - 3L) * 86_400_000L
         val input = submission(week)
         val verified = ReplayVerifier.verify(input, nowMillis, "0.1.0")
-        assertEquals("weekly_$" + "week", verified.board)
+        assertEquals("weekly_" + week, verified.board)
         assertEquals(input.score, verified.score)
     }
 
