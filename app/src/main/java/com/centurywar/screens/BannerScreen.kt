@@ -69,7 +69,7 @@ class BannerScreen(g: Game) : Screen(g) {
             panel.right - 10 * dp, panel.top + previewHeight)
         equip.iconId = Icons.FLAG
         val equipWidth = min(200 * dp, (pw - 32 * dp).coerceAtLeast(90 * dp))
-        equip.set(panel.centerX() - equipWidth / 2, panel.bottom - 52 * dp, equipWidth, 44 * dp)
+        equip.set(panel.centerX() - equipWidth / 2, panel.bottom - 54 * dp, equipWidth, 48 * dp)
         gridTop = preview.bottom + 8 * dp
         gridBottom = max(gridTop + 32 * dp, equip.r.top - 7 * dp)
         columns = when {
