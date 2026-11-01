@@ -42,12 +42,6 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Drzewo zaleznosci wydania (audyt licencji)
-        run: |
-          chmod +x ./gradlew
-          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
-          ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
-          python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Testy listy kontrolnej wydania
         run: |
           chmod +x ./gradlew
@@ -92,6 +86,12 @@ jobs:
             --tests '*FrameMetricsTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
+      - name: Drzewo zaleznosci wydania (audyt licencji)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
+          ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
+          python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Zapisz podglądy muzyki WAV
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
