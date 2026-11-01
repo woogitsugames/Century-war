@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Locale
 
 /**
  * Ręczny benchmark granicy protokołu, uruchamiany wyłącznie przez SERVER_BENCH=true.
@@ -27,7 +26,7 @@ class ServerReplayBenchmarkTest {
             Mode.ENDLESS,
             seed = 121_432_000L,
             aiPower = 1f,
-            playerBonuses = Bonuses(baseHpMul = 1_000_000_000f),
+            playerBonuses = Bonuses(baseHpMul = 1.0e24f),
         )
         val recording = Battle(config)
         recording.playerAi = null
