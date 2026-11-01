@@ -10,21 +10,21 @@ import org.junit.Test
 
 /** Odsłuch ręczny: MUSIC_PREVIEW=true ./gradlew :app:testDebugUnitTest --tests '*MusicPreviewTest*' --rerun-tasks. */
 class MusicPreviewTest {
-    @Test fun exportSixFamiliesAtTwoTensionLevels() {
+    @Test fun exportNineErasAtThreeTensionLevels() {
         assumeTrue("Eksport tylko przy MUSIC_PREVIEW=true", System.getenv("MUSIC_PREVIEW") == "true")
         val folder = File("build/music")
         assertTrue(folder.isDirectory || folder.mkdirs())
-        val families = arrayOf("primitive", "ancient", "medieval", "powder", "industrial", "future")
-        val eras = intArrayOf(0, 1, 2, 3, 4, 6)
+        val families = arrayOf("tribal", "bronze", "iron", "feudal", "powder", "steam", "steel", "silicon", "orbital")
+        val eras = intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
         for (i in families.indices) {
-            for (high in arrayOf(false, true)) {
+            for ((name, tension) in arrayOf("calm" to 0.05f, "clash" to 0.55f, "danger" to 0.98f)) {
                 val synth = MusicSynth(5500 + i)
                 synth.setEra(eras[i])
                 synth.skipFade()
-                synth.setIntensity(if (high) 0.95f else 0.10f)
-                val out = File(folder, "${families[i]}_${if (high) "high" else "low"}.wav")
-                writeWav(out, synth, 60)
-                assertEquals(44L + MusicSynth.SAMPLE_RATE * 60L * 2L, out.length())
+                synth.setIntensity(tension)
+                val out = File(folder, "${families[i]}_${name}.wav")
+                writeWav(out, synth, 12)
+                assertEquals(44L + MusicSynth.SAMPLE_RATE * 12L * 2L, out.length())
             }
         }
     }
