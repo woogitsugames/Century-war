@@ -1,92 +1,73 @@
-# Google Play Console — formularz „Bezpieczeństwo danych”
+# Google Play Console — Bezpieczeństwo danych (Data safety)
 
-**Audyt źródeł:** 31 października 2026 r. **Zakres:** Android, Google Play Games Services (PGS v2) i lokalne przypomnienia o wyzwaniu dnia. To instrukcja do wypełnienia Play Console, nie gotowy formularz do zatwierdzenia bez kontroli wydania.
+**Stan dokumentacji:** 1 listopada 2026 r. **Źródło danych prawnych wydawcy:** [OWNER_INPUT.md](OWNER_INPUT.md). Deklarację składa się dla rzeczywistego pakietu AAB i usług aktywnych w dniu wydania, nie wyłącznie dla kodu źródłowego.
 
-## Status wdrożenia i istotne zastrzeżenia
+## Podsumowanie odpowiedzi do Google Play
 
-- Kod zawiera SDK **com.google.android.gms:play-services-games-v2:22.1.0**, uprawnienie INTERNET oraz obsługę czterech tablic wyników i zapisu w chmurze. SDK inicjuje CenturyWarApp tylko po poprawnym skonfigurowaniu identyfikatorów. **[DO DECYZJI]** W obecnym app/src/main/res/values/games_ids.xml wszystkie identyfikatory to REPLACE_ME: przed udostępnieniem tych funkcji trzeba wprowadzić prawidłowe ID i przetestować wydanie.
-- Po skonfigurowaniu PGS v2 **może uwierzytelnić użytkownika automatycznie przy starcie**, zgodnie z mechaniką SDK. MainActivity.onResume sprawdza stan przez refreshSignIn(); po potwierdzonym uwierzytelnieniu aplikacja wysyła rekordy i rozpoczyna synchronizację chmury, **bez dodatkowej zgody na każdy transfer**. Przycisk w ustawieniach umożliwia ręczne logowanie i synchronizację, ale w aplikacji nie ma osobnego wyłącznika synchronizacji ani przycisku wylogowania PGS.
-- **Nie deklarować osiągnięć Google Play Games jako działających.** Osiągnięcia lokalne są zapisywane w Profile; Game.onlineAchievements pozostaje OnlineAchievements.NoOp, a MainActivity nie podłącza klienta osiągnięć Google. W SDK istnieje taka funkcjonalność, ale obecny adapter jej nie realizuje.
-- Powiadomienia korzystają wyłącznie z Android AlarmManager / NotificationManager (bez FCM i bez serwera push). Prośba o POST_NOTIFICATIONS na Androidzie 13+ pojawia się po pierwszym zwycięstwie, jeśli przypomnienia są włączone. Po restarcie telefonu lub aktualizacji aplikacji alarm jest planowany ponownie.
-- Własny backend w server/ oraz ScoreClient są gotowe do opcjonalnego użycia: transfer następuje **tylko w opublikowanym wydaniu** z CW_SERVER_URL, CW_HMAC_KEY i CW_PRIVACY_URL oraz po osobnej zgodzie. Nie zakładać, że produkcyjny serwer działa bez weryfikacji AAB i VPS. Usunięcie danych inicjuje w ustawieniach „Nowa tożsamość”, a żądanie offline pozostaje w kolejce.
+- **Czy aplikacja zbiera dane? Tak.** Po skonfigurowaniu Google Play Games Services (PGS v2) konto, wyniki i kompletna kopia profilu mogą być przesyłane do Google; SDK może automatycznie przetwarzać tożsamość, dane analityczne i diagnostyczne. Aktywowany własny ranking dodatkowo zbiera pseudonim, identyfikator, wynik i dowód jego poprawności.
+- **Czy dane mogą być publicznie widoczne lub udostępniane? Tak.** Rankingi PGS mogą pokazywać nazwę/awatar profilu Google i wyniki. Ranking wydawcy, jeśli zostanie uruchomiony, pokazuje wybrany pseudonim, wynik i nieodwracalny identyfikator publiczny (po wdrożeniu zlecenia 80). Nie zakładaj, że brak czatu oznacza brak treści użytkowników. W pytaniu o „sharing” zweryfikuj wyjątki dla procesorów danych Google, ale nie pomijaj publicznej widoczności danych.
+- **Szyfrowanie podczas przesyłania:** dane PGS przez HTTPS; własny serwer rankingu może być aktywny tylko za HTTPS. Ręczne udostępnienie raportu błędu używa aplikacji wybranej przez użytkownika, więc jej kanał transmisji zależy od odbiorcy.
+- **Usuwanie:** lokalne dane — wyczyszczenie pamięci aplikacji; PGS — narzędzia konta Google; ranking wydawcy — „Nowa tożsamość” i ponawiane żądanie usunięcia starego UUID. Zmiana UUID nie jest jeszcze potwierdzeniem usunięcia z serwera. Kontakt i adres polityki pochodzą z OWNER_INPUT.md.
+- **Czy wszystkie dane są opcjonalne? Nie deklaruj „tak”.** Rozgrywka działa bez logowania, ale skonfigurowany PGS może uwierzytelnić użytkownika automatycznie, a SDK może zbierać dane techniczne bez osobnego potwierdzenia. Własny ranking wymaga osobnej zgody w aplikacji.
+- **Konto:** nie istnieje konto tworzone u wydawcy; kontem PGS zarządza Google. **Reklamy / zakupy:** w opisywanej wersji brak SDK reklamowego i Play Billing.
 
-## Potwierdzone przepływy danych
+## Wykaz przepływów i odbiorców
 
-| Odbiorca / miejsce | Dane | Kiedy i dlaczego |
+| Funkcja | Dane | Odbiorca i podstawa działania |
 |---|---|---|
-| Prywatna pamięć aplikacji | Plik profile.json: pseudonim, postęp kampanii, gwiazdki, medale, badania, misje, osiągnięcia, statystyki, wyniki i ustawienia | Lokalne zapisywanie rozgrywki; nie wymaga internetu |
-| Prywatna pamięć aplikacji | battle.snap: stan przerwanej bitwy | Lokalna możliwość wznowienia; nie jest częścią JSON profilu ani backupu |
-| Prywatna pamięć aplikacji | files/crash: maks. 10 raportów (wersja, model urządzenia, Android, ekran, 30 zdarzeń technicznych, stos bez wiadomości wyjątków) | Diagnoza awarii; bez pseudonimu i ID, tylko lokalnie; bez automatycznej transmisji lub backupu |
-| Google Play Games, po konfiguracji i uwierzytelnieniu | Cztery liczbowe wyniki: oblężenie bez końca, wyzwanie dnia, kampania i potyczka | Tablice wyników PGS; w publicznym rankingu tożsamość gracza pochodzi z profilu Play Games |
-| Google Play Games — Saved Games, po konfiguracji i uwierzytelnieniu | **Cały wynik Profile.toJson()**, nie tylko liczba medali: w tym pseudonim gracza, rekordy z nazwami, dniami i wynikami, postęp, badania, statystyki, osiągnięcia lokalne, misje i ustawienia (np. język, dźwięk, godzina przypomnienia) | Odczyt i zapis kopii profilu w chmurze po zalogowaniu oraz przy późniejszych zapisach lokalnych |
-| Google Play Games SDK / Google | Tożsamość profilu Gier Play (np. identyfikator gracza, nazwa, awatar), dane analityczne i diagnostyczne SDK | Zakres wynikający z dokumentacji dostawcy; może obejmować automatyczne zbieranie po zainicjowaniu SDK |
-| Wydawca — opcjonalny własny serwer rankingu | UUID v4, pseudonim, wynik, tryb, parametry bitwy, badania, komendy powtórki do weryfikacji | Tylko przy skonfigurowanym HTTPS i zgodzie. SQLite zapisuje UUID, nick, wynik, metadane i SHA-256 zgłoszenia; nie przechowuje pełnej powtórki ani IP. IP służy tymczasowo do limitów i może być w logach proxy. |
-| Android — kopia systemowa | Tylko profile.json (przez reguły kopii i przenoszenia urządzeń) | Mechanizm Androida zależny od konta i ustawień; nie jest tym samym co Saved Games PGS |
+| Lokalna rozgrywka | Pseudonim, postęp, medale, badania, misje, osiągnięcia, lokalne rankingi, statystyki, ustawienia | Wyłącznie prywatna pamięć aplikacji, bez internetu |
+| Wznowienie bitwy | Stan przerwanej bitwy | Lokalny plik battle.snap, nieobjęty zapisem chmurowym |
+| Raport awarii (zlecenie 65) | Wersja gry, model urządzenia, Android, ekran, maksymalnie 30 zdarzeń i stos wywołań; bez pseudonimu, ID i treści wyjątku | Maks. 10 raportów na urządzeniu; brak automatycznej transmisji i backupu. Użytkownik może świadomie wysłać raport przez systemowy mechanizm udostępniania (ACTION_SEND) do samodzielnie wybranego odbiorcy |
+| Play Games — uwierzytelnianie | Google Player ID, nazwa konta, awatar oraz możliwa analityka/diagnostyka SDK | Google, gdy usługa jest skonfigurowana; uwierzytelnienie może być automatyczne |
+| Play Games — rankingi | Wyniki liczbowe dla Endless, Daily, Campaign i Skirmish; publiczna nazwa/awatar profilu Google | Google Play Games i gracze, którzy widzą tablice zgodnie z ustawieniami konta |
+| Play Games — Saved Games | Kompletny profil JSON: również pseudonim, wpisy rekordów (nazwy, dni, wyniki), postęp, badania, ustawienia i statystyki | Google po uwierzytelnieniu; synchronizacja może być automatyczna |
+| Własny ranking (warunkowy) | Losowy wewnętrzny UUID, pseudonim, wynik, tryb, parametry bitwy i komendy powtórki do weryfikacji, znacznik czasu; sekret instalacji wymagany po zleceniu 80 | Serwer wydawcy wyłącznie po konfiguracji HTTPS i zgodzie. Serwer utrzymuje UUID, pseudonim, wynik i metadane; nie zapisuje pełnej powtórki w bazie SQLite. Sekret powinien być przechowywany po stronie serwera jako hash, a nie jawny ciąg |
+| Publikacja własnego rankingu (po zleceniu 80) | Publiczny pseudonim, liczbowy wynik, nieodwracalne publiczne ID wpisu | Inni gracze; surowe UUID i sekret nie powinny być zwracane przez publiczne API |
+| Zgłoszenie obraźliwego pseudonimu (po zleceniu 80) | Publiczne ID wskazanego wpisu, powód zgłoszenia; możliwy IP zgłaszającego do limitowania ruchu | Serwer wydawcy i upoważniony moderator; zgłoszenie nie jest publiczną wiadomością ani czatem |
+| Ochrona serwera | Adres IP w czasie ograniczania nadużyć; możliwe logi reverse proxy | Serwer/proxy wydawcy; zakres i retencja logów wymagają zgodności z faktyczną konfiguracją hostingu |
+| Systemowa kopia Androida | Tylko profile.json | Systemowy mechanizm kopii/przenoszenia urządzenia, niezależny od PGS |
 
-**Raporty problemów:** po awarii pojawia się jednorazowa propozycja udostępnienia; Ustawienia → O grze → Zgłoś problem pozwala otworzyć systemowe ACTION_SEND z tekstem. Nic nie jest wysyłane bez wyboru użytkownika. Ręczne wysłanie do wskazanego odbiorcy należy ocenić osobno od automatycznego zbierania danych przez SDK PGS; samo lokalne tworzenie raportów nie jest zbieraniem przez wydawcę.
+Zlecenie 80 zmienia protokół tożsamości, publiczne identyfikatory i możliwość zgłaszania nicków. Powyższe informacje opisują **planowany wariant po scaleniu i wdrożeniu zlecenia 80**, a nie deklarację, że wszystkie funkcje są już czynne na gałęzi bazowej. Przed wydaniem należy porównać tabelę z wynikiem testów klienta i serwera oraz dostępnymi ekranami rankingu.
 
-Przetwarzanie **na urządzeniu** nie jest samo w sobie „zbieraniem” w formularzu Google Play. Natomiast transfer przez osadzony SDK jest zbieraniem również wtedy, gdy wydawca nie otrzymuje tych danych na własny serwer. Pseudonim i identyfikatory pseudonimowe nie stają się anonimowe tylko przez brak nazwiska.
+## Kategorie w formularzu Play Console
 
-## Proponowane odpowiedzi ogólne — wariant wydania z PGS
+Przy działającym PGS stosuj następującą konserwatywną klasyfikację. „Warunkowo” oznacza, że odpowiedź zależy od aktywnego backendu lub konkretnej wersji SDK i wymaga sprawdzenia końcowego pakietu. **Nie oznacza to zgody na opublikowanie niezweryfikowanego formularza.**
 
-| Pytanie Play Console | Odpowiedź robocza i uzasadnienie |
-|---|---|
-| Czy aplikacja zbiera dane? | **Tak**, gdy skonfigurowany PGS przesyła dane użytkownika i informacje SDK do Google. Nie odpowiadać „Nie zbiera” tylko dlatego, że wydawca nie prowadzi własnego serwera. |
-| Czy aplikacja udostępnia dane innym podmiotom? | **[DO DECYZJI]** Ustalić, czy Google jest dostawcą usługi działającym wyłącznie na rzecz wydawcy, czy odrębnym odbiorcą realizującym własne cele. Sam transfer do SDK oznacza zbieranie, ale kwalifikacja „udostępnianie” zależy od definicji i wyjątków Google Play; dokumentacja PGS mówi także o udostępnianiu tożsamości i widoczności profilu innym graczom. Nie zaznaczać automatycznie „Nie”. |
-| Czy wszystkie przesyłane dane są szyfrowane w tranzycie? | **Tak dla danych PGS wymienionych w dokumentacji Google** (HTTPS). **[DO DECYZJI]** Potwierdzić po audycie pełnego grafu zależności i końcowego AAB, że nie ma innych transferów bez szyfrowania. |
-| Czy użytkownik może poprosić o usunięcie danych? | **Tak dla własnego rankingu:** Ustawienia → Nowa tożsamość zleca usunięcie starego UUID i nicku, z trwałą kolejką offline. To nie jest natychmiastowe potwierdzenie wykonania. **PGS oddzielnie:** Google umożliwia usunięcie danych konkretnej gry. **[DO DECYZJI]** Uzupełnić kontakt wydawcy i procedurę potwierdzenia; lokalny reset nie kasuje PGS. |
-| Czy zbieranie jest opcjonalne? | **[DO DECYZJI]** PGS można nie używać do rozgrywki, a kontem zarządza użytkownik w usługach Google, lecz SDK v2 może automatycznie logować i zbierać własne dane diagnostyczno-analityczne po inicjalizacji. Nie deklarować wszystkich kategorii jako „opcjonalne”. |
-| Czy dane są wykorzystywane wyłącznie do działania aplikacji? | Wyniki i zapis gry: funkcjonalność aplikacji. Dane analityczne i diagnostyczne **zbierane przez SDK** służą też poprawie działania usług Google; opisać je osobno. |
-| Tworzenie konta | Brak własnej rejestracji i konta wydawcy; **konto/profil Google Play Games** może być używane do usług opcjonalnych dla rozgrywki. |
-| Reklamy i zakupy | Brak SDK reklamowego i Play Billing zadeklarowanego w plikach modułu aplikacji. **[DO DECYZJI]** Potwierdzić końcowy pakiet i opublikowany wariant przed wysłaniem deklaracji. |
+| Kategoria Google Play | Zbieranie / udostępnianie | Cel | Wymagalność, transmisja i usunięcie |
+|---|---|---|---|
+| Dane osobowe → **Identyfikatory użytkownika** | Tak: identyfikator Google Player ID, a przy własnym serwerze UUID | Logowanie PGS, rankingi, uwierzytelnianie wpisów i usuwanie | PGS może automatycznie logować; własny ranking dobrowolny. HTTPS. PGS: Google; UUID: żądanie usunięcia na własnym serwerze |
+| Dane osobowe → **Imię / nazwa** | Tak: pseudonim profilu Google i pseudonim użytkownika; własny nick może być **publiczny** | Profil PGS, rankingi, kopia zapisu, własny ranking | Widoczność zależy od usługi i ustawień. HTTPS. Usuwanie oddzielnie w PGS i własnym rankingu |
+| Aktywność w aplikacji → **Inne treści generowane przez użytkownika** | Tak: pseudonimy i — po zadaniu 80 — powody zgłoszeń nicków; nie ma czatu | Udział w rankingu, moderacja obraźliwych nazw | Własne zgłoszenia tylko po aktywacji funkcji; HTTPS. Obsługa wniosku przez operatora |
+| Aktywność w aplikacji → **Inne działania** | Tak: wyniki, postęp, zapis profilu; dla własnego rankingu także metadane zweryfikowanej bitwy | Rankingi, synchronizacja stanu gry, przeciwdziałanie fałszowaniu wyników | Przez Google albo dobrowolnie do serwera, HTTPS; usuwanie według miejsca przechowywania |
+| Aktywność w aplikacji → **Interakcje z aplikacją** | Co najmniej możliwe po stronie PGS SDK; zakwalifikuj zgodnie z deklaracją dla przypiętej wersji 22.1.0 | Analityka i stabilność usług Google | Automatyczne dane SDK nie muszą być opcjonalne; według polityki Google |
+| Informacje o aplikacji i jej działaniu → **Diagnostyka** | Tak według informacji SDK PGS; raporty błędów aplikacji są wyłącznie lokalne aż do ręcznego udostępnienia | Diagnostyka usług Google / dobrowolne zgłoszenia | PGS: według Google; ręczny raport: kanał wybranego odbiorcy |
+| Informacje o aplikacji i jej działaniu → **Dzienniki awarii** | Lokalnie: tak; przez wydawcę: wyłącznie jeśli gracz sam prześle raport. Sprawdź, czy SDK PGS niezależnie przekazuje crash logs | Diagnostyka i wsparcie | Ręcznie opcjonalne; PGS według jego deklaracji i ustawień |
+| Zdjęcia i filmy → **Zdjęcia** | Aplikacja nie pobiera zdjęć z telefonu; PGS może przetwarzać awatar konta Google w ramach tożsamości gracza | Wyświetlanie profilu PGS | Nie deklaruj zdjęć przesyłanych *przez grę*, jeśli SDK ich nie zbiera w tej kategorii. Zweryfikuj deklarację dostawcy |
+| Identyfikatory urządzenia lub inne | Możliwe po stronie PGS / infrastruktury (np. dane techniczne, IP); sam UUID własnego serwera jest identyfikatorem gracza | Usługi Google, bezpieczeństwo / rate limiting | Potwierdź klasyfikację identyfikatorów SDK i logów w końcowym AAB |
+| Lokalizacja, kontakty, mikrofon, wiadomości prywatne, dane płatnicze | Brak funkcji gry i własnych uprawnień przekazujących takie dane | Nie dotyczy | Sprawdź scalony manifest i zależności, nie wyciągaj wniosku wyłącznie z manifestu źródłowego |
 
-## Kategorie danych Play Console — karta robocza
+## Powiadomienia, raporty i przechowywanie
 
-„Tak” w poniższej tabeli dotyczy **wydania z poprawnie skonfigurowanym PGS**. Kolumna „Szyfr.” opisuje potwierdzony transport PGS, a nie automatyczne zapewnienie dotyczące nieprzejrzanych SDK. „Usunięcie: Google” oznacza usuwanie danych gry w ustawieniach profilu Play Games, nie usunięcie lokalnego profilu.
+- Lokalny AlarmManager/NotificationManager planuje przypomnienie o wyzwaniu dnia; **brak FCM i serwera push**. Uprawnienia: INTERNET (PGS i własny HTTPS), POST_NOTIFICATIONS (Android 13+), RECEIVE_BOOT_COMPLETED (odtworzenie alarmu), VIBRATE (reakcje dotykowe).
+- Samo zapisanie raportu w files/crash nie jest zbieraniem przez wydawcę. Dopiero świadomy wybór aplikacji odbiorczej i wysłanie wiadomości może przekazać raport wybranemu podmiotowi.
+- Systemowy backup zawiera tylko profile.json; dane battle.snap i files/crash są wyłączone. Kopia Androida i PGS Saved Games podlegają innym zasadom przechowywania.
+- Baza własnego rankingu: zgodnie z istniejącym kodem rekordy nie wygasają automatycznie, a kasowanie jest inicjowane przez użytkownika. Logi IP, zgłoszenia obraźliwych nicków, ewentualne kopie zapasowe i ich retencję trzeba porównać z wdrożonym serwerem i polityką przed pierwszym uruchomieniem tej funkcji.
+- Dla PGS usuwanie danych tej konkretnej gry odbywa się niezależnie w ustawieniach Play Games. Reset profilu lokalnego nie usuwa kopii w PGS ani danych własnego serwera.
 
-| Kategoria / typ | Zbieranie i uzasadnienie | Cel | Wymagane czy opcjonalne? | Szyfr. | Usunięcie |
-|---|---|---|---|---|---|
-| **Dane osobowe → Identyfikatory użytkowników (User IDs)** | **Tak, PGS**: konto gracza posiada identyfikator Player ID używany w usłudze | Funkcjonalność aplikacji / obsługa konta PGS | **[DO DECYZJI]** Automatyczne uwierzytelnianie | PGS: HTTPS | Google |
-| **Dane osobowe → Imię/nazwa (Name)** | **Tak, PGS**: nazwa gracza Play Games; pełny zapis w chmurze zawiera także lokalny, samodzielnie wybrany pseudonim | Funkcjonalność, widoczność rankingu i synchronizacja | **[DO DECYZJI]** Zależne od stanu PGS i zasad SDK | PGS: HTTPS | Google |
-| **Zdjęcia i filmy → Zdjęcia** | **[DO DECYZJI]** Google opisuje awatar konta jako Game Service identity, ale kod Century War nie wysyła zdjęć ani awatara; ustalić klasyfikację danych obsługiwanych przez sam SDK | Konto PGS | **[DO DECYZJI]** | PGS: HTTPS | Google |
-| **Aktywność w aplikacji → Inne działania (Other actions)** | **Tak, PGS**: wyniki, postęp, rekordy i zdarzenia gry zapisane w JSON oraz w tablicach | Funkcjonalność / rankingi / zapis chmurowy | **[DO DECYZJI]** Zależne od uwierzytelnienia, ale logowanie bywa automatyczne | PGS: HTTPS | Google |
-| **Aktywność w aplikacji → Inne treści tworzone przez użytkownika** | **[DO DECYZJI]** Pseudonim i rekordy są w chmurze; ocenić, czy pseudonim należy tylko do „Name”, czy również do „Other user-generated content” (nie dublować bez powodu) | Zapis w chmurze | **[DO DECYZJI]** | PGS: HTTPS | Google |
-| **Aktywność w aplikacji → Interakcje z aplikacją (App interactions)** | **[DO DECYZJI]** SDK deklaruje automatyczne dane analityczne, ale nie rozpisuje zdarzeń na tę kategorię; sprawdzić dokumentację dokładnej wersji | Analityka / ulepszanie SDK | **[DO DECYZJI]** Może dotyczyć użytkowników SDK niezależnie od świadomej synchronizacji | PGS: HTTPS | Google — zgodnie z zasadami usługi |
-| **Informacje o aplikacji i jej działaniu → Diagnostyka (Diagnostics)** | **Tak według dokumentacji PGS**: SDK automatycznie zbiera dane diagnostyczne | Analityka / stabilność i ulepszanie SDK | **[DO DECYZJI]** Zweryfikować, czy jest możliwe wyłączenie; nie zakładać opcjonalności | PGS: HTTPS | Google — zgodnie z zasadami usługi |
-| **Informacje o aplikacji i jej działaniu → Dzienniki awarii (Crash logs)** | **[DO DECYZJI]** Google potwierdza diagnostykę, ale nie wskazuje jednoznacznie osobnego rodzaju Crash logs dla użytej wersji | Diagnostyka, jeśli występuje | **[DO DECYZJI]** | PGS: HTTPS, jeśli zbierane | Google |
-| **Identyfikatory urządzenia lub inne (Device or other IDs)** | **[DO DECYZJI]** Player ID jest przede wszystkim identyfikatorem użytkownika PGS; nie zakładać automatycznie, że to identyfikator urządzenia. Zbadać zależności transytywne i manifest release pod kątem takich ID, w tym AD_ID | Zależnie od faktycznego użycia | **[DO DECYZJI]** | **[DO DECYZJI]** | Zależnie od dostawcy |
-| **Lokalizacja, kontakty, wiadomości, nagrania, płatności** | **Brak transferów zadeklarowanych przez kod funkcji gry**; nie ma takich żądań uprawnień własnych. **[DO DECYZJI]** Ostateczną deklarację oprzeć na artefakcie release i danych SDK | Nie dotyczy, jeśli brak | Nie dotyczy | Nie dotyczy | Nie dotyczy |
+## Kontrola przed wysłaniem formularza
 
-W dokumentacji PGS zbieranie **Gamertag, avatara, analityki i diagnostyki** jest opisane jako automatyczne, a dane wyników i zapisu gry zależą od użytych API. Google podkreśla, że opis dotyczy **najnowszej wersji SDK**, niekoniecznie przypiętej tutaj wersji 22.1.0. **[DO DECYZJI]** Przed publikacją sprawdzić SDK Index oraz oświadczenia dokładnej wersji i ostateczny sposób udostępniania danych w Play Console.
+1. Uzupełnij dane wydawcy w [OWNER_INPUT.md](OWNER_INPUT.md), opublikuj wyrenderowaną politykę PL/EN pod publicznym HTTPS i ustaw ten sam adres w konfiguracji wydania.
+2. Skonfiguruj identyfikatory projektu Play Games i czterech tablic; sprawdź rzeczywiste logowanie, tablice i Saved Games na urządzeniu. Nie reklamuj osiągnięć PGS jako aktywnych, dopóki adapter osiągnięć nie jest połączony.
+3. Uruchom kontrolę zależności transytywnych i scalonego manifestu release; szczególnie zweryfikuj AD_ID, ACCESS_NETWORK_STATE, WAKE_LOCK oraz inne uprawnienia dodane przez SDK.
+4. Porównaj deklaracje konkretnej wersji PGS SDK 22.1.0 z publikowanym pakietem i aktualnym formularzem Google Play. Dla aktywnego SDK uwzględnij automatyczne dane tożsamości, analityki i diagnostyki nawet bez własnego backendu.
+5. Jeśli integrujesz zlecenie 80, przetestuj sekret instalacji, maskowanie UUID, możliwość zgłoszenia nicka, retencję zgłoszeń, moderację, limity IP i usuwanie wpisów. Uaktualnij politykę po weryfikacji konfiguracji serwera.
+6. Sprawdź, że aplikacja zawiera osiągalny link do publicznej polityki prywatności (w szczególności w Ustawieniach) oraz dostępny sposób kontaktu i usuwania danych.
+7. Formularz zatwierdza wydawca na podstawie **konkretnego wydawanego AAB**, nie samego opisu w repozytorium. Powtórz deklaracje po wprowadzeniu reklam, zakupów, nowych SDK, serwera rankingu lub innych transferów.
 
-## Powiadomienia i uprawnienia
+## Oficjalne źródła
 
-| Uprawnienie w manifeście źródłowym | Cel |
-|---|---|
-| VIBRATE | Lokalne efekty dotykowe gry |
-| INTERNET | Połączenie z Google Play Games, jeżeli skonfigurowano usługę |
-| POST_NOTIFICATIONS | Pokazywanie lokalnych przypomnień na Androidzie 13+ za zgodą systemową |
-| RECEIVE_BOOT_COMPLETED | Przywrócenie harmonogramu lokalnych przypomnień po restarcie |
-
-Nie korzystamy z Firebase Cloud Messaging. Sam alarm i wyświetlenie przypomnienia nie przekazują pseudonimu ani wyników na serwer. Android może wykonywać odrębny backup profile.json: android:allowBackup="true", backup_rules.xml i data_extraction_rules.xml; battle.snap jest pomijany.
-
-## Otwarte punkty przed publikacją
-
-1. **[DO DECYZJI] Uzupełnić ID PGS** (w tej gałęzi pozostają REPLACE_ME), skonfigurować tablice i Saved Games w Play Console, wykonać próbę na urządzeniu; zdecydować, czy osiągnięcia Google będą wdrożone osobno, czy nie będą reklamowane.
-2. **[DO DECYZJI] Zweryfikować zależności transytywne i manifest release** poleceniami: ./gradlew :app:dependencies --configuration releaseRuntimeClasspath oraz ./gradlew :app:processReleaseMainManifest, a następnie sprawdzić app/build/intermediates/merged_manifests/ (m.in. AD_ID, ACCESS_NETWORK_STATE, WAKE_LOCK). Nie utożsamiać braku AD_ID w źródłowym manifeście z brakiem w całym AAB.
-3. **[DO DECYZJI] Uzupełnić i udostępnić politykę prywatności** po polsku i angielsku, określić pełną nazwę prawną wydawcy i działający e-mail, ustalić procedurę próśb o usunięcie danych.
-4. **[DO DECYZJI] Dodać link do polityki prywatności wewnątrz aplikacji.** SettingsScreen.kt nie ma takiego przycisku/odnośnika; zakres tego zlecenia nie obejmuje zmian kodu.
-5. **[DO DECYZJI] Potwierdzić deklarację „udostępniania”, opcjonalności danych diagnostycznych i klasyfikację identyfikatorów** na podstawie polityk SDK, sposobu uwierzytelnienia i wszystkich aktywnych kanałów publikacji.
-6. Przed uruchomieniem własnego rankingu w wydaniu sprawdzić aktywną konfigurację, HTTPS, UUID, pseudonim, wyniki, IP w logach proxy, retencję backupów i ponawianie usunięć po ich odtworzeniu. Serwera **nie przedstawiać jako czynnego bez weryfikacji wdrożenia**.
-7. Powtórzyć audyt przed uruchomieniem reklam, zakupów, dodatkowej analityki lub innego SDK; nie deklarować takich funkcji w obecnej wersji.
-
-**Uwaga o usuwaniu:** Profile.reset() zachowuje pseudonim i nie usuwa danych Google ani własnego rankingu. Własny ranking: **Ustawienia → Nowa tożsamość**, trwała kolejka (bez gwarancji usunięcia przed utratą plików aplikacji). PGS: osobne usunięcie danych gry z konta Google. Lokalne dane: wyczyszczenie pamięci aplikacji. Android Backup pozostaje odrębny. Przy odtworzeniu kopii SQLite operator musi ponowić późniejsze usunięcia.
-
-## Źródła oficjalne
-
-- PGS — deklarowanie danych SDK: https://developer.android.com/games/pgs/data-collection
-- PGS — automatyczne uwierzytelnianie: https://developer.android.com/games/pgs/platform-authentication
-- Play Console — definicje typów, udostępniania i opcjonalności: https://support.google.com/googleplay/android-developer/answer/10787469
-- Usuwanie danych pojedynczej gry z Play Games: https://support.google.com/googleplay/answer/9130646?hl=pl
-- Polityka prywatności Google: https://policies.google.com/privacy
+- Google PGS — zakres danych SDK: https://developer.android.com/games/pgs/data-collection
+- Google PGS — uwierzytelnianie: https://developer.android.com/games/pgs/platform-authentication
+- Play Console — definicje Data safety: https://support.google.com/googleplay/android-developer/answer/10787469
+- Play Games — usuwanie danych gry: https://support.google.com/googleplay/answer/9130646?hl=pl
 - Backup Androida: https://developer.android.com/identity/data/autobackup
