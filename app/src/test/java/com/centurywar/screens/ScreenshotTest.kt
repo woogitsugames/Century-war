@@ -1466,7 +1466,14 @@ class ScreenshotTest {
             for ((tag, dimensions) in screenshotDevices(devices)) {
                 val g = game(dimensions[0], dimensions[1], dimensions[2] * 0.9f,
                     if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "pl"
+                g.onLanguageChanged()
                 g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                // Baner dziennego logowania nie może zasłaniać wyniku bitwy na zrzutach.
+                val warm = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+                val warmCanvas = Canvas(warm)
+                repeat(210) { g.frame(warmCanvas, 1f / 60f) }
+                warm.recycle()
                 val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 84084L, 1f,
                     startEra = 1, maxEra = 3))
                 g.setScreen(bs)
