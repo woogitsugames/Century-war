@@ -473,4 +473,20 @@ class BattleScreenTest {
         assertEquals(Replay.Kind.BARRAGE_AT, controller.log().commands.last().kind)
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
     }
+
+    @Test
+    fun narrowScreensKeepMinimapInSecondRow() {
+        // Wewnętrzny ekran Folda z dużą skalą UI: minimapa nie może zniknąć.
+        for ((w, h, d) in listOf(Triple(1802, 2000, 3.2f), Triple(1600, 720, 2f), Triple(1080, 2400, 3f))) {
+            val g = game(w, h, d)
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 351L, 1f))
+            g.setScreen(bs)
+            g.frame(canvas, 1f / 60f)
+            val mini = field(bs, "mini").get(bs) as RectF
+            val pause = field(bs, "pauseBtn").get(bs) as Button
+            assertTrue("minimapa ${w}x$h", mini.width() >= 60f * g.ui.dp)
+            assertTrue("minimapa w ekranie ${w}x$h", mini.left >= 0f && mini.right <= g.width)
+            assertFalse("minimapa nie nachodzi na pauzę ${w}x$h", RectF.intersects(mini, pause.r))
+        }
+    }
 }

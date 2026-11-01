@@ -305,13 +305,19 @@ class BattleScreen(
         x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
-        topBar.set(0f, 0f, w, topH + g.insetT)
         val t = g.insetT + 6 * dp
         evolveBtn.set(l + 196 * dp, t, 118 * dp, 40 * dp)
         pauseBtn.set(rr - 46 * dp, t, 46 * dp, 40 * dp)
         mini.set(evolveBtn.r.right + 16 * dp, t + 13 * dp, pauseBtn.r.left - 112 * dp, t + 29 * dp)
-        if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
-        if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, t, mini.right + 27 * dp, t + 25 * dp)
+        if (mini.width() < 160 * dp) {
+            // Wąski ekran (np. rozłożony Fold, telefon w pionie): minimapa, HP baz, zegar i pogoda
+            // w drugim rzędzie paska zamiast znikać.
+            topH = 52 * dp + 46 * dp
+            mini.set(l + 22 * dp, t + 46 * dp + 15 * dp, rr - 120 * dp, t + 46 * dp + 31 * dp)
+            if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
+        }
+        topBar.set(0f, 0f, w, topH + g.insetT)
+        if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, mini.top - 13 * dp, mini.right + 27 * dp, mini.top + 12 * dp)
         else weatherRect.setEmpty()
         goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
         xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
@@ -1576,21 +1582,24 @@ class BattleScreen(
         if (mini.width() > 0f) {
             // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
             val wx = mini.right + 14 * dp
-            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, t + 11 * dp, 21 * dp, dp = dp)
+            val wy = mini.top - 13 * dp
+            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
             // gdy brak miejsca, zostaje sama ikona.
-            val eraLeft = pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
+            // W drugim rzędzie (wąski ekran) nazwa epoki wroga jest wyżej, więc miejsce sięga krawędzi.
+            val eraLeft = if (mini.top > pauseBtn.r.bottom) w - g.insetR - 6 * dp
+                else pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
             val wAvail = eraLeft - (wx + 14 * dp) - 6 * dp
             if (wAvail >= 30 * dp) {
                 val size = ui.fit(weatherName, 12f, wAvail, 8f)
                 if (ui.measure(weatherName, size, true) <= wAvail)
-                    ui.textO(c, weatherName, wx + 14 * dp, t + 15 * dp, size, Ui.TEXT)
+                    ui.textO(c, weatherName, wx + 14 * dp, wy + 15 * dp, size, Ui.TEXT)
             }
             if (battle.weather == Weather.WIND) {
                 val dir = battle.windDirection().toFloat()
                 val mx = wx + 24 * dp
-                val my = t + 33 * dp
+                val my = wy + 33 * dp
                 ui.stroke.color = Ui.GOLD
                 ui.stroke.strokeWidth = 2 * dp
                 c.drawLine(mx - 11 * dp * dir, my, mx + 11 * dp * dir, my, ui.stroke)

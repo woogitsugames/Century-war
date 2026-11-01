@@ -206,6 +206,8 @@ class ScreenshotTest {
         for ((tag, dims) in mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "foldOpen" to intArrayOf(2184, 1968, 3),
+            // Wewnętrzny ekran Folda z dużą skalą: minimapa w drugim rzędzie.
+            "foldInner" to intArrayOf(1802, 2000, 4),
         )) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
