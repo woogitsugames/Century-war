@@ -839,6 +839,52 @@ class ScreenshotTest {
         }
     }
 
+
+    /** Zlecenie 105: historia 30 bitew, fale i czas dzienny na 720p i Foldzie. */
+    @Test
+    fun statsCharts105() {
+        for ((tag, dims) in screenshotDevices(mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+        ))) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            val archive = BattleHistory(File.createTempFile("cw-stats105", ".json").apply { delete() })
+            try {
+                val now = System.currentTimeMillis()
+                // Dodaj od najstarszej do najnowszej: add() wstawia nowe bitwy na początek.
+                for (i in 39 downTo 0) {
+                    val mode = Mode.entries[i % 4]
+                    val won = i % 3 == 0
+                    val seconds = 120 + i * 15
+                    archive.add(BattleHistory.Record(
+                        date = now - (i / 3).toLong() * 86_400_000L,
+                        mode = mode.ordinal,
+                        result = if (won) BattleHistory.WIN else BattleHistory.LOSS,
+                        seconds = seconds,
+                        wave = if (mode == Mode.ENDLESS) 42 - i else 0,
+                        score = 1000L + i * 150L,
+                    ))
+                    g.profile.recordBattle(mode, won, seconds)
+                }
+                g.history = archive
+                g.historyLoaded = true
+                val screen = StatsScreen(g)
+                g.setScreen(screen)
+                val metrics = field(screen, "metrics").get(screen) as BattleHistory.Metrics
+                assertTrue(metrics.recentModes.size == 30)
+                shot(g, tag + "_stats105_top")
+                val maxScroll = field(screen, "maxScroll").getFloat(screen)
+                val target = (if (tag == "phone720") 580f else 470f) * g.ui.dp
+                field(screen, "scroll").setFloat(screen, minOf(target, maxScroll))
+                shot(g, tag + "_stats105_charts")
+            } finally {
+                archive.awaitWrites()
+                archive.close()
+            }
+        }
+    }
+
     /** Przegląd nowych dymków bitwy i pierwszego dymka Badań: 720p, 20:9, Fold. */
     @Test
     fun contextualHints() {
