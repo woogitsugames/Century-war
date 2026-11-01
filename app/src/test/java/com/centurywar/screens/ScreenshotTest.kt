@@ -26,6 +26,7 @@ import com.centurywar.game.BattleRenderer
 import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
 import com.centurywar.game.Mode
@@ -249,14 +250,14 @@ class ScreenshotTest {
     /** Mapa kampanii: cztery proporcje, cofanie po osi i szczegóły etapu. */
     @Test
     fun campaignJourneyMap() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
             "foldInner" to intArrayOf(1802, 2000, 4),
             "foldOuter" to intArrayOf(904, 2316, 3),
-        )) {
+        ))) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
             for (i in 0 until 12) g.profile.stars[i] = (i % 3) + 1
@@ -279,6 +280,14 @@ class ScreenshotTest {
 
             field(screen, "selected").set(screen, Campaign.stages[12])
             shot(g, tag + "_campaign_journey_info")
+            if (tag == "phone720" || tag == "foldOpen") {
+                for (difficulty in listOf(CampaignDifficulty.EASY, CampaignDifficulty.HARD)) {
+                    val button = screen.buttons.first { it.id == -10 - difficulty.ordinal }
+                    tap(g, button.r.centerX(), button.r.centerY())
+                    shot(g, tag + "_campaign_difficulty_" + difficulty.name.lowercase())
+                    assertTrue("Zapis trudności po dotknięciu", g.profile.campaignDifficulty == difficulty)
+                }
+            }
             field(screen, "selected").set(screen, null)
             field(screen, "scroll").setFloat(screen, field(screen, "maxScroll").getFloat(screen))
             shot(g, tag + "_campaign_journey_final", 1)

@@ -15,6 +15,7 @@ import com.centurywar.engine.Sound
 import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Stage
 import kotlin.math.abs
@@ -38,6 +39,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     private val hints = HintOverlay(g)
 
     init { buttons.add(0, hints.okBtn) }
+    private val difficultyButtons = Array(3) { btn(-10 - it) }
 
     private var portraitMap = false
     private var laidOut = false
@@ -91,20 +93,27 @@ class CampaignScreen(g: Game) : Screen(g) {
     private var infoTitle = ""
     private var infoRange = ""
     private var infoModifiers = ""
+    private var infoPower = ""
+    private var infoDifficulty = CampaignDifficulty.NORMAL
 
     private fun refreshInfo(s: Stage) {
-        if (infoIndex == s.index && infoLanguage == L.lang) return
+        val difficulty = g.profile.campaignDifficulty
+        if (infoIndex == s.index && infoLanguage == L.lang && infoDifficulty == difficulty) return
         infoIndex = s.index
         infoLanguage = L.lang
+        infoDifficulty = difficulty
         infoTitle = L.f("stage_n", s.index + 1)
         infoRange = L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]])
         infoModifiers = L["modifiers"] + ":"
+        infoPower = L.f("ai_power", (s.aiPower * difficulty.powerMultiplier * 100f).toInt())
     }
 
     override fun isDragScreen() = selected == null
 
     override fun onLanguageChanged() {
         super.onLanguageChanged()
+        for (i in difficultyButtons.indices)
+            difficultyButtons[i].label = L[CampaignDifficulty.entries[i].key]
         eraIntro?.onLanguageChanged()
     }
 
@@ -171,11 +180,22 @@ class CampaignScreen(g: Game) : Screen(g) {
         moving = false
 
         val iw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
-        val ih = min(300 * dp, h - g.insetT - g.insetB - 70 * dp)
+        val ih = min(330 * dp, h - g.insetT - g.insetB - 58 * dp)
         info.set(w / 2 - iw / 2, h / 2 - ih / 2 + 22 * dp,
             w / 2 + iw / 2, h / 2 + ih / 2 + 22 * dp)
-        start.set(info.centerX() - 90 * dp, info.bottom - 66 * dp, 180 * dp, 48 * dp)
+        start.set(info.centerX() - 90 * dp, info.bottom - 62 * dp, 180 * dp, 44 * dp)
+        start.hitSlop = 2 * dp
         close.set(info.right - 34 * dp, info.top - 18 * dp, 48 * dp, 48 * dp)
+        val gap = 6 * dp
+        val buttonWidth = (info.width() - 48 * dp - gap * 2) / 3f
+        for (i in difficultyButtons.indices) {
+            val b = difficultyButtons[i]
+            b.label = L[CampaignDifficulty.entries[i].key]
+            b.highlight = g.profile.campaignDifficulty == CampaignDifficulty.entries[i]
+            b.set(info.left + 24 * dp + i * (buttonWidth + gap),
+                start.r.top - 43 * dp, buttonWidth, 34 * dp)
+            b.hitSlop = 7 * dp
+        }
         place()
         eraIntro?.layout()
     }
@@ -197,6 +217,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         }
         start.visible = selected != null
         close.visible = selected != null
+        for (b in difficultyButtons) b.visible = selected != null
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
@@ -555,9 +576,9 @@ class CampaignScreen(g: Game) : Screen(g) {
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoRange, x + isz + 8 * dp, y, 14f, Ui.TEXT)
         y += 28 * dp
-        val pw = s.aiPower
+        val pw = s.aiPower * g.profile.campaignDifficulty.powerMultiplier
         Icons.draw(c, if (pw > 1f) Icons.SKULL else Icons.CHECK, x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, L.f("ai_power", (pw * 100).toInt()), x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
+        ui.textO(c, infoPower, x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
         y += 28 * dp
         Icons.draw(c, Icons.weatherIcon(s.weather), x + isz / 2, y - 5 * dp, isz, dp = dp)
@@ -571,6 +592,9 @@ class CampaignScreen(g: Game) : Screen(g) {
         } else {
             chips(c, s, x, y, tw)
         }
+        ui.textO(c, L["campaign126_difficulty"], x, difficultyButtons[0].r.top - 6 * dp,
+            12f, Ui.GOLD)
+        for (b in difficultyButtons) ui.button(c, b, 13f)
         ui.button(c, start, 18f)
         ui.closeButton(c, close)
     }
@@ -583,7 +607,7 @@ class CampaignScreen(g: Game) : Screen(g) {
             val label = L[m.key]
             val cw = ui.measure(label, 12f, true) + 18 * dp
             if (x + cw > x0 + width && x > x0) { x = x0; y += hh + 6 * dp }
-            if (y + hh > start.r.top - 6 * dp) break
+            if (y + hh > difficultyButtons[0].r.top - 24 * dp) break
             tmp.set(x, y, x + cw, y + hh)
             ui.card(c, tmp, Color.rgb(84, 60, 110), 10f)
             ui.textO(c, label, x + cw / 2, y + hh * 0.62f, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)
@@ -599,9 +623,17 @@ class CampaignScreen(g: Game) : Screen(g) {
             -1 -> g.pop()
             -2 -> selected?.let { s ->
                 g.setScreen(BattleScreen(g, Campaign.config(s, g.profile.bonuses(), System.nanoTime(),
-                    tutorial = s.index == 0 && !g.profile.tutorialDone)))
+                    tutorial = s.index == 0 && !g.profile.tutorialDone,
+                    difficulty = g.profile.campaignDifficulty)))
             }
             -3 -> selected = null
+            in -12..-10 -> {
+                g.profile.campaignDifficulty = CampaignDifficulty.entries[-10 - b.id]
+                for (i in difficultyButtons.indices)
+                    difficultyButtons[i].highlight = g.profile.campaignDifficulty == CampaignDifficulty.entries[i]
+                infoIndex = -1
+                g.profile.save()
+            }
             else -> {
                 selected = b.tag as? Stage
                 val stage = selected

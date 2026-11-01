@@ -60,6 +60,13 @@ enum class Weather(
 
 enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
 
+/** Jawny mnożnik gospodarki i doświadczenia AI w kampanii. */
+enum class CampaignDifficulty(val powerMultiplier: Float, val medalMultiplier: Float, val key: String) {
+    EASY(0.8f, 0.75f, "campaign126_easy"),
+    NORMAL(1f, 1f, "campaign126_normal"),
+    HARD(1.2f, 1.3f, "campaign126_hard"),
+}
+
 /** Reguła specjalna wyzwania dnia; kolejność jest częścią formatu powtórek. */
 enum class DailyEvent(val key: String, val descriptionKey: String) {
     MARKSMEN("day_marksmen", "day_marksmen_d"),
@@ -200,14 +207,27 @@ object Campaign {
      * [tutorial]: łagodniejsza wersja etapu do samouczka (słabsze AI, a etap 1 dopuszcza
      * jeden awans epoki, żeby dało się pokazać Awans i wybór doktryny).
      */
-    fun config(stage: Stage, bonuses: Bonuses, seed: Long, tutorial: Boolean = false) = BattleConfig(
+    /** Poziom to wyłącznie mnożnik już zapisywanego aiPower; bez zmiany stageRamp. */
+    fun config(
+        stage: Stage, bonuses: Bonuses, seed: Long, tutorial: Boolean = false,
+        difficulty: CampaignDifficulty = CampaignDifficulty.NORMAL,
+    ) = BattleConfig(
         Mode.CAMPAIGN, seed,
-        if (tutorial) stage.aiPower * 0.8f else stage.aiPower,
+        stage.aiPower * difficulty.powerMultiplier * (if (tutorial) 0.8f else 1f),
         stage.startEra,
         if (tutorial) maxOf(stage.maxEra, minOf(Defs.ERA_COUNT - 1, stage.startEra + 1)) else stage.maxEra,
         stage.modifiers, bonuses, stage.index, tutorial,
         weather = stage.weather,
     )
+
+    /** Odczyt poziomu z konfiguracji przechowanej również w snapshotach i powtórkach. */
+    fun difficulty(cfg: BattleConfig): CampaignDifficulty? {
+        if (cfg.mode != Mode.CAMPAIGN || cfg.stageIndex !in stages.indices) return null
+        val base = stages[cfg.stageIndex].aiPower * (if (cfg.tutorial) 0.8f else 1f)
+        return CampaignDifficulty.entries.firstOrNull {
+            kotlin.math.abs(cfg.aiPower - base * it.powerMultiplier) < 0.0001f
+        }
+    }
 }
 
 

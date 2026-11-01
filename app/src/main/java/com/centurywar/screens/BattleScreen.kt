@@ -20,6 +20,8 @@ import com.centurywar.game.EraArt
 import com.centurywar.game.Proj
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
+import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.BattleController
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleRenderer
@@ -1037,18 +1039,23 @@ class BattleScreen(
         when (cfg.mode) {
             Mode.CAMPAIGN -> {
                 val stage = cfg.stageIndex
+                val difficulty = Campaign.difficulty(cfg) ?: CampaignDifficulty.NORMAL
                 val old = pr.stars[stage]
                 val st = battle.stars()
-                reward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12 else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
+                val baseReward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12
+                    else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
+                reward = (baseReward * difficulty.medalMultiplier).toInt()
                 if (st > old) {
                     earnedStars = st - old
                     pr.stars[stage] = st
-                    // Samouczek daje postęp kampanii, lecz bez wpisu w rankingach.
-                    if (!cfg.tutorial) {
-                        newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day, replayId)
-                        g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
-                    }
                 }
+                // Gwiazdki odblokowują etapy niezależnie od poziomu, ranking wymaga Normalnego.
+                if (!cfg.tutorial && difficulty == CampaignDifficulty.NORMAL && st > pr.normalStars[stage]) {
+                    pr.normalStars[stage] = st
+                    newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.normalStarTotal().toLong(), day, replayId)
+                    g.online.submit(Profile.BOARD_CAMPAIGN, pr.normalStarTotal().toLong())
+                }
+                if (won && !cfg.tutorial && difficulty == CampaignDifficulty.HARD) pr.recordHardVictory(stage)
                 if (won) pr.tutorialDone = true
             }
             Mode.SKIRMISH -> {
@@ -1129,7 +1136,10 @@ class BattleScreen(
         val skirmishDiff = if (cfg.mode == Mode.SKIRMISH)
             (0..3).firstOrNull { kotlin.math.abs(Skirmish.power(it) - cfg.aiPower) < 0.0001f } ?: -1 else 0
         val rankedSkirmish = cfg.mode != Mode.SKIRMISH || (SkirmishSetup.isRanked(cfg) && skirmishDiff >= 0)
-        if (pr.globalRanking && battle.stepCount >= 60 && (cfg.mode != Mode.DAILY || rankedDaily) && rankedSkirmish) {
+        val rankedCampaign = cfg.mode != Mode.CAMPAIGN ||
+            (!cfg.tutorial && Campaign.difficulty(cfg) == CampaignDifficulty.NORMAL)
+        if (pr.globalRanking && battle.stepCount >= 60 && (cfg.mode != Mode.DAILY || rankedDaily) &&
+            rankedSkirmish && rankedCampaign) {
             g.scores?.submit(cfg, commands.log(), score, rankedDaily, pr.name, pr.playerId,
                 pr.researchLevels(), skirmishDiff)
         }

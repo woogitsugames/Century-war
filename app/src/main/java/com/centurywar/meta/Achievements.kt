@@ -24,6 +24,7 @@ enum class AchievementMetric {
     CARD_MEDICS_30, CARD_SPARK_30, CARD_GUARD_30, CARD_RECALL_30,
     CARD_NEW_50, WEEKLY_RULESETS, HARD_PERFECT, DAILY_EVENTS,
     MODIFIER_VICTORIES, DOCTRINE_VICTORIES,
+    HARD_CAMPAIGN,
 }
 
 data class AchievementDef(
@@ -114,6 +115,7 @@ object Achievements {
         def("modifier_victories_10", AchievementMetric.MODIFIER_VICTORIES, 10, 230, AchievementCategory.TACTICS),
         def("doctrine_victories_13", AchievementMetric.DOCTRINE_VICTORIES,
             com.centurywar.game.Doctrine.values().size.toLong(), 400, AchievementCategory.TACTICS),
+        def("campaign_hard", AchievementMetric.HARD_CAMPAIGN, Campaign.stages.size.toLong(), 600, AchievementCategory.CAMPAIGN),
     )
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
@@ -126,6 +128,7 @@ object Achievements {
         AchievementMetric.BATTLES -> profile.battles.toLong()
         AchievementMetric.STARS -> profile.totalStars().toLong()
         AchievementMetric.STAGES -> profile.stars.count { it > 0 }.toLong()
+        AchievementMetric.HARD_CAMPAIGN -> profile.hardStagesCleared().toLong()
         AchievementMetric.WAVES -> profile.bestWave.toLong()
         AchievementMetric.KILLS -> profile.totalKills
         AchievementMetric.RESEARCH_LEVELS -> Profile.research.sumOf { profile.level(it.key).toLong() }

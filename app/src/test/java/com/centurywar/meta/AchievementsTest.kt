@@ -38,9 +38,9 @@ class AchievementsTest {
 
     @Test
     fun catalogIsCompleteAndLocalized() {
-        assertEquals(65, Achievements.all.size)
-        assertEquals(65, Achievements.all.map { it.id }.toSet().size)
-        assertEquals(65, Achievements.all.map { it.pgsKey }.toSet().size)
+        assertEquals(66, Achievements.all.size)
+        assertEquals(66, Achievements.all.map { it.id }.toSet().size)
+        assertEquals(66, Achievements.all.map { it.pgsKey }.toSet().size)
         for (a in Achievements.all) {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
@@ -56,6 +56,23 @@ class AchievementsTest {
                 assertTrue(L.text(descKey, lang) != descKey)
             }
         }
+    }
+
+    @Test
+    fun hardCampaignAchievementRequiresAllUniqueStages() {
+        val p = profile()
+        val def = Achievements.byId("campaign_hard")!!
+        for (i in 0 until 35) p.recordHardVictory(i)
+        p.recordHardVictory(34)
+        assertEquals(35L, Achievements.progress(p, def))
+        val cfg = BattleConfig(Mode.SKIRMISH, 12L, 1f)
+        val incomplete = Achievements.onBattleEnd(p, finished(cfg, false), cfg, false)
+        assertFalse(ids(incomplete).contains("campaign_hard"))
+        p.recordHardVictory(35)
+        val lastCfg = BattleConfig(Mode.SKIRMISH, 13L, 1f)
+        val complete = Achievements.onBattleEnd(p, finished(lastCfg, false), lastCfg, false)
+        assertTrue(ids(complete).contains("campaign_hard"))
+        assertEquals(36L, Achievements.progress(p, def))
     }
 
     @Test

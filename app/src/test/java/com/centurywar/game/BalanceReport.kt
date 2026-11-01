@@ -1,6 +1,7 @@
 package com.centurywar.game
 
 import com.centurywar.meta.Profile
+import com.centurywar.game.CampaignDifficulty
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -89,8 +90,11 @@ class BalanceReport {
     /** BALANCE_POWER_SCALE: mnożnik siły AI etapu (przegląd wartości przy strojeniu). */
     private val powerScale = System.getenv("BALANCE_POWER_SCALE")?.toFloatOrNull() ?: 1f
 
-    private fun run(stage: Stage, bonus: Bonuses, seed: Long): Result {
-        val base = Campaign.config(stage, bonus, seed)
+    private fun run(
+        stage: Stage, bonus: Bonuses, seed: Long,
+        difficulty: CampaignDifficulty = CampaignDifficulty.NORMAL,
+    ): Result {
+        val base = Campaign.config(stage, bonus, seed, difficulty = difficulty)
         val battle = Battle(if (powerScale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * powerScale,
             base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.variantsEnabled, base.weather))
         battle.playerAi = Ai(battle, 0)
@@ -110,11 +114,14 @@ class BalanceReport {
         )
     }
 
-    private fun measure(stage: Stage, name: String, bonus: Bonuses, runs: Int): Summary {
+    private fun measure(
+        stage: Stage, name: String, bonus: Bonuses, runs: Int,
+        difficulty: CampaignDifficulty = CampaignDifficulty.NORMAL,
+    ): Summary {
         val results = ArrayList<Result>(runs)
         for (trial in 0 until runs) {
             val seed = 246_813_579L + stage.index * 10_007L + trial * 997L
-            results.add(run(stage, bonus, seed))
+            results.add(run(stage, bonus, seed, difficulty))
         }
         val durations = results.map { it.minutes }.sorted()
         val median = if (runs % 2 == 1) durations[runs / 2]
@@ -140,6 +147,43 @@ class BalanceReport {
             index < n * 3 / 4 -> "sredni"
             else -> "weteran"
         }
+    }
+
+    /**
+     * Dokładnie 36 etapów × 20 seedów × trzy poziomy, z tym samym profilem badań
+     * dla danego etapu. Zakres można podzielić na grupy BALANCE_STAGES.
+     */
+    @Test
+    fun campaignDifficultyReport() {
+        val runs = (System.getenv("BALANCE_RUNS")?.toIntOrNull() ?: 20).coerceAtLeast(1)
+        val only = System.getenv("BALANCE_STAGES")?.split(',')
+            ?.mapNotNull { it.trim().toIntOrNull() }?.toSet()
+        val out = File(System.getenv("BALANCE_OUT") ?: "build/balance")
+        out.mkdirs()
+        val csv = StringBuilder("stage,difficulty,profile,ai_power,n,wins,win_pct,median_minutes,timeouts,timeout_pct\n")
+        val md = StringBuilder("# Poziomy trudności kampanii (126)\n\n")
+            .append("Każdy etap: ten sam profil badań i $runs seedów na każdy z trzech poziomów. ")
+            .append("Sterowanie graczem: Ai, symulacja do 30 minut.\n\n")
+            .append("| Etap | Poziom | Profil | Siła AI | Wygrane | Odsetek | Mediana (min) | Paty |\n")
+            .append("|---:|---|---|---:|---:|---:|---:|---:|\n")
+        for (stage in Campaign.stages) {
+            if (only != null && stage.index + 1 !in only) continue
+            val profile = profiles.first { it.name == targetProfile(stage.index) }
+            val bonus = bonuses(profile.progress)
+            for (difficulty in CampaignDifficulty.entries) {
+                val s = measure(stage, profile.name, bonus, runs, difficulty)
+                val power = stage.aiPower * difficulty.powerMultiplier
+                println("DIFFICULTY_126 stage=${stage.index + 1} difficulty=${difficulty.name}" +
+                    " profile=${profile.name} wins=${s.wins}/${s.count}" +
+                    " median=${fmt(s.medianMinutes)}m timeouts=${s.timeouts}")
+                csv.append("${stage.index + 1},${difficulty.name},${profile.name},${fmt(power.toDouble())},$runs," +
+                    "${s.wins},${fmt(s.winPct)},${fmt(s.medianMinutes)},${s.timeouts},${fmt(s.timeoutPct)}\n")
+                md.append("| ${stage.index + 1} | ${difficulty.name} | ${profile.name} | ${fmt(power.toDouble())} | " +
+                    "${s.wins}/${s.count} | ${fmt(s.winPct)}% | ${fmt(s.medianMinutes)} | ${s.timeouts} |\n")
+            }
+        }
+        File(out, "campaign-difficulty-126.csv").writeText(csv.toString())
+        File(out, "campaign-difficulty-126.md").writeText(md.toString())
     }
 
     private fun fmt(value: Double) = String.format(Locale.US, "%.2f", value)
