@@ -9,6 +9,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
+import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
@@ -586,13 +587,60 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     override fun update(dt: Float) { this.dt = dt }
 
-    override fun onDrag(dx: Float, dy: Float) { scroll = (scroll - dy).coerceIn(0f, maxScroll) }
+    override fun resetTouch() {
+        super.resetTouch()
+        activeRail = 0
+    }
+
+    override fun onTouch(e: TouchEvent): Boolean {
+        when (e.action) {
+            TouchEvent.DOWN -> {
+                activeRail = when {
+                    e.x >= left && e.x <= left + contentW &&
+                        e.y >= categoryRailTop && e.y <= categoryRailTop + categoryRailHeight -> 1
+                    page <= PAGE_ABILITIES && e.x >= left && e.x <= left + contentW &&
+                        e.y >= eraRailTop && e.y <= eraRailTop + eraRailHeight -> 2
+                    else -> 0
+                }
+            }
+            TouchEvent.UP, TouchEvent.CANCEL -> activeRail = 0
+        }
+        return false
+    }
+
+    override fun onDrag(dx: Float, dy: Float) {
+        when (activeRail) {
+            1 -> {
+                categoryScroll = (categoryScroll - dx).coerceIn(0f, maxCategoryScroll)
+                positionCategories()
+            }
+            2 -> {
+                eraScroll = (eraScroll - dx).coerceIn(0f, maxEraScroll)
+                positionEraTabs()
+            }
+            else -> scroll = (scroll - dy).coerceIn(0f, maxScroll)
+        }
+    }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt, g.quality.menuAnimated && !g.profile.reduceFlash, g.quality.menuDetail)
         chrome.dim(c, 130)
-        for (b in categories) ui.button(c, b, 12.5f)
-        for (b in tabs) if (b.visible) ui.button(c, b, 13.5f)
+        c.save()
+        c.clipRect(left + 22 * dp, categoryRailTop, left + contentW - 22 * dp,
+            categoryRailTop + categoryRailHeight)
+        for (b in categories) if (b.visible) ui.button(c, b, 12.5f)
+        c.restore()
+        scrollCue.horizontal(c, left, left + contentW,
+            categoryRailTop + categoryRailHeight / 2f, categoryScroll, maxCategoryScroll, dp)
+        if (page <= PAGE_ABILITIES) {
+            c.save()
+            c.clipRect(left + 22 * dp, eraRailTop, left + contentW - 22 * dp,
+                eraRailTop + eraRailHeight)
+            for (b in tabs) if (b.visible) ui.button(c, b, 13.5f)
+            c.restore()
+            scrollCue.horizontal(c, left, left + contentW,
+                eraRailTop + eraRailHeight / 2f, eraScroll, maxEraScroll, dp)
+        }
         for (b in variantBtn) if (b.visible) ui.button(c, b, 13f)
 
         c.save()
@@ -617,6 +665,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val guideY = if (hasEra) gridTop + gridH + 12 * dp else y0
         drawGuide(c, guideY)
         c.restore()
+        scrollCue.vertical(c, w - g.insetR - 15 * dp, viewTop,
+            h - g.insetB, scroll, maxScroll, dp)
 
         ui.button(c, back, 16f)
         if (toggle.visible) ui.button(c, toggle, 15f)
@@ -696,11 +746,11 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         val ln = lines[i]
         for (k in 0 until lineCount[i]) {
-            ui.text(c, ln[k] ?: "", tx, card.top + 80 * dp + k * 16.5f * dp, 12.5f, Color.rgb(214, 218, 228))
+            ui.text(c, ln[k] ?: "", tx, card.top + (80 + k * descLineDp) * dp, 12.5f, Color.rgb(214, 218, 228))
         }
 
         // statystyki
-        val st = card.top + pad + previewH + 36 * dp
+        val st = card.top + pad + previewH + 36 * dp + descriptionExtra
         val counterHint = counterHints[i]
         if (counterHint != null) {
             val available = cw - 2 * pad - 6 * dp
@@ -788,6 +838,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     selectedVariant = if (Defs.spec(e).variants.isEmpty()) -1 else 0
                     scroll = 0f
                     layout()
+                    revealEra(e)
                 }
             }
         }
