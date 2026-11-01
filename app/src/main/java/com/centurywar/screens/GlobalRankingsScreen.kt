@@ -30,6 +30,14 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
     private val icons = intArrayOf(Icons.TOWER, Icons.CALENDAR, Icons.MAP, Icons.CROSSED_SWORDS)
     private val panel = RectF()
     private val rowRect = RectF()
+    private val reportBtn = btn(20)
+    private val reportRows = Array(32) { btn(100 + it) }
+    private val reportEntries = arrayOfNulls<GlobalEntry>(32)
+    private var drawnRows = 0
+    private var reportTarget: String? = null
+    private var reportNotice: String? = null
+    private var selfPublicId = ""
+    init { for (b in reportRows) b.visible = false }
     private var tab = 0
     private var period = 2
     private var stage = g.profile.unlockedStage().coerceIn(0, 35)
@@ -63,6 +71,9 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         stageBtn.set(panel.left + 22 * dp + filterWidth, panel.top + 8 * dp, filterWidth, 38 * dp)
         periodBtn.iconId = Icons.CALENDAR
         stageBtn.iconId = Icons.MAP
+        val reportWidth = min(180 * dp, (pw - 35 * dp) / 3f)
+        reportBtn.set(panel.right - 12 * dp - reportWidth, panel.top + 8 * dp,
+            reportWidth, 38 * dp)
         update(0f)
         refresh()
     }
@@ -72,6 +83,8 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         periodBtn.label = L[periodNames[period]]
         stageBtn.label = L.f("stage_n", stage + 1)
         stageBtn.visible = tab == 2
+        reportBtn.label = L["global_report_nick"]
+        reportBtn.visible = reportTarget != null
         for (i in tabs.indices) {
             tabs[i].selected = i == tab
             tabs[i].color = if (i == tab) Color.rgb(84, 104, 140) else Ui.BTN
@@ -82,11 +95,16 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         bg.draw(c, w, h, dt)
         chrome.dim(c, 120)
         ui.panel(c, panel)
+        // Niewidoczne przyciski są obszarami gestów przytrzymania wiersza.
+        drawnRows = 0
+        for (b in reportRows) b.visible = false
+        selfPublicId = g.scores?.view(board(), periods[period], g.profile.playerId)?.selfPublicId ?: ""
         chrome.title(c, L["global_ranking"])
         for (button in tabs) ui.button(c, button, 13f)
         ui.button(c, back, 16f)
         ui.button(c, periodBtn, 13f)
         if (stageBtn.visible) ui.button(c, stageBtn, 13f)
+        if (reportBtn.visible) ui.button(c, reportBtn, 12f)
 
         val view = g.scores?.view(board(), periods[period], g.profile.playerId)
         val list = view?.top ?: emptyList()
@@ -116,12 +134,14 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
             var ay = aroundTop + 9 * dp
             for (e in around) {
                 if (ay + 25 * dp > panel.bottom - 35 * dp) break
-                if (e.player == g.profile.playerId || around.size <= 3) {
+                if (e.player == selfPublicId || around.size <= 3) {
                     drawEntry(c, e, l, r, ay, e.rank.toInt())
                     ay += 26 * dp
                 }
             }
         }
+        if (reportNotice != null) ui.text(c, L[reportNotice!!],
+            panel.centerX(), panel.bottom - 43 * dp, 11f, Ui.GOLD, Paint.Align.CENTER)
         val status = when {
             view?.loading == true -> "global_loading"
             view?.error == true -> "global_offline"
@@ -143,8 +163,15 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
     }
 
     private fun drawEntry(c: Canvas, entry: GlobalEntry, left: Float, right: Float, y: Float, index: Int) {
-        val mine = entry.player == g.profile.playerId
+        val mine = entry.player == selfPublicId
         rowRect.set(left, y, right, y + 28 * dp)
+        if (drawnRows < reportRows.size) {
+            val button = reportRows[drawnRows]
+            reportEntries[drawnRows] = entry
+            button.set(left, y, right - left, 28 * dp)
+            button.visible = true
+            drawnRows++
+        }
         ui.fill.color = if (mine) Color.argb(100, 64, 140, 235)
             else if (index % 2 == 0) Color.argb(35, 255, 255, 255)
             else Color.argb(15, 255, 255, 255)
@@ -157,8 +184,29 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         ui.textO(c, entry.scoreLabel, right - 10 * dp, baseline, 14f, col, Paint.Align.RIGHT)
     }
 
+    override fun onLongPress(b: Button): Boolean {
+        if (b.id in 100 until 100 + reportRows.size) {
+            val entry = reportEntries[b.id - 100] ?: return false
+            if (!com.centurywar.meta.ScoreClient.validPublicId(entry.player)) return false
+            reportTarget = entry.player
+            reportNotice = null
+            reportBtn.visible = true
+            return true
+        }
+        return super.onLongPress(b)
+    }
+
     override fun onClick(b: Button) {
         when (b.id) {
+            20 -> {
+                val target = reportTarget ?: return
+                reportTarget = null
+                g.scores?.reportNick(target) { accepted ->
+                    g.post(Runnable {
+                        reportNotice = if (accepted) "global_report_sent" else "global_report_failed"
+                    })
+                }
+            }
             -1 -> g.pop()
             10 -> { period = (period + 1) % periods.size; refresh() }
             11 -> { stage = (stage + 1) % (g.profile.unlockedStage() + 1).coerceAtLeast(1); refresh() }

@@ -36,23 +36,24 @@ class ScoreClientTest {
         val file = dir.resolve("deletions.txt").toFile()
         val a = UUID.randomUUID().toString()
         val b = UUID.randomUUID().toString()
+        val playerSecret = "a1".repeat(32)
         try {
             val pending = PendingDeletions(file)
             assertTrue(pending.load())
-            assertTrue(pending.add(a))
-            assertTrue(pending.add(b))
-            assertTrue(pending.add(a))
-            assertEquals(a, pending.first())
+            assertTrue(pending.add(a, playerSecret))
+            assertTrue(pending.add(b, playerSecret))
+            assertTrue(pending.add(a, playerSecret))
+            assertEquals(a, pending.first()?.player)
             val reopened = PendingDeletions(file)
             assertTrue(reopened.load())
             assertTrue(reopened.contains(a))
             assertTrue(reopened.contains(b))
             assertTrue(reopened.remove(a))
-            assertEquals(b, reopened.first())
+            assertEquals(b, reopened.first()?.player)
             val again = PendingDeletions(file)
             assertTrue(again.load())
             assertFalse(again.contains(a))
-            assertEquals(b, again.first())
+            assertEquals(b, again.first()?.player)
             assertTrue(again.remove(b))
             assertFalse(file.exists())
         } finally {
@@ -72,6 +73,20 @@ class ScoreClientTest {
             nonce, "POST", "/v1/player/delete", body)
         assertEquals(64, deleteSig.length)
         assertFalse(scoreSig == deleteSig)
+    }
+
+    @Test fun playerSecretIsCoveredByHmac() {
+        val key = "test-secret-at-least-32-characters-long!".toByteArray()
+        val nonce = UUID.randomUUID().toString()
+        val original = ScoreClient.sign(key, "1800000000", nonce, "POST", "/v1/score",
+            "{}", "a1".repeat(32))
+        assertEquals(64, original.length)
+        assertFalse(original == ScoreClient.sign(key, "1800000000", nonce, "POST", "/v1/score",
+            "{}", "b2".repeat(32)))
+        assertTrue(ScoreClient.validInstallationSecret("a1".repeat(32)))
+        assertFalse(ScoreClient.validInstallationSecret("short"))
+        assertTrue(ScoreClient.validPublicId("0".repeat(24)))
+        assertFalse(ScoreClient.validPublicId(UUID.randomUUID().toString()))
     }
 
     @Test fun nicknameRulesMatchServer() {

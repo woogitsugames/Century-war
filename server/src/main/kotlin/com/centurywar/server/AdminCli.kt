@@ -3,6 +3,7 @@ package com.centurywar.server
 private val ADMIN_USAGE = """
     Użycie: server admin <polecenie> [argumenty]
       recent [limit]                         Ostatnie 20 (maks. 200) wpisów
+      reports [limit]                        Ostatnie 50 (maks. 200) zgłoszeń
       delete-score <UUID> <board> <day>      Usuń jeden wynik z dnia UTC
       block <UUID>                           Ukryj gracza i zablokuj nowe wyniki
       unblock <UUID>                         Przywróć widoczność gracza
@@ -40,6 +41,19 @@ internal fun runAdmin(
                     out.appendLine(
                         row.player + "\t" + row.board + "\t" + row.day + "\t" +
                             row.score + "\t" + row.verifiedAt + "\t" + row.blocked + "\t" + nick
+                    )
+                }
+                0
+            }
+            "reports" -> {
+                if (args.size !in 1..2) return invalid("Nieprawidłowa liczba argumentów")
+                val limit = if (args.size == 1) 50 else args[1].toIntOrNull()
+                if (limit == null || limit !in 1..200) return invalid("Limit musi być w zakresie 1..200")
+                out.appendLine("id\tplayer\tpublic_id\tnick\treason\treported_at")
+                for (row in store.recentReports(limit)) {
+                    out.appendLine(
+                        row.id.toString() + "\t" + row.player + "\t" + row.publicId + "\t" +
+                            row.nick + "\t" + row.reason + "\t" + row.reportedAt
                     )
                 }
                 0

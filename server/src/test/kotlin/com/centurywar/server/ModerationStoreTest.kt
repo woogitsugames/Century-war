@@ -32,7 +32,7 @@ class ModerationStoreTest {
                 assertEquals(2, store.top("endless", "all", now).size)
                 assertTrue(store.blockPlayer(first.player))
                 assertFalse(store.blockPlayer(first.player))
-                assertEquals(listOf(other.player), store.top("endless", "all", now).map { it.player })
+                assertEquals(listOf(store.publicIdFor(other.player)), store.top("endless", "all", now).map { it.player })
                 assertTrue(store.around("endless", "all", now, first.player).isEmpty())
                 assertEquals(1L, store.around("endless", "all", now, other.player).single().rank)
                 assertTrue(store.top("campaign_7", "all", now).isEmpty())

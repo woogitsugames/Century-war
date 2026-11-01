@@ -31,6 +31,7 @@ data class GlobalRankingView(
     val loading: Boolean = false,
     val error: Boolean = false,
     val updatedAt: Long = 0L,
+    val selfPublicId: String = "",
 )
 
 /**
@@ -116,10 +117,15 @@ class ScoreClient(
             callback(false)
             return
         }
+        val installationSecret = profile.playerSecret
+        if (!validInstallationSecret(installationSecret)) {
+            callback(false)
+            return
+        }
         deletingPlayerId = playerId
         worker.execute {
             if (!deletionsReady) deletionsReady = deletions.load()
-            if (!deletionsReady || !deletions.add(playerId)) {
+            if (!deletionsReady || !deletions.add(playerId, installationSecret)) {
                 deletingPlayerId = null
                 callback(false)
                 return@execute
@@ -199,10 +205,14 @@ class ScoreClient(
                 if (!enabled || !profile.globalRanking) return@execute
                 val topUri = "/v1/top?board=" + board + "&period=" + period
                 val top = parseEntries(get(topUri))
-                val around = if (validPlayerId(player)) {
-                    parseEntries(get("/v1/around?board=" + board + "&period=" + period + "&player=" + player))
-                } else emptyList()
-                if (enabled) cache[cacheKey] = GlobalRankingView(top, around, updatedAt = System.currentTimeMillis())
+                // Stary gracz bez powiązanego sekretu może nadal czytać publiczny TOP.
+                val aroundJson = if (validPlayerId(player)) runCatching {
+                    JSONObject(get("/v1/around?board=" + board + "&period=" + period + "&player=" + player))
+                }.getOrNull() else null
+                val around = if (aroundJson != null) parseEntries(aroundJson) else emptyList()
+                val self = aroundJson?.optString("self", "") ?: ""
+                if (enabled) cache[cacheKey] = GlobalRankingView(top, around,
+                    updatedAt = System.currentTimeMillis(), selfPublicId = self)
             } catch (_: Exception) {
                 val old = cache[cacheKey] ?: GlobalRankingView()
                 cache[cacheKey] = old.copy(loading = false, error = true, updatedAt = System.currentTimeMillis())
@@ -212,18 +222,35 @@ class ScoreClient(
         }
     }
 
+    /** Publiczny identyfikator z rankingu, bez UUID ofiary. */
+    fun reportNick(publicId: String, callback: (Boolean) -> Unit) {
+        if (!enabled || !profile.globalRanking || !validPublicId(publicId)) {
+            callback(false)
+            return
+        }
+        worker.execute {
+            val accepted = try {
+                request("POST", "/v1/report",
+                    JSONObject().put("publicId", publicId).put("reason", "offensive").toString()
+                ).first == 202
+            } catch (_: Exception) { false }
+            callback(accepted)
+        }
+    }
+
     fun close() = worker.shutdown()
 
     /** Ponawianie działa również po wyłączeniu rankingu i po restarcie aplikacji. */
     private fun pumpDeletions() {
         if (!deletionsReady) return
-        val player = deletions.first() ?: return
+        val deletion = deletions.first() ?: return
         val code = try {
-            request("POST", "/v1/player/delete", JSONObject().put("player", player).toString()).first
+            request("POST", "/v1/player/delete", JSONObject().put("player", deletion.player).toString(),
+                deletion.secret).first
         } catch (_: Exception) {
             -1
         }
-        if (code in 200..299 && deletions.remove(player)) {
+        if (code in 200..299 && deletions.remove(deletion.player)) {
             deleteAttempts = 0
             worker.execute { pumpDeletions() }
         } else {
@@ -291,7 +318,17 @@ class ScoreClient(
         return response
     }
 
-    private fun request(method: String, target: String, body: String): Pair<Int, String> {
+    private fun request(method: String, target: String, body: String,
+                        deletionSecret: String? = null): Pair<Int, String> {
+        val requiresIdentity = target == "/v1/score" || target == "/v1/player/delete" ||
+            target.startsWith("/v1/around?")
+        val installationSecret = if (target == "/v1/player/delete") deletionSecret
+            else if (requiresIdentity) profile.playerSecret else null
+        if (requiresIdentity) {
+            if (!validInstallationSecret(installationSecret)) throw IOException("missing_player_secret")
+            if (target != "/v1/player/delete" && !profile.awaitWrites(10_000L))
+                throw IOException("profile_not_saved")
+        }
         val timestamp = (System.currentTimeMillis() / 1000L).toString()
         val nonce = UUID.randomUUID().toString()
         val conn = URL(origin + target).openConnection() as HttpURLConnection
@@ -302,7 +339,9 @@ class ScoreClient(
             conn.instanceFollowRedirects = false
             conn.setRequestProperty("X-CW-Timestamp", timestamp)
             conn.setRequestProperty("X-CW-Nonce", nonce)
-            conn.setRequestProperty("X-CW-Signature", sign(key, timestamp, nonce, method, target, body))
+            if (installationSecret != null) conn.setRequestProperty("X-CW-Player-Secret", installationSecret)
+            conn.setRequestProperty("X-CW-Signature",
+                sign(key, timestamp, nonce, method, target, body, installationSecret))
             if (method == "POST") {
                 val bytes = body.toByteArray(StandardCharsets.UTF_8)
                 conn.doOutput = true
@@ -319,8 +358,10 @@ class ScoreClient(
         }
     }
 
-    private fun parseEntries(response: String): List<GlobalEntry> {
-        val array = JSONObject(response).getJSONArray("entries")
+    private fun parseEntries(response: String): List<GlobalEntry> = parseEntries(JSONObject(response))
+
+    private fun parseEntries(response: JSONObject): List<GlobalEntry> {
+        val array = response.getJSONArray("entries")
         return (0 until minOf(array.length(), 50)).map { i ->
             val entry = array.getJSONObject(i)
             GlobalEntry(entry.getLong("rank"), entry.getString("player"),
@@ -380,6 +421,12 @@ class ScoreClient(
         private const val CACHE_MS = 120_000L
         private val PERIODS = setOf("day", "week", "all")
         private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")
+        private val INSTALL_SECRET_REGEX = Regex("[0-9a-f]{64}")
+        private val PUBLIC_ID_REGEX = Regex("[0-9a-f]{24}")
+
+        fun validInstallationSecret(secret: String?): Boolean =
+            secret != null && INSTALL_SECRET_REGEX.matches(secret)
+        fun validPublicId(value: String): Boolean = PUBLIC_ID_REGEX.matches(value)
 
         fun validNick(nick: String): Boolean =
             nick.length in 1..24 && nick == nick.trim() && NICK_REGEX.matches(nick)
@@ -409,8 +456,9 @@ class ScoreClient(
 
         /** Wektor testowy jest wspólny z Security.kt na serwerze. */
         fun sign(secret: ByteArray, timestamp: String, nonce: String, method: String,
-                 target: String, body: String): String {
-            val msg = listOf(timestamp, nonce, method, target, body).joinToString("\n")
+                 target: String, body: String, installationSecret: String? = null): String {
+            val msg = listOf(timestamp, nonce, method, target, body).joinToString("\n") +
+                (if (installationSecret != null) "\n" + installationSecret else "")
             val mac = Mac.getInstance("HmacSHA256")
             mac.init(SecretKeySpec(secret, "HmacSHA256"))
             val digest = mac.doFinal(msg.toByteArray(StandardCharsets.UTF_8))

@@ -20,9 +20,11 @@ import javax.crypto.spec.SecretKeySpec
 class ModerationApiTest {
     private val now = 1_800_000_000_000L
     private val secret = "test-secret-at-least-32-characters-long!".toByteArray()
+    private val playerSecret = "a1".repeat(32)
 
     private fun sign(method: String, target: String, body: String, nonce: String): String {
-        val message = listOf((now / 1000L).toString(), nonce, method, target, body).joinToString("\n")
+        val message = listOf((now / 1000L).toString(), nonce, method, target, body).joinToString("\n") +
+            (if (method == "POST" && target == "/v1/score") "\n" + playerSecret else "")
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret, "HmacSHA256"))
         return mac.doFinal(message.toByteArray()).joinToString("") { "%02x".format(it.toInt() and 0xff) }
@@ -37,6 +39,7 @@ class ModerationApiTest {
             val response = client.post("/v1/score") {
                 header("X-CW-Timestamp", (now / 1000L).toString())
                 header("X-CW-Nonce", nonce)
+                header("X-CW-Player-Secret", playerSecret)
                 header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
                 setBody(body)
             }
@@ -65,6 +68,7 @@ class ModerationApiTest {
             val response = client.post("/v1/score") {
                 header("X-CW-Timestamp", (now / 1000L).toString())
                 header("X-CW-Nonce", nonce)
+                header("X-CW-Player-Secret", playerSecret)
                 header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
                 setBody(body)
             }

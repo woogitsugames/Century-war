@@ -21,6 +21,7 @@ import javax.crypto.spec.SecretKeySpec
 class PlayerDeletionTest {
     private val now = 1_800_000_000_000L
     private val secret = "test-secret-at-least-32-characters-long!".toByteArray()
+    private val playerSecret = "a1".repeat(32)
 
     private fun input(player: String = UUID.randomUUID().toString()) = ScoreSubmission(
         board = "endless", player = player, nick = "Gracz", gameVersion = "0.4.0",
@@ -29,7 +30,8 @@ class PlayerDeletionTest {
     )
 
     private fun sign(body: String, nonce: String): String {
-        val data = listOf((now / 1000).toString(), nonce, "POST", "/v1/player/delete", body).joinToString("\n")
+        val data = listOf((now / 1000).toString(), nonce, "POST", "/v1/player/delete", body).joinToString("\n") +
+            "\n" + playerSecret
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret, "HmacSHA256"))
         return mac.doFinal(data.toByteArray()).joinToString("") { "%02x".format(it.toInt() and 0xff) }
@@ -39,9 +41,12 @@ class PlayerDeletionTest {
         SqliteStore("jdbc:sqlite::memory:").use { store ->
             val first = input()
             val other = input()
-            store.save(first, VerifiedReplay("endless", 100L, 900), now, "hash-a")
-            store.save(first, VerifiedReplay("campaign_7", 70L, 900), now, "hash-b")
-            store.save(other, VerifiedReplay("endless", 50L, 900), now, "hash-c")
+            store.save(first, VerifiedReplay("endless", 100L, 900), now, "hash-a",
+                installSecretHash(playerSecret))
+            store.save(first, VerifiedReplay("campaign_7", 70L, 900), now, "hash-b",
+                installSecretHash(playerSecret))
+            store.save(other, VerifiedReplay("endless", 50L, 900), now, "hash-c",
+                installSecretHash(playerSecret))
             application { leaderboardModule(store, secret, { now }) }
 
             val health = client.get("/healthz")
@@ -54,6 +59,7 @@ class PlayerDeletionTest {
                 return client.post("/v1/player/delete") {
                     header("X-CW-Timestamp", (now / 1000).toString())
                     header("X-CW-Nonce", nonce)
+                    header("X-CW-Player-Secret", playerSecret)
                     header("X-CW-Signature", if (signatureValid) sign(body, nonce) else "0".repeat(64))
                     setBody(body)
                 }.status
@@ -62,7 +68,7 @@ class PlayerDeletionTest {
             assertEquals(2, store.top("endless", "all", now).size)
             assertEquals(HttpStatusCode.OK, delete())
             assertTrue(store.top("campaign_7", "all", now).isEmpty())
-            assertEquals(listOf(other.player), store.top("endless", "all", now).map { it.player })
+            assertEquals(listOf(store.publicIdFor(other.player)), store.top("endless", "all", now).map { it.player })
             assertEquals(HttpStatusCode.OK, delete())
             assertEquals(1, store.top("endless", "all", now).size)
         }
@@ -71,7 +77,8 @@ class PlayerDeletionTest {
     @Test fun deleteKeepsBlockSoBlockedPlayerCannotUnblockThemselves() = testApplication {
         SqliteStore("jdbc:sqlite::memory:").use { store ->
             val blocked = input()
-            store.save(blocked, VerifiedReplay("endless", 100L, 900), now, "hash-a")
+            store.save(blocked, VerifiedReplay("endless", 100L, 900), now, "hash-a",
+                installSecretHash(playerSecret))
             assertTrue(store.blockPlayer(blocked.player))
             application { leaderboardModule(store, secret, { now }) }
 
@@ -80,6 +87,7 @@ class PlayerDeletionTest {
             val status = client.post("/v1/player/delete") {
                 header("X-CW-Timestamp", (now / 1000).toString())
                 header("X-CW-Nonce", nonce)
+                header("X-CW-Player-Secret", playerSecret)
                 header("X-CW-Signature", sign(body, nonce))
                 setBody(body)
             }.status
@@ -125,7 +133,7 @@ class PlayerDeletionTest {
                 c.createStatement().use { s ->
                     s.executeQuery("SELECT version FROM schema_version WHERE id=1").use { rs ->
                         assertTrue(rs.next())
-                        assertEquals(1, rs.getInt(1))
+                        assertEquals(2, rs.getInt(1))
                     }
                 }
             }

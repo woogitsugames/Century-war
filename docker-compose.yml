@@ -9,7 +9,14 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       CW_HMAC_KEY: ${CW_HMAC_KEY:?Ustaw CW_HMAC_KEY w pliku .env}
-      CW_GAME_VERSION: ${CW_GAME_VERSION:-0.3.0}
+      CW_PUBLIC_ID_KEY: ${CW_PUBLIC_ID_KEY:?Ustaw CW_PUBLIC_ID_KEY w pliku .env}
+      CW_GAME_VERSION: ${CW_GAME_VERSION:-0.4.0}
+      CW_TRUSTED_PROXY_IPS: ${CW_TRUSTED_PROXY_IPS:-127.0.0.1}
+      CW_RATE_POST_IP: ${CW_RATE_POST_IP:-20}
+      CW_RATE_DELETE_IP: ${CW_RATE_DELETE_IP:-20}
+      CW_RATE_READ_IP: ${CW_RATE_READ_IP:-120}
+      CW_RATE_REPORT_IP: ${CW_RATE_REPORT_IP:-5}
+      CW_RATE_POST_PLAYER: ${CW_RATE_POST_PLAYER:-6}
       CW_DATABASE_PATH: /var/lib/cw/leaderboards.db
       PORT: "8080"
     volumes:

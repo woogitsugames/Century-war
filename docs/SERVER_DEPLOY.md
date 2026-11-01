@@ -52,12 +52,15 @@ nano .env
 chmod 600 .env
 ~~~
 
-Wklej wygenerowane 64 znaki w polu CW_HMAC_KEY. Ustaw
+Wygeneruj dwa niezależne 64-znakowe klucze (`openssl rand -hex 32` dwa razy).
+Jeden wklej do `CW_HMAC_KEY`, drugi do `CW_PUBLIC_ID_KEY`.
+**Drugi klucz pozostaje wyłącznie na serwerze**; nie umieszczaj go w APK
+ani nie zmieniaj bez migracji danych. Ustaw
 CW_GAME_VERSION zgodnie z **ScoreClient.GAME_VERSION w Androidzie**
 (obecnie 0.4.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
 Klucz ten jest również w APK, a więc **nie zapewnia mocnego uwierzytelnienia**.
-Ta wersja API pozwala każdemu posiadającemu klucz na żądanie usunięcia
-dowolnego UUID; przed dużą skalą konieczny będzie silniejszy dowód własności.
+Żądanie usunięcia obcego UUID jest odrzucane bez powiązanego z nim
+sekretu instalacji. Istniejące konta wiążą sekret przy pierwszym nowym wyniku.
 
 ~~~bash
 docker compose up -d --build
@@ -87,12 +90,22 @@ curl -f https://scores.twojadomena.pl/healthz
 
 Caddy automatycznie wystawia i odnawia certyfikat TLS przy poprawnym DNS
 i otwartych portach 80/443. Port 8080 pozostaje niewidoczny z Internetu.
-Caddy ogranicza rozmiar body do 1 MB. **Stockowy Caddy nie ma w tym
-przykładzie per-IP rate limit**. Serwer przechowuje limity IP w pamięci,
-ale za reverse proxy widzi adres proxy, nie oryginalnego klienta, więc przy
-większym ruchu limit będzie współdzielony. Przed wzrostem liczby graczy
-wprowadź na zaufanej warstwie proxy realny limit per-IP i bezpieczną konfigurację
-źródłowego adresu; nie ufaj dowolnemu X-Forwarded-For.
+Caddy ogranicza body do 1 MB i **nadpisuje X-Forwarded-For** rzeczywistym IP
+połączenia TLS. Backend ufa XFF wyłącznie od adresów `CW_TRUSTED_PROXY_IPS`.
+Domyślnie zaufany jest tylko `127.0.0.1`, ale przy Docker Compose backend
+może widzieć Caddy jako IP bramy bridge. Sprawdź rzeczywistą bramę:
+
+```bash
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' "$(docker compose ps -q leaderboard)"
+# Jeżeli adres to np. 172.19.0.1, dopisz w .env:
+# CW_TRUSTED_PROXY_IPS=127.0.0.1,172.19.0.1
+docker compose up -d --force-recreate
+```
+
+Dodaj **wyłącznie zweryfikowany adres proxy**, nigdy publiczny IP ani CIDR,
+a port 8080 pozostaw przypięty do loopback hosta. Przetestuj niezależne limity
+dwóch adresów klienta i odporność na podrobiony XFF. Stockowy Caddy nie
+ma tu osobnego rate limitera; dla ochrony DDoS dodaj ograniczenie na brzegu.
 
 ## 5. Podłączenie Androida
 
@@ -188,7 +201,10 @@ do zakończenia wysyłki. Nie usuwaj pamięci aplikacji ani jej nie odinstalowuj
 jeśli żądanie jest jeszcze niewysłane.
 
 Endpoint POST /v1/player/delete usuwa ze wszystkich plansz wyniki i pseudonim,
-idempotentnie. Po stronie serwera nie ma odrębnego konta ani adresu e-mail.
+idempotentnie, **tylko gdy podano sekret instalacji przypisany do UUID**.
+Nowa tożsamość nadaje nowy UUID i sekret, a w kolejce usunięć zachowuje
+poprzedni sekret. Stare rekordy bez sekretu wymagają pierwszego zweryfikowanego
+wyniku przed usunięciem. Po stronie serwera nie ma odrębnego konta ani adresu e-mail.
 Dane Google Play Games, lokalny profil i systemowe kopie Androida **nie są
 usuwane przez tę operację**. Wnioski i prośby o potwierdzenie usunięcia można
 kierować na adres kontaktowy wydawcy z opublikowanej polityki prywatności.
@@ -221,7 +237,14 @@ sudo bash /opt/century-war/server/backup-sqlite.sh
 docker compose run --rm --no-deps -T leaderboard admin help
 ~~~
 
-**Krok 2.** Obejrzyj ostatnie wyniki. Zwrócone kolumny: UUID, plansza,
+**Krok 2.** Sprawdź zgłoszenia pseudonimów (`POST /v1/report` z publicznym ID).
+Administrator widzi UUID, publiczne ID, nick, powód i datę; gracze nie otrzymują UUID.
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin reports 50
+~~~
+
+**Krok 2a.** Obejrzyj ostatnie wyniki. Zwrócone kolumny: UUID, plansza,
 day (liczba dni UTC od 1970-01-01), wynik, czas weryfikacji Unix,
 stan blokady i publiczny nick. Zapisz UUID i planszę dokładnie z listy:
 
@@ -268,12 +291,10 @@ serwera; nie wymagają klucza HMAC i nie uruchamiają serwera HTTP. Nie
 wykonuj ich na kopii .db pobranej zwykłym cp przy aktywnym WAL.
 Błędny UUID albo plansza nie wykonują operacji.
 
-**Usunięcie danych przez gracza ma pierwszeństwo przed blokadą:** endpoint
-POST /v1/player/delete usuwa także wpis UUID z tabeli blokad, aby usunąć
-wszystkie dane tego identyfikatora. To oznacza, że przy obecnym systemie
-UUID bez silnego uwierzytelniania gracz może ominąć blokadę, generując nowe
-UUID albo żądając usunięcia danych i przesyłając nowy wynik. Do ochrony
-przed trwałymi nadużyciami potrzebny będzie mocniejszy mechanizm tożsamości.
+**Blokada jest zachowywana:** /v1/player/delete usuwa wyniki i nick,
+ale nie usuwa rekordu blokady UUID. Historyczny UUID może być przejęty
+przed pierwszym przypisaniem sekretu (migracja ze starej bazy);
+operator rozstrzyga spory ręcznie.
 
 ## 10. Codzienna obsługa
 
@@ -283,6 +304,7 @@ przed trwałymi nadużyciami potrzebny będzie mocniejszy mechanizm tożsamości
 - sudo ls -lt /var/backups/century-war/ — sprawdź, czy powstają nowe kopie.
 - sudo systemctl status caddy — certyfikat i proxy.
 
-**Ograniczenia produkcyjne:** jedna instancja SQLite, rate limit proxy,
-sekret wyodrębnialny z APK (także przy usuwaniu danych), brak pełnego
-uwierzytelniania własności UUID i konieczność zarządzania retencją backupów.
+**Ograniczenia produkcyjne:** jedna instancja SQLite, ochrona DDoS na proxy,
+ryzyko utraty sekretu instalacji wraz z profilem, możliwość przejęcia znanego
+historycznego UUID przed przypisaniem sekretu i retencja backupów.
+Przed startem wykonaj testy /score, /around, /report i /player/delete.

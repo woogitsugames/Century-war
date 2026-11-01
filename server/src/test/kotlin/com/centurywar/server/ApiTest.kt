@@ -30,9 +30,12 @@ class ApiTest {
     private val now = 1_800_000_000_000L
     private val secret = "test-secret-at-least-32-characters-long!".toByteArray()
     private val json = Json
+    private val playerSecret = "a1".repeat(32)
 
-    private fun sign(method: String, uri: String, body: String, nonce: String, at: Long = now): String {
-        val msg = listOf((at / 1000L).toString(), nonce, method, uri, body).joinToString("\n")
+    private fun sign(method: String, uri: String, body: String, nonce: String,
+                     at: Long = now, install: String? = null): String {
+        val msg = listOf((at / 1000L).toString(), nonce, method, uri, body).joinToString("\n") +
+            (if (install != null) "\n" + install else "")
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret, "HmacSHA256"))
         return mac.doFinal(msg.toByteArray()).joinToString("") { "%02x".format(it.toInt() and 0xff) }
@@ -47,7 +50,8 @@ class ApiTest {
         val first = client.post("/v1/score") {
             header("X-CW-Timestamp", (now / 1000L).toString())
             header("X-CW-Nonce", nonce)
-            header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
+            header("X-CW-Player-Secret", playerSecret)
+            header("X-CW-Signature", sign("POST", "/v1/score", body, nonce, install = playerSecret))
             setBody(body)
         }
         assertEquals(HttpStatusCode.OK, first.status)
@@ -61,17 +65,20 @@ class ApiTest {
             header("X-CW-Signature", sign("GET", path, "", getNonce))
         }
         assertEquals(HttpStatusCode.OK, top.status)
-        assertTrue(top.bodyAsText().contains(input.player))
+        assertFalse(top.bodyAsText().contains(input.player))
+        assertTrue(top.bodyAsText().contains(store.publicIdFor(input.player)!!))
 
         val aroundPath = "/v1/around?board=endless&period=all&player=" + input.player
         val aroundNonce = UUID.randomUUID().toString()
         val around = client.get(aroundPath) {
             header("X-CW-Timestamp", (now / 1000L).toString())
             header("X-CW-Nonce", aroundNonce)
-            header("X-CW-Signature", sign("GET", aroundPath, "", aroundNonce))
+            header("X-CW-Player-Secret", playerSecret)
+            header("X-CW-Signature", sign("GET", aroundPath, "", aroundNonce, install = playerSecret))
         }
         assertEquals(HttpStatusCode.OK, around.status)
-        assertTrue(around.bodyAsText().contains(input.player))
+        assertFalse(around.bodyAsText().contains(input.player))
+        assertTrue(around.bodyAsText().contains(store.publicIdFor(input.player)!!))
         store.close()
     }
 
@@ -100,7 +107,8 @@ class ApiTest {
         suspend fun send(): HttpStatusCode = client.post("/v1/score") {
             header("X-CW-Timestamp", (now / 1000L).toString())
             header("X-CW-Nonce", nonce)
-            header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
+            header("X-CW-Player-Secret", playerSecret)
+            header("X-CW-Signature", sign("POST", "/v1/score", body, nonce, install = playerSecret))
             setBody(body)
         }.status
         assertEquals(HttpStatusCode.UnprocessableEntity, send())
@@ -117,7 +125,8 @@ class ApiTest {
             return client.post("/v1/score") {
                 header("X-CW-Timestamp", (now / 1000L).toString())
                 header("X-CW-Nonce", nonce)
-                header("X-CW-Signature", sign("POST", "/v1/score", body, nonce))
+                header("X-CW-Player-Secret", playerSecret)
+            header("X-CW-Signature", sign("POST", "/v1/score", body, nonce, install = playerSecret))
                 setBody(body)
             }.status
         }

@@ -27,6 +27,7 @@ SDK 36. Aby kompilować sam serwer bez instalowania SDK Android:
 
 ```bash
 export CW_HMAC_KEY="$(openssl rand -hex 32)"
+export CW_PUBLIC_ID_KEY="$(openssl rand -hex 32)" # niezależny, tylko na serwerze
 export CW_DATABASE_PATH="./data/leaderboards.db"
 export CW_GAME_VERSION="0.4.0"
 ./gradlew :server:test -PserverOnly=true --console=plain
@@ -44,13 +45,17 @@ Testy kompatybilności aplikacji:
 
 ### API v1
 
-Każde żądanie, **również GET**, musi mieć nagłówki:
+Podpisy wymagane dla `/v1/score`, `/v1/player/delete`, `/v1/top`, `/v1/around`.
+`/v1/report` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
+
+Każde podpisane żądanie musi mieć nagłówki:
 
 | Nagłówek | Wartość |
 |---|---|
 | `X-CW-Timestamp` | czas UTC, sekundy Unix, dopuszczalna różnica ±300 s |
 | `X-CW-Nonce` | nowe UUID na każde żądanie |
 | `X-CW-Signature` | HMAC-SHA256 lowercase hex (64 znaki) |
+| `X-CW-Player-Secret` | 64 małe znaki hex = 32 losowe bajty; dla score/delete/around |
 
 Klucz: `CW_HMAC_KEY` (co najmniej 32 bajty UTF-8, podawany przez środowisko).
 Podpis powstaje z **dokładnych bajtów tekstu UTF-8**:
@@ -61,7 +66,9 @@ timestamp\nnonce\nMETHOD\n/uri?query=...\nbody
 
 Elementy oddzielone pojedynczym LF, bez dodatkowego LF na końcu; body jest
 pustym ciągiem dla GET. URI zawiera query string w takiej kolejności, w jakiej
-zostanie wysłany. Metoda to `GET` albo `POST`.
+zostanie wysłany. Metoda to `GET` albo `POST`. W `score`, `player/delete`
+oraz `around` podpis zawiera dodatkowy składnik na końcu:
+`timestamp\\nnonce\\nMETHOD\\nURI\\nbody\\ninstallationSecret`.
 
 #### POST /v1/player/delete
 
@@ -73,6 +80,8 @@ Podpis obejmuje **dokładny** URI /v1/player/delete i body (UTF-8):
 ~~~
 
 Odpowiedź HTTP 200: {"deleted":true}, również gdy UUID nie był w bazie.
+Błędny sekret właściciela: HTTP 403. Stary gracz bez zapisanego sekretu
+musi najpierw go przypisać pierwszym zweryfikowanym wynikiem.
 Jedna transakcja usuwa wszystkie wyniki (wszystkie plansze i dni) i rekord
 gracza z pseudonimem, a limiter w pamięci zapomina licznik tego UUID.
 Błędny podpis / ponowny nonce: 401; nieprawidłowy UUID v4: 400.
@@ -160,15 +169,27 @@ ze wszystkich zakwalifikowanych dni. Przesłanie słabszego wyniku daje
 `all` (bez daty). `board`: `daily`, `endless`, `skirmish`,
 `campaign_0` ... `campaign_35`, `weekly_<numer_tygodnia>`. Odpowiedź zawiera pierwsze 50 pozycji.
 Remisy rozstrzyga leksykograficznie UUID (stabilna kolejność).
+Odpowiedź nigdy nie zawiera UUID: `entries[].player` to 24-znakowy
+HMAC-SHA256 z UUID i prywatnego `CW_PUBLIC_ID_KEY` (12 bajtów).
 
 #### GET /v1/around?board=endless&period=all&player=<uuid>
 
 Zwraca do 3 miejsc przed i 3 za wskazanym graczem, wraz z nim samym.
+Wymaga `X-CW-Player-Secret` i jego uwzględnienia w HMAC; cudzy/niezarejestrowany
+sekret daje HTTP 403. Odpowiedź podaje wyłącznie publiczne ID (`self` i `player`).
 Brak wyniku gracza daje pustą listę. JSON:
 
 ```json
-{"board":"endless","period":"all","entries":[{"rank":1,"player":"a16036d5-800a-4898-aea3-11b6548de7b4","nick":"Gracz_12","score":257}]}
+{"board":"endless","period":"all","entries":[{"rank":1,"player":"57a837e65366cc8821abf429","nick":"Gracz_12","score":257}],"self":"57a837e65366cc8821abf429"}
 ```
+
+#### POST /v1/report
+
+Zgłoszenie obraźliwego pseudonimu: `{"publicId":"57a837e65366cc8821abf429","reason":"offensive"}`.
+Body maks. 512 B; powód: `offensive`, `impersonation`, `other`. Odpowiedź:
+202 `{"accepted":true}`, 404 jeśli brak ID, 429 po przekroczeniu limitu.
+W SQLite zapisywane są UUID, publiczne ID, publiczny nick, powód i czas raportu.
+Wgląd tylko administracyjnie: `server admin reports [limit]`.
 
 ### Rozszerzenie protokołu 0.2.0
 
@@ -198,11 +219,12 @@ Brak wyniku gracza daje pustą listę. JSON:
 
 ### Bezpieczeństwo i ograniczenia
 
-- HMAC **nie jest silnym uwierzytelnieniem** w aplikacji mobilnej: klucz da
-  się wyodrębnić z APK. Znajomość sekretu pozwala podszyć się pod cudzy UUID.
-  To **weryfikacja możliwego przebiegu**, a nie dowód uczciwego gracza.
-  Do produkcji rozważ Google Play Integrity i token wydawany przez serwer
-  per instalacja / sesja, wraz z serwerowym seedem i ograniczeniem prób.
+- Sam klucz HMAC w APK nie stanowi uwierzytelnienia właściciela UUID.
+  Operacje na kontach wymagają dodatkowego sekretu instalacji (32 bajty),
+  którego skrót SHA-256 zapisuje serwer. Znajomość klucza z APK nie wystarcza
+  do przejęcia powiązanego wpisu. Sekret może jednak zostać skradziony
+  z urządzenia, a historyczny UUID może zostać przejęty przed pierwszym
+  przypisaniem sekretu. Rozważ Play Integrity i powiązanie z kontem.
 - Dowolny klient może generować wiele legalnych powtórek offline. Serwer
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
   Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.
@@ -233,12 +255,12 @@ Brak wyniku gracza daje pustą listę. JSON:
 ## Moderacja administracyjna
 
 Bez panelu WWW: polecenia w tym samym programie `server admin ...` to
-`recent [limit]`, `delete-score UUID board day`, `block UUID`,
+`recent [limit]`, `reports [limit]`, `delete-score UUID board day`, `block UUID`,
 `unblock UUID` i `export-csv` (stdout). Na VPS uruchom je przez
 `docker compose run --rm --no-deps -T leaderboard admin ...`.
 Blokady ukrywają istniejące wyniki i zatrzymują nowe zgłoszenia, bez
 zmiany schematu API. Usunięcie danych z `/v1/player/delete` usuwa
-również wpis blokady dla danego UUID. Pełne przykłady, kopie i uprawnienia
+wyniki i nick, **nie usuwa rekordu blokady UUID**. Pełne przykłady, kopie i uprawnienia
 w instrukcji dla właściciela poniżej.
 
 ## Wdrożenie: Docker Compose / VPS
@@ -249,7 +271,7 @@ Po zainstalowaniu Docker Compose v2, w katalogu głównym projektu:
 
 ~~~bash
 cp .env.example .env
-# Zamień CW_HMAC_KEY na losowy wynik: openssl rand -hex 32
+# Wygeneruj osobno CW_HMAC_KEY i CW_PUBLIC_ID_KEY: openssl rand -hex 32
 chmod 600 .env
 docker compose up -d --build
 docker compose ps
@@ -261,7 +283,8 @@ Kopia bazy: bash server/backup-sqlite.sh (poza wolumenem, domyślnie
 /var/backups/century-war). **Nigdy nie uruchamiaj docker compose down -v**:
 usuwa trwały wolumen z bazą. Wdrażaj tylko jedną instancję serwera.
 
-Przy pierwszym starcie ze starą bazą migracja tworzy schema_version=1
+Przy pierwszym starcie ze starą bazą migracja v1 uzupełnia plansze, a v2
+wprowadza sekret właściciela, publiczne ID i zgłoszenia. Migracja v1
 i przenosi campaign_8..31 na campaign_12..35. Przenumerowanie jest
 transakcyjne i **nie wykonuje się ponownie** po restarcie. Zrób kopię starej
 bazy przed uruchomieniem i sprawdź, czy używa starych numerów etapów.
@@ -273,5 +296,38 @@ i błąd startu, a nie ciche nadpisanie.
 `./gradlew :server:test` uruchamia testy prawdziwej powtórki,
 odrzucenia sfałszowanego wyniku i niedozwolonej komendy,
 HMAC/nonce, endpointów oraz polityki jednego zgłoszenia daily.
-Workflow w `.github/workflows/server.yml` uruchamia również budowę
-aplikacji i test deterministyczności `BattleSimTest`.
+Workflow w `.github/workflows/server.yml` uruchamia testy serwera i budowę obrazu.
+Testy Androida i symulacji uruchamia osobny workflow `android.yml`.
+
+
+## Uwierzytelnianie, proxy i limity (zlecenie 80)
+
+- `CW_HMAC_KEY` może być wyodrębniony z APK. Operacje na własnym koncie wymagają
+  niezależnego, wygenerowanego przez `SecureRandom` sekretu 32 B. Aplikacja
+  zapisuje go lokalnie w profilu, nigdy w chmurowym zapisie PGS. W żądaniu
+  `/v1/score`, `/v1/player/delete` i `/v1/around` dodatkowo przesyła nagłówek
+  `X-CW-Player-Secret` (64 małe znaki hex).
+- Dla tych trzech endpointów treść podpisywana HMAC kończy się dodatkowym LF
+  i dokładną wartością nagłówka sekretu: `timestamp\\nnonce\\nMETHOD\\nURI\\nbody\\nsecretHex`.
+  `GET /v1/top` nadal używa starego podpisu bez sekretu. Serwer zapisuje
+  wyłącznie SHA-256 z **surowych 32 bajtów** sekretu, nie nagłówka ASCII.
+  Próba nadpisania nicka lub wyniku innym sekretem kończy się HTTP 403.
+- Pierwszy zweryfikowany wynik z UUID o niezapisanym sekrecie przypisuje sekret
+  do konta (migracja). Historyczny UUID **może zostać przejęty przed pierwszym
+  przypisaniem**, jeżeli ktoś znał go ze starych odpowiedzi API. Nie istnieje
+  możliwość wiarygodnego potwierdzenia historycznej własności bez wcześniejszego
+  poświadczenia. Po migracji samo poznanie UUID i klucza APK nie wystarcza.
+- `CW_PUBLIC_ID_KEY` to osobny 32-bajtowy klucz serwera, **nigdy nie trafia
+  do aplikacji**. Używamy HMAC-SHA256(UUID), pierwszych 12 bajtów zapisanych
+  jako 24-znakowy hex. Nie rotuj tego klucza bez planu migracji bazy.
+- `CW_TRUSTED_PROXY_IPS` (lista dokładnych adresów po przecinku, domyślnie
+  `127.0.0.1`) określa, skąd akceptować X-Forwarded-For. Caddy musi
+  **nadpisywać** XFF wartością `{remote_host}`. Docker może przedstawiać
+  Caddy pod adresem bramy bridge; w takim przypadku dodaj **wyłącznie**
+  zweryfikowany IP bramy do tej listy.
+- Limity na minutę: `CW_RATE_POST_IP=20`, `CW_RATE_DELETE_IP=20`,
+  `CW_RATE_READ_IP=120`, `CW_RATE_REPORT_IP=5`, `CW_RATE_POST_PLAYER=6`.
+  Limity są w pamięci instancji; pozostaw również ochronę na brzegu proxy.
+- Weryfikacja powtórek: 2 pracowników, maksymalnie 16 oczekujących.
+  Brak miejsca albo timeout: HTTP 503, `Retry-After: 30`.
+  Nie zmieniano zasad `Replay.verify`.
