@@ -131,6 +131,17 @@ class LeftHandedHudTest {
     }
 
     @Test
+    fun twoRowActionsStayAtLeftOnMediumWidth() {
+        val g = game(1000, 1280)
+        g.profile.leftHandedHud = true
+        val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 113L, 1f))
+        g.setScreen(s)
+        assertEquals(g.insetL + 6f * g.ui.dp, button(s, 15).r.left, 0.01f)
+        assertTrue(button(s, 0).r.left > button(s, 10).r.left)
+        assertControlsDoNotOverlap(s, g)
+    }
+
+    @Test
     fun accessibilitySwitchUpdatesProfile() {
         val g = game(720, 1280)
         val s = AccessibilityScreen(g)
