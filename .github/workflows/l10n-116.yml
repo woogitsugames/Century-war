@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: l10n116-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   l10n:
     name: Kompilacja, testy i zrzuty 720p
