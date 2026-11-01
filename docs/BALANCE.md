@@ -709,3 +709,5 @@ wzorce kampanii używają etapów 1 i 29, a wzorce Endless/tygodnia nie dochodz�
 **Testy:** poprawiono dwa testy nieaktualne po 108 (`Doctrine69SnapshotTest`
 oczekiwał `BattleSnapshot.VERSION` 13 zamiast 14; `EndlessExpansion71Test`
 liczył wszystkie karty za 34. pozycją zamiast ośmiu kart zlecenia 71).
+
+- 2026-11-01 — regeneracja złotych powtórek: 122 ARMORED_FOE w Endless.
