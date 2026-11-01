@@ -12,7 +12,7 @@ class DailyTest {
         for (day in days) {
             val rng = Rng(day * 7919L + 17L)
             val modifiers = HashSet<Modifier>()
-            val pool = Modifier.values()
+            val pool = Modifier.values().copyOfRange(0, Modifier.FOG_OF_WAR.ordinal + 1)
             val count = 2 + rng.nextInt(2)
             while (modifiers.size < count) modifiers.add(pool[rng.nextInt(pool.size)])
             val rolledStart = rng.nextInt(3)
@@ -67,4 +67,22 @@ class DailyTest {
         assertEquals(Daily.RELEASE_DAY - 1L, previous.seed)
         assertEquals(Daily.RELEASE_DAY, first.seed)
     }
+    @Test fun newModifiersAppearOnlyFromReleaseDay() {
+        val newcomers = setOf(
+            Modifier.SHORT_DAY, Modifier.VETERANS,
+            Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES,
+        )
+        for (day in Daily.RELEASE_DAY - 500L until Daily.RELEASE_DAY) {
+            val cfg = Daily.config(day, Bonuses())
+            assertTrue("Dzień historyczny $day", cfg.modifiers.none { it in newcomers })
+        }
+        val observed = mutableSetOf<Modifier>()
+        for (day in Daily.RELEASE_DAY until Daily.RELEASE_DAY + 600L) {
+            val cfg = Daily.config(day, Bonuses())
+            observed.addAll(cfg.modifiers.intersect(newcomers))
+            assertEquals(cfg.modifiers, Daily.config(day, Bonuses()).modifiers)
+        }
+        assertEquals(newcomers, observed)
+    }
+
 }
