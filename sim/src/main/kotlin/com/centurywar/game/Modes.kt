@@ -28,6 +28,10 @@ enum class Modifier(val key: String) {
     SLOW_XP("m_slowxp"),
     ARMORED_FOE("m_armored"),
     FOG_OF_WAR("m_fog"),
+    SHORT_DAY("m_shortday"),
+    VETERANS("m_veterans"),
+    EXPENSIVE_TOWERS("m_heavytowers"),
+    MERCENARIES("m_mercenaries"),
 }
 
 /** Warunki atmosferyczne mają osobny model, aby nie zmieniać losowania modyfikatorów dnia. */
@@ -196,6 +200,10 @@ object Weekly {
         Modifier.RANGED_HORDE, Modifier.GLASS_CANNON, Modifier.RICH_START,
         Modifier.SLOW_XP, Modifier.ARMORED_FOE, Modifier.FOG_OF_WAR,
     )
+    // Krótki dzień dotyczy bitew z dwiema bazami, nie fal Endless.
+    private val RELEASE_MODIFIERS = MODIFIERS + arrayOf(
+        Modifier.VETERANS, Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES,
+    )
     private val START_CARDS = arrayOf(
         EndlessCard.ECONOMY, EndlessCard.BULWARK, EndlessCard.FURY,
         EndlessCard.VETERAN, EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
@@ -216,8 +224,9 @@ object Weekly {
         val rng = Rng(seed)
         val start = rng.nextInt(6)
         val max = minOf(Defs.ERA_COUNT - 1, start + 2 + rng.nextInt(2))
+        val pool = if (week >= weekNumber(Daily.RELEASE_DAY)) RELEASE_MODIFIERS else MODIFIERS
         val mods = linkedSetOf<Modifier>()
-        while (mods.size < 2) mods.add(MODIFIERS[rng.nextInt(MODIFIERS.size)])
+        while (mods.size < 2) mods.add(pool[rng.nextInt(pool.size)])
         val card = START_CARDS[rng.nextInt(START_CARDS.size)]
         return BattleConfig(
             mode = Mode.ENDLESS, seed = seed, aiPower = 1f,
@@ -228,6 +237,13 @@ object Weekly {
 }
 
 object Daily {
+    // Kolejność historycznych modyfikatorów jest częścią algorytmu wyzwania dnia.
+    private val LEGACY_MODIFIERS = arrayOf(
+        Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES, Modifier.FAST_UNITS,
+        Modifier.NO_TURRETS, Modifier.RANGED_HORDE, Modifier.GLASS_CANNON,
+        Modifier.RICH_START, Modifier.SLOW_XP, Modifier.ARMORED_FOE, Modifier.FOG_OF_WAR,
+    )
+
     /** Pierwszy dzień UTC pełnej zawartości wyzwania dnia (żelazo, warianty i pogoda). */
     // Przed pierwszym wydaniem ustaw na faktyczny dzień publikacji; potem NIGDY nie zmieniaj.
     // 21153 (2027-12-01 UTC) to wyłącznie data zastępcza do czasu ustalenia premiery.
@@ -243,7 +259,7 @@ object Daily {
 
     private fun generatedConfig(day: Long, historical: Boolean): BattleConfig {
         val rng = Rng(day * 7919L + 17L)
-        val all = Modifier.values()
+        val all = if (historical) LEGACY_MODIFIERS else Modifier.values()
         val mods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
