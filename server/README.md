@@ -272,36 +272,36 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
 
 ## Zdrowie, metryki i kopie zapasowe
 
-**Dostępność:** \`GET /health\` to lekki, publiczny test SQLite (200 \`ok\`, a przy błędzie
-503 \`unavailable\`). Starszy adres \`/healthz\` nadal działa. Healthcheck Compose wywołuje
-\`/health\` co 30 s; można sprawdzić go przez \`docker compose ps\` i:
+**Dostępność:** `GET /health` to lekki, publiczny test SQLite (200 `ok`, a przy błędzie
+503 `unavailable`). Starszy adres `/healthz` nadal działa. Healthcheck Compose wywołuje
+`/health` co 30 s; można sprawdzić go przez `docker compose ps` i:
 
 ~~~bash
 curl -fsS http://127.0.0.1:8080/health
 ~~~
 
-**Metryki (opcjonalne):** wygeneruj osobny klucz \`openssl rand -hex 32\` i ustaw
-\`CW_METRICS_TOKEN\` w prywatnym pliku \`.env\`, a potem wykonaj \`docker compose up -d\`.
-Pusta wartość wyłącza \`/metrics\` (404); skonfigurowana wymaga nagłówka
-\`Authorization: Bearer <token>\` (brak lub zły token: 401). Przykład z serwera VPS:
+**Metryki (opcjonalne):** wygeneruj osobny klucz `openssl rand -hex 32` i ustaw
+`CW_METRICS_TOKEN` w prywatnym pliku `.env`, a potem wykonaj `docker compose up -d`.
+Pusta wartość wyłącza `/metrics` (404); skonfigurowana wymaga nagłówka
+`Authorization: Bearer <token>` (brak lub zły token: 401). Przykład z serwera VPS:
 
 ~~~bash
 curl -fsS -H "Authorization: Bearer $CW_METRICS_TOKEN" \
   http://127.0.0.1:8080/metrics
 ~~~
 
-Odpowiedź JSON zawiera \`scoreCount\` (wszystkie wiersze \`scores\` w SQLite, także
-zablokowane), \`verificationAccepted\`, \`verificationRejected\` (HTTP 422 po
-niepoprawnej powtórce), \`verificationUnavailable\` (kolejka pełna/timeout),
-\`verificationSamples\`, \`verificationMeanMs\`, \`verificationMaxMs\` i
-\`uptimeSeconds\`. Czasy mierzą samą funkcję weryfikacji, nie oczekiwanie
+Odpowiedź JSON zawiera `scoreCount` (wszystkie wiersze `scores` w SQLite, także
+zablokowane), `verificationAccepted`, `verificationRejected` (HTTP 422 po
+niepoprawnej powtórce), `verificationUnavailable` (kolejka pełna/timeout),
+`verificationSamples`, `verificationMeanMs`, `verificationMaxMs` i
+`uptimeSeconds`. Czasy mierzą samą funkcję weryfikacji, nie oczekiwanie
 w kolejce. Liczniki weryfikacji są pamięciowe i zerują się przy restarcie;
-\`scoreCount\` jest odczytywane bezpośrednio z bazy. Nie udostępniaj tokenu w APK,
+`scoreCount` jest odczytywane bezpośrednio z bazy. Nie udostępniaj tokenu w APK,
 logach ani repozytorium; endpointu nie wystawiaj publicznie przez reverse proxy
 bez kontroli dostępu.
 
 **Kopia online:** nie zatrzymuj działającego serwera. Skrypt wykonuje SQLite
-\`VACUUM INTO\` na osobnym połączeniu, sprawdza integralność kopii, przenosi plik
+`VACUUM INTO` na osobnym połączeniu, sprawdza integralność kopii, przenosi plik
 poza wolumen Dockera i dopiero po udanym zapisie usuwa kopie starsze niż
 domyślne 14 dni. Nazwy zawierają czas UTC i PID, uprawnienia plików: 0600.
 
@@ -314,8 +314,8 @@ sudo env CW_BACKUP_DIR=/var/backups/century-war \
 
 Zaplanuj skrypt w cron/systemd timer, codziennie po godzinach szczytu.
 Utrzymuj też **kopię poza VPS**: backup na tym samym dysku nie zabezpiecza
-przed awarią dysku. Rotacja dotyczy tylko plików \`cw-backup-*.sqlite\`
-w katalogu \`CW_BACKUP_DIR\`; katalog \`cw-data\` nie jest miejscem docelowym
+przed awarią dysku. Rotacja dotyczy tylko plików `cw-backup-*.sqlite`
+w katalogu `CW_BACKUP_DIR`; katalog `cw-data` nie jest miejscem docelowym
 trwałych kopii. Kopię można wykonać także przy aktywnym trybie WAL.
 
 **Przywracanie:** jest operacją offline. Zatrzymaj usługę, przekaż plik
@@ -330,18 +330,18 @@ docker compose up -d leaderboard
 curl -fsS http://127.0.0.1:8080/health
 ~~~
 
-Podmień nazwę na faktyczną kopię; polecenie ze znakiem \`<\` czyta
+Podmień nazwę na faktyczną kopię; polecenie ze znakiem `<` czyta
 lokalny plik na serwerze, więc konto użytkownika musi mieć prawo jego odczytu.
-Alternatywa bez strumienia: \`server admin restore /ścieżka/kopia.sqlite\`,
+Alternatywa bez strumienia: `server admin restore /ścieżka/kopia.sqlite`,
 jeśli plik jest dostępny wewnątrz uruchomionego kontenera administracyjnego.
-Tryb \`restore\` wchodzi do programu **przed** otwarciem połączenia SQLite.
-Blokada pliku \`leaderboards.db.server.lock\` uniemożliwia przywrócenie,
+Tryb `restore` wchodzi do programu **przed** otwarciem połączenia SQLite.
+Blokada pliku `leaderboards.db.server.lock` uniemożliwia przywrócenie,
 gdy główny proces serwera działa (plik blokady może pozostać po restarcie,
 ale blokada systemowa zostaje zwolniona). Uszkodzona lub obca baza jest
-odrzucana przez \`PRAGMA integrity_check\` i sprawdzenie schematu.
+odrzucana przez `PRAGMA integrity_check` i sprawdzenie schematu.
 
 Przy przywróceniu poprzedni plik bazy oraz ewentualne pliki WAL/SHM
-zostają zachowane w \`cw-pre-restore-*\` na wolumenie jako kopia ratunkowa.
+zostają zachowane w `cw-pre-restore-*` na wolumenie jako kopia ratunkowa.
 Po weryfikacji działania nowej bazy można je ręcznie usunąć. Przywrócenie
 cofa wszystkie operacje wykonane po momencie utworzenia kopii, w tym
 usunięcia danych przez użytkowników. Taką operację należy odnotować
