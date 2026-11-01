@@ -808,6 +808,12 @@ class ScreenshotTest {
             repeat(210) { g.frame(clear, 1f / 60f) }
             g.setScreen(ResearchScreen(g))
             shot(g, tag + "_hint_research", 1)
+            g.setScreen(MissionsScreen(g))
+            shot(g, tag + "_hint_missions", 1)
+            g.setScreen(ModeScreen(g, Mode.DAILY))
+            shot(g, tag + "_hint_daily_menu", 1)
+            g.setScreen(ModeScreen(g, Mode.ENDLESS))
+            shot(g, tag + "_hint_endless_menu", 1)
 
             val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 560L, 1f))
             g.setScreen(bs)
@@ -825,6 +831,17 @@ class ScreenshotTest {
             capture(hints, HintOverlay.UPGRADE, "hint_upgrade", "upgrade")
             b.player.aliveCount = b.player.cap
             capture(hints, HintOverlay.CAP, "hint_cap", "armory")
+            capture(hints, HintOverlay.RALLY, "hint_rally", "rally")
+            capture(hints, HintOverlay.HOLD, "hint_hold", "hold")
+            capture(hints, HintOverlay.VETERAN, "hint_veteran", "veteran")
+            capture(hints, HintOverlay.MODIFIERS, "hint_modifiers", "modifiers")
+            capture(hints, HintOverlay.FOG, "hint_fog", "fog")
+            capture(hints, HintOverlay.OLD_TURRET, "hint_old_turret", "old_turret")
+
+            val dailyScreen = BattleScreen(g, BattleConfig(Mode.DAILY, 565L, 1f))
+            g.setScreen(dailyScreen)
+            val dailyHint = field(dailyScreen, "hints").get(dailyScreen) as HintOverlay
+            capture(dailyHint, HintOverlay.DAILY, "hint_daily_battle", "daily_battle")
 
             val weatherScreen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 562L, 1f,
                 weather = Weather.WIND))
@@ -845,6 +862,7 @@ class ScreenshotTest {
             eb.wave = 4
             eb.waveTimer = 5f
             capture(eh, HintOverlay.CARD, "hint_card", "endless_card")
+            capture(eh, HintOverlay.THEME, "hint_theme", "endless_theme")
             eb.wave = 10
             eb.units[0].active = true
             eb.units[0].dying = -1f

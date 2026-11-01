@@ -362,6 +362,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
             for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f)
             ui.button(c, start, 20f)
+            hints.draw(c)
             return
         }
 

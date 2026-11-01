@@ -108,12 +108,20 @@ class HintOverlay(
     private var upgradeIndex = 0
     private var screenFocus: RectF? = null
     private var body = ""
-    private var wrapWidth = -1f
-    private val lines = arrayOfNulls<String>(2)
+    private val lines = arrayOfNulls<String>(24)
     private var lineCount = 0
+    private var compact = false
+    private var hintWidth = 0f
+    private var hintHeight = 0f
+    private var hintFont = 12.5f
+    private var layoutDp = -1f
+    private var layoutScale = -1f
+    private var layoutSafeWidth = -1f
     private val panel = RectF()
+    private val connector = RectF()
     private val highlight = RectF()
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val pointer = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
     /** Wyłączenie i wszystkie stany modalne ukrywają dymek, nie zatrzymując bitwy. */
     fun update(dt: Float, blocked: Boolean = false) {
@@ -123,6 +131,7 @@ class HintOverlay(
         if (activeId >= 0) {
             elapsed += dt
             if (suppressed || !g.profile.hintsEnabled || elapsed >= DISPLAY_TIME) dismiss()
+            else prepareLayout()
         }
         if (b == null) return
         if (suppressed || activeId >= 0 || !g.profile.hintsEnabled || b.over) return
@@ -192,7 +201,7 @@ class HintOverlay(
         if (!g.profile.markHintSeen(id)) return
         activeId = id
         elapsed = 0f
-        wrapWidth = -1f
+        layoutDp = -1f
         lineCount = 0
         okBtn.label = L["hint_ok"]
         okBtn.visible = true
@@ -201,6 +210,49 @@ class HintOverlay(
             BOSS -> L[if (battle?.currentBoss()?.bossKind == 2) "hint_boss_aura" else key]
             MODIFIERS -> modifierDescription()
             else -> L[key]
+        }
+        prepareLayout()
+    }
+
+    /**
+     * Szerokość zależy od realnego tekstu. Łamanie i pomiary odbywają się przy
+     * pokazaniu wskazówki lub zmianie skali, nie podczas rysowania klatek.
+     */
+    private fun prepareLayout() {
+        val dp = g.ui.dp
+        val scale = g.ui.textScale
+        val safeW = g.width - g.insetL - g.insetR - 18f * dp
+        if (dp == layoutDp && scale == layoutScale && safeW == layoutSafeWidth) return
+        layoutDp = dp
+        layoutScale = scale
+        layoutSafeWidth = safeW
+        hintWidth = 0f
+        hintHeight = 0f
+        if (safeW < 110f * dp || body.isEmpty()) return
+
+        // Nad wariantami zostaje wąski pas pionowy; korzystamy z całej szerokości.
+        val maxW = if (activeId == VARIANT) safeW else min(600f * dp, safeW)
+        val buttonW = 51f * dp
+        val padding = 12f * dp
+        hintFont = 12.5f
+        var measured = g.ui.measure(body, hintFont)
+        // Rozszerzone opisy wariantów próbujemy najpierw zmieścić w jednym wierszu.
+        if (activeId == VARIANT && measured > maxW - buttonW - 3f * padding) {
+            hintFont = max(10.5f / scale, hintFont * (maxW - buttonW - 3f * padding) / measured)
+            measured = g.ui.measure(body, hintFont)
+        }
+        compact = measured <= maxW - buttonW - 3f * padding
+        if (compact) {
+            lines[0] = body
+            lineCount = 1
+            hintWidth = (measured + buttonW + 3f * padding).coerceIn(min(152f * dp, maxW), maxW)
+            hintHeight = max(36f, 21f + hintFont * scale) * dp
+        } else {
+            lineCount = HintFrame.wrapHintInto(g.ui, body, maxW - 2f * padding, hintFont, lines)
+            var longest = 0f
+            for (i in 0 until lineCount) longest = max(longest, g.ui.measure(lines[i] ?: "", hintFont))
+            hintWidth = (longest + 2f * padding).coerceIn(min(188f * dp, maxW), maxW)
+            hintHeight = (53f + hintFont * scale * 0.5f + 4f * scale + (lineCount - 1) * 17f * scale) * dp
         }
     }
 
@@ -255,50 +307,57 @@ class HintOverlay(
     }
 
     fun draw(c: Canvas) {
-        if (activeId < 0 || !g.profile.hintsEnabled) return
+        if (activeId < 0 || !g.profile.hintsEnabled || hintWidth <= 0f) return
         val dp = g.ui.dp
-        val sl = g.insetL + 9 * dp
-        val sr = g.width - g.insetR - 9 * dp
-        val st = g.insetT + 13 * dp
-        val sb = g.height - g.insetB - 9 * dp
-        val pw = min(610 * dp, sr - sl)
-        if (pw < 100 * dp) return
-        val ph = min(139 * dp, sb - st)
+        val safeL = g.insetL + 4f * dp
+        val safeR = g.width - g.insetR - 4f * dp
+        val safeT = g.insetT + 4f * dp
+        val safeB = g.height - g.insetB - 4f * dp
         val target = focus()
+        if (!HintFrame.place(target, safeL, safeT, safeR, safeB,
+                hintWidth, hintHeight, 4f * dp, panel, connector)) return
+
+        // Wskaźnik kończy się na krawędzi celu; nie przesłania samych przycisków.
         if (target != null && target.width() > 0f && target.height() > 0f) {
             highlight.set(target)
-            highlight.inset(-3 * dp, -3 * dp)
+            highlight.inset(-3f * dp, -3f * dp)
             border.color = Ui.OUTLINE
-            border.strokeWidth = 5 * dp
-            c.drawRoundRect(highlight, 9 * dp, 9 * dp, border)
+            border.strokeWidth = 5f * dp
+            c.drawRoundRect(highlight, 9f * dp, 9f * dp, border)
             border.color = Ui.GOLD
             border.strokeWidth = 2.5f * dp
-            c.drawRoundRect(highlight, 9 * dp, 9 * dp, border)
+            c.drawRoundRect(highlight, 9f * dp, 9f * dp, border)
+            pointer.color = Ui.GOLD
+            pointer.strokeWidth = 2.2f * dp
+            val x0 = connector.left
+            val y0 = connector.top
+            val x1 = connector.right
+            val y1 = connector.bottom
+            c.drawLine(x0, y0, x1, y1, pointer)
+            val head = 5f * dp
+            if (kotlin.math.abs(x1 - x0) > kotlin.math.abs(y1 - y0)) {
+                val dir = if (x1 > x0) 1f else -1f
+                c.drawLine(x1, y1, x1 - dir * head, y1 - head * 0.6f, pointer)
+                c.drawLine(x1, y1, x1 - dir * head, y1 + head * 0.6f, pointer)
+            } else {
+                val dir = if (y1 > y0) 1f else -1f
+                c.drawLine(x1, y1, x1 - head * 0.6f, y1 - dir * head, pointer)
+                c.drawLine(x1, y1, x1 + head * 0.6f, y1 - dir * head, pointer)
+            }
         }
-        val cx = if (target == null || target.width() <= 0f) g.width * 0.5f else target.centerX()
-        val left = (cx - pw / 2).coerceIn(sl, max(sl, sr - pw))
-        val freeAbove = if (target == null) 0f else target.top - st
-        val freeBelow = if (target == null) 0f else sb - target.bottom
-        val top = when {
-            target == null -> st + (sb - st - ph) * 0.4f
-            freeAbove >= ph + 12 * dp || freeAbove > freeBelow ->
-                (target.top - ph - 12 * dp).coerceIn(st, max(st, sb - ph))
-            else -> (target.bottom + 12 * dp).coerceIn(st, max(st, sb - ph))
+        g.ui.panel(c, panel)
+        if (compact) {
+            val baseline = panel.centerY() + hintFont * g.ui.textScale * dp * 0.35f
+            g.ui.text(c, lines[0] ?: "", panel.left + 12f * dp, baseline, hintFont, Ui.TEXT)
+            okBtn.set(panel.right - 59f * dp, panel.centerY() - 14f * dp, 49f * dp, 28f * dp)
+        } else {
+            var y = panel.top + (14f + hintFont * g.ui.textScale * 0.5f) * dp
+            for (i in 0 until lineCount) {
+                g.ui.text(c, lines[i] ?: "", panel.left + 12f * dp, y, hintFont, Ui.TEXT)
+                y += 17f * dp * g.ui.textScale
+            }
+            okBtn.set(panel.right - 65f * dp, panel.bottom - 34f * dp, 53f * dp, 28f * dp)
         }
-        panel.set(left, top, left + pw, top + ph)
-        HintFrame.chrome(c, g.ui, panel, L["hint_title"], dp)
-        val textWidth = pw - 36 * dp
-        if (textWidth != wrapWidth) {
-            wrapWidth = textWidth
-            lineCount = HintFrame.wrapInto(g.ui, body, textWidth, 13.5f, lines)
-        }
-        var y = panel.top + 57 * dp
-        for (i in 0 until lineCount) {
-            g.ui.text(c, lines[i] ?: "", panel.left + 18 * dp, y, 13.5f, Ui.TEXT)
-            y += 20 * dp
-        }
-        val bw = min(100 * dp, pw * 0.28f)
-        okBtn.set(panel.right - bw - 12 * dp, panel.bottom - 39 * dp, bw, 32 * dp)
-        g.ui.button(c, okBtn, 13f)
+        g.ui.button(c, okBtn, 12f)
     }
 }
