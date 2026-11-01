@@ -57,8 +57,9 @@ class BattleScreen(
     restored: RestoredBattle? = null,
 ) : Screen(g) {
     override val crashName get() = "BattleScreen"
-    // Podczas walki i samouczka baner zasłaniałby pole i teksty; wyniki mogą go pokazać.
-    override val blocksNotices: Boolean get() = !finished
+    // Podczas walki i samouczka baner zasłaniałby pole i teksty, a na wynikach — zakładki
+    // „Wynik/Wykres”. Kolejka czeka do następnego ekranu (menu, kampania).
+    override val blocksNotices: Boolean get() = true
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val achievementEvents = AchievementBattleTracker(battle)
@@ -181,6 +182,8 @@ class BattleScreen(
         const val AUTOSAVE_EVERY = 30f
         /** Szerokość bloku liczebności armii (ikona, liczby, dwukropek) w dp. */
         const val ARMY_COUNTS_W = 90f
+        /** Poniżej tej szerokości (dp) nazwa epoki wroga przechodzi do drugiego rzędu. */
+        const val ENEMY_ERA_MIN_W = 60f
     }
 
     /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
@@ -382,11 +385,9 @@ class BattleScreen(
 
         val t = g.insetT + 6 * dp
         pauseBtn.set(rr - 48 * dp, t, 48 * dp, 48 * dp)
-        // Awans zawsze w pierwszym rzędzie. W dwurzędowym HUD leworęcznym zwęża się
-        // przed pauzą (min. 48 dp), by drugi rząd (armia, minimapa, pogoda) pozostał wolny.
-        val evolveW = if (twoRowHud)
-            min(118 * dp, pauseBtn.r.left - 6 * dp - (l + 196 * dp)).coerceAtLeast(48 * dp)
-            else 118 * dp
+        // Awans zawsze w pierwszym rzędzie. Na wąskim ekranie (np. 360 dp) w obu trybach
+        // zwęża się przed pauzą (min. 48 dp), by nie nachodzić na nią ani na drugi rząd.
+        val evolveW = min(118 * dp, pauseBtn.r.left - 6 * dp - (l + 196 * dp)).coerceAtLeast(48 * dp)
         evolveBtn.set(l + 196 * dp, t, evolveW, 48 * dp)
         if (compactTop) {
             // Wąski ekran: osobny rząd na minimapę, paski baz i zegar.
@@ -2005,10 +2006,19 @@ class BattleScreen(
             else ex - mini.right - 12 * dp
         }
         val enemyY = t + (if (compactTop) 15f else 49f) * dp
-        // Gdy w lustrzanym pasku nie ma miejsca, nazwa epoki wroga zostaje w pauzie.
-        if (!leftHud || enemyWidth >= 24 * dp) ui.textO(c, enemyEraText, ex, enemyY,
-            ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
-            Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
+        if (compactTop && mini.width() > 0f && enemyWidth < ENEMY_ERA_MIN_W * dp) {
+            // Wąski ekran (360 dp): pierwszy rząd zajmują złoto, XP, awans i pauza. Nazwa
+            // epoki wroga trafia do wolnego pola pod pogodą, na wysokości liczb HP baz.
+            val colL = if (leftHud) l else mini.right + 6 * dp
+            val colR = if (leftHud) mini.left - 6 * dp else right
+            ui.textO(c, enemyEraText, (colL + colR) * 0.5f, mini.bottom + 13 * dp,
+                ui.fit(enemyEraText, 11f, colR - colL, 7f), Ui.ENEMY, Paint.Align.CENTER, 2f)
+        } else if (!leftHud || enemyWidth >= 24 * dp) {
+            // Gdy w lustrzanym pasku nie ma miejsca, nazwa epoki wroga zostaje w pauzie.
+            ui.textO(c, enemyEraText, ex, enemyY,
+                ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
+                Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
+        }
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
             var x = if (leftHud) ex + isz / 2 else ex - isz / 2
@@ -2019,7 +2029,8 @@ class BattleScreen(
                     // Dwurzędowy pasek: awans dzieli pierwszy rząd z doktrynami.
                     if (compactTop) min(edge, evolveBtn.r.left - 6 * dp) else edge
                 } else {
-                    if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp
+                    val edge = if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp
+                    if (compactTop) max(edge, evolveBtn.r.right + 6 * dp) else edge
                 }
                 if ((leftHud && x > boundary) || (!leftHud && x < boundary)) break
                 Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)

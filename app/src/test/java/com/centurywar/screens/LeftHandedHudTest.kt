@@ -171,8 +171,7 @@ class LeftHandedHudTest {
                     if (other.width() > 0f)
                         assertFalse("$tag: kolizja liczebności armii z: $name", overlap(army, other))
                 }
-                if (w != 720 || left)
-                    assertFalse("$tag: awans nachodzi na pauzę", overlap(evolve, pause))
+                assertFalse("$tag: awans nachodzi na pauzę", overlap(evolve, pause))
                 if (left) {
                     // Pogoda i armia zamieniają się stronami względem minimapy.
                     assertTrue("$tag: armia po prawej", army.left >= mini.right)
