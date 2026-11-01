@@ -213,8 +213,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         toggle.visible = hasEra
         toggle.iconId = Icons.FLASK
         val compact = w - g.insetL - g.insetR < 700 * dp
-        val tw = if (compact) 44 * dp else min(210 * dp, w * 0.24f)
-        toggle.set(w - g.insetR - 12 * dp - tw, g.insetT + 10 * dp, max(48 * dp, tw), 48 * dp)
+        val tw = if (compact) 48 * dp else min(210 * dp, w * 0.24f)
+        toggle.set(w - g.insetR - 12 * dp - tw, g.insetT + 10 * dp, tw, 48 * dp)
 
         eraRailTop = viewTop
         eraRailHeight = 48 * dp
