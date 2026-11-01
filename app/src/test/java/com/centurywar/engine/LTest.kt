@@ -166,6 +166,46 @@ class LTest {
     }
 
 
+    /** Regresje terminologii i formatowania po audycie tłumaczeń 88. */
+    @Test
+    fun audit88TerminologyAndFormatting() {
+        val en = L.CODES.indexOf("en")
+        val de = L.CODES.indexOf("de")
+        val uk = L.CODES.indexOf("uk")
+        val nl = L.CODES.indexOf("nl")
+        val tr = L.CODES.indexOf("tr")
+        val tower = Regex("\\btowers?\\b", RegexOption.IGNORE_CASE)
+        val germanPercentWithoutSpace = Regex("""\d+%%?""")
+        for (key in L.keys) {
+            val translation = L.raw(key)!!
+            assertTrue("$key/en: ${translation[en]}", !tower.containsMatchIn(translation[en]))
+            assertTrue("$key/de: ${translation[de]}",
+                !germanPercentWithoutSpace.containsMatchIn(translation[de]) &&
+                    !translation[de].contains("%d%%"))
+            assertTrue("$key/uk: ${translation[uk]}", !translation[uk].contains("XP"))
+            assertTrue("$key/tr: ${translation[tr]}", !translation[tr].contains("Evrim"))
+        }
+        assertEquals("Steam Age", L.text("era_steam", en))
+        assertEquals("Silicon Age", L.text("era_silicon", en))
+        assertTrue(L.text("ach_steam_twins_d", en).contains("Steam Age"))
+        assertTrue(L.text("ach_silicon_twins_d", en).contains("Silicon Age"))
+        assertTrue(L.text("tip53_evolve", en).startsWith("Evolve to"))
+        assertTrue(L.text("ach_steam_twins_d", uk).contains("Доби пари"))
+        assertTrue(L.text("ach_silicon_twins_d", uk).contains("Доби кремнію"))
+        assertTrue(L.text("ach_steam_twins_d", nl).contains("Stoomtijd"))
+        assertTrue(L.text("ach_silicon_twins_d", nl).contains("Siliciumtijd"))
+        assertEquals("ОД", L.text("xp", uk))
+        assertEquals("ОЗ", L.text("cx_hp", uk))
+        assertEquals("Çağ atla", L.text("evolve", tr))
+        assertEquals("İlerle", L.text("advance", tr))
+        assertTrue(L.text("tip53_intro", de).contains("Schaltfläche"))
+        assertTrue(L.text("hint_missions", de).contains("Belohnungen ab"))
+        for (i in L.CODES.indices) {
+            val paid = L.raw("ms_login_paid")!![i]
+            assertTrue("ms_login_paid/${L.CODES[i]}", ":" !in paid && "%s" in paid)
+        }
+    }
+
     /** Krótkie etykiety interakcji; tytuły i dłuższe opisy mogą się zawijać. */
     @Test
     fun buttonLabelsFitWithin18Characters() {
@@ -373,6 +413,7 @@ class ScreenshotTestTranslation78Test {
         val g = Game(host, com.centurywar.meta.Profile(file).apply {
             tutorialDone = true
             medals = 340
+            hintsSeen = Long.MAX_VALUE
         }, Quality.LOW)
         g.density = 1.8f
         g.resize(1600, 720, 1600, 720)
@@ -412,6 +453,7 @@ class ScreenshotTestTranslation78Test {
             battle.time = 125f
             battle.player.kills = 17
             battle.player.goldEarned = 1426f
+            shot(g, code, "battle")
             paused.onClick(field(paused, "pauseBtn").get(paused) as Button)
             (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
             (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
