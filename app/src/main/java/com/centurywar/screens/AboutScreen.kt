@@ -88,18 +88,24 @@ class AboutScreen(g: Game) : Screen(g) {
         firstRow = textStart + introDp * dp
         footerTop = firstRow + entries.size * step + 12 * dp
         privacy.set(panel.left + 20 * dp, textStart + 98 * dp, min(250 * dp, pw - 40 * dp), 39 * dp)
-        privacy.visible = hasPrivacy && privacy.r.bottom > contentTop && privacy.r.top < contentBottom
+        privacy.visible = hasPrivacy && inContent(privacy)
         report.set(panel.left + 20 * dp, textStart + (if (hasPrivacy) 141 else 98) * dp,
             min(250 * dp, pw - 40 * dp), 39 * dp)
-        report.visible = report.r.bottom > contentTop && report.r.top < contentBottom
+        report.visible = inContent(report)
         fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 42 * dp)
-        fullLicense.visible = fullLicense.r.bottom > contentTop && fullLicense.r.top < contentBottom
+        fullLicense.visible = inContent(fullLicense)
         for (i in entries.indices) {
             val y = firstRow + i * step
             links[i].set(panel.right - 114 * dp, y + 5 * dp, 96 * dp, 33 * dp)
-            links[i].visible = y + 96 * dp > contentTop && y < contentBottom
+            links[i].visible = inContent(links[i])
         }
     }
+
+    /**
+     * Przycisk przewijanej treści jest aktywny tylko w całości wewnątrz panelu:
+     * częściowo przycięty wystawałby trafieniem poza panel i bezpieczny obszar.
+     */
+    private fun inContent(b: Button) = b.r.top >= contentTop && b.r.bottom <= contentBottom
 
     override fun update(dt: Float) { this.dt = dt }
 

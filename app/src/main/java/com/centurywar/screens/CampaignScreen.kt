@@ -290,7 +290,8 @@ class CampaignScreen(g: Game) : Screen(g) {
             c.drawLine(cx[i], cy[i], cx[i + 1], cy[i + 1], pathPaint)
         }
         val unlocked = g.profile.unlockedStage()
-        for (t in tiles) {
+        for (i in tiles.indices) {
+            val t = tiles[i]
             if (t.r.right < viewportL - nodeR || t.r.left > viewportR + nodeR ||
                 t.r.bottom < top - nodeR || t.r.top > bottom + nodeR) continue
             drawNode(c, t, unlocked)

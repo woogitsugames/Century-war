@@ -79,15 +79,31 @@ class Chrome(private val s: Screen) {
         return if (s.ui.measure(short, 9f / s.ui.textScale, true) <= avail) short else ""
     }
 
+    private var medalsValue = Int.MIN_VALUE
+    private var medalsString = ""
+    private var starsValue = Int.MIN_VALUE
+    private var starsString = ""
+
+    /** Napisy liczb buforowane do zmiany wartości: brak nowych String na klatkę. */
+    private fun medalsText(value: Int): String {
+        if (value != medalsValue) { medalsValue = value; medalsString = value.toString() }
+        return medalsString
+    }
+
+    private fun starsText(value: Int): String {
+        if (value != starsValue) { starsValue = value; starsString = value.toString() }
+        return starsString
+    }
+
     /** Plakietki w prawym górnym rogu (od prawej). Zwraca lewą krawędź. */
     fun badges(c: Canvas, medals: Int, stars: Int = -1): Float {
         val ui = s.ui
         var x = s.w - s.g.insetR - 14 * s.dp
         val cy = s.g.insetT + 32 * s.dp
-        val ms = medals.toString()
+        val ms = medalsText(medals)
         x = ui.badge(c, x, cy, Icons.MEDAL, ms, 16f, Ui.GOLD, alignRight = true) - ui.badgeWidth(ms, 16f)
         if (stars >= 0) {
-            val ss = stars.toString()
+            val ss = starsText(stars)
             x -= 8 * s.dp
             x = ui.badge(c, x, cy, Icons.STAR, ss, 16f, Ui.GOLD, alignRight = true) - ui.badgeWidth(ss, 16f)
         }
