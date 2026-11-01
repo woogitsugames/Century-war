@@ -180,12 +180,19 @@ object Campaign {
             else -> 1.35f + 0.85f * (i - lateStart + 1) / (n - lateStart)
         }
         // Korekty trudności pojedynczych etapów, bez wpływu na jednostki ani AI.
+        // Tura 8: etapy 1-6 obniżone po wyłączeniu elit wroga bez badania gracza
+        // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         val correction = when (i + 1) {
-            2 -> 0.837f
-            3 -> 0.90f
+            1 -> 0.85f
+            2 -> 0.753f
+            3 -> 0.81f
+            4 -> 0.80f
+            5 -> 0.80f
+            6 -> 0.85f
             11 -> 0.97f
-            12 -> 0.90f
+            12 -> 0.828f
             16 -> 0.93f
+            18 -> 0.92f
             19 -> 1.265f
             21 -> 1.08f
             22 -> 1.13f
@@ -195,6 +202,7 @@ object Campaign {
             29 -> 1.12f
             30 -> 1.02f
             31 -> 0.97f
+            32 -> 0.97f
             34 -> 0.95f
             35 -> 0.88f
             36 -> 0.81f
