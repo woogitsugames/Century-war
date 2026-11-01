@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -42,7 +44,7 @@ tasks.register<JavaExec>("regenerateGolden") {
     }
     doLast {
         val reason = providers.gradleProperty("goldenReason").get().trim()
-        val date = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        val date = LocalDate.now(ZoneOffset.UTC)
         rootProject.file("docs/BALANCE.md").appendText(
             "\n- ${date} — regeneracja złotych powtórek: ${reason}.\n"
         )
