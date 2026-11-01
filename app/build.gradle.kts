@@ -73,6 +73,14 @@ val releaseKeyIsDebug = releaseKeyAlias.equals("androiddebugkey", ignoreCase = t
 val validReleaseSigning = hasReleaseSigning && !releaseKeyIsDebug &&
     releaseStoreFile?.let { file(it).isFile } == true
 
+// Zabezpieczenie dodatkowe: nawet -x releaseChecklist nie omija wymogu podpisu.
+val releaseTaskRequested = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':') in setOf("assembleRelease", "bundleRelease", "releaseChecklist")
+}
+check(!releaseTaskRequested || validReleaseSigning || ciDebugSigningAllowed) {
+    "Brak prawidłowego podpisu release: wymagany upload JKS i cztery zmienne RELEASE_*."
+}
+
 android {
     namespace = "com.centurywar"
     compileSdk = 36
