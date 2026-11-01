@@ -343,4 +343,60 @@ class Tura8UiTest {
             assertTrue("$tag: skok kamery $maxJump", maxJump <= r.worldVisible * 0.9f / 30f + 0.01f)
         }
     }
+
+    /** Zablokowana elita: dymek i tap podają nazwę badania i koszt z Research; „Stać cię!” przy medalach. */
+    @Test
+    fun lockedEliteExplainsResearch() {
+        for (tag in listOf("phone720", "foldOuter")) {
+            val g = game(devices.getValue(tag))
+            g.profile.medals = 10
+            val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 14101L, 1f,
+                playerBonuses = g.profile.bonuses()))
+            g.setScreen(screen)
+            g.finishScreenTransition()
+            frame(g)
+            val b = field(screen, "battle") as Battle
+            assertFalse("$tag: elita powinna być zablokowana", b.player.eliteUnlocked)
+            val elite = screen.unitBtn[3]
+            val name = L[EliteUnlock.def.key]
+            val cost = EliteUnlock.def.cost(0).toString()
+            assertTrue(screen.onLongPress(elite))
+            assertTrue("$tag: brak nazwy badania: ${elite.tooltipBody}",
+                elite.tooltipBody.contains(name) && elite.tooltipBody.contains(cost))
+            assertEquals(EliteUnlock.text("elite141_locked", g.profile), elite.tooltipBody)
+            screen.onTap(elite.r.centerX(), elite.r.centerY())
+            assertTrue("$tag: tap nie pokazał dymka", screen.lockedRemaining > 0f)
+            assertTrue(screen.lockedTooltip.body.contains(name) && screen.lockedTooltip.body.contains(cost))
+            shot(g, "tura8_elite_locked_$tag")
+            g.profile.medals = 500
+            screen.onTap(elite.r.centerX(), elite.r.centerY())
+            assertEquals(EliteUnlock.text("elite141_afford", g.profile), screen.lockedTooltip.body)
+        }
+    }
+
+    /** Plakietka „!” na Badaniach i jednorazowy dymek, gdy stać gracza na Doktrynę elit. */
+    @Test
+    fun menuBadgeWhenEliteAffordable() {
+        for (tag in listOf("phone720", "foldOuter", "foldInner")) {
+            val g = game(devices.getValue(tag), hints = true)
+            g.profile.medals = 30
+            val menu = MenuScreen(g)
+            g.setScreen(menu)
+            g.finishScreenTransition()
+            frame(g)
+            assertFalse("$tag: plakietka bez medali", menu.eliteReady)
+            g.profile.medals = EliteUnlock.def.cost(0)
+            frame(g)
+            frame(g)
+            assertTrue("$tag: brak plakietki", menu.eliteReady)
+            val hints = field(menu, "hints") as HintOverlay
+            assertEquals(HintOverlay.ELITE_RESEARCH, hints.activeId)
+            val research = field(menu, "research") as Button
+            assertFalse("$tag: dymek zasłania Badania", RectF.intersects(hints.panelRect, research.r))
+            shot(g, "tura8_menu_elite_$tag")
+            g.profile.levels["r_elite"] = 1
+            frame(g)
+            assertFalse("$tag: plakietka po zakupie", menu.eliteReady)
+        }
+    }
 }
