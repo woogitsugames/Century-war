@@ -53,8 +53,10 @@ class CodexCompareScreenshotTest {
                 "tablet" to intArrayOf(1600, 1200, 20),
             )
             for ((name, dims) in sizes) {
-                Palette.select(if (name == "fold_inner") Palette.DEUTAN_PROTAN else Palette.STANDARD)
                 val g = game(dims[0], dims[1], dims[2] / 10f)
+                g.profile.palette = if (name == "fold_inner") Palette.DEUTAN_PROTAN else Palette.STANDARD
+                g.applyAccessibility()
+                assertEquals(g.profile.palette, Palette.selected)
                 val codex = CodexScreen(g, 2)
                 g.setScreen(codex)
                 codex.showCategory(10)
