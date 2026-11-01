@@ -118,7 +118,7 @@ internal object ScreenshotGolden {
         val expectedFile = File("src/test/resources/screens/$name.png")
         val update = System.getProperty("cw.screens.update") == "true"
         if (update) {
-            check(System.getProperty("cw.screens.reason")?.trim()?.length ?: 0 >= 8) {
+            check((System.getProperty("cw.screens.reason")?.trim()?.length ?: 0) >= 8) {
                 "Aktualizacja zrzutów wymaga -PscreenReason (min. 8 znaków)."
             }
             expectedFile.parentFile.mkdirs()
