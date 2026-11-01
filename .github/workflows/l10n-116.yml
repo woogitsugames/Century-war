@@ -31,12 +31,14 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Android SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Tymczasowo wczytaj teksty ze źródłowych gałęzi tury
+        run: python3 scripts/l10n116_collect.py
       - name: Zbuduj APK
         run: ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
-      - name: Kontrola tłumaczeń 88 i 116
-        run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --console=plain --no-configuration-cache
       - name: Zrzuty najdłuższych tłumaczeń na 720p
         run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTestReview116*' --console=plain --no-configuration-cache
+      - name: Kontrola tłumaczeń 88 i 116
+        run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --console=plain --no-configuration-cache
       - name: Artefakty zrzutów i wyników
         if: always()
         uses: actions/upload-artifact@v4
