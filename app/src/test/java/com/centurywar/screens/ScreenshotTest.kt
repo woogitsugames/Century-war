@@ -1449,4 +1449,38 @@ class ScreenshotTest {
             shot(g, "${tag}_pause_quick_settings")
         }
     }
+    /** Menu, cztery zakładki Rekordów i tor logowania na czterech formatach. */
+    @Test
+    fun recordsUxFourFormats() {
+        val oldLang = L.lang
+        try {
+            L.lang = L.PL
+            for ((tag, dims) in screenshotDevices(mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            ))) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                val state = Missions(g.profile).refresh(System.currentTimeMillis())
+                state.daily.firstOrNull()?.let { it.progress = it.target }
+                g.setScreen(MenuScreen(g))
+                shot(g, "${tag}_87_menu", 2)
+                g.setScreen(RankingsScreen(g))
+                shot(g, "${tag}_87_records_rankings", 2)
+                g.setScreen(StatsScreen(g))
+                shot(g, "${tag}_87_records_stats", 2)
+                g.setScreen(ReplayListScreen(g))
+                shot(g, "${tag}_87_records_replays", 2)
+                g.setScreen(AchievementsScreen(g))
+                shot(g, "${tag}_87_records_achievements", 2)
+                g.setScreen(MissionsScreen(g))
+                shot(g, "${tag}_87_streak", 2)
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
+
 }
