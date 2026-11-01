@@ -3,6 +3,8 @@ name: Kontrola zlecenia 68
 on:
   push:
     branches: ['gpt/68-era-intros']
+  pull_request:
+    branches: ['claude/bold-sagan-vwz5gm']
   workflow_dispatch:
 
 permissions:
