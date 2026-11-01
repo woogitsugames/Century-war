@@ -52,6 +52,14 @@ class Quality(val level: Int, val reduction: Int = 0, val gpuReduction: Int = 0)
     val clouds = level >= MED && cpuReduction < 2
     val shadows = level >= HIGH && cpuReduction < 4 && gpuReduction == 0
 
+    /** Ciężkie elementy menu redukujemy także przy dynamicznym przeciążeniu CPU/GPU. */
+    val menuDetail = when {
+        level == LOW || cpuReduction >= 3 || gpuReduction >= 2 -> LOW
+        level == MED || reduction > 0 -> MED
+        else -> HIGH
+    }
+    val menuAnimated = menuDetail > LOW && cpuReduction < 2 && gpuReduction < 2
+
     fun renderScale(viewW: Int, viewH: Int): Float {
         val px = viewW.toFloat().coerceAtLeast(1f) * viewH.coerceAtLeast(1)
         val cap = if (px * baseScale * baseScale > MAX_PIXELS) kotlin.math.sqrt(MAX_PIXELS / px) else baseScale
