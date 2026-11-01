@@ -1,7 +1,6 @@
 package com.centurywar.server
 
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -21,7 +20,12 @@ class VerificationGate(
     suspend fun <T> run(block: suspend () -> T): Result<T>? {
         if (!capacity.tryAcquire()) return null
         try {
-            return runCatching { withTimeout(timeoutMillis) { workerSlots.withPermit { block() } } }
+            return runCatching {
+                withTimeout(timeoutMillis) {
+                    workerSlots.acquire()
+                    try { block() } finally { workerSlots.release() }
+                }
+            }
         } finally {
             capacity.release()
         }
