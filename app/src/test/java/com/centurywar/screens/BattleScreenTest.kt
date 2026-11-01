@@ -510,7 +510,7 @@ class BattleScreenTest {
             }
             val buys = field(bs, "slotBuy").get(bs) as Array<*>
             val sells = field(bs, "slotSell").get(bs) as Array<*>
-            for (raw in buys + sells) {
+            for (group in listOf(buys, sells)) for (raw in group) {
                 val b = raw as Button
                 assertTrue(b.r.height() >= 48 * dp - 0.1f)
             }

@@ -431,7 +431,7 @@ class BattleScreen(
         pauseVibrationBtn.hitSlop = (48 * dp - ctrlH).coerceAtLeast(0f) / 2f
         pauseSpeedBtn.hitSlop = pauseVibrationBtn.hitSlop
 
-        val buttonGap = 8 * dp
+        val buttonGap = 12 * dp
         val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
         for (i in pauseMenu.indices) {
             pauseMenu[i].set(pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
@@ -1693,10 +1693,9 @@ class BattleScreen(
             val wy = if (compactTop) mini.centerY() else t + 11 * dp
             Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
-            // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
-            // gdy brak miejsca, zostaje sama ikona.
-            val eraLeft = pauseBtn.r.left - 10 * dp - ui.measure(enemyEraText, 12f, true) - 4 * dp
-            val wAvail = eraLeft - (wx + 14 * dp) - 6 * dp
+            // Epoka przeciwnika jest na dolnej linii; pogoda zostaje na górnej.
+            val weatherRight = pauseBtn.r.left - 8 * dp
+            val wAvail = weatherRight - (wx + 14 * dp) - 6 * dp
             if (!compactTop && wAvail >= 30 * dp) {
                 val size = ui.fit(weatherName, 12f, wAvail, 8f)
                 if (ui.measure(weatherName, size, true) <= wAvail)
@@ -1833,10 +1832,13 @@ class BattleScreen(
                 ui.fit(nextThemeText, 11f, w - g.insetL - g.insetR - 26 * dp, 8f),
                 Ui.GOLD, Paint.Align.CENTER, 1.7f)
         }
-        // przeciwnik (epoka) + doktryny gracza jako ikony
+        // Epoka wroga w osobnej linii na szerokim HUD; nie nachodzi na pogodę.
         val ex = pauseBtn.r.left - 10 * dp
-        ui.textO(c, enemyEraText, ex, t + 15 * dp,
-            ui.fit(enemyEraText, 12f, ex - evolveBtn.r.right - 10 * dp, 8f),
+        val enemyWidth = if (compactTop) ex - evolveBtn.r.right - 10 * dp
+            else ex - mini.right - 12 * dp
+        val enemyY = t + (if (compactTop) 15f else 49f) * dp
+        ui.textO(c, enemyEraText, ex, enemyY,
+            ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
             Ui.ENEMY, Paint.Align.RIGHT, 2f)
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
@@ -2164,13 +2166,15 @@ class BattleScreen(
             ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, resultStars, 3, 1.05f)
             y += 54 * dp
         } else {
-            Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL, rp.centerX(), y + 20 * dp, 40 * dp, dp = dp)
-            y += 48 * dp
+            val iconSize = if (won) 40f else 32f
+            Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL,
+                rp.centerX(), y + iconSize * 0.5f * dp, iconSize * dp, dp = dp)
+            y += (if (won) 48f else 36f) * dp
         }
         if (resultCustomSkirmish) {
             ui.textO(c, resultUnrankedText, rp.centerX(), y + 7 * dp,
                 ui.fit(resultUnrankedText, 14f, rp.width() - 32 * dp), Ui.GOLD, Paint.Align.CENTER)
-            y += 28 * dp
+            y += (if (won) 28f else 20f) * dp
         }
         y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
         y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
