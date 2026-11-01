@@ -171,7 +171,7 @@ class ReplayScreen(
         val p = player ?: return
         if (renderedBattle === p.battle) return
         val oldCam = renderer?.camX
-        val next = BattleRenderer(g, p.battle)
+        val next = BattleRenderer(g, p.battle, bannerId = 0)
         renderer = next
         renderedBattle = p.battle
         next.layout(w, h, g.insetT + 63 * dp, 114 * dp + g.insetB)
