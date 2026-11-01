@@ -63,6 +63,14 @@ class ScreenshotTest {
 
     private val out = File("build/screenshots").apply { mkdirs() }
 
+    /** W CI każda ciężka metoda jest wykonywana raz na format, lokalnie na wszystkich. */
+    private fun screenshotDevices(devices: Map<String, IntArray>): Map<String, IntArray> {
+        val target = System.getenv("CW_SCREENSHOT_DEVICE")?.trim().orEmpty()
+        if (target.isEmpty()) return devices
+        require(target in devices) { "Nieznany format zrzutu: $target" }
+        return devices.filterKeys { it == target }
+    }
+
     private fun game(w: Int, h: Int, density: Float, q: Int): Game {
         val host = object : Host {
             override fun vibrate(ms: Long) {}
@@ -466,11 +474,11 @@ class ScreenshotTest {
 
     @Test
     fun screens() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
-        )) {
+        ))) {
             val g = game(dims[0], dims[1], dims[2] / 1.0f * 0.9f, if (tag == "phone720") Quality.LOW else Quality.HIGH)
             shot(g, "${tag}_menu")
             g.setScreen(CampaignScreen(g)); shot(g, "${tag}_campaign")
@@ -497,11 +505,11 @@ class ScreenshotTest {
      */
     @Test
     fun tutorial() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
-        )) {
+        ))) {
             val g = game(dims[0], dims[1], dims[2] / 1.0f * 0.9f, if (tag == "phone720") Quality.LOW else Quality.HIGH)
             g.profile.tutorialDone = false
             if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
