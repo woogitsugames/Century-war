@@ -42,6 +42,7 @@ jobs:
           chmod +x ./gradlew
           mkdir -p build/release-metrics
           python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
+          python3 -m unittest discover -s tests -p 'test_verify_release_dex.py' -v
           ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
 
       - name: Potwierdź blokadę release bez klucza upload
@@ -79,6 +80,10 @@ jobs:
           # podstawiamy ten sam syntetyczny zestaw co dla bieżącego commita.
           python3 scripts/ci_synthetic_play_games_ids.py \
             "$RUNNER_TEMP/cw-before/docs/store/play_games_ids.properties"
+          # Dokument Data safety ma nierozstrzygniete decyzje wydawcy.
+          # W smoke CI tymczasowo usuwamy znacznik; publikacyjna checklista zostaje bez zmian.
+          sed -i 's/\[DO DECYZJI\]/[CI-SMOKE: decyzja przed publikacja]/g' \
+            "$RUNNER_TEMP/cw-before/docs/store/data_safety.md"
           (
             cd "$RUNNER_TEMP/cw-before"
             chmod +x ./gradlew
@@ -100,9 +105,12 @@ jobs:
 
       # Smoke-test R8 wymaga technicznie pełnej konfiguracji release.
       # Te ID istnieją tylko w kontenerze CI, nie są produkcyjne ani commitowane.
-      - name: Wstaw syntetyczne ID Play Games do smoke-testu
+      - name: Wstaw testowe dane konfiguracji tylko do smoke-testu
         shell: bash
-        run: python3 scripts/ci_synthetic_play_games_ids.py docs/store/play_games_ids.properties
+        run: |
+          python3 scripts/ci_synthetic_play_games_ids.py docs/store/play_games_ids.properties
+          # Nie uzupelniamy danych wydawcy w repo; ten zamiennik istnieje tylko na runnerze.
+          sed -i 's/\[DO DECYZJI\]/[CI-SMOKE: decyzja przed publikacja]/g' docs/store/data_safety.md
 
       # Smoke-test R8/manifestu na ID syntetycznych, nie do publikacji.
       - name: Zbuduj APK i AAB release
@@ -114,6 +122,18 @@ jobs:
             -PciTestDebugSigning=true \
             -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode,ownerInput \
             2>&1 | tee build/release-metrics/release.log
+
+      - name: Sprawdź rzeczywiste klasy DEX po R8
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_release_dex.py \
+            --apk app/build/outputs/apk/release/app-release.apk \
+            --mapping app/build/outputs/mapping/release/mapping.txt \
+            --dexdump "$ANDROID_HOME/build-tools/36.0.0/dexdump" \
+            | tee build/release-metrics/dex-audit.txt
+          grep -Ei '(^| )warning:|missing class' build/release-metrics/release.log \
+            > build/release-metrics/r8-warnings.txt || true
 
       - name: Sprawdź manifest, profil i rozmiary
         shell: bash
@@ -136,6 +156,9 @@ jobs:
             --usage app/build/outputs/mapping/release/usage.txt \
             --output build/release-metrics/rozmiary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Zbuduj debug APK do pomiaru rozruchu
+        run: ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+
       - name: Uruchom release na emulatorze
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -145,14 +168,57 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            adb install -r app/build/outputs/apk/release/app-release.apk
+            set -eu
+            apk_debug="app/build/outputs/apk/debug/app-debug.apk"
+            apk_release="app/build/outputs/apk/release/app-release.apk"
+            activity="com.centurywar.game/com.centurywar.MainActivity"
+
+            # Debug: pelny cold start i raport StartupTimings z pierwszej klatki menu.
+            adb install -r "$apk_debug"
+            adb shell am force-stop com.centurywar.game
             adb logcat -c
-            adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity | tee build/release-metrics/start.txt
+            adb shell am start -W -n "$activity" | tee build/release-metrics/start-debug.txt
+            grep -q '^Status: ok' build/release-metrics/start-debug.txt
+            for i in $(seq 1 25); do
+              adb logcat -d -s CWStartup:I '*:S' > build/release-metrics/startup-debug.log
+              if grep -q 'Pierwsza klatka menu:' build/release-metrics/startup-debug.log; then break; fi
+              sleep 1
+            done
+            grep 'Pierwsza klatka menu:' build/release-metrics/startup-debug.log
+
+            # Release: oddzielna czysta instalacja, R8 i shrinkResources.
+            adb uninstall com.centurywar.game
+            adb install -r "$apk_release"
+            adb shell am force-stop com.centurywar.game
+            adb logcat -c
+            adb shell am start -W -n "$activity" | tee build/release-metrics/start.txt
             grep -q '^Status: ok' build/release-metrics/start.txt
             sleep 8
             adb shell pidof com.centurywar.game
             adb logcat -d -s AndroidRuntime:E > build/release-metrics/androidruntime.log
             if grep -q "FATAL EXCEPTION" build/release-metrics/androidruntime.log; then cat build/release-metrics/androidruntime.log; exit 1; fi
+
+      - name: Dołącz czas startu do raportu
+        if: always()
+        shell: bash
+        run: |
+          if test -s build/release-metrics/startup-debug.log; then
+            {
+              echo "### Rozruch na emulatorze API 35 (czyste instalacje)"
+              echo ""
+              echo "Debug — StartupTimings do pierwszej klatki menu:"
+              echo ""
+              echo '~~~'
+              grep 'Pierwsza klatka menu:' build/release-metrics/startup-debug.log || true
+              echo '~~~'
+              echo ""
+              echo "Release — ActivityManager am start -W:"
+              echo ""
+              echo '~~~'
+              cat build/release-metrics/start.txt 2>/dev/null || true
+              echo '~~~'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Zachowaj mapping i usage R8
         if: always()
