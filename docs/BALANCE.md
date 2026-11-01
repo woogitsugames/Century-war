@@ -346,3 +346,48 @@ Zlecenie 42 nie zawierało pomiaru; ten przebieg go uzupełnia (profil docelowy,
 | Czujność (`VIGILANCE`) | 20 | 40 | 22 | 18 | 0 | **55,0%** |
 
 **Wynik:** wszystkie cztery doktryny mieszczą się w limicie 60% przy 20 seedach i zamianie stron; żadna bitwa nie zakończyła się timeoutem. To jest test krótkiego scenariusza porównawczego, nie pełne oszacowanie balansu całej kampanii.
+## Zlecenie 71 — osiem nowych kart Endless (1.11.2026)
+
+Karty dopisano po dotychczasowych identyfikatorach, bez zmiany ich kolejności.
+Dwa nowe efekty bojowe: spowalnianie przez wieże (2 s, −15% ruchu za stos,
+maksymalnie −45%) i premia +30% obrażeń jednostek przy HP bazy poniżej 25%.
+Pozostałe efekty: synergie ekonomii, ruchu, liczebności, wież i napraw.
+Naprawy są ograniczone do 30% bazowego HP na falę.
+
+**Powtarzalny pomiar A/B:** `EndlessBalanceReportTest.veteranTwentySeeds`
+z `server/src/test/kotlin/com/centurywar/server/` uruchamiany na obu
+wersjach przez `.github/workflows/endless-balance.yml`.
+Ustawienia: seedy **1001–1020**, 80% badań weterana, kontrola przez
+`Ai`, maksymalnie fala 60 lub 90 000 kroków. Punktem odniesienia jest
+`merge-base` względem **`claude/bold-sagan-vwz5gm`**, a nie `main`.
+Wynik testu to `ENDLESS_MEAN` = średnia osiągnięta fala (fala porażki,
+lub 60 dla ocalałych).
+
+**Warunek akceptacji:** wzrost średniej względem bazy najwyżej **+10%**
+`(nowa / bazowa − 1) × 100`. Ulepszono regułę GitHub Actions, aby
+zwracała błąd, gdy przekroczony zostanie ten próg.
+
+**Wyniki uruchomionego pomiaru A/B:** [GitHub Actions — 20 seedów](https://github.com/woogitsugames/Century-war/actions/runs/41291746749)
+(pomiar 1.11.2026, baza `0893892872e964f97e9c51c34ecfda29911763e1`).
+
+| Wskaźnik | Baza | Nowe karty |
+|---|---:|---:|
+| Średnia osiągnięta fala (`ENDLESS_MEAN`) | 53,05 | 52,20 |
+| Różnica względem bazy | — | **−1,60%** |
+| Porażki przed falą 60 | 10/20 | 15/20 |
+| Mediana fali porażki | 54 | 53 |
+| Żywa baza przy fali 20 | 20/20 | 20/20 |
+| Żywa baza przy fali 30 | 19/20 | 20/20 |
+| Żywa baza przy fali 40 | 16/20 | 18/20 |
+| Żywa baza przy fali 50 | 16/20 | 15/20 |
+| Żywa baza przy fali 60 | 10/20 | 5/20 |
+
+**Wniosek:** wymagany limit wzrostu średniej o maksymalnie +10% spełniono.
+Równocześnie większa liczba porażek przed falą 60 (15 zamiast 10)
+wskazuje na zmianę rozkładu przeżywalności. Kryterium średniej nie
+gwarantuje identycznego poziomu trudności w późniejszych falach;
+przed wydaniem warto sprawdzić większą próbę seedów.
+
+**Zgodność:** zmiana symulacji wymaga od koordynatora aktualizacji wersji
+rankingu w aplikacji i serwerze. `BattleSnapshot.VERSION` podniesiono do 13
+z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.

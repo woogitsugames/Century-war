@@ -385,7 +385,7 @@ class ArtGalleryTest {
             for ((name, def) in variantMachines())
                 for (team in intArrayOf(Ui.PLAYER, Ui.ENEMY)) {
                     bmp.eraseColor(Color.TRANSPARENT)
-                    r.drawUnitIcon(c, def, cx, 135f, 90f, team, widthLimit = widthLimit)
+                    r.drawUnitIcon(c, def, cx, 135f, 90f, team, maxWidth = widthLimit)
                     var minX = bmp.width
                     var maxX = -1
                     var teamPixels = 0

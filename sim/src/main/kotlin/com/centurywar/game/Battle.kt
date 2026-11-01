@@ -46,6 +46,8 @@ class Fighter {
         (bossKind == kind || bossSecondaryKind == kind)
     var burnDps = 0f
     var burnLeft = 0f
+    /** Spowolnienie od wieży w Endless, w sekundach symulacji. */
+    var slowLeft = 0f
     val isBoss get() = bossKind != EndlessBosses.NONE
     val radius get() = 16f * def.size
     val alive get() = active && dying < 0f
@@ -506,8 +508,9 @@ class Battle(val cfg: BattleConfig) {
     fun applyEndlessCard(side: Side, card: EndlessCard) {
         if (!endless || over || side.index != 0) return
         side.cardStacks[card.ordinal]++
-        if (card.doctrine != null) { applyDoctrine(side, card.doctrine); return }
-        when (card) {
+        if (card.doctrine != null) {
+            applyDoctrine(side, card.doctrine)
+        } else when (card) {
             EndlessCard.TOWER_SLOT -> side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
             EndlessCard.FREE_ELITE -> side.freeElitesPerWave = min(4, side.freeElitesPerWave + 1)
             EndlessCard.BURNING_TOWERS -> side.turretBurnRatio += 0.25f
@@ -542,7 +545,64 @@ class Battle(val cfg: BattleConfig) {
             EndlessCard.ELITE_SCHOOL -> side.eliteDmgMul *= 1.3f
             EndlessCard.LAST_STAND -> side.lastStandMul *= 1.35f
             EndlessCard.REPAIR_CREW -> side.repairPerWave = min(0.3f, side.repairPerWave + 0.06f)
+            EndlessCard.WAR_DRUMS -> {
+                side.speedMul *= 1.08f
+                if (side.cardStacks[EndlessCard.MARCH.ordinal] > 0 ||
+                    side.cardStacks[EndlessCard.SWIFT.ordinal] > 0) side.speedMul *= 1.06f
+            }
+            EndlessCard.TOWER_NETWORK -> {
+                side.turretDmgMul *= 1.08f
+                val slots = side.cardStacks[EndlessCard.TOWER_SLOT.ordinal] +
+                    side.cardStacks[EndlessCard.ARSENAL.ordinal]
+                repeat(slots) { side.turretDmgMul *= 1.04f }
+            }
+            EndlessCard.MUSTER_BANNER -> {
+                side.cap = min(MAX_UNITS, side.cap + 1)
+                side.trainMul *= 1.05f
+                if (side.cardStacks[EndlessCard.MOBILIZATION.ordinal] > 0) side.trainMul *= 1.08f
+            }
+            EndlessCard.EMBER_FORGE -> side.turretDmgMul *= 1.1f
+            EndlessCard.CITADEL_HEART -> {
+                val defenses = side.cardStacks[EndlessCard.BULWARK.ordinal] +
+                    side.cardStacks[EndlessCard.FORTRESS.ordinal] +
+                    side.cardStacks[EndlessCard.REPAIR_CREW.ordinal]
+                side.repairPerWave = min(0.3f, side.repairPerWave + 0.01f * (1 + defenses))
+            }
+            // Te karty działają przez istniejące stosy i mechanikę trafień.
+            EndlessCard.SUPPLY_LINE, EndlessCard.IRON_CURTAIN, EndlessCard.LAST_BASTION -> Unit
             else -> Unit
+        }
+        applyCard71Synergies(side, card)
+    }
+
+    /** Dodatkowe premie zależą od stosów kart, niezależnie od kolejności ich zdobycia. */
+    private fun applyCard71Synergies(side: Side, card: EndlessCard) {
+        if (card == EndlessCard.SUPPLY_LINE) {
+            val economic = side.cardStacks[EndlessCard.ECONOMY.ordinal] +
+                side.cardStacks[EndlessCard.PLUNDER.ordinal] +
+                side.cardStacks[EndlessCard.EXTRA_GOLD.ordinal] +
+                side.cardStacks[EndlessCard.BLOOD_GOLD.ordinal] +
+                side.cardStacks[EndlessCard.SCAVENGER.ordinal]
+            repeat(economic) { side.incomeMul *= 1.05f }
+        } else if (card == EndlessCard.ECONOMY || card == EndlessCard.PLUNDER ||
+            card == EndlessCard.EXTRA_GOLD || card == EndlessCard.BLOOD_GOLD ||
+            card == EndlessCard.SCAVENGER) {
+            repeat(side.cardStacks[EndlessCard.SUPPLY_LINE.ordinal]) { side.incomeMul *= 1.05f }
+        }
+        if ((card == EndlessCard.MARCH && side.cardStacks[EndlessCard.SWIFT.ordinal] == 0) ||
+            (card == EndlessCard.SWIFT && side.cardStacks[EndlessCard.MARCH.ordinal] == 0)) {
+            repeat(side.cardStacks[EndlessCard.WAR_DRUMS.ordinal]) { side.speedMul *= 1.06f }
+        }
+        if (card == EndlessCard.TOWER_SLOT || card == EndlessCard.ARSENAL) {
+            repeat(side.cardStacks[EndlessCard.TOWER_NETWORK.ordinal]) { side.turretDmgMul *= 1.04f }
+        }
+        if (card == EndlessCard.MOBILIZATION && side.cardStacks[EndlessCard.MOBILIZATION.ordinal] == 1) {
+            repeat(side.cardStacks[EndlessCard.MUSTER_BANNER.ordinal]) { side.trainMul *= 1.08f }
+        }
+        if (card == EndlessCard.BULWARK || card == EndlessCard.FORTRESS ||
+            card == EndlessCard.REPAIR_CREW) {
+            side.repairPerWave = min(0.3f, side.repairPerWave +
+                0.01f * side.cardStacks[EndlessCard.CITADEL_HEART.ordinal])
         }
     }
 
@@ -949,6 +1009,7 @@ class Battle(val cfg: BattleConfig) {
         f.bossRageActive = false
         f.burnDps = 0f
         f.burnLeft = 0f
+        f.slowLeft = 0f
         f.cd = 0.3f
         f.anim = rng.nextFloat() * 6f
         f.attackAnim = 0f
@@ -1001,6 +1062,7 @@ class Battle(val cfg: BattleConfig) {
             if (u.dying > 0.8f) u.active = false
             return
         }
+        if (u.slowLeft > 0f) u.slowLeft = max(0f, u.slowLeft - dt)
         if (u.burnLeft > 0f) {
             val tick = min(dt, u.burnLeft)
             u.burnLeft -= tick
@@ -1045,8 +1107,11 @@ class Battle(val cfg: BattleConfig) {
         val gap = if (target != null) (target.x - u.x) * s.dir - u.radius - target.radius
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
+        val bastionMul = if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.25f)
+            1f + 0.3f * s.cardStacks[EndlessCard.LAST_BASTION.ordinal] else 1f
         val attackDmg = (if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.35f)
-            u.dmg * s.lastStandMul else u.dmg) * (if (u.bossRageActive) 1.5f else 1f)
+            u.dmg * s.lastStandMul else u.dmg) * bastionMul *
+            (if (u.bossRageActive) 1.5f else 1f)
 
         val attackRange = Defs.unitRange(def, u.tier)
         val effectiveRange = if (def.projectile == Proj.NONE) attackRange
@@ -1107,7 +1172,9 @@ class Battle(val cfg: BattleConfig) {
             if ((u.x - holdX) * s.dir >= 0f) blocked = true
         }
         if (!blocked) {
-            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally
+            val slowMul = if (endless && u.slowLeft > 0f)
+                1f - min(0.45f, 0.15f * e.cardStacks[EndlessCard.IRON_CURTAIN.ordinal]) else 1f
+            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally * slowMul
             val v = if (weather == Weather.RAIN) normalSpeed * Weather.RAIN.moveSpeed else normalSpeed
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
@@ -1227,8 +1294,14 @@ class Battle(val cfg: BattleConfig) {
         val shield = projectile && u.hasBossAbility(EndlessBosses.SHIELD) &&
             u.hp > u.maxHp * EndlessBosses.SHIELD_HP
         val rallyArmor = if (sides[u.side].rallyT > 0f) sides[u.side].rallyArmorMul else 1f
-        val dealt = d * multiplier * rallyArmor * (if (shield) 0.5f else 1f)
+        val emberStacks = if (endless && turretEra >= 0 && u.burnLeft > 0f)
+            sides[attacker].cardStacks[EndlessCard.EMBER_FORGE.ordinal] else 0
+        val dealt = d * multiplier * rallyArmor * (1f + emberStacks * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
+        if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
+            sides[attacker].cardStacks[EndlessCard.IRON_CURTAIN.ordinal] > 0) {
+            u.slowLeft = max(u.slowLeft, 2f)
+        }
         if (direct) {
             u.hitStep = stepCount
             u.hitPow = (dealt / max(1f, u.maxHp) * 4f).coerceIn(0f, 1f)
