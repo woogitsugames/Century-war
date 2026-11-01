@@ -86,7 +86,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var waveSectionTitle = ""
     private val bossIcons = intArrayOf(Icons.ADVANCE, Icons.SPEED, Icons.SHIELD, Icons.HELMET, Icons.FLAME)
     private val waveIcons = intArrayOf(Icons.CROSSED_SWORDS, Icons.CROSSHAIR, Icons.SHIELD,
-        Icons.SPEED, Icons.CROWN, Icons.BOMB, Icons.TOWER, Icons.HELMET)
+        Icons.SPEED, Icons.CROWN, Icons.BOMB, Icons.TOWER, Icons.HELMET,
+        Icons.SHIELD, Icons.CROSSED_SWORDS)
 
     /** Atrapa bitwy tylko po to, by użyć proceduralnych sylwetek jednostek z renderera. */
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
