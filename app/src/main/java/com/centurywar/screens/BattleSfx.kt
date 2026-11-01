@@ -48,6 +48,39 @@ object BattleSfx {
         EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH, EraArt.ORBITAL -> Sound.HIT_ENERGY
     }
 
+    /** Materiał trafienia uwzględnia typ celu, nie tylko epokę atakującego. */
+    private fun impactSound(style: EraArt, body: Int): Int = when (body) {
+        Body.BEAST -> Sound.HIT_WOOD
+        Body.SIEGE, Body.CANNON, Body.VEHICLE -> Sound.HIT_STEEL
+        Body.MECH, Body.HOVER -> Sound.HIT_ENERGY
+        else -> hitSound(style)
+    }
+
+    /** Odrębny charakter akustyczny epok i ich wariantów bez nowych plików WAV. */
+    private fun eraPitch(style: EraArt): Float = when (style) {
+        EraArt.TRIBAL -> 0.93f
+        EraArt.BRONZE -> 1.00f
+        EraArt.IRON -> 0.95f
+        EraArt.FEUDAL -> 1.02f
+        EraArt.POWDER -> 0.96f
+        EraArt.STEAM -> 0.87f
+        EraArt.COMBUSTION -> 1.03f
+        EraArt.GALVANIC -> 1.09f
+        EraArt.STEEL -> 0.98f
+        EraArt.SILICON -> 1.05f
+        EraArt.SWARM -> 1.13f
+        EraArt.BIOTECH -> 0.91f
+        EraArt.ORBITAL -> 0.83f
+    }
+
+    private fun explosionSound(style: EraArt): Int = when (style) {
+        EraArt.TRIBAL, EraArt.BRONZE, EraArt.IRON -> Sound.BARRAGE_STONE
+        EraArt.FEUDAL -> Sound.BARRAGE_FIRE
+        EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC -> Sound.EXPLOSION
+        EraArt.STEEL, EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH -> Sound.BARRAGE_ROCKET
+        EraArt.ORBITAL -> Sound.BARRAGE_ORBITAL
+    }
+
     private fun shotSound(projectile: Int, style: EraArt, turret: Boolean): Int {
         if (turret) return when (style) {
             EraArt.TRIBAL, EraArt.BRONZE -> Sound.TURRET_PRIMITIVE
@@ -107,7 +140,8 @@ object BattleSfx {
                 when (type) {
                     FxBuffer.HIT -> {
                         if (++hits > 3) continue
-                        g.sfx(hitSound(style), vol * 0.35f, 35, pan = pan)
+                        g.sfx(impactSound(style, fx.body[i]), vol * 0.35f, 35,
+                            pitch = eraPitch(style), pan = pan)
                     }
                     FxBuffer.DEATH -> {
                         if (++deaths > 2) continue
@@ -119,14 +153,15 @@ object BattleSfx {
                         g.sfx(id, vol * 0.46f, 75, pan = pan)
                     }
                     FxBuffer.EXPLOSION -> {
-                        g.sfx(Sound.EXPLOSION, vol * min(1f, fx.value[i]) * 0.75f, 100, pan = pan, priority = 3)
+                        g.sfx(explosionSound(style), vol * min(1f, fx.value[i]) * 0.75f, 100,
+                            pitch = eraPitch(style), pan = pan, priority = 3)
                         if (fx.value[i] > 1.1f) g.music?.duck(0.52f, 0.45f)
                     }
                     FxBuffer.MUZZLE -> {
                         if (++shots > 4) continue
                         val id = shotSound(fx.value[i].toInt(), style, fx.turret[i])
                         g.sfx(id, vol * (if (fx.turret[i]) 0.54f else 0.40f),
-                            45, pan = pan, priority = if (fx.turret[i]) 2 else 1)
+                            45, pitch = eraPitch(style), pan = pan, priority = if (fx.turret[i]) 2 else 1)
                     }
                     FxBuffer.BASE_HIT -> {
                         g.sfx(Sound.THUMP, vol * 0.74f, 80, pan = pan, priority = 3)
@@ -144,7 +179,8 @@ object BattleSfx {
                     }
                     FxBuffer.GOLD -> g.sfx(Sound.COIN, 0.22f, 120, pan = pan)
                     FxBuffer.BARRAGE -> {
-                        g.sfx(barrageSound(style), 0.82f, 170, pan = pan, priority = 3)
+                        g.sfx(barrageSound(style), 0.82f, 170,
+                            pitch = eraPitch(style), pan = pan, priority = 3)
                         g.music?.duck(0.34f, 1f)
                     }
                 }
