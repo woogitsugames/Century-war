@@ -312,7 +312,7 @@ class BattleScreen(
         if (mini.width() < 160 * dp) {
             // Wąski ekran (np. rozłożony Fold, telefon w pionie): minimapa, HP baz, zegar i pogoda
             // w drugim rzędzie paska zamiast znikać.
-            topH = 52 * dp + 46 * dp
+            topH = 52 * dp + 60 * dp // drugi rząd z miejscem na liczby HP i zegar pod minimapą
             mini.set(l + 22 * dp, t + 46 * dp + 15 * dp, rr - 120 * dp, t + 46 * dp + 31 * dp)
             if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
         }
