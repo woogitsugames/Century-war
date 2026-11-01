@@ -437,7 +437,7 @@ class ScreenshotTestTranslation78Test {
         org.junit.Assert.assertTrue("Pusty zrzut: " + image.name, image.length() > 1000L)
     }
 
-    private fun capture(code: String) {
+    internal fun capture(code: String, onlyBattle: Boolean = false) {
         val previous = L.lang
         try {
             val g = game()
@@ -459,6 +459,7 @@ class ScreenshotTestTranslation78Test {
             (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
             field(g, "achievementSeconds").setFloat(g, 0f)
             shot(g, code, "pause")
+            if (onlyBattle) return
 
             g.profile.hintsSeen = 0L
             val weather = com.centurywar.screens.BattleScreen(
@@ -505,4 +506,19 @@ class ScreenshotTestTranslation78Test {
     @org.junit.Test fun german720p() { capture("de") }
     @org.junit.Test fun turkish720p() { capture("tr") }
     @org.junit.Test fun ukrainian720p() { capture("uk") }
+}
+
+/** Zlecenie 88: kadry bitwy i pauzy w trzech językach, również w filtrze *LTest*. */
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+@org.robolectric.annotation.Config(sdk = [35])
+class LTestScreens88 {
+    @org.junit.Test fun germanBattleAndPause() =
+        ScreenshotTestTranslation78Test().capture("de", onlyBattle = true)
+
+    @org.junit.Test fun turkishBattleAndPause() =
+        ScreenshotTestTranslation78Test().capture("tr", onlyBattle = true)
+
+    @org.junit.Test fun ukrainianBattleAndPause() =
+        ScreenshotTestTranslation78Test().capture("uk", onlyBattle = true)
 }
