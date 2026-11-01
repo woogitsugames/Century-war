@@ -116,6 +116,18 @@ class ProfileBackupTest {
         assertEquals(2, restored.stars[13])
     }
 
+    @Test fun earliestVersionOneCanBeImportedAndMigrated() {
+        val old = profile()
+        old.medals = 41
+        old.stars[8] = 1
+        val versionOne = JSONObject(old.toJson()).put("v", 1).toString()
+        val restored = profile()
+        restored.fromJson(decode(ProfileBackup.encode(versionOne)))
+        assertEquals(41, restored.medals)
+        assertEquals(0, restored.stars[8])
+        assertEquals(1, restored.stars[12])
+    }
+
     @Test fun safetyCopyIsReadableAndSurvivesChangeOfCurrentProfile() {
         val folder = Files.createTempDirectory("cw-safety").toFile()
         val source = profile()
