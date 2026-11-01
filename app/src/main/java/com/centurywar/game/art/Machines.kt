@@ -169,6 +169,8 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             muzzle(53f - kick * 5f, -37f, atk, 0.85f)
             cv.restore()
         } else {
+            cv.save()
+            cv.scale(0.89f, 1f)
             val left = sin(walk + phase) * 6f * stride
             val right = sin(walk + phase + Motion.PI) * 6f * stride
             p.seg(-17f, -37f, -26f + left, -18f, 10f, shade)
@@ -194,6 +196,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
             p.seg(42f - kick * 5f, -55f, 52f - kick * 5f, -55f, 3f, shade)
             muzzle(54f - kick * 5f, -55f, atk, 0.8f)
             cv.restore()
+            cv.restore()
         }
     }
 
@@ -206,6 +209,7 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         val hover = sin(time * 4f + phase) * 2.1f * (1f - crashed)
         cv.save()
         cv.translate(0f, hover + crashed * 2f)
+        if (elite) cv.scale(0.88f, 0.97f)
         p.glow(0f, -17f, width * 0.9f * (1f - crashed * 0.4f), 0x5551DCE8)
         // Skrzydła i dysze: w locie nie ma nóg ani gąsienic.
         p.quad(-width, -29f, -width + 8f, -50f, width - 9f, -50f, width, -29f); p.shape(team)
