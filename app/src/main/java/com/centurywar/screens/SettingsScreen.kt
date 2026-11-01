@@ -113,7 +113,12 @@ class SettingsScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         chrome.layoutBack(back)
-        val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
+        // Bardzo szeroki telefon ma miejsce na szersze kolumny: długie etykiety
+        // kopii/importu pozostają czytelne, bez zmiany układu na 720p i Foldzie.
+        val panorama = (w - g.insetL - g.insetR) / (h - g.insetT - g.insetB) > 2.25f &&
+            (h - g.insetT - g.insetB) / dp < 380f
+        val pw = min((if (panorama) 760 else 620) * dp,
+            w - g.insetL - g.insetR - 32 * dp)
         rebuildRows()
         val rows = rows()
         lastAvailable = g.online.available
