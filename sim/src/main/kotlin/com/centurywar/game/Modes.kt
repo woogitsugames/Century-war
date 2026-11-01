@@ -210,6 +210,42 @@ object Campaign {
  * Oblężenie tygodnia: poniedziałek 00:00 UTC, jeden zestaw reguł na cały tydzień.
  * Kolejność i zawartość obu pul są częścią zasad historycznych tygodni.
  */
+/**
+ * Sześć zestawów łączących istniejące modyfikatory z pogodą dnia
+ * i kartą startową tygodnia. Kolejność i skład są stałe dla rankingu.
+ */
+object ChallengeRuleSets {
+    class RuleSet(
+        val key: String,
+        val descriptionKey: String,
+        val first: Modifier,
+        val second: Modifier,
+        val weeklyCard: EndlessCard,
+    )
+
+    private val SETS = arrayOf(
+        RuleSet("day109_gold", "day109_gold_d", Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES,
+            EndlessCard.ECONOMY),
+        RuleSet("day109_march", "day109_march_d", Modifier.FAST_UNITS, Modifier.FOG_OF_WAR,
+            EndlessCard.MARCH),
+        RuleSet("day109_rain", "day109_rain_d", Modifier.RANGED_HORDE, Modifier.EXPENSIVE_TOWERS,
+            EndlessCard.SHARPSHOOTERS),
+        RuleSet("day109_veterans", "day109_veterans_d", Modifier.RICH_START, Modifier.VETERANS,
+            EndlessCard.VETERAN),
+        RuleSet("day109_hired", "day109_hired_d", Modifier.SLOW_XP, Modifier.MERCENARIES,
+            EndlessCard.EXTRA_GOLD),
+        RuleSet("day109_iron", "day109_iron_d", Modifier.GLASS_CANNON, Modifier.ARMORED_FOE,
+            EndlessCard.BULWARK),
+    )
+
+    const val COUNT = 6
+
+    fun forModifiers(first: Modifier, second: Modifier): RuleSet? =
+        SETS.firstOrNull { it.first == first && it.second == second }
+
+    fun forWeek(index: Long): RuleSet = SETS[Math.floorMod(index, COUNT.toLong()).toInt()]
+}
+
 object Weekly {
     private val MODIFIERS = arrayOf(
         Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES, Modifier.FAST_UNITS,
@@ -234,6 +270,12 @@ object Weekly {
     fun medalReward(index: Int): Int = MEDAL_REWARDS[index]
     const val TIER_COUNT = 3
 
+    /** Dwa pierwsze tygodnie po premierze są częścią istniejących wzorców rankingu. */
+    fun ruleSet(week: Long): ChallengeRuleSets.RuleSet? {
+        val first = weekNumber(Daily.RELEASE_DAY) + 3L
+        return if (week < first) null else ChallengeRuleSets.forWeek(week - first)
+    }
+
     fun config(week: Long): BattleConfig {
         require(week >= 0L) { "Nieprawidłowy numer tygodnia" }
         val seed = week * 104_729L + 211L
@@ -241,9 +283,14 @@ object Weekly {
         val start = rng.nextInt(6)
         val max = minOf(Defs.ERA_COUNT - 1, start + 2 + rng.nextInt(2))
         val pool = if (week >= weekNumber(Daily.RELEASE_DAY)) RELEASE_MODIFIERS else MODIFIERS
+        val rule = ruleSet(week)
         val mods = linkedSetOf<Modifier>()
-        while (mods.size < 2) mods.add(pool[rng.nextInt(pool.size)])
-        val card = START_CARDS[rng.nextInt(START_CARDS.size)]
+        if (rule == null) {
+            while (mods.size < 2) mods.add(pool[rng.nextInt(pool.size)])
+        } else {
+            mods.add(rule.first); mods.add(rule.second)
+        }
+        val card = rule?.weeklyCard ?: START_CARDS[rng.nextInt(START_CARDS.size)]
         return BattleConfig(
             mode = Mode.ENDLESS, seed = seed, aiPower = 1f,
             startEra = start, maxEra = max, modifiers = mods,
@@ -260,10 +307,43 @@ object Daily {
         Modifier.RICH_START, Modifier.SLOW_XP, Modifier.ARMORED_FOE, Modifier.FOG_OF_WAR,
     )
 
+    // Zamrożona kolejność 14 modyfikatorów: dopisanie enumów nie przelosuje starych dni.
+    private val RELEASE_MODIFIERS = arrayOf(
+        Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES, Modifier.FAST_UNITS,
+        Modifier.NO_TURRETS, Modifier.RANGED_HORDE, Modifier.GLASS_CANNON,
+        Modifier.RICH_START, Modifier.SLOW_XP, Modifier.ARMORED_FOE,
+        Modifier.FOG_OF_WAR, Modifier.SHORT_DAY, Modifier.VETERANS,
+        Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES,
+    )
+    // 90 unikalnych par bez sprzeczności „bez wież” + „drogie wieże”.
+    private val RULE_PAIRS: List<Pair<Modifier, Modifier>> = buildList {
+        for (i in RELEASE_MODIFIERS.indices) for (j in i + 1 until RELEASE_MODIFIERS.size) {
+            val a = RELEASE_MODIFIERS[i]
+            val b = RELEASE_MODIFIERS[j]
+            if (a == Modifier.NO_TURRETS && b == Modifier.EXPENSIVE_TOWERS) continue
+            add(a to b)
+        }
+    }
+
+    private fun pairFor(day: Long): Pair<Modifier, Modifier> {
+        val position = Math.floorMod(day - RULES_V2_DAY, RULE_PAIRS.size.toLong()).toInt()
+        // 37 i 90 są względnie pierwsze: każde 90 kolejnych dni ma inne pary.
+        return RULE_PAIRS[(position * 37 + 13) % RULE_PAIRS.size]
+    }
+
+    fun ruleSet(day: Long): ChallengeRuleSets.RuleSet? {
+        if (day < RULES_V2_DAY) return null
+        val pair = pairFor(day)
+        return ChallengeRuleSets.forModifiers(pair.first, pair.second)
+    }
+
     /** Pierwszy dzień UTC pełnej zawartości wyzwania dnia (żelazo, warianty i pogoda). */
     // Przed pierwszym wydaniem ustaw na faktyczny dzień publikacji; potem NIGDY nie zmieniaj.
     // 21153 (2027-12-01 UTC) to wyłącznie data zastępcza do czasu ustalenia premiery.
     const val RELEASE_DAY = 21153L
+
+    /** Zestawy v2 od następnego cyklu; dni 0–3 po premierze mają przypięte powtórki. */
+    const val RULES_V2_DAY = RELEASE_DAY + 4L
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
@@ -275,10 +355,13 @@ object Daily {
 
     private fun generatedConfig(day: Long, historical: Boolean): BattleConfig {
         val rng = Rng(day * 7919L + 17L)
-        val all = if (historical) LEGACY_MODIFIERS else Modifier.values()
-        val mods = HashSet<Modifier>()
+        val all = if (historical) LEGACY_MODIFIERS else RELEASE_MODIFIERS
+        val rolledMods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
-        while (mods.size < count) mods.add(all[rng.nextInt(all.size)])
+        while (rolledMods.size < count) rolledMods.add(all[rng.nextInt(all.size)])
+        val pair = if (historical || day < RULES_V2_DAY) null else pairFor(day)
+        val mods: Set<Modifier> = if (pair == null) rolledMods
+            else linkedSetOf(pair.first, pair.second)
         // Stare dni zachowują losowanie sprzed dodania żelaza. Numer epoki >=2
         // otrzymuje tylko nowy indeks, nie zmieniając historycznej pary epok.
         val rolledStart = if (historical) rng.nextInt(3) else rng.nextInt(6) // zamrożone: kolejna epoka nie może przelosować przyszłych dni
