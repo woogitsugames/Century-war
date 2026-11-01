@@ -32,7 +32,8 @@ class ProfileBackupTest {
         source.name = "Testowy"
         source.medals = 1234
         source.stars[0] = 3
-        source.levels["commerce"] = 2
+        val researchKey = Profile.research.first { it.max >= 2 }.key
+        source.levels[researchKey] = 2
         source.enableGlobalRanking()
         val identity = source.playerId
         val secret = source.playerSecret
@@ -48,6 +49,7 @@ class ProfileBackupTest {
         assertEquals("Testowy", restored.name)
         assertEquals(1234, restored.medals)
         assertEquals(3, restored.stars[0])
+        assertEquals(2, restored.levels[researchKey])
         assertFalse(restored.globalRanking)
         assertEquals("", restored.playerId)
     }
@@ -134,4 +136,17 @@ class ProfileBackupTest {
         repeat(7) { ProfileBackup.saveSafetyCopy(folder, current) }
         assertEquals(5, folder.listFiles()!!.count { it.name.endsWith(".cwprofile") })
     }
+    @Test fun invalidProfileIsRejectedEvenWithCorrectChecksum() {
+        val malformed = JSONObject(profile().toJson()).put("medals", "nie liczba")
+        // Kodowanie sprawdza ogólny kształt; odczyt musi dodatkowo walidować typy.
+        rejected(ProfileBackup.encode(malformed.toString()))
+    }
+
+    @Test fun safetyCopyFailsWhenDirectoryCannotBeCreated() {
+        val fileInsteadOfDirectory = Files.createTempFile("cw-no-folder", ".tmp").toFile()
+        assertTrue(runCatching {
+            ProfileBackup.saveSafetyCopy(fileInsteadOfDirectory, profile().toJson())
+        }.isFailure)
+    }
+
 }
