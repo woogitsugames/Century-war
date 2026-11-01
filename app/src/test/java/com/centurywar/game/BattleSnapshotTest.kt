@@ -318,6 +318,21 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun allSpecialDailyEventsResumeWithIdenticalBattleState() {
+        val found = HashSet<DailyEvent>()
+        for (day in Daily.RELEASE_DAY + 3L..Daily.RELEASE_DAY + 720L step 4L) {
+            val cfg = Daily.config(day, Bonuses())
+            val event = cfg.dailyEvent ?: continue
+            if (!found.add(event)) continue
+            val (original, resumed) = check(cfg, 60 * 25, 60 * 45, ranked = true)
+            assertEquals(event, original.cfg.dailyEvent)
+            assertEquals(event, resumed.cfg.dailyEvent)
+            if (found.size == DailyEvent.entries.size) break
+        }
+        assertEquals(DailyEvent.entries.toSet(), found)
+    }
+
+    @Test
     fun pendingDoctrineChoiceSurvives() {
         val a = Battle(BattleConfig(Mode.SKIRMISH, 5L, 0.8f, startEra = 0, maxEra = 3))
         var guard = 0

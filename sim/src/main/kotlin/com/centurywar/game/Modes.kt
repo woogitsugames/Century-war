@@ -60,6 +60,16 @@ enum class Weather(
 
 enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
 
+/** Reguła specjalna wyzwania dnia; kolejność jest częścią formatu powtórek. */
+enum class DailyEvent(val key: String, val descriptionKey: String) {
+    MARKSMEN("day_marksmen", "day_marksmen_d"),
+    RAPID_ABILITIES("day_rapid", "day_rapid_d"),
+    FREE_BARRAGE("day_barrage", "day_barrage_d"),
+    FORTIFIED_BASES("day_fortress", "day_fortress_d"),
+    GOLD_RUSH("day_gold", "day_gold_d"),
+    MIRROR_ARMY("day_mirror", "day_mirror_d"),
+}
+
 /** Mnożniki z badań gracza (metaprogresja). Liczy je [com.centurywar.meta.Profile]. */
 class Bonuses(
     val startGold: Float = 0f,
@@ -98,6 +108,8 @@ class BattleConfig(
     val weekly: Long = -1L,
     /** Karta przyznawana na starcie tygodniowego oblężenia. */
     val weeklyCard: EndlessCard? = null,
+    /** Specjalna reguła dnia, niezależna od zwykłych modyfikatorów. */
+    val dailyEvent: DailyEvent? = null,
 )
 
 class Stage(
@@ -277,8 +289,21 @@ object Daily {
         // Drugi, niezależny strumień: nie przesuwa żadnego starego losowania.
         val weather = if (historical) Weather.CLEAR
             else Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
-        return BattleConfig(Mode.DAILY, day, power,
-            start, maxEra, mods, normalizedBonuses(), variantsEnabled = !historical, weather = weather)
+
+        // Osobny strumień nie wpływa na losowania epok, AI, modyfikatorów i pogody.
+        // Czwarty dzień cyklu to RELEASE_DAY + 3; przeszłe dni pozostają bez zmian.
+        val event = if (!historical && (day - RELEASE_DAY) % 4L == 3L)
+            DailyEvent.entries[Rng(day * 131_071L + 907L).nextInt(DailyEvent.entries.size)]
+        else null
+        val eventStart = if (event == DailyEvent.GOLD_RUSH) 2 else start
+        val eventMax = maxOf(maxEra, eventStart)
+        val eventPower = if (event == DailyEvent.MIRROR_ARMY) 1f else power
+        val personality = if (event == DailyEvent.MIRROR_ARMY)
+            AiPersonality.entries[Rng(day * 1_000_003L + 71L).nextInt(AiPersonality.entries.size)]
+        else null
+        return BattleConfig(Mode.DAILY, day, eventPower,
+            eventStart, eventMax, mods, normalizedBonuses(), aiPersonality = personality,
+            variantsEnabled = !historical, weather = weather, dailyEvent = event)
     }
 
     internal fun normalizedBonuses() = Bonuses(

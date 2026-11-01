@@ -1,6 +1,8 @@
 package com.centurywar.server
 
 import com.centurywar.game.Battle
+import com.centurywar.game.Ai
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
 import com.centurywar.game.Bonuses
@@ -62,6 +64,7 @@ class ReplayVerifierTest {
         val battle = Battle(cfg)
         val controller = BattleController(battle)
         while (!battle.over && battle.stepCount < 60 * 180) {
+            if (battle.pendingVariant != null) controller.variant(0)
             if (battle.pendingChoice != null) controller.doctrine(0)
             if (battle.pendingCards != null) controller.card(0)
             if (battle.stepCount % 90 == 0 && battle.canQueue(battle.player, Role.MELEE)) {
@@ -102,6 +105,37 @@ class ReplayVerifierTest {
         val submission = weatherSubmission(cfg, "daily", day = day)
         val verified = ReplayVerifier.verify(submission, day * 86_400_000L + 1_000L, "0.1.0")
         assertEquals(submission.score, verified.score)
+    }
+
+
+    @Test fun serverVerifiesSpecialDayAndRejectsForgedEvent() {
+        val day = (Daily.RELEASE_DAY + 3L..Daily.RELEASE_DAY + 720L step 4L)
+            .first { Daily.config(it, Bonuses()).dailyEvent == DailyEvent.FREE_BARRAGE }
+        val cfg = Daily.config(day, Research.bonuses(IntArray(Research.defs.size)))
+        val battle = Battle(cfg)
+        val controller = BattleController(battle)
+        battle.playerAi = Ai(battle, 0)
+        while (!battle.over && battle.stepCount < 60 * 240) {
+            battle.step()
+            battle.fx.count = 0
+        }
+        if (!battle.over) controller.surrender()
+        org.junit.jupiter.api.Assertions.assertTrue(battle.score() > 0L)
+        val log = controller.log()
+        assertEquals(DailyEvent.FREE_BARRAGE, log.dailyEvent)
+        val input = ScoreSubmission(
+            board = "daily", player = UUID.randomUUID().toString(), nick = "Dowodca",
+            gameVersion = "0.1.0", day = day, seed = day,
+            replay = Replay.encode(log), score = battle.score(),
+            research = List(Research.defs.size) { 0 },
+        )
+        val verified = ReplayVerifier.verify(input, day * 86_400_000L + 1_000L, "0.1.0")
+        assertEquals(input.score, verified.score)
+
+        val forged = input.copy(replay = Replay.encode(log.copy(dailyEvent = null)))
+        assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(forged, day * 86_400_000L + 1_000L, "0.1.0")
+        }
     }
 
     @Test fun verifiesRealScoreFromSim() {

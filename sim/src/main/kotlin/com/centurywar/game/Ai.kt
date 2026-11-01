@@ -321,6 +321,7 @@ class Ai(
 
     /** Losowanie ważone kontrami, ekonomią i profilem dowódcy, bez tymczasowych tablic. */
     private fun pickRole(melee: Int, ranged: Int, heavy: Int): Role {
+        if (b.cfg.dailyEvent == DailyEvent.MARKSMEN) return Role.RANGED
         if (melee == 0 && me.queueSize == 0) return Role.MELEE
         val profile = personality
         var wm = profile.meleeWeight

@@ -34,6 +34,7 @@ import com.centurywar.meta.MissionType
 import com.centurywar.meta.Missions
 import com.centurywar.game.Weather
 import com.centurywar.game.Daily
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.Weekly
 import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.OnlineState
@@ -258,6 +259,32 @@ class ScreenshotTest {
             field(screen, "selected").set(screen, null)
             field(screen, "scroll").setFloat(screen, field(screen, "maxScroll").getFloat(screen))
             shot(g, tag + "_campaign_journey_final", 1)
+        }
+    }
+
+    /** Podgląd wszystkich sześciu zdarzeń na 720p i rozłożonym Foldzie. */
+    @Test
+    fun specialDailyCards() {
+        val dates = LinkedHashMap<DailyEvent, Long>()
+        for (day in Daily.RELEASE_DAY + 3L..Daily.RELEASE_DAY + 720L step 4L) {
+            val event = Daily.config(day, Bonuses()).dailyEvent ?: continue
+            if (event !in dates) dates[event] = day
+            if (dates.size == DailyEvent.entries.size) break
+        }
+        assertTrue(dates.size == DailyEvent.entries.size)
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                if (tag == "phone720") Quality.LOW else Quality.HIGH)
+            for ((event, day) in dates) {
+                val screen = ModeScreen(g, Mode.DAILY, previewDailyDay = day)
+                g.setScreen(screen)
+                shot(g, "${tag}_daily_event_${event.name.lowercase()}")
+                assertTrue((field(screen, "dailyEventTitle").get(screen) as String).isNotBlank())
+            }
         }
     }
 

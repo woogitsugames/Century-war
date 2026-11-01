@@ -214,7 +214,7 @@ class BattleController(
                 ),
             )
         }
-        return Replay.Log(battle.stepCount, commands)
+        return Replay.Log(battle.stepCount, commands, dailyEvent = battle.cfg.dailyEvent)
     }
     /** Zapis surowych wpisów jest możliwy także przed wykonaniem następnego kroku. */
     internal fun writeSnapshot(o: DataOutputStream) {
