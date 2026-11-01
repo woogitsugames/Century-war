@@ -48,7 +48,7 @@ class PrivacySummaryScreen(g: Game) : Screen(g) {
             val words = L[key].split(' ')
             var line = ""
             for (word in words) {
-                val candidate = if (line.isEmpty()) word else "$" + "{line} $" + "{word}"
+                val candidate = if (line.isEmpty()) word else line + " " + word
                 if (line.isNotEmpty() && ui.measure(candidate, 15f) > width) {
                     lines.add(line)
                     line = word
