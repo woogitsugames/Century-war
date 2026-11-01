@@ -257,6 +257,77 @@ class LTest {
         }
     }
 
+    /** Kontrola krótkich etykiet przycisków i zakładek z części 53–67. */
+    @Test
+    fun passTwoInteractiveLabelsFitWithin18Characters() {
+        val keys = listOf(
+            "tip53_barrage_title", "tip53_speed_title", "tip53_queue_title",
+            "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
+            "cx62_abilities", "cx62_doctrines", "cx62_weather",
+            "cx62_modifiers", "cx62_cards", "cx62_bosses", "cx62_no_variants",
+            "pause_quick", "report_problem", "report_send", "report_cancel",
+        )
+        for (key in keys) {
+            val translations = L.raw(key) ?: error("Brak klucza $key")
+            for (i in L.CODES.indices) {
+                val value = translations[i]
+                assertTrue(key + "/" + L.CODES[i] + ": " + value + " (" + value.length + ")",
+                    value.length <= 18)
+            }
+        }
+    }
+
+    @Test
+    fun passTwoBarrageTitleUsesCanonicalTranslation() {
+        val canonical = L.raw("cx_barrage")!!
+        val tooltip = L.raw("tip53_barrage_title")!!
+        for (i in L.CODES.indices) {
+            assertEquals(L.CODES[i], canonical[i], tooltip[i])
+        }
+    }
+
+    /** Przypadki 1/2/5/21/22/25 i turecki znak procentu przed liczbą. */
+    @Test
+    fun passTwoMissionPluralsAndTurkishPercentOrder() {
+        L.setCode("pl")
+        for ((count, suffix) in listOf(
+            1 to "bitwę", 2 to "bitwy", 5 to "bitew",
+            21 to "bitew", 22 to "bitwy", 25 to "bitew",
+        )) {
+            assertEquals("Wygraj $count $suffix przy niepogodzie",
+                L.plural("ms_weather_wins", count.toLong()))
+        }
+        L.setCode("uk")
+        for ((count, suffix) in listOf(
+            1 to "битву в негоду", 2 to "битви в негоду", 5 to "битв у негоду",
+            21 to "битву в негоду", 22 to "битви в негоду", 25 to "битв у негоду",
+        )) {
+            assertEquals("Виграй $count $suffix",
+                L.plural("ms_weather_wins", count.toLong()))
+        }
+        L.setCode("tr")
+        val rally = L.f("cx62_rally_d", 7, 3, 12)
+        assertTrue(rally, rally.contains("+%7"))
+        assertTrue(rally, !rally.contains("%d") && !rally.contains("%%"))
+        val rain = L.f("cx62_rain_d", 10, 20, 30)
+        assertTrue(rain, rain.contains("−%10"))
+        assertTrue(rain, rain.contains("−%20"))
+        assertTrue(rain, rain.contains("−%30"))
+        for (key in listOf(
+            "ms_weather_wins", "ms_custom_skirmish", "ms_endless_bosses",
+            "ms_unit_upgrades", "ms_replays_watched", "ms_endless_cards",
+        )) {
+            for (i in L.CODES.indices) {
+                L.lang = i
+                for (n in longArrayOf(1L, 2L, 5L, 21L, 22L, 25L)) {
+                    val result = L.plural(key, n)
+                    assertTrue(key + "/" + L.CODES[i] + "/" + n + ": " + result,
+                        result.contains(n.toString()) && !result.contains('|') && !result.contains("%d"))
+                }
+            }
+        }
+    }
+
     @Test
     fun fallbackAndCodes() {
         assertEquals("missing_key", L["missing_key"])
