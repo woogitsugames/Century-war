@@ -6,7 +6,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 /** Muzyka proceduralna PCM mono. Cały stan syntezy należy wyłącznie do wątku muzyki. */
-class MusicSynth(private val seed: Int = 0x43A72F19) {
+class MusicSynth(seed: Int = 0x43A72F19) {
+    private var seed = seed
     companion object {
         const val SAMPLE_RATE = 22_050
         const val MENU = -1
@@ -62,11 +63,12 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         private val chordsB = intArrayOf(0, 5, 3, 4)
         private val chordsBridge = intArrayOf(5, 3, 4, 4)
 
-        // Plemiona, antyk, średniowiecze, proch, para, stal, krzem, orbita, menu.
-        // Para/stal i krzem/orbita należą do tych samych rodzin, ale mają inne barwy i tempa.
+        // Każda z dziewięciu epok ma własne tempo, skalę lub instrumentarium.
+        // Menu ma osobny, dziesiąty styl.
         private val styles = arrayOf(
             Style(82, 52, pentatonic, FLUTE, TRIANGLE, SINE, 0, 0.18f),
             Style(94, 53, dorian, PLUCK, TRIANGLE, TRIANGLE, 1, 0.21f),
+            Style(98, 50, dorian, HORN, TRIANGLE, SINE, 2, 0.20f),
             Style(102, 53, major, PLUCK, TRIANGLE, TRIANGLE, 2, 0.22f),
             Style(110, 50, harmonic, HORN, SAW, TRIANGLE, 3, 0.19f),
             Style(116, 48, minor, BRASS, SAW, SAW, 4, 0.18f),
@@ -93,10 +95,13 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
     private inner class Voice {
         var era = MENU
             private set
-        private var style = styles[8]
+        private var style = styles[9]
         private var step = 0
         private var samplesUntilStep = 0
         private var noiseState = 1
+        private var phraseVariation = 0
+        var seedAtReset = seed
+            private set
         private val leadA = Note()
         private val leadB = Note()
         private val counter = Note()
@@ -105,6 +110,9 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         private var bassFrequency = 0f
         private var bassLevel = 0f
         private var bassFilter = 0f
+        private var tensionPhase = 0f
+        private var tensionFrequency = 0f
+        private var tensionLevel = 0f
         private var padPhase1 = 0f
         private var padPhase2 = 0f
         private var padPhase3 = 0f
@@ -194,11 +202,13 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
 
         fun reset(newEra: Int) {
             era = newEra
-            style = styles[if (newEra == MENU) 8 else newEra]
-            step = 0; samplesUntilStep = 0
+            style = styles[if (newEra == MENU) 9 else newEra]
+            step = 0; samplesUntilStep = 0; phraseVariation = 0
+            seedAtReset = seed
             noiseState = (seed xor ((newEra + 2) * 0x45D9F3B)).let { if (it == 0) 1 else it }
             leadA.clear(); leadB.clear(); counter.clear(); nextLead = false
             bassPhase = 0f; bassFrequency = 0f; bassLevel = 0f; bassFilter = 0f
+            tensionPhase = 0f; tensionFrequency = 0f; tensionLevel = 0f
             padPhase1 = 0f; padPhase2 = 0f; padPhase3 = 0f
             padFrequency1 = 0f; padFrequency2 = 0f; padFrequency3 = 0f
             padFilter = 0f; padLevel = 0f
@@ -221,9 +231,18 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         private fun wave(type: Int, phase: Float): Float =
             waves[type][(phase * TABLE_SIZE).toInt() and TABLE_MASK]
 
+        private fun phraseHash(phrase: Int): Int {
+            var x = seed xor ((era + 2) * 0x45D9F3B) xor (phrase * 0x7FEB352D)
+            x = (x xor (x ushr 16)) * 0x7FEB352D
+            x = (x xor (x ushr 15)) * 0x846CA68B.toInt()
+            return x xor (x ushr 16)
+        }
+
         private fun trigger() {
             val position = step % 32
-            val section = (step / 32) % 3
+            val phrase = step / 32
+            val section = phrase % 3
+            if (position == 0) phraseVariation = phraseHash(phrase)
             val melody = when (section) {
                 0 -> themeA[position]
                 1 -> themeB[position]
@@ -234,22 +253,32 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
                 1 -> chordsB
                 else -> chordsBridge
             }
-            if (melody >= 0) {
+            if (melody >= 0 && (position != 12 || (phraseVariation and 3) != 0)) {
                 val note = if (nextLead) leadA else leadB
-                note.start(frequency(melody, 12), style.lead)
+                val shift = if (position == 20 && (phraseVariation and 4) != 0) 1 else 0
+                note.start(frequency(melody + shift, 12), style.lead)
                 nextLead = !nextLead
             }
             if (position % 8 == 0) {
                 val chord = progression[position / 8]
                 bassFrequency = frequency(chord, -12)
                 bassLevel = 1f
+                tensionFrequency = frequency(chord, -24)
+                tensionLevel = 1f
                 padFrequency1 = frequency(chord, 0)
                 padFrequency2 = frequency(chord + 2, 0)
                 padFrequency3 = frequency(chord + 4, 0)
             }
-            // Odpowiedź melodyczna sekcji B: nuta co czwartą szesnastkę.
-            if (section == 1 && position % 4 == 2) {
+            // Sześć cichych ozdobników koduje numer frazy (0..63).
+            // Żadna fraza nie powtarza się dokładnie przez co najmniej 64 frazy.
+            val marker = position / 4
+            if (position % 4 == 3 && marker < 6 &&
+                ((phrase and 63) and (1 shl marker)) != 0) {
                 counter.start(frequency(progression[position / 8] + 2, 0),
+                    if (style.lead == PLUCK) FLUTE else style.lead)
+            } else if (section == 1 && position % 4 == 2) {
+                counter.start(frequency(progression[position / 8] + 2 +
+                    ((phraseVariation ushr 8) and 1), 0),
                     if (style.lead == PLUCK) FLUTE else style.lead)
             }
             val drums = style.drums
@@ -271,10 +300,11 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
                 }
                 if (position % (if (drums >= 4) 2 else 4) == 0) hatLevel = 0.6f
             }
-            step = (step + 1) % 96
+            // 3 sekcje x 64 warianty = 192 frazy; nie wracamy co 96 kroków.
+            step = (step + 1) % (32 * 192)
         }
 
-        fun sample(energy: Float): Float {
+        fun sample(calm: Float, clash: Float, danger: Float): Float {
             if (samplesUntilStep == 0) {
                 trigger()
                 samplesUntilStep = style.stepSamples
@@ -287,6 +317,9 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
             bassLevel *= 0.9998f
             if (bassLevel < 0.0001f) bassLevel = 0f
             bassFilter += (wave(style.bass, bassPhase) - bassFilter) * 0.095f
+            tensionPhase += tensionFrequency
+            if (tensionPhase >= 1f) tensionPhase -= 1f
+            tensionLevel *= 0.99965f
 
             padPhase1 += padFrequency1
             padPhase2 += padFrequency2
@@ -313,12 +346,13 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
                 wave(SINE, kickPhase) * kickLevel * 0.7f +
                     n * (snareLevel * 0.45f + hatLevel * 0.16f)
             } else 0f
-            val calm = if (era == MENU) 0.37f else 1f
-            return (lead * (0.16f + 0.04f * energy) +
-                response * 0.095f * energy +
-                bassFilter * bassLevel * (0.07f + 0.065f * energy) +
-                padFilter * padLevel * (0.12f - 0.024f * energy) +
-                percussion * (0.022f + 0.115f * energy)) * calm
+            val menuGain = if (era == MENU) 0.37f else 1f
+            return (lead * (0.11f + 0.05f * calm + 0.055f * clash) +
+                response * (0.026f + 0.062f * clash) +
+                bassFilter * bassLevel * (0.064f + 0.038f * clash + 0.024f * danger) +
+                padFilter * padLevel * (0.115f * calm + 0.060f * clash) +
+                percussion * (0.018f * calm + 0.066f * clash + 0.072f * danger) +
+                wave(TRIANGLE, tensionPhase) * tensionLevel * 0.048f * danger) * menuGain
         }
 
         val reverbAmount: Float get() = style.reverb
@@ -356,11 +390,24 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
         return duckLevel
     }
 
+    /** Ziarno dotyczy tylko muzyki; nie zmienia RNG bitwy ani powtórek. */
+    fun setSeed(value: Int) {
+        seed = value
+    }
+
     /** W trakcie crossfade następna zmiana czeka na koniec poprzedniej. */
     fun setEra(era: Int) {
-        require(era in MENU..7) { "Nieznana epoka: $era" }
+        require(era in MENU..8) { "Nieznana epoka: $era" }
         targetEra = era
-        if (fadeRemaining == 0 && foreground.era != era) beginFade(era)
+        if (fadeRemaining == 0 && (foreground.era != era || foreground.seedAtReset != seed)) {
+            beginFade(era)
+        }
+    }
+
+    /** Dolna granica okresu fraz (sześciobitowe ozdobniki). */
+    internal fun shortestFormRepeatSeconds(era: Int): Float {
+        require(era in MENU..8)
+        return 64 * 32f * styles[if (era == MENU) 9 else era].stepSamples / SAMPLE_RATE
     }
 
     fun setIntensity(value: Float) {
@@ -369,7 +416,7 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
 
     /** Bez przejścia przy uruchomieniu nowego strumienia. */
     fun skipFade() {
-        if (foreground.era != targetEra) foreground.reset(targetEra)
+        if (foreground.era != targetEra || foreground.seedAtReset != seed) foreground.reset(targetEra)
         fadeRemaining = 0
     }
 
@@ -382,23 +429,28 @@ class MusicSynth(private val seed: Int = 0x43A72F19) {
     }
 
     private fun sample(): Float {
-        intensity += (desiredIntensity - intensity) * 0.001f
-        val energy = intensity * intensity
+        // Szybsze wejście w walkę, wolniejszy powrót do spokoju.
+        val smoothing = if (desiredIntensity > intensity) 0.00024f else 0.000075f
+        intensity += (desiredIntensity - intensity) * smoothing
+        val calm = (1f - intensity * 1.15f).coerceIn(0f, 1f)
+        val clash = (intensity * 2.2f).coerceIn(0f, 1f)
+        val danger = ((intensity - 0.55f) * 2.22f).coerceIn(0f, 1f)
         val dry: Float
         val reverb: Float
         if (fadeRemaining == 0) {
-            dry = foreground.sample(energy)
+            dry = foreground.sample(calm, clash, danger)
             reverb = foreground.reverbAmount
         } else {
             val mix = 1f - fadeRemaining.toFloat() / CROSSFADE_SAMPLES
-            dry = foreground.sample(energy) * (1f - mix) + incoming.sample(energy) * mix
+            dry = foreground.sample(calm, clash, danger) * (1f - mix) +
+                incoming.sample(calm, clash, danger) * mix
             reverb = foreground.reverbAmount * (1f - mix) + incoming.reverbAmount * mix
             fadeRemaining--
             if (fadeRemaining == 0) {
                 val old = foreground
                 foreground = incoming
                 incoming = old
-                if (foreground.era != targetEra) beginFade(targetEra)
+                if (foreground.era != targetEra || foreground.seedAtReset != seed) beginFade(targetEra)
             }
         }
         // Dwa krótkie opóźnienia z tłumionym sprzężeniem; zero alokacji i stabilna energia.
