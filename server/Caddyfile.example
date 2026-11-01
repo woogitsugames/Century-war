@@ -9,6 +9,8 @@ scores.example.com {
         X-Content-Type-Options "nosniff"
     }
     reverse_proxy 127.0.0.1:8080 {
+        # Nadpisujemy XFF adresem rzeczywistego połączenia, a nie nagłówkiem klienta.
+        header_up X-Forwarded-For {remote_host}
         transport http {
             read_timeout 120s
         }

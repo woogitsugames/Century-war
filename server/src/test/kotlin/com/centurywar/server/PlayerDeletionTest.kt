@@ -77,7 +77,8 @@ class PlayerDeletionTest {
     @Test fun deleteKeepsBlockSoBlockedPlayerCannotUnblockThemselves() = testApplication {
         SqliteStore("jdbc:sqlite::memory:").use { store ->
             val blocked = input()
-            store.save(blocked, VerifiedReplay("endless", 100L, 900), now, "hash-a")
+            store.save(blocked, VerifiedReplay("endless", 100L, 900), now, "hash-a",
+                installSecretHash(playerSecret))
             assertTrue(store.blockPlayer(blocked.player))
             application { leaderboardModule(store, secret, { now }) }
 

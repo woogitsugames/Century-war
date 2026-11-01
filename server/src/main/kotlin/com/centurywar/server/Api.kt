@@ -175,7 +175,7 @@ fun Application.leaderboardModule(
                 withContext(Dispatchers.Default) { verifyReplay(input, receivedAt, supportedVersion) }
             }
             if (verification == null || verification.exceptionOrNull() is TimeoutCancellationException) {
-                call.response.header(HttpHeaders.RetryAfter, "30")
+                call.response.header("Retry-After", "30")
                 call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")
                 return@post
             }
