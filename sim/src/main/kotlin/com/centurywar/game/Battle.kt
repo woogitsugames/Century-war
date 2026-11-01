@@ -329,8 +329,15 @@ class Battle(val cfg: BattleConfig) {
             if (Modifier.NO_TURRETS in mods) s.slots = 0
             if (Modifier.GLASS_CANNON in mods) { s.dmgMul *= 1.5f; s.hpMul *= 0.7f }
             if (Modifier.SLOW_XP in mods) s.xpMul *= 0.6f
+            if (cfg.dailyEvent == DailyEvent.FORTIFIED_BASES) s.baseHpMul *= 2f
+            if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES) s.abilityCdMul *= 0.5f
+            if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
+                s.autoBarrageInterval = 30f
+                s.autoBarrageTimer = 30f
+            }
             s.gold = 175f * Defs.costScale(cfg.startEra)
             if (Modifier.RICH_START in mods) s.gold += 400f * Defs.costScale(cfg.startEra)
+            if (cfg.dailyEvent == DailyEvent.GOLD_RUSH) s.gold += 1000f * Defs.costScale(cfg.startEra)
         }
         val p = sides[0]
         val b = cfg.playerBonuses
@@ -352,6 +359,10 @@ class Battle(val cfg: BattleConfig) {
         e.incomeMul *= cfg.aiPower
         e.xpMul *= cfg.aiPower
         if (Modifier.ARMORED_FOE in mods) e.hpMul *= 1.3f
+        if (cfg.dailyEvent == DailyEvent.MIRROR_ARMY) {
+            e.cap = p.cap
+            e.slots = p.slots
+        }
         // Przeciwnik ma taki sam limit armii i slotów, jak strona bez badań.
         if (cfg.tutorial) { e.gold *= 0.5f; p.xpMul *= 1.5f } // samouczek: łagodniejszy start, szybszy awans
         if (endless) {
@@ -377,16 +388,23 @@ class Battle(val cfg: BattleConfig) {
 
     // ---------------------------------------------------------------- komendy gracza / AI
 
+    /** Cena jednostki po zastosowaniu reguły specjalnej dnia. */
+    fun unitCost(side: Side, role: Role): Int {
+        val cost = side.unit(role).cost
+        return if (cfg.dailyEvent == DailyEvent.MARKSMEN && role == Role.RANGED)
+            cost * 7 / 10 else cost
+    }
+
     fun canQueue(side: Side, role: Role): Boolean {
-        val def = side.unit(role)
+        if (cfg.dailyEvent == DailyEvent.MARKSMEN && role != Role.RANGED) return false
         if (role == Role.ELITE && !side.eliteUnlocked) return false
-        return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= def.cost
+        return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= unitCost(side, role)
     }
 
     fun queueUnit(side: Side, role: Role): Boolean {
         if (over || !canQueue(side, role)) return false
         val def = side.unit(role)
-        side.gold -= def.cost
+        side.gold -= unitCost(side, role)
         side.queue[side.queueSize] = def.id
         side.queueWaveTheme[side.queueSize] = EndlessWaveTheme.MIXED.ordinal
         side.queueSize++
@@ -417,7 +435,9 @@ class Battle(val cfg: BattleConfig) {
     fun cancelLast(side: Side): Boolean {
         if (side.queueSize == 0) return false
         val id = side.queue[--side.queueSize]
-        side.gold += Defs.allUnits[id].cost
+        val def = Defs.allUnits[id]
+        side.gold += if (cfg.dailyEvent == DailyEvent.MARKSMEN && def.role == Role.RANGED)
+            def.cost * 7 / 10 else def.cost
         if (side.queueSize == 0) side.trainT = 0f
         return true
     }
@@ -744,6 +764,13 @@ class Battle(val cfg: BattleConfig) {
             turrets(s, dt)
             for (i in 0..1) if (s.abilityCd[i] > 0f) s.abilityCd[i] -= dt
             if (s.rallyT > 0f) s.rallyT -= dt
+            if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
+                s.autoBarrageTimer -= dt
+                if (s.autoBarrageTimer <= 0f) {
+                    s.autoBarrageTimer += s.autoBarrageInterval
+                    fireBarrage(s)
+                }
+            }
         }
         for (s in sides) promote(s)
         if (endless) director(dt)
