@@ -61,6 +61,10 @@ class CampaignScreen(g: Game) : Screen(g) {
     private val cx = FloatArray(Campaign.stages.size)
     private val cy = FloatArray(Campaign.stages.size)
     private val regionPictures = arrayOfNulls<Picture>(Defs.ERA_COUNT)
+    private var pictureWidth = -1
+    private var pictureHeight = -1
+    private var pictureDp = -1f
+    private var picturePortrait = false
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -357,6 +361,9 @@ class CampaignScreen(g: Game) : Screen(g) {
         val rh = if (portraitMap) regionSpan else viewportH
         val wi = ceil(rw.toDouble()).toInt().coerceAtLeast(1)
         val hi = ceil(rh.toDouble()).toInt().coerceAtLeast(1)
+        // Powrót z bitwy wywołuje layout bez zmiany mapy; nie nagrywamy 9 Picture ponownie.
+        if (wi == pictureWidth && hi == pictureHeight && dp == pictureDp &&
+            portraitMap == picturePortrait && regionPictures.all { it != null }) return
         for (era in regionPictures.indices) {
             val picture = Picture()
             val art = picture.beginRecording(wi, hi)
@@ -364,6 +371,10 @@ class CampaignScreen(g: Game) : Screen(g) {
             picture.endRecording()
             regionPictures[era] = picture
         }
+        pictureWidth = wi
+        pictureHeight = hi
+        pictureDp = dp
+        picturePortrait = portraitMap
     }
 
     private fun triangle(c: Canvas, x: Float, y: Float, radius: Float, height: Float, color: Int) {
