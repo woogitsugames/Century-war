@@ -35,6 +35,9 @@ class CampaignScreen(g: Game) : Screen(g) {
     private val tiles = Campaign.stages.map { stage -> btn(stage.index).also { it.tag = stage } }
     private val start = btn(-2)
     private val close = btn(-3)
+    private val hints = HintOverlay(g)
+
+    init { buttons.add(0, hints.okBtn) }
 
     private var portraitMap = false
     private var laidOut = false
@@ -218,6 +221,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     }
 
     override fun onDrag(dx: Float, dy: Float) {
+        hints.onAction()
         if (selected != null) return
         autoScroll = false
         moving = true
@@ -256,6 +260,11 @@ class CampaignScreen(g: Game) : Screen(g) {
             }
         }
         place()
+        hints.update(dt)
+        if (g.profile.battles == 1 && selected == null && !autoScroll) {
+            val next = tiles[g.profile.unlockedStage().coerceIn(0, tiles.lastIndex)]
+            hints.showScreen(HintOverlay.FIRST_BATTLE, if (next.visible) next.r else back.r)
+        }
     }
 
     override fun render(c: Canvas) {
@@ -303,6 +312,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         chrome.title(c, L["campaign"])
         chrome.badges(c, g.profile.medals, g.profile.totalStars())
         selected?.let { drawInfo(c, it) }
+        hints.draw(c)
         eraIntro?.draw(c)
     }
 
@@ -583,6 +593,8 @@ class CampaignScreen(g: Game) : Screen(g) {
 
     override fun onClick(b: Button) {
         if (eraIntro?.active == true) return
+        if (hints.onClick(b)) return
+        hints.onAction()
         when (b.id) {
             -1 -> g.pop()
             -2 -> selected?.let { s ->
