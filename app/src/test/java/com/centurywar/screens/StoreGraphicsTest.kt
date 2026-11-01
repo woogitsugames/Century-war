@@ -53,8 +53,13 @@ class StoreGraphicsTest {
 
     private val devices = listOf(
         Device("phone", 1920, 1080, 2f),
-        Device("tablet7", 1920, 1200, 1.8f),
-        Device("tablet10", 2560, 1600, 2f),
+        Device("tablet7", 1920, 1080, 1.8f),
+        Device("tablet10", 2560, 1440, 2f),
+    )
+    // Podglądy Folda nie są osobnym typem zasobu w Play Console.
+    private val foldDevices = listOf(
+        Device("foldLandscape", 2184, 1968, 3f),
+        Device("foldPortrait", 1968, 2184, 3f),
     )
     private val names = arrayOf(
         "menu", "campaign", "endless-boss", "night-barrage", "era-variants",
@@ -68,7 +73,7 @@ class StoreGraphicsTest {
         val output = File("build/store").apply { mkdirs() }
         val previousLanguage = L.lang
         try {
-            for (language in listOf("pl", "en")) {
+            for (language in selectedLanguages()) {
                 val strings = captions(language)
                 val langDir = File(output, language).apply { mkdirs() }
                 val manifest = StringBuilder("file\twidth\theight\talt\n")
@@ -97,6 +102,22 @@ class StoreGraphicsTest {
                             .append(strings.getProperty("alt." + scene)).append('\n')
                     }
                 }
+                // Autentyczny HUD i nowy pasek na obu orientacjach rozłożonego Folda.
+                // Podglądy są do QA, nie trafiają do manifestu Play Console.
+                for (device in foldDevices) {
+                    val g = game(device, language)
+                    val preview = File(langDir, "preview_${device.name}_hud.png")
+                    writePng(preview, device.width, device.height, false) { c ->
+                        val battle = sceneBattle(4)
+                        val screen = BattleScreen(g, battle.cfg,
+                            restored = RestoredBattle(battle, false, -120f))
+                        g.setScreen(screen)
+                        g.finishScreenTransition()
+                        check(screen.onBack()) // Wznów zapisaną bitwę, aby pokazać HUD.
+                        g.frame(c, 0f)
+                    }
+                    checkPng(preview, device.width, device.height, false)
+                }
                 val feature = File(langDir, "feature_1024x500.png")
                 writePng(feature, 1024, 500, false) { c ->
                     val g = game(Device("feature", 1024, 500, 1f), language)
@@ -119,6 +140,22 @@ class StoreGraphicsTest {
         } finally {
             L.lang = previousLanguage
         }
+    }
+
+    /** Format wszystkich plików i komplet napisów, bez kosztownego renderowania. */
+    @Test
+    fun storeAssetRequirements() {
+        assertEquals("Dziesięć języków gry", 10, L.CODES.size)
+        assertEquals("Telefon i dwa tablety", setOf("phone", "tablet7", "tablet10"),
+            devices.map { it.name }.toSet())
+        for (device in devices) {
+            assertTrue("Rozmiar: ${device.name}",
+                device.width in 320..3840 && device.height in 320..3840)
+            assertTrue("Proporcje 2:1: ${device.name}",
+                maxOf(device.width, device.height) <= 2 * minOf(device.width, device.height))
+            assertEquals("Zalecane 16:9: ${device.name}", device.width * 9, device.height * 16)
+        }
+        for (language in L.CODES) captions(language)
     }
 
     /** Sekcje publikowane musza miescic sie w limitach Play Console. */
@@ -242,6 +279,17 @@ class StoreGraphicsTest {
         check(props.getProperty("alt.feature")?.let { it.length in 1..140 } == true)
         check(props.getProperty("alt.icon")?.let { it.length in 1..140 } == true)
         return props
+    }
+
+    private fun selectedLanguages(): List<String> {
+        val codes = System.getenv("STORE_LANGUAGES")
+            ?.takeIf { it.isNotBlank() }
+            ?.split(',')
+            ?.map { it.trim().lowercase() }
+            ?: L.CODES.toList()
+        require(codes.isNotEmpty() && codes.distinct().size == codes.size &&
+            codes.all { it in L.CODES }) { "Niepoprawne STORE_LANGUAGES: $codes" }
+        return codes
     }
 
     private fun game(device: Device, language: String): Game {
