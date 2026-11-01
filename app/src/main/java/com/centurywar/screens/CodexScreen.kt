@@ -41,7 +41,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private companion object {
         const val CARDS = 6          // 4 jednostki + wieża + ostrzał
         const val MAX_STATS = 9
-        const val MAX_LINES = 3
+        const val MAX_LINES = 16
         const val TURRET = 4
         const val BARRAGE = 5
         const val PAGE_ERAS = 0
@@ -55,7 +55,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         const val PAGE_CARDS = 8
         const val PAGE_BOSSES = 9
         const val MAX_GUIDE = 64
-        const val MAX_GUIDE_LINES = 8
+        const val MAX_GUIDE_LINES = 32
         val CATEGORY_KEYS = arrayOf(
             "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
             "cx62_abilities", "cx62_doctrines", "cx62_weather",
@@ -69,6 +69,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     }
 
     private val bg = MenuBg()
+    private val scrollCue = ScrollCue()
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val toggle = btn(-2)
@@ -111,7 +112,22 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var previewH = 0f
     private var scroll = 0f
     private var maxScroll = 0f
+    private var categoryScroll = 0f
+    private var maxCategoryScroll = 0f
+    private var eraScroll = 0f
+    private var maxEraScroll = 0f
+    private var categoryRailTop = 0f
+    private var categoryRailHeight = 0f
+    private var eraRailTop = 0f
+    private var eraRailHeight = 0f
+    private var activeRail = 0
+    private val categoryOffsets = FloatArray(CATEGORY_KEYS.size)
+    private val categoryWidths = FloatArray(CATEGORY_KEYS.size)
+    private val eraOffsets = FloatArray(Defs.ERA_COUNT)
+    private val eraWidths = FloatArray(Defs.ERA_COUNT)
+    private var descriptionExtra = 0f
     private val gap get() = 12 * dp
+    private val descLineDp get() = if (ui.textScale > 1.15f) 22f else 17f
     private val headerH get() =
         (if (page == PAGE_VARIANTS) 97f + variantLineCount * guideLineDp else 75f) * dp
     private val guideLineDp get() = if (ui.textScale > 1.15f) 20f else 17f
@@ -162,6 +178,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         page = index
         scroll = 0f
         layout()
+        revealCategory(index)
     }
 
     override fun layout() {
@@ -169,19 +186,26 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         left = g.insetL + 16 * dp
         contentW = w - g.insetL - g.insetR - 32 * dp
 
+        // Dwie pojedyncze poziome listwy; szerokość każdej etykiety wynika z tekstu.
+        // Żadna nazwa epoki nie wymaga mniejszej czcionki niż sąsiadujące zakładki.
+        val railWidth = (contentW - 44 * dp).coerceAtLeast(1f)
         val tabGap = 7 * dp
-        val topicW = (contentW - 4 * tabGap) / 5f
-        val topicH = (if (ui.textScale > 1.15f) 44f else 40f) * dp
-        val tabTop = chrome.top + 2 * dp
+        categoryRailTop = chrome.top + 2 * dp
+        categoryRailHeight = (if (ui.textScale > 1.15f) 46f else 42f) * dp
+        var used = 0f
         for (i in categories.indices) {
             val b = categories[i]
             b.label = L[CATEGORY_KEYS[i]]
             b.selected = i == page
             b.highlight = b.selected
-            b.set(left + (i % 5) * (topicW + tabGap),
-                tabTop + (i / 5) * (topicH + tabGap), topicW, topicH)
+            categoryOffsets[i] = used
+            categoryWidths[i] = max(100 * dp, ui.measure(b.label, 12.5f, true) + 28 * dp)
+            used += categoryWidths[i] + tabGap
         }
-        viewTop = tabTop + 2 * topicH + tabGap + 12 * dp
+        maxCategoryScroll = max(0f, used - tabGap - railWidth)
+        categoryScroll = categoryScroll.coerceIn(0f, maxCategoryScroll)
+        positionCategories()
+        viewTop = categoryRailTop + categoryRailHeight + 12 * dp
 
         val hasEra = page <= PAGE_ABILITIES
         toggle.visible = hasEra
@@ -190,22 +214,24 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val tw = if (compact) 44 * dp else min(210 * dp, w * 0.24f)
         toggle.set(w - g.insetR - 12 * dp - tw, g.insetT + 10 * dp, tw, 44 * dp)
 
-        // Wybór epoki pozostaje dostępny na stronach związanych z konkretną epoką.
-        val eraGap = 8 * dp
-        val perRow = if ((contentW - (Defs.ERA_COUNT - 1) * eraGap) /
-            Defs.ERA_COUNT < 66 * dp) 5 else Defs.ERA_COUNT
-        val eraW = (contentW - (perRow - 1) * eraGap) / perRow
-        val eraH = 40 * dp
-        for (i in tabs.indices) {
-            val b = tabs[i]
-            b.visible = hasEra
-            b.label = L[Defs.eraKeys[i]]
-            if (hasEra) b.set(left + (i % perRow) * (eraW + eraGap),
-                viewTop + (i / perRow) * (eraH + eraGap), eraW, eraH)
-        }
+        eraRailTop = viewTop
+        eraRailHeight = 40 * dp
         if (hasEra) {
-            val rows = (tabs.size + perRow - 1) / perRow
-            viewTop += rows * eraH + (rows - 1) * eraGap + 10 * dp
+            used = 0f
+            for (i in tabs.indices) {
+                val b = tabs[i]
+                b.label = L[Defs.eraKeys[i]]
+                eraOffsets[i] = used
+                eraWidths[i] = max(100 * dp, ui.measure(b.label, 13.5f, true) + 28 * dp)
+                used += eraWidths[i] + 8 * dp
+            }
+            maxEraScroll = max(0f, used - 8 * dp - railWidth)
+            eraScroll = eraScroll.coerceIn(0f, maxEraScroll)
+            positionEraTabs()
+            viewTop += eraRailHeight + 10 * dp
+        } else {
+            for (b in tabs) b.visible = false
+            maxEraScroll = 0f
         }
 
         val variants = Defs.spec(era).variants
@@ -217,14 +243,13 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         if (page == PAGE_VARIANTS && variants.isNotEmpty()) viewTop += 50 * dp
 
-        cols = (contentW / ((if (ui.textScale > 1.15f) 340f else 280f) * dp))
+        cols = (contentW / ((if (ui.textScale > 1.15f) 375f else 380f) * dp))
             .toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
         statCols = if (cw >= 340 * dp) 3 else 2
         previewW = min(128 * dp, cw * 0.34f)
         previewH = 112 * dp
         val unitRows = (MAX_STATS + statCols - 1) / statCols
-        ch = 10 * dp + previewH + 36 * dp + unitRows * rowH + 12 * dp
         activeCards = when (page) {
             PAGE_ERAS, PAGE_VARIANTS -> if (page == PAGE_VARIANTS && variants.isEmpty()) 0 else CARDS
             PAGE_UNITS -> 4
@@ -232,11 +257,58 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             else -> 0
         }
         rebuild()
+        var longest = 3
+        for (i in 0 until CARDS) longest = max(longest, lineCount[i])
+        descriptionExtra = (longest - 3) * descLineDp * dp
+        ch = 10 * dp + previewH + 36 * dp + descriptionExtra + unitRows * rowH + 12 * dp
         val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
         val contentH = if (hasEra) headerH + gridH + 12 * dp else 0f
         val allH = contentH + guideHeight
         maxScroll = max(0f, allH - (h - g.insetB - viewTop) + 8 * dp)
         scroll = scroll.coerceIn(0f, maxScroll)
+    }
+
+    /** Przyciski całkowicie poza widoczną listwą nie przechwytują dotyku. */
+    private fun positionCategories() {
+        val minX = left + 22 * dp
+        val maxX = left + contentW - 22 * dp
+        for (i in categories.indices) {
+            val b = categories[i]
+            b.set(minX + categoryOffsets[i] - categoryScroll, categoryRailTop,
+                categoryWidths[i], categoryRailHeight)
+            b.visible = b.r.left >= minX - 0.5f * dp && b.r.right <= maxX + 0.5f * dp
+        }
+    }
+
+    private fun positionEraTabs() {
+        val minX = left + 22 * dp
+        val maxX = left + contentW - 22 * dp
+        for (i in tabs.indices) {
+            val b = tabs[i]
+            b.set(minX + eraOffsets[i] - eraScroll, eraRailTop,
+                eraWidths[i], eraRailHeight)
+            b.visible = b.r.left >= minX - 0.5f * dp && b.r.right <= maxX + 0.5f * dp
+        }
+    }
+
+    private fun revealCategory(index: Int) {
+        val railWidth = (contentW - 44 * dp).coerceAtLeast(1f)
+        val start = categoryOffsets[index]
+        val end = start + categoryWidths[index]
+        if (start < categoryScroll) categoryScroll = start
+        else if (end > categoryScroll + railWidth) categoryScroll = end - railWidth
+        categoryScroll = categoryScroll.coerceIn(0f, maxCategoryScroll)
+        positionCategories()
+    }
+
+    private fun revealEra(index: Int) {
+        val railWidth = (contentW - 44 * dp).coerceAtLeast(1f)
+        val start = eraOffsets[index]
+        val end = start + eraWidths[index]
+        if (start < eraScroll) eraScroll = start
+        else if (end > eraScroll + railWidth) eraScroll = end - railWidth
+        eraScroll = eraScroll.coerceIn(0f, maxEraScroll)
+        positionEraTabs()
     }
 
     /** Przelicza wszystkie teksty i wartości (bez tego render nie alokuje). */
