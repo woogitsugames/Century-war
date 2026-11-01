@@ -116,6 +116,7 @@ object L {
         putAll(part71())
         putAll(part70())
         putAll(part72())
+        putAll(part82())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1334,7 +1335,7 @@ object L {
         "d_banner" to t("Sztandar", "War Banner", "Kampfbanner", "Estandarte", "Bannière", "Stendardo", "Estandarte", "Бойовий стяг", "Strijdvaandel", "Savaş Sancağı"),
         "d_banner_d" to t("Zryw: jednostki otrzymują o 15% mniej obrażeń", "Rally: units take 15% less damage", "Ansturm: Einheiten erleiden 15% weniger Schaden", "Impulso: las unidades reciben un 15% menos de daño", "Élan : les unités subissent 15 % de dégâts en moins", "Slancio: le unità subiscono il 15% di danni in meno", "Ímpeto: unidades sofrem menos 15% de dano", "Ривок: бійці отримують на 15% менше шкоди", "Stormloop: troepen krijgen 15% minder schade", "Hücum: birlikler %15 daha az hasar alır"),
         "d_supply" to t("Zaopatrzenie", "Supply Lines", "Nachschub", "Suministros", "Ravitaillement", "Rifornimenti", "Abastecimento", "Постачання", "Bevoorrading", "İkmal"),
-        "d_supply_d" to t("+30% złota za zabójstwa przez 60 s od wyboru", "+30% kill gold for 60 s after selection", "+30% Tötungsgold für 60 s nach der Wahl", "+30% de oro por baja durante 60 s tras elegir", "+30% d’or par élimination pendant 60 s après le choix", "+30% oro per uccisione per 60 s dalla scelta", "+30% ouro por abate durante 60 s após a escolha", "+30% золота за вбивства протягом 60 с після вибору", "+30% goud per verslagen vijand gedurende 60 s na keuze", "Seçimden sonra 60 sn boyunca öldürme altını +%30"),
+        "d_supply_d" to t("Od razu +250 złota w skali epoki; +30% złota z zabójstw przez 60 s", "Gain 250 era-scaled gold now; +30% kill gold for 60 s", "Sofort 250 epochenabhängiges Gold; +30 % Tötungsgold für 60 s", "250 de oro según la era al instante; +30% de oro por baja durante 60 s", "250 pièces d'or immédiates selon l'ère ; +30 % d'or par élimination pendant 60 s", "250 oro subito in base all'era; +30% oro per uccisione per 60 s", "Recebe já 250 de ouro ajustado à era; +30% ouro por abate durante 60 s", "Одразу 250 золота з урахуванням епохи; +30% золота за вбивства протягом 60 с", "Direct 250 goud naar tijdperk; +30% goud per verslagen vijand gedurende 60 s", "Hemen çağa göre 250 altın; 60 sn boyunca öldürme altını +%30"),
         "d_siege_masters" to t("Mistrzowie oblężeń", "Siege Masters", "Belagerungsmeister", "Maestros del asedio", "Maîtres de siège", "Maestri d'assedio", "Mestres do cerco", "Майстри облоги", "Belegeringsmeesters", "Kuşatma Ustaları"),
         "d_siege_masters_d" to t("+18% obrażeń ciężkich jednostek przeciw bazom", "+18% heavy-unit damage to bases", "+18% Basisschaden durch schwere Einheiten", "+18% de daño de tropas pesadas a bases", "+18% de dégâts aux bases par les unités lourdes", "+18% danni alle basi dalle unità pesanti", "+18% dano de unidades pesadas contra bases", "+18% шкоди базам від важких бійців", "+18% schade aan bases door zware eenheden", "Ağır birliklerin üslere hasarı +%18"),
         "d_vigilance" to t("Czujność", "Vigilance", "Wachsamkeit", "Vigilancia", "Vigilance", "Vigilanza", "Vigilância", "Пильність", "Waakzaamheid", "Teyakkuz"),
@@ -1392,4 +1393,20 @@ object L {
         "day_mirror" to t("Dzień lustrzanych armii", "Mirror Armies Day", "Tag der Spiegelarmeen", "Día de ejércitos espejo", "Jour des armées miroirs", "Giorno degli eserciti specchio", "Dia dos exércitos espelho", "День дзеркальних армій", "Dag van spiegellegers", "Ayna Ordular Günü"),
         "day_mirror_d" to t("Równe limity armii i wież. AI ma siłę 100% i jeden styl dowódcy.", "Equal army and turret limits. AI power is 100%, with one commander style.", "Gleiche Armee- und Turmlimits. KI-Stärke 100 %, ein Kommandantenstil.", "Límites iguales de ejército y torres. IA al 100 % y un estilo de mando.", "Mêmes limites d'armée et de tours. IA à 100 % et un seul style de commandement.", "Limiti uguali per truppe e torri. IA al 100% e stesso stile di comando.", "Limites iguais de tropas e torres. IA a 100% e mesmo estilo de comando.", "Однакові ліміти військ і веж. Сила ШІ 100% та спільний стиль командира.", "Gelijke leger- en torenlimieten. AI op 100% en één commandostijl.", "Ordu ve kule sınırları eşit. Yapay zekâ %100 güçte, tek komutan tarzı."),
     )
+    /** Zlecenie 82: opis Czujności bez mgły, w komplecie 10 języków. */
+    private fun part82(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "d_vigilance_clear_d" to t(
+            "+18% zasięgu wież (w tej bitwie nie ma mgły)",
+            "+18% turret range (no fog in this battle)",
+            "+18 % Turmreichweite (kein Nebel in diesem Gefecht)",
+            "+18% alcance de torres (sin niebla en esta batalla)",
+            "+18 % de portée des tours (pas de brouillard ici)",
+            "+18% portata delle torri (nessuna nebbia qui)",
+            "+18% alcance das torres (sem nevoeiro nesta batalha)",
+            "+18% дальності веж (у цій битві немає туману)",
+            "+18% torenbereik (geen mist in dit gevecht)",
+            "Kule menzili +%18 (bu savaşta sis yok)",
+        ),
+    )
+
 }
