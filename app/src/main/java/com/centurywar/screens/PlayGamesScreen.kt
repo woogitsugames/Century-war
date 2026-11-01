@@ -24,8 +24,12 @@ class PlayGamesScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         chrome.layoutBack(back)
-        val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
-        val ph = min(290 * dp, h - chrome.top - g.insetB - 24 * dp)
+        // Na tablecie karta statusu ma mało treści, nie zajmuje więc całej szerokości.
+        val largeTablet = (w - g.insetL - g.insetR) / g.density >= 960f
+        val pw = min((if (largeTablet) 500 else 620) * dp,
+            w - g.insetL - g.insetR - 32 * dp)
+        val ph = min((if (largeTablet) 260 else 290) * dp,
+            h - chrome.top - g.insetB - 24 * dp)
         val top = chrome.top + (h - chrome.top - g.insetB - ph) * 0.5f
         val cx = (w + g.insetL - g.insetR) * 0.5f
         panel.set(cx - pw / 2, top, cx + pw / 2, top + ph)
