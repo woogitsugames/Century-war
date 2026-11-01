@@ -8,7 +8,7 @@ import java.util.zip.CRC32
 
 /** Samodzielny plik powtórki, niezależny od zapisu przerwanej bitwy. */
 object ReplayRecord {
-    const val VERSION = 1
+    const val VERSION = 2
     private const val MAGIC = 0x43575231 // CWR1
     private const val MAX_BYTES = 1 shl 20
     private const val MAX_LOG_BYTES = 600_000
@@ -74,7 +74,9 @@ object ReplayRecord {
         require(bytes.size in 24..MAX_BYTES) { "Nieprawidłowy rozmiar powtórki" }
         return try {
             val h = DataInputStream(ByteArrayInputStream(bytes))
-            require(h.readInt() == MAGIC && h.readInt() == VERSION) { "Nieobsługiwany format powtórki" }
+            require(h.readInt() == MAGIC) { "Nieobsługiwany format powtórki" }
+            val recordVersion = h.readInt()
+            require(recordVersion in 1..VERSION) { "Nieobsługiwany format powtórki" }
             val replayVersion = h.readInt()
             val fingerprint = h.readInt()
             val length = h.readInt()
@@ -82,7 +84,8 @@ object ReplayRecord {
             require(replayVersion > 0 && length == bytes.size - 24) { "Uszkodzony nagłówek powtórki" }
             require(CRC32().apply { update(bytes, 24, length) }.value.toInt() == crc) { "Niepoprawny CRC" }
             val input = DataInputStream(ByteArrayInputStream(bytes, 24, length))
-            val cfg = requireNotNull(BattleSnapshot.readConfig(input)) { "Niepoprawna konfiguracja" }
+            // Wersja 1 nie zawierała bajtu zdarzenia dnia; stare wyniki pozostają na liście.
+            val cfg = requireNotNull(BattleSnapshot.readConfig(input, recordVersion >= 2)) { "Niepoprawna konfiguracja" }
             val logLength = input.readInt()
             require(logLength in 1..MAX_LOG_BYTES && logLength <= input.available()) { "Niepoprawna długość dziennika" }
             val logBytes = ByteArray(logLength)
