@@ -21,7 +21,7 @@ import org.json.JSONObject
 class PlayGamesLeaderboards(
     private val activity: Activity,
     private val game: Game,
-) : OnlineLeaderboards {
+) : OnlineLeaderboards, OnlineAchievements {
 
     companion object {
         private const val TAG = "CenturyWarPGS"
@@ -29,25 +29,14 @@ class PlayGamesLeaderboards(
         private const val LEADERBOARD_REQUEST = 9004
         private const val SAVE_DELAY_MS = 1800L
 
-        /** Nie uruchamiaj SDK z identyfikatorem przykładowym. */
-        fun isConfigured(context: Context): Boolean {
-            val project = context.getString(R.string.game_services_project_id).trim()
-            if (project.isEmpty() || !project.all { it in '0'..'9' }) return false
-            return intArrayOf(
-                R.string.leaderboard_endless,
-                R.string.leaderboard_daily,
-                R.string.leaderboard_campaign,
-                R.string.leaderboard_skirmish,
-            ).all { id ->
-                val value = context.getString(id).trim()
-                value.isNotEmpty() && !value.contains("REPLACE_ME", ignoreCase = true)
-            }
-        }
+        /** Bez pełnej konfiguracji nie inicjujemy Play Games SDK. */
+        fun isConfigured(context: Context): Boolean = PlayGamesIds.isConfigured(context)
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private val signInClient = PlayGames.getGamesSignInClient(activity)
     private val boardsClient = PlayGames.getLeaderboardsClient(activity)
+    private val achievementsClient = PlayGames.getAchievementsClient(activity)
     private val snapshotsClient = PlayGames.getSnapshotsClient(activity)
     private val boardIds = mapOf(
         Profile.BOARD_ENDLESS to activity.getString(R.string.leaderboard_endless),
@@ -66,6 +55,7 @@ class PlayGamesLeaderboards(
     private var latestLocalJson = game.profile.toCloudJson()
     private var lastSyncedJson: String? = null
     private val queuedScores = LinkedHashMap<String, Long>()
+    private val queuedAchievements = LinkedHashSet<String>()
     private val sentScores = HashMap<String, Long>()
     private var dailyDay = System.currentTimeMillis() / 86_400_000L
 
@@ -126,6 +116,8 @@ class PlayGamesLeaderboards(
         sentScores.clear()
         refreshDailyDay()
         flushScores()
+        flushAchievements()
+        game.post { Achievements.syncUnlocked(game.profile, this@PlayGamesLeaderboards) }
         publishSavedScores(latestLocalJson)
         syncCloud()
     }
@@ -166,6 +158,30 @@ class PlayGamesLeaderboards(
     /** Mapowanie lokalnych dziennych tablic daily_123 na wspólną tablicę PGS. */
     internal fun boardId(board: String): String? =
         boardIds[if (board == "daily" || board.startsWith("daily_")) "daily" else board]
+
+    /** Lokalny stan pozostaje źródłem prawdy; odblokowania są ponawiane po logowaniu. */
+    override fun unlock(pgsKey: String) {
+        val id = PlayGamesIds.achievementId(activity, pgsKey) ?: return
+        handler.post {
+            if (closed) return@post
+            queuedAchievements.add(id)
+            flushAchievements()
+        }
+    }
+
+    private fun flushAchievements() {
+        if (!authenticated || closed) return
+        val iterator = queuedAchievements.iterator()
+        while (iterator.hasNext()) {
+            val id = iterator.next()
+            try {
+                achievementsClient.unlock(id)
+                iterator.remove()
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "Nie można wysłać osiągnięcia PGS", e)
+            }
+        }
+    }
 
     override fun submit(board: String, score: Long) {
         if (score < 0) return
@@ -375,6 +391,7 @@ class PlayGamesLeaderboards(
                     game.setQuality(game.effectiveQualityLevel())
                     game.applyFrameRate()
                     appliedCloud = true
+                    Achievements.syncUnlocked(game.profile, this@PlayGamesLeaderboards)
                 } catch (e: Exception) {
                     Log.w(TAG, "Nie udało się odtworzyć profilu", e)
                 }
@@ -441,5 +458,6 @@ class PlayGamesLeaderboards(
         authenticated = false
         handler.removeCallbacks(delayedSave)
         game.profile.onSaved = null
+        game.onlineAchievements = OnlineAchievements.NoOp
     }
 }
