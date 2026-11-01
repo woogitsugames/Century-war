@@ -74,7 +74,15 @@ class LeftHandedHudTest {
         for (i in 0..3) {
             val arrow = button(s, 70 + i)
             val own = rect(s, i)
-            assertTrue("Strzałka nie leży w jednostce", own.contains(arrow.r.centerX(), arrow.r.centerY()))
+            if (arrow.r.top > own.bottom) {
+                // Zlecenie 119: na wąskim ekranie ulepszenie ma własny rząd.
+                assertFalse("Ulepszenie nie może nakrywać jednostki", overlap(own, arrow.r))
+                assertTrue("Ulepszenie musi być nad akcjami", arrow.r.bottom < rect(s, 10).top)
+            } else {
+                // Dawny układ: mała strzałka mieści się w przycisku jednostki.
+                assertTrue("Strzałka nie leży w jednostce",
+                    own.contains(arrow.r.centerX(), arrow.r.centerY()))
+            }
             for (j in 0..3) if (i != j)
                 assertFalse("Cel strzałki trafia sąsiednią jednostkę",
                     arrow.contains(rect(s, j).centerX(), rect(s, j).centerY()))
@@ -194,7 +202,9 @@ class LeftHandedHudTest {
                 button(s, 0).r.top, button(s, 10).r.top, 0.01f)
             g.profile.leftHandedHud = true
             s.layout()
-            val hasTwoRows = width == 1802
+            val dp = g.ui.dp
+            val availableDp = (g.width - g.insetL - g.insetR) / dp - 12f
+            val hasTwoRows = availableDp < 560f
             if (hasTwoRows)
                 assertTrue("Wewnętrzny Fold zachowuje dwa rzędy leworęczne",
                     button(s, 0).r.bottom < button(s, 10).r.top)
