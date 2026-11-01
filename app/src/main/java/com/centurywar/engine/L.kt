@@ -123,6 +123,7 @@ object L {
         putAll(part89())
         putAll(part84())
         putAll(part87())
+        putAll(part110())
     }
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
@@ -1468,6 +1469,11 @@ object L {
         "battle84_cause_turrets" to t("Nie zbudowano żadnej wieży", "No defensive turret was built", "Kein Verteidigungsturm gebaut", "No se construyeron torres", "Aucune tour défensive construite", "Nessuna torre difensiva costruita", "Nenhuma torre defensiva construída", "Не збудовано жодної вежі", "Geen verdedigingstoren gebouwd", "Savunma kulesi kurulmadı"),
         "battle84_cause_army" to t("Wysłano %d jednostek, wróg %d", "You deployed %d units, enemy %d", "Eigene Einheiten: %d, Gegner: %d", "Tus unidades: %d, enemigo: %d", "Vos unités : %d, ennemi : %d", "Unità schierate: %d, nemico: %d", "Unidades enviadas: %d, inimigo: %d", "Ваших бійців: %d, ворожих: %d", "Eigen troepen: %d, vijand: %d", "Birliklerin: %d, düşman: %d"),
         "battle84_cause_eco" to t("Zdobyto %d złota, wróg %d", "Gold earned: %d, enemy: %d", "Gold verdient: %d, Feind: %d", "Oro ganado: %d, enemigo: %d", "Or gagné : %d, ennemi : %d", "Oro guadagnato: %d, nemico: %d", "Ouro ganho: %d, inimigo: %d", "Здобуто золота: %d, ворог: %d", "Goud verdiend: %d, vijand: %d", "Kazanılan altın: %d, düşman: %d"),
+    )
+
+    /** Zlecenie 110: leworęczny układ sterowania bitwą. */
+    private fun part110(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "access_left_handed_hud" to t("HUD dla leworęcznych", "Left-handed HUD", "HUD für Linkshänder", "HUD para zurdos", "Interface gaucher", "HUD per mancini", "HUD para canhotos", "Інтерфейс для шульг", "HUD voor linkshandigen", "Solak HUD"),
     )
 
 }
