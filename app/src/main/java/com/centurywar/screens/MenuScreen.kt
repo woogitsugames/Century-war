@@ -43,6 +43,7 @@ class MenuScreen(g: Game) : Screen(g) {
     private val resumeDescLines = arrayOfNulls<String>(5)
     private var resumeDescCount = 0
     private var resumeDescWidth = -1f
+    private var resumeDescScale = -1f
     private var resumeDescLanguage = -1
     private var dt = 0f
 
@@ -134,8 +135,10 @@ class MenuScreen(g: Game) : Screen(g) {
         resumeNo.set(resumePanel.left + 24 * dp, by, bw, bh)
         resumeYes.set(resumeNo.r.right + gap, by, bw, bh)
         val descWidth = pw - 48 * dp
-        if (resumeDescWidth != descWidth || resumeDescLanguage != L.lang) {
+        if (resumeDescWidth != descWidth || resumeDescLanguage != L.lang ||
+            resumeDescScale != ui.textScale) {
             resumeDescWidth = descWidth
+            resumeDescScale = ui.textScale
             resumeDescLanguage = L.lang
             resumeDescCount = HintFrame.wrapInto(ui, L["resume_desc"], descWidth, 14f, resumeDescLines)
         }
