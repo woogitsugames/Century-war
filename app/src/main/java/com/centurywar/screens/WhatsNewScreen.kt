@@ -33,6 +33,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
     private var contentBottom = 0f
     private var scroll = 0f
     private var maxScroll = 0f
+    private var linesHeight = 0f
     private var dt = 0f
 
     override fun layout() {
@@ -51,6 +52,21 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
         contentTop = panel.top + 18 * dp
         contentBottom = close.r.top - 14 * dp
         rebuildLines()
+        // Na dużym tablecie krótka lista zmian nie wypełnia pustego panelu.
+        // Wymiary telefonów i Folda pozostają bez zmian.
+        val safeWidthDp = (w - g.insetL - g.insetR) / dp
+        if (safeWidthDp >= 960f) {
+            val naturalHeight = max(205 * dp, linesHeight + 89 * dp)
+            if (naturalHeight < panel.height()) {
+                val newTop = panel.top + (panel.height() - naturalHeight) * 0.5f
+                panel.set(panel.left, newTop, panel.right, newTop + naturalHeight)
+                close.set(cx - buttonWidth * 0.5f, panel.bottom - 57 * dp,
+                    buttonWidth, 44 * dp)
+                contentTop = panel.top + 18 * dp
+                contentBottom = close.r.top - 14 * dp
+                rebuildLines()
+            }
+        }
     }
 
     private fun rebuildLines() {
@@ -78,6 +94,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
             }
         }
 
+        linesHeight = y
         maxScroll = max(0f, y - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
     }
