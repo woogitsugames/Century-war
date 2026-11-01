@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.LongAdder
 
 /** Liczniki procesu; liczba zapisanych wyników jest zawsze odczytywana z SQLite. */
-internal class ServerMetrics(
+class ServerMetrics(
     private val startedNanos: Long = System.nanoTime(),
 ) {
     private val accepted = LongAdder()
@@ -42,7 +42,7 @@ internal class ServerMetrics(
 }
 
 @Serializable
-internal data class ServerMetricsSnapshot(
+data class ServerMetricsSnapshot(
     val scoreCount: Long,
     val verificationAccepted: Long,
     val verificationRejected: Long,
