@@ -1845,7 +1845,9 @@ class BattleScreen(
             for (role in 0..3) {
                 val def = Defs.unit(era, roles[role], i)
                 val xx = tmpR.left + (role + 0.5f) * tmpR.width() / 4f
-                r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER)
+                // Każdy podgląd musi zmieścić się we własnej ćwiartce karty.
+                r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER,
+                    widthLimit = (tmpR.width() / 4f - 8 * dp).coerceAtLeast(1f))
             }
             c.restore()
         }
