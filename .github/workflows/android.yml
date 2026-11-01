@@ -70,6 +70,7 @@ jobs:
             --tests '*Snapshot*' \
             --tests '*WeatherTest*' \
             --tests '*DailyTest*' \
+            --tests '*WeeklyTest*' \
             --tests '*Replay*' \
             --tests '*Counter*' \
             --tests '*Endless*' \
@@ -78,6 +79,7 @@ jobs:
             --tests '*ScoreClientTest*' \
             --tests '*ScoreQueueTest*' \
             --tests '*LTest*' \
+            --tests '*SkirmishSetupTest*' \
             --tests '*AchievementsTest*' \
             --tests '*Achievement60Test*' \
           --tests '*HapticGateTest*' \
@@ -97,6 +99,12 @@ jobs:
             --tests '*FrameMetricsTest*' \
             --tests '*ReleaseConfigTest*' \
             --console=plain --no-configuration-cache
+      - name: Drzewo zaleznosci wydania (audyt licencji)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
+          ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
+          python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
       - name: Zapisz podglądy muzyki WAV
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

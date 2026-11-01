@@ -71,6 +71,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     private val modIcons = intArrayOf(
         Icons.COIN, Icons.WALL, Icons.SPEED, Icons.TOWER, Icons.CROSSHAIR,
         Icons.FLAME, Icons.CHEST, Icons.HOURGLASS, Icons.SHIELD, Icons.SKULL,
+        Icons.HOURGLASS, Icons.SHIELD, Icons.TOWER, Icons.CROSSED_SWORDS,
     )
 
     override fun isDragScreen() = true

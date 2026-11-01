@@ -224,6 +224,9 @@ class Battle(val cfg: BattleConfig) {
         const val SIEGE_START = 480f
         /** Ułamek HP bazy na sekundę przy pełnej kontroli frontu przez wroga (przed presją). */
         const val SIEGE_ATTRITION = 0.0032f
+        const val SHORT_DAY_STEPS = 8 * 60 * 60
+        const val MERCENARY_INTERVAL_STEPS = 60 * 60
+        const val VETERAN_START_RANK = 2
         const val MAX_UNITS = 72
         const val MAX_PROJ = 160
         const val QUEUE_CAP = 32
@@ -336,6 +339,15 @@ class Battle(val cfg: BattleConfig) {
             if (Modifier.NO_TURRETS in mods) s.slots = 0
             if (Modifier.GLASS_CANNON in mods) { s.dmgMul *= 1.5f; s.hpMul *= 0.7f }
             if (Modifier.SLOW_XP in mods) s.xpMul *= 0.6f
+            if (Modifier.VETERANS in mods) {
+                s.rank = VETERAN_START_RANK
+                val rankBonus = 1.06f * 1.06f
+                s.dmgMul *= rankBonus; s.hpMul *= rankBonus; s.turretDmgMul *= rankBonus
+            }
+            if (Modifier.EXPENSIVE_TOWERS in mods) {
+                s.turretCostMul *= 1.6f
+                s.turretDmgMul *= 1.4f
+            }
             s.gold = 175f * Defs.costScale(cfg.startEra)
             if (Modifier.RICH_START in mods) s.gold += 400f * Defs.costScale(cfg.startEra)
         }
@@ -818,21 +830,36 @@ class Battle(val cfg: BattleConfig) {
         if (endless) director(dt)
         if (!cfg.tutorial || time >= TUTORIAL_AI_DELAY) ai?.update(dt)
         if (controller == null) playerAi?.update(dt)
+        if (Modifier.MERCENARIES in cfg.modifiers && stepCount % MERCENARY_INTERVAL_STEPS == 0)
+            dispatchMercenaries()
         bossAuraCount = 0
         if (endless) for (u in units) if (u.alive && u.hasBossAbility(EndlessBosses.AURA)) {
             bossAuraXs[bossAuraCount++] = u.x
         }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
-        if (!endless && !over && time >= SIEGE_START) applySiegeAttrition(dt)
+        if (!endless && !over && time >= SIEGE_START && Modifier.SHORT_DAY !in cfg.modifiers)
+            applySiegeAttrition(dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
+            else if (!endless && Modifier.SHORT_DAY in cfg.modifiers && stepCount >= SHORT_DAY_STEPS) {
+                // Porównujemy procent zdrowia baz; przy remisie wygrywa obrona.
+                val playerHp = player.baseHp / player.baseMaxHp
+                val enemyHp = enemy.baseHp / enemy.baseMaxHp
+                finish(if (playerHp > enemyHp) 0 else 1)
+            }
         }
         if (endless && !over && pendingCards == null && bossRewardsPending > 0) {
             bossRewardsPending--
             offerEndlessCards()
         }
+    }
+
+    /** Darmowa jednostka tej samej losowej roli dla obu stron co minutę. */
+    private fun dispatchMercenaries() {
+        val role = Role.entries[rng.nextInt(Role.entries.size)]
+        for (s in sides) if (s.aliveCount < s.cap) spawn(s, s.unit(role))
     }
 
     /** Koszt XP kolejnej rangi weteranów (gdy nie ma już epoki do awansu). */
@@ -1384,8 +1411,10 @@ class Battle(val cfg: BattleConfig) {
             if (cfg.variantsEnabled) offerVariant(e)
         }
         val inEra = wave % 6
-        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f)
-        e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f)
+        // Dyrektor Endless przelicza te mnożniki po fali; zachowujemy rangę startową.
+        val veteranBonus = if (Modifier.VETERANS in cfg.modifiers) 1.06f * 1.06f else 1f
+        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f) * veteranBonus
+        e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f) * veteranBonus
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f) *
             when (currentWaveTheme) {
                 EndlessWaveTheme.SIEGE_TRAIN -> 1.15f

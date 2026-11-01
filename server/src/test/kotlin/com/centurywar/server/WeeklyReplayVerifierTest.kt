@@ -5,6 +5,8 @@ import com.centurywar.game.BattleController
 import com.centurywar.game.Replay
 import com.centurywar.game.Role
 import com.centurywar.game.Weekly
+import com.centurywar.game.Daily
+import com.centurywar.game.Modifier
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -19,6 +21,7 @@ class WeeklyReplayVerifierTest {
         val battle = Battle(cfg)
         val commands = BattleController(battle)
         while (battle.stepCount < 900 && !battle.over) {
+            if (battle.pendingVariant != null) commands.variant(0)
             if (battle.pendingCards != null) commands.card(0)
             if (battle.stepCount == 30) commands.queue(Role.MELEE)
             battle.step()
@@ -60,4 +63,17 @@ class WeeklyReplayVerifierTest {
             ReplayVerifier.verify(currentInput.copy(score = currentInput.score + 1L), now, "0.1.0")
         }
     }
+    @Test fun verifiesWeeklyReplayWithPostReleaseModifiers() {
+        val releaseWeek = Weekly.weekNumber(Daily.RELEASE_DAY)
+        val newcomers = setOf(Modifier.VETERANS, Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES)
+        val week = (releaseWeek until releaseWeek + 200L).first {
+            Weekly.config(it).modifiers.any { modifier -> modifier in newcomers }
+        }
+        val nowMillis = (week * 7L - 3L) * 86_400_000L
+        val input = submission(week)
+        val verified = ReplayVerifier.verify(input, nowMillis, "0.1.0")
+        assertEquals("weekly_" + week, verified.board)
+        assertEquals(input.score, verified.score)
+    }
+
 }
