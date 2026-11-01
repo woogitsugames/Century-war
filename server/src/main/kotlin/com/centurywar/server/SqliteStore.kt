@@ -88,6 +88,16 @@ class SqliteStore(
                         )
                     """.trimIndent())
                     s.execute("CREATE INDEX IF NOT EXISTS idx_nonces_expire ON used_nonces(expires_at)")
+                    // Liczniki żądań z ważnym podpisem; przetrwają restart serwera.
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS score_submit_quotas (
+                            day INTEGER NOT NULL,
+                            quota_kind TEXT NOT NULL,
+                            quota_key TEXT NOT NULL,
+                            requests INTEGER NOT NULL CHECK(requests > 0),
+                            PRIMARY KEY(day, quota_kind, quota_key)
+                        )
+                    """.trimIndent())
                     s.execute("""
                         CREATE TABLE IF NOT EXISTS schema_version (
                             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -232,6 +242,48 @@ class SqliteStore(
             it.setString(1, nonce)
             it.setLong(2, nowSeconds + 600L)
             it.executeUpdate() == 1
+        }
+    }
+
+    /**
+     * Atomowy dzienny limit UTC dla sekretu instalacji i adresu IP.
+     * Liczymy próby z poprawnym podpisem przed kosztowną weryfikacją, także błędne powtórki.
+     */
+    fun consumeScoreSubmissionQuota(
+        installationHash: String, ip: String, nowMillis: Long,
+        installationLimit: Int, ipLimit: Int,
+    ): Boolean = synchronized(lock) {
+        require(installationLimit > 0 && ipLimit > 0)
+        val day = todayUtc(nowMillis)
+        connection.autoCommit = false
+        try {
+            connection.prepareStatement("DELETE FROM score_submit_quotas WHERE day < ?").use {
+                it.setLong(1, day)
+                it.executeUpdate()
+            }
+            fun consume(kind: String, key: String, limit: Int): Boolean =
+                connection.prepareStatement("""
+                    INSERT INTO score_submit_quotas(day, quota_kind, quota_key, requests)
+                    VALUES (?, ?, ?, 1)
+                    ON CONFLICT(day, quota_kind, quota_key) DO UPDATE SET
+                        requests = requests + 1
+                    WHERE requests < ?
+                """.trimIndent()).use {
+                    it.setLong(1, day)
+                    it.setString(2, kind)
+                    it.setString(3, key)
+                    it.setInt(4, limit)
+                    it.executeUpdate() == 1
+                }
+            val allowed = consume("installation", installationHash, installationLimit) &&
+                consume("ip", ip, ipLimit)
+            if (allowed) connection.commit() else connection.rollback()
+            allowed
+        } catch (e: Exception) {
+            connection.rollback()
+            throw e
+        } finally {
+            connection.autoCommit = true
         }
     }
 
