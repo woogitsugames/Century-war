@@ -60,18 +60,18 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             val col = i % 2
             val row = i / 2
             palettes[i].set(left + 20f * dp + col * (bw + 12f * dp),
-                panel.top + (63f + row * 53f) * dp, bw, 45f * dp)
+                panel.top + (63f + row * 53f) * dp, bw, 48f * dp)
         }
         preview.set(panel.left + 18f * dp, panel.top + 186f * dp, panel.right - 18f * dp, panel.top + 340f * dp)
         goodState.set(preview.left + 8f * dp, panel.top + 352f * dp, preview.centerX() - 5f * dp, panel.top + 389f * dp)
         badState.set(preview.centerX() + 5f * dp, panel.top + 352f * dp, preview.right - 8f * dp, panel.top + 389f * dp)
         val sw = (pw - 56f * dp) / 3f
         for (i in sizes.indices) sizes[i].set(
-            panel.left + 20f * dp + i * (sw + 8f * dp), panel.top + 444f * dp, sw, 44f * dp)
+            panel.left + 20f * dp + i * (sw + 8f * dp), panel.top + 444f * dp, sw, 48f * dp)
         val toggleW = min(132f * dp, pw * 0.31f)
-        markers.set(panel.right - 20f * dp - toggleW, panel.top + 533f * dp, toggleW, 42f * dp)
-        shake.set(panel.right - 20f * dp - toggleW, panel.top + 594f * dp, toggleW, 42f * dp)
-        flash.set(panel.right - 20f * dp - toggleW, panel.top + 655f * dp, toggleW, 42f * dp)
+        markers.set(panel.right - 20f * dp - toggleW, panel.top + 533f * dp, toggleW, 48f * dp)
+        shake.set(panel.right - 20f * dp - toggleW, panel.top + 594f * dp, toggleW, 48f * dp)
+        flash.set(panel.right - 20f * dp - toggleW, panel.top + 655f * dp, toggleW, 48f * dp)
         for (b in buttons) if (b !== back) {
             b.visible = b.r.top >= contentTop && b.r.bottom <= contentBottom
         }
