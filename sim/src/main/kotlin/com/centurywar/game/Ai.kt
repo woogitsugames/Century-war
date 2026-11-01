@@ -408,8 +408,8 @@ class Ai(
             Doctrine.PLUNDER -> 3; Doctrine.SWIFT -> 4; else -> 5
         }
         AiPersonality.SIEGER -> when (d) {
-            Doctrine.SIEGE_MASTERS -> 0; Doctrine.SIEGE -> 1; Doctrine.TACTICS -> 2
-            Doctrine.ARSENAL -> 3; Doctrine.FURY -> 4; else -> 5
+            Doctrine.SIEGE -> 0; Doctrine.TACTICS -> 1; Doctrine.ARSENAL -> 2
+            Doctrine.FURY -> 3; Doctrine.SIEGE_MASTERS -> 4; else -> 5
         }
         AiPersonality.BALANCED -> when (d) {
             Doctrine.BANNER -> 0; Doctrine.FURY -> 1; Doctrine.ECONOMY -> 2

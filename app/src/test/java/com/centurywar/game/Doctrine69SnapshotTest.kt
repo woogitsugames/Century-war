@@ -36,10 +36,11 @@ class Doctrine69SnapshotTest {
         assertEquals(original.enemy.supplyUntil, copy.enemy.supplyUntil)
         assertArrayEquals(bytes, BattleSnapshot.encode(copy))
 
-        repeat(1800) {
+        repeat(3700) {
             if (!original.over) { original.step(); original.fx.count = 0 }
             if (!copy.over) { copy.step(); copy.fx.count = 0 }
         }
+        assertTrue("Okno zaopatrzenia powinno już wygasnąć", original.time > original.player.supplyUntil)
         assertArrayEquals(BattleSnapshot.encode(original), BattleSnapshot.encode(copy))
     }
 }
