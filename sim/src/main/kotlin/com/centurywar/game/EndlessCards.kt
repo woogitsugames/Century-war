@@ -75,17 +75,41 @@ enum class EndlessWaveTheme {
 
 /** Losowanie bez powtórzeń w obrębie oferty; brak alokacji podczas symulacji. */
 object EndlessCards {
+    const val MAX_PERSISTENT_STACKS = 8
+
+    // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
+    private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)
+    private val totalPowers = floatArrayOf(0f, 1f, 1.6f, 2f, 2.3f, 2.5f, 2.65f, 2.75f, 2.8f)
+    val economicSynergyCards = arrayOf(
+        EndlessCard.ECONOMY, EndlessCard.PLUNDER, EndlessCard.EXTRA_GOLD,
+        EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER,
+    )
     private val cards = EndlessCard.values()
     private val themes = EndlessWaveTheme.values()
 
-    fun draw(rng: Rng, side: Side, result: Array<EndlessCard>) {
+    fun stackPower(stacks: Int): Float =
+        if (stacks in 1..MAX_PERSISTENT_STACKS) stackPowers[stacks - 1] else 0f
+
+    fun totalStackPower(stacks: Int): Float =
+        totalPowers[stacks.coerceIn(0, MAX_PERSISTENT_STACKS)]
+
+    /** Jednorazowe nagrody oraz efekty ograniczone odrębnym limitem nie zużywają stosów mocy. */
+    fun persistent(card: EndlessCard): Boolean = when (card) {
+        EndlessCard.ARSENAL, EndlessCard.TOWER_SLOT, EndlessCard.FREE_ELITE,
+        EndlessCard.AUTO_BARRAGE, EndlessCard.CLONING, EndlessCard.MEDIC,
+        EndlessCard.EXTRA_GOLD, EndlessCard.MOBILIZATION, EndlessCard.REPAIR_CREW,
+        EndlessCard.SUPPLY, EndlessCard.CITADEL_HEART -> false
+        else -> true
+    }
+
+    fun draw(rng: Rng, side: Side, result: Array<EndlessCard>, fog: Boolean = false) {
         for (slot in result.indices) {
             var total = 0
-            for (card in cards) if (available(card, side, result, slot)) total += card.rarity.weight
+            for (card in cards) if (available(card, side, result, slot, fog)) total += card.rarity.weight
             require(total > 0) { "Brak kart do wylosowania" }
             var roll = rng.nextInt(total)
             for (card in cards) {
-                if (!available(card, side, result, slot)) continue
+                if (!available(card, side, result, slot, fog)) continue
                 roll -= card.rarity.weight
                 if (roll < 0) {
                     result[slot] = card
@@ -97,12 +121,35 @@ object EndlessCards {
 
     fun nextTheme(rng: Rng): EndlessWaveTheme = themes[rng.nextInt(themes.size)]
 
-    private fun available(card: EndlessCard, side: Side, picks: Array<EndlessCard>, count: Int): Boolean {
+    /** Kryteria ofert uwzględniają zarówno limity, jak i odblokowane mechaniki. */
+    fun canOffer(card: EndlessCard, side: Side, fog: Boolean = false): Boolean {
+        if (persistent(card) && side.cardStacks[card.ordinal] >= MAX_PERSISTENT_STACKS) return false
         if ((card == EndlessCard.ARSENAL || card == EndlessCard.TOWER_SLOT) &&
             (side.slots == 0 || side.slots >= Defs.MAX_TURRET_SLOTS)) return false
         if ((card == EndlessCard.BURNING_TOWERS || card == EndlessCard.RAPID_TOWERS ||
                 card == EndlessCard.IRON_CURTAIN || card == EndlessCard.TOWER_NETWORK ||
                 card == EndlessCard.EMBER_FORGE) && side.slots == 0) return false
+        if (card == EndlessCard.BANNER && !side.rallyUnlocked) return false
+        if (card == EndlessCard.VIGILANCE && side.slots == 0 && (!fog || side.fogSight)) return false
+        if (card == EndlessCard.CLONING && side.cloneChance >= 0.6f) return false
+        if (card == EndlessCard.FREE_ELITE && side.freeElitesPerWave >= 4) return false
+        if ((card == EndlessCard.REPAIR_CREW || card == EndlessCard.CITADEL_HEART) &&
+            side.repairPerWave >= 0.3f) return false
+        if ((card == EndlessCard.MOBILIZATION || card == EndlessCard.MUSTER_BANNER) &&
+            side.cap >= Battle.MAX_UNITS) return false
+        if (card == EndlessCard.AUTO_BARRAGE && side.autoBarrageInterval in 0.001f..15f) return false
+        if ((card == EndlessCard.TACTICS || card == EndlessCard.RALLY_MASTER) &&
+            side.abilityCdMul <= Battle.MIN_ABILITY_CD_MUL) return false
+        if (card == EndlessCard.MEDIC && side.baseHp >= side.baseMaxHp) return false
+        if (card == EndlessCard.IRON_CURTAIN &&
+            side.cardStacks[card.ordinal] >= 3) return false
+        return true
+    }
+
+    private fun available(
+        card: EndlessCard, side: Side, picks: Array<EndlessCard>, count: Int, fog: Boolean,
+    ): Boolean {
+        if (!canOffer(card, side, fog)) return false
         for (i in 0 until count) if (picks[i] == card) return false
         return true
     }

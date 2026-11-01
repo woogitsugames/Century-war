@@ -411,3 +411,49 @@ powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
 - 2026-11-01 — regeneracja złotych powtórek: utworzenie 10 wzorców na podstawie
   bazowego silnika (Replay.VERSION=5, BattleSnapshot.VERSION=13), bez zmiany balansu.
   Zweryfikowane przez `:sim:regenerateGolden` w CI.
+## Zlecenie 82 — limity odnowienia, eliminacja pustych ofert i malejące stosy (1.11.2026)
+
+**Reguły:**
+- `abilityCdMul` nie spada poniżej **0,35** (badania, karty, doktryny i zdarzenie dnia; również przy nałożeniu odnowienia).
+- Karty, których ograniczony efekt osiągnął limit, przestają być losowane: klonowanie (0,6), elity na falę (4), leczenie na falę (0,3), limit armii (72), autoostrzał (15 s), sloty wież, odnowienie przy 0,35 i leczenie pełnej bazy. `BANNER` wymaga Zrywu, `VIGILANCE` bez mgły wzmacnia tylko zasięg wież.
+- Trwałe efekty kart otrzymują pełny pierwszy stos; kolejne mają odpowiednio **60%, 40%, 30%, 20%, 15%, 10%, 5%** siły pojedynczej premii. Po ośmiu stosach karta nie pojawia się ponownie. Skumulowana *addytywna* siła premii wynosi maksymalnie 2,8 jednostki pierwszego stosu, a mnożniki nadal składają się multiplikatywnie.
+- `SUPPLY`: natychmiastowe 25 złota w skali epoki i dotychczasowe +30% złota z zabójstw przez 60 s.
+- W zwykłych pojedynkach doktryny `BULWARK`, `FURY` i `PLUNDER` mają osłabione wartości (odpowiednio 5%/3%, 8% i 8%) po audycie lustrzanym. **Karty Endless zachowują pierwszą historyczną premię** (20%/10%, 12% i 35%); ich kolejne stosy są wygaszane według powyższej tabeli. Opisy ofert rozróżniają te tryby. Opis w dziesięciu językach uwzględnia obie nagrody.
+
+**Pomiar referencyjny Endless A/B na wcześniejszej rewizji (przed końcową korektą doktryn i złota SUPPLY; wynik nie jest pomiarem bieżącego HEAD):** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
+
+| Metryka (20 seedów) | Przed (gałąź bazowa) | Po (pierwsza wersja zlecenia 82) |
+|---|---:|---:|
+| Średnia osiągnięta fala (`ENDLESS_MEAN`, z uciętymi na 60) | 50,05 | **50,10** |
+| Średnia fala porażki (wyłącznie przegrane) | 48,29 (17 porażek) | **50,10 (20 porażek)** |
+| Zmiana średniej | — | **+0,05 fali (+0,10%)** |
+| Mediana fali porażki (tylko zakończone porażką) | 53 | **54** |
+| Porażki przed falą 60 | 17/20 | **20/20** |
+| Przetrwanie fali 20 | 20/20 | 20/20 |
+| Przetrwanie fali 30 | 20/20 | 19/20 |
+| Przetrwanie fali 40 | 16/20 | 16/20 |
+| Przetrwanie fali 50 | 13/20 | 15/20 |
+| Przetrwanie fali 60 | 3/20 | **0/20** |
+
+**Rozkład osiągniętych fal przed/po (ten sam seed):**
+
+| Seed | Przed | Po | Seed | Przed | Po |
+|---|---:|---:|---|---:|---:|
+| 1001 | 60* | 54 | 1011 | 55 | 55 |
+| 1002 | 41 | 54 | 1012 | 60* | 35 |
+| 1003 | 53 | 54 | 1013 | 46 | 56 |
+| 1004 | 53 | 56 | 1014 | 36 | 53 |
+| 1005 | 54 | 56 | 1015 | 58 | 57 |
+| 1006 | 53 | 54 | 1016 | 53 | 23 |
+| 1007 | 53 | 38 | 1017 | 58 | 36 |
+| 1008 | 38 | 57 | 1018 | 45 | 44 |
+| 1009 | 35 | 54 | 1019 | 34 | 54 |
+| 1010 | 60* | 57 | 1020 | 56 | 55 |
+
+`*` — osiągnięto limit pomiaru (fala 60), baza nie została pokonana.
+
+**Drugi pomiar doktryn (przed dostrojeniem do 5%/3%, 8% i 25 złota):** [CI #41309274812](https://github.com/woogitsugames/Century-war/actions/runs/41309274812). Z 13 doktryn 11 mieściło się w przedziale 40–60% na seedach 82_000–82_019. Poza przedziałem: `BULWARK` 26/39 = 66,7% i `PLUNDER` 25/40 = 62,5%. Na seedach 69_000–69_019 `SUPPLY` nadal osiągnęło 28/40 = 70%. `FURY` spadło do 23/40 = 57,5%. Ponowny pomiar bieżącego HEAD jest wymagany.
+
+**Pierwszy test lustrzany doktryn** ([CI #41309004688](https://github.com/woogitsugames/Century-war/actions/runs/41309004688), 20 seedów × 2 strony, buff kontra brak buffa) wykrył zbyt wysoką skuteczność czterech doktryn: `BULWARK` 29/39 (74,4%, jeden remis), `FURY` 26/40 (65%), `PLUNDER` 34/40 (85%) i `SUPPLY` 32/40 (80%). Pozostałych dziewięć doktryn było w paśmie 40–60%. Testy 69 wykryły `SUPPLY` 29/40 (72,5%) na osobnych seedach. Na tej podstawie osłabiono zwykłe doktryny i zmniejszono natychmiastową premię `SUPPLY`, zachowując pierwsze karty Endless. **Wyniki po tych korektach trzeba zmierzyć ponownie**; nie wpisuje się niezweryfikowanych wartości jako końcowych.
+
+**Wniosek dla pomiaru przed końcowym strojeniem:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).

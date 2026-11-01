@@ -7,15 +7,15 @@ package com.centurywar.game
 enum class Doctrine(val key: String) {
     ECONOMY("d_economy"),      // +25% przychodu
     SIEGE("d_siege"),          // +30% obrażeń wobec baz, +20% obrażeń wież
-    BULWARK("d_bulwark"),      // +20% HP bazy (leczy), +10% HP jednostek
+    BULWARK("d_bulwark"),      // +5% HP bazy (leczy), +3% HP jednostek
     SWIFT("d_swift"),          // +25% szybkości szkolenia, +10% szybkości ruchu
     VETERAN("d_veteran"),      // +30% XP
-    FURY("d_fury"),            // +12% obrażeń jednostek
+    FURY("d_fury"),            // +8% obrażeń jednostek
     ARSENAL("d_arsenal"),      // +1 slot wieży (do limitu) i -20% kosztu wież
     TACTICS("d_tactics"),      // -25% odnowienia zdolności
-    PLUNDER("d_plunder"),      // +35% złota za zabójstwa
+    PLUNDER("d_plunder"),      // +8% złota za zabójstwa
     BANNER("d_banner"),       // -15% obrażeń podczas Zrywu
-    SUPPLY("d_supply"),       // +30% złota za zabójstwa przez 60 s
+    SUPPLY("d_supply"),       // +25 złota w skali epoki, +30% za zabójstwa przez 60 s
     SIEGE_MASTERS("d_siege_masters"), // +18% ciężkich przeciw bazom
     VIGILANCE("d_vigilance"), // +18% zasięgu wież, zwiad przez mgłę
 }
