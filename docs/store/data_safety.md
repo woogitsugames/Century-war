@@ -1,6 +1,6 @@
 # Google Play Console — formularz „Bezpieczeństwo danych”
 
-**Audyt źródeł:** 31 października 2026 r. **Zakres:** Android, Google Play Games Services (PGS v2) i lokalne przypomnienia o wyzwaniu dnia. To instrukcja do wypełnienia Play Console, nie gotowy formularz do zatwierdzenia bez kontroli wydania.
+**Audyt źródeł:** 1 listopada 2026 r. **Zakres:** Android, Google Play Games Services (PGS v2) i lokalne przypomnienia o wyzwaniu dnia. To instrukcja do wypełnienia Play Console, nie gotowy formularz do zatwierdzenia bez kontroli wydania.
 
 ## Status wdrożenia i istotne zastrzeżenia
 
@@ -14,13 +14,14 @@
 
 | Odbiorca / miejsce | Dane | Kiedy i dlaczego |
 |---|---|---|
-| Prywatna pamięć aplikacji | Plik profile.json: pseudonim, postęp kampanii, gwiazdki, medale, badania, misje, osiągnięcia, statystyki, wyniki i ustawienia | Lokalne zapisywanie rozgrywki; nie wymaga internetu |
+| Prywatna pamięć aplikacji | Plik profile.json: pseudonim, postęp, wyniki, ustawienia oraz po zgodzie na własny ranking UUID i losowy 32-bajtowy sekret instalacji | Lokalne zapisywanie gry oraz poświadczenie własności konta rankingu; nie wymaga internetu |
 | Prywatna pamięć aplikacji | battle.snap: stan przerwanej bitwy | Lokalna możliwość wznowienia; nie jest częścią JSON profilu ani backupu |
 | Prywatna pamięć aplikacji | files/crash: maks. 10 raportów (wersja, model urządzenia, Android, ekran, 30 zdarzeń technicznych, stos bez wiadomości wyjątków) | Diagnoza awarii; bez pseudonimu i ID, tylko lokalnie; bez automatycznej transmisji lub backupu |
 | Google Play Games, po konfiguracji i uwierzytelnieniu | Cztery liczbowe wyniki: oblężenie bez końca, wyzwanie dnia, kampania i potyczka | Tablice wyników PGS; w publicznym rankingu tożsamość gracza pochodzi z profilu Play Games |
-| Google Play Games — Saved Games, po konfiguracji i uwierzytelnieniu | **Cały wynik Profile.toJson()**, nie tylko liczba medali: w tym pseudonim gracza, rekordy z nazwami, dniami i wynikami, postęp, badania, statystyki, osiągnięcia lokalne, misje i ustawienia (np. język, dźwięk, godzina przypomnienia) | Odczyt i zapis kopii profilu w chmurze po zalogowaniu oraz przy późniejszych zapisach lokalnych |
+| Google Play Games — Saved Games, po konfiguracji i uwierzytelnieniu | **Profile.toCloudJson()**: pseudonim gracza, rekordy, postęp, badania, statystyki, osiągnięcia, misje i ustawienia; **bez lokalnego UUID, sekretu instalacji i zgody na ranking wydawcy** | Odczyt i zapis kopii profilu w chmurze po zalogowaniu oraz przy późniejszych zapisach lokalnych |
 | Google Play Games SDK / Google | Tożsamość profilu Gier Play (np. identyfikator gracza, nazwa, awatar), dane analityczne i diagnostyczne SDK | Zakres wynikający z dokumentacji dostawcy; może obejmować automatyczne zbieranie po zainicjowaniu SDK |
-| Wydawca — opcjonalny własny serwer rankingu | UUID v4, pseudonim, wynik, tryb, parametry bitwy, badania, komendy powtórki do weryfikacji | Tylko przy skonfigurowanym HTTPS i zgodzie. SQLite zapisuje UUID, nick, wynik, metadane i SHA-256 zgłoszenia; nie przechowuje pełnej powtórki ani IP. IP służy tymczasowo do limitów i może być w logach proxy. |
+| Wydawca — opcjonalny własny serwer rankingu | UUID v4, pseudonim, wynik, tryb, parametry bitwy, badania, komendy powtórki, sekret instalacji przesyłany przez HTTPS | Po zgodzie: SQLite zapisuje UUID, pseudonim, publiczne ID (HMAC UUID z prywatnym kluczem serwera), wynik, SHA-256 sekretu i metadane; **nie** zapisuje jawnego sekretu, powtórki ani IP. Publiczne API pokazuje pseudonim, wynik i publiczne ID, nie UUID. IP służy tymczasowo do limiterów i może być w logach proxy. |
+| Wydawca — zgłoszenia nicków | Publiczne ID zgłaszanego gracza, powód, nick w chwili zgłoszenia, UUID tego gracza i czas; IP zgłaszającego do limitowania | Na żądanie użytkownika z ekranu rankingu, bez konta zgłaszającego. SQLite przechowuje zgłoszenie dla operatora, bez IP; IP może być w logach proxy. |
 | Android — kopia systemowa | Tylko profile.json (przez reguły kopii i przenoszenia urządzeń) | Mechanizm Androida zależny od konta i ustawień; nie jest tym samym co Saved Games PGS |
 
 **Raporty problemów:** po awarii pojawia się jednorazowa propozycja udostępnienia; Ustawienia → O grze → Zgłoś problem pozwala otworzyć systemowe ACTION_SEND z tekstem. Nic nie jest wysyłane bez wyboru użytkownika. Ręczne wysłanie do wskazanego odbiorcy należy ocenić osobno od automatycznego zbierania danych przez SDK PGS; samo lokalne tworzenie raportów nie jest zbieraniem przez wydawcę.
@@ -79,6 +80,8 @@ Nie korzystamy z Firebase Cloud Messaging. Sam alarm i wyświetlenie przypomnien
 5. **[DO DECYZJI] Potwierdzić deklarację „udostępniania”, opcjonalności danych diagnostycznych i klasyfikację identyfikatorów** na podstawie polityk SDK, sposobu uwierzytelnienia i wszystkich aktywnych kanałów publikacji.
 6. Przed uruchomieniem własnego rankingu w wydaniu sprawdzić aktywną konfigurację, HTTPS, UUID, pseudonim, wyniki, IP w logach proxy, retencję backupów i ponawianie usunięć po ich odtworzeniu. Serwera **nie przedstawiać jako czynnego bez weryfikacji wdrożenia**.
 7. Powtórzyć audyt przed uruchomieniem reklam, zakupów, dodatkowej analityki lub innego SDK; nie deklarować takich funkcji w obecnej wersji.
+
+**Uwaga o usuwaniu:** przy usunięciu własnego UUID serwer kasuje także zgłoszenia powiązane z tym UUID; zachowuje rekord blokady, aby nie obchodzić moderacji. Sekret instalacji w kopii Androida (profile.json) nie jest wysyłany do Google Play Games Saved Games. Zgłoszenia dotyczące innych osób nie są łączone z UUID zgłaszającego.
 
 **Uwaga o usuwaniu:** Profile.reset() zachowuje pseudonim i nie usuwa danych Google ani własnego rankingu. Własny ranking: **Ustawienia → Nowa tożsamość**, trwała kolejka (bez gwarancji usunięcia przed utratą plików aplikacji). PGS: osobne usunięcie danych gry z konta Google. Lokalne dane: wyczyszczenie pamięci aplikacji. Android Backup pozostaje odrębny. Przy odtworzeniu kopii SQLite operator musi ponowić późniejsze usunięcia.
 
