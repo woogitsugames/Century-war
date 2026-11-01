@@ -1,5 +1,6 @@
 package com.centurywar.meta
 
+import com.centurywar.game.Replay
 import com.centurywar.game.ReplayRecord
 import java.io.File
 import java.io.FileOutputStream
@@ -12,7 +13,10 @@ import java.util.concurrent.atomic.AtomicLong
  * Zachowuje 20 ostatnich zwykłych zapisów i 20 przypiętych.
  */
 class ReplayStore(private val directory: File) {
-    data class Entry(val id: String, val meta: ReplayRecord.Meta, val playable: Boolean, val pinned: Boolean)
+    data class Entry(
+        val id: String, val meta: ReplayRecord.Meta, val playable: Boolean,
+        val pinned: Boolean, val imported: Boolean = false, val orderMillis: Long = meta.dateMillis,
+    )
 
     private val seq = AtomicLong()
     private val io = Executors.newSingleThreadExecutor { job ->
@@ -37,6 +41,34 @@ class ReplayStore(private val directory: File) {
                 writeAtomic(File(directory, "$id.cwr"), bytes)
                 prune()
             } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Import z obcego źródła. Dekodowanie, pełne odtworzenie i zapis odbywają się
+     * kolejno na wątku I/O; callback nigdy nie działa na wątku gry.
+     * Prefiks friend_ izoluje cudze powtórki od rankingu i osiągnięć.
+     */
+    fun importAsync(bytes: ByteArray, callback: (String?) -> Unit) {
+        io.execute {
+            val id = try {
+                require(bytes.size in 24..ReplayImport.MAX_BYTES)
+                val record = ReplayRecord.decode(bytes)
+                require(record.playable) { "Niekompatybilna wersja powtórki" }
+                val result = Replay.verify(record.cfg, requireNotNull(record.log))
+                require(result.winner == record.meta.winner &&
+                    result.score == record.meta.score && result.wave == record.meta.wave &&
+                    result.time == record.meta.time) { "Wynik nie zgadza się z dziennikiem" }
+                var importedId: String
+                do { importedId = "friend_" + newId() }
+                while (File(directory, "$importedId.cwr").exists())
+                if (!writeAtomic(File(directory, "$importedId.cwr"), bytes)) null
+                else {
+                    prune()
+                    importedId.takeIf { File(directory, "$it.cwr").isFile }
+                }
+            } catch (_: Exception) { null }
+            callback(id)
         }
     }
 
@@ -96,9 +128,11 @@ class ReplayStore(private val directory: File) {
             val id = file.name.removeSuffix(".cwr")
             if (!pattern.matches(id)) continue
             val record = try { ReplayRecord.decode(file.readBytes()) } catch (_: Exception) { continue }
-            result.add(Entry(id, record.meta, record.playable, id in set))
+            val imported = isImportedId(id)
+            result.add(Entry(id, record.meta, record.playable, id in set,
+                imported, if (imported) file.lastModified() else record.meta.dateMillis))
         }
-        result.sortWith(compareByDescending<Entry> { it.meta.dateMillis }.thenByDescending { it.id })
+        result.sortWith(compareByDescending<Entry> { it.orderMillis }.thenByDescending { it.id })
         return result
     }
 
@@ -146,6 +180,8 @@ class ReplayStore(private val directory: File) {
     companion object {
         const val MAX_RECENT = 20
         const val MAX_PINNED = 20
+        const val MAX_SHARE_BYTES = 2 * 1024 * 1024
         private const val MAX_BYTES = 1 shl 20
+        fun isImportedId(id: String): Boolean = id.startsWith("friend_")
     }
 }

@@ -45,7 +45,8 @@ class ReplayListScreen(g: Game) : Screen(g) {
                 }]
                 val suffix = if (e.meta.stage >= 0) " #${e.meta.stage + 1}" else
                     if (e.meta.wave > 0) " ${e.meta.wave}" else ""
-                Display(e, mode + suffix, e.meta.nick + " · " +
+                val origin = if (e.imported) L["replay_from_friend"] + " · " else ""
+                Display(e, mode + suffix, origin + e.meta.nick + " · " +
                     formatter.format(Date(e.meta.dateMillis)) + " · " + e.meta.score)
             }
             g.post { entries = labels; loading = false; offset = offset.coerceIn(0f, maxOffset()) }
@@ -91,14 +92,19 @@ class ReplayListScreen(g: Game) : Screen(g) {
             val x = row.left + 14 * dp
             ui.textO(c, item.title, x, y + 22 * dp, 14f, Ui.TEXT)
             ui.text(c, item.detail, x, y + 40 * dp,
-                ui.fit(item.detail, 11f, row.width() - 132 * dp), Ui.DIM)
-            val pinsX = row.right - 83 * dp
+                ui.fit(item.detail, 11f, row.width() - 191 * dp), Ui.DIM)
+            val pinsX = row.right - 137 * dp
             Icons.draw(c, Icons.FLAG, pinsX, y + 25 * dp, 24 * dp,
                 if (item.entry.pinned) Ui.GOLD else Ui.DIM, dp = dp)
-            Icons.draw(c, Icons.CLOSE, row.right - 30 * dp, y + 25 * dp,
+            val shareX = row.right - 83 * dp
+            Icons.draw(c, Icons.GLOBE, shareX, y + 21 * dp, 23 * dp,
+                if (item.entry.playable) Ui.TEXT else Ui.DIM, dp = dp)
+            ui.text(c, L["replay_share"], shareX, y + 44 * dp,
+                ui.fit(L["replay_share"], 9f, 68 * dp), Ui.DIM, Paint.Align.CENTER)
+            Icons.draw(c, Icons.CLOSE, row.right - 29 * dp, y + 25 * dp,
                 21 * dp, Ui.BAD, dp = dp)
             if (!item.entry.playable) {
-                ui.text(c, L["replay_old_version"], row.right - 106 * dp,
+                ui.text(c, L["replay_old_version"], row.right - 183 * dp,
                     y + 14 * dp, 10f, Ui.BAD, Paint.Align.RIGHT)
             }
         }
@@ -116,9 +122,12 @@ class ReplayListScreen(g: Game) : Screen(g) {
         val index = ((y - rowTop() + offset) / (56 * dp)).toInt()
         val item = entries.getOrNull(index) ?: return
         val id = item.entry.id
+        val right = panel.right - 14 * dp
         when {
-            x > panel.right - 60 * dp -> { g.replays?.deleteAsync(id); refresh() }
-            x > panel.right - 125 * dp -> { g.replays?.pinAsync(id, !item.entry.pinned); refresh() }
+            x > right - 51 * dp -> { g.replays?.deleteAsync(id); refresh() }
+            x > right - 108 * dp -> if (item.entry.playable) g.host.shareReplay(id)
+                else g.showNotice(L["replay_old_version"], Icons.CLOSE)
+            x > right - 165 * dp -> { g.replays?.pinAsync(id, !item.entry.pinned); refresh() }
             else -> g.push(ReplayScreen(g, id))
         }
     }

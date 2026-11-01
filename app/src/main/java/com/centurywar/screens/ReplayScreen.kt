@@ -46,6 +46,7 @@ class ReplayScreen(
     private var frameDt = 0f
     private var watchedSeconds = 0f
     private var replayAchievementChecked = false
+    private val imported = replayId?.startsWith("friend_") == true
     private var draggingTime = false
     private var watchedClaimed = false
     private var preparedPlayerEra = -1
@@ -206,7 +207,8 @@ class ReplayScreen(
         }
         if (p.broken) { state = BROKEN; return }
         // Samo otwarcie ani przewinięcie osi czasu nie oznacza obejrzenia (misja po 5 s, osiągnięcie po 10 s).
-        if ((!watchedClaimed || !replayAchievementChecked) && !paused && !p.seeking && !draggingTime &&
+        if (!imported && (!watchedClaimed || !replayAchievementChecked) &&
+            !paused && !p.seeking && !draggingTime &&
             !p.finished && p.step > 0) {
             watchedSeconds += dt.coerceIn(0f, 0.1f)
             if (!watchedClaimed && watchedSeconds >= 5f) {
