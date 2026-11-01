@@ -1,0 +1,53 @@
+name: Wykresy statystyk 105
+
+on:
+  push:
+    branches:
+      - gpt/105-stats-charts
+  pull_request:
+    branches:
+      - 'claude/**'
+    paths:
+      - 'app/src/main/java/com/centurywar/meta/BattleHistory.kt'
+      - 'app/src/main/java/com/centurywar/screens/StatsScreen.kt'
+      - 'app/src/main/java/com/centurywar/engine/L.kt'
+      - 'app/src/test/java/com/centurywar/meta/BattleHistoryTest.kt'
+      - 'app/src/test/java/com/centurywar/screens/ScreenshotTest.kt'
+      - '.github/workflows/stats-charts-105.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  stats:
+    name: Android 36, agregacja i zrzuty
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Zainstaluj SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Testy historii, jezykow i zrzutow
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*BattleHistoryTest*' \
+            --tests '*LTest*' \
+            --tests '*ScreenshotTest.statsCharts105*' \
+            --console=plain --no-configuration-cache
+      - name: Zrzuty 720p i Fold
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stats-105-720p-fold
+          path: app/build/screenshots/*_stats105_*.png
+          if-no-files-found: ignore

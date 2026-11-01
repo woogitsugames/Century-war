@@ -160,6 +160,67 @@ class BattleHistoryTest {
         assertArrayEquals(longArrayOf(70, 100), m.endlessScores)
     }
 
+
+    @Test
+    fun last30OutcomesAreChronologicalAndGroupedByMode() {
+        val now = 1_800_000_000_000L
+        val records = (0 until 35).map { index ->
+            val result = when (index % 3) {
+                0 -> BattleHistory.WIN
+                1 -> BattleHistory.LOSS
+                else -> BattleHistory.SURRENDER
+            }
+            entry(100 - index, Mode.entries[index % 4], result, now - index * 1_000L)
+        }
+        val metrics = BattleHistory.aggregate(records, now)
+        val last30 = records.take(30)
+        assertEquals(30, metrics.recentModes.size)
+        assertArrayEquals(last30.asReversed().map { it.mode }.toIntArray(), metrics.recentModes)
+        assertArrayEquals(last30.asReversed().map {
+            if (it.result == BattleHistory.WIN) BattleHistory.WIN else BattleHistory.LOSS
+        }.toIntArray(), metrics.recentResults)
+        for (mode in Mode.entries) {
+            assertEquals(last30.count { it.mode == mode.ordinal && it.result == BattleHistory.WIN },
+                metrics.recentWinsByMode[mode.ordinal])
+            assertEquals(last30.count { it.mode == mode.ordinal && it.result != BattleHistory.WIN },
+                metrics.recentLossesByMode[mode.ordinal])
+        }
+        assertEquals(30, metrics.recentWinsByMode.sum() + metrics.recentLossesByMode.sum())
+        val empty = BattleHistory.aggregate(emptyList(), now)
+        assertTrue(empty.recentModes.isEmpty())
+        assertTrue(empty.recentResults.isEmpty())
+        assertEquals(0, empty.recentWinsByMode.sum())
+        assertEquals(0, empty.recentLossesByMode.sum())
+    }
+
+    @Test
+    fun bestEndlessWaveAndDailyTimeUseLocalCalendarDays() {
+        val zone = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.of(2026, 11, 1)
+        fun day(ago: Long): Long = today.minusDays(ago).atTime(12, 0)
+            .atZone(zone).toInstant().toEpochMilli()
+        val records = listOf(
+            entry(6, Mode.ENDLESS, date = day(0)).copy(wave = 6, seconds = 90),
+            entry(7, Mode.SKIRMISH, date = day(0)).copy(seconds = 30),
+            entry(10, Mode.ENDLESS, date = day(1)).copy(wave = 10, seconds = 3600),
+            entry(4, Mode.ENDLESS, date = day(13)).copy(wave = 4, seconds = 600),
+            entry(3, Mode.CAMPAIGN, date = day(14)).copy(seconds = 999),
+            entry(2, Mode.SKIRMISH, date = day(-1)).copy(seconds = 888),
+            entry(1, Mode.DAILY, date = day(0)).copy(seconds = -100),
+        )
+        val metrics = BattleHistory.aggregate(records, day(0))
+        assertArrayEquals(intArrayOf(4, 10, 10), metrics.endlessBestWaves)
+        assertEquals(14, metrics.dailySeconds.size)
+        assertEquals(600L, metrics.dailySeconds[0])
+        assertEquals(3600L, metrics.dailySeconds[12])
+        assertEquals(120L, metrics.dailySeconds[13])
+        assertEquals(0L, metrics.dailySeconds[1])
+        assertEquals(3, metrics.days[13])
+        val empty = BattleHistory.aggregate(emptyList(), day(0))
+        assertTrue(empty.endlessBestWaves.isEmpty())
+        assertArrayEquals(LongArray(14), empty.dailySeconds)
+    }
+
     @Test
     fun corruptHistoryLoadsInBackgroundAndSignalsCompletion() {
         val f = file()

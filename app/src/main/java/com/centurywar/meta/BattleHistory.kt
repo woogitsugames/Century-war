@@ -77,8 +77,24 @@ class BattleHistory(private val file: File) {
             val days = IntArray(14)
             val dayWins = IntArray(14)
             val endlessNewest = ArrayList<Long>(20)
+            val endlessWaveNewest = ArrayList<Int>(LIMIT)
+            val recentCount = minOf(30, records.size)
+            val recentModes = IntArray(recentCount)
+            val recentResults = IntArray(recentCount)
+            val recentWinsByMode = IntArray(Mode.entries.size)
+            val recentLossesByMode = IntArray(Mode.entries.size)
+            val dailySeconds = LongArray(14)
             val today = dayNumber(nowMillis)
-            for (record in records) {
+            for (index in records.indices) {
+                val record = records[index]
+                // Oś X od najstarszej do najnowszej bitwy; kapitulacja to porażka.
+                if (index < recentCount && record.mode in recentWinsByMode.indices) {
+                    val position = recentCount - 1 - index
+                    recentModes[position] = record.mode
+                    recentResults[position] = if (record.result == WIN) WIN else LOSS
+                    if (record.result == WIN) recentWinsByMode[record.mode]++
+                    else recentLossesByMode[record.mode]++
+                }
                 for (i in roles.indices) roles[i] = (roles[i].toLong() +
                     record.roles.getOrElse(i) { 0 }.coerceAtLeast(0).toLong())
                     .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -92,16 +108,25 @@ class BattleHistory(private val file: File) {
                     val dayIndex = 13 - ago.toInt()
                     days[dayIndex]++
                     if (record.result == WIN) dayWins[dayIndex]++
+                    dailySeconds[dayIndex] += record.seconds.coerceAtLeast(0).toLong()
                 }
-                if (record.mode == Mode.ENDLESS.ordinal && endlessNewest.size < 20) {
-                    endlessNewest.add(record.score)
+                if (record.mode == Mode.ENDLESS.ordinal) {
+                    if (endlessNewest.size < 20) endlessNewest.add(record.score)
+                    if (endlessWaveNewest.size < LIMIT) endlessWaveNewest.add(record.wave.coerceAtLeast(0))
                 }
             }
             val favoriteRole = roles.indices.maxByOrNull { roles[it] }?.takeIf { roles[it] > 0 } ?: -1
             val favoriteDoctrine = doctrines.indices.maxByOrNull { doctrines[it] }
                 ?.takeIf { doctrines[it] > 0 } ?: -1
             val endlessScores = LongArray(endlessNewest.size) { endlessNewest[endlessNewest.lastIndex - it] }
-            return Metrics(roles, doctrines, favoriteRole, favoriteDoctrine, aiBattles, aiWins, days, dayWins, endlessScores)
+            var bestWave = 0
+            val endlessBestWaves = IntArray(endlessWaveNewest.size) { i ->
+                bestWave = maxOf(bestWave, endlessWaveNewest[endlessWaveNewest.lastIndex - i])
+                bestWave
+            }
+            return Metrics(roles, doctrines, favoriteRole, favoriteDoctrine, aiBattles, aiWins, days,
+                dayWins, endlessScores, recentModes, recentResults, recentWinsByMode,
+                recentLossesByMode, endlessBestWaves, dailySeconds)
         }
 
         fun dayNumber(ms: Long): Long = Instant.ofEpochMilli(ms.coerceAtLeast(0L))
@@ -200,6 +225,15 @@ class BattleHistory(private val file: File) {
         val days: IntArray,
         val dayWins: IntArray,
         val endlessScores: LongArray,
+        /** Ostatnie 30 wyników w kolejności chronologicznej, według lokalnego archiwum. */
+        val recentModes: IntArray,
+        val recentResults: IntArray,
+        val recentWinsByMode: IntArray,
+        val recentLossesByMode: IntArray,
+        /** Rekordy kolejnych oblężeń; liczony narastająco, nie według wyniku punktowego. */
+        val endlessBestWaves: IntArray,
+        /** Sekundy lokalnych bitew w ostatnich 14 dniach, od najstarszego dnia. */
+        val dailySeconds: LongArray,
     )
 
     private val entries = ArrayList<Record>(LIMIT)

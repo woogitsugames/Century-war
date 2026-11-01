@@ -57,6 +57,16 @@ class StatsScreen(g: Game) : Screen(g) {
     private var emptyText = ""
     private var battlesLegend = ""
     private var winsLegend = ""
+    private val recentModeTexts = Array(4) { "" }
+    private var recentLossLegend = ""
+    private var recentDirection = ""
+    private var waveMaxText = ""
+    private var timeMaxText = ""
+    private var oldestDayText = ""
+    private var todayText = ""
+    private var bestWaveMax = 1
+    private var dailySecondsMax = 1L
+    private var hasDailyTime = false
     private var dayMax = 1
     private var endlessMax = 1L
     private val historyTitles = ArrayList<String>(BattleHistory.LIMIT)
@@ -129,6 +139,21 @@ class StatsScreen(g: Game) : Screen(g) {
         emptyText = L["bh_empty"]
         battlesLegend = L["bh_battles"]
         winsLegend = L["bh_wins"]
+        for (i in recentModeTexts.indices) {
+            recentModeTexts[i] = metrics.recentWinsByMode[i].toString() + " / " +
+                metrics.recentLossesByMode[i]
+        }
+        recentLossLegend = L["bh105_losses"]
+        recentDirection = L["bh105_old_new"]
+        val maxWave = metrics.endlessBestWaves.maxOrNull() ?: 0
+        bestWaveMax = max(1, maxWave)
+        waveMaxText = L.f("bh105_max_wave", maxWave)
+        val longestDay = metrics.dailySeconds.maxOrNull() ?: 0L
+        dailySecondsMax = max(1L, longestDay)
+        hasDailyTime = longestDay > 0L
+        timeMaxText = L.f("bh105_max_time", clock(longestDay))
+        oldestDayText = L["bh105_13days"]
+        todayText = L["bh_today"]
         historyTitles.clear(); historySubtitles.clear(); historyTimes.clear()
         for (e in history) {
             val caption = modeLabel(e.mode) + " · " + resultLabel(e.result)
@@ -168,7 +193,7 @@ class StatsScreen(g: Game) : Screen(g) {
             selected >= 0 -> (detailNames.size * 34 + 38 +
                 if (tipLines.isEmpty()) 0 else (48 + tipLines.size * 19)) * dp
             tab == 1 -> history.size * 66 * dp + 24 * dp
-            else -> 970 * dp // sekcje, dwa wykresy i pięć wierszy AI
+            else -> 1560 * dp // sekcje, pięć wykresów i pięć wierszy AI
         }
         maxScroll = max(0f, content - panel.height() + 26 * dp)
         scroll = scroll.coerceIn(0f, maxScroll)
@@ -371,6 +396,12 @@ class StatsScreen(g: Game) : Screen(g) {
             drawPair(c, modeLabel(i), bestTexts[i], y, modeIcons[i])
             y += 29 * dp
         }
+        drawSection(c, L["bh105_last30"], y); y += 27 * dp
+        drawRecentResults(c, y); y += 168 * dp
+        drawSection(c, L["bh105_best_wave"], y); y += 27 * dp
+        drawBestWaves(c, y); y += 142 * dp
+        drawSection(c, L["bh105_day_time"], y); y += 27 * dp
+        drawDailyTime(c, y); y += 146 * dp
         drawSection(c, L["bh_last14"], y); y += 27 * dp
         drawDays(c, y); y += 136 * dp
         drawSection(c, L["bh_endless20"], y); y += 27 * dp
@@ -381,6 +412,114 @@ class StatsScreen(g: Game) : Screen(g) {
             y += 29 * dp
         }
         ui.text(c, L["bh_local"], panel.centerX(), y + 17 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
+    }
+
+
+    /** Wyniki ostatnich 30 bitew: każda kolumna to bitwa, wiersz oznacza tryb. */
+    private fun drawRecentResults(c: Canvas, top: Float) {
+        val l = panel.left + 18 * dp
+        val r = panel.right - 18 * dp
+        chart.set(l, top, r, top + 150 * dp)
+        ui.card(c, chart, Color.rgb(36, 46, 62), 9f)
+        ui.fill.color = Ui.GOOD
+        c.drawCircle(l + 12 * dp, top + 15 * dp, 4 * dp, ui.fill)
+        ui.text(c, winsLegend, l + 22 * dp, top + 19 * dp, 11f, Ui.GOOD)
+        ui.fill.color = Ui.BAD
+        c.drawCircle(l + 106 * dp, top + 15 * dp, 4 * dp, ui.fill)
+        ui.text(c, recentLossLegend, l + 116 * dp, top + 19 * dp, 11f, Ui.BAD)
+        if (metrics.recentModes.isEmpty()) {
+            ui.text(c, emptyText, chart.centerX(), chart.centerY(), 12f, Ui.DIM, Paint.Align.CENTER)
+            return
+        }
+        val axisLeft = l + min(116 * dp, chart.width() * 0.26f)
+        val axisRight = max(axisLeft + 30 * dp, r - 67 * dp)
+        val slot = (axisRight - axisLeft) / 30f
+        val marker = min(12 * dp, slot * 0.72f)
+        for (mode in modeKeys.indices) {
+            val y = top + (43 + mode * 24) * dp
+            val title = modeLabel(mode)
+            ui.text(c, title, l + 10 * dp, y + 4 * dp,
+                ui.fit(title, 11f, axisLeft - l - 16 * dp), Ui.TEXT)
+            ui.fill.color = Color.argb(55, 255, 255, 255)
+            c.drawRect(axisLeft, y, axisRight, y + dp, ui.fill)
+            for (index in metrics.recentModes.indices) {
+                if (metrics.recentModes[index] != mode) continue
+                // Puste kolumny z lewej zostają wolne przy mniej niż 30 bitwach.
+                val position = 30 - metrics.recentModes.size + index
+                val x = axisLeft + (position + 0.5f) * slot
+                ui.fill.color = if (metrics.recentResults[index] == BattleHistory.WIN) Ui.GOOD else Ui.BAD
+                c.drawRoundRect(x - marker / 2f, y - 6 * dp,
+                    x + marker / 2f, y + 6 * dp, 2 * dp, 2 * dp, ui.fill)
+            }
+            ui.text(c, recentModeTexts[mode], r - 9 * dp, y + 4 * dp,
+                11f, Ui.GOLD, Paint.Align.RIGHT)
+        }
+        ui.text(c, recentDirection, r - 10 * dp, chart.bottom - 6 * dp,
+            10f, Ui.DIM, Paint.Align.RIGHT)
+    }
+
+    /** Narastający rekord fal z lokalnie dostępnej historii oblężeń. */
+    private fun drawBestWaves(c: Canvas, top: Float) {
+        val l = panel.left + 18 * dp
+        val r = panel.right - 18 * dp
+        chart.set(l, top, r, top + 124 * dp)
+        ui.card(c, chart, Color.rgb(36, 46, 62), 9f)
+        val waves = metrics.endlessBestWaves
+        if (waves.isEmpty()) {
+            ui.text(c, emptyText, chart.centerX(), chart.centerY(), 12f, Ui.DIM, Paint.Align.CENTER)
+            return
+        }
+        ui.text(c, waveMaxText, l + 12 * dp, top + 18 * dp, 11f, Ui.GOLD)
+        val startX = l + 20 * dp
+        val width = max(1f, chart.width() - 40 * dp)
+        val baseline = chart.bottom - 19 * dp
+        ui.fill.color = Color.argb(55, 255, 255, 255)
+        c.drawRect(startX, baseline, startX + width, baseline + dp, ui.fill)
+        var lastX = startX
+        var lastY = baseline
+        for (i in waves.indices) {
+            val x = startX + if (waves.size == 1) width / 2 else width * i / (waves.size - 1)
+            val y = baseline - waves[i].toFloat() / bestWaveMax * 70 * dp
+            if (i > 0) {
+                ui.stroke.color = Ui.XP
+                ui.stroke.strokeWidth = 2.5f * dp
+                c.drawLine(lastX, lastY, x, y, ui.stroke)
+            }
+            ui.fill.color = Ui.GOLD
+            c.drawCircle(x, y, 3 * dp, ui.fill)
+            lastX = x; lastY = y
+        }
+        ui.text(c, recentDirection, r - 10 * dp, chart.bottom - 5 * dp,
+            10f, Ui.DIM, Paint.Align.RIGHT)
+    }
+
+    /** Suma sekund bitew w lokalnych dniach kalendarzowych; zakres 14 dni. */
+    private fun drawDailyTime(c: Canvas, top: Float) {
+        val l = panel.left + 18 * dp
+        val r = panel.right - 18 * dp
+        chart.set(l, top, r, top + 126 * dp)
+        ui.card(c, chart, Color.rgb(36, 46, 62), 9f)
+        if (!hasDailyTime) {
+            ui.text(c, emptyText, chart.centerX(), chart.centerY(), 12f, Ui.DIM, Paint.Align.CENTER)
+            return
+        }
+        ui.text(c, timeMaxText, l + 12 * dp, top + 18 * dp, 11f, Ui.GOLD)
+        val baseline = chart.bottom - 23 * dp
+        val space = (chart.width() - 28 * dp) / 14f
+        val startX = l + 14 * dp
+        ui.fill.color = Color.argb(55, 255, 255, 255)
+        c.drawRect(startX, baseline, startX + space * 14, baseline + dp, ui.fill)
+        for (i in metrics.dailySeconds.indices) {
+            val x = startX + (i + 0.5f) * space
+            val barWidth = space * 0.64f
+            val height = metrics.dailySeconds[i].toFloat() / dailySecondsMax.toFloat() * 68 * dp
+            ui.fill.color = Ui.XP
+            c.drawRoundRect(x - barWidth / 2, baseline - height,
+                x + barWidth / 2, baseline, 2 * dp, 2 * dp, ui.fill)
+        }
+        ui.text(c, oldestDayText, l + 14 * dp, chart.bottom - 5 * dp, 10f, Ui.DIM)
+        ui.text(c, todayText, r - 14 * dp, chart.bottom - 5 * dp,
+            10f, Ui.DIM, Paint.Align.RIGHT)
     }
 
     private fun drawDays(c: Canvas, top: Float) {

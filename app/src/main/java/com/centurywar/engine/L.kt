@@ -141,6 +141,7 @@ object L {
         putAll(part92())
         putAll(part93())
         }
+        putAll(part105())
     }
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
@@ -1513,6 +1514,16 @@ object L {
         "privacy93_saving" to t("Trwa zapisywanie żądania usunięcia…", "Saving deletion request…", "Löschanfrage wird gespeichert…", "Guardando solicitud de borrado…", "Enregistrement de la demande de suppression…", "Salvataggio richiesta di eliminazione…", "A guardar pedido de eliminação…", "Збереження запиту на видалення…", "Verwijderverzoek opslaan…", "Silme isteği kaydediliyor…"),
         "privacy93_queued" to t("Żądanie zapisane; usunięcie na serwerze nie jest jeszcze potwierdzone.", "Request queued; server deletion is still pending.", "Anfrage gespeichert; Serverlöschung steht noch aus.", "Solicitud en cola; el borrado del servidor aún está pendiente.", "Demande enregistrée ; suppression du serveur en attente.", "Richiesta in coda; eliminazione dal server ancora in sospeso.", "Pedido em fila; eliminação no servidor ainda pendente.", "Запит у черзі; видалення на сервері ще очікується.", "Verzoek in wachtrij; serververwijdering volgt nog.", "İstek sırada; sunucuda silme işlemi henüz bekliyor."),
         "privacy93_failed" to t("Nie zapisano żądania. Dane nie zostały usunięte — spróbuj ponownie.", "Request not saved. Data was not deleted; try again.", "Anfrage nicht gespeichert. Daten nicht gelöscht; erneut versuchen.", "Solicitud no guardada. Datos no borrados; inténtalo de nuevo.", "Demande non enregistrée. Données non supprimées ; réessayez.", "Richiesta non salvata. Dati non eliminati; riprova.", "Pedido não guardado. Dados não eliminados; tenta novamente.", "Запит не збережено. Дані не видалені; спробуйте знову.", "Verzoek niet opgeslagen. Gegevens niet gewist; probeer opnieuw.", "İstek kaydedilmedi. Veriler silinmedi; yeniden deneyin."),
+    /** Zlecenie 105: wykresy lokalnych statystyk. */
+    private fun part105(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "bh105_last30" to t("Wyniki ostatnich 30 bitew", "Last 30 battle results", "Ergebnisse der letzten 30 Kämpfe", "Resultados de las últimas 30 batallas", "Résultats des 30 derniers combats", "Risultati delle ultime 30 battaglie", "Resultados das últimas 30 batalhas", "Результати останніх 30 битв", "Uitslagen laatste 30 gevechten", "Son 30 savaşın sonuçları"),
+        "bh105_losses" to t("Przegrane", "Losses", "Niederlagen", "Derrotas", "Défaites", "Sconfitte", "Derrotas", "Поразки", "Nederlagen", "Yenilgiler"),
+        "bh105_old_new" to t("Od starszych do nowszych", "Oldest to newest", "Alt nach neu", "De antiguo a reciente", "Du plus ancien au récent", "Dal più vecchio al nuovo", "Do mais antigo ao recente", "Від давніших до новіших", "Oud naar nieuw", "Eskiden yeniye"),
+        "bh105_best_wave" to t("Rekord fal Endless w czasie", "Best Endless wave over time", "Endless-Wellenrekord im Verlauf", "Récord de oleadas Endless", "Record de vagues Endless", "Record delle ondate Endless", "Recorde de ondas Endless", "Рекорд хвиль Endless із часом", "Endless-golfrecord door de tijd", "Endless dalga rekoru"),
+        "bh105_day_time" to t("Czas gry dziennie (14 dni)", "Daily play time (14 days)", "Spielzeit pro Tag (14 Tage)", "Tiempo diario de juego (14 días)", "Temps de jeu par jour (14 jours)", "Tempo di gioco al giorno (14 giorni)", "Tempo diário de jogo (14 dias)", "Час гри за день (14 днів)", "Speeltijd per dag (14 dagen)", "Günlük oyun süresi (14 gün)"),
+        "bh105_max_wave" to t("Rekord: fala %d", "Record: wave %d", "Rekord: Welle %d", "Récord: oleada %d", "Record : vague %d", "Record: ondata %d", "Recorde: onda %d", "Рекорд: хвиля %d", "Record: golf %d", "Rekor: dalga %d"),
+        "bh105_max_time" to t("Maksymalnie: %s", "Maximum: %s", "Maximum: %s", "Máximo: %s", "Maximum : %s", "Massimo: %s", "Máximo: %s", "Максимум: %s", "Maximum: %s", "En fazla: %s"),
+        "bh105_13days" to t("13 dni temu", "13 days ago", "Vor 13 Tagen", "Hace 13 días", "Il y a 13 jours", "13 giorni fa", "Há 13 dias", "13 днів тому", "13 dagen geleden", "13 gün önce"),
     )
 
 }
