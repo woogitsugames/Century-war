@@ -82,3 +82,13 @@ tasks.register("balanceTest") {
     description = "Długie testy balansu po stronie serwera."
     dependsOn("test")
 }
+
+ // W osobnym przebiegu benchmarku testowe JVM ma jeden procesor i ograniczony heap.
+ // Zwykłe testy pozostają bez zmian.
+if (System.getenv("SERVER_BENCH") == "true") {
+    tasks.named<org.gradle.api.tasks.testing.Test>("test") {
+        maxHeapSize = "512m"
+        maxParallelForks = 1
+        jvmArgs("-XX:ActiveProcessorCount=1")
+    }
+}
