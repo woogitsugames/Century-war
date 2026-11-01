@@ -407,3 +407,7 @@ Bez Android SDK: `./gradlew :sim:test -PserverOnly=true`.
 Zadanie nadpisuje wyłącznie pliki golden i dopisuje uzasadnienie z datą na końcu
 `docs/BALANCE.md`. Przed scaleniem sprawdź diff JSON, zmianę wyników i wpływ na
 powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
+
+- 2026-11-01 — regeneracja złotych powtórek: utworzenie 10 wzorców na podstawie
+  bazowego silnika (Replay.VERSION=5, BattleSnapshot.VERSION=13), bez zmiany balansu.
+  Zweryfikowane przez `:sim:regenerateGolden` w CI.

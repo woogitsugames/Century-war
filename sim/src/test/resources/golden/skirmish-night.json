@@ -1,0 +1,27 @@
+{
+  "id": "skirmish-night",
+  "config": {"mode":"SKIRMISH","seed":91010,"aiPower":0.9,"startEra":1,"maxEra":3,"modifiers":["FOG_OF_WAR"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"NIGHT","weekly":-1,"weeklyCard":null,"dailyEvent":null},
+  "replayVersion": 5,
+  "replay": "Bf-QHBIAAAAAAwAZAAA3AAFpAADAAgAAiwMHVQAA1wEIaQAAoAEAAKABAADAAgAAwAIAAOADAADAAgAA4AMAADcL",
+  "commands": [
+    {"step":0,"kind":"QUEUE","argument":0},
+    {"step":0,"kind":"BUY_TURRET","argument":0},
+    {"step":25,"kind":"QUEUE","argument":0},
+    {"step":80,"kind":"QUEUE","argument":1},
+    {"step":185,"kind":"QUEUE","argument":0},
+    {"step":505,"kind":"QUEUE","argument":0},
+    {"step":900,"kind":"BARRAGE","argument":0},
+    {"step":985,"kind":"QUEUE","argument":0},
+    {"step":1200,"kind":"RALLY","argument":0},
+    {"step":1305,"kind":"QUEUE","argument":0},
+    {"step":1465,"kind":"QUEUE","argument":0},
+    {"step":1625,"kind":"QUEUE","argument":0},
+    {"step":1945,"kind":"QUEUE","argument":0},
+    {"step":2265,"kind":"QUEUE","argument":0},
+    {"step":2745,"kind":"QUEUE","argument":0},
+    {"step":3065,"kind":"QUEUE","argument":0},
+    {"step":3545,"kind":"QUEUE","argument":0},
+    {"step":3600,"kind":"SURRENDER","argument":0}
+  ],
+  "expected": {"score":6,"winner":1,"wave":0,"steps":3600,"kills":1,"enemyKills":12,"timeBits":1114636289,"snapshotSha256":"08ca2dab28515c06c1397c70a37e5a0ba73ebe46481aae35eb2e56d8b465747f"}
+}

@@ -109,6 +109,14 @@ object GoldenFixtures {
         battle.fx.count = 0
 
         val log = controller.log()
+        // Test ma obejmować rzeczywiste wybory, nie tylko konfigurację trybu.
+        when (scenario.id) {
+            "daily-event" -> check(cfg.dailyEvent != null)
+            "weekly-start-card" -> check(cfg.weeklyCard != null)
+            "endless-with-cards" -> check(log.commands.any { it.kind == Replay.Kind.CARD })
+            "steam-variant-wind", "silicon-variant" ->
+                check(log.commands.any { it.kind == Replay.Kind.VARIANT })
+        }
         check(log.steps <= scenario.limit)
         val encoded = Replay.encode(log)
         val verified = Replay.verify(cfg, encoded)
