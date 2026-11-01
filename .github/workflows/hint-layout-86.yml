@@ -1,0 +1,51 @@
+name: Testy podpowiedzi 86
+
+on:
+  push:
+    branches:
+      - gpt/86-hint-layout
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj APK i uruchom testy podpowiedzi
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest \
+            --tests '*HintFramePlacementTest*' \
+            --tests '*HintOverlayTest*' \
+            --tests '*ScreenshotTest.contextualHints*' \
+            --console=plain --no-configuration-cache -PtestForks=1
+      - name: Zachowaj zrzuty wszystkich podpowiedzi
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hint-layout-86-screenshots
+          path: app/build/screenshots/*_hint_*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Zachowaj wyniki testów
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hint-layout-86-results
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
