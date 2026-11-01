@@ -47,8 +47,8 @@ enum class AiPersonality(
     ECONOMIST(
         20, 22, 20, 38,
         150f, 0.13f, 0f, 0.73f, 14f, 5f,
-        4, 5, 6, false, 0.80f, 7,
-        1.05f, 0.52f, 1.15f, 28, false,
+        4, 5, 6, false, 0.80f, 5,
+        0.90f, 0.52f, 1.15f, 28, false,
     ),
     SIEGER(
         12, 20, 34, 34,
@@ -58,7 +58,7 @@ enum class AiPersonality(
     ),
     BALANCED(
         30, 28, 28, 14,
-        35f, 0.42f, 3f, 0.86f, 6f, 1.3f,
+        35f, 0.42f, 6f, 0.86f, 6f, 1.3f,
         4, 4, 5, false, 0.60f, 2,
         1.40f, 0.55f, 1.05f, 18, true,
     ),

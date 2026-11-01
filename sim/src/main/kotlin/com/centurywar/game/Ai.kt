@@ -350,10 +350,10 @@ class Ai(
 
         // Kontry: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
         // Zrównoważony dowódca obserwuje role wroga i mocniej reaguje kontrami.
-        val counterWeight = if (profile == AiPersonality.BALANCED) 55 else 35
+        val counterWeight = if (profile == AiPersonality.BALANCED) 45 else 35
         if (enemyRanged >= 2 && enemyRanged > enemyMelee) wm += counterWeight
         if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) wr += counterWeight
-        if (enemyMelee >= 3) wh += if (profile == AiPersonality.BALANCED) 45 else 25
+        if (enemyMelee >= 3) wh += if (profile == AiPersonality.BALANCED) 35 else 25
         if (danger >= 3) wm += 15
         if (melee > ranged + heavy + 3) wm = wm * 2 / 3
         if (ranged < melee) wr += 10
