@@ -1,0 +1,45 @@
+name: Lokalizacja 116
+
+on:
+  push:
+    branches:
+      - gpt/116-l10n-review-4
+  pull_request:
+    branches:
+      - claude/bold-sagan-vwz5gm
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  l10n:
+    name: Kompilacja, testy i zrzuty 720p
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj APK
+        run: ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Kontrola tłumaczeń 88 i 116
+        run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --console=plain --no-configuration-cache
+      - name: Zrzuty najdłuższych tłumaczeń na 720p
+        run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTestReview116*' --console=plain --no-configuration-cache
+      - name: Artefakty zrzutów i wyników
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l10n116-720p
+          path: |
+            app/build/screenshots/l10n116/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
