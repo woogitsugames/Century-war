@@ -794,7 +794,7 @@ końca pasa; nie rozszerzono zasięgu zdolności tylko dla jednego bota.
 na **50 tych samych seedach** (50021 + 9973 × indeks), w potyczce epok 2–3
 z modyfikatorami RICH_START i FRAGILE_BASES. Graczem kieruje BALANCED,
 przeciwnik ma wymuszoną osobowość. Zapis CSV obejmuje rozkład czterech ról,
-czas pierwszego skutecznego trafienia gracza, pierwszą wieżę i ewolucję,
+czas pierwszego ataku i pierwszego skutecznego trafienia gracza, pierwszą wieżę i ewolucję,
 wieże/ostrzały/zrywy/ulepszenia na mecz oraz czas spędzony w obronie.
 Niezaobserwowane zdarzenia mają pustą średnią („-”) i osobny licznik prób.
 
