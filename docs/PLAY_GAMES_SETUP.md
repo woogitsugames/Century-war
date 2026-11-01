@@ -24,7 +24,7 @@ Zależność: **com.google.android.gms:play-services-games-v2:22.1.0** (stabilna
 
 **Play App Signing**: w Play Console → Test and release → Setup → App integrity skopiuj SHA-1 z **App signing key certificate**. Ten certyfikat jest zwykle inny niż klucz upload. Do obsługi debug APK i aplikacji ze sklepu rejestruj odpowiadające im odciski w poświadczeniach PGS.
 
-**Ważne:** aktualny build release projektu jest tymczasowo podpisywany kluczem debug. Przed publikacją ustaw prawdziwy klucz upload.
+**Ważne:** build release wymaga prawdziwego klucza upload. Niekompletna konfiguracja podpisu zatrzymuje build, a debugowy wyjątek dostępny jest wyłącznie w smoke-teście CI.
 
 ## 2. Cztery rankingi
 

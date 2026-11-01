@@ -7,16 +7,18 @@ lang: en
 
 # Century War Privacy Policy
 
-**Effective date:** November 1, 2026  
+**Effective date:** {{OWNER.release_date}}  
 **Applies to:** Century War for Android, including Google Play Games integration where it has been configured in the published release.
 
 ## 1. Publisher and contact
 
 Century War is developed under the **WooGitsu Games** label. The publisher is responsible for the game's own features and the privacy disclosures presented to users on Google Play. Google processes data within its Google Play Games service under its own policies.
 
-**Details to complete before publishing:**
-- Publisher's full legal name: **[INSERT_PUBLISHER_LEGAL_NAME]**
-- Privacy contact email: **[INSERT_CONTACT_EMAIL]**
+**Publisher details (source: [OWNER_INPUT.md](OWNER_INPUT.md)):**
+- Publisher's legal name: **{{OWNER.publisher_name}}**
+- Postal contact address: **{{OWNER.postal_address}}**
+- Privacy and deletion contact email: **{{OWNER.contact_email}}**
+- Published policy URL: **{{OWNER.privacy_policy_url}}**
 
 You may use this address for questions about data practices and requests concerning data handled by the publisher. Data held in Google Play Games can also be deleted using Google's tools described below.
 
@@ -64,6 +66,8 @@ When the service is configured and you are authenticated, the app can send score
 
 The game also supports an **optional publisher-operated leaderboard server**, enabled only in releases with a configured HTTPS endpoint, HMAC key and privacy policy URL, and after separate in-game consent. The app then sends a random player UUID, nickname, board, score, timestamp and battle settings, plus replay commands to verify the score. SQLite stores the UUID, nickname, results, verification metadata and a SHA-256 submission hash; **it does not store the full replay or IP addresses in SQLite**. IP addresses may be used temporarily for rate limiting and may appear in infrastructure logs. Without configuration and consent, no scores are sent to the publisher server. The presence of the code alone does not imply a live deployment.
 
+**Public nicknames and reporting abuse:** if the publisher's leaderboard server is enabled, other players may see the nickname you choose and your scores. The public entry identifier is not your internal installation UUID; an installation secret is used to authenticate score submissions and deletion requests. The server may store a hash of that secret, not its plaintext. Once the nickname-reporting feature from task 80 has been integrated, players can long-press a leaderboard entry to report an abusive name. A report contains the target's public entry ID and a reason; moderators can review reports and take action. The reporter's IP address may be used for request rate limiting or recorded in infrastructure logs according to the server configuration. These features apply only after the relevant app and server release is actually deployed.
+
 Google states that Play Games data is encrypted in transit using HTTPS. Information about data collection, retention, and profile visibility: https://developer.android.com/games/pgs/data-collection
 
 ## 5. Local Daily Challenge reminders
@@ -102,7 +106,7 @@ Google's retention periods are determined by Google and your account settings. T
 
 ## 9. Data protection and children
 
-Local records are stored in Android's private app storage. The game has no chat, player-to-player messages, or location sharing. Technical reports can only be shared manually through Android's system chooser. PGS leaderboards may nevertheless show Google profile names and scores according to the selected visibility settings. The game's content rating comes from the IARC questionnaire and does not, by itself, mean that the product targets children.
+Local records are stored in Android's private app storage. When leaderboards are enabled, player profile names and scores may be visible publicly on PGS and the publisher-operated server. Players cannot publish posts or send direct messages. The abusive-name reporting and moderation mechanism becomes available once task 80 has been integrated and deployed. The game has no chat, player-to-player messages, or location sharing. Technical reports can only be shared manually through Android's system chooser. PGS leaderboards may nevertheless show Google profile names and scores according to the selected visibility settings. The game's content rating comes from the IARC questionnaire and does not, by itself, mean that the product targets children.
 
 ## 10. Policy changes
 

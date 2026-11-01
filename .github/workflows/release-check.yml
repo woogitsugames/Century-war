@@ -1,7 +1,7 @@
 name: Weryfikacja wydania Android
 
 # Smoke-test release (R8 + shrinkResources) na emulatorze dla PR do main/claude/**
-# i uruchomien recznych. Podpis: klucz debug (brak sekretow RELEASE_*) — to NIE sa
+# i uruchomien recznych. Jawna flaga CI dopuszcza podpis debug — to NIE sa
 # artefakty do publikacji; podpisany release buduje job `release` w android.yml po tagu v*.
 on:
   pull_request:
@@ -44,6 +44,25 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
           ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
 
+      - name: Potwierdź blokadę release bez klucza upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          for task in :app:assembleRelease :app:bundleRelease; do
+            log="build/release-metrics/blocked-${task#*:app:}.log"
+            if ./gradlew "$task" \
+              -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode \
+              --console=plain --no-configuration-cache > "$log" 2>&1; then
+              echo "::error::$task bez klucza produkcyjnego zakończył się sukcesem"
+              exit 1
+            fi
+            grep -q 'Brak prawidłowego podpisu release' "$log" || {
+              cat "$log"
+              echo "::error::Brak oczekiwanego błędu podpisu w $task"
+              exit 1
+            }
+          done
+
       # Porownanie na tych samych SDK/runnerze: najnowszy wspolny commit z baza PR.
       - name: Zbuduj bazowe APK i AAB (porownanie rozmiaru)
         if: ${{ github.event_name == 'pull_request' }}
@@ -59,9 +78,16 @@ jobs:
           (
             cd "$RUNNER_TEMP/cw-before"
             chmod +x ./gradlew
-            ./gradlew :app:assembleRelease :app:bundleRelease \
-              -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode \
-              --console=plain --no-configuration-cache
+            if grep -q 'ciTestDebugSigning' app/build.gradle.kts; then
+              CW_RELEASE_SMOKE=true ./gradlew :app:assembleRelease :app:bundleRelease \
+                -PciTestDebugSigning=true \
+                -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode,ownerInput \
+                --console=plain --no-configuration-cache
+            else
+              ./gradlew :app:assembleRelease :app:bundleRelease \
+                -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode \
+                --console=plain --no-configuration-cache
+            fi
           )
           mkdir -p "$RUNNER_TEMP/cw-before-artifacts"
           cp "$RUNNER_TEMP/cw-before/app/build/outputs/apk/release/app-release.apk" "$RUNNER_TEMP/cw-before-artifacts/before.apk"
@@ -70,9 +96,14 @@ jobs:
 
       # Smoke-test R8/manifestu na placeholderach, nie jest to walidacja publikacji.
       - name: Zbuduj APK i AAB release
+        env:
+          CW_RELEASE_SMOKE: "true"
         run: |
           set -o pipefail
-          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode 2>&1 | tee build/release-metrics/release.log
+          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain \
+            -PciTestDebugSigning=true \
+            -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode,ownerInput \
+            2>&1 | tee build/release-metrics/release.log
 
       - name: Sprawdź manifest, profil i rozmiary
         shell: bash

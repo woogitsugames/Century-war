@@ -188,7 +188,7 @@ Przed tagowaniem upewnij sie, ze commit zawiera workflow i przechodzi CI. Job **
 
 ## Lokalny release
 
-Bez zmiennych srodowiskowych `:app:assembleRelease` i `:app:bundleRelease` nadal korzystaja z debug signingConfig, zeby nie popsuc dotychczasowego lokalnego procesu. Aby lokalnie sprawdzic podpis produkcyjny, ustaw wszystkie cztery zmienne (najlepiej w menedzerze sekretow, bez zapisywania ich w repo):
+Bez czterech zmiennych srodowiskowych `:app:assembleRelease` i `:app:bundleRelease` kończą się błędem; nie ma już automatycznego podpisu debug. Do lokalnego builda produkcyjnego ustaw wszystkie cztery zmienne (najlepiej w menedżerze sekretów, poza repo):
 
 | Zmienna Gradle | Wartosc |
 |---|---|
@@ -197,7 +197,7 @@ Bez zmiennych srodowiskowych `:app:assembleRelease` i `:app:bundleRelease` nadal
 | `RELEASE_KEY_ALIAS` | Alias klucza |
 | `RELEASE_KEY_PASSWORD` | Haslo klucza |
 
-Przy czesciowo ustawionych zmiennych konfiguracja Gradle zwroci blad zamiast niejawnie uzyc klucza debug.
+Przy częściowo ustawionych zmiennych konfiguracja Gradle zwróci błąd. Plik debug.keystore i alias androiddebugkey nie są akceptowane jako produkcyjny podpis. Testowy podpis debug wymaga jednocześnie flagi `-PciTestDebugSigning=true`, zdarzenia pull_request / workflow_dispatch i oznaczenia `CW_RELEASE_SMOKE=true` w GitHub Actions. Flaga nie działa podczas publikacji taga. Dane wydawcy uzupełnia się w [OWNER_INPUT.md](store/OWNER_INPUT.md), a gotowe polityki generuje zadanie `:app:renderStorePolicies`.
 
 ## Diagnostyka
 
