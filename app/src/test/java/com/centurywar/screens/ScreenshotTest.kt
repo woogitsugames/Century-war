@@ -1713,6 +1713,8 @@ class ScreenshotTest {
             for ((tag, dims) in selected) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "pl"
+                g.onLanguageChanged()
                 g.profile.hintsEnabled = false
                 g.profile.hintsSeen = Profile.HINT_VALID_MASK
                 g.profile.stars[0] = 3
