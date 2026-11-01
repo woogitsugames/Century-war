@@ -28,6 +28,7 @@ class StatsScreen(g: Game) : Screen(g) {
     override val crashName get() = "StatsScreen"
     private val bg = MenuBg()
     private val chrome = Chrome(this)
+    private val recordsTabs = RecordsTabs(this, 1)
     private val back = btn(-1)
     private val tabs = Array(2) { btn(it + 10) }
     private val detailBack = btn(12)
@@ -142,17 +143,18 @@ class StatsScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         chrome.layoutBack(back)
+        recordsTabs.layout()
         val pw = min(950 * dp, w - g.insetL - g.insetR - 24 * dp)
         val cx = (w + g.insetL - g.insetR) / 2f
         val gap = 8 * dp
         val tw = (pw - gap) / 2f
         tabs[0].label = L["stats"]; tabs[0].iconId = Icons.CHART
         tabs[1].label = L["bh_history"]; tabs[1].iconId = Icons.BOOK
-        tabs[0].set(cx - pw / 2, chrome.top + 3 * dp, tw, 42 * dp)
-        tabs[1].set(cx + gap / 2, chrome.top + 3 * dp, tw, 42 * dp)
+        tabs[0].set(cx - pw / 2, recordsTabs.contentTop + 3 * dp, tw, 48 * dp)
+        tabs[1].set(cx + gap / 2, recordsTabs.contentTop + 3 * dp, tw, 48 * dp)
         detailBack.label = L["back"]; detailBack.iconId = Icons.BACK
-        detailBack.set(cx - pw / 2 + 8 * dp, chrome.top + 5 * dp, min(132 * dp, pw * 0.4f), 38 * dp)
-        panel.set(cx - pw / 2, chrome.top + 53 * dp, cx + pw / 2, h - g.insetB - 12 * dp)
+        detailBack.set(cx - pw / 2 + 8 * dp, recordsTabs.contentTop + 5 * dp, min(132 * dp, pw * 0.4f), 48 * dp)
+        panel.set(cx - pw / 2, recordsTabs.contentTop + 59 * dp, cx + pw / 2, h - g.insetB - 12 * dp)
         refresh()
         if (selected in history.indices) openDetails(selected) else {
             selected = -1
@@ -296,6 +298,7 @@ class StatsScreen(g: Game) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        if (recordsTabs.onClick(b)) return
         when (b.id) {
             -1 -> if (!onBack()) g.pop()
             12 -> onBack()
@@ -323,7 +326,9 @@ class StatsScreen(g: Game) : Screen(g) {
         else if (tab == 0) drawStats(c) else drawHistory(c)
         c.restore()
         ui.button(c, back, 16f)
-        chrome.title(c, if (selected >= 0) L["bh_details"] else L["stats"])
+        recordsTabs.draw(c)
+        chrome.title(c, if (selected >= 0) L["bh_details"] else L["records"])
+        drawHeldTooltip(c)
     }
 
     private fun drawSection(c: Canvas, title: String, y: Float) {
