@@ -91,7 +91,7 @@ class WeatherTest {
         for (day in longArrayOf(19000L, 20000L, 20757L, Daily.RELEASE_DAY - 2, Daily.RELEASE_DAY - 1)) {
             val rng = Rng(day * 7919L + 17L)
             val mods = HashSet<Modifier>()
-            val values = Modifier.values()
+            val values = Modifier.values().copyOfRange(0, 10) // historyczna pula
             val count = 2 + rng.nextInt(2)
             while (mods.size < count) mods.add(values[rng.nextInt(values.size)])
             val rolledStart = if (day < Daily.RELEASE_DAY) rng.nextInt(3) else rng.nextInt(6)

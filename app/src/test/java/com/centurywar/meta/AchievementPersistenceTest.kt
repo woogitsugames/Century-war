@@ -75,7 +75,7 @@ class AchievementPersistenceTest {
         assertFalse(p.achievementCounters.containsKey("UNKNOWN"))
         assertEquals(setOf("win_1"), p.unlockedAchievements)
         assertEquals(setOf(20000L), p.achievementDailySeeds)
-        assertEquals(0x1FF, p.achievementDoctrineMask)
+        assertEquals((1 shl com.centurywar.game.Doctrine.values().size) - 1, p.achievementDoctrineMask)
     }
 
     @Test

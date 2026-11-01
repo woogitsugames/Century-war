@@ -162,7 +162,7 @@ class AchievementsTest {
         b.player.doctrines.addAll(Doctrine.values())
         b.surrender()
         Achievements.onBattleEnd(p, b, cfg, false)
-        assertEquals(9L, Achievements.progress(p, Achievements.byId("all_doctrines")!!))
+        assertEquals(Doctrine.values().size.toLong(), Achievements.progress(p, Achievements.byId("all_doctrines")!!))
         assertTrue(Achievements.isUnlocked(p, "all_doctrines"))
     }
 

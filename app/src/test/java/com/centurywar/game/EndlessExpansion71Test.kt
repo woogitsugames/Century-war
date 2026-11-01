@@ -10,14 +10,14 @@ class EndlessExpansion71Test {
     private fun battle(seed: Long = 71L) = Battle(BattleConfig(Mode.ENDLESS, seed, 1f))
 
     @Test fun eightCardsHaveRequestedRaritiesAndAppendOnlyOrdinals() {
-        val added = EndlessCard.values().drop(30)
+        val added = EndlessCard.values().drop(34) // 30 bazowych + 4 karty doktryn ze zlecenia 69
         assertEquals(8, added.size)
         assertEquals(listOf(EndlessRarity.COMMON, EndlessRarity.COMMON,
             EndlessRarity.UNCOMMON, EndlessRarity.UNCOMMON, EndlessRarity.UNCOMMON,
             EndlessRarity.RARE, EndlessRarity.RARE, EndlessRarity.LEGENDARY),
             added.map { it.rarity })
-        assertEquals(30, EndlessCard.SUPPLY_LINE.ordinal)
-        assertEquals(37, EndlessCard.CITADEL_HEART.ordinal)
+        assertEquals(34, EndlessCard.SUPPLY_LINE.ordinal)
+        assertEquals(41, EndlessCard.CITADEL_HEART.ordinal)
     }
 
     @Test fun economicSynergyIsIndependentOfCardOrder() {

@@ -75,7 +75,7 @@ object Achievements {
         def("daily_7", AchievementMetric.DAILY_DAYS, 7, 100, AchievementCategory.DAILY),
         def("daily_30", AchievementMetric.DAILY_DAYS, 30, 350, AchievementCategory.DAILY),
         def("insane_win", AchievementMetric.INSANE_WINS, 1, 130, AchievementCategory.TACTICS),
-        def("all_doctrines", AchievementMetric.DOCTRINES, 9, 250, AchievementCategory.TACTICS),
+        def("all_doctrines", AchievementMetric.DOCTRINES, com.centurywar.game.Doctrine.values().size.toLong(), 250, AchievementCategory.TACTICS),
         def("armory_10", AchievementMetric.ARMORY_TEN, 1, 110, AchievementCategory.TACTICS),
         def("turrets_50", AchievementMetric.TURRETS_BUILT, 50, 130, AchievementCategory.TACTICS),
         def("barrages_100", AchievementMetric.BARRAGES_CAST, 100, 160, AchievementCategory.COMBAT),

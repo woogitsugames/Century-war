@@ -9,7 +9,7 @@ import org.junit.Test
 class BattleVariantsTest {
     private fun legacyConfig(day: Long): BattleConfig {
         val rng = Rng(day * 7919L + 17L)
-        val all = Modifier.values()
+        val all = Modifier.values().copyOfRange(0, 10) // pula sprzed nowych modyfikatorów (zlecenie 70)
         val mods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (mods.size < count) mods.add(all[rng.nextInt(all.size)])

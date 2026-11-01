@@ -112,7 +112,10 @@ class NewModifiersBattleRulesTest {
         val cfg = BattleConfig(Mode.SKIRMISH, 707L, 1f,
             modifiers = setOf(Modifier.VETERANS, Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES))
         val original = Battle(cfg)
-        nearStep(original, Battle.MERCENARY_INTERVAL_STEPS - 3)
+        // Zrzut zawsze zawiera AI przeciwnika; usypiamy je zamiast usuwać.
+        original.ai!!.thinkTimer = Float.MAX_VALUE
+        original.stepCount = Battle.MERCENARY_INTERVAL_STEPS - 3
+        original.time = original.stepCount * Battle.STEP
         val restored = BattleSnapshot.decode(BattleSnapshot.encode(original))
         assertNotNull(restored)
         val copy = restored!!.battle
