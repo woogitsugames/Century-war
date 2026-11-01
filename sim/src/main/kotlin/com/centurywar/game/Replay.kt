@@ -8,7 +8,7 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 4
+    const val VERSION = 5
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -21,7 +21,8 @@ object Replay {
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
-    data class Log(val steps: Int, val commands: List<Command>, val version: Int = VERSION)
+    data class Log(val steps: Int, val commands: List<Command>, val version: Int = VERSION,
+                   val dailyEvent: DailyEvent? = null)
 
     data class Result(
         val score: Long,
@@ -38,6 +39,7 @@ object Replay {
         validate(log)
         val out = ByteArrayOutputStream(log.commands.size * 4 + 12)
         out.write(VERSION)
+        out.write(log.dailyEvent?.ordinal ?: 255)
         writeVarint(out, log.steps)
         writeVarint(out, log.commands.size)
         var previousStep = 0
@@ -61,6 +63,9 @@ object Replay {
         val input = Reader(raw)
         val version = input.byte()
         require(version == VERSION) { "Nieobsługiwana wersja powtórki: $version" }
+        val eventCode = input.byte()
+        require(eventCode == 255 || eventCode in DailyEvent.entries.indices) { "Nieznane zdarzenie dnia" }
+        val dailyEvent = if (eventCode == 255) null else DailyEvent.entries[eventCode]
         val steps = input.varint()
         val count = input.varint()
         require(steps in 0..MAX_STEPS && count in 0..MAX_COMMANDS) { "Przekroczono limity powtórki" }
@@ -78,7 +83,7 @@ object Replay {
             commands.add(Command(step, kind, argument))
         }
         require(input.done()) { "Nadmiarowe dane w powtórce" }
-        return Log(steps, commands, version).also(::validate)
+        return Log(steps, commands, version, dailyEvent).also(::validate)
     }
 
     fun verify(cfg: BattleConfig, encoded: String): Result = verify(cfg, decode(encoded))
@@ -89,6 +94,7 @@ object Replay {
      */
     fun verify(cfg: BattleConfig, log: Log): Result {
         validate(log)
+        require(cfg.dailyEvent == log.dailyEvent) { "Nieprawidłowe zdarzenie dnia" }
         val battle = Battle(cfg)
         battle.playerAi = null
         val controller = BattleController(battle, record = false)
