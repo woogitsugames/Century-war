@@ -36,7 +36,7 @@ class HintFramePlacementTest {
             )
             for (target in targets) {
                 val width = min(490f, w - 16f)
-                assertTrue("Brak miejsca dla celu $target na $" + "{screen[0]}x$" + "{screen[1]}",
+                assertTrue("Brak miejsca dla celu $target na " + screen[0] + "x" + screen[1],
                     HintFrame.place(target, safeL, safeT, safeR, safeB,
                         width, 42f, 6f, bubble, pointer))
                 assertFalse("Panel przecina cel: $target, $bubble", RectF.intersects(bubble, target))
