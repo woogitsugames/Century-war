@@ -41,7 +41,7 @@ class ServerMetricsTest {
         application {
             leaderboardModule(
                 store, secret, { now }, metrics = metrics, metricsToken = token,
-                verifyReplay = { submission, _, _ ->
+                verifyReplay = { submission, _, _, _ ->
                     if (submission.score == invalid.score) error("invalid replay")
                     VerifiedReplay("endless", submission.score, 900)
                 },
