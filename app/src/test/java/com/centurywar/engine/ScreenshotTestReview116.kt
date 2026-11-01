@@ -119,10 +119,15 @@ class ScreenshotTestReview116 {
         val old = L.lang
         try {
             val paint = widthPaint()
+            // Ten sam zestaw kluczy dla każdego języka: długi przekład nie
+            // może wypaść z pomiaru tylko dlatego, że przekracza limit długości.
+            val labelKeys = keys.filter { key ->
+                val english = L.raw(key)?.getOrNull(L.EN) ?: return@filter false
+                english.length <= 48 && '|' !in english && '\n' !in english
+            }.ifEmpty { keys }
             val ranking = L.CODES.indices.map { i ->
-                val texts = longestLabels(keys, i, paint)
+                val texts = longestLabels(labelKeys, i, paint)
                     .map { it.second }
-                    .filter { it.length <= 48 }
                     .take(12)
                 val score = texts.sumOf { paint.measureText(it).toDouble() }
                 i to score
