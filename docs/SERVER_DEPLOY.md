@@ -308,3 +308,58 @@ operator rozstrzyga spory ręcznie.
 ryzyko utraty sekretu instalacji wraz z profilem, możliwość przejęcia znanego
 historycznego UUID przed przypisaniem sekretu i retencja backupów.
 Przed startem wykonaj testy /score, /around, /report i /player/delete.
+
+## 11. Wydajność weryfikacji powtórek (zlecenie 121)
+
+**Pomiar 01.11.2026, [GitHub Actions — benchmark 121](https://github.com/woogitsugames/Century-war/actions/runs/41341222738):**
+Ubuntu Linux (`ubuntu-latest`), AMD EPYC 7763 64-Core Processor, Java 21.0.13,
+jeden logiczny procesor (afinityzacja `taskset`, dodatkowo
+`-XX:ActiveProcessorCount=1`), `-Xmx512m` (raportowana maksymalna
+sterta 494 MiB). Dwie rozgrzewki JIT, następnie pięć osobnych weryfikacji.
+
+Syntetyczna powtórka ma **432 000 kroków**, **30 945 komend** i 123 791 bajtów
+zakodowanego Base64 URL; Endless osiągnął falę 432. Wynik `Replay.verify`
+zgadzał się z wynikiem nagrywania we wszystkich siedmiu przebiegach.
+
+| Pomiar | Pięć próbek (ms) | Mediana | Maksimum |
+|---|---|---:|---:|
+| `Replay.verify` | 1911, 1924, 1911, 1893, 1933 | **1911 ms** | **1933 ms** |
+| `Replay.decode + verify` | 1915, 1928, 1912, 1893, 1934 | **1915 ms** | **1934 ms** |
+
+**Ograniczenie metody:** po fali 120 dyrektor Endless zadaje bazie
+obrażenia proporcjonalne do jej maksymalnego HP; w normalnej rozgrywce
+testowa baza była niszczona już po 159 869 krokach. Do pomiaru *górnego
+limitu liczby kroków* użyto więc wyłącznie w syntetycznym teście
+`Bonuses(baseHpMul = Float.POSITIVE_INFINITY)`. Taka niefizyczna
+konfiguracja **nie przejdzie walidacji normalnego zgłoszenia rankingu**
+i nie mierzy czasu pojedynczej legalnej gry ani najgorszego możliwego
+obciążenia przez wszystkie komendy. Nie należy na tej podstawie
+deklarować gwarancji czasu na VPS. Na serwerze rankingowym zgłoszenie
+z badaniami może wymagać **drugiej** symulacji do normalizacji wyniku.
+
+**Wniosek:** przy tym scenariuszu maksimum 1,933 s daje zapas do
+aktualnego deadline'u 15 s; nie trzeba zmieniać `Replay.MAX_STEPS`,
+wersji protokołu ani zasad gry. `VerificationGate` już ogranicza
+weryfikacje do maksymalnie jednej na wykrywany vCPU (do 8 wątków),
+ma ograniczoną kolejkę 16, przerywa po 15 s i zwraca HTTP **503**
+z `Retry-After: 30` po przeciążeniu lub przekroczeniu budżetu.
+Nie używać nieograniczonej puli ani kolejki.
+
+**Zalecenia dla taniego VPS:** na 1 vCPU zacząć od jednej równoległej
+weryfikacji i sterty JVM `-Xmx512m` (np. `JAVA_TOOL_OPTIONS=-Xmx512m
+-XX:ActiveProcessorCount=1`). Zapewnić zapas RAM na SQLite, Ktor,
+system i proxy, monitorować `verification_busy`, czasy z `/metrics`
+oraz GC. Na 2 vCPU nie zakładać automatycznie liniowego przyspieszenia;
+powtórzyć benchmark przy realnym obciążeniu, szczególnie z
+normalizacją badań i równoległymi żądaniami. Przed zmianą timeoutu lub
+limitów ponowić pomiary na **rzeczywistym VPS**.
+
+**Powtórzenie pomiaru** (na Linux, uruchomienie poza zwykłym `server:test`):
+
+~~~bash
+CPU=$(awk '/^Cpus_allowed_list:/ {split($2, n, /[,-]/); print n[1]}' /proc/self/status)
+SERVER_BENCH=true taskset -c "$CPU" ./gradlew :server:test -PserverOnly=true \
+  --tests '*ServerReplayBenchmarkTest*' --console=plain --no-daemon --no-configuration-cache
+~~~
+
+Zwykłe `./gradlew :server:test -PserverOnly=true` pomija benchmark.
