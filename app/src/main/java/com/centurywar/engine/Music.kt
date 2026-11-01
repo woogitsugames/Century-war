@@ -22,6 +22,7 @@ class Music {
 
     @Volatile private var era = MENU
     @Volatile private var intensity = 0f
+    @Volatile private var themeSeed = 0x43A72F19
     @Volatile private var volume = 0.5f
     private val duckPriority = DuckPriority()
     @Volatile private var duckSerial = 0
@@ -53,8 +54,13 @@ class Music {
     }
 
     fun setEra(newEra: Int) {
-        // 8 motywów odpowiada stylom grafiki; Epoka żelaza gra motyw feudalny (Defs.artPreset).
-        era = if (newEra == MENU) MENU else com.centurywar.game.Defs.artPreset(newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1))
+        // Motyw odpowiada rzeczywistej epoce, również dla epoki żelaza.
+        era = if (newEra == MENU) MENU else newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1)
+    }
+
+    /** Ziarno aranżacji pojedynczej bitwy, niezależne od symulacji. */
+    fun setThemeSeed(seed: Int) {
+        themeSeed = seed
     }
 
     fun setIntensity(value: Float) {
@@ -94,6 +100,7 @@ class Music {
         val me = Thread.currentThread()
         try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) } catch (_: RuntimeException) { }
         val synth = MusicSynth()
+        synth.setSeed(themeSeed)
         synth.setEra(era)
         synth.skipFade()
         val pcm = ShortArray(CHUNK_SAMPLES)
@@ -128,6 +135,7 @@ class Music {
                         if (remaining > 0f) synth.duck(duckPriority.amount, remaining)
                     }
                 }
+                synth.setSeed(themeSeed)
                 synth.setEra(era)
                 synth.setIntensity(intensity)
                 synth.renderPcm(pcm, pcm.size, volume)
