@@ -86,6 +86,9 @@ internal object ColorVisionSim {
     }
 }
 
+// Ui.TEXT/DIM/BTN powstają przez Color.rgb: bez Robolectric zwraca on 0 i kontrast liczy się dla czerni.
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [35])
 class ColorBlindTest {
     private fun withPalettes(action: (Int, PaletteColors) -> Unit) {
         val original = Palette.selected
