@@ -1,12 +1,6 @@
 name: Benchmark weryfikacji powtórek 121
 
 on:
-  push:
-    branches:
-      - gpt/121-server-verify-timing
-    paths:
-      - "server/**"
-      - ".github/workflows/server-benchmark.yml"
   workflow_dispatch:
 
 permissions:

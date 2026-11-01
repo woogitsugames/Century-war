@@ -52,28 +52,43 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
     fun layout(l: Float, rr: Float, avail: Float, pad: Float) {
         with(owner) {
             val n = 10
-            val gap = 5 * dp
-            // Domyślny pasek pozostaje bez zmian; na wąskim ekranie tryb leworęczny
-            // układa cztery jednostki nad sześcioma akcjami zamiast zmniejszać cele dotyku.
-            twoRowHud = g.profile.leftHandedHud && avail < 560 * dp
-            val size = if (twoRowHud) min(70 * dp, (avail - gap * 5) / 6f)
+            // Na okładce Folda i telefonach do 360 dp strzałki ulepszeń potrzebują
+            // osobnego rzędu. Inaczej ich cel 48 dp przechwytuje tapnięcia w jednostki.
+            threeRowHud = h >= w * 2.2f || avail < 360 * dp
+            val gap = if (threeRowHud && avail < 313 * dp) 3 * dp else 5 * dp
+            // Pozostałe układy są bez zmian, w tym dwa rzędy leworęczne na Foldzie.
+            twoRowHud = threeRowHud || (g.profile.leftHandedHud && avail < 560 * dp)
+            val size = if (threeRowHud) min(48 * dp, (avail - gap * 5) / 6f)
+                else if (twoRowHud) min(70 * dp, (avail - gap * 5) / 6f)
                 else min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
-            hudH = (if (twoRowHud) 2 * size + gap else size) + pad * 2 + 4 * dp + g.insetB
-            val y = h - g.insetB - pad - size
+            val rowGap = if (threeRowHud) 3 * dp else gap
+            val bottomPad = if (threeRowHud) 4 * dp else pad
+            hudH = if (threeRowHud) 3 * size + 2 * rowGap + bottomPad * 2 + 2 * dp + g.insetB
+                else (if (twoRowHud) 2 * size + gap else size) + pad * 2 + 4 * dp + g.insetB
+            val y = h - g.insetB - bottomPad - size
             var x = l
             for (b in unitBtn) {
-                b.set(x, if (twoRowHud) y - size - gap else y, size, size)
+                val unitY = if (threeRowHud) y - 2 * (size + rowGap)
+                    else if (twoRowHud) y - size - gap else y
+                b.set(x, unitY, size, size)
                 x += size + gap
             }
             val arrow = min(24 * dp, size * 0.36f)
             for (i in 0..3) {
                 val ur = unitBtn[i].r
-                unitUpgrade[i].set(ur.right - arrow, ur.top, arrow, arrow)
-                val target = if (twoRowHud) min(48 * dp, size) else 48 * dp
-                unitUpgrade[i].hitSlop = (target - arrow).coerceAtLeast(0f) / 2f
-                // Powiększony obszar strzałki leży wewnątrz przycisku jednostki.
-                unitUpgrade[i].hitOffsetX = -unitUpgrade[i].hitSlop
-                unitUpgrade[i].hitOffsetY = -unitUpgrade[i].hitSlop
+                if (threeRowHud) {
+                    unitUpgrade[i].set(ur.left, y - size - rowGap, size, size)
+                    unitUpgrade[i].hitSlop = 0f
+                    unitUpgrade[i].hitOffsetX = 0f
+                    unitUpgrade[i].hitOffsetY = 0f
+                } else {
+                    unitUpgrade[i].set(ur.right - arrow, ur.top, arrow, arrow)
+                    val target = if (twoRowHud) min(48 * dp, size) else 48 * dp
+                    unitUpgrade[i].hitSlop = (target - arrow).coerceAtLeast(0f) / 2f
+                    // Powiększony obszar strzałki leży wewnątrz przycisku jednostki.
+                    unitUpgrade[i].hitOffsetX = -unitUpgrade[i].hitSlop
+                    unitUpgrade[i].hitOffsetY = -unitUpgrade[i].hitSlop
+                }
             }
             queueInfoBtn.set(unitBtn[0].r.left, unitBtn[0].r.top - 23 * dp, 92 * dp, 22 * dp)
             queueInfoBtn.hitSlop = 13 * dp
@@ -271,7 +286,8 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         // Separator między jednostkami a akcjami: pionowy lub między dwoma rzędami.
         ui.fill.color = Color.argb(90, 255, 255, 255)
         if (twoRowHud) {
-            val sy = (unitBtn[0].r.bottom + turretBtn.r.top) * 0.5f
+            val sy = ((if (threeRowHud) unitUpgrade[0].r.bottom else unitBtn[0].r.bottom) +
+                turretBtn.r.top) * 0.5f
             c.drawRect(g.insetL + 6 * dp, sy - 1 * dp, w - g.insetR - 6 * dp, sy + 1 * dp, ui.fill)
         } else {
             val sx = if (g.profile.leftHandedHud) (unitBtn[3].r.left + turretBtn.r.right) / 2f

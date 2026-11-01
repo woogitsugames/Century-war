@@ -272,6 +272,7 @@ class BattleScreen(
     private var choiceDescLanguage = -1
     internal var hudH = 0f
     internal var twoRowHud = false
+    internal var threeRowHud = false
     internal var topH = 0f
     internal var compactTop = false
     internal var enemyEraShown = -1

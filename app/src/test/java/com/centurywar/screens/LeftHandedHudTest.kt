@@ -74,7 +74,15 @@ class LeftHandedHudTest {
         for (i in 0..3) {
             val arrow = button(s, 70 + i)
             val own = rect(s, i)
-            assertTrue("Strzałka nie leży w jednostce", own.contains(arrow.r.centerX(), arrow.r.centerY()))
+            if (arrow.r.top > own.bottom) {
+                // Zlecenie 119: na wąskim ekranie ulepszenie ma własny rząd.
+                assertFalse("Ulepszenie nie może nakrywać jednostki", overlap(own, arrow.r))
+                assertTrue("Ulepszenie musi być nad akcjami", arrow.r.bottom < rect(s, 10).top)
+            } else {
+                // Dawny układ: mała strzałka mieści się w przycisku jednostki.
+                assertTrue("Strzałka nie leży w jednostce",
+                    own.contains(arrow.r.centerX(), arrow.r.centerY()))
+            }
             for (j in 0..3) if (i != j)
                 assertFalse("Cel strzałki trafia sąsiednią jednostkę",
                     arrow.contains(rect(s, j).centerX(), rect(s, j).centerY()))
@@ -114,7 +122,7 @@ class LeftHandedHudTest {
     }
 
     @Test
-    fun narrowScreenUsesTwoRowsAndSafeInsets() {
+    fun narrowScreenUsesSeparateUpgradeRowAndSafeInsets() {
         val g = game(720, 1280)
         g.setInsets(24, 10, 36, 24)
         g.profile.leftHandedHud = true
@@ -126,8 +134,84 @@ class LeftHandedHudTest {
         assertControlsDoNotOverlap(s, g)
         g.profile.leftHandedHud = false
         s.layout()
-        assertEquals("Domyślny HUD także na wąskim ekranie pozostaje jednorzędowy",
-            button(s, 0).r.top, button(s, 10).r.top, 0.01f)
+        assertTrue("Praworęczne jednostki muszą być nad ulepszeniami",
+            button(s, 0).r.bottom < button(s, 70).r.top)
+        assertTrue("Praworęczne ulepszenia muszą być nad akcjami",
+            button(s, 70).r.bottom < button(s, 10).r.top)
+        assertControlsDoNotOverlap(s, g)
+    }
+
+    /** Zlecenie 119: wszystkie główne cele HUD mają co najmniej 48 dp, bez nakładania. */
+    @Test
+    fun narrowHud119HasIndependent48DpTargets() {
+        val devices = listOf(
+            Triple(904, 2316, 2.7f), // zewnętrzny ekran Folda
+            Triple(720, 1280, 2f), // telefon w pionie, z wycięciami
+            Triple(800, 2000, 2.5f), // szerokość 320 dp
+        )
+        for ((width, height, density) in devices) for (leftHanded in listOf(false, true)) {
+            val g = game(width, height, density)
+            if (width == 720) g.setInsets(24, 10, 36, 24)
+            g.profile.leftHandedHud = leftHanded
+            val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 119L, 1f))
+            g.setScreen(s)
+            val dp = g.ui.dp
+            val tag = "${width}x$height ${if (leftHanded) "lewa" else "prawa"}"
+            val ids = (0..3).toList() + (10..17).toList() + (70..73).toList()
+            val controls = ids.map { button(s, it) }
+            val safe = RectF(g.insetL.toFloat(), g.insetT.toFloat(),
+                (g.width - g.insetR).toFloat(), (g.height - g.insetB).toFloat())
+            for (i in controls.indices) {
+                val b = controls[i]
+                assertTrue("$tag: szerokość ${b.id} = ${b.r.width() / dp} dp",
+                    b.r.width() + 0.1f >= 48 * dp)
+                assertTrue("$tag: wysokość ${b.id} = ${b.r.height() / dp} dp",
+                    b.r.height() + 0.1f >= 48 * dp)
+                assertTrue("$tag: poza bezpiecznym obszarem ${b.id}", safe.contains(b.r))
+                for (j in i + 1 until controls.size)
+                    assertFalse("$tag: kolizja ${b.id} i ${controls[j].id}",
+                        overlap(b.r, controls[j].r))
+            }
+            for (i in 0..3) {
+                assertTrue("$tag: jednostka/ulepszenie $i",
+                    button(s, i).r.bottom < button(s, 70 + i).r.top)
+                assertTrue("$tag: ulepszenie/akcja $i",
+                    button(s, 70 + i).r.bottom < button(s, 10).r.top)
+            }
+            val area = field(s, "fieldRect")
+            assertTrue("$tag: pole bitwy ma ${area.height() / g.height * 100f}% wysokości",
+                area.height() >= g.height * 0.55f)
+            assertControlsDoNotOverlap(s, g)
+        }
+    }
+
+    /** Zmiana dotyczy tylko ekranów wąskich, nie rozłożonego Folda i poziomych. */
+    @Test
+    fun widerHud119KeepsExistingRows() {
+        for ((width, height, density) in listOf(
+            Triple(1600, 720, 2f),
+            Triple(2400, 1080, 2.7f),
+            Triple(2184, 1968, 2.7f),
+            Triple(1968, 2184, 2.7f),
+            Triple(1802, 2000, 3.6f),
+        )) {
+            val g = game(width, height, density)
+            val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 1191L, 1f))
+            g.setScreen(s)
+            assertEquals("$width x $height: praworęczny HUD nadal jednorzędowy",
+                button(s, 0).r.top, button(s, 10).r.top, 0.01f)
+            g.profile.leftHandedHud = true
+            s.layout()
+            val dp = g.ui.dp
+            val availableDp = (g.width - g.insetL - g.insetR) / dp - 12f
+            val hasTwoRows = availableDp < 560f
+            if (hasTwoRows)
+                assertTrue("Wewnętrzny Fold zachowuje dwa rzędy leworęczne",
+                    button(s, 0).r.bottom < button(s, 10).r.top)
+            else
+                assertEquals("$width x $height: leworęczny HUD nadal jednorzędowy",
+                    button(s, 0).r.top, button(s, 10).r.top, 0.01f)
+        }
     }
 
     @Test
@@ -180,6 +264,37 @@ class LeftHandedHudTest {
                     assertTrue("$tag: armia po lewej", army.right <= mini.left)
                 }
             }
+        }
+    }
+
+    /** Przycisk ulepszenia nie może przechwytywać szkolenia jednostki. */
+    @Test
+    fun narrowHud119KeepsUnitTapSeparateFromUpgradeTap() {
+        for (leftHanded in listOf(false, true)) {
+            val g = game(904, 2316, 2.7f)
+            g.profile.leftHandedHud = leftHanded
+            val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 1192L, 1f))
+            g.setScreen(s)
+            g.frame(canvas, 1f / 60f)
+            val unit = button(s, 0)
+            val upgrade = button(s, 70)
+            assertFalse("Szkolenie i ulepszanie mają oddzielne cele", overlap(unit.r, upgrade.r))
+
+            fun tap(b: Button) {
+                g.pushTouch(TouchEvent.DOWN, b.r.centerX(), b.r.centerY(), 0)
+                g.pushTouch(TouchEvent.UP, b.r.centerX(), b.r.centerY(), 0)
+                g.frame(canvas, 1f / 60f)
+            }
+            tap(unit)
+            val controller = s.javaClass.getDeclaredField("commands").apply {
+                isAccessible = true
+            }.get(s) as BattleController
+            assertEquals("Szkolenie ma trafić do logu komend", 1, controller.log().commands.size)
+            tap(upgrade)
+            val selected = s.javaClass.getDeclaredField("showUpgrade").apply {
+                isAccessible = true
+            }.getInt(s)
+            assertEquals("Ulepszanie ma otworzyć odpowiedni panel", 0, selected)
         }
     }
 
