@@ -1522,9 +1522,11 @@ class Battle(val cfg: BattleConfig) {
         val inEra = wave % 6
         // Dyrektor Endless przelicza te mnożniki po fali; zachowujemy rangę startową.
         val veteranBonus = if (Modifier.VETERANS in cfg.modifiers) 1.06f * 1.06f else 1f
-        // Tura 6: nachylenie po fali 48 podniesione z 0,06 (po 97/108 fala 60 była zbyt łatwa).
-        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.07f) * veteranBonus
-        e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f) * veteranBonus
+        e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f) * veteranBonus
+        // Tura 6: dodatkowe +5% obrażeń na falę od fali 45. Po kartach 108 i RNG AI 97 do fali 60
+        // dochodziło 16/100 seedów (cel 5–15); samo zdrowie fal prawie nic nie zmieniało (docs/BALANCE.md).
+        e.dmgMul = (1f + inEra * 0.03f) * (1f + max(0, wave - 32) * 0.055f) *
+            (1f + max(0, wave - 44) * 0.05f) * veteranBonus
         var budget = 45f * Defs.costScale(e.era) * (1f + inEra * 0.18f + wave * 0.02f) *
             when (currentWaveTheme) {
                 EndlessWaveTheme.SIEGE_TRAIN -> 1.15f

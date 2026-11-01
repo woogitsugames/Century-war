@@ -10,7 +10,8 @@ class EndlessExpansion71Test {
     private fun battle(seed: Long = 71L) = Battle(BattleConfig(Mode.ENDLESS, seed, 1f))
 
     @Test fun eightCardsHaveRequestedRaritiesAndAppendOnlyOrdinals() {
-        val added = EndlessCard.values().drop(34) // 30 bazowych + 4 karty doktryn ze zlecenia 69
+        // 30 bazowych + 4 karty doktryn ze zlecenia 69; dalsze karty (108) dopisano za nimi.
+        val added = EndlessCard.values().drop(34).take(8)
         assertEquals(8, added.size)
         assertEquals(listOf(EndlessRarity.COMMON, EndlessRarity.COMMON,
             EndlessRarity.UNCOMMON, EndlessRarity.UNCOMMON, EndlessRarity.UNCOMMON,
