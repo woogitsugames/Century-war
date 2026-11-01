@@ -23,7 +23,11 @@ object ReplayVerifier {
             (day == today - 1L && Math.floorMod(nowMillis, DAY_MS) < DAILY_GRACE_MS)
     }
 
-    fun verify(input: ScoreSubmission, nowMillis: Long, supportedVersion: String): VerifiedReplay {
+    fun verify(
+        input: ScoreSubmission, nowMillis: Long, supportedVersion: String,
+        budget: VerificationBudget? = null,
+    ): VerifiedReplay {
+        budget?.check()
         require(input.gameVersion == supportedVersion) { "unsupported_version" }
         validateSubmission(input)
         require(input.score > 0L) { "invalid_score" }
@@ -34,7 +38,9 @@ object ReplayVerifier {
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("invalid_replay", e)
         }
+        budget?.check()
         require(log.steps in 60..Replay.MAX_STEPS) { "invalid_ticks" }
+        require(budget == null || log.steps <= budget.maxReplaySteps) { "verification_step_limit" }
         require(log.commands.none { it.kind == Replay.Kind.SURRENDER && it.step < 60 }) { "early_surrender" }
         require(log.commands.none { it.kind == Replay.Kind.TUTORIAL_GOLD }) { "illegal_command" }
 
@@ -68,7 +74,7 @@ object ReplayVerifier {
         }
 
         val result = try {
-            Replay.verify(cfg, log)
+            Replay.verify(cfg, log, budget?.let { it::check })
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("illegal_replay", e)
         } catch (e: IndexOutOfBoundsException) {
@@ -87,8 +93,9 @@ object ReplayVerifier {
                     Skirmish.power(input.difficulty!!), playerBonuses = zero)
                 else -> Campaign.config(Campaign.stages[input.stage!!], zero, input.seed)
             }
-            Replay.normalized(normalizedConfig, log).score
+            Replay.normalized(normalizedConfig, log, budget?.let { it::check }).score
         } else result.score
+        budget?.check()
         return VerifiedReplay(board, normalizedScore, result.steps, input.research.sum())
     }
 }

@@ -46,6 +46,8 @@ fun main(args: Array<String>) {
         readIp = limit("CW_RATE_READ_IP", 120),
         reportIp = limit("CW_RATE_REPORT_IP", 5),
         postPlayer = limit("CW_RATE_POST_PLAYER", 6),
+        postInstallDaily = limit("CW_RATE_POST_INSTALL_DAY", 100),
+        postIpDaily = limit("CW_RATE_POST_IP_DAY", 400),
     )
     val metricsToken = System.getenv("CW_METRICS_TOKEN")?.takeIf { it.isNotEmpty() }
     if (metricsToken != null) {

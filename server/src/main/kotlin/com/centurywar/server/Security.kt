@@ -126,6 +126,11 @@ data class RateLimits(
     val readIp: Int = 120,
     val reportIp: Int = 5,
     val postPlayer: Int = 6,
+    val postInstallDaily: Int = 100,
+    val postIpDaily: Int = 400,
 ) {
-    init { require(listOf(postIp, deleteIp, readIp, reportIp, postPlayer).all { it > 0 }) }
+    init {
+        require(listOf(postIp, deleteIp, readIp, reportIp, postPlayer,
+            postInstallDaily, postIpDaily).all { it > 0 })
+    }
 }

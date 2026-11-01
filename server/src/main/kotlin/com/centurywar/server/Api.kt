@@ -6,6 +6,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.request.receiveChannel
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
@@ -16,7 +17,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -43,13 +43,14 @@ fun Application.leaderboardModule(
     trustedProxies: Set<String> = setOf("127.0.0.1"),
     limits: RateLimits = RateLimits(),
     verificationGate: VerificationGate = VerificationGate(),
-    verifyReplay: (ScoreSubmission, Long, String) -> VerifiedReplay = ReplayVerifier::verify,
+    verifyReplay: (ScoreSubmission, Long, String, VerificationBudget) -> VerifiedReplay = ReplayVerifier::verify,
     metrics: ServerMetrics = ServerMetrics(),
     metricsToken: String? = null,
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)
     val addresses = ClientAddress(trustedProxies)
+    monitor.subscribe(ApplicationStopped) { verificationGate.close() }
     fun clientIp(call: ApplicationCall): String =
         addresses.resolve(call.request.local.remoteHost, call.request.headers["X-Forwarded-For"])
 
@@ -202,17 +203,22 @@ fun Application.leaderboardModule(
             }
 
             val receivedAt = nowMillis()
-            val verification = verificationGate.run {
-                withContext(Dispatchers.Default) {
-                    val started = System.nanoTime()
-                    try {
-                        verifyReplay(input, receivedAt, supportedVersion)
-                    } finally {
-                        metrics.verificationDuration(System.nanoTime() - started)
-                    }
+            if (!store.consumeScoreSubmissionQuota(ownerHash, remote, receivedAt,
+                    limits.postInstallDaily, limits.postIpDaily)) {
+                val untilMidnight = (todayUtc(receivedAt) + 1L) * 86_400_000L - receivedAt
+                call.response.header("Retry-After", ((untilMidnight + 999L) / 1000L).toString())
+                call.fail(HttpStatusCode.TooManyRequests, "daily_quota_exceeded")
+                return@post
+            }
+            val verification = verificationGate.run { budget ->
+                val started = System.nanoTime()
+                try {
+                    verifyReplay(input, receivedAt, supportedVersion, budget)
+                } finally {
+                    metrics.verificationDuration(System.nanoTime() - started)
                 }
             }
-            if (verification == null || verification.exceptionOrNull() is TimeoutCancellationException) {
+            if (verification == null || verification.exceptionOrNull() is VerificationBudgetExceeded) {
                 metrics.unavailable()
                 call.response.header("Retry-After", "30")
                 call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")

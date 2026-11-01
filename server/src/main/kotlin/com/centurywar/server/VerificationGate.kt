@@ -1,33 +1,98 @@
 package com.centurywar.server
 
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.withTimeout
+import com.centurywar.game.Replay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.FutureTask
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
+
+/** Przekroczenie budżetu weryfikacji: serwer odrzuca ją bez zapisywania wyniku. */
+class VerificationBudgetExceeded : RuntimeException("verification_budget_exceeded")
+
+/** Zegar monotoniczny jest używany tylko na serwerze, nigdy w symulacji. */
+class VerificationBudget internal constructor(
+    val maxReplaySteps: Int,
+    timeoutMillis: Long,
+) {
+    private val startedAt = System.nanoTime()
+    private val durationNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+
+    internal fun remainingNanos(): Long =
+        (durationNanos - (System.nanoTime() - startedAt)).coerceAtLeast(0L)
+
+    fun check() {
+        if (Thread.currentThread().isInterrupted || remainingNanos() == 0L) {
+            throw VerificationBudgetExceeded()
+        }
+    }
+}
 
 /**
- * Dwa aktywne obliczenia i co najwyżej 16 oczekujących. Żaden klient nie może
- * wypełnić nieograniczonej kolejki zadań CPU.
+ * Stała pula CPU i ograniczona kolejka. Future.get pozwala zwrócić 503 także wtedy,
+ * gdy kod zadania nie zawiesza korutyny. Anulowanie przerywa wątek, a kontrola
+ * budżetu w pętli Replay kończy obliczenia przy najbliższym punkcie kontrolnym.
  */
 class VerificationGate(
-    parallel: Int = 2,
+    parallel: Int = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
     waiting: Int = 16,
-    private val timeoutMillis: Long = 30_000L,
-) {
-    init { require(parallel > 0 && waiting >= 0 && timeoutMillis > 0L) }
-    private val workerSlots = Semaphore(parallel)
-    private val capacity = Semaphore(parallel + waiting)
+    private val timeoutMillis: Long = 15_000L,
+    private val maxReplaySteps: Int = 108_000,
+) : AutoCloseable {
+    init {
+        require(parallel > 0 && waiting >= 0 && timeoutMillis > 0L)
+        require(maxReplaySteps in 60..Replay.MAX_STEPS)
+    }
 
-    /** null oznacza pełną kolejkę; Result.failure obejmuje również timeout. */
-    suspend fun <T> run(block: suspend () -> T): Result<T>? {
-        if (!capacity.tryAcquire()) return null
+    private val nextThread = AtomicInteger()
+    private val pool = ThreadPoolExecutor(
+        parallel, parallel, 30L, TimeUnit.SECONDS,
+        if (waiting == 0) SynchronousQueue() else ArrayBlockingQueue(waiting),
+        { task ->
+            Thread(task, "cw-replay-${nextThread.incrementAndGet()}").apply { isDaemon = true }
+        },
+        ThreadPoolExecutor.AbortPolicy(),
+    ).apply { allowCoreThreadTimeOut(true) }
+
+    /** null = pełna kolejka; wynik błędny = timeout lub błąd weryfikatora. */
+    suspend fun <T> run(block: (VerificationBudget) -> T): Result<T>? {
+        val budget = VerificationBudget(maxReplaySteps, timeoutMillis)
+        val task = FutureTask {
+            budget.check()
+            block(budget).also { budget.check() }
+        }
         try {
-            return runCatching {
-                withTimeout(timeoutMillis) {
-                    workerSlots.acquire()
-                    try { block() } finally { workerSlots.release() }
+            pool.execute(task)
+        } catch (_: RejectedExecutionException) {
+            return null
+        }
+
+        try {
+            return withContext(Dispatchers.IO) {
+                try {
+                    Result.success(task.get(budget.remainingNanos(), TimeUnit.NANOSECONDS))
+                } catch (_: TimeoutException) {
+                    Result.failure(VerificationBudgetExceeded())
+                } catch (e: ExecutionException) {
+                    Result.failure(e.cause ?: e)
+                } catch (_: CancellationException) {
+                    Result.failure(VerificationBudgetExceeded())
                 }
             }
         } finally {
-            capacity.release()
+            if (!task.isDone) task.cancel(true)
+            if (task.isCancelled) pool.remove(task)
         }
+    }
+
+    override fun close() {
+        pool.shutdownNow()
     }
 }

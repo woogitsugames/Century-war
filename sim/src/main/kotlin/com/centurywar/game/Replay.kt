@@ -92,16 +92,20 @@ object Replay {
      * Weryfikacja bez renderera i AI gracza. Każda niedozwolona komenda
      * lub rozbieżność liczby kroków powoduje odrzucenie powtórki.
      */
-    fun verify(cfg: BattleConfig, log: Log): Result = simulate(cfg, log, false)
+    fun verify(cfg: BattleConfig, log: Log, checkBudget: (() -> Unit)? = null): Result =
+        simulate(cfg, log, false, checkBudget)
 
     /**
      * Drugi, rankingowy przebieg bez badań. Rozkazy niemożliwe bez ulepszeń
      * są pomijane, a brakujący wybór zastępuje pierwsza dostępna opcja.
      * Wynik pochodzi wyłącznie z legalnych działań w neutralnej symulacji.
      */
-    fun normalized(cfg: BattleConfig, log: Log): Result = simulate(cfg, log, true)
+    fun normalized(cfg: BattleConfig, log: Log, checkBudget: (() -> Unit)? = null): Result =
+        simulate(cfg, log, true, checkBudget)
 
-    private fun simulate(cfg: BattleConfig, log: Log, normalized: Boolean): Result {
+    private fun simulate(
+        cfg: BattleConfig, log: Log, normalized: Boolean, checkBudget: (() -> Unit)?,
+    ): Result {
         validate(log)
         require(cfg.dailyEvent == log.dailyEvent) { "Nieprawidłowe zdarzenie dnia" }
         val battle = Battle(cfg)
@@ -110,6 +114,8 @@ object Replay {
         var index = 0
         while (!battle.over) {
             val step = battle.stepCount
+            // Serwer kontroluje budżet bez dodawania zegara do deterministycznej symulacji.
+            if (step and 63 == 0) checkBudget?.invoke()
             while (index < log.commands.size && log.commands[index].step == step && !battle.over) {
                 val command = log.commands[index]
                 val accepted = applyCommand(controller, command)
@@ -137,6 +143,7 @@ object Replay {
             }
             battle.fx.count = 0
         }
+        checkBudget?.invoke()
         if (!normalized) require(index == log.commands.size && battle.over && battle.stepCount == log.steps) {
             "Niekompletna lub przedłużona bitwa"
         } else require(battle.over && battle.stepCount <= log.steps) {
