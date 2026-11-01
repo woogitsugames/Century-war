@@ -3,6 +3,7 @@ package com.centurywar.meta
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Defs
 import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
 import com.centurywar.game.Research
@@ -131,6 +132,11 @@ class Profile(private val file: File) {
     var hintsSeen = 0L
     var hintsEnabled = true
 
+    /** Zapowiedź każdej epoki jest odtwarzana tylko raz, niezależnie od podpowiedzi. */
+    var eraIntrosSeen = 0L
+        private set
+    var eraIntrosEnabled = true
+
     /** Identyfikator powstaje dopiero po świadomym włączeniu rankingu. */
     var playerId = ""
         private set
@@ -248,6 +254,19 @@ class Profile(private val file: File) {
     }
 
     fun replayHints() { hintsSeen = 0L; save() }
+
+    /** Oznacza zobaczoną epokę przed wyświetleniem, aby mapa i bitwa się nie dublowały. */
+    fun markEraIntroSeen(era: Int): Boolean {
+        if (!eraIntrosEnabled || era !in 0 until Defs.ERA_COUNT) return false
+        val bit = 1L shl era
+        if (eraIntrosSeen and bit != 0L) return false
+        eraIntrosSeen = (eraIntrosSeen or bit) and ((1L shl Defs.ERA_COUNT) - 1L)
+        save()
+        return true
+    }
+
+    /** Umożliwia ponowny podgląd przy następnym wejściu do epoki. */
+    fun replayEraIntros() { eraIntrosSeen = 0L; save() }
 
     fun level(key: String) = levels[key] ?: 0
 
@@ -380,6 +399,8 @@ class Profile(private val file: File) {
         o.put("tutorialDone", tutorialDone)
         o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
         o.put("hintsEnabled", hintsEnabled)
+        o.put("eraIntrosSeen", eraIntrosSeen and ((1L shl Defs.ERA_COUNT) - 1L))
+        o.put("eraIntrosEnabled", eraIntrosEnabled)
         o.put("playerId", playerId)
         o.put("globalRanking", globalRanking)
         o.put("quality", quality)
@@ -730,6 +751,8 @@ class Profile(private val file: File) {
         tutorialDone = json.optBoolean("tutorialDone", false)
         hintsSeen = json.optLong("hintsSeen", 0L).coerceIn(0L, HINT_VALID_MASK)
         hintsEnabled = json.optBoolean("hintsEnabled", true)
+        eraIntrosSeen = json.optLong("eraIntrosSeen", 0L).coerceIn(0L, (1L shl Defs.ERA_COUNT) - 1L)
+        eraIntrosEnabled = json.optBoolean("eraIntrosEnabled", true)
         val storedId = json.optString("playerId", "")
         playerId = if (validRankingId(storedId)) storedId else ""
         globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
@@ -792,6 +815,7 @@ class Profile(private val file: File) {
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
+        eraIntrosSeen = 0L; eraIntrosEnabled = true
         playerId = ""; globalRanking = false
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
@@ -890,6 +914,7 @@ class Profile(private val file: File) {
         medals = 0; levels.clear(); stars.fill(0); bestWave = 0; lastRankedDaily = -1L
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         tutorialDone = false; hintsSeen = 0L; hintsEnabled = true
+        eraIntrosSeen = 0L; eraIntrosEnabled = true
         battles = 0; wins = 0; totalKills = 0; playSeconds = 0; boards.clear()
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
         winStreak = 0; bestWinStreak = 0

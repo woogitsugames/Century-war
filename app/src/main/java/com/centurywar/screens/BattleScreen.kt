@@ -266,6 +266,18 @@ class BattleScreen(
         goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn,
     ), rankedDaily)
 
+    /** Plansza nie zapisuje komend i nie wykonuje kroków symulacji. */
+    private var eraIntro: EraIntroOverlay? = null
+    private var lastIntroEra = battle.player.era
+
+    private fun maybeShowEraIntro() {
+        val current = battle.player.era
+        if (current == lastIntroEra) return
+        lastIntroEra = current
+        eraIntro = EraIntroOverlay.showIfFirst(g, current, battle, r)
+        eraIntro?.layout()
+    }
+
     init {
         // OK oraz przyciski samouczka mają pierwszeństwo przed HUD.
         tut?.let { buttons.add(0, it.nextBtn); buttons.add(0, it.skipBtn) }
@@ -321,6 +333,7 @@ class BattleScreen(
         // Szerokość paneli zmienia łamanie opisów wariantów i kart.
         variantDescWidth = -1f
         choiceDescWidth = -1f
+        eraIntro?.layout()
     }
 
     /**
@@ -441,6 +454,7 @@ class BattleScreen(
         if (introRemaining > 0f) introTooltip.set(L["hint_title"], L["tip53_intro"])
         tut?.onLanguageChanged()
         super.onLanguageChanged()
+        eraIntro?.onLanguageChanged()
         if (finished) refreshResultTexts()
     }
 
@@ -448,13 +462,15 @@ class BattleScreen(
 
     override fun update(dt: Float) {
         frameDt = dt
+        eraIntro?.update(dt)
+        maybeShowEraIntro()
         if (aimingBarrage && (paused || finished || battle.over ||
                 battle.pendingChoice != null || battle.pendingCards != null ||
                 showUpgrade >= 0 || !battle.abilityReady(battle.player, 0))) {
             aimingBarrage = false
         }
         val tutScale = tut?.timeScale ?: 1f
-        if (!paused && !finished) {
+        if (!paused && !finished && eraIntro?.active != true) {
             tut?.update(dt)
             if (battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null) {
                 // Zamiast porzucać czas przy ×3/×5, ograniczamy tempo do budżetu CPU.
@@ -471,6 +487,9 @@ class BattleScreen(
                     achievementEvents.afterStep()
                     acc -= Battle.STEP
                     steps++
+                    // Nie wykonuj dalszych kroków po pierwszym awansie w tej klatce.
+                    maybeShowEraIntro()
+                    if (eraIntro?.active == true) break
                 }
                 if (steps > 0) {
                     val sample = (System.nanoTime() - startedNs).toFloat() / steps
@@ -492,7 +511,8 @@ class BattleScreen(
                 g.snapshots?.saveAsync(snapshotBytes())
             }
         }
-        if (paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
+        maybeShowEraIntro()
+        if (paused || finished || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
         // Awans rangi jest zdarzeniem interfejsu, nie modyfikuje bitwy ani powtórki.
         val newRank = battle.player.rank
         if (newRank > lastSfxRank) g.sfx(Sound.RANK_UP, 0.62f, 250, priority = 2)
@@ -545,7 +565,7 @@ class BattleScreen(
         }
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
-        hints.update(dt, finished || paused || (tut != null && !tut.finished) ||
+        hints.update(dt, finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
             showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f)
 
@@ -844,6 +864,7 @@ class BattleScreen(
     }
 
     override fun onClick(b: Button) {
+        if (eraIntro?.active == true) return
         if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
         val p = battle.player
         if (hints.onClick(b)) return
@@ -883,7 +904,10 @@ class BattleScreen(
                 g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
                 g.profile.save()
             }
-            EVOLVE -> if (commands.evolve()) haptics.onEvolve()
+            EVOLVE -> if (commands.evolve()) {
+                haptics.onEvolve()
+                maybeShowEraIntro()
+            }
             PAUSE -> paused = true
             RESUME -> paused = false
             RESTART, RESTART + 100 -> {
@@ -946,6 +970,10 @@ class BattleScreen(
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
+        if (eraIntro?.active == true) {
+            if (e.action == TouchEvent.UP) eraIntro?.dismiss()
+            return true
+        }
         if (pauseSliderPointer >= 0) {
             if (e.action == TouchEvent.CANCEL) {
                 pauseSliderPointer = -1
@@ -1090,6 +1118,7 @@ class BattleScreen(
     }
 
     override fun onBack(): Boolean {
+        if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (aimingBarrage) { aimingBarrage = false; return true }
         if (finished) { g.setScreen(nextScreen()); return true }
         if (showUpgrade >= 0) { showUpgrade = -1; return true }
@@ -1421,7 +1450,7 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
         if (aimingBarrage) r.drawBarrageAim(c, aimWorldX, fieldRect)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
         val regularTextScale = ui.textScale
@@ -1453,7 +1482,8 @@ class BattleScreen(
             ui.tooltip(c, unitBtn[0].r, introTooltip, g.insetL, g.insetT,
                 w - g.insetR, h - g.insetB)
         }
-        if (!paused && !finished) drawHeldTooltip(c)
+        if (!paused && !finished && eraIntro?.active != true) drawHeldTooltip(c)
+        eraIntro?.draw(c)
         ui.textScale = regularTextScale
     }
 
