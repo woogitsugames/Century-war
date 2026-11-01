@@ -15,13 +15,15 @@ class ReleaseConfigTest {
         DocumentBuilderFactory.newInstance().newDocumentBuilder()
             .parse(File("src/main/$path")).documentElement
 
-    private fun includes(element: Element): List<String> {
-        val nodes = element.getElementsByTagName("include")
-        return (0 until nodes.length).map { i ->
+    private fun assertNoPrivateDataBackup(element: Element) {
+        assertEquals(0, element.getElementsByTagName("include").length)
+        val nodes = element.getElementsByTagName("exclude")
+        val excluded = (0 until nodes.length).map { i ->
             val rule = nodes.item(i) as Element
-            assertEquals("file", rule.getAttribute("domain"))
-            rule.getAttribute("path")
-        }
+            assertEquals(".", rule.getAttribute("path"))
+            rule.getAttribute("domain")
+        }.toSet()
+        assertEquals(setOf("root", "file", "database", "sharedpref", "external"), excluded)
     }
 
     @Test fun localesMatchInGameLanguages() {
@@ -34,17 +36,14 @@ class ReleaseConfigTest {
         assertEquals(L.CODES.toList(), names)
     }
 
-    /** Kopia tylko profilu; battle.snap (przerwana bitwa) jest przejściowy i nie trafia do backupu. */
-    @Test fun onlyPlayerProfileIsBackedUp() {
-        assertEquals(
-            listOf("profile.json"),
-            includes(xml("res/xml/backup_rules.xml")),
-        )
+    /** profile.json zawiera sekret instalacji; wyklucz go także z transferu na Androidzie 12+. */
+    @Test fun playerProfileAndSecretsAreNeverAutomaticallyBackedUp() {
+        assertNoPrivateDataBackup(xml("res/xml/backup_rules.xml"))
         val rules = xml("res/xml/data_extraction_rules.xml")
         for (tag in listOf("cloud-backup", "device-transfer")) {
             val elements = rules.getElementsByTagName(tag)
             assertEquals(1, elements.length)
-            assertEquals(listOf("profile.json"), includes(elements.item(0) as Element))
+            assertNoPrivateDataBackup(elements.item(0) as Element)
         }
     }
 
@@ -70,6 +69,47 @@ class ReleaseConfigTest {
         assertEquals("@xml/locales_config", app.getAttribute("android:localeConfig"))
         assertEquals("@xml/backup_rules", app.getAttribute("android:fullBackupContent"))
         assertEquals("@xml/data_extraction_rules", app.getAttribute("android:dataExtractionRules"))
+        assertEquals("false", app.getAttribute("android:allowBackup"))
+        assertEquals("false", app.getAttribute("android:usesCleartextTraffic"))
+        assertEquals("@xml/network_security_config", app.getAttribute("android:networkSecurityConfig"))
+    }
+
+    @Test fun networkConfigRequiresSystemTlsAndDisallowsHttp() {
+        val network = xml("res/xml/network_security_config.xml")
+        assertEquals("network-security-config", network.tagName)
+        assertEquals(0, network.getElementsByTagName("domain-config").length)
+        val configs = network.getElementsByTagName("base-config")
+        assertEquals(1, configs.length)
+        assertEquals("false", (configs.item(0) as Element).getAttribute("cleartextTrafficPermitted"))
+        val authorities = network.getElementsByTagName("certificates")
+        assertEquals(1, authorities.length)
+        assertEquals("system", (authorities.item(0) as Element).getAttribute("src"))
+    }
+
+    @Test fun onlyReplayViewerActivityIsPublicAndReceiversArePrivate() {
+        val manifest = xml("AndroidManifest.xml")
+        val activities = manifest.getElementsByTagName("activity")
+        assertEquals(1, activities.length)
+        val main = activities.item(0) as Element
+        assertEquals(".MainActivity", main.getAttribute("android:name"))
+        assertEquals("true", main.getAttribute("android:exported"))
+        val filters = main.getElementsByTagName("intent-filter")
+        assertTrue(filters.length >= 2)
+        val receivers = manifest.getElementsByTagName("receiver")
+        assertEquals(1, receivers.length)
+        val reminder = receivers.item(0) as Element
+        assertEquals(".notifications.DailyReminderReceiver", reminder.getAttribute("android:name"))
+        assertEquals("false", reminder.getAttribute("android:exported"))
+        val providers = manifest.getElementsByTagName("provider")
+        val share = (0 until providers.length).map { providers.item(it) as Element }
+            .first { it.getAttribute("android:name") == ".meta.ReplayShareProvider" }
+        assertEquals("false", share.getAttribute("android:exported"))
+        assertEquals("true", share.getAttribute("android:grantUriPermissions"))
+        val playGames = (0 until providers.length).map { providers.item(it) as Element }
+            .first { it.getAttribute("android:name") ==
+                "com.google.android.gms.games.provider.PlayGamesInitProvider" }
+        assertEquals("remove", playGames.getAttribute("tools:node"))
+        assertEquals(0, manifest.getElementsByTagName("service").length)
     }
 
     @Test fun activityHandlesLocaleWithoutRestart() {
