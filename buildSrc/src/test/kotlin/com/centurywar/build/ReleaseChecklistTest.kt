@@ -86,7 +86,7 @@ class ReleaseChecklistTest {
             serverUrl = "", privacyUrl = "", hasHmacKey = false,
             versionCode = 1,
         )
-        for (flag in ReleaseChecklist.allowedSkips) {
+        for (flag in ReleaseChecklist.allowedSkips - "ownerInput") {
             val issues = ReleaseChecklist.problems(notReady.copy(skipChecks = setOf(flag)))
             assertEquals(flag, 5, issues.size)
         }
@@ -96,6 +96,93 @@ class ReleaseChecklistTest {
         assertEquals(setOf("releaseDay", "privacyUrl"),
             ReleaseChecklist.parseSkips("releaseDay, privacyUrl,releaseDay"))
         assertFalse(ReleaseChecklist.parseSkips("").isNotEmpty())
+    }
+
+
+    private fun validOwner() = """
+        | Pole | Wartość |
+        | --- | --- |
+        | publisher_name | Legal Publisher |
+        | contact_email | privacy@example.org |
+        | postal_address | 123 Avenue, City, Country |
+        | privacy_policy_url | https://example.org/privacy |
+        | release_date | 2026-11-01 |
+        | play_games_project_id | 123456789012 |
+    """.trimIndent()
+
+    private fun docs() = mapOf(
+        "privacy_policy_pl.md" to "Adres: {{OWNER.postal_address}}",
+        "privacy_policy_en.md" to "Email: {{OWNER.contact_email}}",
+        "data_safety.md" to "Przetwarzanie danych rankingu",
+        "content_rating.md" to "Publiczne pseudonimy graczy",
+    )
+
+    @Test fun signingCannotBeSkippedByChecklistFlag() {
+        val missing = ready().copy(hasReleaseSigning = false)
+        assertTrue(ReleaseChecklist.problems(missing).single().contains("podpisu release"))
+        assertTrue(ReleaseChecklist.problems(missing.copy(
+            skipChecks = ReleaseChecklist.allowedSkips,
+        )).single().contains("podpisu release"))
+        assertTrue(ReleaseChecklist.problems(missing.copy(ciTestDebugSigning = true)).isEmpty())
+    }
+
+    @Test fun ciSigningRequiresExplicitSmoketestContext() {
+        assertTrue(ReleaseChecklist.canUseCiDebugSigning(true, "true", "pull_request", "true"))
+        assertTrue(ReleaseChecklist.canUseCiDebugSigning(true, "true", "workflow_dispatch", "true"))
+        assertFalse(ReleaseChecklist.canUseCiDebugSigning(true, "true", "push", "true"))
+        assertFalse(ReleaseChecklist.canUseCiDebugSigning(true, "false", "pull_request", "true"))
+        assertFalse(ReleaseChecklist.canUseCiDebugSigning(true, "true", "pull_request", "false"))
+        assertFalse(ReleaseChecklist.canUseCiDebugSigning(false, "true", "pull_request", "true"))
+    }
+
+    @Test fun validatesAllPublisherFieldsAndFormats() {
+        assertTrue(ReleaseChecklist.ownerInputProblems(validOwner()).isEmpty())
+        assertTrue(ReleaseChecklist.ownerInputProblems(null).single().contains("OWNER_INPUT"))
+        assertTrue(ReleaseChecklist.ownerInputProblems(
+            validOwner().replace("Legal Publisher", "WYMAGA_DANYCH_WLASCICIELA"),
+        ).any { it.contains("publisher_name") })
+        assertTrue(ReleaseChecklist.ownerInputProblems(
+            validOwner().replace("privacy@example.org", "invalid"),
+        ).any { it.contains("contact_email") })
+        assertTrue(ReleaseChecklist.ownerInputProblems(
+            validOwner().replace("https://example.org/privacy", "http://example.org/privacy"),
+        ).any { it.contains("privacy_policy_url") })
+        assertTrue(ReleaseChecklist.ownerInputProblems(
+            validOwner().replace("2026-11-01", "yesterday"),
+        ).any { it.contains("release_date") })
+        assertTrue(ReleaseChecklist.ownerInputProblems(
+            validOwner().replace("123456789012", "REPLACE_ME"),
+        ).any { it.contains("play_games_project_id") })
+    }
+
+    @Test fun checksStoreDocsAndBlocksEveryPlaceholder() {
+        val full = ready().copy(enforceStoreDocuments = true,
+            storeDocuments = docs(), ownerInputText = validOwner())
+        assertTrue(ReleaseChecklist.problems(full).isEmpty())
+        assertTrue(ReleaseChecklist.problems(full.copy(ownerInputText = null))
+            .any { it.contains("OWNER_INPUT") })
+        assertTrue(ReleaseChecklist.problems(full.copy(
+            storeDocuments = docs() - "data_safety.md",
+        )).any { it.contains("data_safety.md") })
+        for (marker in listOf("[INSERT_CONTACT_EMAIL]", "[DO DECYZJI]", "[UZUPEŁNIJ_EMAIL]")) {
+            assertTrue(ReleaseChecklist.problems(full.copy(
+                storeDocuments = docs() + ("content_rating.md" to marker),
+            )).any { it.contains("content_rating.md") })
+        }
+        assertTrue(ReleaseChecklist.problems(full.copy(
+            storeDocuments = docs() + ("privacy_policy_pl.md" to "{{OWNER.unknown}}"),
+        )).any { it.contains("privacy_policy_pl.md") })
+        assertTrue(ReleaseChecklist.problems(full.copy(
+            ownerInputText = null, skipChecks = setOf("ownerInput"),
+        )).isEmpty())
+    }
+
+    @Test fun rendersPrivatePublisherValuesOnlyForPublishableOutput() {
+        assertEquals("Contact: privacy@example.org",
+            ReleaseChecklist.renderOwnerTemplate(
+                "Contact: {{OWNER.contact_email}}",
+                ReleaseChecklist.ownerFields(validOwner()),
+            ))
     }
 
     @Test fun misspelledSkipFlagFails() {
