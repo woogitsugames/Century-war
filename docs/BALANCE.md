@@ -778,7 +778,7 @@ Zmiany obejmują wyłącznie **decyzje** botów: bez zmian statystyk, kosztów,
 mnożników trudności i formatów zapisu. Nie dodano żadnych pól stanu ani nowych
 źródeł losowości; wybór ról nadal używa `Rng.nextAiInt`.
 
-- **ECONOMIST:** opóźnia wyprawę od 60. sekundy, zbiera co najmniej 7 żołnierzy,
+- **ECONOMIST:** opóźnia wyprawę od 105. sekundy, zbiera co najmniej 7 żołnierzy,
   a przy braku zagrożenia przeznacza więcej nadwyżek na ulepszenia; rzadziej buduje wieże.
 - **SIEGER:** rozpoczyna inwestycje w wieże od 18. sekundy, utrzymuje większą falę
   i kieruje ostrzał na najdalej wysuniętą widoczną jednostkę w legalnym zasięgu.
