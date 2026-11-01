@@ -1053,10 +1053,16 @@ class ScreenshotTest {
         field(access, "scroll").setFloat(access, field(access, "maxScroll").getFloat(access))
         show("accessibility_bottom", access, "accessibility")
         show("hints", HintSettingsScreen(g), "hint_settings")
-        show("codex", CodexScreen(g, 0), "codex")
+        val codex = CodexScreen(g, 0)
+        show("codex", codex, "codex")
+        for (category in 1 until 10) {
+            codex.showCategory(category)
+            show("codex_category_$category", codex, "codex")
+        }
         val variantGuide = CodexScreen(g, Defs.eraOf(com.centurywar.game.EraArt.STEAM))
         variantGuide.showCategory(2)
         show("codex_variants", variantGuide, "codex")
+        show("about", AboutScreen(g), "about")
         show("play_games", PlayGamesScreen(g), "play_games")
     }
 
@@ -1111,6 +1117,7 @@ class ScreenshotTest {
         try {
             for ((tag, dims) in mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
+                "phone1280" to intArrayOf(1280, 720, 2),
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
@@ -1157,6 +1164,7 @@ class ScreenshotTest {
         try {
             for ((tag, dims) in mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
+                "phone1280" to intArrayOf(1280, 720, 2),
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
@@ -1195,6 +1203,171 @@ class ScreenshotTest {
             L.lang = originalLang
         }
     }
+
+    /** Geometria paneli modalnych, które celowo zasłaniają przyciski bitwy. */
+    private fun assert74Pause(g: Game, bs: BattleScreen, tag: String) {
+        val safe = RectF(g.insetL, g.insetT, g.width - g.insetR, g.height - g.insetB)
+        val panel = field(bs, "pausePanel").get(bs) as RectF
+        assertTrue("$tag: panel pauzy poza ekranem: $panel", safe.contains(panel))
+        val footer = field(bs, "pauseMenu").get(bs) as List<*>
+        val controls = arrayOf(
+            field(bs, "pauseVibrationBtn").get(bs) as Button,
+            field(bs, "pauseSpeedBtn").get(bs) as Button,
+        )
+        val visible = footer.map { it as Button } + controls.toList()
+        for (b in visible) {
+            assertTrue("$tag: kontrolka pauzy ${b.id} poza panelem: ${b.r}",
+                panel.contains(b.r))
+        }
+        for (i in visible.indices) for (j in i + 1 until visible.size) {
+            assertTrue("$tag: nakładające się kontrolki pauzy ${visible[i].id}/${visible[j].id}",
+                !RectF.intersects(visible[i].r, visible[j].r))
+        }
+        val sfx = field(bs, "pauseSfxRect").get(bs) as RectF
+        val music = field(bs, "pauseMusicRect").get(bs) as RectF
+        for (slider in arrayOf(sfx, music)) {
+            assertTrue("$tag: suwak pauzy poza panelem", panel.contains(slider))
+            for (b in visible) assertTrue("$tag: suwak nachodzi na kontrolkę ${b.id}",
+                !RectF.intersects(slider, b.r))
+        }
+        assertTrue("$tag: suwaki pauzy na siebie nachodzą", !RectF.intersects(sfx, music))
+    }
+
+    /** Teksty i sylwetki wariantów mają rozłączne pola wewnątrz kart. */
+    private fun assert74Variants(g: Game, bs: BattleScreen, tag: String) {
+        val dp = g.ui.dp
+        val safe = RectF(g.insetL, g.insetT, g.width - g.insetR, g.height - g.insetB)
+        @Suppress("UNCHECKED_CAST")
+        val cards = field(bs, "variantBtn").get(bs) as Array<Button>
+        val battle = field(bs, "battle").get(bs) as Battle
+        val era = battle.pendingVariant ?: error("$tag: brak okna wariantu")
+        val descriptions = field(bs, "variantDescCount").get(bs) as IntArray
+        for (i in cards.indices) {
+            val b = cards[i]
+            assertTrue("$tag: karta wariantu $i niewidoczna", b.visible)
+            assertTrue("$tag: karta wariantu $i poza ekranem: ${b.r}", safe.contains(b.r))
+            val title = L[Defs.spec(era).variants[i].nameKey]
+            val textW = b.r.width() - 16 * dp
+            val titleSize = g.ui.fit(title, 19f, textW)
+            assertTrue("$tag: tytuł wariantu nie mieści się w karcie",
+                g.ui.measure(title, titleSize) <= textW + dp)
+            val imgH = minOf(72 * dp, b.r.height() * 0.32f)
+            val iconTop = b.r.bottom - 28 * dp - imgH
+            val lineEnd = b.r.top + 58 * dp +
+                maxOf(0, descriptions[i] - 1) * 12.5f * dp * g.ui.textScale * 1.3f
+            assertTrue("$tag: opis wariantu $i nachodzi na sylwetki: $lineEnd >= $iconTop",
+                descriptions[i] == 0 || lineEnd + 3 * dp < iconTop)
+            assertTrue("$tag: pola sylwetek za wąskie",
+                b.r.width() / 4f > 12 * dp)
+        }
+        assertTrue("$tag: karty wariantów na siebie nachodzą",
+            !RectF.intersects(cards[0].r, cards[1].r))
+    }
+
+    /** Powiadomienie w menu jest poniżej logo, ale nad pierwszym rzędem przycisków. */
+    private fun assert74Notice(g: Game, menu: MenuScreen, tag: String) {
+        val banner = field(g, "achievementBanner").get(g) as RectF
+        val first = field(menu, "campaign").get(menu) as Button
+        val subtitleY = field(menu, "subY").getFloat(menu)
+        assertTrue("$tag: baner zachodzi na podtytuł menu: $banner / $subtitleY",
+            banner.top > subtitleY + 4 * g.ui.dp)
+        assertTrue("$tag: baner zachodzi na przyciski menu: $banner / ${first.r}",
+            banner.bottom <= first.r.top - 3 * g.ui.dp)
+        val msg = field(g, "achievementMessage").get(g) as String
+        val available = banner.width() - 61 * g.ui.dp
+        assertTrue("$tag: tekst banera nie mieści się w panelu",
+            g.ui.measure(msg, g.ui.fit(msg, 14f, available)) <= available + g.ui.dp)
+    }
+
+    private fun clear74Notices(g: Game) {
+        (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+        (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+        field(g, "achievementSeconds").setFloat(g, 0f)
+    }
+
+    /**
+     * Kontrola nowych stanów zleceń 53–67: 720p, 1280×720@2, 20:9,
+     * Fold w obu orientacjach, DE/TR/UK i tekst 130%.
+     * Pliki audit74_after_* służą do wizualnego porównania z bazowymi screenshotami.
+     */
+    @Test
+    fun layout74VisualStates() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone1280" to intArrayOf(1280, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldLandscape" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) for (lang in arrayOf("de", "tr", "uk")) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
+                if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+                g.profile.lang = lang
+                g.profile.textScale = 130
+                g.profile.hintsEnabled = false
+                g.onLanguageChanged()
+                g.applyAccessibility()
+                val key = "$tag/$lang/130%"
+                val prefix = "audit74_after_${tag}_${lang}_130"
+
+                val menu = MenuScreen(g)
+                g.setScreen(menu)
+                clear74Notices(g)
+                g.showNotice(L["ms_streak"] + " 7/7: " + L["ms_daily"])
+                shot(g, "${prefix}_menu_notice", 1)
+                assert74Notice(g, menu, key)
+
+                clear74Notices(g)
+                val pause = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7401L, 1f,
+                    startEra = 2, maxEra = 7, weather = Weather.NIGHT,
+                    modifiers = setOf(Modifier.FOG_OF_WAR, Modifier.FAST_UNITS)))
+                g.setScreen(pause)
+                pause.onClick(field(pause, "pauseBtn").get(pause) as Button)
+                shot(g, "${prefix}_pause", 1)
+                assert74Pause(g, pause, key)
+
+                val steam = Defs.eraOf(com.centurywar.game.EraArt.STEAM)
+                val variants = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7402L, 1f,
+                    startEra = steam, maxEra = steam))
+                g.setScreen(variants)
+                (field(variants, "battle").get(variants) as Battle).pendingVariant = steam
+                shot(g, "${prefix}_variants", 1)
+                assert74Variants(g, variants, key)
+
+                val tooltip = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7403L, 1f,
+                    startEra = 2, maxEra = 4))
+                g.setScreen(tooltip)
+                @Suppress("UNCHECKED_CAST")
+                val units = field(tooltip, "unitBtn").get(tooltip) as Array<Button>
+                assertTrue("$key: nie udało się otworzyć dymka", tooltip.onLongPress(units[0]))
+                Screen::class.java.getDeclaredField("heldButton").apply {
+                    isAccessible = true
+                    set(tooltip, units[0])
+                }
+                shot(g, "${prefix}_tooltip", 1)
+
+                val codex = CodexScreen(g, steam)
+                g.setScreen(codex)
+                codex.showCategory(2)
+                shot(g, "${prefix}_codex_tabs", 1)
+                assertNoCollisions(g, codex, "codex_variants74", "codex")
+
+                g.setScreen(CampaignScreen(g))
+                shot(g, "${prefix}_campaign", 1)
+                g.setScreen(AchievementsScreen(g))
+                shot(g, "${prefix}_achievements", 1)
+                g.setScreen(MissionsScreen(g))
+                shot(g, "${prefix}_missions", 1)
+                g.setScreen(AboutScreen(g))
+                shot(g, "${prefix}_about", 1)
+            }
+        } finally {
+            L.lang = originalLang
+        }
+    }
+
     /** Zrzuty bitew w pięciu epokach: 720p i rozłożony Fold. */
     @Test
     fun eraBackdropBattleScreens() {

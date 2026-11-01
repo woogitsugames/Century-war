@@ -238,12 +238,17 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (achievementSeconds <= 0f) return
         val pw = minOf(470 * ui.dp, width - insetL - insetR - 20 * ui.dp)
         val px = (width + insetL - insetR - pw) / 2f
-        val py = insetT + 72 * ui.dp
-        achievementBanner.set(px, py, px + pw, py + 50 * ui.dp)
+        val menu = screen as? MenuScreen
+        // W menu baner mieści się między logo a przyciskami, także na 720p.
+        val py = menu?.noticeTop ?: insetT + 72 * ui.dp
+        val ph = if (menu == null) 50 * ui.dp
+            else minOf(50 * ui.dp, (menu.noticeBottom - py).coerceAtLeast(24 * ui.dp))
+        achievementBanner.set(px, py, px + pw, py + ph)
         ui.card(c, achievementBanner, Color.rgb(42, 74, 64), 12f, Ui.GOLD)
-        Icons.draw(c, noticeIcon, px + 23 * ui.dp, py + 25 * ui.dp, 26 * ui.dp, dp = ui.dp)
+        val iconSize = minOf(26 * ui.dp, ph - 10 * ui.dp)
+        Icons.draw(c, noticeIcon, px + 23 * ui.dp, py + ph / 2f, iconSize, dp = ui.dp)
         val size = ui.fit(achievementMessage, 14f, pw - 61 * ui.dp)
-        ui.textO(c, achievementMessage, px + 45 * ui.dp, py + 30 * ui.dp, size, Ui.TEXT)
+        ui.textO(c, achievementMessage, px + 45 * ui.dp, py + ph / 2f + 5 * ui.dp, size, Ui.TEXT)
     }
 
     init {

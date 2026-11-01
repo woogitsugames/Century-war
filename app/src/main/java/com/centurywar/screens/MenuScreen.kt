@@ -55,6 +55,9 @@ class MenuScreen(g: Game) : Screen(g) {
     private var logoSize = 40f
     private var logoY = 0f
     private var subY = 0f
+    /** Pionowy pas między podtytułem i pierwszym rzędem menu, dla powiadomień. */
+    internal val noticeTop: Float get() = subY + max(10 * dp, logoSize * 0.26f)
+    internal val noticeBottom: Float get() = campaign.r.top - 6 * dp
     private val plate = RectF()
     private var plateRight = 0f
 
@@ -83,11 +86,16 @@ class MenuScreen(g: Game) : Screen(g) {
         logoFill.typeface = ui.heavy; logoLine.typeface = ui.heavy
         logoFill.textSize = 100f
         val ratio = logoFill.measureText(L["title"]) / 100f
-        logoSize = min(min(availW * 0.62f, 560 * dp) / ratio, (h - g.insetT - g.insetB - gridH - 56 * dp) / 2.8f)
-        logoSize = max(logoSize, 26 * dp)
+        val layoutLogoSize = max(26 * dp,
+            min(min(availW * 0.62f, 560 * dp) / ratio,
+                (h - g.insetT - g.insetB - gridH - 56 * dp) / 2.8f))
+        // Zachowujemy wysokość nagłówka, lecz zmniejszamy sam znak:
+        // pod podtytułem powstaje miejsce na baner serii logowań.
+        val compact = h - g.insetT - g.insetB <= 530 * dp
+        logoSize = max(26 * dp, layoutLogoSize * (if (compact) 0.65f else 0.83f))
         logoFill.textSize = logoSize; logoLine.textSize = logoSize
 
-        val headerH = logoSize * 2.75f
+        val headerH = layoutLogoSize * 2.75f
         val freeTop = g.insetT + 8 * dp
         val bottomPad = g.insetB + 22 * dp
         val total = headerH + gridH + 14 * dp

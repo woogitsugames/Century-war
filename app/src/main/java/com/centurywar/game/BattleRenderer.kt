@@ -757,14 +757,17 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     }
 
     fun drawUnitIcon(c: Canvas, def: UnitDef, cx: Float, bottom: Float, height: Float, team: Int, tier: Int = 1,
-                     walk: Float = 0f, atk: Float = 0f, hitAge: Float = -1f, dying: Float = -1f) {
+                     walk: Float = 0f, atk: Float = 0f, hitAge: Float = -1f, dying: Float = -1f,
+                     maxWidth: Float = Float.POSITIVE_INFINITY) {
         if (!poseOverride) {
             val intensity = if (walk == 0f) 0f else 1f
             men.stride = intensity; men.windup = -1f
             mach.stride = intensity; mach.windup = -1f
             mach.phase = (def.era * 41 + def.role.ordinal * 67) * 0.017453293f
         }
-        val sc = height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f)
+        // Szerokie maszyny muszą mieścić się także w szerokości podglądu.
+        val sc = min(height / (max(unitHeight(def), unitWidth(def) * 0.82f) * def.size + 8f),
+            maxWidth / (unitWidth(def) * def.size + 8f))
         val save = alpha
         alpha = 1f
         val savedCv = if (pen.cvReady()) pen.cv else null
