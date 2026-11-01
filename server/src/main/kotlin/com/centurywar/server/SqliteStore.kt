@@ -275,8 +275,10 @@ class SqliteStore(
                     it.setInt(4, limit)
                     it.executeUpdate() == 1
                 }
+            // Nie zapisujemy adresu IP: tylko dzienny HMAC kluczem prywatnym serwera.
+            val ipKey = publicIds.of("quota-ip:$day:$ip")
             val allowed = consume("installation", installationHash, installationLimit) &&
-                consume("ip", ip, ipLimit)
+                consume("ip", ipKey, ipLimit)
             if (allowed) connection.commit() else connection.rollback()
             allowed
         } catch (e: Exception) {
