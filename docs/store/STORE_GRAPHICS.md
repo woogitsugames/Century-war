@@ -37,8 +37,8 @@ Wszystkie grafiki sklepu są PNG 8-bit RGB (bez kanału alfa), poza ikoną PNG R
 
 1. Menu — logo i emblemat.
 2. Kampania — 36 etapów i gwiazdki profilu testowego.
-3. Boss Endless — boss fali dziesiątej i jednostki renderera.
-4. Nocny ostrzał — noc, salwa i eksplozje.
+3. Boss Endless — boss fali dziesiątej i jednostki wraz z prawdziwym HUD.
+4. Nocny ostrzał — noc, salwa i eksplozje na produkcyjnym ekranie bitwy z paskiem akcji.
 5. Wariant epoki — rzeczywisty wybór wariantu pary.
 6. Pauza — produkcyjny panel ze statystykami.
 7. Oblężenie tygodnia — produkcyjny ekran wyzwania.

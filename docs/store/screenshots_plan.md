@@ -8,8 +8,8 @@ Wykorzystujemy osiem aktualnych, autentycznych kadrów na typ urządzenia, w 10 
 | --- | --- | --- |
 | 01 | `01-menu.png` | Menu, logo, emblemat i tryby |
 | 02 | `02-campaign.png` | Mapa 36 etapów i gwiazdki |
-| 03 | `03-endless-boss.png` | Boss fali 10 Endless i walczące oddziały |
-| 04 | `04-night-barrage.png` | Nocny ostrzał i efekty renderera |
+| 03 | `03-endless-boss.png` | Boss fali 10 Endless, walczące oddziały i HUD |
+| 04 | `04-night-barrage.png` | Nocny ostrzał, efekty i pasek akcji bitwy |
 | 05 | `05-era-variants.png` | Dwa rzeczywiste warianty pary |
 | 06 | `06-pause-summary.png` | Pauza, statystyki i ustawienia |
 | 07 | `07-weekly-siege.png` | Oblężenie tygodnia i nagrody |

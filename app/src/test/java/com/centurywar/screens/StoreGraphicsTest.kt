@@ -87,7 +87,7 @@ class StoreGraphicsTest {
                             when (scene) {
                                 1 -> renderScreen(canvas, g, MenuScreen(g))
                                 2 -> renderScreen(canvas, g, CampaignScreen(g))
-                                3, 4 -> drawBattle(canvas, g, scene, device.width, device.height)
+                                3, 4 -> drawGameplay(canvas, g, scene)
                                 5 -> drawVariant(canvas, g)
                                 6 -> drawPauseSummary(canvas, g)
                                 7 -> renderScreen(canvas, g, ModeScreen(g, Mode.DAILY, true))
@@ -108,13 +108,7 @@ class StoreGraphicsTest {
                     val g = game(device, language)
                     val preview = File(langDir, "preview_${device.name}_hud.png")
                     writePng(preview, device.width, device.height, false) { c ->
-                        val battle = sceneBattle(4)
-                        val screen = BattleScreen(g, battle.cfg,
-                            restored = RestoredBattle(battle, false, -120f))
-                        g.setScreen(screen)
-                        g.finishScreenTransition()
-                        check(screen.onBack()) // Wznów zapisaną bitwę, aby pokazać HUD.
-                        g.frame(c, 0f)
+                        drawGameplay(c, g, 4)
                     }
                     checkPng(preview, device.width, device.height, false)
                 }
@@ -201,6 +195,17 @@ class StoreGraphicsTest {
         val screen = BattleScreen(g, cfg, restored = RestoredBattle(battle, false, -120f))
         g.setScreen(screen)
         check(screen.onBack()) // Wznowienie po odtworzeniu zapisanej bitwy.
+        g.frame(c, 0f)
+    }
+
+    /** Prawdziwa walka z HUD i dolnym paskiem, kamera na fotografowanym starciu. */
+    private fun drawGameplay(c: Canvas, g: Game, scene: Int) {
+        val battle = sceneBattle(scene)
+        val screen = BattleScreen(g, battle.cfg,
+            restored = RestoredBattle(battle, false, 800f))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        check(screen.onBack()) // Wyjście z pauzy przy odtwarzaniu bitwy.
         g.frame(c, 0f)
     }
 
