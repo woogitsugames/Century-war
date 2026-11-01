@@ -475,7 +475,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             }
             PAGE_CARDS -> for (entry in com.centurywar.game.EndlessCard.entries) {
                 val rarity = L["er_" + entry.rarity.name.lowercase(Locale.ROOT)]
-                addGuide(Icons.CODEX, L[entry.textKey], L[entry.textKey + "_d"], rarity)
+                val icon = when (entry) {
+                    com.centurywar.game.EndlessCard.FIELD_MEDICS -> Icons.FIELD_MEDICS
+                    com.centurywar.game.EndlessCard.FINAL_SPARK -> Icons.FINAL_SPARK
+                    com.centurywar.game.EndlessCard.FIRST_GUARD -> Icons.FIRST_GUARD
+                    com.centurywar.game.EndlessCard.BOSS_RECALL -> Icons.BOSS_RECALL
+                    else -> Icons.CODEX
+                }
+                addGuide(icon, L[entry.textKey], L[entry.textKey + "_d"], rarity)
             }
             PAGE_BOSSES -> {
                 guideTitle = L["cx_endless_bosses"]
