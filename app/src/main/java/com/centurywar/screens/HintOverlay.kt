@@ -247,7 +247,7 @@ class HintOverlay(
             hintWidth = (measured + buttonW + 3f * padding).coerceIn(min(152f * dp, maxW), maxW)
             hintHeight = max(36f, 21f + hintFont * scale) * dp
         } else {
-            lineCount = HintFrame.wrapInto(g.ui, body, maxW - 2f * padding, hintFont, lines)
+            lineCount = HintFrame.wrapHintInto(g.ui, body, maxW - 2f * padding, hintFont, lines)
             var longest = 0f
             for (i in 0 until lineCount) longest = max(longest, g.ui.measure(lines[i] ?: "", hintFont))
             hintWidth = (longest + 2f * padding).coerceIn(min(188f * dp, maxW), maxW)
