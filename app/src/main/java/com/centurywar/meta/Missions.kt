@@ -151,6 +151,18 @@ class Missions(private val profile: Profile) {
         const val DAY_MILLIS = 86_400_000L
         private val LOGIN_REWARDS = intArrayOf(5, 8, 12, 17, 23, 30, 40)
 
+        /** Suma wyłącznie ukończonych, jeszcze nieodebranych misji. */
+        fun pendingClaims(state: MissionState): Int {
+            var count = 0
+            for (item in state.daily) if (item.completed && !item.claimed) count++
+            for (item in state.weekly) if (item.completed && !item.claimed) count++
+            return count
+        }
+
+        /** Nagrody dni 1–7, z aktualnym bonusem za gwiazdki kampanii. */
+        fun loginRewardFor(streakDay: Int, stars: Int): Int =
+            LOGIN_REWARDS[streakDay.coerceIn(1, 7) - 1] + stars.coerceAtLeast(0) / 16
+
         fun utcDay(nowMillis: Long): Long = Math.floorDiv(nowMillis, DAY_MILLIS)
         fun utcWeek(nowMillis: Long): Long = Math.floorDiv(utcDay(nowMillis) + 3L, 7L)
         fun refresh(profile: Profile, nowMillis: Long): MissionState = Missions(profile).refresh(nowMillis)
@@ -332,7 +344,7 @@ class Missions(private val profile: Profile) {
     fun claimLogin(nowMillis: Long = System.currentTimeMillis()): Int {
         if (!refreshInternal(nowMillis, true)) return 0
         if (state.loginDay != utcDay(nowMillis) || state.loginClaimedDay == state.loginDay) return 0
-        val reward = LOGIN_REWARDS[state.loginStreak.coerceIn(1, 7) - 1] + profile.totalStars() / 16
+        val reward = loginRewardFor(state.loginStreak, profile.totalStars())
         state.loginClaimedDay = state.loginDay
         state.loginRewardToday = reward
         profile.medals = (profile.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -343,6 +355,6 @@ class Missions(private val profile: Profile) {
     fun pendingLoginReward(nowMillis: Long = System.currentTimeMillis()): Int {
         if (!refreshInternal(nowMillis, true)) return 0
         if (state.loginClaimedDay == state.loginDay) return 0
-        return LOGIN_REWARDS[state.loginStreak.coerceIn(1, 7) - 1] + profile.totalStars() / 16
+        return loginRewardFor(state.loginStreak, profile.totalStars())
     }
 }
