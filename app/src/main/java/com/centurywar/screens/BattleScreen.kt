@@ -1082,12 +1082,13 @@ class BattleScreen(
         when (cfg.mode) {
             Mode.CAMPAIGN -> {
                 val stage = cfg.stageIndex
-                val difficulty = Campaign.difficulty(cfg) ?: CampaignDifficulty.NORMAL
+                // Nierozpoznana siła AI nie może liczyć się jako Normalny (ranking).
+                val difficulty = Campaign.difficulty(cfg)
                 val old = pr.stars[stage]
                 val st = battle.stars()
                 val baseReward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12
                     else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
-                reward = (baseReward * difficulty.medalMultiplier).toInt()
+                reward = (baseReward * (difficulty?.medalMultiplier ?: 1f)).toInt()
                 if (st > old) {
                     earnedStars = st - old
                     pr.stars[stage] = st

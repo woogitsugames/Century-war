@@ -109,7 +109,7 @@ class Ai(
             me.xp > Defs.evolveXp[me.era] * personality.upgradeXpLimit) return
         val meleeCost = me.unit(Role.MELEE).cost
         // Gospodarz inwestuje nadwyżki w ulepszenia, ale nie zaniedbuje obrony.
-        val safeInvestment = if (personality == AiPersonality.ECONOMIST && danger == 0) 0.65f else 1f
+        val safeInvestment = if (personality == AiPersonality.ECONOMIST && danger == 0) 0.8f else 1f
         val reserve = meleeCost * (if (full) 2f else 5f) *
             personality.upgradeReserve * safeInvestment
         for (role in upgradeOrder) {
