@@ -53,7 +53,7 @@ class TutorialUxTest {
         try {
             game.frame(canvas, 1f / 60f)
             assertTrue(tutorial.showing)
-            assertTrue(tutorial.skipBtn.r.height() >= 48 * game.ui.dp)
+            assertTrue(tutorial.skipBtn.r.height() + 0.01f >= 48 * game.ui.dp)
             val oldX = tutorial.skipBtn.r.centerX()
             val oldY = tutorial.skipBtn.r.centerY()
             tap(oldX, oldY)

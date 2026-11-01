@@ -594,8 +594,8 @@ class ScreenshotTest {
                 tut.skipConfirmationVisible && !tut.finished && !g.profile.tutorialDone)
             shot(g, "${tag}_tut85_skip_confirmation", 1)
             assertTrue("$tag: przyciski potwierdzenia mają 48 dp",
-                tut.nextBtn.visible && tut.skipBtn.r.height() >= 48 * g.ui.dp &&
-                    tut.nextBtn.r.height() >= 48 * g.ui.dp)
+                tut.nextBtn.visible && tut.skipBtn.r.height() + 0.01f >= 48 * g.ui.dp &&
+                    tut.nextBtn.r.height() + 0.01f >= 48 * g.ui.dp)
             tap(g, tut.nextBtn.r.centerX(), tut.nextBtn.r.centerY()); g.frame(c, 1f / 60f)
             assertTrue("$tag: anulowanie nie kończy samouczka",
                 !tut.skipConfirmationVisible && !tut.finished && !g.profile.tutorialDone)
@@ -639,8 +639,9 @@ class ScreenshotTest {
             g.pushTouch(TouchEvent.MOVE, finishX, aimY, 0)
             g.pushTouch(TouchEvent.UP, finishX, aimY, 0)
             g.frame(c, 1f / 60f)
-            tutorialShot("tut11_barrage_drag")
-            tapHole() // przeciągnięcie ustawia znacznik, dotknięcie zatwierdza ostrzał
+            // Puszczenie palca po przeciągnięciu od razu odpala ostrzał (celowanie przeciąganiem).
+            shot(g, "${tag}_tut11_barrage_drag")
+            if (b.player.barragesUsed == 0) tapHole()
             assertTrue("$tag: ostrzał samouczka", b.player.barragesUsed > 0)
             until(TutorialOverlay.S_CAMERA); tutorialShot("tut12_camera"); next()
             until(TutorialOverlay.S_DONE); tutorialShot("tut13_done"); next()

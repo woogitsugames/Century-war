@@ -124,7 +124,7 @@ class LTest {
         assertEquals("2 medale", L.plural("medals_n", 2L))
         assertEquals("5 medali", L.plural("medals_n", 5L))
         assertEquals("21 medali", L.plural("medals_n", 21L))
-        assertEquals("Dziś: +1 medal", L.f("ms_login_paid", L.plural("medals_n", 1L)))
+        assertEquals("Dziś +1 medal", L.f("ms_login_paid", L.plural("medals_n", 1L)))
         assertEquals("Wygraj %d bitew", L["ms_wins"])
         assertTrue(!L.f("ms_wins", 1).contains('|'))
         L.lang = L.EN

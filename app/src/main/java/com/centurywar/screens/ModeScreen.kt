@@ -81,13 +81,22 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var skirmishPower = ""
     private var skirmishScore = ""
 
+    private var endlessKeyWave = -1
+    private var endlessKeyScore = -2L
+    private var endlessKeyLang = -1
+
     private fun refreshLabels() {
         val pr = g.profile
         when (mode) {
             Mode.ENDLESS -> {
-                endlessBest = "${L["best"]}: ${L.f("wave", pr.bestWave)}"
+                // Napisy budowane tylko przy zmianie danych lub języka (bez alokacji co sekundę).
                 val best = pr.top(Profile.BOARD_ENDLESS).firstOrNull()
-                endlessScore = if (best == null) "" else "${L["score"]}: ${best.score}"
+                val score = best?.score ?: -1L
+                if (endlessKeyWave != pr.bestWave || endlessKeyScore != score || endlessKeyLang != L.lang) {
+                    endlessKeyWave = pr.bestWave; endlessKeyScore = score; endlessKeyLang = L.lang
+                    endlessBest = "${L["best"]}: ${L.f("wave", pr.bestWave)}"
+                    endlessScore = if (best == null) "" else "${L["score"]}: ${best.score}"
+                }
             }
             Mode.DAILY -> Unit // Karta dzienna i tygodniowa ma własną pamięć podręczną (rebuildDaily/rebuildWeekly).
             else -> {
@@ -366,7 +375,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         if (mode == Mode.DAILY) {
             if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
-            for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f)
+            for (bi in buttons.indices) { val b = buttons[bi]; if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f) }
             ui.button(c, start, 20f)
             hints.draw(c)
             return
@@ -403,7 +412,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                 ui.textO(c, L["difficulty"], panel.centerX(), diff[0].r.top - 10 * dp, 14f, Ui.GOLD, Paint.Align.CENTER)
             }
         }
-        for (b in buttons) if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, if (b === back) 16f else 14f)
+        for (bi in buttons.indices) { val b = buttons[bi]; if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, if (b === back) 16f else 14f) }
         ui.button(c, start, 20f)
         hints.draw(c)
     }

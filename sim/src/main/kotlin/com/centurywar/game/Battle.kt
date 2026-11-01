@@ -232,7 +232,7 @@ class Battle(val cfg: BattleConfig) {
         const val QUEUE_CAP = 32
         const val HOLD_DIST = 430f
         const val MIN_ABILITY_CD_MUL = 0.35f
-        const val SUPPLY_INSTANT_GOLD = 25f
+        const val SUPPLY_INSTANT_GOLD = 15f
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f

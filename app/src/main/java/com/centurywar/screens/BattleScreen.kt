@@ -361,7 +361,7 @@ class BattleScreen(
             // liczby HP i zegar pod minimapą.
             mini.set(l + 120 * dp, t + 64 * dp, rr - 120 * dp, t + 80 * dp)
             if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
-            if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, mini.bottom - 2 * dp, mini.right + 27 * dp, mini.bottom + 23 * dp)
+            if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, mini.centerY() - 13 * dp, rr, mini.centerY() + 13 * dp)
             else weatherRect.setEmpty()
         } else {
             mini.set(evolveBtn.r.right + 16 * dp, t + 15 * dp,
@@ -371,6 +371,7 @@ class BattleScreen(
                 mini.right + 27 * dp, t + 25 * dp)
             else weatherRect.setEmpty()
         }
+        topBar.set(0f, 0f, w, topH + g.insetT)
         goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
         xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
         fieldRect.set(0f, topH + g.insetT, w, h - hudH)
@@ -1716,12 +1717,19 @@ class BattleScreen(
         if (mini.width() > 0f) {
             // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
             val secondRow = compactTop
-            val wx = mini.right + 14 * dp
-            // W drugim rzędzie pogoda na wysokości liczb pod minimapą (dolny wiersz).
-            val wy = if (secondRow) mini.bottom else mini.top - 13 * dp
-            if (secondRow) drawArmyCounts(c, p, e, mini.left - 108 * dp, wy + 11 * dp)
-            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
+            // W drugim rzędzie: liczebność armii i pogoda na wysokości środka minimapy,
+            // każda wyśrodkowana w wolnym polu po swojej stronie.
+            val wy = if (secondRow) mini.centerY() - 11 * dp else mini.top - 13 * dp
+            val wx = if (secondRow) {
+                val tw = ui.measure(weatherName, 12f, true)
+                val block = 21 * dp + 4 * dp + tw
+                val free = (w - g.insetR - 8 * dp - mini.right) - 4 * dp
+                if (block <= free) mini.right + 2 * dp + (free - block) * 0.5f + 10 * dp
+                else mini.right + 14 * dp
+            } else mini.right + 14 * dp
+            if (secondRow) drawArmyCounts(c, p, e, (l + mini.left) * 0.5f - 38 * dp, wy + 11 * dp)
+            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
             // gdy brak miejsca, zostaje sama ikona.
             // W drugim rzędzie (wąski ekran) nazwa epoki wroga jest wyżej, więc miejsce sięga krawędzi.

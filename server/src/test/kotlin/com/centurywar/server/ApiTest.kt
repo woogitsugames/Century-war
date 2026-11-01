@@ -163,7 +163,7 @@ class ApiTest {
 
     @Test fun dailySingleAttemptAndPeriodQueries() {
         SqliteStore("jdbc:sqlite::memory:").use { store ->
-            val input = ReplayVerifierTest.validEndless()
+            val input = ReplayVerifierTest.validEndless().copy(day = Math.floorDiv(now, 86_400_000L))
             val daily = VerifiedReplay("daily", 100L, 900)
             val once = store.save(input, daily, now, "sha1")
             val twice = store.save(input.copy(score = 200L), daily.copy(score = 200L), now, "sha2")

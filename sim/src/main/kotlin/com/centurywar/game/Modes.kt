@@ -15,7 +15,7 @@ enum class Doctrine(val key: String) {
     TACTICS("d_tactics"),      // -25% odnowienia zdolności
     PLUNDER("d_plunder"),      // +8% złota za zabójstwa
     BANNER("d_banner"),       // -15% obrażeń podczas Zrywu
-    SUPPLY("d_supply"),       // +25 złota w skali epoki, +30% za zabójstwa przez 60 s
+    SUPPLY("d_supply"),       // +15 złota w skali epoki, +30% za zabójstwa przez 60 s
     SIEGE_MASTERS("d_siege_masters"), // +18% ciężkich przeciw bazom
     VIGILANCE("d_vigilance"), // +18% zasięgu wież, zwiad przez mgłę
 }
