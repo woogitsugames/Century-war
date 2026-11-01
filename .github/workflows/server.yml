@@ -1,7 +1,7 @@
 name: Backend rankingów
 
 # Build i testy aplikacji (w tym symulacji z :sim) wykonuje android.yml.
-# Tu tylko :server, bez Android SDK (settings.gradle.kts pomija :app przy zadaniach :server:*).
+# Tu :sim:test i :server:test, bez Android SDK (settings.gradle.kts pomija :app przy zadaniach :server:*).
 on:
   push:
     branches:
@@ -41,8 +41,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Testy endpointów i weryfikatora
-        run: ./gradlew :server:test --console=plain --stacktrace
+      - name: Testy symulacji, endpointów i weryfikatora
+        run: ./gradlew :sim:test :server:test -PserverOnly=true --console=plain --no-configuration-cache --stacktrace
       - name: Buduj obraz Docker
         run: docker build -f server/Dockerfile -t century-war-score:ci .
       - name: Zapisz raporty testów
