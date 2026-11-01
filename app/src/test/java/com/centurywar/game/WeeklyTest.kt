@@ -95,4 +95,23 @@ class WeeklyTest {
         assertEquals(a.wave, result.wave)
         assertEquals(a.stepCount, result.steps)
     }
+    @Test fun releaseWeekAddsOnlyModifiersValidForEndless() {
+        val releaseWeek = Weekly.weekNumber(Daily.RELEASE_DAY)
+        val newcomers = setOf(Modifier.VETERANS, Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES)
+        for (week in 0L until releaseWeek) {
+            val cfg = Weekly.config(week)
+            assertTrue("Tydzień historyczny $week", cfg.modifiers.none { it in newcomers })
+        }
+        val observed = mutableSetOf<Modifier>()
+        for (week in releaseWeek until releaseWeek + 500L) {
+            val cfg = Weekly.config(week)
+            observed.addAll(cfg.modifiers.intersect(newcomers))
+            assertFalse("Krótki dzień nie pasuje do Endless", Modifier.SHORT_DAY in cfg.modifiers)
+            assertEquals(cfg.modifiers, Weekly.config(week).modifiers)
+            assertEquals(cfg.weeklyCard, Weekly.config(week).weeklyCard)
+        }
+        assertEquals(newcomers, observed)
+        assertEquals(releaseWeek, Weekly.weekNumber(Daily.RELEASE_DAY))
+    }
+
 }
