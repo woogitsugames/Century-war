@@ -45,11 +45,14 @@ jobs:
             --tests '*BattleRulesTest*' \
             --tests '*Snapshot*' \
             --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
             --console=plain --no-configuration-cache
       - name: Zrzuty interfejsu sztandarów i bitwy
         run: |
           ./gradlew :app:testDebugUnitTest \
-            --tests '*BannerScreenshotTest*' \
+            --tests '*ScreenshotTest*' \
             --console=plain --no-configuration-cache
       - name: Zachowaj zrzuty
         if: ${{ always() }}
