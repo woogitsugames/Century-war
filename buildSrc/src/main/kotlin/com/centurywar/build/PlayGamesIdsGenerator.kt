@@ -65,6 +65,17 @@ object PlayGamesIdsGenerator {
         "weekly_gold",
         "custom_three",
         "replay_record",
+        "card_medics_30",
+        "card_spark_30",
+        "card_guard_30",
+        "card_recall_30",
+        "card_new_50",
+        "weekly_rules_3",
+        "weekly_rules_6",
+        "hard_perfect",
+        "daily_events_6",
+        "modifier_victories_10",
+        "doctrine_victories_13",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +
