@@ -238,7 +238,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val top = rowsTop()
         if (y < top || y >= rowsBottom()) return
         val index = ((y - top + rowScroll) / (34 * dp)).toInt()
-        if (index !in cachedEntries.indices || top + (index + 1) * 34 * dp > rowsBottom()) return
+        if (index !in cachedEntries.indices || top + (index + 1) * 34 * dp - rowScroll > rowsBottom()) return
         val id = cachedEntries[index].replay ?: return
         if (id in existingReplayIds) g.push(ReplayScreen(g, id))
     }
