@@ -83,6 +83,18 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 77 | [Wydajność nowej oprawy na słabych telefonach](77-lowend-perf-2.md) | `gpt/77-lowend-perf-2` | tura 5 |
 | 78 | [Przegląd tłumaczeń z tury 4 (53–67)](78-translation-pass-2.md) | `gpt/78-translation-pass-2` | tura 5 (na końcu) |
 | 79 | [Dopracowanie wyglądu maszyn wariantów epok](79-variant-art.md) | `gpt/79-variant-art` | tura 5 |
+| 80 | [Serwer rankingu: własność gracza, publiczne ID i limity zapytań](80-server-identity.md) | `gpt/80-server-identity` | tura 6 (audyt) |
+| 81 | [Weryfikacja wyników: północ, długie bitwy, samouczek, badania, wersja](81-server-verify-rules.md) | `gpt/81-server-verify-rules` | tura 6 (audyt) |
+| 82 | [Balans symulacji: limity odnowienia, karty bez efektu, kumulacja](82-sim-balance-caps.md) | `gpt/82-sim-balance-caps` | tura 6 (audyt) |
+| 83 | [Wydanie: podpis, dokumenty sklepu bez luk](83-release-hardening.md) | `gpt/83-release-hardening` | tura 6 (audyt) |
+| 84 | [Ekran bitwy i wyniki: czytelność, cele dotyku, informacja po porażce](84-battle-ux.md) | `gpt/84-battle-ux` | tura 6 (audyt) |
+| 85 | [Samouczek: pewne pomijanie i panel nie zasłania celu](85-tutorial-ux.md) | `gpt/85-tutorial-ux` | tura 6 (audyt) |
+| 86 | [Podpowiedzi: mniejsze i obok celu](86-hint-layout.md) | `gpt/86-hint-layout` | tura 6 (audyt) |
+| 87 | [Menu główne i rankingi: odznaki, porządek, bez tekstów technicznych](87-menu-rankings-ux.md) | `gpt/87-menu-rankings-ux` | tura 6 (audyt) |
+| 88 | [Poprawki tłumaczeń z audytu](88-l10n-fixes-3.md) | `gpt/88-l10n-fixes-3` | tura 6 (audyt) |
+| 89 | [Ustawienia, potyczka i kodeks: porządek i przewijanie](89-settings-codex-ux.md) | `gpt/89-settings-codex-ux` | tura 6 (audyt) |
+| 90 | [Odczucia: odbiór nagród i drobne optymalizacje rysowania](90-feedback-perf.md) | `gpt/90-feedback-perf` | tura 6 (audyt) |
+| 91 | [Siatka bezpieczeństwa: złote powtórki i testy symulacji bez Androida](91-golden-tests.md) | `gpt/91-golden-tests` | tura 6 (audyt) |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 

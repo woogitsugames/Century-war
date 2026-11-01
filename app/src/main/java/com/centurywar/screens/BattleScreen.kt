@@ -56,6 +56,8 @@ class BattleScreen(
     restored: RestoredBattle? = null,
 ) : Screen(g) {
     override val crashName get() = "BattleScreen"
+    // Podczas walki i samouczka baner zasłaniałby pole i teksty; wyniki mogą go pokazać.
+    override val blocksNotices: Boolean get() = !finished
 
     private val battle = restored?.battle ?: Battle(cfg)
     private val achievementEvents = AchievementBattleTracker(battle)

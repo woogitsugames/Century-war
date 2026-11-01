@@ -22,6 +22,8 @@ abstract class Screen(val g: Game) {
      * ekrany gry nadpisują ją literałem.
      */
     open val crashName: String get() = "OtherScreen"
+    /** Gdy true, powiadomienia (seria logowań, osiągnięcia) czekają w kolejce na inny ekran lub koniec akcji. */
+    open val blocksNotices: Boolean get() = false
 
     val ui get() = g.ui
     val dp get() = g.ui.dp

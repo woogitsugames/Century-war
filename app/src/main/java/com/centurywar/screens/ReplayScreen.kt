@@ -29,6 +29,7 @@ class ReplayScreen(
     initial: ReplayRecord.Record? = null,
 ) : Screen(g) {
     override val crashName get() = "ReplayScreen"
+    override val blocksNotices: Boolean get() = true
     constructor(g: Game, bytes: ByteArray) : this(g, null,
         try { ReplayRecord.decode(bytes) } catch (_: Exception) { null })
 

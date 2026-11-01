@@ -75,3 +75,17 @@ Po fali 1 (42, 46) koordynator mierzy balans i podbija wersję gry rankingu (`0.
 | Funkcje | 73 udostępnianie powtórek |
 | Jakość | 74 przegląd układu, 76 szybsze CI, 77 wydajność oprawy, 79 grafika wariantów |
 | Sklep i teksty | 75 karta sklepu, 78 tłumaczenia (na końcu) |
+
+---
+
+# Wysyłka zleceń 80–91 (tura 6, po audycie)
+
+1.11.2026. Źródło: dwa audyty (symulacja/serwer/wydanie oraz ekrany/UX/tłumaczenia). Wszystkie paczki można wysłać naraz; pary 80/81 (serwer) i 84/88 (teksty w `L.kt`) dotykają częściowo tych samych plików, ale w różnych miejscach.
+
+| Grupa | Paczki |
+|---|---|
+| Serwer i uczciwość rankingu | 80 tożsamość i limity, 81 reguły weryfikacji |
+| Symulacja | 82 limity i kumulacja kart/doktryn, 91 złote powtórki i testy `:sim` |
+| Wydanie | 83 podpis i dokumenty |
+| Ekrany i wygoda | 84 bitwa i wyniki, 85 samouczek, 86 podpowiedzi, 87 menu i rankingi, 89 ustawienia/kodeks, 90 nagrody i drobna wydajność |
+| Teksty | 88 poprawki tłumaczeń |

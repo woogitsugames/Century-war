@@ -29,7 +29,8 @@ class EraIntroOverlay private constructor(
     private val renderer: BattleRenderer,
 ) {
     companion object {
-        const val DURATION = 3.2f
+        // Dość czasu na przeczytanie; dotknięcie zamyka wcześniej.
+        const val DURATION = 7f
 
         /** Mapa i bitwa używają tej samej maski profilu. */
         fun showIfFirst(g: Game, era: Int, battle: Battle? = null, renderer: BattleRenderer? = null): EraIntroOverlay? {
@@ -64,6 +65,9 @@ class EraIntroOverlay private constructor(
     private var remaining = DURATION
 
     val active: Boolean get() = remaining > 0f
+
+    // Teksty muszą być gotowe przed pierwszym rysowaniem, nie dopiero po zmianie języka.
+    init { onLanguageChanged() }
 
     fun onLanguageChanged() {
         title = L[Defs.eraKeys[era]]
