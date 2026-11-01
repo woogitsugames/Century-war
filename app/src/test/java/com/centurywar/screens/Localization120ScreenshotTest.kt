@@ -147,6 +147,7 @@ class Localization120ScreenshotTest {
                 } finally {
                     archive.awaitWrites()
                     archive.close()
+                    g.history = null
                 }
 
                 g.setScreen(ModeScreen(g, Mode.DAILY))
