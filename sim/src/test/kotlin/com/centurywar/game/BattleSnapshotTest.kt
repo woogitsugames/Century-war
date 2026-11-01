@@ -243,6 +243,36 @@ class BattleSnapshotTest {
     }
 
     @Test
+    fun endless108CardsAndThemedQueueResumeBitForBit() {
+        val a = Battle(BattleConfig(Mode.ENDLESS, 10_108L, 1f))
+        for (card in arrayOf(EndlessCard.FIELD_MEDICS, EndlessCard.FINAL_SPARK,
+            EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL)) {
+            a.applyEndlessCard(a.player, card)
+        }
+        assertTrue(a.spawn(a.player, a.player.unit(Role.HEAVY)))
+        val soldier = a.units.first { it.alive && it.side == 0 }
+        soldier.hp *= 0.5f
+        a.nextWaveTheme = EndlessWaveTheme.PIKE_SCREEN
+        a.waveTimer = 0f
+        a.step()
+        a.nextWaveTheme = EndlessWaveTheme.TWIN_RAID
+        a.waveTimer = 0f
+        a.step()
+        assertEquals(2, a.wave)
+
+        val b = roundTrip(a)
+        assertEquals(14, BattleSnapshot.VERSION)
+        assertArrayEquals(a.player.cardStacks, b.player.cardStacks)
+        assertArrayEquals(a.enemy.queueWaveTheme.copyOf(a.enemy.queueSize),
+            b.enemy.queueWaveTheme.copyOf(b.enemy.queueSize))
+        assertEquals(a.currentWaveTheme, b.currentWaveTheme)
+        assertEquals(a.nextWaveTheme, b.nextWaveTheme)
+        steps(a, 240)
+        steps(b, 240)
+        assertSame(a, b)
+    }
+
+    @Test
     fun endlessWithPlayerChoices() {
         // bez AI gracza: co 5 fal gra czeka na wybór doktryny
         check(BattleConfig(Mode.ENDLESS, 11L, 1f), 60 * 170, 60 * 200, playerAi = false)
