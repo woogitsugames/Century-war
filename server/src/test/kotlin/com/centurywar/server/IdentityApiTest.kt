@@ -7,7 +7,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -21,6 +20,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -47,7 +48,7 @@ class IdentityApiTest {
     @Test fun cannotOverwriteOrDeleteAnotherPlayersIdentity() = testApplication {
         SqliteStore("jdbc:sqlite::memory:", PublicPlayerIds(publicKey)).use { store ->
             application {
-                leaderboardModule(store, hmacKey, { now }, verifyReplay = { input, _, _ ->
+                leaderboardModule(store, hmacKey, { now }, verifyReplay = { input, _, _, _ ->
                     VerifiedReplay("endless", input.score, 900)
                 })
             }
@@ -128,7 +129,7 @@ class IdentityApiTest {
             assertFalse(store.isOwner(victim.player, installSecretHash(ownerSecret)))
             assertTrue(store.mayClaim(victim.player, installSecretHash(ownerSecret)))
             application {
-                leaderboardModule(store, hmacKey, { now }, verifyReplay = { input, _, _ ->
+                leaderboardModule(store, hmacKey, { now }, verifyReplay = { input, _, _, _ ->
                     VerifiedReplay("endless", input.score, 900)
                 })
             }
@@ -181,20 +182,25 @@ class IdentityApiTest {
         assertFalse(limiter.allow("post-ip:" + resolver.resolve("127.0.0.1", "203.0.113.4"), 1))
     }
 
-    @Test fun boundedVerificationQueueRejectsSeventeenthWaiter() = runBlocking {
+    @Test fun boundedVerificationQueueRejectsOverCapacity() = runBlocking {
         withTimeout(5_000L) {
             val gate = VerificationGate(parallel = 1, waiting = 1, timeoutMillis = 4_000L)
-            val started = CompletableDeferred<Unit>()
-            val release = CompletableDeferred<Unit>()
-            val active = async(start = CoroutineStart.UNDISPATCHED) {
-                gate.run { started.complete(Unit); release.await(); 1 }
+            val started = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            try {
+                val active = async(start = CoroutineStart.UNDISPATCHED) {
+                    gate.run { started.countDown(); release.await(); 1 }
+                }
+                assertTrue(started.await(2L, TimeUnit.SECONDS))
+                val waiting = async(start = CoroutineStart.UNDISPATCHED) { gate.run { 2 } }
+                assertNull(gate.run { 3 })
+                release.countDown()
+                assertEquals(1, active.await()!!.getOrThrow())
+                assertEquals(2, waiting.await()!!.getOrThrow())
+            } finally {
+                release.countDown()
+                gate.close()
             }
-            started.await()
-            val waiting = async(start = CoroutineStart.UNDISPATCHED) { gate.run { 2 } }
-            assertNull(gate.run { 3 })
-            release.complete(Unit)
-            assertEquals(1, active.await()!!.getOrThrow())
-            assertEquals(2, waiting.await()!!.getOrThrow())
         }
     }
 }
