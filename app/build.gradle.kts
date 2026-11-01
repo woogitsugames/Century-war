@@ -123,9 +123,42 @@ dependencies {
 }
 
 
-// Raport przepustowosci i alokacji tylko przy jawnym PERF_REPORT=true.
+// Szybka ścieżka uruchamiana przez :app:quickCheck albo zadanie główne quickCheck.
+val quickCheckRequested = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':') == "quickCheck"
+}
+
+// Limit dwóch procesów JVM i pamięci, również na komputerach z 8 GB RAM.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
+    maxParallelForks = (configuredForks ?: 2).coerceIn(1, 2)
+    forkEvery = 15L
+    maxHeapSize = "1024m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
+
+    if (quickCheckRequested && name == "testDebugUnitTest") {
+        filter {
+            listOf(
+                "com.centurywar.game.BattleRulesTest",
+                "com.centurywar.game.BattleSnapshotTest",
+                "com.centurywar.game.ReplayTest",
+                "com.centurywar.game.EndlessCardsTest",
+                "com.centurywar.game.AiPersonalityTest",
+                "com.centurywar.game.DailyTest",
+                "com.centurywar.game.BattleSimTest.deterministicForSameSeed",
+                "com.centurywar.engine.LTest",
+                "com.centurywar.meta.ProfileTest",
+                "com.centurywar.screens.BattleScreenTest",
+            ).forEach { includeTestsMatching(it) }
+        }
+    }
+}
+
+// Korzysta z oryginalnego testDebugUnitTest: zachowuje zasoby i konfigurację Robolectric.
+tasks.register("quickCheck") {
+    group = "verification"
+    description = "Buduje debug APK i wykonuje szybki zestaw testów symulacji oraz UI."
+    dependsOn("assembleDebug", "testDebugUnitTest")
 }
 
 

@@ -24,89 +24,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Debug APK i testy symulacji
+  build:
+    name: Debug APK, lista wydania i licencje
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Cache Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
       - name: Android SDK 36
-        uses: android-actions/setup-android@v4
-      - name: Zainstaluj Android SDK
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Drzewo zaleznosci wydania (audyt licencji)
+      - name: Testy narzędzi CI
+        run: python3 -m unittest discover -s tests -p 'test_ci_tools.py' -v
+      - name: Zbuduj APK i sprawdź listę wydania
         run: |
           chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
+      - name: Audyt licencji
+        run: |
+          set -euo pipefail
           ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain --no-configuration-cache | tee release-runtime-dependencies.txt
           ./gradlew :server:dependencies --configuration runtimeClasspath -PserverOnly=true --console=plain --no-configuration-cache | tee server-runtime-dependencies.txt
           python3 scripts/check_license_inventory.py release-runtime-dependencies.txt server-runtime-dependencies.txt
-      - name: Testy listy kontrolnej wydania
-        run: |
-          chmod +x ./gradlew
-          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
-      - name: Zbuduj APK i uruchom krytyczne testy
-        env:
-          PERF_REPORT: 'true'
-          SFX_PREVIEW: 'true'
-          MUSIC_PREVIEW: 'true'
-        run: |
-          chmod +x ./gradlew
-          ./gradlew :app:assembleDebug :app:testDebugUnitTest \
-            --tests '*BattleSimTest*' \
-            --tests '*BattleRulesTest*' \
-            --tests '*Snapshot*' \
-            --tests '*WeatherTest*' \
-            --tests '*DailyTest*' \
-            --tests '*Replay*' \
-            --tests '*Counter*' \
-            --tests '*Endless*' \
-            --tests '*AiPersonality*' \
-            --tests '*MotionTest*' \
-            --tests '*ScoreClientTest*' \
-            --tests '*ScoreQueueTest*' \
-            --tests '*LTest*' \
-            --tests '*AchievementsTest*' \
-            --tests '*Achievement60Test*' \
-          --tests '*HapticGateTest*' \
-          --tests '*BattleHapticsTest*' \
-            --tests '*CrashReportsTest*' \
-            --tests '*SoundSynthTest*' \
-            --tests '*SfxPreviewTest*' \
-            --tests '*MusicSynthTest*' \
-            --tests '*MusicArrangementTest*' \
-            --tests '*MusicPreviewTest*' \
-            --tests '*AllocationTest*' \
-            --tests '*SimPerformanceTest*' \
-            --tests '*BattleIndexTest*' \
-            --tests '*QualityGovernorTest*' \
-            --tests '*FrameMetricsTest*' \
-            --tests '*ReleaseConfigTest*' \
-            --console=plain --no-configuration-cache
-      - name: Zapisz podglądy muzyki WAV
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: century-war-music-preview
-          path: app/build/music/*.wav
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Zapisz podglądy WAV
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: era-sfx-preview
-          path: app/build/sfx/*.wav
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Zapisz debug APK
+      - name: Debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -114,7 +60,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
           retention-days: 14
-      - name: Zapisz drzewo zaleznosci
+      - name: Raporty licencji
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -124,11 +70,83 @@ jobs:
             server-runtime-dependencies.txt
           if-no-files-found: warn
           retention-days: 14
-      - name: Zapisz raporty testow
+
+  tests:
+    name: Testy (${{ matrix.shard }})
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { shard: jvm, group: jvm, device: '' }
+          - { shard: robolectric, group: robolectric, device: '' }
+          - { shard: screen-phone720, group: screen-device, device: phone720 }
+          - { shard: screen-phone20x9, group: screen-device, device: phone20x9 }
+          - { shard: screen-foldOpen, group: screen-device, device: foldOpen }
+          - { shard: screens-other, group: visual, device: '' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Cache Robolectric
+        if: ${{ matrix.group != 'jvm' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-sdk35-${{ hashFiles('app/build.gradle.kts') }}
+          restore-keys: |
+            robolectric-${{ runner.os }}-sdk35-
+      - name: Sprawdź i uruchom przypisane testy
+        env:
+          CW_SCREENSHOT_DEVICE: ${{ matrix.device }}
+          CI_TEST_GROUP: ${{ matrix.group }}
+          PERF_REPORT: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
+          SFX_PREVIEW: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
+          MUSIC_PREVIEW: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          python3 scripts/ci_test_shards.py verify
+          python3 scripts/ci_test_shards.py args "$CI_TEST_GROUP" > "$RUNNER_TEMP/ci-filters"
+          mapfile -t filters < "$RUNNER_TEMP/ci-filters"
+          ./gradlew :app:testDebugUnitTest "${filters[@]}" --console=plain --no-configuration-cache -PtestForks=1
+      - name: Zrzuty PNG
+        if: ${{ always() && (matrix.group == 'visual' || matrix.group == 'screen-device') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-screenshots-${{ matrix.shard }}
+          path: app/build/screenshots/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Podglądy muzyki WAV
+        if: ${{ always() && matrix.group == 'jvm' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-music-preview
+          path: app/build/music/*.wav
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Podglądy SFX WAV
+        if: ${{ always() && matrix.group == 'jvm' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: era-sfx-preview
+          path: app/build/sfx/*.wav
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Raport testów
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: battle-sim-test-reports
+          name: cw-tests-${{ matrix.shard }}-results
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
@@ -136,69 +154,58 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  robolectric:
-    name: Testy Robolectric (Profile, BattleScreen, Screenshot, ArtGallery)
+  server-tests:
+    name: Serwer i weryfikacja powtórek
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Cache Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Android SDK 36
-        uses: android-actions/setup-android@v4
-      - name: Zainstaluj Android SDK
-        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
-      # Robolectric pobiera android-all (SDK 35, ~150 MB) do ~/.m2 przy pierwszym uruchomieniu.
-      - name: Cache Robolectric
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository/org/robolectric
-          key: robolectric-${{ runner.os }}-sdk35-${{ hashFiles('app/build.gradle.kts') }}
-          restore-keys: |
-            robolectric-${{ runner.os }}-sdk35-
-      - name: Wykonaj testy Robolectric
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Uruchom testy serwera
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:testDebugUnitTest \
-            --tests '*ProfileTest*' \
-            --tests '*AchievementPersistenceTest*' \
-            --tests '*ProfileCloudTest*' \
-            --tests '*BattleHistoryTest*' \
-            --tests '*StartupTest*' \
-            --tests '*SkirmishSetupTest*' \
-            --tests '*MissionsTest*' \
-            --tests '*BattleScreenTest*' \
-            --tests '*BackLocaleTest*' \
-            --tests '*HintOverlayTest*' \
-            --tests '*ScreenshotTest*' \
-            --tests '*ArtGalleryTest*' \
-            --tests '*BackdropsTest*' \
-            --tests '*RendererStressTest*' \
-            --console=plain --no-configuration-cache
-      - name: Zapisz zrzuty PNG
+          ./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
+      - name: Raport serwera
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: century-war-screenshots
-          path: app/build/screenshots/**/*.png
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Zapisz raporty Robolectric
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: robolectric-test-reports
+          name: cw-tests-server-results
           path: |
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/test-results/testDebugUnitTest/
+            server/build/reports/tests/test/
+            server/build/test-results/test/
           if-no-files-found: warn
           retention-days: 14
+
+  test-timings:
+    name: Raport czasu testów (top 20)
+    needs: [tests, server-tests]
+    if: ${{ always() && !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cw-tests-*-results
+          path: ci-test-artifacts
+      - name: Raport najwolniejszych testów
+        run: |
+          python3 scripts/ci_test_timings.py ci-test-artifacts --top 20 --output ci-test-timings.md
+          cat ci-test-timings.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Zapisz raport czasu
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-ci-test-timings
+          path: ci-test-timings.md
+          if-no-files-found: warn
+          retention-days: 14
+
 
   lint:
     name: Android Lint (nieblokujacy)

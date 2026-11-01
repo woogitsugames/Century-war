@@ -2,12 +2,149 @@
 
 Workflow: [`.github/workflows/android.yml`](../.github/workflows/android.yml).
 
-## Automatyczne budowanie
+## Szybka kontrola lokalna
 
-- Push i pull request skierowany do `main`, `claude/**` lub `gpt/**` uruchamiaja job `build-and-test` (JDK 17 Temurin, Gradle, Android SDK 36). Powstaje debug APK oraz raporty JUnit (`BattleSimTest`, `BattleRulesTest`, `BattleSnapshotTest`, `LTest`).
-- `lint` uruchamia `:app:lintDebug`. To job nieblokujacy, ale jego wynik i raport HTML/XML nalezy sprawdzic.
-- W zakladce **Actions** wybierz run i na dole strony pobierz artefakty: `century-war-debug-apk`, `battle-sim-test-reports`, `android-lint-report`.
-- Testy Robolectric (`ProfileTest`, `BattleScreenTest`, `ScreenshotTest`, `ArtGalleryTest`) dzialaja w osobnym jobie `robolectric` (rownolegle do `build-and-test`), bo sa wolniejsze i pobieraja `android-all` SDK 35. Cache obejmuje `~/.m2/repository/org/robolectric`. Zrzuty PNG trafiaja do artefaktu `century-war-screenshots`, raporty do `robolectric-test-reports`.
+Po pierwszym pobraniu SDK 36 i zależności uruchom:
+
+```bash
+./gradlew quickCheck --console=plain --no-configuration-cache
+# To samo z modułu: ./gradlew :app:quickCheck
+```
+
+`quickCheck` buduje APK debug i wykonuje reprezentatywne testy symulacji
+(reguły, deterministyczność, snapshot, replay, AI, karty, wyzwanie dnia),
+`LTest` oraz wybrane Robolectric (`ProfileTest`, `BattleScreenTest`).
+Nie generuje setek PNG. Cel: **poniżej 5 min przy rozgrzanym cache**;
+pierwsze uruchomienie z pobieraniem SDK/Robolectric może potrwać dłużej.
+Pełny lokalny zestaw nie jest zastępowany tym zadaniem:
+
+```bash
+./gradlew :app:testDebugUnitTest :server:test --console=plain --no-configuration-cache
+```
+
+Własność `-PtestForks=1` ogranicza testy do jednego procesu JVM.
+Domyślnie są maksymalnie dwa procesy testowe po 1 GiB sterty,
+`forkEvery=15` klas. Dzięki temu testy nie zajmują niekontrolowanie
+pamięci na maszynach z 8–16 GB RAM. `quickCheck` filtruje
+`testDebugUnitTest` **tylko wtedy, gdy uruchomiono zadanie quickCheck**;
+nie należy łączyć obu nazw zadań w jednej komendzie, jeżeli potrzebny
+jest pełny przebieg.
+
+## Równoległe CI
+
+Workflow: [`.github/workflows/android.yml`](../.github/workflows/android.yml).
+Każdy push/PR uruchamia niezależne joby, bez uzależniania testów od audytu licencji:
+
+| Job | Zakres |
+|---|---|
+| `build` | Debug APK, `buildSrc:test`, zależności i kontrola licencji |
+| `tests (jvm)` | Wszystkie testy JVM (w tym deterministyczna symulacja) |
+| `tests (robolectric)` | Logika z Robolectric, bez ciężkiego renderowania |
+| `tests (screen-phone720)` | `ScreenshotTest.screens` i `tutorial`, format 1600×720 |
+| `tests (screen-phone20x9)` | Te same metody, format 2400×1080 |
+| `tests (screen-foldOpen)` | Te same metody, rozłożony Fold 2184×1968 |
+| `tests (screens-other)` | Pozostałe metody `ScreenshotTest`, galeria, ikony, renderer |
+| `server-tests` | Pełne `:server:test` wraz z weryfikacją powtórek |
+| `lint` | Android Lint, informacyjnie (nieblokujący) |
+| `test-timings` | Łączy XML z jobów i publikuje top 20 klas/metod |
+
+Joby testów mają limit 20 min, a celem jest **cały przebieg CI poniżej
+20 min czasu ściennego**. Nie jest to gwarantowany wynik dla zimnego cache:
+pobranie Gradle, Robolectric i SDK może podnieść czas. Rzeczywiste czasy
+jobów należy sprawdzać w zakładce Actions; raport JUnit liczy *czas metod*,
+który sumuje się między równoległymi shardami.
+
+`scripts/ci_test_shards.py` odczytuje bieżące pliki `app/src/test`
+i generuje rozłączne selektory Gradle. Polecenie:
+
+```bash
+python3 scripts/ci_test_shards.py verify
+python3 scripts/ci_test_shards.py args jvm
+```
+
+sprawdza pokrycie wszystkich wykrytych metod `@Test` i odrzuca nieznane
+selektory lub duplikaty. `ScreenshotTest.screens` i `tutorial` działają
+na wszystkich trzech formatach przy zwykłym lokalnym uruchomieniu.
+W CI filtr `CW_SCREENSHOT_DEVICE=phone720|phone20x9|foldOpen` wybiera
+jeden format na job. **Nie pomijamy żadnego formatu ani metody**.
+Raporty balansu (`BALANCE_RUN=true`) i generator sklepu
+(`STORE_GRAPHICS=true`) pozostają na żądanie, jak poprzednio.
+
+Każdy job zachowuje osobny artefakt `cw-tests-*-results`, shardy obrazów
+również PNG, a `build` — `century-war-debug-apk`.
+Gradle wykorzystuje `gradle/actions/setup-gradle@v4`, Robolectric ma
+dodatkowy cache `~/.m2/repository/org/robolectric` (w tym
+`android-all-instrumented`). `server.yml` nadal sprawdza także
+budowanie obrazu Docker po zmianach w `server/` albo `sim/`.
+
+## Pomiar czasów i punkt odniesienia
+
+Skrypt odczytuje `TEST-*.xml` (także z katalogów wielu shardów):
+
+```bash
+python3 scripts/ci_test_timings.py app/build/test-results/testDebugUnitTest --top 20
+python3 scripts/ci_test_timings.py ci-test-artifacts --top 20 --output ci-test-timings.md
+```
+
+**Pomiar bazowy:** raport `robolectric-test-reports` z workflow Android CI
+nr `41291246736`, 1 listopada 2026. W archiwum było **140 przypadków
+w 17 klasach**, więc nie jest to pomiar wszystkich testów w repozytorium.
+`ScreenshotTest`: 22 testy i **983,91 s** (16 min 24 s). Top 20
+zarejestrowanych metod.
+
+W archiwum występuje 17 klas (pozostałych trzech pozycji top 20 nie
+można zmierzyć z tego przebiegu). Najwolniejsze klasy:
+
+| Klasa | Czas |
+|---|---:|
+| `ScreenshotTest` | 983,91 s |
+| `BattleScreenTest` | 14,36 s |
+| `AiPersonalityProfileTest` | 6,92 s |
+| `AppIconScreenshotTest` | 5,11 s |
+| `BackLocaleTest` | 3,02 s |
+| `ArtGalleryTest` | 2,51 s |
+| `RendererStressTest` | 2,43 s |
+| `ProfileCloudTest` | 0,67 s |
+| `ProfileTest` | 0,58 s |
+| `BackdropsTest` | 0,31 s |
+| `MissionsTest` | 0,30 s |
+| `StartupTest` | 0,29 s |
+| `BattleHistoryTest` | 0,27 s |
+| `SkirmishSetupTest` | 0,14 s |
+| `HintOverlayTest` | 0,13 s |
+| `ScreenTransitionScreenshotTest` | 0,13 s |
+| `AchievementPersistenceTest` | 0,09 s |
+
+Top 20 najwolniejszych metod:
+
+| Metoda | Czas |
+|---|---:|
+| `ScreenshotTest.screens` | 549,59 s |
+| `ScreenshotTest.tutorial` | 304,23 s |
+| `ScreenshotTest.menus` | 64,50 s |
+| `ScreenshotTest.campaignJourneyMap` | 16,30 s |
+| `ScreenshotTest.accessibility` | 13,63 s |
+| `BattleScreenTest.firstBattleLongPressHintUsesCompatibleProfileBit` | 10,32 s |
+| `ScreenshotTest.codexAllCategories` | 7,73 s |
+| `AiPersonalityProfileTest.measureAndReport` | 6,92 s |
+| `ScreenshotTest.endlessBossVariants` | 6,18 s |
+| `ScreenshotTest.contextualHints` | 3,71 s |
+| `ScreenshotTest.battleHistoryScreens` | 3,69 s |
+| `BackLocaleTest.activityConfigurationRefreshesAutoLocaleButPreservesManualSelection` | 2,98 s |
+| `AppIconScreenshotTest.launcherSizesAndStoreExport` | 2,94 s |
+| `ScreenshotTest.weatherScreens` | 2,93 s |
+| `RendererStressTest.simultaneousBarragesStayWithinParticleBudget` | 2,43 s |
+| `ScreenshotTest.variantScreens` | 2,31 s |
+| `AppIconScreenshotTest.legacyThemeDisplaysBrandedWindow` | 2,06 s |
+| `BattleScreenTest.longPressDoesNotClickAndShortTapStillWorks` | 1,76 s |
+| `ScreenshotTest.replays` | 1,66 s |
+| `ScreenshotTest.playGamesMenus` | 1,59 s |
+
+Pierwotny job `build-and-test` na gałęzi bazowej jest już czerwony:
+`scripts/check_license_inventory.py` zgłasza brakujące wpisy serwera
+w `docs/LICENSES.md`. To osobny problem **sprzed niniejszej zmiany**.
+Nowy job `build` nadal traktuje ten audyt jako blokujący, ale wykonuje
+kompilację i zachowuje APK przed kontrolą licencji; testy biegną niezależnie.
 
 ## Keystore do podpisywania release
 
