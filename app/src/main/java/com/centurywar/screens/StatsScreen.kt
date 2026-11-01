@@ -171,8 +171,8 @@ class StatsScreen(g: Game) : Screen(g) {
         chrome.layoutBack(back)
         recordsTabs.layout()
         // Na dużym tablecie wykresy nie powinny rozciągać się na całą szerokość.
-        val safeWidthDp = (w - g.insetL - g.insetR) / dp
-        val maxWidthDp = if (safeWidthDp >= 960f) 780f else 950f
+        val safeWidthDp = (w - g.insetL - g.insetR) / g.density
+        val maxWidthDp = if (safeWidthDp >= 960f) 620f else 950f
         val pw = min(maxWidthDp * dp, w - g.insetL - g.insetR - 24 * dp)
         val cx = (w + g.insetL - g.insetR) / 2f
         val gap = 8 * dp
