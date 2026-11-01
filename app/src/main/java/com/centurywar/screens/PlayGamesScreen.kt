@@ -59,7 +59,8 @@ class PlayGamesScreen(g: Game) : Screen(g) {
             OnlineState.ERROR -> "pgs_error"
             else -> "pgs_disabled"
         }
-        ui.textO(c, L[key], panel.centerX(), panel.top + 124 * dp, 20f,
+        ui.textO(c, L[key], panel.centerX(), panel.top + 124 * dp,
+            ui.fit(L[key], 20f, panel.width() - 36 * dp),
             if (g.online.state == OnlineState.CONNECTED) Ui.GOOD else Ui.GOLD, Paint.Align.CENTER)
         val description = L[if (g.online.available) "pgs_info" else "pgs_local_only"]
         ui.textO(c, description, panel.centerX(), panel.top + 158 * dp,
