@@ -192,4 +192,26 @@ class SkirmishSetupTest {
         assertEquals(1L, p.achievementCounters["INSANE_WINS"])
         assertEquals(1, hard.progress)
     }
+    @Test
+    fun newModifiersKeepStableProfileBitsAndAreNeverRanked() {
+        val newMods = listOf(Modifier.SHORT_DAY, Modifier.VETERANS,
+            Modifier.EXPENSIVE_TOWERS, Modifier.MERCENARIES)
+        for ((index, modifier) in newMods.withIndex()) {
+            assertEquals(10 + index, modifier.ordinal)
+            val setup = SkirmishSetup.defaults().copy(modifierMask = 1 shl modifier.ordinal)
+            assertEquals(setOf(modifier), setup.sanitized().modifiers())
+            assertFalse(setup.isRanked())
+            val cfg = setup.toConfig(70L + index, Bonuses())
+            assertEquals(setOf(modifier), cfg.modifiers)
+            assertFalse(SkirmishSetup.isRanked(cfg))
+            assertEquals(setup.modifierMask, SkirmishSetup.fromConfig(cfg).modifierMask)
+            val f = file()
+            val p = Profile(f)
+            p.skirmishSetup = setup
+            p.save()
+            Profile.awaitHintWrites()
+            assertEquals(setup.modifierMask, Profile(f).also { it.load() }.skirmishSetup.modifierMask)
+        }
+    }
+
 }
