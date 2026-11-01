@@ -107,7 +107,6 @@ class ReleaseChecklistTest {
         | postal_address | 123 Avenue, City, Country |
         | privacy_policy_url | https://example.org/privacy |
         | release_date | 2026-11-01 |
-        | play_games_project_id | 123456789012 |
     """.trimIndent()
 
     private fun docs() = mapOf(
@@ -133,6 +132,11 @@ class ReleaseChecklistTest {
         assertFalse(ReleaseChecklist.canUseCiDebugSigning(true, "false", "pull_request", "true"))
         assertFalse(ReleaseChecklist.canUseCiDebugSigning(true, "true", "pull_request", "false"))
         assertFalse(ReleaseChecklist.canUseCiDebugSigning(false, "true", "pull_request", "true"))
+    }
+
+    @Test fun ownerInputDoesNotDuplicatePlayGamesId() {
+        assertTrue(ReleaseChecklist.ownerInputProblems(validOwner()).isEmpty())
+        assertFalse(ReleaseChecklist.ownerFields(validOwner()).containsKey("play_games_project_id"))
     }
 
     @Test fun validatesAllPublisherFieldsAndFormats() {
