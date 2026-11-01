@@ -17,12 +17,12 @@ class CiToolsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             (folder / "SimTest.kt").write_text(
-                "package com.example\nclass SimTest { @Test fun sim() {} }\n",
+                "package com.example\nclass SimTest {\n  @Test fun sim() {}\n}\n",
                 encoding="utf-8",
             )
             (folder / "RoboTest.kt").write_text(
                 "package com.example\n@RunWith(RobolectricTestRunner::class)\n"
-                "class RoboTest { @Test fun ui() {} }\n",
+                "class RoboTest {\n  @Test fun ui() {}\n}\n",
                 encoding="utf-8",
             )
             (folder / "ScreenshotTest.kt").write_text(
