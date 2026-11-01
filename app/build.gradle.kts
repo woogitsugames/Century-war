@@ -47,8 +47,8 @@ val scoreHmacKey = scoreSetting("CW_HMAC_KEY")
 val scorePrivacyUrl = scoreSetting("CW_PRIVACY_URL").trim()
 
 // ---- Podpis release ------------------------------------------------------------------------
-// Klucz upload wyłącznie ze środowiska (CI: sekrety GitHub, patrz docs/CI.md). Brak wszystkich
-// zmiennych oznacza lokalny podpis kluczem debug (jak dotąd); konfiguracja częściowa jest błędem.
+// Klucz upload wyłącznie ze środowiska (CI: sekrety GitHub, patrz docs/CI.md).
+// Brak podpisu nigdy nie oznacza automatycznego użycia klucza debug.
 val releaseStoreFile = providers.environmentVariable("RELEASE_KEYSTORE_FILE").orNull
 val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
@@ -58,6 +58,20 @@ val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
 check(!releaseSigningValues.any { !it.isNullOrBlank() } || hasReleaseSigning) {
     "Niekompletne zmienne RELEASE_KEYSTORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD"
 }
+val ciTestDebugSigning = providers.gradleProperty("ciTestDebugSigning").orNull == "true"
+val ciDebugSigningAllowed = ReleaseChecklist.canUseCiDebugSigning(
+    ciTestDebugSigning,
+    providers.environmentVariable("GITHUB_ACTIONS").orNull,
+    providers.environmentVariable("GITHUB_EVENT_NAME").orNull,
+    providers.environmentVariable("CW_RELEASE_SMOKE").orNull,
+)
+check(!ciTestDebugSigning || ciDebugSigningAllowed) {
+    "-PciTestDebugSigning=true jest dozwolone wyłącznie w oznaczonym smoke-teście CI dla PR/manual."
+}
+val releaseKeyIsDebug = releaseKeyAlias.equals("androiddebugkey", ignoreCase = true) ||
+    releaseStoreFile?.let { file(it).name.equals("debug.keystore", ignoreCase = true) } == true
+val validReleaseSigning = hasReleaseSigning && !releaseKeyIsDebug &&
+    releaseStoreFile?.let { file(it).isFile } == true
 
 android {
     namespace = "com.centurywar"
@@ -92,8 +106,12 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Bez sekretów lokalne kompilacje release używają klucza debug (nie do publikacji).
-            signingConfig = signingConfigs.getByName(if (hasReleaseSigning) "release" else "debug")
+            // Podpis debug jest dostępny tylko dla świadomego testu w CI.
+            signingConfig = when {
+                hasReleaseSigning -> signingConfigs.getByName("release")
+                ciDebugSigningAllowed -> signingConfigs.getByName("debug")
+                else -> null
+            }
         }
     }
 
@@ -168,17 +186,26 @@ val dailySourceFile = rootProject.file("sim/src/main/kotlin/com/centurywar/game/
 val gamesIdsFile = file("src/main/res/values/games_ids.xml")
 val gamesManifestFile = file("src/main/AndroidManifest.xml")
 val lastVersionCodeFile = rootProject.file("release/last_version_code.txt")
+val storeDocsDir = rootProject.file("docs/store")
+val ownerInputFile = rootProject.file("docs/store/OWNER_INPUT.md")
+val privacyTemplates = listOf("privacy_policy_pl.md", "privacy_policy_en.md")
 val skippedReleaseChecks = providers.gradleProperty("skipCheck").getOrElse("")
+check("ownerInput" !in ReleaseChecklist.parseSkips(skippedReleaseChecks) || ciDebugSigningAllowed) {
+    "-PskipCheck=ownerInput jest dozwolone wyłącznie w smoke-teście CI."
+}
 val releaseHasHmacKey = scoreHmacKey.isNotBlank()
 
 val releaseChecklist = tasks.register("releaseChecklist") {
     group = "verification"
     description = "Sprawdza konfigurację, datę i numer publikacji przed release."
     inputs.files(dailySourceFile, gamesIdsFile, gamesManifestFile, lastVersionCodeFile)
+    inputs.files(fileTree(storeDocsDir) { include("*.md") })
     inputs.property("releaseVersionCode", releaseVersionCode)
     inputs.property("scoreServerUrl", scoreServerUrl)
     inputs.property("scorePrivacyUrl", scorePrivacyUrl)
     inputs.property("hasHmacKey", releaseHasHmacKey)
+    inputs.property("validReleaseSigning", validReleaseSigning)
+    inputs.property("ciDebugSigningAllowed", ciDebugSigningAllowed)
     inputs.property("skipCheck", skippedReleaseChecks)
 
     doLast {
@@ -197,6 +224,13 @@ val releaseChecklist = tasks.register("releaseChecklist") {
             lastVersionCode = lastVersionCodeFile.takeIf { it.isFile }
                 ?.readText()?.trim()?.toIntOrNull(),
             skipChecks = ReleaseChecklist.parseSkips(skippedReleaseChecks),
+            hasReleaseSigning = validReleaseSigning,
+            ciTestDebugSigning = ciDebugSigningAllowed,
+            enforceStoreDocuments = true,
+            storeDocuments = storeDocsDir.listFiles()
+                ?.filter { it.isFile && it.extension == "md" }
+                ?.associate { it.name to it.readText() }.orEmpty(),
+            ownerInputText = ownerInputFile.takeIf { it.isFile }?.readText(),
         )
         val problems = ReleaseChecklist.problems(checks)
         if (problems.isNotEmpty()) {
@@ -218,4 +252,32 @@ tasks.matching {
     it.name == "preReleaseBuild" || it.name == "assembleRelease" || it.name == "bundleRelease"
 }.configureEach {
     dependsOn(releaseChecklist)
+}
+
+    
+// Polityki przeznaczone do umieszczenia na stronie: dane z OWNER_INPUT.md.
+tasks.register("renderStorePolicies") {
+    group = "publishing"
+    description = "Przygotowuje polskie i angielskie polityki do opublikowania."
+    inputs.files(ownerInputFile, fileTree(storeDocsDir) { include("privacy_policy_*.md") })
+    val destination = rootProject.layout.buildDirectory.dir("store-policies")
+    outputs.dir(destination)
+    doLast {
+        val ownerText = ownerInputFile.takeIf { it.isFile }?.readText()
+        val problems = ReleaseChecklist.ownerInputProblems(ownerText)
+        if (problems.isNotEmpty()) throw GradleException(problems.joinToString("\n"))
+        val docs = privacyTemplates.associateWith { storeDocsDir.resolve(it).readText() }
+        val errors = ReleaseChecklist.storeDocumentProblems(
+            docs + mapOf("data_safety.md" to "Dane rankingowe", "content_rating.md" to "IARC"),
+        )
+        if (errors.isNotEmpty()) throw GradleException(errors.joinToString("\n"))
+        val fields = ReleaseChecklist.ownerFields(ownerText)
+        val out = destination.get().asFile.apply { mkdirs() }
+        docs.forEach { (name, template) ->
+            val published = ReleaseChecklist.renderOwnerTemplate(template, fields)
+            check(!published.contains("{{OWNER.")) { "Nierozwiązany znacznik w " + name }
+            out.resolve(name).writeText(published)
+        }
+        logger.lifecycle("Polityki do publikacji: " + out.absolutePath)
+    }
 }
