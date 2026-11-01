@@ -18,6 +18,42 @@ Wymagania: JDK 17+, Android SDK z platformą 36 (`sdk.dir` w `local.properties` 
 ./gradlew :app:testDebugUnitTest    # symulacje balansu AI vs AI + screenshoty (build/screenshots)
 ```
 
+## Regresja wizualna (zlecenie 100)
+
+Zestaw 15 kluczowych stanów UI w dwóch formatach: telefon 1600×720 (720p) i rozłożony
+Fold 2184×1968. Łącznie **30 wersjonowanych PNG** w
+`app/src/test/resources/screens/`. Zrzuty bieżące: `app/build/screenshots/`.
+
+```bash
+# Sprawdzenie wzorców (odchylenia kończą się błędem testu):
+./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.regression100*' \
+  --tests '*ScreenshotGoldenTest*' --console=plain --no-configuration-cache
+
+# Świadoma zmiana wzorców, dopiero po zatwierdzeniu nowego wyglądu:
+./gradlew :app:updateScreenshots -PscreenReason="Zatwierdzona zmiana układu HUD" \
+  --console=plain --no-configuration-cache
+git diff -- app/src/test/resources/screens/
+git add app/src/test/resources/screens/
+```
+
+Zwykłe testy **nie tworzą** brakujących wzorców i **nigdy ich nie aktualizują**.
+`updateScreenshots` wymaga uzasadnienia (minimum 8 znaków), odtwarza oba urządzenia,
+kontroluje komplet 30 plików i dopisuje uzasadnienie do
+`app/src/test/resources/screens/UPDATES.md`. Pierwszy zestaw powstaje na osobnej
+gałęzi z zadania 100 w GitHub Actions i jest objęty tym samym przeglądem zmian.
+
+Porównanie dopuszcza odchylenie do **20 jednostek na kanał RGBA** i najwyżej **0,5%**
+zmienionych pikseli poza maską. Maska obejmuje środkowy pas animowanego pola bitwy
+(`battle_hud`, 22–68% wysokości), **nie zasłania górnego paska ani dolnych kontrolek**.
+Różne wymiary obrazu zawsze kończą się błędem. Przy regresji test zapisuje
+`app/build/screenshots/diffs/<nazwa>.diff.png` (czerwony – zmiana, granatowy –
+maska, ciemny – zgodność) oraz `<nazwa>.txt` z liczbami; w CI te pliki trafiają
+do artefaktów. Zmiany wzorców wymagają obejrzenia PNG, nie tylko zielonych testów.
+
+Wynik rasteryzacji zależy od środowiska: wzorce generować i porównywać na
+ustalonej konfiguracji CI (Ubuntu 24.04, JDK 17, Robolectric SDK 35). Nie
+nadpisywać wzorców na innym systemie bez świadomego przeglądu różnic.
+
 ## Struktura
 
 - `game/`: symulacja (czysty Kotlin, deterministyczna), dane balansu, AI, renderer bitwy
