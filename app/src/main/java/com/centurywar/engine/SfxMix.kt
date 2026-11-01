@@ -115,7 +115,7 @@ internal class SfxRateGate(count: Int) {
         in SoundSynth.SHOT_SLING..SoundSynth.SHOT_PLASMA,
         in SoundSynth.TURRET_PRIMITIVE..SoundSynth.TURRET_ENERGY -> 1
         SoundSynth.DEATH, in SoundSynth.DEATH_HUMAN..SoundSynth.DEATH_MACHINE -> 2
-        SoundSynth.EXPLOSION, SoundSynth.BOSS,
+        SoundSynth.EXPLOSION,
         in SoundSynth.BARRAGE_STONE..SoundSynth.BARRAGE_ORBITAL -> 3
         else -> -1
     }

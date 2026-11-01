@@ -62,6 +62,7 @@ class SfxMixTest {
         assertFalse(gate.allowed(SoundSynth.HIT_STEEL, 1010, 0))
         assertTrue(gate.allowed(SoundSynth.HIT_STEEL, 1022, 0))
         assertTrue(gate.allowed(SoundSynth.REWARD, 1010, 0))
+        assertTrue(gate.allowed(SoundSynth.BOSS, 1010, 0))
         assertTrue(gate.allowed(SoundSynth.SHOT_RIFLE, 1010, 0))
         gate.played(SoundSynth.SHOT_RIFLE, 1010)
         assertFalse(gate.allowed(SoundSynth.SHOT_BOW, 1020, 0))
