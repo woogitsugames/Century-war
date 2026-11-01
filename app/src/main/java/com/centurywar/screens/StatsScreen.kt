@@ -170,7 +170,10 @@ class StatsScreen(g: Game) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         recordsTabs.layout()
-        val pw = min(950 * dp, w - g.insetL - g.insetR - 24 * dp)
+        // Na dużym tablecie wykresy nie powinny rozciągać się na całą szerokość.
+        val safeWidthDp = (w - g.insetL - g.insetR) / dp
+        val maxWidthDp = if (safeWidthDp >= 960f) 780f else 950f
+        val pw = min(maxWidthDp * dp, w - g.insetL - g.insetR - 24 * dp)
         val cx = (w + g.insetL - g.insetR) / 2f
         val gap = 8 * dp
         val tw = (pw - gap) / 2f
