@@ -147,6 +147,7 @@ object L {
         putAll(part109())
         putAll(part108())
         }
+        putAll(part110())
     }
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
@@ -1611,6 +1612,9 @@ object L {
         "ew_pike_screen_d" to t("Pierwsze dwa oddziały są ciężkie; za nimi idą głównie strzelcy.", "The first two units are heavy; mostly ranged troops follow behind.", "Die ersten zwei Truppen sind schwer; dahinter folgen vor allem Fernkämpfer.", "Las dos primeras unidades son pesadas; detrás van sobre todo tiradores.", "Les deux premières unités sont lourdes ; des tireurs suivent en majorité.", "Le prime due unità sono pesanti, seguite soprattutto da tiratori.", "As duas primeiras unidades são pesadas; seguem-se sobretudo atiradores.", "Перші два загони важкі; за ними йдуть переважно стрільці.", "De eerste twee eenheden zijn zwaar; daarna volgen vooral schutters.", "İlk iki birlik ağırdır; arkalarından çoğunlukla nişancılar gelir."),
         "ew_twin_raid" to t("Podwójny rajd", "Twin raid", "Doppelangriff", "Doble incursión", "Double raid", "Doppia incursione", "Incursão dupla", "Подвійний рейд", "Dubbele aanval", "İkili baskın"),
         "ew_twin_raid_d" to t("Dwa oddziały wręcz i strzelcy, od 4. fali także elita; +15% szybkości.", "Pairs of melee troops and ranged support, plus elites from wave 4; +15% speed.", "Zwei Nahkämpfer mit Fernkampfstütze, ab Welle 4 auch Eliten; +15 % Tempo.", "Parejas cuerpo a cuerpo con tiradores; élites desde la oleada 4; +15% velocidad.", "Duo de mêlée et tireurs ; élites dès la vague 4 ; +15 % de vitesse.", "Due truppe da mischia e tiratori, élite dalla quarta ondata; +15% velocità.", "Duplas corpo a corpo com atiradores; elites desde a 4.ª vaga; +15% velocidade.", "Пари бійців ближнього бою зі стрільцями; з 4-ї хвилі є еліта; +15% швидкості.", "Twee strijders met schutters, vanaf golf 4 ook elites; +15% snelheid.", "İki yakın dövüşçü ve nişancılar, 4. dalgadan itibaren seçkinler; %15 hız."),
+    /** Zlecenie 110: leworęczny układ sterowania bitwą. */
+    private fun part110(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "access_left_handed_hud" to t("HUD dla leworęcznych", "Left-handed HUD", "HUD für Linkshänder", "HUD para zurdos", "Interface gaucher", "HUD per mancini", "HUD para canhotos", "Інтерфейс для шульг", "HUD voor linkshandigen", "Solak HUD"),
     )
 
 }

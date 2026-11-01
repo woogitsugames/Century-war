@@ -204,6 +204,8 @@ class Profile(private val file: File) {
         set(value) { field = if (value < 108) 100 else if (value < 123) 115 else 130 }
     var reduceShake = false
     var reduceFlash = false
+    /** Opcjonalne lustrzane sterowanie bitwą, domyślnie wyłączone. */
+    var leftHandedHud = false
     var sound = true
     var sfxVolume = 0.8f
         set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.8f }
@@ -435,6 +437,7 @@ class Profile(private val file: File) {
         o.put("textScale", textScale)
         o.put("reduceShake", reduceShake)
         o.put("reduceFlash", reduceFlash)
+        o.put("leftHandedHud", leftHandedHud)
         o.put("sound", sound)
         o.put("sfxVolume", sfxVolume.toDouble())
         o.put("musicVolume", musicVolume.toDouble())
@@ -804,6 +807,7 @@ class Profile(private val file: File) {
         textScale = json.optInt("textScale", 100)
         reduceShake = json.optBoolean("reduceShake", false)
         reduceFlash = json.optBoolean("reduceFlash", false)
+        leftHandedHud = json.opt("leftHandedHud") == true
         sound = json.optBoolean("sound", true)
         // Stare profile (także z sound=false) zachowują domyślne 80% efektów.
         sfxVolume = json.optDouble("sfxVolume", 0.8).toFloat()
@@ -856,7 +860,7 @@ class Profile(private val file: File) {
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
         palette = 0; teamMarkers = false; textScale = 100
-        reduceShake = false; reduceFlash = false
+        reduceShake = false; reduceFlash = false; leftHandedHud = false
         showFps = false; lang = ""; skirmishDiff = 1; skirmishSetup = SkirmishSetup.defaults()
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)

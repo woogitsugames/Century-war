@@ -30,6 +30,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
     private val markers = btn(40)
     private val shake = btn(41)
     private val flash = btn(42)
+    private val leftHud = btn(43)
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 7L, 1f)))
     private val demoUnit = Defs.unit(0, Role.MELEE)
 
@@ -51,7 +52,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         val left = (w + g.insetL - g.insetR - pw) / 2f
         contentTop = chrome.top + 8f * dp
         contentBottom = h - g.insetB - 10f * dp
-        val cardH = 718f * dp
+        val cardH = 779f * dp
         maxScroll = max(0f, cardH - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
         panel.set(left, contentTop - scroll, left + pw, contentTop - scroll + cardH)
@@ -72,6 +73,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         markers.set(panel.right - 20f * dp - toggleW, panel.top + 533f * dp, toggleW, 42f * dp)
         shake.set(panel.right - 20f * dp - toggleW, panel.top + 594f * dp, toggleW, 42f * dp)
         flash.set(panel.right - 20f * dp - toggleW, panel.top + 655f * dp, toggleW, 42f * dp)
+        leftHud.set(panel.right - 20f * dp - toggleW, panel.top + 716f * dp, toggleW, 42f * dp)
         for (b in buttons) if (b !== back) {
             b.visible = b.r.top >= contentTop && b.r.bottom <= contentBottom
         }
@@ -97,9 +99,11 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         markers.label = L[if (g.profile.teamMarkers) "on" else "off"]
         shake.label = L[if (g.profile.reduceShake) "on" else "off"]
         flash.label = L[if (g.profile.reduceFlash) "on" else "off"]
+        leftHud.label = L[if (g.profile.leftHandedHud) "on" else "off"]
         markers.color = if (g.profile.teamMarkers) Ui.BTN_GREEN else Ui.BTN
         shake.color = if (g.profile.reduceShake) Ui.BTN_GREEN else Ui.BTN
         flash.color = if (g.profile.reduceFlash) Ui.BTN_GREEN else Ui.BTN
+        leftHud.color = if (g.profile.leftHandedHud) Ui.BTN_GREEN else Ui.BTN
     }
 
     override fun render(c: Canvas) {
@@ -154,9 +158,11 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         rowLabel(c, L["access_team_markers"], markers)
         rowLabel(c, L["access_reduce_shake"], shake)
         rowLabel(c, L["access_reduce_flash"], flash)
+        rowLabel(c, L["access_left_handed_hud"], leftHud)
         if (markers.visible) ui.button(c, markers, 14f)
         if (shake.visible) ui.button(c, shake, 14f)
         if (flash.visible) ui.button(c, flash, 14f)
+        if (leftHud.visible) ui.button(c, leftHud, 14f)
         c.restore()
         chrome.title(c, L["accessibility"])
         ui.button(c, back, 16f)
@@ -182,6 +188,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             40 -> g.profile.teamMarkers = !g.profile.teamMarkers
             41 -> g.profile.reduceShake = !g.profile.reduceShake
             42 -> g.profile.reduceFlash = !g.profile.reduceFlash
+            43 -> g.profile.leftHandedHud = !g.profile.leftHandedHud
         }
         g.applyAccessibility()
         g.profile.save()
