@@ -114,7 +114,7 @@ class LeftHandedHudTest {
     }
 
     @Test
-    fun narrowScreenUsesTwoRowsAndSafeInsets() {
+    fun narrowScreenUsesSeparateUpgradeRowAndSafeInsets() {
         val g = game(720, 1280)
         g.setInsets(24, 10, 36, 24)
         g.profile.leftHandedHud = true
@@ -254,6 +254,37 @@ class LeftHandedHudTest {
                     assertTrue("$tag: armia po lewej", army.right <= mini.left)
                 }
             }
+        }
+    }
+
+    /** Przycisk ulepszenia nie może przechwytywać szkolenia jednostki. */
+    @Test
+    fun narrowHud119KeepsUnitTapSeparateFromUpgradeTap() {
+        for (leftHanded in listOf(false, true)) {
+            val g = game(904, 2316, 2.7f)
+            g.profile.leftHandedHud = leftHanded
+            val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 1192L, 1f))
+            g.setScreen(s)
+            g.frame(canvas, 1f / 60f)
+            val unit = button(s, 0)
+            val upgrade = button(s, 70)
+            assertFalse("Szkolenie i ulepszanie mają oddzielne cele", overlap(unit.r, upgrade.r))
+
+            fun tap(b: Button) {
+                g.pushTouch(TouchEvent.DOWN, b.r.centerX(), b.r.centerY(), 0)
+                g.pushTouch(TouchEvent.UP, b.r.centerX(), b.r.centerY(), 0)
+                g.frame(canvas, 1f / 60f)
+            }
+            tap(unit)
+            val controller = s.javaClass.getDeclaredField("commands").apply {
+                isAccessible = true
+            }.get(s) as BattleController
+            assertEquals("Szkolenie ma trafić do logu komend", 1, controller.log().commands.size)
+            tap(upgrade)
+            val selected = s.javaClass.getDeclaredField("showUpgrade").apply {
+                isAccessible = true
+            }.getInt(s)
+            assertEquals("Ulepszanie ma otworzyć odpowiedni panel", 0, selected)
         }
     }
 
