@@ -71,6 +71,18 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 65 | [Lokalny dziennik błędów i zgłaszanie problemu](65-error-log.md) | `gpt/65-error-log` | tura 4 (równolegle) |
 | 66 | [Wersja release: R8, rozmiar, profil startowy](66-release-build-check.md) | `gpt/66-release-build-check` | tura 4 (równolegle) |
 | 67 | [Pauza z szybkimi ustawieniami i podsumowaniem bitwy](67-pause-quick-settings.md) | `gpt/67-pause-quick-settings` | tura 4 (równolegle) |
+| 68 | [Zapowiedzi epok: krótkie plansze fabularne](68-era-intros.md) | `gpt/68-era-intros` | tura 5 |
+| 69 | [Cztery nowe doktryny](69-new-doctrines.md) | `gpt/69-new-doctrines` | tura 5 |
+| 70 | [Cztery nowe modyfikatory bitew](70-new-modifiers.md) | `gpt/70-new-modifiers` | tura 5 |
+| 71 | [Nowe karty oblężenia bez końca](71-endless-cards-2.md) | `gpt/71-endless-cards-2` | tura 5 |
+| 72 | [Wyzwanie dnia: dni specjalne](72-daily-events.md) | `gpt/72-daily-events` | tura 5 |
+| 73 | [Udostępnianie i import powtórek](73-replay-share.md) | `gpt/73-replay-share` | tura 5 |
+| 74 | [Przegląd układu nowych ekranów (53–67) i menu](74-layout-audit-2.md) | `gpt/74-layout-audit-2` | tura 5 |
+| 75 | [Odświeżenie karty sklepu po nowych funkcjach](75-store-refresh.md) | `gpt/75-store-refresh` | tura 5 |
+| 76 | [Szybsze testy i CI](76-ci-speed.md) | `gpt/76-ci-speed` | tura 5 |
+| 77 | [Wydajność nowej oprawy na słabych telefonach](77-lowend-perf-2.md) | `gpt/77-lowend-perf-2` | tura 5 |
+| 78 | [Przegląd tłumaczeń z tury 4 (53–67)](78-translation-pass-2.md) | `gpt/78-translation-pass-2` | tura 5 (na końcu) |
+| 79 | [Dopracowanie wyglądu maszyn wariantów epok](79-variant-art.md) | `gpt/79-variant-art` | tura 5 |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 

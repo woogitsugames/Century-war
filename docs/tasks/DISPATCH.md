@@ -62,3 +62,16 @@ Po fali 1 (42, 46) koordynator mierzy balans i podbija wersję gry rankingu (`0.
 | Oprawa | 55 muzyka, 56 tła epok, 57 menu główne, 58 ikona i splash, 59 mapa kampanii |
 | Treść i motywacja | 60 osiągnięcia, 61 misje, 62 kodeks |
 | Jakość i wydanie | 63 haptyka, 64 moderacja rankingu, 65 dziennik błędów, 66 wersja release |
+
+---
+
+# Wysyłka zleceń 68–79 (tura 5)
+
+1.11.2026. Zlecenia 53–67 scalone. Paczki 68–77 i 79 można wysłać naraz (rozłączne pliki; 69, 70 i 72 dotykają `Modes.kt` w różnych miejscach). **78 (przegląd tłumaczeń) wyślij na końcu**, po scaleniu reszty.
+
+| Grupa | Paczki |
+|---|---|
+| Treść | 68 zapowiedzi epok, 69 doktryny, 70 modyfikatory, 71 karty Endless, 72 dni specjalne |
+| Funkcje | 73 udostępnianie powtórek |
+| Jakość | 74 przegląd układu, 76 szybsze CI, 77 wydajność oprawy, 79 grafika wariantów |
+| Sklep i teksty | 75 karta sklepu, 78 tłumaczenia (na końcu) |
