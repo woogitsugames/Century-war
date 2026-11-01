@@ -233,7 +233,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     }
 
     override fun render(c: Canvas) {
-        bg.draw(c, w, h, dt)
+        bg.draw(c, w, h, dt, g.quality.menuAnimated && !g.profile.reduceFlash, g.quality.menuDetail)
         chrome.dim(c, 110)
         c.save()
         c.clipRect(viewportL, top, viewportR, bottom)
