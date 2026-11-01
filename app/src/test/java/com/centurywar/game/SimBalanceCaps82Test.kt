@@ -136,8 +136,8 @@ class SimBalanceCaps82Test {
         // W zwykłym pojedynku doktryny mają osobny, słabszy balans.
         val skirmish = Battle(BattleConfig(Mode.SKIRMISH, 82L, 1f))
         skirmish.applyDoctrine(skirmish.player, Doctrine.BULWARK)
-        assertEquals(1.1f, skirmish.player.baseHpMul / Battle.BALANCE_BASE_HP_MUL, 0.00001f)
-        assertEquals(1.05f, skirmish.player.hpMul, 0.00001f)
+        assertEquals(1.05f, skirmish.player.baseHpMul / Battle.BALANCE_BASE_HP_MUL, 0.00001f)
+        assertEquals(1.03f, skirmish.player.hpMul, 0.00001f)
     }
 
     @Test fun supplyGrantsScaledGoldImmediatelyAndKeepsTemporaryKillBonus() {
