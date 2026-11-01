@@ -82,6 +82,7 @@ class BattleScreen(
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
+    internal var aimingBarrage = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
     private var preparedPlayerVariant = -2
@@ -129,6 +130,7 @@ class BattleScreen(
     internal var resultNewRecordLabel = ""
     internal var resultStars = 0
     internal var resultCustomSkirmish = false
+    internal var resultTipCount = 0
 
     private companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
@@ -247,6 +249,7 @@ class BattleScreen(
     internal var hudH = 0f
     internal var topH = 0f
     internal var compactTop = false
+    internal var enemyEraText = ""
 
     init {
         // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.
@@ -288,7 +291,7 @@ class BattleScreen(
             unitBtn, evolveBtn, turretBtn, armoryBtn, stanceBtn, rallyBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
-            { barrageAiming.aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
+            { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
         )) else null
 
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
@@ -486,10 +489,10 @@ class BattleScreen(
         frameDt = dt
         eraIntro?.update(dt)
         maybeShowEraIntro()
-        if (barrageAiming.aimingBarrage && (paused || finished || battle.over ||
+        if (aimingBarrage && (paused || finished || battle.over ||
                 battle.pendingChoice != null || battle.pendingCards != null ||
                 showUpgrade >= 0 || !battle.abilityReady(battle.player, 0))) {
-            barrageAiming.aimingBarrage = false
+            aimingBarrage = false
         }
         val tutScale = tut?.timeScale ?: 1f
         if (!paused && !finished && eraIntro?.active != true) {
@@ -662,9 +665,9 @@ class BattleScreen(
         barrageBtn.iconId = Icons.METEOR
         barrageBtn.enabled = battle.abilityReady(p, 0)
         barrageBtn.progress = if (p.abilityCd[0] > 0f) 1f - p.abilityCd[0] / (Battle.BARRAGE_CD * p.abilityCdMul) else -1f
-        if (modal || !barrageBtn.enabled) barrageAiming.aimingBarrage = false
-        barrageBtn.selected = barrageAiming.aimingBarrage
-        barrageBtn.highlight = barrageAiming.aimingBarrage
+        if (modal || !barrageBtn.enabled) aimingBarrage = false
+        barrageBtn.selected = aimingBarrage
+        barrageBtn.highlight = aimingBarrage
         rallyBtn.visible = !modal && p.rallyUnlocked
         rallyBtn.label = L["battle84_rally_short"]
         rallyBtn.iconId = Icons.FLAG; rallyBtn.iconTint = Ui.PLAYER
@@ -895,7 +898,7 @@ class BattleScreen(
 
     override fun onClick(b: Button) {
         if (eraIntro?.active == true) return
-        if (barrageAiming.aimingBarrage && b.id != BARRAGE) barrageAiming.aimingBarrage = false
+        if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
         val p = battle.player
         if (hints.onClick(b)) return
         val t = tut
@@ -1029,17 +1032,17 @@ class BattleScreen(
     override fun onDrag(dx: Float, dy: Float) {
         if (finished || paused) return
         // Podczas celowania palec przesuwa celownik, a nie kamerę.
-        if (barrageAiming.aimingBarrage && barrageAiming.aimStartedInField) return
+        if (aimingBarrage && barrageAiming.aimStartedInField) return
         r.camX -= dx / r.k
         r.clampCam()
-        if (barrageAiming.aimingBarrage) barrageAiming.aimWorldX = barrageAiming.snap(r.worldX(barrageAiming.aimScreenX))
+        if (aimingBarrage) barrageAiming.aimWorldX = barrageAiming.snap(r.worldX(barrageAiming.aimScreenX))
         manualCam = 4f
         tut?.onCamera()
     }
 
     override fun onTap(x: Float, y: Float) {
         // Krótki tap wyłączonego awansu nie wydaje komendy i podaje brakujące XP.
-        if (!paused && !finished && !barrageAiming.aimingBarrage && evolveBtn.visible &&
+        if (!paused && !finished && !aimingBarrage && evolveBtn.visible &&
             !evolveBtn.enabled && battle.player.era < cfg.maxEra &&
             (tut == null || tut.finished) && evolveBtn.contains(x, y)) {
             val p = battle.player
@@ -1080,7 +1083,7 @@ class BattleScreen(
 
     override fun onBack(): Boolean {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
-        if (barrageAiming.aimingBarrage) { barrageAiming.aimingBarrage = false; return true }
+        if (aimingBarrage) { aimingBarrage = false; return true }
         if (finished) { g.setScreen(nextScreen()); return true }
         if (showUpgrade >= 0) { showUpgrade = -1; return true }
         if (showTurrets) { showTurrets = false; return true }
@@ -1094,7 +1097,7 @@ class BattleScreen(
 
     /** Przy pauzie serializujemy stan na wątku gry, a fsync wykonuje wątek I/O. */
     override fun onPause() {
-        barrageAiming.aimingBarrage = false
+        aimingBarrage = false
         clearHeldTooltip()
         if (finished || closed || battle.over) return
         paused = true
@@ -1106,7 +1109,7 @@ class BattleScreen(
     // ---------------------------------------------------------------- koniec bitwy
 
     private fun onFinished() {
-        barrageAiming.aimingBarrage = false
+        aimingBarrage = false
         finished = true
         // Kolejka I/O usuwa zrzut w tej samej kolejności co wcześniejsze zapisy.
         g.snapshots?.deleteAsync()

@@ -6,7 +6,6 @@ import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 
 internal class BarrageAiming(private val screen: BattleScreen) {
-    var aimingBarrage = false
     var aimWorldX = 0f
     var aimScreenX = 0f
     var aimDownX = 0f
@@ -110,7 +109,7 @@ internal class BarrageAiming(private val screen: BattleScreen) {
     }
 
     fun onTap(x: Float, y: Float): Boolean {
-        if (!aimingBarrage) return false
+        if (!screen.aimingBarrage) return false
         with(screen) {
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&

@@ -15,7 +15,6 @@ import kotlin.math.min
 internal class BattleTopBar(private val screen: BattleScreen) {
     private var enemyEraShown = -1
     private var enemyEraLanguage = -1
-    private var enemyEraText = ""
     private var goldShown = -1
     private var goldText = ""
     private var capKey = -1

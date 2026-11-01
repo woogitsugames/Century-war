@@ -14,7 +14,6 @@ import kotlin.math.min
 internal class BattleResultsPanel(private val screen: BattleScreen) {
     private val resultPanel = RectF()
     private val resultTipLines = arrayOfNulls<String>(16)
-    private var resultTipCount = 0
 
     fun layout() {
         with(screen) {
