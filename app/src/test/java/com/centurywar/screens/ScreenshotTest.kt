@@ -878,6 +878,8 @@ class ScreenshotTest {
                 val target = (if (tag == "phone720") 580f else 470f) * g.ui.dp
                 field(screen, "scroll").setFloat(screen, minOf(target, maxScroll))
                 shot(g, tag + "_stats105_charts")
+                field(screen, "scroll").setFloat(screen, minOf(940f * g.ui.dp, maxScroll))
+                shot(g, tag + "_stats105_daily")
             } finally {
                 archive.awaitWrites()
                 archive.close()
