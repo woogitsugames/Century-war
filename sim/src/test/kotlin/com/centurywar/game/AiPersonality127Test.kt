@@ -30,7 +30,7 @@ class AiPersonality127Test {
             Mode.SKIRMISH, 12_702L, 1f, startEra = 2, maxEra = 3,
             aiPersonality = AiPersonality.ECONOMIST,
         ))
-        b.time = 65f
+        b.time = 110f
         repeat(3) { assertTrue(b.spawn(b.enemy, Defs.unit(2, Role.MELEE))) }
         b.ai!!.update(1f)
         assertTrue("Gospodarz powinien grupować oddziały", b.enemy.hold)
