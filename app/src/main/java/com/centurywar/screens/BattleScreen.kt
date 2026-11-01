@@ -248,6 +248,8 @@ class BattleScreen(
     private val introTooltip = TooltipBubble()
     private val missingXpTooltip = TooltipBubble()
     private var missingXpRemaining = 0f
+    internal val lockedTooltip = TooltipBubble()
+    internal var lockedRemaining = 0f
     private var introDelay = 0f
     private var introRemaining = 0f
     private var introChecked = false
@@ -339,7 +341,7 @@ class BattleScreen(
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(
         unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
-        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn,
+        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn, unitBtn[3],
     ), rankedDaily)
 
     /** Plansza nie zapisuje komend i nie wykonuje kroków symulacji. */
@@ -630,6 +632,9 @@ class BattleScreen(
             r.follow(dt, followRamp)
         }
         bottomHudView.refreshButtons()
+        if (lockedRemaining > 0f) {
+            lockedRemaining = if (finished || paused) 0f else (lockedRemaining - dt).coerceAtLeast(0f)
+        }
         if (missingXpRemaining > 0f) {
             if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
             else missingXpRemaining = (missingXpRemaining - dt).coerceAtLeast(0f)
@@ -708,7 +713,8 @@ class BattleScreen(
                 val i = b.id - UNIT0
                 val def = p.unit(roles[i])
                 title = L[def.tierNameKeys[(p.unitTier[i] - 1).coerceIn(0, 2)]]
-                body = if (i == 3) L.f("tip53_unit_elite", def.cost, p.queueSize)
+                body = if (i == 3 && !p.eliteUnlocked) EliteUnlock.lockedText(g.profile)
+                    else if (i == 3) L.f("tip53_unit_elite", def.cost, p.queueSize)
                     else L.f("tip53_unit", L["bh_role_" + i],
                         L["bh_role_" + when (i) { 0 -> 1; 1 -> 2; else -> 0 }],
                         def.cost, p.queueSize)
@@ -954,6 +960,15 @@ class BattleScreen(
     }
 
     override fun onTap(x: Float, y: Float) {
+        // Zlecenie 141: tap zablokowanej elity mówi wprost, gdzie ją odblokować.
+        val elite = unitBtn[3]
+        if (!paused && !finished && !aimingBarrage && elite.visible && !battle.player.eliteUnlocked &&
+            (tut == null || tut.finished) && elite.contains(x, y)) {
+            lockedTooltip.set(L[battle.player.unit(roles[3]).tierNameKeys[0]],
+                EliteUnlock.lockedText(g.profile))
+            lockedRemaining = 4f
+            return
+        }
         // Krótki tap wyłączonego awansu nie wydaje komendy i podaje brakujące XP.
         if (!paused && !finished && !aimingBarrage && evolveBtn.visible &&
             !evolveBtn.enabled && battle.player.era < cfg.maxEra &&
@@ -1425,6 +1440,10 @@ class BattleScreen(
         if (!paused && !finished && eraIntro?.active != true && missingXpRemaining > 0f &&
             hints.activeId < 0 && !isTooltipHeld) {
             ui.tooltip(c, evolveBtn.r, missingXpTooltip, g.insetL, g.insetT,
+                w - g.insetR, h - g.insetB)
+        }
+        if (!paused && !finished && eraIntro?.active != true && lockedRemaining > 0f && !isTooltipHeld) {
+            ui.tooltip(c, unitBtn[3].r, lockedTooltip, g.insetL, g.insetT,
                 w - g.insetR, h - g.insetB)
         }
         if (!paused && !finished && eraIntro?.active != true) drawHeldTooltip(c)

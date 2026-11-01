@@ -154,8 +154,17 @@ object L {
         putAll(part126())
         putAll(part124())
         putAll(part139())
+        putAll(part141())
         }
     }
+
+    /** Zlecenie 141: jak odblokować jednostkę elitarną (nazwa i koszt badania z Research). */
+    private fun part141(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "elite141_locked" to t("Zablokowane. Odblokuj w Badaniach: %s (%d medali)", "Locked. Unlock in Research: %s (%d medals)", "Gesperrt. In der Forschung freischalten: %s (%d Medaillen)", "Bloqueado. Desbloquéalo en Investigación: %s (%d medallas)", "Verrouillé. Débloquez dans Recherche : %s (%d médailles)", "Bloccato. Sblocca in Ricerca: %s (%d medaglie)", "Bloqueado. Desbloqueie em Pesquisa: %s (%d medalhas)", "Заблоковано. Відкрий у Дослідженнях: %s (%d медалей)", "Vergrendeld. Ontgrendel in Onderzoek: %s (%d medailles)", "Kilitli. Araştırma'da aç: %s (%d madalya)"),
+        "elite141_afford" to t("Stać cię! Odblokuj w Badaniach: %s (%d medali)", "You can afford it! Unlock in Research: %s (%d medals)", "Du kannst es dir leisten! In der Forschung freischalten: %s (%d Medaillen)", "¡Te lo puedes permitir! Desbloquéalo en Investigación: %s (%d medallas)", "Vous en avez les moyens ! Débloquez dans Recherche : %s (%d médailles)", "Te lo puoi permettere! Sblocca in Ricerca: %s (%d medaglie)", "Você pode pagar! Desbloqueie em Pesquisa: %s (%d medalhas)", "Тобі вистачає! Відкрий у Дослідженнях: %s (%d медалей)", "Je kunt het betalen! Ontgrendel in Onderzoek: %s (%d medailles)", "Paran yetiyor! Araştırma'da aç: %s (%d madalya)"),
+        "elite141_menu_hint" to t("Masz medale na: %s (%d). Odblokuj jednostki elitarne w Badaniach.", "You have the medals for %s (%d). Unlock elite units in Research.", "Genug Medaillen für %s (%d). Schalte Elite-Einheiten in der Forschung frei.", "Tienes medallas para %s (%d). Desbloquea unidades de élite en Investigación.", "Vous avez les médailles pour %s (%d). Débloquez les unités d’élite dans Recherche.", "Hai le medaglie per %s (%d). Sblocca le unità d'élite in Ricerca.", "Você tem medalhas para %s (%d). Desbloqueie unidades de elite em Pesquisa.", "У тебе є медалі на: %s (%d). Відкрий елітних бійців у Дослідженнях.", "Je hebt medailles voor %s (%d). Ontgrendel elite-eenheden in Onderzoek.", "Madalyan yetiyor: %s (%d). Seçkin birlikleri Araştırma'da aç."),
+        "elite141_enemy_hint" to t("Wróg ma elitę? Odblokuj własną w Badaniach: %s (%d medali).", "Enemy has elites? Unlock your own in Research: %s (%d medals).", "Der Feind hat Elite? Schalte deine eigene in der Forschung frei: %s (%d Medaillen).", "¿El enemigo tiene élite? Desbloquea la tuya en Investigación: %s (%d medallas).", "L’ennemi a une élite ? Débloquez la vôtre dans Recherche : %s (%d médailles).", "Il nemico ha l'élite? Sblocca la tua in Ricerca: %s (%d medaglie).", "O inimigo tem elite? Desbloqueie a sua em Pesquisa: %s (%d medalhas).", "Ворог має еліту? Відкрий свою в Дослідженнях: %s (%d медалей).", "Heeft de vijand elite? Ontgrendel je eigen in Onderzoek: %s (%d medailles).", "Düşmanın seçkinleri mi var? Kendininkini Araştırma'da aç: %s (%d madalya)."),
+    )
 
     /** Zlecenie 139: baner dostępnego awansu epoki w bitwie. */
     private fun part139(): Array<Pair<String, Array<out String>>> = arrayOf(

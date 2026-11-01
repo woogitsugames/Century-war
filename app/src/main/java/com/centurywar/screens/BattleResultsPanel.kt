@@ -120,6 +120,10 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             resultReasonText2 = ""
             tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         }
+        // Zlecenie 141: po bitwie wyraźnie wskazujemy Doktrynę elit, gdy gracza na nią stać.
+        if (tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
+            tipText = EliteUnlock.text("elite141_afford", g.profile)
+        }
         prepareResultTipLines()
         }
     }

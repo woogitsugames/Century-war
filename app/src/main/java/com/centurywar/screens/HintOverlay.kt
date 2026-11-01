@@ -41,6 +41,8 @@ class HintOverlay(
         val field: RectF,
         val weather: RectF,
         val variants: Array<Button>,
+        /** Przycisk jednostki elitarnej (podpowiedź o elicie wroga). */
+        val eliteUnit: Button? = null,
     )
 
     private class HintDef(val id: Int, val key: String, val priority: Int)
@@ -66,6 +68,10 @@ class HintOverlay(
         const val VARIANT = 18
         const val WEATHER = 19
         const val FIRST_BATTLE = 20
+        /** Zlecenie 141: stać gracza na Doktrynę elit (menu, przycisk Badań). */
+        const val ELITE_RESEARCH = 21
+        /** Zlecenie 141: pierwsza elita wroga, gdy gracz nie ma własnej. */
+        const val ENEMY_ELITE = 22
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -84,6 +90,7 @@ class HintOverlay(
             HintDef(DAILY, "hint_daily_battle", 96),
             HintDef(VARIANT, "hint_variant54", 110),
             HintDef(WEATHER, "hint_weather54", 86),
+            HintDef(ENEMY_ELITE, "elite141_enemy_hint", 92),
         )
         private val SCREEN_KEYS = arrayOf(
             "hint_research", "hint_missions", "hint_daily_menu", "hint_endless_menu",
@@ -156,12 +163,19 @@ class HintOverlay(
         val key = when (id) {
             in RESEARCH..ENDLESS_MENU -> SCREEN_KEYS[id - RESEARCH]
             FIRST_BATTLE -> "first_next_steps"
+            ELITE_RESEARCH -> "elite141_menu_hint"
             else -> return
         }
         if (battle != null || activeId >= 0 ||
             !g.profile.hintsEnabled || g.profile.hintsSeen and (1L shl id) != 0L) return
         screenFocus = focus
         activate(id, key)
+    }
+
+    private fun enemyHasElite(): Boolean {
+        val b = battle ?: return false
+        for (unit in b.units) if (unit.alive && unit.side == 1 && unit.def.role == Role.ELITE) return true
+        return false
     }
 
     private fun nearEnemyCount(): Int {
@@ -199,6 +213,7 @@ class HintOverlay(
             DAILY -> b.cfg.mode == Mode.DAILY && rankedDaily && b.time < 18f
             VARIANT -> b.pendingVariant != null
             WEATHER -> b.weather != Weather.CLEAR
+            ENEMY_ELITE -> !p.eliteUnlocked && enemyHasElite()
             else -> false
         }
     }
@@ -215,6 +230,7 @@ class HintOverlay(
         body = when (id) {
             BOSS -> L[if (battle?.currentBoss()?.bossKind == 2) "hint_boss_aura" else key]
             MODIFIERS -> modifierDescription()
+            ELITE_RESEARCH, ENEMY_ELITE -> EliteUnlock.text(key, g.profile)
             else -> L[key]
         }
         prepareLayout()
@@ -308,6 +324,7 @@ class HintOverlay(
             OLD_TURRET -> t.turrets.r
             VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
             WEATHER -> t.weather
+            ENEMY_ELITE -> t.eliteUnit?.r
             else -> null
         }
     }
