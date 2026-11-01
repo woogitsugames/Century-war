@@ -926,6 +926,7 @@ class BattleScreen(
         mode, if (mode == Mode.DAILY || weekly >= 0L) seed else seed + 1, aiPower,
         startEra, maxEra, modifiers, playerBonuses, stageIndex,
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
+        dailyEvent,
     )
 
     private fun nextScreen(): Screen = when (cfg.mode) {
