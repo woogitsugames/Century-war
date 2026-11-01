@@ -25,7 +25,7 @@ internal object HintFrame {
         var line = ""
         for (word in s.split(' ')) {
             if (word.isEmpty()) continue
-            val combined = if (line.isEmpty()) word else "$" + "{line} $" + "{word}"
+            val combined = if (line.isEmpty()) word else "$line $word"
             if (line.isNotEmpty() && ui.measure(combined, size) > width) {
                 if (n == out.size) return n
                 out[n++] = line
@@ -40,7 +40,7 @@ internal object HintFrame {
                 out[n++] = remaining.substring(0, length)
                 remaining = remaining.substring(length)
             }
-            line = if (line.isEmpty()) remaining else "$" + "{line} $" + "{remaining}"
+            line = if (line.isEmpty()) remaining else "$line $remaining"
         }
         if (line.isNotEmpty() && n < out.size) out[n++] = line
         return n
