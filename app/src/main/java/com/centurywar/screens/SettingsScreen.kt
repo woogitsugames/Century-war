@@ -55,7 +55,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         visibleRows.clear()
         visibleRows.addAll(soundRows)
         visibleRows.addAll(personalRows)
-        if (g.online.available) visibleRows.add(playGames)
+        visibleRows.add(playGames)
         if (g.scores != null) {
             visibleRows.add(globalRank)
             visibleRows.add(newIdentity)

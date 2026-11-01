@@ -4,7 +4,7 @@ package com.centurywar.meta
  * Most do rankingu globalnego. Domyślnie [Local] (tylko lokalne tablice w [Profile]).
  *
  * Adapter PGS v2 obsługuje cztery tablice: endless, daily, campaign i skirmish.
- * Identyfikatory w games_ids.xml muszą zostać skonfigurowane w Play Console.
+ * Identyfikatory są generowane z docs/store/play_games_ids.properties.
  * Dzienne wyniki używają okna TIME_SPAN_DAILY, nie fizycznego resetu tablicy.
  *
  * Symulacja jest deterministyczna, więc własny backend może odtworzyć bitwę

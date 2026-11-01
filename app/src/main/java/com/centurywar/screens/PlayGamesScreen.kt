@@ -36,9 +36,11 @@ class PlayGamesScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         back.label = L["back"]
+        action.visible = g.online.available
         action.label = if (g.online.state == OnlineState.CONNECTED || g.online.state == OnlineState.SYNCING)
             L["pgs_sync"] else L["pgs_sign_in"]
-        action.enabled = g.online.state != OnlineState.CHECKING && g.online.state != OnlineState.SYNCING
+        action.enabled = g.online.available && g.online.state != OnlineState.CHECKING &&
+            g.online.state != OnlineState.SYNCING
         action.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
     }
 
@@ -49,7 +51,7 @@ class PlayGamesScreen(g: Game) : Screen(g) {
         chrome.title(c, L["play_games"])
         Icons.draw(c, Icons.GLOBE, panel.centerX(), panel.top + 46 * dp, 50 * dp, dp = dp)
         ui.textO(c, L["pgs_account_status"], panel.centerX(), panel.top + 94 * dp, 15f, Ui.TEXT, Paint.Align.CENTER)
-        val key = when (g.online.state) {
+        val key = if (!g.online.available) "pgs_unavailable_version" else when (g.online.state) {
             OnlineState.CONNECTED -> "pgs_connected"
             OnlineState.SYNCING -> "pgs_syncing"
             OnlineState.CHECKING -> "pgs_checking"
@@ -59,16 +61,20 @@ class PlayGamesScreen(g: Game) : Screen(g) {
         }
         ui.textO(c, L[key], panel.centerX(), panel.top + 124 * dp, 20f,
             if (g.online.state == OnlineState.CONNECTED) Ui.GOOD else Ui.GOLD, Paint.Align.CENTER)
-        ui.textO(c, L["pgs_info"], panel.centerX(), panel.top + 158 * dp,
-            ui.fit(L["pgs_info"], 13f, panel.width() - 36 * dp), Ui.DIM, Paint.Align.CENTER)
-        ui.button(c, action, 15f)
+        val description = L[if (g.online.available) "pgs_info" else "pgs_local_only"]
+        ui.textO(c, description, panel.centerX(), panel.top + 158 * dp,
+            ui.fit(description, 13f, panel.width() - 36 * dp), Ui.DIM, Paint.Align.CENTER)
+        if (g.online.available) ui.button(c, action, 15f)
         ui.button(c, back, 16f)
     }
 
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()
-            1 -> if (g.online.state == OnlineState.CONNECTED) g.online.syncNow() else g.online.signIn()
+            1 -> if (g.online.available) {
+                if (g.online.state == OnlineState.CONNECTED) g.online.syncNow()
+                else g.online.signIn()
+            }
         }
     }
 }

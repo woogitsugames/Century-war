@@ -123,7 +123,14 @@ object L {
         putAll(part89())
         putAll(part84())
         putAll(part87())
+        putAll(part92())
     }
+
+    /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
+    private fun part92(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "pgs_unavailable_version" to t("Niedostępne w tej wersji", "Unavailable in this version", "In dieser Version nicht verfügbar", "No disponible en esta versión", "Indisponible dans cette version", "Non disponibile in questa versione", "Indisponível nesta versão", "Недоступно в цій версії", "Niet beschikbaar in deze versie", "Bu sürümde kullanılamıyor"),
+        "pgs_local_only" to t("Gra działa lokalnie. Nie wymaga konta Google.", "Local play works without a Google account.", "Lokal spielen ohne Google-Konto.", "Puedes jugar sin cuenta de Google.", "Jouez en local sans compte Google.", "Puoi giocare senza un account Google.", "Jogue sem uma conta Google.", "Можна грати локально без облікового запису Google.", "Lokaal spelen zonder Google-account.", "Google hesabı olmadan oynayabilirsiniz."),
+    )
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
     private fun part80(): Array<Pair<String, Array<out String>>> = arrayOf(
