@@ -1,7 +1,7 @@
 name: Balans kampanii (20 seedow)
 on:
   push:
-    branches: ['gpt/42-campaign-endgame-balance', 'gpt/96-campaign-remeasure']
+    branches: ['gpt/42-campaign-endgame-balance']
     paths:
       - 'sim/src/main/kotlin/com/centurywar/game/Modes.kt'
       - 'app/src/test/java/com/centurywar/game/BalanceReport.kt'
@@ -47,12 +47,6 @@ jobs:
           ./gradlew :app:testDebugUnitTest --rerun-tasks \
             --tests '*BalanceReport.campaignReport*' \
             --console=plain --no-configuration-cache
-      - name: Wyniki 20 seedow w logu CI
-        if: ${{ always() }}
-        run: |
-          for report in app/build/balance/report-*.csv; do
-            if [ -f "$report" ]; then cat "$report"; fi
-          done
       - name: Zapisz raport i logi testow
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
