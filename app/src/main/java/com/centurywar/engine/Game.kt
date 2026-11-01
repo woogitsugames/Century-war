@@ -38,6 +38,8 @@ interface Host {
     fun showApacheLicense() {}
     fun shareProblemReport() {}
     fun shareReplay(id: String) {}
+    fun requestProfileExport() {}
+    fun requestProfileImport() {}
 }
 
 /**
