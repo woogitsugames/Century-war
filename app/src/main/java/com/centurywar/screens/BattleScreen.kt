@@ -102,6 +102,11 @@ class BattleScreen(
     // wynik
     private var reward = 0
     private var rewardText = ""
+    private var totalMedalsGained = 0
+    private var missionsAdvanced = 0
+    private var retainedProgressText = ""
+    private val defeatReasons = arrayOfNulls<String>(2)
+    private var defeatReasonCount = 0
     private var newRecord = false
     private var tipKey = ""
     private var tipText = ""
@@ -198,6 +203,8 @@ class BattleScreen(
     /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
     private val queueInfoBtn = btn(90)
     private val introTooltip = TooltipBubble()
+    private val missingXpTooltip = TooltipBubble()
+    private var missingXpRemaining = 0f
     private var introDelay = 0f
     private var introRemaining = 0f
     private var introChecked = false
@@ -228,6 +235,10 @@ class BattleScreen(
     private var choiceDescLanguage = -1
     private var hudH = 0f
     private var topH = 0f
+    private var compactTop = false
+    private var enemyEraShown = -1
+    private var enemyEraLanguage = -1
+    private var enemyEraText = ""
 
     init {
         // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.
@@ -237,6 +248,16 @@ class BattleScreen(
         preparedEnemyEra = battle.enemy.era
         preparedPlayerVariant = battle.player.eraVariant
         preparedEnemyVariant = battle.enemy.eraVariant
+        armoryBtn.icon = { c, area ->
+            // Podpis Zbrojowni pozostaje pod ikoną; liczba ulepszeń jest w rogu.
+            Icons.draw(c, Icons.ANVIL, area.centerX(), area.top + area.height() * 0.24f,
+                area.height() * 0.34f, dp = dp)
+            val text = L["battle84_armory_short"]
+            ui.textO(c, text, area.centerX(), area.bottom - 22 * dp,
+                ui.fit(text, 10f, area.width() - 8 * dp), Ui.TEXT, Paint.Align.CENTER, 1.3f)
+            if (armoryBtn.label.isNotEmpty()) ui.cornerTag(c, armoryBtn.label,
+                area.right - 4 * dp, area.top + 4 * dp)
+        }
         for (i in 0..3) {
             val role = roles[i]
             unitBtn[i].icon = { c, rr ->
@@ -288,10 +309,11 @@ class BattleScreen(
 
     override fun layout() {
         val pad = 6 * dp
-        topH = 52 * dp
         val l = g.insetL + pad
         val rr = w - g.insetR - pad
         val avail = rr - l
+        compactTop = avail < 790 * dp
+        topH = if (compactTop) 108 * dp else 58 * dp
         val n = 10
         val gap = 5 * dp
         val size = min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
@@ -300,19 +322,32 @@ class BattleScreen(
         var x = l
         for (b in unitBtn) { b.set(x, y, size, size); x += size + gap }
         val arrow = min(24 * dp, size * 0.36f)
-        for (i in 0..3) unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
+        for (i in 0..3) {
+            unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
+            unitUpgrade[i].hitSlop = (48 * dp - arrow).coerceAtLeast(0f) / 2f
+        }
         queueInfoBtn.set(unitBtn[0].r.left, y - 23 * dp, 92 * dp, 22 * dp)
+        queueInfoBtn.hitSlop = 13 * dp
         x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         topBar.set(0f, 0f, w, topH + g.insetT)
         val t = g.insetT + 6 * dp
-        evolveBtn.set(l + 196 * dp, t, 118 * dp, 40 * dp)
-        pauseBtn.set(rr - 46 * dp, t, 46 * dp, 40 * dp)
-        mini.set(evolveBtn.r.right + 16 * dp, t + 13 * dp, pauseBtn.r.left - 112 * dp, t + 29 * dp)
-        if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
-        if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, t, mini.right + 27 * dp, t + 25 * dp)
-        else weatherRect.setEmpty()
+        evolveBtn.set(l + 196 * dp, t, 118 * dp, 48 * dp)
+        pauseBtn.set(rr - 48 * dp, t, 48 * dp, 48 * dp)
+        if (compactTop) {
+            // Wąski ekran: osobny rząd na minimapę, paski baz i zegar.
+            val side = min(98 * dp, max(54 * dp, (avail - 190 * dp) * 0.18f))
+            mini.set(l + side, t + 64 * dp, rr - side, t + 80 * dp)
+            weatherRect.set(mini.right + 8 * dp, mini.top, mini.right + 33 * dp, mini.bottom)
+        } else {
+            mini.set(evolveBtn.r.right + 16 * dp, t + 15 * dp,
+                pauseBtn.r.left - 112 * dp, t + 31 * dp)
+            if (mini.width() < 190 * dp) mini.set(0f, 0f, 0f, 0f)
+            if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, t,
+                mini.right + 27 * dp, t + 25 * dp)
+            else weatherRect.setEmpty()
+        }
         goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
         xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
         fieldRect.set(0f, topH + g.insetT, w, h - hudH)
@@ -393,22 +428,31 @@ class BattleScreen(
         pauseMusicRect.set(sliderX, rowTop(1), controlsRight, rowTop(1) + ctrlH)
         pauseVibrationBtn.set(controlsRight - 96 * dp, rowTop(2), 96 * dp, ctrlH)
         pauseSpeedBtn.set(controlsRight - 96 * dp, rowTop(3), 96 * dp, ctrlH)
+        pauseVibrationBtn.hitSlop = (48 * dp - ctrlH).coerceAtLeast(0f) / 2f
+        pauseSpeedBtn.hitSlop = pauseVibrationBtn.hitSlop
 
         val buttonGap = 8 * dp
         val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
-        for (i in pauseMenu.indices) pauseMenu[i].set(
-            pausePanel.left + 18 * dp + i * (buttonW + buttonGap), buttonTop, buttonW, buttonH)
+        for (i in pauseMenu.indices) {
+            pauseMenu[i].set(pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
+                buttonTop, buttonW, buttonH)
+            pauseMenu[i].hitSlop = (48 * dp - buttonH).coerceAtLeast(0f) / 2f
+        }
     }
 
     private fun layoutResults() {
         val rw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
-        val rh = min(h - g.insetT - g.insetB - 40 * dp, 400 * dp)
-        resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp, w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
-        val bw = (rw - 56 * dp) / 3
+        val rh = min(h - g.insetT - g.insetB - 40 * dp, 430 * dp)
+        resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp,
+            w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
+        val gap = 5 * dp
+        val usable = rw - 32 * dp - gap * 2
         val bh = 50 * dp
-        restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, bw, bh)
-        replayEnd.set(restartEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
-        continueBtn.set(replayEnd.r.right + 4 * dp, restartEnd.r.top, bw, bh)
+        val first = usable * 0.26f
+        val middle = usable * 0.44f
+        restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, first, bh)
+        replayEnd.set(restartEnd.r.right + gap, restartEnd.r.top, middle, bh)
+        continueBtn.set(replayEnd.r.right + gap, restartEnd.r.top, usable - first - middle, bh)
         if (finished) prepareResultTipLines()
     }
 
@@ -417,13 +461,13 @@ class BattleScreen(
         val ph = min(260 * dp, h - g.insetT - g.insetB - 20 * dp)
         val cy = (g.insetT + h - g.insetB) / 2f
         upgradePanel.set(w / 2 - pw / 2, cy - ph / 2, w / 2 + pw / 2, cy + ph / 2)
-        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 54 * dp, pw - 50 * dp, 40 * dp)
-        upgradeClose.set(upgradePanel.right - 28 * dp, upgradePanel.top - 12 * dp, 38 * dp, 38 * dp)
+        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 62 * dp, pw - 50 * dp, 48 * dp)
+        upgradeClose.set(upgradePanel.right - 38 * dp, upgradePanel.top - 12 * dp, 48 * dp, 48 * dp)
     }
 
     private fun layoutTurretPanel() {
         val pw = min(480 * dp, w - 40 * dp)
-        val rowH = 46 * dp
+        val rowH = 50 * dp
         turretSlotsLaid = battle.player.slots
         val ph = 62 * dp + rowH * turretSlotsLaid + 10 * dp
         panel.set(w / 2 - pw / 2, (h - hudH - ph) / 2 + topH / 2, w / 2 + pw / 2, (h - hudH - ph) / 2 + topH / 2 + ph)
@@ -431,10 +475,10 @@ class BattleScreen(
         val sw = min(116 * dp, pw * 0.25f)
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
             val y = panel.top + 50 * dp + i * rowH
-            slotSell[i].set(panel.right - 20 * dp - sw, y, sw, rowH - 8 * dp)
-            slotBuy[i].set(slotSell[i].r.left - 8 * dp - bw, y, bw, rowH - 8 * dp)
+            slotSell[i].set(panel.right - 20 * dp - sw, y, sw, 48 * dp)
+            slotBuy[i].set(slotSell[i].r.left - 8 * dp - bw, y, bw, 48 * dp)
         }
-        closeBtn.set(panel.right - 30 * dp, panel.top - 12 * dp, 40 * dp, 40 * dp)
+        closeBtn.set(panel.right - 38 * dp, panel.top - 12 * dp, 48 * dp, 48 * dp)
     }
 
 
@@ -453,6 +497,12 @@ class BattleScreen(
         pauseLanguage = -1
         variantDescLanguage = -1
         choiceDescLanguage = -1
+        enemyEraLanguage = -1
+        if (missingXpRemaining > 0f && battle.player.era < cfg.maxEra) {
+            val missing = kotlin.math.ceil(
+                (Defs.evolveXp[battle.player.era] - battle.player.xp).coerceAtLeast(0f).toDouble()).toInt()
+            missingXpTooltip.set(L["evolve"], L.f("battle84_missing_xp", missing))
+        }
         if (introRemaining > 0f) introTooltip.set(L["hint_title"], L["tip53_intro"])
         tut?.onLanguageChanged()
         super.onLanguageChanged()
@@ -548,6 +598,10 @@ class BattleScreen(
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
         refreshButtons()
+        if (missingXpRemaining > 0f) {
+            if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
+            else missingXpRemaining = (missingXpRemaining - dt).coerceAtLeast(0f)
+        }
         // Nie zużywamy czasu ani bitu wskazówki, gdy zasłania ją inna podpowiedź.
         if (!paused && !finished && hints.activeId < 0 && !isTooltipHeld &&
             showUpgrade < 0 && !showTurrets &&
@@ -634,7 +688,7 @@ class BattleScreen(
         armoryBtn.subIcon = Icons.COIN
         armoryBtn.enabled = p.gold >= battle.armoryCost(p) && p.armory < 15
         barrageBtn.visible = !modal
-        barrageBtn.label = ""
+        barrageBtn.label = L["battle84_barrage_short"]
         barrageBtn.iconId = Icons.METEOR
         barrageBtn.enabled = battle.abilityReady(p, 0)
         barrageBtn.progress = if (p.abilityCd[0] > 0f) 1f - p.abilityCd[0] / (Battle.BARRAGE_CD * p.abilityCdMul) else -1f
@@ -642,7 +696,7 @@ class BattleScreen(
         barrageBtn.selected = aimingBarrage
         barrageBtn.highlight = aimingBarrage
         rallyBtn.visible = !modal && p.rallyUnlocked
-        rallyBtn.label = ""
+        rallyBtn.label = L["battle84_rally_short"]
         rallyBtn.iconId = Icons.FLAG; rallyBtn.iconTint = Ui.PLAYER
         rallyBtn.sub = ""
         rallyBtn.enabled = battle.abilityReady(p, 1)
@@ -690,8 +744,8 @@ class BattleScreen(
         restartEnd.label = L["restart"]
         restartEnd.iconId = Icons.RESTART
         replayEnd.visible = finished && resultTime > 0.8f && replayBytes != null
-        replayEnd.label = L["replay"]
-        replayEnd.iconId = Icons.PLAY
+        replayEnd.label = L["battle84_watch_replay"]
+        replayEnd.iconId = Icons.WATCH_EYE
 
         val choiceOpen = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
@@ -818,8 +872,12 @@ class BattleScreen(
                 title = L[if (p.era >= cfg.maxEra) "rank" else "evolve"].let {
                     if (p.era >= cfg.maxEra) L.f("rank", p.rank) else it
                 }
-                body = if (p.era >= cfg.maxEra) L["tip53_veteran"]
-                    else L.f("tip53_evolve", Defs.evolveXp[p.era])
+                body = when {
+                    p.era >= cfg.maxEra -> L["tip53_veteran"]
+                    !battle.canEvolve(p) -> L.f("battle84_missing_xp",
+                        kotlin.math.ceil((Defs.evolveXp[p.era] - p.xp).coerceAtLeast(0f).toDouble()).toInt())
+                    else -> L.f("tip53_evolve", Defs.evolveXp[p.era])
+                }
             }
             PAUSE -> { title = L["paused"]; body = L["tip53_pause"] }
             90 -> { title = L["tip53_queue_title"]; body = L.f("tip53_queue", p.queueSize) }
@@ -907,6 +965,7 @@ class BattleScreen(
                 g.profile.save()
             }
             EVOLVE -> if (commands.evolve()) {
+                missingXpRemaining = 0f
                 haptics.onEvolve()
                 maybeShowEraIntro()
             }
@@ -1082,6 +1141,17 @@ class BattleScreen(
     }
 
     override fun onTap(x: Float, y: Float) {
+        // Krótki tap wyłączonego awansu nie wydaje komendy i podaje brakujące XP.
+        if (!paused && !finished && !aimingBarrage && evolveBtn.visible &&
+            !evolveBtn.enabled && battle.player.era < cfg.maxEra &&
+            (tut == null || tut.finished) && evolveBtn.contains(x, y)) {
+            val p = battle.player
+            val missing = kotlin.math.ceil(
+                (Defs.evolveXp[p.era] - p.xp).coerceAtLeast(0f).toDouble()).toInt()
+            missingXpTooltip.set(L["evolve"], L.f("battle84_missing_xp", missing))
+            missingXpRemaining = 3.5f
+            return
+        }
         if (aimingBarrage) {
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
@@ -1153,6 +1223,9 @@ class BattleScreen(
         // Kolejka I/O usuwa zrzut w tej samej kolejności co wcześniejsze zapisy.
         g.snapshots?.deleteAsync()
         val pr = g.profile
+        val medalsBefore = pr.medals
+        val missionBefore = (pr.missionState.daily + pr.missionState.weekly)
+            .associate { it.id to it.progress }
         val won = battle.winner == 0
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
@@ -1234,7 +1307,10 @@ class BattleScreen(
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val finishedAt = System.currentTimeMillis()
         Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars, playerCommands = missionLog)
+        missionsAdvanced = (pr.missionState.daily + pr.missionState.weekly)
+            .count { it.progress > (missionBefore[it.id] ?: it.progress) }
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))
+        totalMedalsGained = (pr.medals - medalsBefore).coerceAtLeast(0)
         tipKey = if (won) "" else when {
             !battle.endless && battle.time >= Battle.SIEGE_START + 35f -> "tip_siege"
             battle.player.aliveCount >= battle.player.cap &&
@@ -1246,6 +1322,7 @@ class BattleScreen(
             battle.player.turretEra.none { it >= 0 } || battle.player.armory == 0 -> "tip_turret"
             else -> "tip_ability"
         }
+        if (!won) collectDefeatReasons()
         pr.recordBattle(cfg.mode, won, battle.time.toInt())
         g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
         tipIcon = when (tipKey) {
@@ -1277,6 +1354,33 @@ class BattleScreen(
         refreshResultTexts()
         if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
         if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
+    }
+
+    /** Dwie sprawdzalne przyczyny wybierane tylko z zakończonej bitwy. */
+    private fun collectDefeatReasons() {
+        defeatReasonCount = 0
+        val p = battle.player
+        val e = battle.enemy
+        fun add(key: String) {
+            if (defeatReasonCount < defeatReasons.size) defeatReasons[defeatReasonCount++] = key
+        }
+        if (surrendered) add("battle84_cause_surrender")
+        if (e.era > p.era) add("battle84_cause_era")
+        if (p.gold >= max(250f, battle.armoryCost(p) * 1.2f)) add("battle84_cause_gold")
+        if (p.slots > 0 && p.turretEra.none { it >= 0 }) add("battle84_cause_turrets")
+        if (e.spawned >= p.spawned + 4 && e.spawned > p.spawned * 1.25f)
+            add("battle84_cause_army")
+        if (e.goldEarned >= 200f && e.goldEarned > p.goldEarned * 1.3f)
+            add("battle84_cause_eco")
+        // Przy braku wymiernej przewagi wracamy do ogólnej wskazówki historycznej.
+        if (defeatReasonCount == 0 && tipKey.isNotEmpty()) add(tipKey)
+    }
+
+    private fun defeatReasonText(key: String): String = when (key) {
+        "battle84_cause_gold" -> L.f(key, battle.player.gold.toInt())
+        "battle84_cause_army" -> L.f(key, battle.player.spawned, battle.enemy.spawned)
+        "battle84_cause_eco" -> L.f(key, battle.player.goldEarned.toInt(), battle.enemy.goldEarned.toInt())
+        else -> L[key]
     }
 
     /** Rozpoznaj kontrę wobec najczęściej szkolonej roli; tylko liczniki z bitwy. */
@@ -1486,6 +1590,11 @@ class BattleScreen(
             ui.tooltip(c, unitBtn[0].r, introTooltip, g.insetL, g.insetT,
                 w - g.insetR, h - g.insetB)
         }
+        if (!paused && !finished && eraIntro?.active != true && missingXpRemaining > 0f &&
+            hints.activeId < 0 && !isTooltipHeld) {
+            ui.tooltip(c, evolveBtn.r, missingXpTooltip, g.insetL, g.insetT,
+                w - g.insetR, h - g.insetB)
+        }
         if (!paused && !finished && eraIntro?.active != true) drawHeldTooltip(c)
         eraIntro?.draw(c)
         ui.textScale = regularTextScale
@@ -1546,6 +1655,11 @@ class BattleScreen(
     private fun drawTop(c: Canvas) {
         val p = battle.player
         val e = battle.enemy
+        if (e.era != enemyEraShown || enemyEraLanguage != L.lang) {
+            enemyEraShown = e.era
+            enemyEraLanguage = L.lang
+            enemyEraText = L.f("battle84_enemy_era", L[Defs.eraKeys[e.era]])
+        }
         // pasek: ciemne tło, ciemny kontur i złota lamówka na dole
         ui.fill.color = Color.argb(200, 16, 20, 32)
         c.drawRect(topBar, ui.fill)
@@ -1575,19 +1689,20 @@ class BattleScreen(
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
             // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
-            val wx = mini.right + 14 * dp
-            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, t + 11 * dp, 21 * dp, dp = dp)
+            val wx = if (compactTop) mini.right + 19 * dp else mini.right + 14 * dp
+            val wy = if (compactTop) mini.centerY() else t + 11 * dp
+            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
             // gdy brak miejsca, zostaje sama ikona.
-            val eraLeft = pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
+            val eraLeft = pauseBtn.r.left - 10 * dp - ui.measure(enemyEraText, 12f, true) - 4 * dp
             val wAvail = eraLeft - (wx + 14 * dp) - 6 * dp
-            if (wAvail >= 30 * dp) {
+            if (!compactTop && wAvail >= 30 * dp) {
                 val size = ui.fit(weatherName, 12f, wAvail, 8f)
                 if (ui.measure(weatherName, size, true) <= wAvail)
                     ui.textO(c, weatherName, wx + 14 * dp, t + 15 * dp, size, Ui.TEXT)
             }
-            if (battle.weather == Weather.WIND) {
+            if (!compactTop && battle.weather == Weather.WIND) {
                 val dir = battle.windDirection().toFloat()
                 val mx = wx + 24 * dp
                 val my = t + 33 * dp
@@ -1597,7 +1712,7 @@ class BattleScreen(
                 c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my - 5 * dp, ui.stroke)
                 c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my + 5 * dp, ui.stroke)
             }
-            val hw = mini.width() * 0.5f - 14 * dp
+            val hw = max(24 * dp, mini.width() * 0.5f - 14 * dp)
             val hy = mini.top - 11 * dp
             ui.bar(c, mini.left + 12 * dp, hy, hw, 7 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)
             Icons.draw(c, Icons.TOWER, mini.left + 4 * dp, hy + 3 * dp, 16 * dp, Ui.PLAYER, dp = dp)
@@ -1649,7 +1764,9 @@ class BattleScreen(
             }
             val pi = p.baseHp.toInt()
             if (pi != hpP) { hpP = pi; hpPText = pi.toString() }
-            ui.textO(c, hpPText, mini.left, mini.bottom + 14 * dp, 11f, Ui.PLAYER, Paint.Align.LEFT, 1.8f)
+            ui.textO(c, hpPText, mini.left, mini.bottom + 14 * dp,
+                ui.fit(hpPText, 11f, mini.width() * 0.28f, 8f),
+                Ui.PLAYER, Paint.Align.LEFT, 1.8f)
             val rightLabel = if (battle.endless) {
                 if (battle.wave != waveShown) { waveShown = battle.wave; waveText = L.f("wave", battle.wave) }
                 waveText
@@ -1658,13 +1775,22 @@ class BattleScreen(
                 if (ei != hpE) { hpE = ei; hpEText = ei.toString() }
                 hpEText
             }
-            ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp, 11f, if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
+            ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp,
+                ui.fit(rightLabel, 11f, mini.width() * 0.28f, 8f),
+                if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
             val sp = battle.siegePressure()
             if (sp > 1f) {
                 val k = kotlin.math.round(sp * 10f).toInt()
                 if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
-                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.BAD, Paint.Align.CENTER, 1.8f)
-            } else ui.textO(c, timeStr(battle.time), mini.centerX(), mini.bottom + 14 * dp, 11f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
+                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp,
+                    ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f),
+                    Ui.BAD, Paint.Align.CENTER, 1.8f)
+            } else {
+                val clock = timeStr(battle.time)
+                ui.textO(c, clock, mini.centerX(), mini.bottom + 14 * dp,
+                    ui.fit(clock, 11f, mini.width() * 0.40f, 8f),
+                    Ui.TEXT, Paint.Align.CENTER, 1.8f)
+            }
         }
         if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
             val boss = battle.currentBoss()
@@ -1709,7 +1835,9 @@ class BattleScreen(
         }
         // przeciwnik (epoka) + doktryny gracza jako ikony
         val ex = pauseBtn.r.left - 10 * dp
-        ui.textO(c, L[Defs.eraKeys[e.era]], ex, t + 15 * dp, 12f, Ui.ENEMY, Paint.Align.RIGHT, 2f)
+        ui.textO(c, enemyEraText, ex, t + 15 * dp,
+            ui.fit(enemyEraText, 12f, ex - evolveBtn.r.right - 10 * dp, 8f),
+            Ui.ENEMY, Paint.Align.RIGHT, 2f)
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
             var x = ex - isz / 2
@@ -1966,14 +2094,20 @@ class BattleScreen(
         resultRewardLabel = L["reward"]
         resultNewRecordLabel = L["new_record"]
         weeklyResultLabel = if (weeklyResultKey.isEmpty()) "" else L[weeklyResultKey]
-        rewardText = "+" + L.plural("medals_n", reward.toLong())
-        tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
+        rewardText = "+" + L.plural("medals_n", totalMedalsGained.toLong())
+        retainedProgressText = L.f("battle84_kept", battle.player.kills, missionsAdvanced)
+        if (defeatReasonCount > 0) {
+            val first = defeatReasonText(defeatReasons[0]!!)
+            val second = if (defeatReasonCount > 1) defeatReasonText(defeatReasons[1]!!) else ""
+            tipText = L["why_lost"] + ": " + first +
+                (if (second.isNotEmpty()) "; " + second else "")
+        } else tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         prepareResultTipLines()
     }
 
     /** Zawijanie tylko przy rozliczeniu, zmianie języka lub wymiarów ekranu. */
     private fun prepareResultTipLines() {
-        if (tipKey.isEmpty()) { resultTipCount = 0; return }
+        if (tipText.isEmpty()) { resultTipCount = 0; return }
         val scale = ui.textScale
         ui.textScale = min(scale, 1.15f)
         try {
@@ -1997,7 +2131,7 @@ class BattleScreen(
     }
 
     private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
-        val lh = 28 * dp
+        val lh = 26 * dp
         if (y + lh > restartEnd.r.top - 8 * dp) return y
         val lx = resultPanel.left + 30 * dp
         val rx = resultPanel.right - 30 * dp
@@ -2048,14 +2182,23 @@ class BattleScreen(
         }
         if (cfg.mode != Mode.CAMPAIGN)
             y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
-        y = drawResultRow(c, y, Icons.MEDAL, resultRewardLabel, rewardText, Ui.GOLD)
+        if (totalMedalsGained > 0) y = drawResultRow(c, y, Icons.MEDAL,
+            resultRewardLabel, rewardText, Ui.GOLD)
+        if (!won && y + 23 * dp < restartEnd.r.top) {
+            ui.textO(c, retainedProgressText, rp.centerX(), y + 17 * dp,
+                ui.fit(retainedProgressText, 11f, rp.width() - 32 * dp),
+                Ui.GOOD, Paint.Align.CENTER, 1.3f)
+            y += 23 * dp
+        }
         if (newRecord && y + 26 * dp < restartEnd.r.top) {
             ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
-        if (tipKey.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
+        if (tipText.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
             Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            drawWrappedLines(c, resultTipLines, resultTipCount,
+            val available = ((restartEnd.r.top - y - 14 * dp) /
+                (13f * dp * ui.textScale * 1.3f)).toInt().coerceAtLeast(0)
+            drawWrappedLines(c, resultTipLines, min(resultTipCount, available),
                 rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
         }
         c.restore()
