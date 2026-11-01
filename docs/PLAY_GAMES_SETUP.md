@@ -6,7 +6,7 @@ Zależność: **com.google.android.gms:play-services-games-v2:22.1.0** (stabilna
 
 1. Otwórz Google Play Console, aplikację **Century War**, pakiet **com.centurywar.game** (sprawdź identyfikator w app/build.gradle.kts).
 2. Przejdź do Grow users → Play Games Services → Setup and management → Configuration i utwórz/połącz projekt Play Games Services v2 z grą.
-3. Skopiuj **Game services project ID** (same cyfry, a nie OAuth Client ID) do app/src/main/res/values/games_ids.xml jako game_services_project_id.
+3. Skopiuj **Game services project ID** (same cyfry, a nie OAuth Client ID) do docs/store/play_games_ids.properties jako game_services_project_id.
 4. Utwórz poświadczenia Android OAuth przypisane do pakietu com.centurywar.game i poprawnych odcisków SHA-1.
 5. Dodaj konta testerów do testowej konfiguracji PGS, opublikuj ją do testów i zaloguj się na urządzeniach wskazanymi kontami.
 
@@ -30,14 +30,14 @@ Zależność: **com.google.android.gms:play-services-games-v2:22.1.0** (stabilna
 
 Play Games Services → Setup and management → Leaderboards: utwórz cztery tablice, wszystkie sortowane od największego wyniku.
 
-| Klucz w grze | Zasób w games_ids.xml | Jednostka | Okno wyświetlania |
+| Klucz w grze | Klucz w play_games_ids.properties | Jednostka | Okno wyświetlania |
 | --- | --- | --- | --- |
 | endless | leaderboard_endless | punkty oblężenia | all-time |
 | daily | leaderboard_daily | punkty wyzwania dnia | daily |
 | campaign | leaderboard_campaign | suma gwiazdek 0–96 | all-time |
 | skirmish | leaderboard_skirmish | punkty potyczki | all-time |
 
-Wstaw ID przydzielone przez Play Console do zasobów app/src/main/res/values/games_ids.xml, zastępując wszystkie napisy REPLACE_ME. PGS włącza się dopiero po ustawieniu ID projektu i wszystkich czterech tablic. Tablica dzienna korzysta z wbudowanego wariantu czasowego TIME_SPAN_DAILY; nie jest to oddzielny reset fizycznych rekordów. Wyniki trzeba wysyłać w dniu rozgrywki, a nie po kolejnej północy UTC.
+Wstaw ID przydzielone przez Play Console do zasobów docs/store/play_games_ids.properties, zastępując wszystkie napisy REPLACE_ME. PGS włącza się dopiero po ustawieniu ID projektu i wszystkich czterech tablic. Tablica dzienna korzysta z wbudowanego wariantu czasowego TIME_SPAN_DAILY; nie jest to oddzielny reset fizycznych rekordów. Wyniki trzeba wysyłać w dniu rozgrywki, a nie po kolejnej północy UTC.
 
 ## 3. Osiągnięcia
 
@@ -49,8 +49,8 @@ na stan gry, seed ani kodowanie powtórek.
 
 W Play Console → Play Games Services → Setup and management → Achievements utwórz
 odpowiednie osiągnięcia **standardowe, odblokowywane jednorazowo**. Przepisz
-nadane przez Google identyfikatory do `app/src/main/res/values/games_ids.xml`.
-Nowe pola mają nazwy `achievement_<id>` i wartości `REPLACE_ME_<ID>` do zastąpienia.
+nadane przez Google identyfikatory do `docs/store/play_games_ids.properties`.
+Wszystkie 54 pola mają nazwy `achievement_<id>` i wartości `REPLACE_ME` do zastąpienia.
 Ich logiczny klucz po stronie katalogu to `cw_<id>`.
 
 | ID katalogu / sufiks zasobu | Warunek |
@@ -78,11 +78,12 @@ zbierane podczas bitwy bez alokacji w pętli. Wynik tygodniowy liczy się
 również wtedy, gdy oblężenie kończy się porażką po osiągnięciu progu.
 
 **Integracja online:** `OnlineAchievements` udostępnia logiczne klucze
-`cw_*` i bezpieczny adapter `NoOp`. W obecnej wersji nie ma jeszcze
-konkretnego mapowania `cw_*` na ID `AchievementsClient`; same placeholdery
-nie włączają synchronizacji osiągnięć w Play Games. Skonfigurowanie
-konsoli oraz adaptera jest wymagane przed publikacją funkcji online.
-Osiągnięcia lokalne pozostają w pełni funkcjonalne.
+`cw_*` i bezpieczny adapter `NoOp`. W obecnej wersji
+mapowania `cw_*` na zasoby odpowiada `PlayGamesIds.kt`. Po pełnej konfiguracji
+`PlayGamesLeaderboards` implementuje `OnlineAchievements`, wysyła odblokowania
+przez `AchievementsClient` i ponawia lokalne osiągnięcia po zalogowaniu i
+odtworzeniu chmury. Bez konfiguracji działa `NoOp`, a osiągnięcia lokalne
+pozostają w pełni funkcjonalne.
 
 ## 4. Włącz Saved Games
 
@@ -96,7 +97,7 @@ Osiągnięcia lokalne pozostają w pełni funkcjonalne.
 ## 5. Integracja UI (zrealizowana)
 
 - **Rankingi → Ranking globalny**: przycisk jest widoczny tylko wtedy, gdy podano poprawne ID PGS i inicjalizacja SDK powiodła się. Wybór otwiera odpowiednią tablicę (endless, daily, campaign, skirmish). Użytkownik niezalogowany może zalogować się przy otwieraniu tablicy.
-- **Ustawienia → Play Games**: ekran pokazuje stan konta (sprawdzanie, niezalogowany, połączono, synchronizacja, błąd) oraz przycisk zalogowania albo ręcznej synchronizacji.
+- **Ustawienia → Play Games**: ekran pokazuje stan konta i przycisk logowania lub synchronizacji. Bez konfiguracji wyświetla „Niedostępne w tej wersji” bez przycisku logowania.
 - Wznowienie aplikacji uruchamia asynchroniczną kontrolę `isAuthenticated`; nigdy nie blokuje ekranu.
 - Wyniki zwycięskiej potyczki wysyłane są bezpośrednio, a zapisane wcześniej rekordy może dosłać mechanizm synchronizacji profilu.
 - `g.online.available` informuje, czy funkcjonalność została poprawnie skonfigurowana i zainicjalizowana. **Nie** oznacza, że gracz jest zalogowany; do prezentacji stanu służy `g.online.state`.

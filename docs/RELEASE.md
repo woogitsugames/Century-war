@@ -135,15 +135,59 @@ Po podpisaniu upload key pozostają kroki w Play Console: polityka prywatności,
 Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 
 
+## Play Games: konfiguracja premierowa z jednego pliku
+
+**Jedynym źródłem identyfikatorów jest `docs/store/play_games_ids.properties`.**
+Nie edytuj ręcznie XML. Gradle generuje `games_ids.xml` osobno dla każdego wariantu
+w `app/build/generated/res/playGames/<wariant>/values/games_ids.xml`.
+Plik zawiera 59 kluczy: ID projektu, 4 rankingi i 54 osiągnięcia.
+
+1. Otwórz Google Play Console → **Century War** (`com.centurywar.game`) →
+   **Play Games Services → Setup and management → Configuration**. Utwórz usługę
+   i odczytaj numeryczny **Game services project ID** (nie OAuth Client ID).
+   Wpisz go jako `app_id` w `docs/store/play_games_ids.properties`.
+2. W **Play Games Services → Leaderboards** utwórz cztery rankingi
+   z sortowaniem malejącym i skopiuj ich identyfikatory z Play Console do
+   `leaderboard_endless` (oblężenie), `leaderboard_campaign` (gwiazdki),
+   `leaderboard_skirmish` (potyczka) i `leaderboard_daily` (wyzwanie dnia).
+   Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
+3. W **Play Games Services → Achievements** utwórz 54 osiągnięcia standardowe.
+   Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego
+   identyfikatora katalogu `id` skopiuj ID przyznane przez Play Console do
+   `achievement_<id>`, np. `achievement_win_1`. Wszystkie klucze z szablonu
+   muszą mieć prawdziwe ID. Mapowanie `cw_<id>` na zasoby jest w
+   `meta/PlayGamesIds.kt`; nie zmieniaj tego mapowania przy wpisywaniu ID.
+4. W **Play Games Services → Configuration → Credentials** utwórz
+   poświadczenia OAuth dla Androida (`com.centurywar.game`). Dodaj SHA-1
+   certyfikatu debug oraz certyfikatu **App signing key certificate** z
+   Play Console. Klucz upload może mieć inny SHA-1. Włącz **Saved Games**,
+   dodaj konta testerów i opublikuj konfigurację PGS do testów.
+5. Uruchom `./gradlew :app:generateDebugPlayGamesIds :app:assembleDebug` oraz
+   `./gradlew -p buildSrc test`. Debug bez konfiguracji lub z `REPLACE_ME`
+   uruchamia wyłącznie funkcje lokalne (`play_games_configured=false`).
+   Brak choć jednego ID lub placeholder blokuje **release** niezależnie od
+   `-PskipCheck=playGames`. ID o złym formacie powoduje błąd walidacji.
+6. Na urządzeniu testera z Google Play Services zainstaluj APK debug
+   z kompletem ID. Otwórz **Ustawienia → Play Games**: sprawdź logowanie
+   i synchronizację. Otwórz cztery tablice, wyślij wyniki z czterech trybów,
+   odblokuj osiągnięcie i potwierdź je w PGS. Na drugim urządzeniu sprawdź
+   pobranie profilu z chmury. Powtórz próbę offline i bez usług Google;
+   profil i gra muszą działać lokalnie. Zainstaluj również AAB z toru
+   **Internal testing** i potwierdź logowanie przy podpisie produkcyjnym.
+7. Przed premierą wykonaj `:app:releaseChecklist`, build wydania, testy
+   jednostkowe i testy na rzeczywistych urządzeniach. Sam build nie
+   potwierdza dostępności usług po stronie Play Console.
+
+Szczegóły i znaczenie osiągnięć: [PLAY_GAMES_SETUP.md](PLAY_GAMES_SETUP.md).
+
 ## Lista kontrolna dnia wydania — dla właściciela
 
 Przed pierwszą publikacją i przed **każdą kolejną** aktualizacją przejdź kroki w podanej kolejności.
 
 **Krok 0 — dane wydawcy (obowiązkowy):** otwórz
-[docs/store/OWNER_INPUT.md](store/OWNER_INPUT.md), uzupełnij sześć pól:
+[docs/store/OWNER_INPUT.md](store/OWNER_INPUT.md), uzupełnij pięć pól:
 pełna nazwa prawna wydawcy, e-mail kontaktowy, adres korespondencyjny,
-publiczny URL polityki HTTPS, rzeczywista data pierwszego wydania UTC,
-numeryczny identyfikator projektu Play Games. Nie wpisuj tutaj sekretów.
+publiczny URL polityki HTTPS i rzeczywista data pierwszego wydania UTC. Nie wpisuj tutaj sekretów.
 Następnie uruchom `./gradlew :app:renderStorePolicies` i opublikuj
 **wygenerowane** pliki PL/EN z `build/store-policies/` pod wskazanym adresem.
 Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
@@ -164,11 +208,12 @@ Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
    kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
    [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
    Nie publikuj APK/AAB podpisanych kluczem debug.
-4. **Play Games i rankingi.** W Play Console utwórz usługę gier, OAuth i cztery
-   tablice (endless, daily, campaign, skirmish). Zastąp wszystkie `REPLACE_ME`
-   w `app/src/main/res/values/games_ids.xml`. Skonfiguruj testerów i Saved
-   Games; przeprowadź rzeczywiste logowanie, zapis w chmurze i publikację wyników.
-   Szczegóły: [PLAY_GAMES_SETUP.md](PLAY_GAMES_SETUP.md).
+4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 54
+   osiągnięcia w Play Console. Ich ID wpisz wyłącznie w
+   `docs/store/play_games_ids.properties` (bez ręcznego XML).
+   Skonfiguruj testerów, OAuth i Saved Games; zweryfikuj logowanie,
+   chmurę, rankingi i osiągnięcia na urządzeniu.
+   Szczegóły w sekcji wyżej i [PLAY_GAMES_SETUP.md](PLAY_GAMES_SETUP.md).
 5. **Backend rankingu i podpis wyników.** Uruchom serwer z HTTPS, sprawdź
    `/health`, dostępną wersję protokołu i wysyłkę zweryfikowanej powtórki.
    Ustaw `CW_SERVER_URL`, `CW_HMAC_KEY` i `CW_PRIVACY_URL` w
@@ -213,14 +258,14 @@ jednym polskim komunikatem i blokuje `:app:assembleRelease` oraz
 `:app:bundleRelease`, jeśli:
 
 - `RELEASE_DAY` jest dawniej niż 30 dni temu lub dalej niż 60 dni w przyszłości;
-- manifest deklaruje Play Games, a `games_ids.xml` nadal ma `REPLACE_ME`;
+- `play_games_ids.properties` nie zawiera kompletu prawidłowych ID (generator release blokuje wydanie);
 - `CW_SERVER_URL` lub `CW_PRIVACY_URL` nie jest poprawnym adresem HTTPS;
 - `CW_HMAC_KEY` jest pusty;
 - `releaseVersionCode` nie przewyższa `release/last_version_code.txt`
   albo ten plik ma niepoprawną zawartość;
 - nie istnieje kompletny i poprawnie wskazany keystore upload lub podano
   standardowy podpis debug (ta kontrola jest **niepomijalna** przy normalnym release);
-- brakuje `docs/store/OWNER_INPUT.md`, któreś z jego sześciu pól pozostaje
+- brakuje `docs/store/OWNER_INPUT.md`, któreś z jego pięciu pól pozostaje
   niewypełnione albo ma nieprawidłowy format (e-mail, URL, data, ID PGS);
 - brakuje dokumentów `privacy_policy_pl.md`, `privacy_policy_en.md`,
   `data_safety.md` lub `content_rating.md`, lub jakikolwiek dokument
@@ -239,6 +284,7 @@ z `-PciTestDebugSigning=true`; nie jest to opcja publikacyjna. Przykład:
 ./gradlew :app:assembleRelease -PskipCheck=playGames,releaseDay
 ```
 
+Wyjątek `playGames` nie wyłącza walidacji generatora zasobów release.
 Wyjątek **nie konfiguruje** brakującej usługi ani nie naprawia podpisu.
 Ostateczna publikacja wymaga zaliczenia całej listy kontrolnej bez flag pomijających.
 Workflow `release-check.yml` świadomie pomija konfigurację niezbędną
