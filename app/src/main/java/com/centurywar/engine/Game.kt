@@ -66,7 +66,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var scores: ScoreClient? = null
     var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
     /** Null w testach; na urządzeniu ustawia MainActivity. */
-    var sound: Sound? = null
+    @Volatile var sound: Sound? = null
     /** Muzyka działa niezależnie od efektów SoundPool. */
     var music: Music? = null
 
