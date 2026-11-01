@@ -6,33 +6,71 @@ import android.graphics.Color
 import android.graphics.LightingColorFilter
 import android.graphics.Paint
 import android.graphics.Picture
+import com.centurywar.engine.Quality
 
 /**
- * Błysk bazy bez saveLayer na każdą klatkę trafienia.
- * Canvas.drawPicture nie przyjmuje Paint: filtr nakładamy na bitmapową kopię
- * Picture, odświeżaną wyłącznie po zmianie nagranego korpusu bazy.
+ * Bitmapy błysku są tworzone dopiero przy pierwszym trafieniu bazy.
+ * Na LOW obie strony mogą współdzielić jedną bitmapę; przy zbyt małym budżecie
+ * rysujemy samo Picture, zamiast ryzykować OutOfMemoryError.
  */
-internal class BaseFlashCache(width: Int, height: Int) {
-    private val images = Array(2) { Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888) }
-    private val painters = Array(2) { Canvas(images[it]) }
+internal class BaseFlashCache(
+    private val width: Int,
+    private val height: Int,
+    memoryClassMb: Int = 256,
+    qualityLevel: Int = Quality.HIGH
+) {
+    private val budget = BitmapCacheBudget(memoryClassMb)
+    private val images = arrayOfNulls<Bitmap>(2)
+    private val painters = arrayOfNulls<Canvas>(2)
     private val sources = arrayOfNulls<Picture>(2)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
+    private var quality = -1
+    private var slots = 0
 
     // LightingColorFilter: RGB' = RGB * (255-a)/255 + a, alfa bez zmian.
-    // Odpowiednik białej warstwy SRC_ATOP, ale bez alokacji filtra na klatkę.
     private val filters = Array(111) { a ->
         val multiplier = Color.rgb(255 - a, 255 - a, 255 - a)
         val addition = Color.rgb(a, a, a)
         LightingColorFilter(multiplier, addition)
     }
 
+    init { setQuality(qualityLevel) }
+
+    /** Wywoływane przed renderem; po spadku jakości nadmiarowe bitmapy zwalniamy. */
+    fun setQuality(level: Int) {
+        if (quality == level) return
+        quality = level
+        slots = budget.bitmapSlots(level, width, height)
+        for (i in slots until images.size) {
+            images[i]?.recycle()
+            images[i] = null
+            painters[i] = null
+            sources[i] = null
+        }
+    }
+
+    internal val budgetBytes: Long get() = budget.limitBytes(quality)
+    internal val cachedBytes: Long get() =
+        images.count { it != null }.toLong() * width.toLong() * height.toLong() * 4L
+
     fun draw(c: Canvas, picture: Picture, side: Int, alpha: Int) {
-        if (sources[side] !== picture) {
-            images[side].eraseColor(Color.TRANSPARENT)
-            painters[side].drawPicture(picture)
-            sources[side] = picture
+        if (slots == 0) {
+            c.drawPicture(picture)
+            return
+        }
+        val slot = if (slots == 1) 0 else side
+        var image = images[slot]
+        if (image == null) {
+            image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            images[slot] = image
+            painters[slot] = Canvas(image)
+        }
+        if (sources[slot] !== picture) {
+            image.eraseColor(Color.TRANSPARENT)
+            painters[slot]!!.drawPicture(picture)
+            sources[slot] = picture
         }
         paint.colorFilter = filters[alpha.coerceIn(0, 110)]
-        c.drawBitmap(images[side], 0f, 0f, paint)
+        c.drawBitmap(image, 0f, 0f, paint)
     }
 }
