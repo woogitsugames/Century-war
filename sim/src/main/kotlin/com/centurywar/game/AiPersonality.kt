@@ -54,7 +54,7 @@ enum class AiPersonality(
         10, 20, 35, 35,
         90f, 0.22f, 8f, 0.88f, 8f, 1.8f,
         1, 2, 6, false, 0.80f, 7,
-        1.70f, 0.70f, 0.85f, 75, true,
+        1.70f, 0.70f, 1.05f, 45, true,
     ),
     BALANCED(
         30, 28, 28, 14,
