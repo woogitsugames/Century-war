@@ -5,12 +5,14 @@ on:
     branches:
       - 'gpt/50-store-graphics'
       - 'gpt/75-store-refresh'
+      - 'gpt/117-store-screenshots-3'
     paths:
       - 'app/src/test/java/com/centurywar/screens/StoreGraphicsTest.kt'
       - 'app/src/test/resources/store/**'
       - 'docs/store/STORE_GRAPHICS.md'
       - 'docs/store/listing_*.md'
       - 'docs/store/screenshots_plan.md'
+      - 'scripts/validate_store_graphics.py'
       - '.github/workflows/store-graphics.yml'
   workflow_dispatch:
 
@@ -18,10 +20,63 @@ permissions:
   contents: read
 
 jobs:
-  store-graphics:
-    name: Generuj grafiki sklepu PL/EN
+  verify:
+    name: Kompilacja i testy bazowe
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj APK debug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --no-configuration-cache --console=plain
+      - name: Sprawdź języki i zasoby
+        run: ./gradlew :app:testDebugUnitTest --tests '*StoreGraphicsTest.storeAssetRequirements*' --tests '*StoreGraphicsTest.listingLimits*' --tests '*LTest*' --no-configuration-cache --console=plain
+      - name: Testy symulacji
+        run: ./gradlew :sim:test --no-configuration-cache --console=plain
+      - name: Raport testów
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-store-verify-report
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+            sim/build/reports/tests/
+            sim/build/test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  render:
+    name: Generuj ${{ matrix.group }}
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: pl-en
+            languages: pl,en
+          - group: de-es
+            languages: de,es
+          - group: fr-it
+            languages: fr,it
+          - group: pt-uk
+            languages: pt,uk
+          - group: nl-tr
+            languages: nl,tr
     steps:
       - uses: actions/checkout@v4
       - name: JDK 17
@@ -41,28 +96,50 @@ jobs:
           path: ~/.m2/repository/org/robolectric
           key: robolectric-store-${{ runner.os }}-sdk35-${{ hashFiles('app/build.gradle.kts') }}
           restore-keys: |
-            robolectric-${{ runner.os }}-sdk35-
-      - name: Wykonaj generator PL i EN
+            robolectric-store-${{ runner.os }}-sdk35-
+      - name: Wygeneruj grafiki
         env:
           STORE_GRAPHICS: 'true'
+          STORE_LANGUAGES: ${{ matrix.languages }}
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:testDebugUnitTest --tests '*StoreGraphicsTest*' --no-configuration-cache --console=plain
-      - name: Udostepnij grafiki
+          ./gradlew :app:testDebugUnitTest --tests '*StoreGraphicsTest.generate*' --no-configuration-cache --console=plain
+      - name: Zachowaj grupę grafik
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: century-war-store-graphics
+          name: store-shard-${{ matrix.group }}
           path: app/build/store/
           if-no-files-found: warn
           retention-days: 14
-      - name: Raport testu
+      - name: Raport testu grupy
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: century-war-store-test-report
+          name: store-report-${{ matrix.group }}
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
+          retention-days: 14
+
+  bundle:
+    name: Waliduj i udostępnij komplet
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: store-shard-*
+          path: app/build/store/
+          merge-multiple: true
+      - name: Sprawdź 10 języków i formaty Google Play
+        run: python3 scripts/validate_store_graphics.py app/build/store/
+      - name: Udostępnij komplet grafik
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-store-graphics
+          path: app/build/store/
+          if-no-files-found: error
           retention-days: 14

@@ -1,54 +1,70 @@
-# Grafiki Google Play — odświeżenie 75 (PL/EN)
+# Grafiki Google Play — zlecenie 117 (10 języków)
 
-Generator `StoreGraphicsTest` renderuje prawdziwe ekrany gry i sceny `BattleRenderer`, bez przerabiania kodu produkcyjnego. Wersje PL i EN mają własne napisy, alternatywne opisy i interfejs w odpowiednim języku.
+Generator `StoreGraphicsTest` renderuje produkcyjne ekrany i sceny `BattleRenderer`. Zawartość obrazu pochodzi z gry, a lokalizowane nakładki i opisy są osobnymi zasobami. Dodatkowe podglądy Folda pokazują **prawdziwy HUD i dolny pasek akcji** z `BattleScreen` w obu orientacjach, bez symulowania elementów interfejsu.
 
-## Uruchomienie
+## Eksport i uruchomienie
 
-Wymagane: JDK 17, Android SDK 36, zasoby Robolectric SDK 35.
+Wymagane: JDK 17, Android SDK 36, Robolectric SDK 35. Wynik nie trafia do repozytorium.
 
 ```bash
 STORE_GRAPHICS=true ./gradlew :app:testDebugUnitTest --tests '*StoreGraphicsTest*' --no-configuration-cache --console=plain
+python3 scripts/validate_store_graphics.py app/build/store
 ```
 
-Bez `STORE_GRAPHICS=true` test eksportujący jest pomijany; niezależny test `listingLimits` sprawdza opisy sklepu przy zwykłym uruchomieniu.
+Domyślnie tworzone są wszystkie języki `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. Można ograniczyć zestaw do kontroli lokalnej lub równoległej pracy CI, np. `STORE_LANGUAGES=pl,en`. Nieobsługiwane i powtórzone kody powodują błąd.
 
-GitHub Actions: workflow **Store graphics**, uruchamiany na zmianach generatora w gałęziach `gpt/50-store-graphics` i `gpt/75-store-refresh`. Artefakt: `century-war-store-graphics`.
+Workflow **Store graphics** w GitHub Actions ma pięć równoległych grup językowych i zadanie końcowe zbierające oraz walidujące całość. Artefakt: `century-war-store-graphics`; raporty testów są osobnymi artefaktami.
 
-## Pliki w `app/build/store/`
+## Pliki wynikowe `app/build/store/{język}/`
 
-| Wzorzec w `{pl,en}/` | Liczba na język | Wymiary | Do Play Console? |
+| Zasób | Liczba / język | Rozmiar | Przeznaczenie |
 | --- | ---: | --- | --- |
-| `phone/01-menu.png` … `phone/08-custom-skirmish.png` | 8 | 1920 × 1080, RGB | Tak |
-| `tablet7/01-menu.png` … `tablet7/08-custom-skirmish.png` | 8 | 1920 × 1200, RGB | Tak, po kontroli kadru |
-| `tablet10/01-menu.png` … `tablet10/08-custom-skirmish.png` | 8 | 2560 × 1600, RGB | Tak, po kontroli kadru |
-| `icon_512.png` | 1 | 512 × 512, RGBA | Tak |
-| `feature_1024x500.png` | 1 | 1024 × 500, RGB | Tak |
-| `preview_contact.png` | 1 | 1600 × 960, RGB | **Nie** — miniatury do przeglądu |
-| `manifest.tsv` | 1 | Ścieżka, wymiary, alt | **Nie** — metadane |
+| `phone/01-menu.png` … `phone/08-custom-skirmish.png` | 8 | 1920 × 1080 | Google Play — telefon |
+| `tablet7/01-menu.png` … `tablet7/08-custom-skirmish.png` | 8 | 1920 × 1080 | Google Play — tablet 7″ |
+| `tablet10/01-menu.png` … `tablet10/08-custom-skirmish.png` | 8 | 2560 × 1440 | Google Play — tablet 10″ |
+| `icon_512.png` | 1 | 512 × 512, PNG RGBA | Google Play — ikona |
+| `feature_1024x500.png` | 1 | 1024 × 500, PNG RGB | Google Play — grafika promocyjna |
+| `preview_foldLandscape_hud.png` | 1 | 2184 × 1968 | **Tylko QA** — Fold poziomo |
+| `preview_foldPortrait_hud.png` | 1 | 1968 × 2184 | **Tylko QA** — Fold pionowo |
+| `preview_contact.png` | 1 | 1600 × 960 | **Tylko QA** — stykówka |
+| `manifest.tsv` | 1 | 26 wpisów | Metadane i teksty alt |
 
-Razem: **27 PNG i 1 manifest na język**, tj. 54 PNG i 2 manifesty. W `manifest.tsv` wpisujemy tylko 26 właściwych grafik sklepu. Zasoby są artefaktami builda i nie są dopisywane do repozytorium.
+Na język: **26 grafik sklepu + 3 obrazy kontrolne = 29 PNG** oraz jeden `manifest.tsv`. Łącznie **260 PNG do Google Play, 30 podglądów QA, 10 manifestów**. Podglądy Folda **nie są** osobną kategorią uploadu do Play Console.
 
-## Osiem scen
+Wszystkie grafiki sklepu są PNG 8-bit RGB (bez kanału alfa), poza ikoną PNG RGBA. Alt ≤ 140 znaków i opisuje rzeczywistą scenę.
 
-1. **Menu** — aktualne złote logo i emblemat epok z `MenuScreen`.
-2. **Kampania** — produkcyjna mapa i gwiazdki lokalnego profilu testowego.
-3. **Boss Endless** — prawdziwy boss fali 10 oraz jednostki oryginalnego renderera.
-4. **Nocny ostrzał** — `Weather.NIGHT`, komenda `BattleController.barrage` i efekty trafienia.
-5. **Wariant epoki** — rzeczywisty awans z epoki prochu do pary przez `BattleController.evolve()` i modal `BattleScreen`.
-6. **Pauza** — rzeczywisty panel pauzy ze statystykami bitwy, nie imitacja interfejsu.
-7. **Oblężenie tygodnia** — produkcyjny `ModeScreen`, zakładka `weeklySelected`.
-8. **Własna potyczka** — produkcyjny `SkirmishSetupScreen` i jego ustawienia.
+## Sceny
 
-Feature graphic łączy rzeczywiste tło bitwy z **`MenuEmblem` z nowego logo menu** i jego złotą typografią. Ikona jest renderowana z istniejących adaptacyjnych warstw Androida (zlecenie 58).
+1. Menu — logo i emblemat.
+2. Kampania — 36 etapów i gwiazdki profilu testowego.
+3. Boss Endless — boss fali dziesiątej i jednostki wraz z prawdziwym HUD.
+4. Nocny ostrzał — noc, salwa i eksplozje na produkcyjnym ekranie bitwy z paskiem akcji.
+5. Wariant epoki — rzeczywisty wybór wariantu pary.
+6. Pauza — produkcyjny panel ze statystykami.
+7. Oblężenie tygodnia — produkcyjny ekran wyzwania.
+8. Własna potyczka — ekran wyboru zasad.
+
+Feature graphic używa własnego emblematu menu i nocnej sceny bitwy; ikona pochodzi z adaptacyjnych warstw Androida. Nie dodawać ocen, cudzych znaków, ani nieistniejących funkcji.
+
+## Wymagania Google Play (sprawdzono 2026-11-01)
+
+- Zrzuty: **JPEG lub PNG 24-bit (bez alfa)**; najkrótszy bok ≥ 320 px, najdłuższy ≤ 3840 px, stosunek długości boków ≤ 2:1; maks. **8 na kategorię urządzenia**; do publikacji potrzebne przynajmniej 2.
+- Dla gier rekomendowane minimum **3 zrzuty 16:9, co najmniej 1920 × 1080**; na tabletach rekomendowane minimum 4 zrzuty i **16:9** poziomo. Stąd oba zestawy tabletowe mają 16:9, ale odmienne DPI/układ produkcyjnego UI.
+- Ikona: **512 × 512 PNG 32-bit (alfa), maksimum 1024 KB**.
+- Feature graphic: **1024 × 500 JPEG lub PNG 24-bit bez alfa**.
+- Teksty alternatywne: **maksimum 140 znaków**.
+- Tytuł aplikacji: do 30 znaków, krótki opis do 80, pełny do 4000. Istniejący test `listingLimits` sprawdza listy PL/EN.
+
+Wymogi i zalecenia aktualne na wskazany dzień: https://support.google.com/googleplay/android-developer/answer/9866151
+
+Walidator `scripts/validate_store_graphics.py` sprawdza liczbę plików, wymiary, typ PNG, nazwę, limity ikony, spójność `manifest.tsv` i opisy alt.
 
 ## Kontrola przed publikacją
 
-- PNG: wymagany typ koloru RGB (24-bit) dla zrzutów i feature, RGBA dla ikony; generator sprawdza sygnaturę, wymiary i typ koloru.
-- Zrzuty: min. 320 px i max. 3840 px na bok, proporcje maks. 2:1, do 8 na typ urządzenia.
-- Ikona: maks. 1024 KB. Feature graphic: dokładnie 1024 × 500.
-- Alt: krótki (do 140 znaków), opisujący faktyczną scenę, nie samo hasło.
-- Najpierw obejrzyj miniatury `preview_contact.png` PL i EN, następnie pełne PNG na telefon i tablety.
-- Zakładka tygodnia bazuje na bieżącej dacie UTC; jej szczegóły mogą się zmienić między eksportami.
-- Sprawdź na finalnym AAB, czy przyciski, podpisy, pogoda i logo zgadzają się z wydaniem; dodatkowo test na rzeczywistych urządzeniach.
+1. Otworzyć stykówki wszystkich 10 języków, a potem pełne kadry telefonu i obu tabletów.
+2. Sprawdzić łamanie tekstu, lokalizację UI, variant, pauzę, noc, oblężenie i oba podglądy Folda, zwłaszcza dolny pasek.
+3. Zestawić grafikę z finalnym AAB; sprawdzić na urządzeniach fizycznych i w podglądzie Play Console.
+4. Upewnić się, że do Play Console trafiają wyłącznie **26 pozycji z manifestu** na język, a nie podglądy QA.
+5. Przed publikacją ponownie wygenerować scenę wyzwania tygodnia, bo opiera się na aktualnym tygodniu UTC.
 
-Źródło: https://support.google.com/googleplay/android-developer/answer/9866151
+**Brak automatycznego wysyłania do Play Console.** Zatwierdzenie i upload pozostają osobnym krokiem.
