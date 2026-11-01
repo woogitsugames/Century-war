@@ -41,6 +41,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Sprawdź składnię skryptu kopii
+        run: bash -n server/backup-sqlite.sh
       - name: Testy symulacji, endpointów i weryfikatora
         run: ./gradlew :sim:test :server:test -PserverOnly=true --console=plain --no-configuration-cache --stacktrace
       - name: Buduj obraz Docker
