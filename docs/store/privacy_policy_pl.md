@@ -7,16 +7,18 @@ lang: pl
 
 # Polityka prywatności gry Century War
 
-**Obowiązuje od:** 1 listopada 2026 r.  
+**Obowiązuje od:** {{OWNER.release_date}}  
 **Dotyczy:** gry Century War na Androida, w tym integracji Google Play Games, jeżeli została skonfigurowana w opublikowanym wydaniu.
 
 ## 1. Wydawca i kontakt
 
 Century War jest rozwijana pod marką **WooGitsu Games**. Wydawca odpowiada za własne funkcje gry oraz informacje dotyczące prywatności przedstawione użytkownikom w Google Play. Google przetwarza dane swojej usługi Google Play Games zgodnie z własnymi zasadami.
 
-**Do uzupełnienia przed publikacją:**
-- Pełna nazwa prawna wydawcy: **[UZUPEŁNIJ_NAZWĘ_PRAWNĄ_WYDAWCY]**
-- Kontakt w sprawach prywatności: **[UZUPEŁNIJ_EMAIL_KONTAKTOWY]**
+**Dane prawne wydawcy (źródło: [OWNER_INPUT.md](OWNER_INPUT.md)):**
+- Pełna nazwa prawna wydawcy: **{{OWNER.publisher_name}}**
+- Adres korespondencyjny: **{{OWNER.postal_address}}**
+- Kontakt w sprawach prywatności i usuwania danych: **{{OWNER.contact_email}}**
+- Publiczny adres polityki: **{{OWNER.privacy_policy_url}}**
 
 Na ten adres można kierować pytania o przetwarzanie danych i wnioski dotyczące danych obsługiwanych przez wydawcę. Dane przechowywane przez Google Play Games usuwa się również za pomocą narzędzi Google opisanych poniżej.
 
@@ -64,6 +66,8 @@ Po skonfigurowaniu usługi i uwierzytelnieniu aplikacja może wysyłać do Googl
 
 Gra obsługuje również **opcjonalny własny serwer rankingowy** wydawcy. Funkcja działa wyłącznie w wydaniach ze skonfigurowanym adresem HTTPS, kluczem HMAC i adresem tej polityki oraz po osobnej zgodzie w grze. Wtedy aplikacja wysyła losowe UUID gracza, pseudonim, planszę, wynik, datę i parametry bitwy oraz komendy powtórki do weryfikacji wyniku. Serwer zapisuje w SQLite UUID, pseudonim, wyniki, metadane i skrót SHA-256 zgłoszenia, **nie zapisuje pełnej powtórki ani adresu IP w SQLite**. Adres IP może być używany tymczasowo do ograniczania ruchu i występować w logach infrastruktury. Bez konfiguracji i zgody nie są przesyłane wyniki do własnego serwera. Sam kod nie oznacza, że serwer jest już dostępny publicznie.
 
+**Publiczne pseudonimy i zgłaszanie naruszeń:** jeżeli własny serwer rankingu zostanie uruchomiony, inni gracze mogą zobaczyć wybrany przez Ciebie pseudonim i wyniki. Identyfikator widoczny publicznie jest inny niż wewnętrzny UUID instalacji; sekret instalacji służy do uwierzytelniania własnych zgłoszeń i usuwania danych. Serwer może przechowywać skrót sekretu, nie sam sekret w postaci jawnej. Po wdrożeniu funkcji zgłaszania zastrzeżeń do pseudonimów (zlecenie 80) użytkownik może zgłosić wpis z rankingu przez przytrzymanie jego nazwy: przesyłane są publiczne ID zgłaszanego wpisu i powód zgłoszenia; administrator przegląda zgłoszenia i może moderować nazwy. Adres IP zgłaszającego może zostać użyty do limitowania zgłoszeń i zapisany w logach infrastruktury zgodnie z konfiguracją serwera. Funkcje zależą od rzeczywiście wdrożonej wersji serwera i aplikacji, nie od samej obecności ich projektu w repozytorium.
+
 Google deklaruje szyfrowanie danych Play Games w transmisji (HTTPS). Informacje o zakresie danych, przechowywaniu i ustawieniach widoczności: https://developer.android.com/games/pgs/data-collection
 
 ## 5. Lokalne powiadomienia o wyzwaniu dnia
@@ -102,7 +106,7 @@ Okres przechowywania danych przez Google jest określany przez Google i ustawien
 
 ## 9. Ochrona danych i dzieci
 
-Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Nie udostępnia czatu, wiadomości między graczami ani lokalizacji. Jedynie raport techniczny można ręcznie udostępnić przez systemowe okno Androida. Rankingi PGS mogą jednak pokazywać nazwy profili Google i wyniki zgodnie z wybraną widocznością. Klasyfikacja wieku jest ustalana na podstawie ankiety IARC, a nie stanowi automatycznej deklaracji kierowania produktu do dzieci.
+Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Przy aktywnych rankingach publicznie widoczne mogą być pseudonimy i wyniki PGS oraz osobnego serwera wydawcy; użytkownik nie ma możliwości publikowania postów ani wysyłania wiadomości. Zgłoszenia obraźliwych pseudonimów są dostępne po wdrożeniu mechanizmu moderacji (zlecenie 80). Nie udostępnia czatu, wiadomości między graczami ani lokalizacji. Jedynie raport techniczny można ręcznie udostępnić przez systemowe okno Androida. Rankingi PGS mogą jednak pokazywać nazwy profili Google i wyniki zgodnie z wybraną widocznością. Klasyfikacja wieku jest ustalana na podstawie ankiety IARC, a nie stanowi automatycznej deklaracji kierowania produktu do dzieci.
 
 ## 10. Zmiany polityki
 
