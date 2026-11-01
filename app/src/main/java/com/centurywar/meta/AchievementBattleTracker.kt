@@ -3,6 +3,7 @@ package com.centurywar.meta
 import com.centurywar.game.Battle
 import com.centurywar.game.Defs
 import com.centurywar.game.EndlessBosses
+import com.centurywar.game.EndlessCard
 import kotlin.math.abs
 
 /**
@@ -10,6 +11,18 @@ import kotlin.math.abs
  * Bufory powstają tylko przy otwarciu ekranu; obserwacja kroku nie alokuje obiektów.
  */
 class AchievementBattleTracker(private val battle: Battle) {
+    companion object {
+        /** Maski czterech kart z nowej puli, także po wznowieniu migawki. */
+        fun newCardMaskFor(battle: Battle): Int {
+            val cards = battle.player.cardStacks
+            var mask = 0
+            if (cards[EndlessCard.FIELD_MEDICS.ordinal] > 0) mask = mask or 1
+            if (cards[EndlessCard.FINAL_SPARK.ordinal] > 0) mask = mask or 2
+            if (cards[EndlessCard.FIRST_GUARD.ordinal] > 0) mask = mask or 4
+            if (cards[EndlessCard.BOSS_RECALL.ordinal] > 0) mask = mask or 8
+            return mask
+        }
+    }
     private val steamEra = Defs.eraKeys.indexOf("era_steam")
     private val siliconEra = Defs.eraKeys.indexOf("era_silicon")
     private val activeBefore = BooleanArray(battle.projs.size)
@@ -24,6 +37,8 @@ class AchievementBattleTracker(private val battle: Battle) {
     var bossMask = 0
         private set
     var barrageEight = false
+        private set
+    var newCardMask = 0
         private set
 
     init { observeBattleState() }
@@ -71,6 +86,8 @@ class AchievementBattleTracker(private val battle: Battle) {
 
     private fun observeBattleState() {
         val player = battle.player
+        // Stały koszt, bez alokacji i bez dostępu do logu komend.
+        newCardMask = newCardMask or newCardMaskFor(battle)
         if (player.eraVariant in 0..1) {
             if (player.era == steamEra) steamMask = steamMask or (1 shl player.eraVariant)
             if (player.era == siliconEra) siliconMask = siliconMask or (1 shl player.eraVariant)
