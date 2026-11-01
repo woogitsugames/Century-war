@@ -25,6 +25,8 @@ internal class EvolveBanner(private val owner: BattleScreen, val goBtn: Button, 
         /** Czas widoczności przed zanikaniem (s). */
         const val SHOW_TIME = 8f
         const val FADE_TIME = 0.6f
+        /** Krótka zwłoka: baner nie miga przy chwilowej dostępności ani w kadrach z dt = 0. */
+        const val DELAY = 0.5f
     }
 
     /** Epoka, dla której baner już się pojawił (raz na epokę). */
@@ -33,6 +35,7 @@ internal class EvolveBanner(private val owner: BattleScreen, val goBtn: Button, 
     var active = false
         private set
     private var elapsed = 0f
+    private var availableFor = 0f
     private var pulse = 0f
     private var hidden = false
     private var title = ""
@@ -63,7 +66,10 @@ internal class EvolveBanner(private val owner: BattleScreen, val goBtn: Button, 
             if (!blocked) elapsed += dt
             if (elapsed >= SHOW_TIME + FADE_TIME) { dismiss(); return }
         } else if (canEvolve && !blocked && era < maxEra && shownForEra != era) {
-            activate(era)
+            availableFor += dt
+            if (availableFor >= DELAY) activate(era)
+        } else if (!canEvolve) {
+            availableFor = 0f
         }
         val show = active && !hidden && elapsed < SHOW_TIME + FADE_TIME
         goBtn.visible = show
@@ -72,6 +78,7 @@ internal class EvolveBanner(private val owner: BattleScreen, val goBtn: Button, 
 
     private fun activate(era: Int) {
         active = true
+        availableFor = 0f
         shownForEra = era
         elapsed = 0f
         refreshTexts()
