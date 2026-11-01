@@ -110,6 +110,7 @@ object L {
         putAll(part67())
         putAll(part61())
         putAll(part65())
+        putAll(part70())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1292,5 +1293,21 @@ object L {
         "report_cancel" to t("Nie teraz", "Not now", "Nicht jetzt", "Ahora no", "Pas maintenant", "Non ora", "Agora não", "Не зараз", "Niet nu", "Şimdi değil"),
         "report_share_title" to t("Udostępnij raport", "Share report", "Bericht teilen", "Compartir informe", "Partager le rapport", "Condividi rapporto", "Partilhar relatório", "Поділитися звітом", "Rapport delen", "Raporu paylaş"),
         "report_subject" to t("Century War - raport błędu", "Century War - error report", "Century War - Fehlerbericht", "Century War - informe de error", "Century War - rapport d'erreur", "Century War - rapporto errore", "Century War - relatório de erro", "Century War - звіт про помилку", "Century War - foutrapport", "Century War - hata raporu"),
+    )
+
+    // --- zlecenie 70: reguły bitew
+    private fun part70(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "m_shortday" to t("8 minut", "8 minutes", "8 Minuten", "8 minutos", "8 minutes", "8 minuti", "8 minutos", "8 хвилин", "8 minuten", "8 dakika"),
+        "m_shortday_d" to t("limit 8 minut", "8-minute limit", "8-Minuten-Limit", "límite de 8 minutos", "limite de 8 minutes", "limite di 8 minuti", "limite de 8 minutos", "ліміт 8 хвилин", "limiet van 8 minuten", "8 dakika sınırı"),
+        "m_veterans" to t("Weterani", "Veterans", "Veteranen", "Veteranos", "Vétérans", "Veterani", "Veteranos", "Ветерани", "Veteranen", "Gaziler"),
+        "m_veterans_d" to t("ranga 2 na start", "start at rank 2", "Start mit Rang 2", "rango 2 al inicio", "rang 2 au départ", "grado 2 iniziale", "nível 2 inicial", "ранг 2 на початку", "start op rang 2", "başlangıçta rütbe 2"),
+        "m_heavytowers" to t("Ciężkie wieże", "Heavy towers", "Schwere Türme", "Torres pesadas", "Tours lourdes", "Torri pesanti", "Torres pesadas", "Важкі вежі", "Zware torens", "Ağır kuleler"),
+        "m_heavytowers_d" to t("droższe, silniejsze wieże", "costlier, stronger towers", "teurere, stärkere Türme", "torres caras y potentes", "tours plus chères et fortes", "torri costose e potenti", "torres caras e fortes", "дорожчі й сильніші вежі", "duurdere, sterkere torens", "pahalı, güçlü kuleler"),
+        "m_mercenaries" to t("Zaciężni", "Mercenaries", "Söldner", "Mercenarios", "Mercenaires", "Mercenari", "Mercenários", "Найманці", "Huurlingen", "Paralı askerler"),
+        "m_mercenaries_d" to t("darmowe posiłki co minutę", "free troops each minute", "jede Minute freie Truppen", "tropas gratis cada minuto", "renforts gratuits par minute", "rinforzi gratis ogni minuto", "reforços grátis por minuto", "безплатні війська щохвилини", "elke minuut gratis troepen", "her dakika ücretsiz asker"),
+        "sk_moddesc_10" to t("Po 8 min wygrywa baza z większym % HP. Remis: wróg.", "After 8 min, higher base HP % wins. Tie: foe.", "Nach 8 Min. gewinnt die Basis mit mehr HP %. Gleichstand: Gegner.", "Tras 8 min gana la base con más % de vida. Empate: rival.", "Après 8 min, la base au meilleur % de vie gagne. Égalité : ennemi.", "Dopo 8 min vince la base con più % di vita. Pari: nemico.", "Após 8 min vence a base com mais % de vida. Empate: rival.", "Через 8 хв виграє база з більшим % здоров’я. Нічия: ворог.", "Na 8 min wint de basis met het hoogste HP %. Gelijk: vijand.", "8 dk sonra üssün can yüzdesi yüksek olan kazanır. Eşitlikte rakip."),
+        "sk_moddesc_11" to t("Obie strony zaczynają z rangą weteranów 2.", "Both sides start with veteran rank 2.", "Beide Seiten starten mit Veteranenrang 2.", "Ambos bandos empiezan con rango veterano 2.", "Les deux camps commencent au rang vétéran 2.", "Entrambe le parti iniziano al grado veterano 2.", "Ambos os lados começam com patente veterana 2.", "Обидві сторони починають із рангом ветерана 2.", "Beide kanten beginnen met veteranenrang 2.", "İki taraf da gazi rütbesi 2 ile başlar."),
+        "sk_moddesc_12" to t("Wieże kosztują +60%, ale zadają +40% obrażeń.", "Towers cost 60% more but deal 40% more damage.", "Türme kosten 60 % mehr, verursachen 40 % mehr Schaden.", "Las torres cuestan un 60 % más y dañan un 40 % más.", "Tours : coût +60 %, dégâts +40 %.", "Torri: costo +60 %, danni +40 %.", "Torres: custo +60 %, dano +40 %.", "Вежі дорожчі на 60 %, але завдають на 40 % більше шкоди.", "Torens kosten 60 % meer en doen 40 % meer schade.", "Kuleler %60 pahalı, %40 daha çok hasar verir."),
+        "sk_moddesc_13" to t("Co 60 s obie strony dostają darmową losową jednostkę.", "Every 60 s both sides get a free random unit.", "Alle 60 s erhalten beide Seiten eine zufällige Einheit gratis.", "Cada 60 s ambos bandos reciben una unidad aleatoria gratis.", "Toutes les 60 s, chaque camp reçoit une unité aléatoire gratuite.", "Ogni 60 s, entrambi ricevono un'unità casuale gratis.", "A cada 60 s, ambos os lados ganham uma unidade aleatória.", "Кожні 60 с обидві сторони отримують випадкового бійця.", "Elke 60 s krijgen beide kanten een gratis willekeurige eenheid.", "Her 60 sn iki taraf da rastgele ücretsiz birlik alır."),
     )
 }
