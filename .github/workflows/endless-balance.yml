@@ -48,8 +48,8 @@ jobs:
             if (old <= 0 || old100 <= 0) exit 2;
             diff = (now-old)/old*100;
             diff100 = (new100-old100)/old100*100;
-            printf "Endless 20 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\\n", old, now, diff;
-            printf "Endless 100 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\\n", old100, new100, diff100;
+            printf "Endless 20 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old, now, diff;
+            printf "Endless 100 seedów: baza=%.2f, nowa=%.2f, zmiana=%+.2f%%\n", old100, new100, diff100;
             if (diff > 10) exit 1;
           }'
       - name: Logi balansu
