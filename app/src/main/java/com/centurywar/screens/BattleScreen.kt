@@ -572,7 +572,7 @@ class BattleScreen(
             b.visible = !modal
             val locked = role == Role.ELITE && !p.eliteUnlocked
             b.enabled = !locked && battle.canQueue(p, role)
-            b.sub = if (locked) "" else costStr(i, def.cost)
+            b.sub = if (locked) "" else costStr(i, battle.unitCost(p, role))
             b.subIcon = if (locked) Icons.LOCK else Icons.COIN
             b.progress = if (p.queueSize > 0 && p.queue[0] == def.id) p.trainT / def.trainTime else -1f
             val up = unitUpgrade[i]
