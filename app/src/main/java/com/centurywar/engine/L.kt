@@ -152,6 +152,21 @@ object L {
     private fun part92(): Array<Pair<String, Array<out String>>> = arrayOf(
         "pgs_unavailable_version" to t("Niedostępne w tej wersji", "Unavailable in this version", "In dieser Version nicht verfügbar", "No disponible en esta versión", "Indisponible dans cette version", "Non disponibile in questa versione", "Indisponível nesta versão", "Недоступно в цій версії", "Niet beschikbaar in deze versie", "Bu sürümde kullanılamıyor"),
         "pgs_local_only" to t("Gra działa lokalnie. Nie wymaga konta Google.", "Local play works without a Google account.", "Lokal spielen ohne Google-Konto.", "Puedes jugar sin cuenta de Google.", "Jouez en local sans compte Google.", "Puoi giocare senza un account Google.", "Jogue sem uma conta Google.", "Можна грати локально без облікового запису Google.", "Lokaal spelen zonder Google-account.", "Google hesabı olmadan oynayabilirsiniz."),
+        putAll(part104())
+    }
+
+    /** Zlecenie 104: raport bitwy i wykresy. */
+    private fun part104(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "bs104_player" to t("Gracz", "Player", "Spieler", "Jugador", "Joueur", "Giocatore", "Jogador", "Гравець", "Speler", "Oyuncu"),
+        "bs104_enemy" to t("Wróg", "Enemy", "Gegner", "Enemigo", "Ennemi", "Nemico", "Inimigo", "Ворог", "Vijand", "Rakip"),
+        "bs104_evolution" to t("Awans epoki", "Era advance", "Epochenwechsel", "Cambio de era", "Changement d'ère", "Cambio d'epoca", "Mudança de era", "Перехід епохи", "Tijdperkwissel", "Çağ atlama"),
+        "bs104_gold" to t("Złoto", "Gold", "Gold", "Oro", "Or", "Oro", "Ouro", "Золото", "Goud", "Altın"),
+        "bs104_army" to t("Liczebność armii", "Army size", "Armeegröße", "Tamaño del ejército", "Effectifs", "Dimensione esercito", "Tamanho do exército", "Чисельність війська", "Legergrootte", "Ordu büyüklüğü"),
+        "bs104_hp" to t("HP baz", "Base HP", "Basis-LP", "PV de bases", "PV des bases", "PV delle basi", "PV das bases", "Міцність баз", "Basis-HP", "Üs canı"),
+        "bs104_stats" to t("Wynik", "Results", "Ergebnis", "Resultado", "Résultat", "Risultato", "Resultado", "Підсумок", "Uitslag", "Sonuç"),
+        "bs104_chart" to t("Wykres", "Chart", "Verlauf", "Gráfico", "Graphique", "Grafico", "Gráfico", "Графік", "Grafiek", "Grafik"),
+        "bs104_battle" to t("Bitwa", "Battle", "Schlacht", "Batalla", "Bataille", "Battaglia", "Batalha", "Битва", "Gevecht", "Savaş"),
+        "bs104_loading" to t("Odtwarzanie wykresu…", "Building chart…", "Verlauf wird erstellt…", "Generando gráfico…", "Création du graphique…", "Creazione grafico…", "A gerar gráfico…", "Побудова графіка…", "Grafiek maken…", "Grafik hazırlanıyor…"),
     )
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
