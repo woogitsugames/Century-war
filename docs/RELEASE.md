@@ -44,8 +44,9 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
 - `bundleRelease` jest dostępne w `com.android.application` bez dodatkowych wtyczek.
   Brak kodu natywnego, więc podziały ABI nie mają zastosowania.
 - Release: `isMinifyEnabled` + `isShrinkResources`; AGP 8.x domyślnie używa R8 full mode.
-  Gra nie używa refleksji (profil i zrzut bitwy to ręczny JSON / ręczny format binarny,
-  jedyna Activity jest w manifeście), więc `proguard-rules.pro` nie potrzebuje reguł keep.
+  Profil i zrzut bitwy mają ręczny JSON / format binarny. Reguły
+  `proguard-rules.pro` zachowują komponenty manifestu oraz enumy o trwałych
+  ordinalach i nazwach zapisywanych do profilu (zlecenie 128).
 - `app/src/main/baseline-prof.txt` zawiera ręcznie prześledzone ścieżki
   startu (`CenturyWarApp`, `MainActivity`, `Profile`), menu
   (`GameView`, `Game`, `MenuScreen`, `MenuBg`), wyboru trybu
@@ -109,10 +110,10 @@ Dzięki `localeConfig` Android 13+ pokazuje grę w ustawieniach języka aplikacj
   Skrypt blokuje job, gdy w mapowaniu brakuje klas krytycznych startu
   i bitwy. Zawartość `usage.txt` jest raportowana do ręcznej analizy.
 - Przegląd produkcyjnych źródeł `:app`/`:sim`: nie stwierdzono
-  refleksyjnego ładowania klas/metod/pól, ani serializacji przez refleksję.
-  Komponenty manifestu mają reguły generowane przez AGP, dlatego
-  **nie dodano szerokiego `-keep`**. Jeśli pojawią się później
-  refleksyjne wywołania, trzeba dopisać precyzyjne reguły i test.
+  refleksyjnego ładowania klas/metod/pól ani serializacji przez refleksję.
+  Po kontroli zlecenia 128 dodano wąskie reguły keep: komponenty manifestu,
+  enumy z ordinalami w snapshotach/powtórkach oraz `AchievementMetric`
+  zapisywany po nazwie w JSON. Nie dodano szerokiego `-keep com.centurywar.**`.
 - `shrinkResources = true` jest włączone. Zasoby statyczne to głównie
   ikona, konfiguracja, manifest, kopia zapasowa i tekst licencji Apache
   odczytywany przez `MainActivity`; brak zasobów z pewnością zbędnych
@@ -130,6 +131,92 @@ Test skryptu bez Android SDK:
 ```bash
 python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
 ```
+
+## Kontrola rzeczywistego DEX i rozruchu (zlecenie 128)
+
+**Zakres.** Konfiguracja release używa `minifyEnabled=true` (R8) i
+`shrinkResources=true`; nie dodajemy bibliotek ani nie modyfikujemy
+`versionCode` lub danych wydawcy. `ReplayShareProvider`, `MainActivity`,
+`CenturyWarApp` i odbiornik przypomnienia są komponentami manifestu,
+dlatego ich nazwy muszą być zachowane. Play Games jest wywoływane bezpośrednio
+przez SDK (jego reguły pochodzą z biblioteki); w projekcie nie ma `BackupAgent`.
+`AchievementMetric.name` jest utrwalane w JSON profilu, a ordinale
+`Role`, `Mode`, `Doctrine`, `Modifier`, `Weather`,
+`AiPersonality`, `DailyEvent`, `EndlessCard`,
+`EndlessWaveTheme`, `EraArt` i `Replay.Kind` są używane
+w zapisach bitwy, definicjach lub powtórkach. Zachowanie klas enumów
+jest celowe i może nieco zwiększyć APK względem agresywnego unboxingu R8.
+
+**Weryfikacja po minifikacji.** `scripts/verify_release_dex.py` uruchamia
+`dexdump -f` na *każdym* `classes*.dex` wyjętym z gotowego APK.
+Uwzględnia nazwy po obfuskacji z `mapping.txt`; wymaga klas startu,
+bitwy, profilu i Play Games, obecności 12 enumów z nadklasą
+`java.lang.Enum` i niezmienionych nazw komponentów Androida.
+W przeciwieństwie do samego `mapping.txt`, wykrywa brak klasy
+w wynikowym APK. Nie sprawdza zachowania rozgrywki na urządzeniu.
+Zamknięty zestaw 7 testów bez Android SDK: `tests/test_verify_release_dex.py`.
+
+```bash
+python3 -m unittest discover -s tests -p 'test_verify_release_dex.py' -v
+python3 scripts/verify_release_dex.py \
+  --apk app/build/outputs/apk/release/app-release.apk \
+  --mapping app/build/outputs/mapping/release/mapping.txt \
+  --dexdump "$ANDROID_HOME/build-tools/36.0.0/dexdump"
+```
+
+**Rozmiar APK/AAB.** Workflow `release-check.yml` buduje oba artefakty
+z testowym podpisem oraz porównuje je z commitem bazowym tego samego PR.
+Wynik to `build/release-metrics/rozmiary.md` w artefakcie
+`release-walidacja` i w GitHub Actions Job Summary. Raport podaje
+rzeczywiste wielkości ZIP osobno dla APK i AAB, w tym skompresowany
+DEX (`classes*.dex`), zasoby (`res/*`, `resources.arsc`,
+`resources.pb`), manifest, profil ART i pozostałe elementy.
+Bez wykonanego buildu **nie podajemy hipotetycznych wartości**.
+`shrinkResources` był już włączony; bez danych z narzędzia
+nie usuwamy ręcznie zasobów, których użycie może być pośrednie.
+Do dalszej diagnostyki trafiają `mapping.txt`, `usage.txt`,
+`configuration.txt`, `dex-audit.txt`, `r8-warnings.txt`
+i pełny `release.log`.
+
+**Start na emulatorze i telefonie.** CI buduje również APK debug,
+wykonuje *czystą instalację* i start przez `adb shell am start -W`.
+W debug log `CWStartup` podaje czas od `Application.onCreate`
+do pierwszej klatki menu, wraz z fazami
+`Application`, profil, snapshot, wykrywanie jakości, tłumaczenia,
+`Game`, Play Games, muzyka i `SurfaceView`.
+Następnie CI usuwa aplikację, instaluje APK release i zbiera
+`am start -W` oraz log błędów AndroidRuntime. Wyniki:
+`start-debug.txt`, `startup-debug.log`, `start.txt` w
+`release-walidacja` (i podsumowaniu workflow).
+
+Na fizycznym urządzeniu zmierz release po instalacji **testowej**
+(nie produkcyjny upload key w CI) i każdorazowym `force-stop`:
+
+```bash
+adb install -r app/build/outputs/apk/release/app-release.apk
+adb shell am force-stop com.centurywar.game
+adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity
+# Dla debug: ten sam pomiar + fazy StartupTimings w logcat
+adb logcat -d -s CWStartup:I '*:S'
+```
+
+Zapisz osobno `TotalTime` i `WaitTime` z `am start -W`
+(dla obu wariantów) oraz `CWStartup` z debug. To **inne miary**:
+`am start -W` mierzy zgłoszenie uruchomienia Activity
+(może zakończyć się już na ekranie startowym), a `CWStartup`
+mierzy *pierwszą klatkę menu*. Release nie loguje
+`StartupTimings` (warunek `BuildConfig.DEBUG`), więc do uczciwego
+porównania wariantów służy ten sam pomiar `am start -W`,
+a fazy debug są diagnozą opóźnień. Dla wiarygodnych wyników
+powtórz co najmniej 5 zimnych startów na tym samym telefonie,
+bez aktywnego procesu aplikacji, i podaj medianę.
+Zwykły emulator jest kontrolą regresji, nie benchmarkiem taniego telefonu.
+
+**Warunki publikacji.** Testowe ID i podpis CI nie nadają się do wydania;
+normalny release wymaga prawdziwego klucza upload i kompletnej
+`releaseChecklist`. Po R8 nadal trzeba na telefonie sprawdzić
+ścieżki zewnętrznych providerów, osiągnięcia i rankingi Play Games,
+import/eksport powtórek i wznawianie zapisów.
 
 ## Walidacja
 
