@@ -46,7 +46,14 @@ data class RankingResponse(
     val board: String,
     val period: String,
     val entries: List<RankingEntry>,
+    val self: String? = null,
 )
+
+@Serializable
+data class NickReportRequest(val publicId: String, val reason: String)
+
+@Serializable
+data class NickReportReceipt(val accepted: Boolean)
 
 @Serializable
 data class DeletePlayerRequest(val player: String)
