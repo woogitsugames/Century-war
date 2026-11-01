@@ -230,7 +230,8 @@ class HintOverlay(
         hintHeight = 0f
         if (safeW < 110f * dp || body.isEmpty()) return
 
-        val maxW = min(600f * dp, safeW)
+        // Nad wariantami zostaje wąski pas pionowy; korzystamy z całej szerokości.
+        val maxW = if (activeId == VARIANT) safeW else min(600f * dp, safeW)
         val buttonW = 51f * dp
         val padding = 12f * dp
         hintFont = 12.5f
