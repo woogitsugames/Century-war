@@ -620,7 +620,9 @@ class Battle(val cfg: BattleConfig) {
                 side.repairPerWave = min(0.3f, side.repairPerWave + 0.01f * (1 + defenses))
             }
             // Te karty działają przez istniejące stosy i mechanikę trafień.
-            EndlessCard.SUPPLY_LINE, EndlessCard.IRON_CURTAIN, EndlessCard.LAST_BASTION -> Unit
+            EndlessCard.SUPPLY_LINE, EndlessCard.IRON_CURTAIN, EndlessCard.LAST_BASTION,
+            EndlessCard.FIELD_MEDICS, EndlessCard.FINAL_SPARK,
+            EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL -> Unit
             else -> Unit
         }
         applyCard71Synergies(side, card, power)
@@ -1104,7 +1106,11 @@ class Battle(val cfg: BattleConfig) {
         f.hitStep = -1; f.hitPow = 0f
         f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier) *
             (if (waveTheme == EndlessWaveTheme.SKIRMISHERS) 0.8f else 1f)
-        f.waveSpeedMul = if (waveTheme == EndlessWaveTheme.SIEGE_TRAIN) 0.85f else 1f
+        f.waveSpeedMul = when (waveTheme) {
+            EndlessWaveTheme.SIEGE_TRAIN -> 0.85f
+            EndlessWaveTheme.TWIN_RAID -> 1.15f
+            else -> 1f
+        }
         f.hp = f.maxHp
         f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier) * when (def.role) {
             Role.RANGED -> s.rangedDmgMul
@@ -1405,7 +1411,11 @@ class Battle(val cfg: BattleConfig) {
         val rallyArmor = if (sides[u.side].rallyT > 0f) sides[u.side].rallyArmorMul else 1f
         val emberStacks = if (endless && turretEra >= 0 && u.burnLeft > 0f)
             sides[attacker].cardStacks[EndlessCard.EMBER_FORGE.ordinal] else 0
-        val dealt = d * multiplier * rallyArmor * (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
+        // Tarcza pochłania pierwsze trafienie przy pełnym zdrowiu (także po wyleczeniu).
+        val firstGuard = if (endless && u.side == 0 && u.hp >= u.maxHp &&
+            sides[0].cardStacks[EndlessCard.FIRST_GUARD.ordinal] > 0) 0.6f else 1f
+        val dealt = d * multiplier * rallyArmor * firstGuard *
+            (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
         if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
             sides[attacker].cardStacks[EndlessCard.IRON_CURTAIN.ordinal] > 0) {
@@ -1441,9 +1451,26 @@ class Battle(val cfg: BattleConfig) {
             if (endless && u.isBoss && attacker == 0) {
                 bossesDefeated++
                 bossRewardsPending++
+                // Po pokonaniu bossa oba rozkazy gracza są znów dostępne.
+                if (k.cardStacks[EndlessCard.BOSS_RECALL.ordinal] > 0) {
+                    k.abilityCd[0] = 0f
+                    k.abilityCd[1] = 0f
+                }
             }
             v.aliveCount--
             liveDirty = true
+            if (endless && u.side == 0 && attacker == 1) {
+                val echo = EndlessCards.totalStackPower(
+                    v.cardStacks[EndlessCard.FINAL_SPARK.ordinal])
+                if (echo > 0f) {
+                    fx.add(FxBuffer.EXPLOSION, u.x, 20f, 0, 0.75f)
+                    // Iskra nie zadaje obrażeń bazie ani sojusznikom; bez dodatkowego RNG.
+                    for (target in units) if (target.alive && target.side == 1 &&
+                        abs(target.x - u.x) <= 95f + target.radius) {
+                        damageUnit(target, u.maxHp * 0.18f * echo, 0, direct = false)
+                    }
+                }
+            }
             if (u.def.role == Role.ELITE) v.elitesLost++
             fx.add(FxBuffer.DEATH, u.x, 0f, u.side, u.def.size,
                 eraId = u.def.era, bodyId = u.def.body)
@@ -1505,7 +1532,7 @@ class Battle(val cfg: BattleConfig) {
             }
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
-            val def = e.unit(waveRole(rng.nextInt(100)))
+            val def = e.unit(waveRole(rng.nextInt(100), n))
             e.queue[e.queueSize] = def.id
             e.queueWaveTheme[e.queueSize] = currentWaveTheme.ordinal
             e.queueSize++
@@ -1514,6 +1541,14 @@ class Battle(val cfg: BattleConfig) {
         }
         if (p.repairPerWave > 0f) {
             p.baseHp = min(p.baseMaxHp, p.baseHp + p.baseMaxHp * p.repairPerWave)
+        }
+        // Medycy leczą żywych rannych dopiero na początku nowej fali.
+        val medics = p.cardStacks[EndlessCard.FIELD_MEDICS.ordinal]
+        if (medics > 0) {
+            val healing = min(0.45f, 0.16f * EndlessCards.totalStackPower(medics))
+            for (unit in units) if (unit.alive && unit.side == 0 && unit.hp < unit.maxHp) {
+                unit.hp += (unit.maxHp - unit.hp) * healing
+            }
         }
         if (p.freeElitesPerWave > 0) {
             p.freeEliteCredits += p.freeElitesPerWave
@@ -1528,7 +1563,7 @@ class Battle(val cfg: BattleConfig) {
         }
     }
 
-    private fun waveRole(roll: Int): Role = when (currentWaveTheme) {
+    private fun waveRole(roll: Int, slot: Int): Role = when (currentWaveTheme) {
         EndlessWaveTheme.MIXED -> when {
             wave >= 4 && roll < 10 -> Role.ELITE
             roll < 30 -> Role.HEAVY
@@ -1557,6 +1592,15 @@ class Battle(val cfg: BattleConfig) {
             roll < 70 -> Role.MELEE
             roll < 95 -> Role.RANGED
             else -> Role.HEAVY
+        }
+        // Ekran ciężkich jednostek osłania strzelców w kolejce tej fali.
+        EndlessWaveTheme.PIKE_SCREEN ->
+            if (slot < 2) Role.HEAVY else if (roll < 80) Role.RANGED else Role.MELEE
+        // Dwa oddziały szturmowe, strzelec, a od czwartej fali elita.
+        EndlessWaveTheme.TWIN_RAID -> when (slot % 4) {
+            0, 1 -> Role.MELEE
+            2 -> Role.RANGED
+            else -> if (wave >= 4) Role.ELITE else Role.RANGED
         }
     }
 
