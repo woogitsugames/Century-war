@@ -183,12 +183,12 @@ object Campaign {
         // Tura 8: etapy 1-6 obniżone po wyłączeniu elit wroga bez badania gracza
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         val correction = when (i + 1) {
-            1 -> 0.85f
-            2 -> 0.753f
+            1 -> 0.799f
+            2 -> 0.708f
             3 -> 0.81f
             4 -> 0.80f
             5 -> 0.80f
-            6 -> 0.85f
+            6 -> 0.8245f
             11 -> 0.97f
             12 -> 0.828f
             16 -> 0.93f
@@ -198,9 +198,10 @@ object Campaign {
             22 -> 1.13f
             23 -> 0.96f
             24 -> 0.94f
+            25 -> 0.97f
             27 -> 0.846f
-            29 -> 1.12f
-            30 -> 1.02f
+            29 -> 1.053f
+            30 -> 0.989f
             31 -> 0.97f
             32 -> 0.97f
             34 -> 0.95f
