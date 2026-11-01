@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: whats-new-106-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   whats-new:
     name: APK, testy i zrzuty 106
