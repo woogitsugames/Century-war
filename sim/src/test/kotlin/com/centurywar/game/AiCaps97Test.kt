@@ -110,4 +110,37 @@ class AiCaps97Test {
             }
         }
     }
+    @Test fun chooseCardConsumesSameAiRngRegardlessOfOffers() {
+        for (seed in 1L..20L) {
+            val open = endless(seed)
+            val capped = endless(seed)
+            // Wyczerpana karta w jednej bitwie nie może przesunąć strumienia AI.
+            capped.player.cloneChance = 0.6f
+            val options = arrayOf(EndlessCard.CLONING, EndlessCard.FURY, EndlessCard.ECONOMY)
+            Ai(open, 0, AiPersonality.BALANCED).chooseCard(options)
+            Ai(capped, 0, AiPersonality.BALANCED).chooseCard(options)
+            repeat(4) {
+                assertEquals("seed=$seed", open.rng.nextAiInt(0, 1000), capped.rng.nextAiInt(0, 1000))
+            }
+        }
+    }
+
+    @Test fun newEndlessCardsHavePersonalityFans() {
+        val favored = mapOf(
+            AiPersonality.ASSAULT to EndlessCard.FINAL_SPARK,
+            AiPersonality.ENGINEER to EndlessCard.FIRST_GUARD,
+            AiPersonality.ECONOMIST to EndlessCard.FIELD_MEDICS,
+            AiPersonality.SIEGER to EndlessCard.BOSS_RECALL,
+            AiPersonality.BALANCED to EndlessCard.FIELD_MEDICS,
+        )
+        for (seed in 1L..20L) for ((personality, card) in favored) {
+            val b = endless(seed)
+            // Neutralna karta bez doktryny i bez premii danej osobowości.
+            val foil = if (personality == AiPersonality.SIEGER) EndlessCard.LAST_STAND
+                else EndlessCard.ELITE_SCHOOL
+            val offers = arrayOf(foil, card)
+            assertEquals("seed=$seed $personality", card,
+                offers[Ai(b, 0, personality).chooseCard(offers)])
+        }
+    }
 }

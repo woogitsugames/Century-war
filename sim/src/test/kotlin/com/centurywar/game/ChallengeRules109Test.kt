@@ -9,7 +9,20 @@ import org.junit.Test
 
 /** Regresje rotacji wyzwań i niezmienności dawnych wyników rankingu. */
 class ChallengeRules109Test {
-    private val surrenderReplay = "Bf8AAQAL" // Replay v5: poddanie w kroku zerowym.
+    /** Złota powtórka wyzwania dnia sprzed premiery: pełna bitwa z komendami gracza. */
+    private class GoldenDaily(val day: Long, val replay: String, val score: Long, val winner: Int, val steps: Int)
+
+    private fun goldenDaily(): GoldenDaily {
+        val text = javaClass.getResourceAsStream("/golden/daily-historical.json")!!
+            .bufferedReader(Charsets.UTF_8).use { it.readText() }
+        fun field(name: String): String =
+            Regex("\"$name\"\\s*:\\s*\"?([-A-Za-z0-9_]+)").find(text)!!.groupValues[1]
+        val expected = text.substring(text.indexOf("\"expected\""))
+        fun expectedInt(name: String): Int =
+            Regex("\"$name\"\\s*:\\s*(-?\\d+)").find(expected)!!.groupValues[1].toInt()
+        return GoldenDaily(field("seed").toLong(), field("replay"),
+            expectedInt("score").toLong(), expectedInt("winner"), expectedInt("steps"))
+    }
 
     @Test
     fun all365DailyChallengesHaveAtLeast14DaysBetweenRepeatedRules() {
@@ -126,16 +139,20 @@ class ChallengeRules109Test {
 
     @Test
     fun archivedReplayStillVerifiesAgainstDailyRankingConfiguration() {
-        // Stały bajtowy zapis Replay v5, a nie powtórka wygenerowana po zmianie.
-        val oldLog = Replay.decode(surrenderReplay)
-        assertEquals(Replay.Kind.SURRENDER, oldLog.commands.single().kind)
-        for (day in listOf(0L, Daily.RELEASE_DAY - 365L, Daily.RELEASE_DAY - 1L)) {
-            val fromArchive = Replay.verify(archivedDaily(day), surrenderReplay)
-            val fromRanking = Replay.verify(Daily.config(day, Bonuses()), surrenderReplay)
-            assertEquals(fromArchive.score, fromRanking.score)
-            assertEquals(fromArchive.winner, fromRanking.winner)
-            assertEquals(0, fromRanking.steps)
-        }
+        // Złota powtórka dnia sprzed premiery: wiele komend i tysiące kroków symulacji.
+        val golden = goldenDaily()
+        assertTrue(golden.day < Daily.RELEASE_DAY)
+        val log = Replay.decode(golden.replay)
+        assertTrue("Powtórka musi zawierać komendy gracza", log.commands.size > 3)
+        val fromArchive = Replay.verify(archivedDaily(golden.day), golden.replay)
+        val fromRanking = Replay.verify(Daily.config(golden.day, Bonuses()), golden.replay)
+        assertTrue(fromRanking.steps > 1000)
+        assertEquals(golden.score, fromRanking.score)
+        assertEquals(golden.winner, fromRanking.winner)
+        assertEquals(golden.steps, fromRanking.steps)
+        assertEquals(fromArchive.score, fromRanking.score)
+        assertEquals(fromArchive.winner, fromRanking.winner)
+        assertEquals(fromArchive.steps, fromRanking.steps)
     }
 
     @Test
@@ -155,16 +172,16 @@ class ChallengeRules109Test {
     @Test
     fun weeklyThemesCycleThroughAllSixCardsWithoutChangingOldWeeks() {
         val releaseWeek = Weekly.weekNumber(Daily.RELEASE_DAY)
-        assertNull(Weekly.ruleSet(releaseWeek + 2L))
-        val archivedWeek = archivedWeekly(releaseWeek + 2L)
-        val currentWeek = Weekly.config(releaseWeek + 2L)
-        assertEquals(archivedWeek.modifiers, currentWeek.modifiers)
-        assertEquals(archivedWeek.weeklyCard, currentWeek.weeklyCard)
-        assertEquals(archivedWeek.startEra, currentWeek.startEra)
-        assertEquals(archivedWeek.maxEra, currentWeek.maxEra)
+        assertEquals(releaseWeek + 3L, Weekly.firstRuleSetWeek())
+        for (week in releaseWeek - 52L..releaseWeek + 2L) {
+            assertNull(Weekly.ruleSet(week))
+            assertSameAsArchived(week)
+        }
 
         val names = HashSet<String>()
-        for (week in releaseWeek + 3L..releaseWeek + 2L + ChallengeRuleSets.COUNT.toLong()) {
+        val every = Weekly.RULE_SET_EVERY
+        var week = Weekly.firstRuleSetWeek()
+        repeat(ChallengeRuleSets.COUNT) {
             val rules = Weekly.ruleSet(week)!!
             val cfg = Weekly.config(week)
             names.add(rules.key)
@@ -172,8 +189,60 @@ class ChallengeRules109Test {
             assertEquals(rules.weeklyCard, cfg.weeklyCard)
             assertEquals(week, cfg.weekly)
             assertEquals(1, Battle(cfg).player.cardStacks[rules.weeklyCard.ordinal])
+            week += every
         }
         assertEquals(ChallengeRuleSets.COUNT, names.size)
+    }
+
+    private fun assertSameAsArchived(week: Long) {
+        val archived = archivedWeekly(week)
+        val current = Weekly.config(week)
+        assertEquals("Tydzień $week", archived.modifiers, current.modifiers)
+        assertEquals("Tydzień $week", archived.weeklyCard, current.weeklyCard)
+        assertEquals("Tydzień $week", archived.startEra, current.startEra)
+        assertEquals("Tydzień $week", archived.maxEra, current.maxEra)
+        assertEquals("Tydzień $week", archived.seed, current.seed)
+    }
+
+    @Test
+    fun weeklyMixesRandomWeeksWithRuleSetsWithoutQuickRepeats() {
+        val first = Weekly.firstRuleSetWeek()
+        val lastSeen = HashMap<String, Long>()
+        var themed = 0
+        var random = 0
+        for (week in first until first + 156L) {
+            val rules = Weekly.ruleSet(week)
+            val cfg = Weekly.config(week)
+            val iter = cfg.modifiers.iterator()
+            val a = iter.next()
+            val b = iter.next()
+            val asSet = ChallengeRuleSets.forModifiers(a, b) ?: ChallengeRuleSets.forModifiers(b, a)
+            if (rules != null) {
+                themed++
+                assertEquals(rules, asSet)
+                assertEquals(rules.weeklyCard, cfg.weeklyCard)
+                val previous = lastSeen.put(rules.key, week)
+                if (previous != null) {
+                    assertTrue("Powtórka ${rules.key} po ${week - previous} tygodniach",
+                        week - previous >= 4L)
+                }
+            } else {
+                random++
+                // Losowy tydzień nie podszywa się pod zestaw tematyczny.
+                assertNull("Tydzień $week", asSet)
+                val archived = archivedWeekly(week)
+                if (archived.modifiers == cfg.modifiers) assertSameAsArchived(week)
+            }
+        }
+        assertEquals(52, themed)
+        assertEquals(104, random)
+        // Większość losowych tygodni to dokładnie dawne losowanie (bez kolizji z zestawami).
+        var unchanged = 0
+        for (week in first until first + 156L) {
+            if (Weekly.ruleSet(week) == null && archivedWeekly(week).modifiers == Weekly.config(week).modifiers)
+                unchanged++
+        }
+        assertTrue("Niezmienione losowe tygodnie: $unchanged", unchanged >= 80)
     }
 
     /** Generator tygodniowy używany przed wdrożeniem nowych zestawów. */

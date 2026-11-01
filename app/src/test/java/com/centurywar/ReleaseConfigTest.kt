@@ -15,15 +15,25 @@ class ReleaseConfigTest {
         DocumentBuilderFactory.newInstance().newDocumentBuilder()
             .parse(File("src/main/$path")).documentElement
 
-    private fun assertNoPrivateDataBackup(element: Element) {
-        assertEquals(0, element.getElementsByTagName("include").length)
-        val nodes = element.getElementsByTagName("exclude")
-        val excluded = (0 until nodes.length).map { i ->
+    /**
+     * Kopia Androida obejmuje wyłącznie postęp gracza. Reguły include wykluczają resztę:
+     * kolejkę wyników (score-queue*), dzienniki awarii, zapis bitwy, powtórki i kopie importu.
+     */
+    private fun assertOnlyProgressBackedUp(element: Element) {
+        assertEquals(0, element.getElementsByTagName("exclude").length)
+        val nodes = element.getElementsByTagName("include")
+        val included = (0 until nodes.length).map { i ->
             val rule = nodes.item(i) as Element
-            assertEquals(".", rule.getAttribute("path"))
-            rule.getAttribute("domain")
-        }.toSet()
-        assertEquals(setOf("root", "file", "database", "sharedpref", "external"), excluded)
+            assertEquals("file", rule.getAttribute("domain"))
+            rule.getAttribute("path")
+        }
+        assertEquals(listOf("profile.json", "history.json"), included)
+        for (path in included) {
+            assertFalse(path, path.startsWith("score-queue"))
+            assertFalse(path, path.startsWith("crash"))
+            assertFalse(path, path.endsWith(".snap"))
+            assertFalse(path, path == ".")
+        }
     }
 
     @Test fun localesMatchInGameLanguages() {
@@ -36,15 +46,23 @@ class ReleaseConfigTest {
         assertEquals(L.CODES.toList(), names)
     }
 
-    /** profile.json zawiera sekret instalacji; wyklucz go także z transferu na Androidzie 12+. */
-    @Test fun playerProfileAndSecretsAreNeverAutomaticallyBackedUp() {
-        assertNoPrivateDataBackup(xml("res/xml/backup_rules.xml"))
+    /** Postęp wraca po zmianie telefonu (114); sekret rankingu tylko w szyfrowanej kopii. */
+    @Test fun onlyPlayerProgressIsAutomaticallyBackedUp() {
+        val legacy = xml("res/xml/backup_rules.xml")
+        assertOnlyProgressBackedUp(legacy)
+        val legacyIncludes = legacy.getElementsByTagName("include")
+        for (i in 0 until legacyIncludes.length) {
+            assertEquals("clientSideEncryption",
+                (legacyIncludes.item(i) as Element).getAttribute("requireFlags"))
+        }
         val rules = xml("res/xml/data_extraction_rules.xml")
         for (tag in listOf("cloud-backup", "device-transfer")) {
             val elements = rules.getElementsByTagName(tag)
             assertEquals(1, elements.length)
-            assertNoPrivateDataBackup(elements.item(0) as Element)
+            assertOnlyProgressBackedUp(elements.item(0) as Element)
         }
+        val cloud = rules.getElementsByTagName("cloud-backup").item(0) as Element
+        assertEquals("true", cloud.getAttribute("disableIfNoEncryptionCapabilities"))
     }
 
     @Test fun manifestContainsOnlyRequiredPermissionAndReleaseSettings() {
@@ -69,7 +87,7 @@ class ReleaseConfigTest {
         assertEquals("@xml/locales_config", app.getAttribute("android:localeConfig"))
         assertEquals("@xml/backup_rules", app.getAttribute("android:fullBackupContent"))
         assertEquals("@xml/data_extraction_rules", app.getAttribute("android:dataExtractionRules"))
-        assertEquals("false", app.getAttribute("android:allowBackup"))
+        assertEquals("true", app.getAttribute("android:allowBackup"))
         assertEquals("false", app.getAttribute("android:usesCleartextTraffic"))
         assertEquals("@xml/network_security_config", app.getAttribute("android:networkSecurityConfig"))
     }

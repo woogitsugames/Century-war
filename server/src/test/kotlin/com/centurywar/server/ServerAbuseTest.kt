@@ -101,6 +101,52 @@ class ServerAbuseTest {
         }
     }
 
+    @Test fun busyVerificationRefundsDailyQuota() = testApplication {
+        SqliteStore("jdbc:sqlite::memory:").use { store ->
+            val runs = AtomicInteger()
+            application {
+                leaderboardModule(store, hmacKey, { now },
+                    limits = RateLimits(postIp = 100, postPlayer = 100,
+                        postInstallDaily = 2, postIpDaily = 20),
+                    verifyReplay = { input, _, _, _ ->
+                        // Dwie pierwsze weryfikacje przekraczają budżet (503).
+                        if (runs.incrementAndGet() <= 2) throw VerificationBudgetExceeded()
+                        VerifiedReplay("endless", input.score, 900)
+                    })
+            }
+            val sample = ReplayVerifierTest.validEndless()
+            suspend fun submit(): HttpStatusCode {
+                val body = Json.encodeToString(sample)
+                val nonce = UUID.randomUUID().toString()
+                return client.post("/v1/score") {
+                    header("X-CW-Timestamp", (now / 1000L).toString())
+                    header("X-CW-Nonce", nonce)
+                    header("X-CW-Player-Secret", installation)
+                    header("X-CW-Signature", sign(body, nonce))
+                    setBody(body)
+                }.status
+            }
+            assertEquals(HttpStatusCode.ServiceUnavailable, submit())
+            assertEquals(HttpStatusCode.ServiceUnavailable, submit())
+            // 503 nie zużył limitu: nadal są dwie wysyłki, dopiero trzecia dostaje 429.
+            assertEquals(HttpStatusCode.OK, submit())
+            assertEquals(HttpStatusCode.OK, submit())
+            assertEquals(HttpStatusCode.TooManyRequests, submit())
+            assertEquals(4, runs.get())
+        }
+    }
+
+    @Test fun refundNeverGoesBelowZeroAndKeepsOtherKeys() {
+        SqliteStore("jdbc:sqlite::memory:", PublicPlayerIds(ByteArray(32) { 7 })).use { store ->
+            store.refundScoreSubmissionQuota("install-a", "203.0.113.1", now)
+            assertTrue(store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 1, 5))
+            assertTrue(!store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 1, 5))
+            store.refundScoreSubmissionQuota("install-a", "203.0.113.1", now)
+            assertTrue(store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 1, 5))
+            assertTrue(!store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 1, 5))
+        }
+    }
+
     @Test fun stepBudgetRejectsLargeReplayBeforeSimulation() {
         val sample = ReplayVerifierTest.validEndless()
         val budget = VerificationBudget(maxReplaySteps = 500, timeoutMillis = 30_000L)

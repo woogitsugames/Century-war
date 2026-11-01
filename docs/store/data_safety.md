@@ -17,14 +17,14 @@
 | Funkcja | Dane | Odbiorca i podstawa działania |
 |---|---|---|
 | Prywatna pamięć aplikacji | Plik profile.json: pseudonim, postęp, wyniki, ustawienia oraz po zgodzie na własny ranking UUID i losowy 32-bajtowy sekret instalacji | Lokalne zapisywanie gry oraz poświadczenie własności konta rankingu; nie wymaga internetu |
-| Prywatna pamięć aplikacji | battle.snap: stan przerwanej bitwy | Lokalna możliwość wznowienia; nie jest częścią JSON profilu ani backupu |
+| Prywatna pamięć aplikacji | battle.snap: stan przerwanej bitwy | Lokalna możliwość wznowienia; nie jest częścią JSON profilu ani kopii Androida |
 | Prywatna pamięć aplikacji | files/crash: maks. 10 raportów (wersja, model urządzenia, Android, ekran, 30 zdarzeń technicznych, stos bez wiadomości wyjątków) | Diagnoza awarii; bez pseudonimu i ID, tylko lokalnie; bez automatycznej transmisji lub backupu |
 | Google Play Games, po konfiguracji i uwierzytelnieniu | Cztery liczbowe wyniki: oblężenie bez końca, wyzwanie dnia, kampania i potyczka | Tablice wyników PGS; w publicznym rankingu tożsamość gracza pochodzi z profilu Play Games |
 | Google Play Games — Saved Games, po konfiguracji i uwierzytelnieniu | **Profile.toCloudJson()**: pseudonim gracza, rekordy, postęp, badania, statystyki, osiągnięcia, misje i ustawienia; **bez lokalnego UUID, sekretu instalacji i zgody na ranking wydawcy** | Odczyt i zapis kopii profilu w chmurze po zalogowaniu oraz przy późniejszych zapisach lokalnych |
 | Google Play Games SDK / Google | Tożsamość profilu Gier Play (np. identyfikator gracza, nazwa, awatar), dane analityczne i diagnostyczne SDK | Zakres wynikający z dokumentacji dostawcy; może obejmować automatyczne zbieranie po zainicjowaniu SDK |
 | Wydawca — opcjonalny własny serwer rankingu | UUID v4, pseudonim, wynik, tryb, parametry bitwy, badania, komendy powtórki, sekret instalacji przesyłany przez HTTPS | Po zgodzie: SQLite zapisuje UUID, pseudonim, publiczne ID (HMAC UUID z prywatnym kluczem serwera), wynik, SHA-256 sekretu i metadane; **nie** zapisuje jawnego sekretu, powtórki ani IP. Publiczne API pokazuje pseudonim, wynik i publiczne ID, nie UUID. IP służy tymczasowo do limiterów i może być w logach proxy. |
 | Wydawca — zgłoszenia nicków | Publiczne ID zgłaszanego gracza, powód, nick w chwili zgłoszenia, UUID tego gracza i czas; IP zgłaszającego do limitowania | Na żądanie użytkownika z ekranu rankingu, bez konta zgłaszającego. SQLite przechowuje zgłoszenie dla operatora, bez IP; IP może być w logach proxy. |
-| Android — kopia systemowa | Tylko profile.json (przez reguły kopii i przenoszenia urządzeń) | Mechanizm Androida zależny od konta i ustawień; nie jest tym samym co Saved Games PGS |
+| Android — kopia systemowa | Tylko profile.json (z lokalnym UUID i sekretem rankingu, jeśli gracz wyraził zgodę) i history.json; bez score-queue*, files/crash, battle.snap, powtórek | Przeniesienie postępu na nowy telefon tego samego konta Google; kopia w chmurze tylko z szyfrowaniem end-to-end (blokada ekranu). Mechanizm Androida zależny od konta i ustawień; nie jest tym samym co Saved Games PGS |
 
 Zlecenie 80 zmienia protokół tożsamości, publiczne identyfikatory i możliwość zgłaszania nicków. Powyższe informacje opisują **planowany wariant po scaleniu i wdrożeniu zlecenia 80**, a nie deklarację, że wszystkie funkcje są już czynne na gałęzi bazowej. Przed wydaniem należy porównać tabelę z wynikiem testów klienta i serwera oraz dostępnymi ekranami rankingu.
 
@@ -49,7 +49,7 @@ Przy działającym PGS stosuj następującą konserwatywną klasyfikację. „Wa
 
 - Lokalny AlarmManager/NotificationManager planuje przypomnienie o wyzwaniu dnia; **brak FCM i serwera push**. Uprawnienia: INTERNET (PGS i własny HTTPS), POST_NOTIFICATIONS (Android 13+), RECEIVE_BOOT_COMPLETED (odtworzenie alarmu), VIBRATE (reakcje dotykowe).
 - Samo zapisanie raportu w files/crash nie jest zbieraniem przez wydawcę. Dopiero świadomy wybór aplikacji odbiorczej i wysłanie wiadomości może przekazać raport wybranemu podmiotowi.
-- Systemowy backup zawiera tylko profile.json; dane battle.snap i files/crash są wyłączone. Kopia Androida i PGS Saved Games podlegają innym zasadom przechowywania.
+- Systemowy backup zawiera tylko profile.json i history.json (android:allowBackup="true" z regułami include); battle.snap, files/crash, kolejka wyników score-queue*, powtórki i kopie sprzed importu są wyłączone. Kopia w chmurze wymaga szyfrowania end-to-end. Kopia Androida i PGS Saved Games podlegają innym zasadom przechowywania. W Data safety kopia systemowa Google nie jest „udostępnianiem” ani „zbieraniem” przez dewelopera (szyfrowana, zarządzana przez Androida).
 - Baza własnego rankingu: zgodnie z istniejącym kodem rekordy nie wygasają automatycznie, a kasowanie jest inicjowane przez użytkownika. Logi IP, zgłoszenia obraźliwych nicków, ewentualne kopie zapasowe i ich retencję trzeba porównać z wdrożonym serwerem i polityką przed pierwszym uruchomieniem tej funkcji.
 - Dla PGS usuwanie danych tej konkretnej gry odbywa się niezależnie w ustawieniach Play Games. Reset profilu lokalnego nie usuwa kopii w PGS ani danych własnego serwera.
 
@@ -76,7 +76,7 @@ Przy działającym PGS stosuj następującą konserwatywną klasyfikację. „Wa
 | POST_NOTIFICATIONS | Pokazywanie lokalnych przypomnień na Androidzie 13+ za zgodą systemową |
 | RECEIVE_BOOT_COMPLETED | Przywrócenie harmonogramu lokalnych przypomnień po restarcie |
 
-Nie korzystamy z Firebase Cloud Messaging. Sam alarm i wyświetlenie przypomnienia nie przekazują pseudonimu ani wyników na serwer. Android może wykonywać odrębny backup profile.json: android:allowBackup="true", backup_rules.xml i data_extraction_rules.xml; battle.snap jest pomijany.
+Nie korzystamy z Firebase Cloud Messaging. Sam alarm i wyświetlenie przypomnienia nie przekazują pseudonimu ani wyników na serwer. Android może wykonywać odrębny backup profile.json i history.json: android:allowBackup="true", backup_rules.xml i data_extraction_rules.xml (tylko include); battle.snap, score-queue*, files/crash i powtórki są pomijane.
 
 ## Otwarte punkty przed publikacją
 

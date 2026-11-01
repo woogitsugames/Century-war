@@ -193,7 +193,7 @@ class StatsScreen(g: Game) : Screen(g) {
             selected >= 0 -> (detailNames.size * 34 + 38 +
                 if (tipLines.isEmpty()) 0 else (48 + tipLines.size * 19)) * dp
             tab == 1 -> history.size * 66 * dp + 24 * dp
-            else -> 1560 * dp // sekcje, pięć wykresów i pięć wierszy AI
+            else -> statsContentHeightDp() * dp
         }
         maxScroll = max(0f, content - panel.height() + 26 * dp)
         scroll = scroll.coerceIn(0f, maxScroll)
@@ -379,41 +379,65 @@ class StatsScreen(g: Game) : Screen(g) {
     }
 
     private fun drawStats(c: Canvas) {
-        var y = panel.top + 8 * dp - scroll
-        drawSection(c, L["bh_by_mode"], y); y += 28 * dp
+        var y = panel.top + STATS_TOP * dp - scroll
+        drawSection(c, L["bh_by_mode"], y); y += FIRST_SECTION_H * dp
         for (i in modeKeys.indices) {
             drawPair(c, modeLabel(i), modeTexts[i], y, modeIcons[i])
-            y += 34 * dp
+            y += MODE_ROW_H * dp
         }
-        drawSection(c, L["bh_total"], y); y += 27 * dp
+        drawSection(c, L["bh_total"], y); y += SECTION_H * dp
         for (i in extraTexts.indices) {
             drawPair(c, L[extraKeys[i]], extraTexts[i], y,
                 if (i == 3) Icons.HELMET else if (i == 4) Icons.BOOK else Icons.TROPHY)
-            y += 29 * dp
+            y += ROW_H * dp
         }
-        drawSection(c, L["bh_best"], y); y += 27 * dp
+        drawSection(c, L["bh_best"], y); y += SECTION_H * dp
         for (i in bestTexts.indices) {
             drawPair(c, modeLabel(i), bestTexts[i], y, modeIcons[i])
-            y += 29 * dp
+            y += ROW_H * dp
         }
-        drawSection(c, L["bh105_last30"], y); y += 27 * dp
-        drawRecentResults(c, y); y += 168 * dp
-        drawSection(c, L["bh105_best_wave"], y); y += 27 * dp
-        drawBestWaves(c, y); y += 142 * dp
-        drawSection(c, L["bh105_day_time"], y); y += 27 * dp
-        drawDailyTime(c, y); y += 146 * dp
-        drawSection(c, L["bh_last14"], y); y += 27 * dp
-        drawDays(c, y); y += 136 * dp
-        drawSection(c, L["bh_endless20"], y); y += 27 * dp
-        drawEndless(c, y); y += 130 * dp
-        drawSection(c, L["bh_vs_ai"], y); y += 27 * dp
+        drawSection(c, L["bh105_last30"], y); y += SECTION_H * dp
+        drawRecentResults(c, y); y += RECENT_H * dp
+        drawSection(c, L["bh105_best_wave"], y); y += SECTION_H * dp
+        drawBestWaves(c, y); y += WAVES_H * dp
+        drawSection(c, L["bh105_day_time"], y); y += SECTION_H * dp
+        drawDailyTime(c, y); y += DAILY_H * dp
+        drawSection(c, L["bh_last14"], y); y += SECTION_H * dp
+        drawDays(c, y); y += DAYS_H * dp
+        drawSection(c, L["bh_endless20"], y); y += SECTION_H * dp
+        drawEndless(c, y); y += ENDLESS_H * dp
+        drawSection(c, L["bh_vs_ai"], y); y += SECTION_H * dp
         for (i in aiNames.indices) {
             drawPair(c, aiNames[i], aiTexts[i], y, Icons.HELMET)
-            y += 29 * dp
+            y += ROW_H * dp
         }
         ui.text(c, L["bh_local"], panel.centerX(), y + 17 * dp, 10f, Ui.DIM, Paint.Align.CENTER)
     }
 
+    /** Wysokość zakładki statystyk (dp) z tych samych stałych, których używa drawStats. */
+    internal fun statsContentHeightDp(): Float =
+        STATS_TOP + FIRST_SECTION_H + modeKeys.size * MODE_ROW_H +
+            SECTION_H + extraTexts.size * ROW_H +
+            SECTION_H + bestTexts.size * ROW_H +
+            SECTION_H + RECENT_H + SECTION_H + WAVES_H + SECTION_H + DAILY_H +
+            SECTION_H + DAYS_H + SECTION_H + ENDLESS_H +
+            SECTION_H + aiNames.size * ROW_H + FOOTER_H
+
+    private companion object {
+        // Odstępy zakładki statystyk w dp: wspólne dla rysowania i przewijania.
+        const val STATS_TOP = 8f
+        const val FIRST_SECTION_H = 28f
+        const val SECTION_H = 27f
+        const val MODE_ROW_H = 34f
+        const val ROW_H = 29f
+        const val RECENT_H = 168f
+        const val WAVES_H = 142f
+        const val DAILY_H = 146f
+        const val DAYS_H = 136f
+        const val ENDLESS_H = 130f
+        /** Stopka „dane lokalne” (linia bazowa +17 dp) z marginesem. */
+        const val FOOTER_H = 26f
+    }
 
     /** Wyniki ostatnich 30 bitew: każda kolumna to bitwa, wiersz oznacza tryb. */
     private fun drawRecentResults(c: Canvas, top: Float) {

@@ -110,7 +110,7 @@ nie jest poprawną, zweryfikowaną powtórką):
   "board": "endless",
   "player": "a16036d5-800a-4898-aea3-11b6548de7b4",
   "nick": "Gracz_12",
-  "gameVersion": "0.4.0",
+  "gameVersion": "0.5.0",
   "seed": 12345,
   "replay": "AoQH...",
   "score": 257,
@@ -252,7 +252,7 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
   Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.
 - Wspólna wersja protokołu jest zdefiniowana jako `SimVersion.PROTOCOL`
-  w `:sim` (obecnie `0.4.0`). Używa jej klient oraz domyślny serwer.
+  w `:sim` (obecnie `0.5.0`). Używa jej klient oraz domyślny serwer.
   `CW_GAME_VERSION` nie jest już konfigurowana w Docker Compose.
   Jej podbicie po zmianach przebiegu symulacji wykonuje koordynator.
   `Replay.VERSION` (obecnie 5) wersjonuje tylko format powtórek.
@@ -356,10 +356,34 @@ odrzucana przez `PRAGMA integrity_check` i sprawdzenie schematu.
 
 Przy przywróceniu poprzedni plik bazy oraz ewentualne pliki WAL/SHM
 zostają zachowane w `cw-pre-restore-*` na wolumenie jako kopia ratunkowa.
-Po weryfikacji działania nowej bazy można je ręcznie usunąć. Przywrócenie
-cofa wszystkie operacje wykonane po momencie utworzenia kopii, w tym
-usunięcia danych przez użytkowników. Taką operację należy odnotować
-i sprawdzić skutki dla retencji i żądań usunięcia danych.
+**Rotacja:** po każdym udanym przywróceniu zostają tylko 3 najnowsze katalogi
+`cw-pre-restore-*` (`DatabaseMaintenance.PRE_RESTORE_KEEP`); starsze są
+usuwane automatycznie. Nieudane przywrócenie niczego nie usuwa. Katalogi
+ratunkowe zawierają dane osobowe (nicki, UUID) – po weryfikacji działania
+nowej bazy usuń je ręcznie, a jeśli potrzebujesz starszego stanu, skopiuj go
+poza wolumen przed kolejnym przywróceniem.
+
+**Przywrócenie a usunięcia danych graczy.** Przywrócenie cofa wszystkie
+operacje wykonane po momencie utworzenia kopii, w tym usunięcia danych
+(`/v1/player/delete`, `admin delete-score`). Serwer **nie prowadzi dziennika
+usunięć** (celowo nie przechowuje UUID osób, które usunęły dane), więc
+usunięć nie da się odtworzyć automatycznie. Po każdym przywróceniu, przed
+ponownym udostępnieniem rankingu:
+
+1. Odnotuj datę kopii i datę przywrócenia.
+2. Zbierz UUID graczy, którzy po dacie kopii zażądali usunięcia danych
+   kanałami poza aplikacją (e-mail, zgłoszenia prywatności, notatki
+   moderacji z `delete-score`/`block`).
+3. Dla każdego UUID znajdź jego wyniki:
+   `docker compose run --rm --no-deps -T leaderboard admin export-csv | grep '^UUID,'`
+   i usuń każdy wiersz poleceniem
+   `admin delete-score UUID board day` (kolumny `board` i `day` z CSV).
+   Usunięcie ostatniego wyniku gracza usuwa też jego nick i zgłoszenia.
+   Ponów także `admin block UUID` dla blokad nadanych po dacie kopii.
+4. Sprawdź `admin export-csv`, że UUID nie występuje w wynikach.
+5. Usunięć wykonanych w aplikacji po dacie kopii serwer nie zna; dlatego
+   przywracaj możliwie najnowszą kopię i opisz zdarzenie w rejestrze
+   incydentów (skutki dla retencji i żądań usunięcia danych).
 
 ## Moderacja administracyjna
 
@@ -439,12 +463,16 @@ Testy Androida i symulacji uruchamia osobny workflow `android.yml`.
   Limity są w pamięci instancji; pozostaw również ochronę na brzegu proxy.
 - Dzienny limit zgłoszeń: `CW_RATE_POST_INSTALL_DAY=100`,
   `CW_RATE_POST_IP_DAY=400`; liczniki są atomowe i trwałe w SQLite.
-  Każdy podpisany, poprawny strukturalnie POST zajmuje miejsce nawet przy
-  późniejszym błędzie 422/503. Limit jest liczony od UTC, a IP jest zastępowany
+  Każdy podpisany, poprawny strukturalnie POST zajmuje miejsce także przy
+  późniejszym błędzie 422 (`invalid_replay`). Przy 503 (`verification_busy`:
+  pełna kolejka lub przekroczony budżet czasu) jednostka limitu jest zwracana,
+  bo przeciążenie serwera nie może zużywać dziennego limitu gracza. Limit jest liczony od UTC, a IP jest zastępowany
   dziennym HMAC kluczem `CW_PUBLIC_ID_KEY`. Zachowaj ten klucz między restartami.
 - Weryfikacja: pula `min(liczba rdzeni, 8)` wątków i maks. 16 oczekujących,
-  timeout 15 sekund liczony od wejścia do kolejki oraz limit 108 000 kroków
-  pojedynczej powtórki (30 minut symulacji przy 60 Hz).
+  timeout 15 sekund liczony od wejścia do kolejki oraz limit kroków
+  pojedynczej powtórki równy `Replay.MAX_STEPS` (432 000, czyli 120 minut
+  symulacji przy 60 Hz) – ten sam próg co po stronie klienta
+  (`REPLAY_TOO_LONG`), więc uczciwa długa gra Endless nie dostaje 422.
   Drugi przebieg normalizacji korzysta z **tego samego** limitu czasu.
   Przepełnienie lub timeout: HTTP 503 z `Retry-After: 30`.
   Przekroczenie liczby kroków: HTTP 422 (`invalid_replay`).

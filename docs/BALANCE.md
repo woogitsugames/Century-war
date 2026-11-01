@@ -572,7 +572,11 @@ Wpis „60” jest **prawostronnie ucięty**: nie oznacza zwycięstwa nad falą 
 ani pokonania bossa tej fali. Mediana liczona jest **wyłącznie z porażek**.
 Porażka podczas fali progowej nie liczy się do jej przeżycia.
 
-| Metryka | Przed (bazowy `487a82b`) | Po audycie (bez zmiany symulacji) | Cel |
+Uwaga (tura 6, koordynator): kolumna „Przed” nie pochodzi z osobnego
+przebiegu – audyt 95 nie zmienił symulacji, więc wartości zostały
+**przepisane z kolumny „Po”**, a nie zmierzone niezależnie na `487a82b`.
+
+| Metryka | Przed (kopia „Po”, bez osobnego pomiaru) | Po audycie (bez zmiany symulacji) | Cel |
 |---|---:|---:|---:|
 | Przetrwanie fali 20 | 100/100 | **100/100** | co najmniej 95/100 |
 | Przetrwanie fali 30 | 94/100 | **94/100** | pomiar |
@@ -604,8 +608,10 @@ się błędem technicznym, gdy drugie uruchomienie Gradle użyło cache i nie
 wypisało ponownie `ENDLESS_MEAN`). Workflow poprawiono przez
 `--rerun-tasks` i dodano porównanie średnich z 100 seedów.
 
-**Ochrona przed regresją:** test 100-seedowy ma asercje dla trzech celów
-(20: ≥95, 60: 5–15, mediana porażek: 45–55). Nie zmieniono kart, doktryn,
+**Ochrona przed regresją:** test 100-seedowy twardo sprawdza przeżycie fali 20
+(≥95/100) i szeroki zakres mediany porażek (38–60); cele strojenia (fala 60:
+5–15/100, mediana 45–55) są tylko raportowane (`ENDLESS100_TARGET_*`), bo
+kolejne zlecenia (97, 108) je przesuwają (korekta w turze 6). Nie zmieniono kart, doktryn,
 wartości skalowania, pól stanu, `BattleSnapshot.VERSION` ani `Replay.VERSION`.
 
 **Zależność:** podczas pomiaru zlecenie 108 (nowe karty i motywy fal) nie
@@ -613,4 +619,3 @@ było scalone z `claude/bold-sagan-vwz5gm`. Po jego scaleniu należy
 **ponownie uruchomić 100 seedów**; wcześniejszego wyniku nie wolno uważać
 za pomiar po zleceniu 108.
 
-- 2026-11-01 — regeneracja złotych powtórek: Zlecenie 95: audyt 100 seedow, bez zmiany skalowania.

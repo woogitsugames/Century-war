@@ -97,7 +97,7 @@ class WhatsNewScreenshotTest {
         p.whatsNewSeenVersion = "0.0.9"
         g.push(AboutScreen(g))
         val about = g.current as AboutScreen
-        about.onClick(about.buttons.first { it.id == 4 })
+        about.onClick(about.buttons.first { it.id == 5 }) // 5 = Co nowego (4 to usuwanie danych po 93)
         assertTrue(g.current is WhatsNewScreen)
         g.back()
         assertTrue(g.current === about)

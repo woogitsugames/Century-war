@@ -59,9 +59,48 @@ class MusicSynth(seed: Int = 0x43A72F19) {
             2, -1, -1, -1, 1, -1, -1, -1, 0, -1, 2, -1, 3, -1, -1, -1,
             4, -1, -1, -1, 3, -1, -1, -1, 2, -1, 1, -1, 0, -1, -1, -1,
         )
-        private val chordsA = intArrayOf(0, 3, 4, 0)
-        private val chordsB = intArrayOf(0, 5, 3, 4)
-        private val chordsBridge = intArrayOf(5, 3, 4, 4)
+        // Cztery progresje na sekcję; wybór z hash(epoka, fraza), tablice tworzone raz.
+        private val progressions = arrayOf(
+            arrayOf(intArrayOf(0, 3, 4, 0), intArrayOf(0, 5, 3, 4), intArrayOf(0, 2, 3, 4), intArrayOf(0, 4, 5, 3)),
+            arrayOf(intArrayOf(0, 5, 3, 4), intArrayOf(5, 3, 0, 4), intArrayOf(3, 4, 2, 5), intArrayOf(0, 3, 5, 4)),
+            arrayOf(intArrayOf(5, 3, 4, 4), intArrayOf(3, 4, 5, 4), intArrayOf(5, 4, 3, 4), intArrayOf(2, 5, 3, 4)),
+        )
+
+        /** Stały wkład epoki (bez ziarna): każda epoka ma własny układ przekształceń. */
+        private fun eraShape(era: Int): Int {
+            var x = (era + 11) * 0x9E3779B1.toInt()
+            x = (x xor (x ushr 15)) * 0x2C1B3C6D
+            return x xor (x ushr 13)
+        }
+
+        /**
+         * Kształt frazy upakowany w Int: bity 0–1 tryb (1 = zamiana półfraz, 2 = inwersja),
+         * bity 2–3 transpozycja o 0–2 stopnie skali, bity 4–5 numer progresji akordów.
+         */
+        internal fun phraseShape(era: Int, variation: Int): Int {
+            val v = variation ushr 10
+            val e = eraShape(era)
+            val mode = (v + e) and 3
+            val shift = ((v ushr 2) + (e ushr 2)).and(0xFFFF) % 3
+            val progression = ((v ushr 4) xor (e ushr 4)) and 3
+            return mode or (shift shl 2) or (progression shl 4)
+        }
+
+        /** Stopień melodii (lub -1 = pauza) dla sekcji, pozycji i kształtu frazy. */
+        internal fun melodyDegree(section: Int, position: Int, shape: Int): Int {
+            val source = if ((shape and 1) != 0) position xor 16 else position
+            var degree = when (section) {
+                0 -> themeA[source]
+                1 -> themeB[source]
+                else -> themeBridge[source]
+            }
+            if (degree < 0) return -1
+            if ((shape and 2) != 0) degree = 6 - degree
+            return degree + ((shape ushr 2) and 3)
+        }
+
+        internal fun progression(section: Int, shape: Int): IntArray =
+            progressions[section][(shape ushr 4) and 3]
 
         // Każda z dziewięciu epok ma własne tempo, skalę lub instrumentarium.
         // Menu ma osobny, dziesiąty styl.
@@ -100,6 +139,7 @@ class MusicSynth(seed: Int = 0x43A72F19) {
         private var samplesUntilStep = 0
         private var noiseState = 1
         private var phraseVariation = 0
+        private var shape = 0
         var seedAtReset = seed
             private set
         private val leadA = Note()
@@ -203,7 +243,7 @@ class MusicSynth(seed: Int = 0x43A72F19) {
         fun reset(newEra: Int) {
             era = newEra
             style = styles[if (newEra == MENU) 9 else newEra]
-            step = 0; samplesUntilStep = 0; phraseVariation = 0
+            step = 0; samplesUntilStep = 0; phraseVariation = 0; shape = 0
             seedAtReset = seed
             noiseState = (seed xor ((newEra + 2) * 0x45D9F3B)).let { if (it == 0) 1 else it }
             leadA.clear(); leadB.clear(); counter.clear(); nextLead = false
@@ -242,17 +282,13 @@ class MusicSynth(seed: Int = 0x43A72F19) {
             val position = step % 32
             val phrase = step / 32
             val section = phrase % 3
-            if (position == 0) phraseVariation = phraseHash(phrase)
-            val melody = when (section) {
-                0 -> themeA[position]
-                1 -> themeB[position]
-                else -> themeBridge[position]
+            if (position == 0) {
+                phraseVariation = phraseHash(phrase)
+                // Wariacja motywu: zamiana/inwersja półfraz, transpozycja i progresja akordów.
+                shape = phraseShape(era, phraseVariation)
             }
-            val progression = when (section) {
-                0 -> chordsA
-                1 -> chordsB
-                else -> chordsBridge
-            }
+            val melody = melodyDegree(section, position, shape)
+            val progression = progression(section, shape)
             if (melody >= 0 && (position != 12 || (phraseVariation and 3) != 0)) {
                 val note = if (nextLead) leadA else leadB
                 val shift = if (position == 20 && (phraseVariation and 4) != 0) 1 else 0

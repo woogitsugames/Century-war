@@ -107,4 +107,26 @@ class BattleSummaryTest {
         assertTrue(samples.stepAt(0) > 0)
         assertTrue(samples.stepAt(samples.count - 1) > samples.stepAt(0))
     }
+
+    /** write() w pętli bitwy nie formatuje napisów; robi to dopiero formatLabels(). */
+    @Test
+    fun labelsAreFormattedLazily() {
+        val battle = battle()
+        val samples = BattleSummarySamples()
+        samples.capture(battle)
+        repeat(185) {
+            battle.step()
+            samples.capture(battle)
+        }
+        samples.finish(battle)
+        assertEquals("0:00", samples.lastTimeText)
+        samples.formatLabels()
+        assertEquals("0:00", samples.firstTimeText)
+        assertEquals("0:03", samples.lastTimeText)
+        assertEquals(samples.maxHp.toString(), samples.maxHpText)
+        assertEquals(samples.valueAt(2, 0, samples.count - 1).toString(), samples.playerGoldText)
+        val cached = samples.lastTimeText
+        samples.formatLabels()
+        assertTrue("Bez zmian próbek napis nie jest tworzony ponownie", cached === samples.lastTimeText)
+    }
 }

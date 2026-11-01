@@ -92,4 +92,37 @@ class SqliteMaintenanceTest {
         assertEquals(2, runRestore(listOf("restore"), db, StringBuilder(), StringBuilder()))
         assertEquals(1, runRestore(listOf("restore", db.toString()), db, StringBuilder(), StringBuilder()))
     }
+
+    @Test fun repeatedRestoresKeepOnlyNewestRescueDirectories() {
+        val db = directory.resolve("rotate.db")
+        val backup = directory.resolve("rotate-backup.sqlite")
+        val now = 1_800_000_000_000L
+        SqliteStore("jdbc:sqlite:$db").use { store ->
+            store.save(input(UUID.randomUUID().toString(), 10L), VerifiedReplay("endless", 10L, 900), now, "h")
+            assertEquals(0, runAdmin(listOf("backup", backup.toString()), store, StringBuilder(), StringBuilder()))
+        }
+        // Obcy katalog i plik o podobnej nazwie nie mogą zostać usunięte przez rotację.
+        val unrelated = Files.createDirectories(directory.resolve("cw-other-keep"))
+        val lookalike = Files.writeString(directory.resolve("cw-pre-restore-note.txt"), "x")
+        val rescues = mutableListOf<Path>()
+        repeat(DatabaseMaintenance.PRE_RESTORE_KEEP + 2) { i ->
+            val output = StringBuilder()
+            assertEquals(0, runRestore(listOf("restore", backup.toString()), db, output, StringBuilder()))
+            val rescue = Path.of(output.lines().first { it.startsWith("previous-files:") }
+                .substringAfter("previous-files: ").trim())
+            // Jednoznaczna kolejność mimo zgrubnej rozdzielczości mtime w systemie plików.
+            Files.setLastModifiedTime(rescue,
+                java.nio.file.attribute.FileTime.fromMillis(now + i * 1_000L))
+            rescues.add(rescue)
+        }
+        val left = Files.list(directory).use { stream ->
+            stream.filter {
+                it.fileName.toString().startsWith("cw-pre-restore-") && Files.isDirectory(it)
+            }.toList().toSet()
+        }
+        assertEquals(DatabaseMaintenance.PRE_RESTORE_KEEP, left.size)
+        assertEquals(rescues.takeLast(DatabaseMaintenance.PRE_RESTORE_KEEP).toSet(), left)
+        assertTrue(Files.isDirectory(unrelated))
+        assertTrue(Files.isRegularFile(lookalike))
+    }
 }

@@ -169,6 +169,14 @@ class PlayGamesLeaderboards(
         }
     }
 
+    /**
+     * unlock() jest „fire-and-forget”: identyfikator usuwamy z kolejki od razu po
+     * przekazaniu do klienta PGS, nie po wyniku Task. Gdy PGS odrzuci lub zgubi
+     * wywołanie (sieć, wylogowanie), lokalny profil nadal ma osiągnięcie, a
+     * Achievements.syncUnlocked() przy kolejnym zalogowaniu (onAuthenticated)
+     * ponownie zgłasza wszystkie odblokowane — unlock jest idempotentny. Dzięki temu
+     * nie trzymamy w pamięci wiszących Tasków ani nie dublujemy ponowień tutaj.
+     */
     private fun flushAchievements() {
         if (!authenticated || closed) return
         val iterator = queuedAchievements.iterator()

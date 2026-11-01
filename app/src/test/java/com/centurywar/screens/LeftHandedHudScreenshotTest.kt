@@ -27,6 +27,8 @@ class LeftHandedHudScreenshotTest {
             Pair("phone720", intArrayOf(1600, 720, 2)),
             Pair("narrow", intArrayOf(720, 1280, 2)),
             Pair("fold", intArrayOf(2184, 1968, 3)),
+            // Wewnętrzny ekran Folda z dużą skalą (gęstość 3.6): dwurzędowy pasek górny.
+            Pair("foldInner", intArrayOf(1802, 2000, 36)),
         )
         for ((tag, dims) in devices) {
             for (leftHanded in listOf(false, true)) {
@@ -43,7 +45,7 @@ class LeftHandedHudScreenshotTest {
                     hintsSeen = Profile.HINT_VALID_MASK
                     leftHandedHud = leftHanded
                 }, Quality.LOW)
-                g.density = dims[2].toFloat()
+                g.density = if (dims[2] > 9) dims[2] / 10f else dims[2].toFloat()
                 g.resize(dims[0], dims[1], dims[0], dims[1])
                 g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 110L, 1f)))
                 g.finishScreenTransition()

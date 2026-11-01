@@ -161,4 +161,30 @@ class ProfileBackupTest {
         }.isFailure)
     }
 
+    /** Import nie może zostać cofnięty przez równoległy zapis tego samego profilu (107a). */
+    @Test fun trackedSaveSurvivesConcurrentLaterSave() {
+        val source = profile()
+        source.medals = 777
+        val imported = source.toJson()
+        val file = File(Files.createTempDirectory("cw-backup").toFile(), "profile.json")
+        val target = Profile(file)
+        target.fromJson(imported)
+        val importSeq = target.saveTracked()
+        // Równoległa zmiana i zapis (np. ekran ustawień) – plik różni się od migawki importu.
+        target.musicVolume = 0.25f
+        target.save()
+        assertTrue(target.awaitWrites(5_000L))
+        assertTrue(target.isPersisted(importSeq))
+        val onDisk = JSONObject(file.readText(Charsets.UTF_8))
+        assertEquals(777, onDisk.getInt("medals"))
+    }
+
+    @Test fun trackedSaveNotPersistedWhenWriteFails() {
+        // Katalog nadrzędny nie istnieje: zapis nie może się udać.
+        val missing = File(Files.createTempDirectory("cw-backup").toFile(), "brak/profile.json")
+        val target = Profile(missing)
+        val seq = target.saveTracked()
+        assertTrue(target.awaitWrites(5_000L))
+        assertFalse(target.isPersisted(seq))
+    }
 }

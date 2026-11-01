@@ -70,6 +70,8 @@ class BattleScreen(
     private val haptics = BattleHaptics(g, battle)
     private val r = BattleRenderer(g, battle)
     private val battleSummary = BattleSummarySamples().apply { capture(battle) }
+    /** Bitwa wznowiona ze zrzutu nie ma próbek sprzed przerwania: powtórka odbuduje je z logu. */
+    private val summaryComplete = restored == null
     private val resultChart = BattleSummaryChart()
     private val resultChartArea = RectF()
     private var showResultChart = false
@@ -173,8 +175,12 @@ class BattleScreen(
         const val UNIT_UPGRADE0 = 70 // 70..73
         const val UNIT_UPGRADE_BUY = 74
         const val UNIT_UPGRADE_CLOSE = 75
+        const val RESULT_STATS_TAB = 201
+        const val RESULT_CHART_TAB = 202
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
+        /** Szerokość bloku liczebności armii (ikona, liczby, dwukropek) w dp. */
+        const val ARMY_COUNTS_W = 90f
     }
 
     /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
@@ -219,8 +225,8 @@ class BattleScreen(
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
     private val replayEnd = btn(WATCH_REPLAY)
-    private val resultStatsTab = btn(201)
-    private val resultChartTab = btn(202)
+    private val resultStatsTab = btn(RESULT_STATS_TAB)
+    private val resultChartTab = btn(RESULT_CHART_TAB)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     private val variantBtn = Array(2) { btn(VARIANT0 + it) }
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -241,6 +247,8 @@ class BattleScreen(
     private val xpRect = RectF()
     private val fieldRect = RectF()
     private val weatherRect = RectF()
+    /** Obszar liczebności armii w drugim rzędzie paska (pusty w układzie szerokim). */
+    private val armyRect = RectF()
     private val panel = RectF()
     private val upgradePanel = RectF()
     private val upgradeRoleKeys = arrayOf("unit_upgrade_melee", "unit_upgrade_ranged", "unit_upgrade_heavy", "unit_upgrade_elite")
@@ -373,11 +381,13 @@ class BattleScreen(
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         val t = g.insetT + 6 * dp
-        // Na bardzo wąskich ekranach awans ma własne miejsce przy minimapie.
-        // W pierwszym rzędzie nachodziłby na pauzę; układ zwykły jest nietknięty.
-        if (twoRowHud) evolveBtn.set(l, t + 54 * dp, 118 * dp, 48 * dp)
-        else evolveBtn.set(l + 196 * dp, t, 118 * dp, 48 * dp)
         pauseBtn.set(rr - 48 * dp, t, 48 * dp, 48 * dp)
+        // Awans zawsze w pierwszym rzędzie. W dwurzędowym HUD leworęcznym zwęża się
+        // przed pauzą (min. 48 dp), by drugi rząd (armia, minimapa, pogoda) pozostał wolny.
+        val evolveW = if (twoRowHud)
+            min(118 * dp, pauseBtn.r.left - 6 * dp - (l + 196 * dp)).coerceAtLeast(48 * dp)
+            else 118 * dp
+        evolveBtn.set(l + 196 * dp, t, evolveW, 48 * dp)
         if (compactTop) {
             // Wąski ekran: osobny rząd na minimapę, paski baz i zegar.
             // Minimapa na środku; po lewej liczebność armii, po prawej pogoda (po 120 dp),
@@ -416,6 +426,13 @@ class BattleScreen(
             mirrorHudRect(mini, l, rr)
             mirrorHudRect(weatherRect, l, rr)
         }
+        // Liczebność armii w drugim rzędzie: wyśrodkowana w polu po stronie przeciwnej
+        // do pogody (tej samej, co przy rysowaniu); prostokąt służy też testom kolizji.
+        if (compactTop && mini.width() > 0f) {
+            val ax = (if (g.profile.leftHandedHud) mini.right + (w - g.insetR - 8 * dp - mini.right) * 0.5f
+                else (g.insetL + 8 * dp + mini.left) * 0.5f) - 38 * dp
+            armyRect.set(ax, mini.centerY() - 11 * dp, ax + ARMY_COUNTS_W * dp, mini.centerY() + 11 * dp)
+        } else armyRect.setEmpty()
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
@@ -1079,9 +1096,12 @@ class BattleScreen(
             }
             QUIT -> { paused = false; surrendered = commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
-            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, replayId, it, battleSummary)) }
-            201 -> showResultChart = false
-            202 -> showResultChart = true
+            WATCH_REPLAY -> replayBytes?.let {
+                g.push(if (summaryComplete) ReplayScreen(g, replayId, it, battleSummary)
+                    else ReplayScreen(g, replayId, it))
+            }
+            RESULT_STATS_TAB -> showResultChart = false
+            RESULT_CHART_TAB -> showResultChart = true
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 val cards = battle.pendingCards
                 if (cards != null) {
@@ -1822,9 +1842,8 @@ class BattleScreen(
                     else mini.right + 14 * dp
                 }
             } else if (leftHud) mini.left - 14 * dp else mini.right + 14 * dp
-            if (secondRow) drawArmyCounts(c, p, e,
-                (if (leftHud) mini.right + (right - mini.right) * 0.5f
-                 else (l + mini.left) * 0.5f) - 38 * dp, wy + 11 * dp)
+            if (secondRow && armyRect.width() > 0f)
+                drawArmyCounts(c, p, e, armyRect.left, armyRect.centerY())
             Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
             // gdy brak miejsca, zostaje sama ikona.
@@ -1847,7 +1866,8 @@ class BattleScreen(
             }
             if (!compactTop && battle.weather == Weather.WIND) {
                 val dir = battle.windDirection().toFloat()
-                val mx = wx + 24 * dp
+                // W odbitym układzie strzałka po zewnętrznej stronie ikony, nie na minimapie.
+                val mx = if (leftHud) wx - 24 * dp else wx + 24 * dp
                 val my = wy + 33 * dp
                 ui.stroke.color = Ui.GOLD
                 ui.stroke.strokeWidth = 2 * dp
@@ -1975,13 +1995,18 @@ class BattleScreen(
         }
         // Epoka wroga w osobnej linii na szerokim HUD; nie nachodzi na pogodę.
         val ex = if (leftHud) pauseBtn.r.right + 10 * dp else pauseBtn.r.left - 10 * dp
+        // W układzie dwurzędowym granicą jest najbliższy z: awansu, złota i paska XP
+        // (w trybie leworęcznym odbitych na prawą stronę).
         val enemyWidth = if (leftHud) {
-            if (compactTop) evolveBtn.r.left - ex - 10 * dp else mini.left - ex - 12 * dp
+            if (compactTop) min(evolveBtn.r.left, min(goldRect.left, xpRect.left)) - ex - 10 * dp
+            else mini.left - ex - 12 * dp
         } else {
-            if (compactTop) ex - evolveBtn.r.right - 10 * dp else ex - mini.right - 12 * dp
+            if (compactTop) ex - max(evolveBtn.r.right, max(goldRect.right, xpRect.right)) - 10 * dp
+            else ex - mini.right - 12 * dp
         }
         val enemyY = t + (if (compactTop) 15f else 49f) * dp
-        ui.textO(c, enemyEraText, ex, enemyY,
+        // Gdy w lustrzanym pasku nie ma miejsca, nazwa epoki wroga zostaje w pauzie.
+        if (!leftHud || enemyWidth >= 24 * dp) ui.textO(c, enemyEraText, ex, enemyY,
             ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
             Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
         if (p.doctrines.isNotEmpty()) {
@@ -1990,7 +2015,9 @@ class BattleScreen(
             var i = p.doctrines.size - 1
             while (i >= 0) {
                 val boundary = if (leftHud) {
-                    if (mini.width() > 0f) mini.left - 10 * dp else evolveBtn.r.left - 10 * dp
+                    val edge = if (mini.width() > 0f) mini.left - 10 * dp else evolveBtn.r.left - 10 * dp
+                    // Dwurzędowy pasek: awans dzieli pierwszy rząd z doktrynami.
+                    if (compactTop) min(edge, evolveBtn.r.left - 6 * dp) else edge
                 } else {
                     if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp
                 }
@@ -2052,7 +2079,9 @@ class BattleScreen(
             if (!b.visible) continue
             val bw = min(7 * dp, (b.r.width() - 15 * dp) / 3f)
             for (t in 0 until Defs.MAX_UNIT_TIER) {
-                val x = b.r.left + 4 * dp + t * (bw + 2 * dp)
+                // Leworęczny HUD ma strzałkę ulepszenia w lewym rogu: belki od prawej.
+                val x = if (g.profile.leftHandedHud) b.r.right - 4 * dp - bw - t * (bw + 2 * dp)
+                    else b.r.left + 4 * dp + t * (bw + 2 * dp)
                 ui.fill.color = if (t < p.unitTier[i]) Ui.GOLD else Ui.FRAME
                 c.drawRoundRect(x, b.r.top + 4 * dp, x + bw, b.r.top + 7 * dp, 1.5f * dp, 1.5f * dp, ui.fill)
             }
@@ -2292,9 +2321,14 @@ class BattleScreen(
         }
     }
 
+    /** Wysokość wiersza wyniku (26 dp, ściskana na 720p, gdy wierszy jest dużo). */
+    private var resultRowH = 0f
+    /** Wiersze pominięte z braku miejsca w ostatniej klatce (kontrola zrzutów 720p). */
+    private var resultRowsClipped = 0
+
     private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
-        val lh = 26 * dp
-        if (y + lh > restartEnd.r.top - 8 * dp) return y
+        val lh = resultRowH
+        if (y + lh > restartEnd.r.top - 8 * dp) { resultRowsClipped++; return y }
         val lx = resultPanel.left + 30 * dp
         val rx = resultPanel.right - 30 * dp
         tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
@@ -2355,6 +2389,14 @@ class BattleScreen(
                 ui.fit(resultUnrankedText, 14f, rp.width() - 32 * dp), Ui.GOLD, Paint.Align.CENTER)
             y += (if (won) 28f else 20f) * dp
         }
+        // Treść zaczyna się pod zakładkami (73 dp), więc na 720p wiersze mogą się ścisnąć,
+        // zamiast znikać ostatnie (np. nagroda w tygodniowym Endless).
+        var rows = 2
+        if (cfg.mode == Mode.ENDLESS) rows += if (cfg.weekly >= 0L) 3 else 2
+        if (cfg.mode != Mode.CAMPAIGN) rows++
+        if (totalMedalsGained > 0) rows++
+        resultRowH = ((restartEnd.r.top - 8 * dp - y) / rows).coerceIn(20 * dp, 26 * dp)
+        resultRowsClipped = 0
         y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
         y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
         if (cfg.mode == Mode.ENDLESS) {

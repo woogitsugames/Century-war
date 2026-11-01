@@ -14,6 +14,7 @@ import com.centurywar.game.BattleController
 import com.centurywar.game.Mode
 import com.centurywar.meta.Profile
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,10 +84,16 @@ class BattleSummaryScreenshotTest {
                 assertTrue("Wykres nie może nakładać się na przyciski",
                     area.top > chart.r.bottom && area.bottom < buttons.r.top)
                 assertTrue("Wykres musi zachować wysokość", area.height() >= 95f * g.ui.dp)
-                screen.onClick(chart)
                 g.finishScreenTransition()
                 val bitmap = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
+                // Zakładka wyniku: treść pod zakładkami (73 dp) nie może gubić wierszy.
+                g.frame(canvas, 1f / 60f)
+                assertEquals("$name: pominięte wiersze wyniku", 0, field(screen, "resultRowsClipped"))
+                File(out, "battle104_${name}_stats.png").outputStream().use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                screen.onClick(chart)
                 g.frame(canvas, 1f / 60f)
                 File(out, "battle104_${name}_chart.png").outputStream().use {
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
@@ -96,5 +103,28 @@ class BattleSummaryScreenshotTest {
         } finally {
             L.lang = previousLanguage
         }
+    }
+
+    /** Najdłuższa lista wyników (tygodniowy Endless z nagrodą) na 720p: nic nie znika. */
+    @Test fun weeklyEndlessResultRowsFitPhone720() {
+        val g = game(1600, 720, 1.8f, Quality.LOW)
+        com.centurywar.meta.Achievements.all.forEach { g.profile.unlockedAchievements.add(it.id) }
+        val week = com.centurywar.game.Weekly.weekNumber(com.centurywar.game.Daily.dayNumber())
+        val screen = BattleScreen(g, com.centurywar.game.Weekly.config(week))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        val tiny = Canvas(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888))
+        g.frame(tiny, 1f / 60f)
+        val battle = field(screen, "battle") as Battle
+        battle.wave = 20
+        battle.surrender()
+        repeat(70) { g.frame(tiny, 1f / 60f) }
+        val bitmap = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+        g.frame(Canvas(bitmap), 1f / 60f)
+        assertEquals("pominięte wiersze wyniku", 0, field(screen, "resultRowsClipped"))
+        File(out, "battle104_phone720_weekly_stats.png").outputStream().use {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
     }
 }

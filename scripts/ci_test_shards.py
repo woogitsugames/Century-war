@@ -28,28 +28,52 @@ class Source:
     robolectric: bool
 
 
+TEST_ANNOTATION = r"@(?:org\.junit\.)?Test"
+CLASS_PATTERN = re.compile(
+    r"(?m)^(?:(?:internal|public)\s+)?(?:open\s+)?class\s+([A-Za-z_]\w*)\b"
+)
+METHOD_PATTERN = re.compile(
+    TEST_ANNOTATION
+    + r"(?:\([^)]*\))?\s*(?:@[^\n]*\n\s*)*(?:(?:internal|public)\s+)?fun\s+([A-Za-z_]\w*)\s*\("
+)
+ANNOTATION_PATTERN = re.compile(r"(?m)^\s*" + TEST_ANNOTATION + r"\b")
+ROBOLECTRIC_PATTERN = re.compile(r"@(?:[\w.]*\.)?RunWith\(\s*[\w.]*RobolectricTestRunner\b")
+
+
 def discover(root: Path = TEST_ROOT) -> list[Source]:
     result: list[Source] = []
     for path in sorted(root.rglob("*.kt")):
         code = path.read_text(encoding="utf-8")
-        if not re.search(r"(?m)^\s*@Test\b", code):
+        annotations = [m.start() for m in ANNOTATION_PATTERN.finditer(code)]
+        if not annotations:
             continue
         package = re.search(r"(?m)^package\s+([\w.]+)\s*$", code)
-        classes = re.findall(
-            r"(?m)^(?:(?:internal|public)\s+)?(?:open\s+)?class\s+([A-Za-z_]\w*)\b",
-            code,
-        )
-        methods = re.findall(
-            r"@Test(?:\([^)]*\))?\s*(?:@[^\n]*\n\s*)*(?:(?:internal|public)\s+)?fun\s+([A-Za-z_]\w*)\s*\(",
-            code,
-        )
-        annotation_count = len(re.findall(r"(?m)^\s*@Test\b", code))
-        if package is None or len(classes) != 1 or len(methods) != annotation_count:
+        classes = list(CLASS_PATTERN.finditer(code))
+        methods = list(METHOD_PATTERN.finditer(code))
+        if package is None or not classes or len(methods) != len(annotations):
             raise ValueError(f"Nie można odczytać klasy/metod @Test: {path}")
-        name = f"{package.group(1)}.{classes[0]}"
-        if any(source.name == name for source in result):
-            raise ValueError(f"Powtórzona klasa testowa: {name}")
-        result.append(Source(name, tuple(methods), "RobolectricTestRunner" in code))
+        # Plik może mieć kilka klas: metoda należy do najbliższej poprzedzającej klasy.
+        owned: dict[int, list[str]] = {}
+        for method in methods:
+            owners = [i for i, c in enumerate(classes) if c.start() < method.start()]
+            if not owners:
+                raise ValueError(f"Metoda @Test przed deklaracją klasy: {path}")
+            owned.setdefault(owners[-1], []).append(method.group(1))
+        for index, declaration in enumerate(classes):
+            if index not in owned:
+                continue
+            name = f"{package.group(1)}.{declaration.group(1)}"
+            if any(source.name == name for source in result):
+                raise ValueError(f"Powtórzona klasa testowa: {name}")
+            if len(classes) == 1:
+                robolectric = "RobolectricTestRunner" in code
+            else:
+                # Adnotacje klasy leżą między końcem poprzedniej klasy ("}" w kolumnie 0)
+                # a jej deklaracją.
+                header_start = code.rfind("\n}", 0, declaration.start())
+                header = code[max(header_start, 0):declaration.start()]
+                robolectric = ROBOLECTRIC_PATTERN.search(header) is not None
+            result.append(Source(name, tuple(owned[index]), robolectric))
     if not result:
         raise ValueError(f"Brak testów w {root}")
     return result

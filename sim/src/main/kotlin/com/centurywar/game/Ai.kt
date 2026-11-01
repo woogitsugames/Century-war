@@ -410,30 +410,34 @@ class Ai(
         value += when (personality) {
             AiPersonality.ASSAULT -> when (card) {
                 EndlessCard.BERSERK, EndlessCard.MARCH, EndlessCard.WAR_DRUMS,
-                EndlessCard.LAST_STAND, EndlessCard.DRILL_SERGEANT -> 24f
+                EndlessCard.LAST_STAND, EndlessCard.DRILL_SERGEANT,
+                EndlessCard.FINAL_SPARK -> 24f
                 else -> 0f
             }
             AiPersonality.ENGINEER -> when (card) {
                 EndlessCard.BURNING_TOWERS, EndlessCard.RAPID_TOWERS,
                 EndlessCard.TOWER_NETWORK, EndlessCard.IRON_CURTAIN,
-                EndlessCard.EMBER_FORGE, EndlessCard.REPAIR_CREW -> 24f
+                EndlessCard.EMBER_FORGE, EndlessCard.REPAIR_CREW,
+                EndlessCard.FIRST_GUARD -> 24f
                 else -> 0f
             }
             AiPersonality.ECONOMIST -> when (card) {
                 EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD,
                 EndlessCard.SCAVENGER, EndlessCard.SUPPLY_LINE,
-                EndlessCard.MOBILIZATION -> 24f
+                EndlessCard.MOBILIZATION, EndlessCard.FIELD_MEDICS -> 24f
                 else -> 0f
             }
             AiPersonality.SIEGER -> when (card) {
                 EndlessCard.FRONTLINE_PLATE, EndlessCard.SHARPSHOOTERS,
                 EndlessCard.ELITE_SCHOOL, EndlessCard.FORTRESS,
-                EndlessCard.FREE_ELITE, EndlessCard.MUSTER_BANNER -> 24f
+                EndlessCard.FREE_ELITE, EndlessCard.MUSTER_BANNER,
+                EndlessCard.BOSS_RECALL -> 24f
                 else -> 0f
             }
             AiPersonality.BALANCED -> when (card) {
                 EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
-                EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE -> 12f
+                EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE,
+                EndlessCard.FIELD_MEDICS -> 12f
                 else -> 0f
             }
         }
@@ -501,8 +505,10 @@ class Ai(
         var bestScore = -1f
         for (i in options.indices) {
             val card = options[i]
+            // Losowanie przed warunkiem: stała liczba odczytów strumienia AI na ofertę.
+            val jitter = b.rng.nextAiInt(me.index, 3)
             if (!EndlessCards.canOffer(card, me, b.fog)) continue
-            val score = cardValue(card) + b.rng.nextAiInt(me.index, 3)
+            val score = cardValue(card) + jitter
             if (score > bestScore) {
                 bestScore = score
                 best = i

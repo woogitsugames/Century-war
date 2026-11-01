@@ -78,18 +78,27 @@ class BattleHistory(private val file: File) {
             val dayWins = IntArray(14)
             val endlessNewest = ArrayList<Long>(20)
             val endlessWaveNewest = ArrayList<Int>(LIMIT)
-            val recentCount = minOf(30, records.size)
+            // Najpierw odfiltrowujemy rekordy ze znanym trybem, dopiero potem bierzemy 30.
+            // Pominięty rekord w środku okna zostawiał zerową pozycję = fałszywą wygraną kampanii.
+            val modeCount = Mode.entries.size
+            var recentCount = 0
+            for (record in records) {
+                if (recentCount >= 30) break
+                if (record.mode in 0 until modeCount) recentCount++
+            }
             val recentModes = IntArray(recentCount)
             val recentResults = IntArray(recentCount)
             val recentWinsByMode = IntArray(Mode.entries.size)
             val recentLossesByMode = IntArray(Mode.entries.size)
             val dailySeconds = LongArray(14)
             val today = dayNumber(nowMillis)
+            var recentFilled = 0
             for (index in records.indices) {
                 val record = records[index]
                 // Oś X od najstarszej do najnowszej bitwy; kapitulacja to porażka.
-                if (index < recentCount && record.mode in recentWinsByMode.indices) {
-                    val position = recentCount - 1 - index
+                if (recentFilled < recentCount && record.mode in recentWinsByMode.indices) {
+                    val position = recentCount - 1 - recentFilled
+                    recentFilled++
                     recentModes[position] = record.mode
                     recentResults[position] = if (record.result == WIN) WIN else LOSS
                     if (record.result == WIN) recentWinsByMode[record.mode]++

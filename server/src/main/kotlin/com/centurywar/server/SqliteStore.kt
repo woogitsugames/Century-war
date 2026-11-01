@@ -303,6 +303,43 @@ class SqliteStore(
         }
     }
 
+    /**
+     * Zwraca jednostkę dziennego limitu pobraną przez [consumeScoreSubmissionQuota],
+     * gdy serwer nie zweryfikował zgłoszenia z własnej winy (pełna kolejka, budżet).
+     * Dzień liczymy od chwili przyjęcia; po północy UTC wiersz jest już nieaktualny.
+     */
+    fun refundScoreSubmissionQuota(installationHash: String, ip: String, receivedAtMillis: Long) =
+        synchronized(lock) {
+            val day = todayUtc(receivedAtMillis)
+            val ipKey = publicIds.of("quota-ip:$day:$ip")
+            connection.autoCommit = false
+            try {
+                for ((kind, key) in listOf("installation" to installationHash, "ip" to ipKey)) {
+                    // Schemat wymaga requests > 0: ostatnią jednostkę zwracamy, usuwając wiersz.
+                    for (sql in listOf(
+                        "DELETE FROM score_submit_quotas " +
+                            "WHERE day = ? AND quota_kind = ? AND quota_key = ? AND requests = 1",
+                        "UPDATE score_submit_quotas SET requests = requests - 1 " +
+                            "WHERE day = ? AND quota_kind = ? AND quota_key = ? AND requests > 1",
+                    )) {
+                        val changed = connection.prepareStatement(sql).use {
+                            it.setLong(1, day)
+                            it.setString(2, kind)
+                            it.setString(3, key)
+                            it.executeUpdate()
+                        }
+                        if (changed > 0) break
+                    }
+                }
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+
     fun save(
         input: ScoreSubmission,
         replay: VerifiedReplay,

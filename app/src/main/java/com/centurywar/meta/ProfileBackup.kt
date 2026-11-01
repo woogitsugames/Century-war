@@ -19,6 +19,7 @@ object ProfileBackup {
     const val MAX_PROFILE_BYTES = 512 * 1024
     private const val MAGIC = "century-war-profile"
     private const val FORMAT_VERSION = 1
+    private const val VALIDATION_FILE = "cw-profile-backup-validation.json"
     private val HEX = "0123456789abcdef".toCharArray()
 
     /** Eksport korzysta z Profile.toCloudJson(), aby nie ujawniać sekretu rankingu. */
@@ -82,7 +83,10 @@ object ProfileBackup {
         require(Profile.isValidJson(payload)) { "Uszkodzony profil" }
         require(JSONObject(payload).optInt("v", -1) == version.toInt()) { "Niezgodna wersja profilu" }
         // Sprawdź także semantykę i migrację bez dotykania aktywnego profilu.
-        Profile(File("profile-backup-validation")).fromJson(payload)
+        // Profil walidacyjny żyje tylko w pamięci: fromJson() nie czyta ani nie zapisuje pliku,
+        // a save()/load() nie są tu wołane. Ścieżka wskazuje katalog tymczasowy JVM,
+        // żeby nawet przypadkowy zapis nie trafił do bieżącego katalogu procesu.
+        Profile(File(System.getProperty("java.io.tmpdir") ?: ".", VALIDATION_FILE)).fromJson(payload)
         return payload
     }
 

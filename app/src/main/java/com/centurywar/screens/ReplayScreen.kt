@@ -127,6 +127,8 @@ class ReplayScreen(
         }
         if (replay.broken) { state = BROKEN; return }
         player = replay
+        // Ten sam motyw co w oryginalnej bitwie (ziarno muzyki jak w BattleScreen).
+        g.music?.setThemeSeed((record.cfg.seed xor (record.cfg.seed ushr 32)).toInt())
         for (cmd in log.commands) {
             val type = when (cmd.kind) {
                 Replay.Kind.EVOLVE -> 0

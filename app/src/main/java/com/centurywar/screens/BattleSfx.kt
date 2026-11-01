@@ -17,7 +17,11 @@ object BattleSfx {
     fun prepareEra(g: Game, era: Int, variant: Int = -1) {
         val sound = g.sound ?: return
         val style = Defs.sideArt(era, variant)
-        sound.prewarm(hitSound(style))
+        // impactSound wybiera materiał po typie celu, więc trafienia potrzebują wszystkich czterech.
+        sound.prewarm(Sound.HIT_WOOD)
+        sound.prewarm(Sound.HIT_BRONZE)
+        sound.prewarm(Sound.HIT_STEEL)
+        sound.prewarm(Sound.HIT_ENERGY)
         sound.prewarm(barrageSound(style))
         sound.prewarm(evolveSound(style))
         sound.prewarm(Sound.DEATH_HUMAN)
@@ -73,13 +77,12 @@ object BattleSfx {
         EraArt.ORBITAL -> 0.83f
     }
 
-    private fun explosionSound(style: EraArt): Int = when (style) {
-        EraArt.TRIBAL, EraArt.BRONZE, EraArt.IRON -> Sound.BARRAGE_STONE
-        EraArt.FEUDAL -> Sound.BARRAGE_FIRE
-        EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC -> Sound.EXPLOSION
-        EraArt.STEEL, EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH -> Sound.BARRAGE_ROCKET
-        EraArt.ORBITAL -> Sound.BARRAGE_ORBITAL
-    }
+    /**
+     * Wybuch zawsze brzmi jak wybuch (rozpoznawalny we wszystkich epokach); charakter epoki
+     * nadaje eraPitch. Próbki ostrzału (BARRAGE_*) zostają zarezerwowane dla ostrzału.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    internal fun explosionSound(style: EraArt): Int = Sound.EXPLOSION
 
     private fun shotSound(projectile: Int, style: EraArt, turret: Boolean): Int {
         if (turret) return when (style) {

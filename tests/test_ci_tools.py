@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from ci_test_shards import SCREENSHOTS, discover, selectors
 from ci_test_timings import collect, markdown
+from ci_synthetic_play_games_ids import main as synthetic_ids, substitute
 
 
 class CiToolsTest(unittest.TestCase):
@@ -43,6 +44,26 @@ class CiToolsTest(unittest.TestCase):
                 groups["screen-device"],
             )
 
+    def test_methods_belong_to_nearest_preceding_class(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "LTest.kt").write_text(
+                "package com.example\nimport org.junit.Test\n"
+                "class LTest {\n  @Test fun plain() {}\n  @Test fun other() {}\n}\n\n"
+                "@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)\n"
+                "@org.robolectric.annotation.Config(sdk = [35])\n"
+                "class LScreenTest {\n  @org.junit.Test fun screen() {}\n}\n\n"
+                "class LHelper {\n  fun notATest() {}\n}\n",
+                encoding="utf-8",
+            )
+            sources = {s.name: s for s in discover(Path(directory))}
+            self.assertEqual(
+                {"com.example.LTest", "com.example.LScreenTest"}, set(sources)
+            )
+            self.assertEqual(("plain", "other"), sources["com.example.LTest"].methods)
+            self.assertFalse(sources["com.example.LTest"].robolectric)
+            self.assertEqual(("screen",), sources["com.example.LScreenTest"].methods)
+            self.assertTrue(sources["com.example.LScreenTest"].robolectric)
+
     def test_unrecognised_test_annotation_fails_loudly(self):
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / "OopsTest.kt").write_text(
@@ -52,6 +73,17 @@ class CiToolsTest(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 discover(Path(directory))
+
+    def test_synthetic_play_games_ids_replace_only_placeholders(self):
+        text = "# app_id=REPLACE_ME\napp_id=REPLACE_ME\nach_a=REPLACE_ME_A\nach_b=CgkIreal\n"
+        result = substitute(text)
+        self.assertIn("# app_id=REPLACE_ME", result)
+        self.assertIn("app_id=123456789012", result)
+        self.assertIn("ach_a=CgkI000000000001EAIQAg", result)
+        self.assertIn("ach_b=CgkIreal", result)
+        with tempfile.TemporaryDirectory() as directory:
+            # Brak pliku w starszej bazie PR nie jest błędem.
+            self.assertEqual(0, synthetic_ids(["x", str(Path(directory) / "missing")]))
 
     def test_timing_report_sums_shards(self):
         with tempfile.TemporaryDirectory() as directory:

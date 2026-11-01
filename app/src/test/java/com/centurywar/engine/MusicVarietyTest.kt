@@ -36,6 +36,30 @@ class MusicVarietyTest {
         }
     }
 
+    /** Motyw nie jest wspólny: epoki i kolejne frazy tej samej sekcji mają różne melodie. */
+    @Test fun eraAndPhraseShapeMelodyAndChords() {
+        fun melody(era: Int, variation: Int, section: Int): List<Int> {
+            val shape = MusicSynth.phraseShape(era, variation)
+            return (0 until 32).map { MusicSynth.melodyDegree(section, it, shape) } +
+                MusicSynth.progression(section, shape).toList()
+        }
+        // Ta sama wariacja frazy, różne epoki: większość epok brzmi inaczej.
+        val perEra = (0..8).map { melody(it, 0x5A5A5A5A, 0) }.toSet()
+        assertTrue("Za mało różnych motywów epok: ${perEra.size}", perEra.size >= 5)
+        // Jedna epoka, kolejne frazy (różne wariacje): melodia i harmonia się zmieniają.
+        for (era in 0..8) {
+            val phrases = (0 until 16).map { melody(era, it * 0x2F6B1D37, it % 3) }.toSet()
+            assertTrue("Epoka $era: frazy zbyt podobne (${phrases.size})", phrases.size >= 8)
+            for (section in 0..2) for (v in 0 until 64) {
+                val shape = MusicSynth.phraseShape(era, v * 0x01234567)
+                for (p in 0 until 32) {
+                    val d = MusicSynth.melodyDegree(section, p, shape)
+                    assertTrue("Stopień poza zakresem: $d", d in -1..8)
+                }
+            }
+        }
+    }
+
     @Test fun deterministicSeedAndChunkSizes() {
         val first = MusicSynth(103)
         val second = MusicSynth(103)

@@ -17,6 +17,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Narzędzia offline/online do utrzymania jednej bazy SQLite. */
 internal object DatabaseMaintenance {
+    /** Ile ostatnich katalogów ratunkowych `cw-pre-restore-*` zostaje na wolumenie. */
+    const val PRE_RESTORE_KEEP = 3
+    private const val PRE_RESTORE_PREFIX = "cw-pre-restore-"
+
     private val privatePermissions = setOf(
         PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE,
     )
@@ -69,7 +73,7 @@ internal object DatabaseMaintenance {
 
                 val oldFiles = listOf(target, wal, shm).filter { Files.exists(it) }
                 if (oldFiles.isNotEmpty()) {
-                    rescue = Files.createTempDirectory(target.parent, "cw-pre-restore-")
+                    rescue = Files.createTempDirectory(target.parent, PRE_RESTORE_PREFIX)
                     for (old in oldFiles) {
                         Files.copy(old, rescue.resolve(old.fileName), StandardCopyOption.COPY_ATTRIBUTES)
                     }
@@ -91,10 +95,39 @@ internal object DatabaseMaintenance {
                     }
                     throw failure
                 }
+                // Rotacja dopiero po udanej wymianie: nieudane przywrócenie niczego nie usuwa.
+                rotatePreRestore(target.parent, rescue)
                 return rescue
             } finally {
                 Files.deleteIfExists(staging)
             }
+        }
+    }
+
+    /**
+     * Zostawia [keep] najnowszych katalogów `cw-pre-restore-*` (zawsze z [current]),
+     * starsze usuwa. Dowiązania symboliczne nie są śledzone ani usuwane.
+     */
+    internal fun rotatePreRestore(directory: Path, current: Path?, keep: Int = PRE_RESTORE_KEEP) {
+        require(keep >= 1)
+        val candidates = Files.list(directory).use { stream ->
+            stream.filter {
+                it.fileName.toString().startsWith(PRE_RESTORE_PREFIX) &&
+                    Files.isDirectory(it, LinkOption.NOFOLLOW_LINKS)
+            }.toList()
+        }
+        val currentPath = current?.toAbsolutePath()?.normalize()
+        val ordered = candidates.sortedWith(
+            compareByDescending<Path> { it.toAbsolutePath().normalize() == currentPath }
+                .thenByDescending { Files.getLastModifiedTime(it, LinkOption.NOFOLLOW_LINKS) }
+                .thenByDescending { it.fileName.toString() },
+        )
+        for (old in ordered.drop(keep)) deleteTree(old)
+    }
+
+    private fun deleteTree(root: Path) {
+        Files.walk(root).use { stream ->
+            stream.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
         }
     }
 

@@ -29,10 +29,13 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks | tee "$RUNNER_TEMP/new.log"
       - name: Kod bazowy
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
         run: |
           set -o pipefail
-          git fetch origin claude/bold-sagan-vwz5gm
-          base=$(git merge-base HEAD origin/claude/bold-sagan-vwz5gm)
+          # Baza: gałąź docelowa PR albo (workflow_dispatch) domyślna gałąź repozytorium.
+          git fetch origin "$BASE_REF"
+          base=$(git merge-base HEAD "origin/$BASE_REF")
           echo "ENDLESS_BASE=$base"
           git worktree add --detach "$RUNNER_TEMP/cw-baseline" "$base"
           cp server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt "$RUNNER_TEMP/cw-baseline/server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt"

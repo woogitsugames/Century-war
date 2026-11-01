@@ -368,6 +368,109 @@ class LTest {
         }
     }
 
+    /** Klucze z funkcji part92()–part115() odczytane ze źródła L.kt (przegląd 116). */
+    private fun review116Keys(): List<String> {
+        val file = listOf(
+            java.io.File("src/main/java/com/centurywar/engine/L.kt"),
+            java.io.File("app/src/main/java/com/centurywar/engine/L.kt"),
+        ).first { it.isFile }
+        val source = file.readText()
+        val parts = Regex("""(?m)^\s*private\s+fun\s+part(\d+)\s*\(""").findAll(source).toList()
+        val entry = Regex("""(?m)^\s*"(\w+)"\s+to\s+t\(""")
+        val keys = ArrayList<String>()
+        for (i in parts.indices) {
+            if (parts[i].groupValues[1].toInt() !in 92..115) continue
+            val until = parts.getOrNull(i + 1)?.range?.first ?: source.length
+            entry.findAll(source.substring(parts[i].range.last + 1, until))
+                .mapTo(keys) { it.groupValues[1] }
+        }
+        return keys
+    }
+
+    /** Glosariusz 88 dla nowych kluczy: nazwy samodzielne jak w kanonicznych kluczach. */
+    @Test
+    fun review116NewEntriesRespectGlossary() {
+        val keys = review116Keys()
+        assertTrue("Brak kluczy part92()–part115()", keys.size >= 85)
+        val uk = L.CODES.indexOf("uk")
+        val tr = L.CODES.indexOf("tr")
+        val ukLatin = Regex("""\b(?:XP|HP)\b""")
+        val trPercentAfter = Regex("""\d+%|%d\s*%%""")
+        val canonicalKeys = listOf(
+            "cx_turret", "cx_barrage", "rally", "evolve", "advance",
+            "era_steam", "era_silicon", "endless", "daily", "weekly", "skirmish",
+        )
+        for (key in keys) {
+            val row = L.raw(key)!!
+            assertTrue("$key/uk: ${row[uk]}", !ukLatin.containsMatchIn(row[uk]))
+            assertTrue("$key/tr: ${row[tr]}", !trPercentAfter.containsMatchIn(row[tr]))
+            for (canonicalKey in canonicalKeys) {
+                val canonical = L.raw(canonicalKey) ?: continue
+                if (row[L.EN] != canonical[L.EN]) continue
+                for (i in L.CODES.indices) {
+                    assertEquals("$key/${L.CODES[i]} = $canonicalKey", canonical[i], row[i])
+                }
+            }
+        }
+    }
+
+    /** Regresje z przeglądu 116 (gałęzie 104/105/106/108/109). */
+    @Test
+    fun review116GameplayNamesAreCanonical() {
+        // "Advance" to postawa armii, a nie awans epoki.
+        assertTrue(!L.raw("bs104_evolution")!![L.EN].contains("advance", ignoreCase = true))
+
+        // Nazwa trybu w danym języku zamiast angielskiego "Endless".
+        val endless = L.raw("endless")!!
+        val bestWave = L.raw("bh105_best_wave")!!
+        for (i in L.CODES.indices) {
+            assertTrue("bh105_best_wave/${L.CODES[i]}: ${bestWave[i]}",
+                bestWave[i].contains(endless[i], ignoreCase = true))
+        }
+
+        // Ogłoszenie nowości używa nazwy wieży z Kodeksu.
+        val turret = L.raw("cx_turret")!!
+        val iron = L.raw("wn_010_iron")!!
+        for (i in L.CODES.indices) {
+            assertTrue("wn_010_iron/${L.CODES[i]}: ${iron[i]}",
+                iron[i].contains(turret[i], ignoreCase = true))
+        }
+
+        // Karta odnawia dokładnie Ostrzał i Zryw: te same nazwy co przyciski zdolności.
+        val barrage = L.raw("cx_barrage")!!
+        val rally = L.raw("rally")!!
+        val recall = L.raw("ec_boss_recall_d")!!
+        for (i in L.CODES.indices) {
+            assertTrue("ec_boss_recall_d/${L.CODES[i]}: brak ${barrage[i]}",
+                recall[i].contains(barrage[i], ignoreCase = true))
+            assertTrue("ec_boss_recall_d/${L.CODES[i]}: brak ${rally[i]}",
+                recall[i].contains(rally[i], ignoreCase = true))
+        }
+
+        // Nazwa karty nie sugeruje przywołania bossa; strzelcy to nie tylko łucznicy.
+        assertTrue(!L.raw("ec_boss_recall")!![L.EN].contains("recall", ignoreCase = true))
+        assertTrue(!L.raw("day109_rain")!![L.EN].contains("Archers"))
+        assertTrue(L.raw("day109_hired_d")!![L.CODES.indexOf("de")].contains("kostenlose"))
+        // Kolejka usuwania ponawia żądanie po odzyskaniu sieci, a nie "offline".
+        assertTrue(!L.raw("privacy93_remove")!![L.EN].contains("retries offline"))
+        assertTrue(!L.raw("privacy93_remove")!![L.PL].contains("ponawia je offline"))
+        // Pełne słowo w przycisku zamiast skrótu.
+        assertTrue(!L.raw("profile_restore_action")!!.any { it.endsWith(".") })
+    }
+
+    /** Krótkie przyciski z tury 92–115 mieszczą się w limicie 18 znaków. */
+    @Test
+    fun review116ShortActionLabels() {
+        for (key in listOf(
+            "wn_continue", "profile_export_action", "profile_import_action",
+            "profile_restore_action", "bs104_stats", "bs104_chart",
+        )) {
+            for (value in L.raw(key)!!) {
+                assertTrue("$key: $value (${value.length})", value.length <= 18)
+            }
+        }
+    }
+
     @Test
     fun fallbackAndCodes() {
         assertEquals("missing_key", L["missing_key"])

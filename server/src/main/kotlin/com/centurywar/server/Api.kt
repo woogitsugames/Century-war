@@ -219,6 +219,8 @@ fun Application.leaderboardModule(
                 }
             }
             if (verification == null || verification.exceptionOrNull() is VerificationBudgetExceeded) {
+                // Przeciążenie to błąd serwera, nie gracza: oddajemy jednostkę dziennego limitu.
+                store.refundScoreSubmissionQuota(ownerHash, remote, receivedAt)
                 metrics.unavailable()
                 call.response.header("Retry-After", "30")
                 call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")

@@ -8,7 +8,7 @@ oraz sieć. Przegląd statyczny źródeł; **nie zastępuje testów APK na urzą
 
 | Obszar | Stan przed poprawką | Poprawka / stan po przeglądzie |
 |---|---|---|
-| Automatyczna kopia | `profile.json` trafiał do kopii chmurowej i transferu urządzeń, mimo że zawiera lokalny `playerSecret` | `allowBackup=false`; wykluczenie prywatnych domen w `backup_rules.xml` i osobno dla chmury oraz transferu Androida 12+ |
+| Automatyczna kopia | `profile.json` trafiał do kopii chmurowej i transferu urządzeń, mimo że zawiera lokalny `playerSecret`; pierwsza poprawka (`allowBackup=false`, wykluczenie wszystkiego) powodowała utratę postępu przy zmianie telefonu | `allowBackup=true` z regułami **include**: tylko `profile.json` i `history.json` (`backup_rules.xml`, `data_extraction_rules.xml`). Kopia w chmurze tylko przy szyfrowaniu po stronie klienta (`disableIfNoEncryptionCapabilities`, `requireFlags=clientSideEncryption`). Pominięte: `score-queue*`, `crash/`, `battle.snap`, `replays/`, `profile-backups/`, `.tmp`, SharedPreferences |
 | Ruch HTTP | Brak jawnego `network_security_config` | `usesCleartextTraffic=false`, polityka sieciowa odrzucająca cleartext i zaufanie tylko do certyfikatów systemowych |
 | Ranking | `ScoreClient.configured()` wymagał HTTPS, a przekierowania były wyłączone; typ połączenia nie był dodatkowo kontrolowany | Wymagany `HttpsURLConnection`; nadal brak podążania za HTTP 30x; odpowiedzi czytane do limitu **1 048 576 znaków**, bez wcześniejszego `readText()` bez ograniczeń |
 | Import CWR | Limit wejściowy 2 MiB, a magazyn odczytywał tylko pliki do 1 MiB; strumień zwracający ciągle 0 mógł zapętlić odczyt | Wspólny limit **1 MiB**, minimum 24 B, natychmiastowe odrzucenie zera z `InputStream.read()`; dalej obowiązuje dekodowanie i `Replay.verify()` |
@@ -45,11 +45,24 @@ oraz sieć. Przegląd statyczny źródeł; **nie zastępuje testów APK na urzą
   aplikacji; Play Games korzysta z własnego stosu usług.
 - **Dane lokalne:** profil, sekret instalacji, historia, kolejki wysyłek
   i powtórki pozostają w prywatnej przestrzeni aplikacji. Lokalny sekret
-  `playerSecret` jest pomijany w `Profile.toCloudJson()`, ale **był**
-  obecny w kopii Androida. Po zmianie automatyczny backup i transfer profilu
-  są wyłączone. Oznacza to brak odtworzenia lokalnego profilu z mechanizmu
-  backupu Androida po reinstalacji; własne funkcje synchronizacji gry
-  są niezależne.
+  `playerSecret` jest pomijany w `Profile.toCloudJson()` (Play Games Saved Games
+  i eksport `.cwprofile`), ale **jest** częścią `profile.json`, a więc kopii Androida.
+- **Kopia Androida (decyzja świadoma):** kopia systemowa obejmuje `profile.json`
+  i `history.json`, aby gracz nie tracił postępu przy zmianie telefonu.
+  Przywrócenie `playerId`/`playerSecret` na nowym telefonie **tego samego konta
+  Google** jest akceptowalne: to ten sam użytkownik, a kopia Google jest szyfrowana
+  (w chmurze wymagamy szyfrowania end-to-end kluczem blokady ekranu; bez blokady
+  ekranu kopia w chmurze nie powstaje, transfer urządzenie-urządzenie działa dalej).
+  Skutek uboczny: stary i nowy telefon mogą przez chwilę wysyłać wyniki z tą samą
+  tożsamością rankingu; „Nowa tożsamość” w ustawieniach ją rozdziela.
+  Kolejka wyników i żądań usunięcia (`score-queue.json*`) **nie** jest kopiowana,
+  aby nowe urządzenie nie ponawiało cudzych/nieaktualnych wysyłek; dzienniki awarii,
+  zapis przerwanej bitwy i powtórki również są pominięte.
+- **adb backup:** `allowBackup` dotyczy jednocześnie kopii Google i `adb backup`;
+  nie da się ich rozdzielić atrybutem. Dla aplikacji z `targetSdk` 31+ Android 12+
+  i tak pomija dane niedebugowalnej aplikacji w `adb backup`; na starszych
+  systemach `adb backup` (wymaga odblokowanego telefonu i zgody na nim) obejmie
+  te same dwa pliki co kopia Google.
 - **Raporty awarii:** wysłanie problemu inicjuje użytkownik z dialogu,
   nie ma automatycznej wysyłki danych przez ten przepływ.
 
@@ -57,8 +70,9 @@ oraz sieć. Przegląd statyczny źródeł; **nie zastępuje testów APK na urzą
 
 Dodano / rozszerzono testy:
 - `ReleaseConfigTest`: eksport komponentów, prywatny receiver i provider,
-  zakaz ruchu jawnego, magazyn zaufanych certyfikatów oraz wyłączenie
-  kopii w chmurze i przeniesienia danych.
+  zakaz ruchu jawnego, magazyn zaufanych certyfikatów oraz reguły kopii:
+  tylko `profile.json` i `history.json`, wymóg szyfrowania, brak `score-queue*`,
+  `crash/` i `battle.snap`.
 - `ReplayImportTest`: minimum 24 B, granica 1 MiB, odrzucenie zbyt dużego
   i pustego wejścia, wadliwego strumienia zwracającego 0.
 - `ReplayShareProviderTest`: dowiązanie do pliku i całego katalogu, za krótki
@@ -84,10 +98,11 @@ Nie należy oznaczać ich jako zaliczonych bez raportu z uruchomienia lub CI.
 1. **Scalony manifest:** skontroluj wynik `merged_manifest` obu wariantów,
    w tym komponenty dodawane przez Play Games. Ten raport opisuje źródłowy
    manifest aplikacji, nie manifest z gotowego APK.
-2. **Transfer OEM:** polityka `allowBackup=false` jest wsparta regułami
-   wykluczeń; sprawdź zachowanie transferu na realnym Androidzie 12–16
-   u używanych producentów. Użytkownik może utracić lokalny postęp
-   po reinstalacji, jeśli nie ma niezależnej synchronizacji.
+2. **Transfer OEM i przywracanie:** sprawdź na realnym Androidzie 12–16
+   (`adb shell bmgr backupnow com.centurywar.game`, reinstalacja, `bmgr restore`)
+   i u używanych producentów, że wraca `profile.json` z `history.json`, a nie wraca
+   kolejka wyników ani `battle.snap`. Przy kopii z telefonu bez blokady ekranu
+   kopia w chmurze nie powstanie (wymóg szyfrowania).
 3. **Niezaufany provider wejściowy:** ograniczenie rozmiaru i odczyt poza
    głównym wątkiem zmniejszają ryzyko DoS, ale obcy ContentProvider może
    blokować samo `openInputStream()` lub `read()` bez końca. Wariant

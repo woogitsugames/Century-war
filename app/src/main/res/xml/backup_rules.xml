@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Brak automatycznych kopii: profile.json zawiera sekret instalacji do rankingu. -->
+<!-- Android 6–11 (Auto Backup). Kopia obejmuje tylko postęp gracza: profil i historię bitew.
+     Reguła include oznacza, że WSZYSTKO inne jest pominięte, w tym:
+     score-queue.json i score-queue.json.deletions (kolejka wyników i żądań usunięcia),
+     crash/ (dzienniki awarii), battle.snap (przerwana bitwa), replays/ (rozmiar),
+     profile-backups/ (lokalne kopie sprzed importu), pliki .tmp i SharedPreferences.
+     profile.json zawiera sekret rankingu; przywrócenie go na nowym telefonie tego samego
+     konta Google jest świadome (docs/SECURITY.md). -->
+<!-- requireFlags (Android 9+): tylko gdy kopia jest szyfrowana po stronie klienta. -->
 <full-backup-content>
-    <exclude domain="root" path="." />
-    <exclude domain="file" path="." />
-    <exclude domain="database" path="." />
-    <exclude domain="sharedpref" path="." />
-    <exclude domain="external" path="." />
+    <include domain="file" path="profile.json" requireFlags="clientSideEncryption" />
+    <include domain="file" path="history.json" requireFlags="clientSideEncryption" />
 </full-backup-content>

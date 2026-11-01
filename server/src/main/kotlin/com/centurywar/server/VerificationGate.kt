@@ -44,7 +44,7 @@ class VerificationGate(
     parallel: Int = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
     waiting: Int = 16,
     private val timeoutMillis: Long = 15_000L,
-    private val maxReplaySteps: Int = 108_000,
+    private val maxReplaySteps: Int = Replay.MAX_STEPS,
 ) : AutoCloseable {
     init {
         require(parallel > 0 && waiting >= 0 && timeoutMillis > 0L)

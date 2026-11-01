@@ -24,7 +24,7 @@ class PlayerDeletionTest {
     private val playerSecret = "a1".repeat(32)
 
     private fun input(player: String = UUID.randomUUID().toString()) = ScoreSubmission(
-        board = "endless", player = player, nick = "Gracz", gameVersion = "0.4.0",
+        board = "endless", player = player, nick = "Gracz", gameVersion = "0.5.0",
         seed = 42L, replay = "nieistotny", score = 100L,
         research = List(13) { 0 },
     )

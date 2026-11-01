@@ -8,7 +8,7 @@ Dzięki temu nie tworzymy osobnej konfiguracji Robolectric i nie pomijamy zasob�
 |---|---|
 | `./gradlew fastTest` | Testy Android debug, symulacji i serwera poza ciężkimi kategoriami |
 | `./gradlew screenshotTest` | `*ScreenshotTest*`, galerie grafiki, tła, renderowanie i testy ekranów low-end |
-| `./gradlew balanceTest` | `*Balance*`, `*Report*`, długie pojedynki kampanii, Endless i lustrzane doktryny |
+| `./gradlew balanceTest` | `*Balance*`, wskazane raporty AI (`measureAndReport`, `tenSeedAiWaveReport`), długie pojedynki kampanii, Endless i lustrzane doktryny |
 | `./gradlew :app:testDebugUnitTest` | Cały zestaw debug bez filtrów |
 | `./gradlew test` | Zestawy standardowe modułów; test release Android jest pomijany |
 

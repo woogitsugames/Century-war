@@ -9,6 +9,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.meta.Profile
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,5 +95,46 @@ class BaseFlashCache90Test {
         assertTrue("Błysk różni się wizualnie od saveLayer (średnia $mean)", mean < 5.0)
         before.recycle()
         after.recycle()
+    }
+
+    /** LOW: jeden slot tylko dla gracza; naprzemienne błyski nie przerysowują cache (101). */
+    @Test fun singleSlotCachesOnlyPlayerSide() {
+        val pic = picture()
+        val width = 460
+        val height = 580
+        val cache = BaseFlashCache(width, height, memoryClassMb = 256, qualityLevel = Quality.LOW)
+        val enemyPic = Picture().apply {
+            beginRecording(width, height).drawColor(Color.RED)
+            endRecording()
+        }
+        val target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(target)
+        for (frame in 0 until 20) {
+            cache.draw(canvas, pic, 0, 60)
+            cache.draw(canvas, enemyPic, 1, 60)
+        }
+        assertEquals("Przy 1 slocie bitmapa ma być nagrana raz", 1, cache.cacheRenders)
+        assertEquals(width.toLong() * height * 4L, cache.cachedBytes)
+        // Strona przeciwnika: samo Picture bez błysku (czysty czerwony, bez rozjaśnienia).
+        val enemyOnly = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        cache.draw(Canvas(enemyOnly), enemyPic, 1, 110)
+        assertEquals(Color.RED, enemyOnly.getPixel(width / 2, height / 2))
+        assertEquals(1, cache.cacheRenders)
+        target.recycle()
+        enemyOnly.recycle()
+    }
+
+    @Test fun twoSlotsCacheBothSidesOnce() {
+        val pic = picture()
+        val cache = BaseFlashCache(460, 580, memoryClassMb = 512, qualityLevel = Quality.HIGH)
+        val other = Picture().apply { beginRecording(460, 580).drawColor(Color.BLUE); endRecording() }
+        val target = Bitmap.createBitmap(460, 580, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(target)
+        for (frame in 0 until 10) {
+            cache.draw(canvas, pic, 0, 60)
+            cache.draw(canvas, other, 1, 60)
+        }
+        assertEquals(2, cache.cacheRenders)
+        target.recycle()
     }
 }

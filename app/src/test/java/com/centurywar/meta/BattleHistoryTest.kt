@@ -161,6 +161,30 @@ class BattleHistoryTest {
     }
 
 
+    /** Rekordy z nieznanym trybem nie zostawiają w oknie 30 pustych pozycji (= wygranych kampanii). */
+    @Test
+    fun unknownModesAreFilteredBeforeTakingLast30() {
+        val now = 1_800_000_000_000L
+        val records = (0 until 40).map { index ->
+            val base = entry(100 - index, Mode.SKIRMISH, BattleHistory.LOSS, now - index * 1_000L)
+            if (index % 4 == 1) base.copy(mode = 99) else base
+        }
+        val metrics = BattleHistory.aggregate(records, now)
+        val valid = records.filter { it.mode in Mode.entries.indices }.take(30)
+        assertEquals(30, metrics.recentModes.size)
+        assertArrayEquals(valid.asReversed().map { it.mode }.toIntArray(), metrics.recentModes)
+        assertTrue(metrics.recentModes.none { it == Mode.CAMPAIGN.ordinal })
+        assertTrue(metrics.recentResults.all { it == BattleHistory.LOSS })
+        assertEquals(0, metrics.recentWinsByMode.sum())
+        assertEquals(30, metrics.recentLossesByMode[Mode.SKIRMISH.ordinal])
+
+        // Mniej niż 30 poprawnych: okno ma tylko tyle pozycji, ile poprawnych rekordów.
+        val few = listOf(entry(1, Mode.SKIRMISH, BattleHistory.LOSS, now), entry(2).copy(mode = -1))
+        val small = BattleHistory.aggregate(few, now)
+        assertEquals(1, small.recentModes.size)
+        assertEquals(0, small.recentWinsByMode.sum())
+    }
+
     @Test
     fun last30OutcomesAreChronologicalAndGroupedByMode() {
         val now = 1_800_000_000_000L

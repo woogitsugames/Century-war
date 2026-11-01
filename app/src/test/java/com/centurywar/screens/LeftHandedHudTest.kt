@@ -141,6 +141,49 @@ class LeftHandedHudTest {
         assertControlsDoNotOverlap(s, g)
     }
 
+    /**
+     * Drugi rząd paska górnego: liczebność armii nie koliduje z awansem, pauzą, minimapą,
+     * pogodą ani złotem/XP; awans zostaje w pierwszym rzędzie w obu trybach.
+     */
+    @Test
+    fun armyCountsDoNotCollideInBothModesOnFoldInnerAndPhone() {
+        for ((w, h, d) in listOf(Triple(1802, 2000, 3.6f), Triple(1600, 720, 2f), Triple(720, 1280, 2f))) {
+            for (left in listOf(false, true)) {
+                val g = game(w, h, d)
+                g.profile.leftHandedHud = left
+                val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 114L, 1f))
+                g.setScreen(s)
+                g.frame(canvas, 1f / 60f)
+                val tag = "${w}x$h ${if (left) "leworęczny" else "domyślny"}"
+                val army = field(s, "armyRect")
+                val mini = field(s, "mini")
+                val evolve = rect(s, 16)
+                val pause = rect(s, 17)
+                assertTrue("$tag: minimapa", mini.width() > 0f)
+                assertTrue("$tag: liczebność armii w drugim rzędzie", army.width() > 0f)
+                assertTrue("$tag: awans w pierwszym rzędzie", evolve.bottom <= mini.top)
+                assertTrue("$tag: liczebność w ekranie",
+                    army.left >= g.insetL && army.right <= g.width - g.insetR)
+                assertTrue("$tag: liczebność pod paskiem", army.bottom <= field(s, "topBar").bottom)
+                for ((name, other) in listOf("awans" to evolve, "pauza" to pause, "minimapa" to mini,
+                    "pogoda" to field(s, "weatherRect"), "złoto" to field(s, "goldRect"),
+                    "XP" to field(s, "xpRect"))) {
+                    if (other.width() > 0f)
+                        assertFalse("$tag: kolizja liczebności armii z: $name", overlap(army, other))
+                }
+                if (w != 720 || left)
+                    assertFalse("$tag: awans nachodzi na pauzę", overlap(evolve, pause))
+                if (left) {
+                    // Pogoda i armia zamieniają się stronami względem minimapy.
+                    assertTrue("$tag: armia po prawej", army.left >= mini.right)
+                    assertTrue("$tag: pogoda po lewej", field(s, "weatherRect").right <= mini.left)
+                } else {
+                    assertTrue("$tag: armia po lewej", army.right <= mini.left)
+                }
+            }
+        }
+    }
+
     @Test
     fun accessibilitySwitchUpdatesProfile() {
         val g = game(720, 1280)

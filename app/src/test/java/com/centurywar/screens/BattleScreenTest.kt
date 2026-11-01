@@ -474,6 +474,21 @@ class BattleScreenTest {
         assertFalse(field(bs, "aimingBarrage").getBoolean(bs))
     }
 
+    /** Bitwa wznowiona ze zrzutu nie przekazuje niepełnych próbek do powtórki. */
+    @Test
+    fun restoredBattleRebuildsReplayChartFromLog() {
+        val g = game()
+        val cfg = BattleConfig(Mode.SKIRMISH, 352L, 1f)
+        val fresh = BattleScreen(g, cfg)
+        assertTrue(field(fresh, "summaryComplete").getBoolean(fresh))
+        val battle = Battle(cfg)
+        repeat(300) { battle.step() }
+        val restored = BattleScreen(g, cfg, restored = com.centurywar.game.RestoredBattle(battle, false, -120f))
+        assertFalse(field(restored, "summaryComplete").getBoolean(restored))
+        assertEquals(201, (field(fresh, "resultStatsTab").get(fresh) as Button).id)
+        assertEquals(202, (field(fresh, "resultChartTab").get(fresh) as Button).id)
+    }
+
     @Test
     fun narrowScreensKeepMinimapInSecondRow() {
         // Wewnętrzny ekran Folda z dużą skalą UI: minimapa nie może zniknąć.

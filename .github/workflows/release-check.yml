@@ -75,6 +75,10 @@ jobs:
           base_sha="$(git merge-base HEAD "origin/$BASE_BRANCH")"
           echo "$base_sha" > build/release-metrics/base-sha.txt
           git worktree add --detach "$RUNNER_TEMP/cw-before" "$base_sha"
+          # Od zlecenia 92 baza ma ID REPLACE_ME, a generator release je odrzuca:
+          # podstawiamy ten sam syntetyczny zestaw co dla bieżącego commita.
+          python3 scripts/ci_synthetic_play_games_ids.py \
+            "$RUNNER_TEMP/cw-before/docs/store/play_games_ids.properties"
           (
             cd "$RUNNER_TEMP/cw-before"
             chmod +x ./gradlew
@@ -98,24 +102,7 @@ jobs:
       # Te ID istnieją tylko w kontenerze CI, nie są produkcyjne ani commitowane.
       - name: Wstaw syntetyczne ID Play Games do smoke-testu
         shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          source = Path('docs/store/play_games_ids.properties')
-          lines = []
-          next_id = 0
-          for line in source.read_text(encoding='utf-8').splitlines():
-              if '=' in line and not line.lstrip().startswith('#'):
-                  key, value = line.split('=', 1)
-                  if key == 'app_id':
-                      value = '123456789012'
-                  elif value.strip().startswith('REPLACE_ME'):
-                      next_id += 1
-                      value = 'CgkI' + str(next_id).zfill(12) + 'EAIQAg'
-                  line = key + '=' + value
-              lines.append(line)
-          source.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          PY
+        run: python3 scripts/ci_synthetic_play_games_ids.py docs/store/play_games_ids.properties
 
       # Smoke-test R8/manifestu na ID syntetycznych, nie do publikacji.
       - name: Zbuduj APK i AAB release

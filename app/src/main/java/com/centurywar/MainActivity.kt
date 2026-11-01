@@ -87,6 +87,8 @@ class MainActivity : Activity(), Host {
     private var gameBackRegistered = false
     private var resumed = false
     private var pendingReplayUri: Uri? = null
+    private var pendingProfileUri: Uri? = null
+    private var pendingProfileRequest = 0
     private val replayImportRunning = AtomicBoolean(false)
     private lateinit var startup: StartupTimings
     private var startupFirstFrameShown = false
@@ -160,7 +162,7 @@ class MainActivity : Activity(), Host {
         }
         startup.record(StartupTimings.Phase.HISTORY, start, SystemClock.elapsedRealtimeNanos())
         game.density = resources.displayMetrics.density
-        // Synteza i prewarm SFX startują dopiero po pierwszej klatce menu, poza UI.
+        // Synteza i prewarm SFX startują dopiero po pierwszej wyrenderowanej klatce, poza UI.
         // Nie wystawiamy zgody bez skonfigurowanego HTTPS i polityki prywatności.
         val privacyOk = SecureLinks.isHttps(BuildConfig.CW_PRIVACY_URL)
         if (privacyOk && ScoreClient.configured(BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY)) {
@@ -193,7 +195,7 @@ class MainActivity : Activity(), Host {
         game.resumeOffer = restored
         start = SystemClock.elapsedRealtimeNanos()
         view = GameView(this, game)
-        view.onFirstMenuFrame = {
+        view.onFirstFrame = {
             // Po publikacji ramki mierzony jest czas całego rozruchu, także Surface.
             val firstFrameNs = SystemClock.elapsedRealtimeNanos()
             runOnUiThread {
@@ -244,9 +246,13 @@ class MainActivity : Activity(), Host {
             pendingReplayUri = null
             importReplay(uri)
         }
+        pendingProfileUri?.let { uri ->
+            pendingProfileUri = null
+            handleProfileDocument(pendingProfileRequest, uri)
+        }
     }
 
-    /** SoundPool i prewarm WAV nie konkurują z pierwszym rysowaniem menu. */
+    /** SoundPool i prewarm WAV nie konkurują z pierwszym rysowaniem (menu lub innego ekranu). */
     private fun startAudioAfterMenu() {
         if (audioInitStarted) return
         audioInitStarted = true
@@ -548,10 +554,29 @@ class MainActivity : Activity(), Host {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_OK) return
         val uri = data?.data ?: return
+        if (requestCode != REQUEST_PROFILE_EXPORT && requestCode != REQUEST_PROFILE_IMPORT) return
+        // Po śmierci procesu wynik wyboru dokumentu przychodzi przed końcem rozruchu:
+        // zapamiętujemy go do finishStartup (jak pendingReplayUri).
+        if (::game.isInitialized) handleProfileDocument(requestCode, uri)
+        else { pendingProfileRequest = requestCode; pendingProfileUri = uri }
+    }
+
+    private fun handleProfileDocument(requestCode: Int, uri: Uri) {
         when (requestCode) {
             REQUEST_PROFILE_EXPORT -> exportProfile(uri)
             REQUEST_PROFILE_IMPORT -> importProfile(uri)
         }
+    }
+
+    /** "wt" (obcięcie) nie jest obsługiwane przez każdego dostawcę dokumentów. */
+    private fun openProfileOutput(uri: Uri): java.io.OutputStream? = try {
+        contentResolver.openOutputStream(uri, "wt")
+    } catch (_: java.io.FileNotFoundException) {
+        contentResolver.openOutputStream(uri, "w")
+    } catch (_: IllegalArgumentException) {
+        contentResolver.openOutputStream(uri, "w")
+    } catch (_: UnsupportedOperationException) {
+        contentResolver.openOutputStream(uri, "w")
     }
 
 
@@ -598,7 +623,7 @@ class MainActivity : Activity(), Host {
             Thread({
                 val ok = runCatching {
                     val bytes = ProfileBackup.encode(snapshot)
-                    val output = contentResolver.openOutputStream(uri, "wt")
+                    val output = openProfileOutput(uri)
                         ?: error("Nie można otworzyć pliku do zapisu")
                     output.use {
                         it.write(bytes)
@@ -663,14 +688,21 @@ class MainActivity : Activity(), Host {
                 game.post {
                     try {
                         game.profile.fromJson(json)
-                        game.profile.save()
-                        val expected = game.profile.toJson()
+                        // Licznik migawek zamiast porównania całego pliku: równoległy save()
+                        // (np. z ekranu ustawień) zapisuje nowszą migawkę z tym samym importem
+                        // i nie może cofnąć poprawnie zapisanego importu.
+                        val importSeq = game.profile.saveTracked()
                         Thread({
-                            val persisted = game.profile.awaitWrites(5_000L) && runCatching {
-                                File(filesDir, "profile.json").readText(Charsets.UTF_8) == expected
-                            }.getOrDefault(false)
+                            val persisted = game.profile.awaitWrites(5_000L) &&
+                                game.profile.isPersisted(importSeq) && runCatching {
+                                    Profile.isValidJson(
+                                        File(filesDir, "profile.json").readText(Charsets.UTF_8))
+                                }.getOrDefault(false)
                             game.post {
                                 if (persisted) {
+                                    // Przerwana bitwa należała do poprzedniego profilu.
+                                    game.snapshots?.deleteAsync()
+                                    game.resumeOffer = null
                                     game.onLanguageChanged()
                                     game.applyAccessibility()
                                     game.setQuality(game.effectiveQualityLevel())

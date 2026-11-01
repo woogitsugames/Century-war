@@ -212,10 +212,6 @@ object Campaign {
 
 
 /**
- * Oblężenie tygodnia: poniedziałek 00:00 UTC, jeden zestaw reguł na cały tydzień.
- * Kolejność i zawartość obu pul są częścią zasad historycznych tygodni.
- */
-/**
  * Sześć zestawów łączących istniejące modyfikatory z pogodą dnia
  * i kartą startową tygodnia. Kolejność i skład są stałe dla rankingu.
  */
@@ -251,6 +247,10 @@ object ChallengeRuleSets {
     fun forWeek(index: Long): RuleSet = SETS[Math.floorMod(index, COUNT.toLong()).toInt()]
 }
 
+/**
+ * Oblężenie tygodnia: poniedziałek 00:00 UTC, jeden zestaw reguł na cały tydzień.
+ * Kolejność i zawartość obu pul są częścią zasad historycznych tygodni.
+ */
 object Weekly {
     private val MODIFIERS = arrayOf(
         Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES, Modifier.FAST_UNITS,
@@ -275,10 +275,32 @@ object Weekly {
     fun medalReward(index: Int): Int = MEDAL_REWARDS[index]
     const val TIER_COUNT = 3
 
-    /** Dwa pierwsze tygodnie po premierze są częścią istniejących wzorców rankingu. */
+    /** Co który tydzień (licząc od [firstRuleSetWeek]) przypada zestaw tematyczny. */
+    const val RULE_SET_EVERY = 3L
+
+    /**
+     * Tydzień premiery i dwa kolejne (trzy tygodnie) zachowują dotychczasowe losowanie;
+     * zestawy tematyczne zaczynają się w czwartym tygodniu.
+     */
+    fun firstRuleSetWeek(): Long = weekNumber(Daily.RELEASE_DAY) + 3L
+
+    /**
+     * Zestaw tematyczny co [RULE_SET_EVERY] tygodnie, pozostałe tygodnie losowane jak dotąd.
+     * Ten sam zestaw wraca dopiero po COUNT * RULE_SET_EVERY = 18 tygodniach.
+     */
     fun ruleSet(week: Long): ChallengeRuleSets.RuleSet? {
-        val first = weekNumber(Daily.RELEASE_DAY) + 3L
-        return if (week < first) null else ChallengeRuleSets.forWeek(week - first)
+        val offset = week - firstRuleSetWeek()
+        if (offset < 0L || offset % RULE_SET_EVERY != 0L) return null
+        return ChallengeRuleSets.forWeek(offset / RULE_SET_EVERY)
+    }
+
+    /** Czy losowa para pokrywa się z modyfikatorami któregoś zestawu tematycznego. */
+    private fun matchesRuleSet(mods: Set<Modifier>): Boolean {
+        val iter = mods.iterator()
+        val a = iter.next()
+        val b = iter.next()
+        return ChallengeRuleSets.forModifiers(a, b) != null ||
+            ChallengeRuleSets.forModifiers(b, a) != null
     }
 
     fun config(week: Long): BattleConfig {
@@ -292,6 +314,12 @@ object Weekly {
         val mods = linkedSetOf<Modifier>()
         if (rule == null) {
             while (mods.size < 2) mods.add(pool[rng.nextInt(pool.size)])
+            // Od zestawów tematycznych losowy tydzień nie powtarza ich pary modyfikatorów;
+            // dawne tygodnie (przed firstRuleSetWeek) zostają bez zmian.
+            while (week >= firstRuleSetWeek() && matchesRuleSet(mods)) {
+                mods.clear()
+                while (mods.size < 2) mods.add(pool[rng.nextInt(pool.size)])
+            }
         } else {
             mods.add(rule.first); mods.add(rule.second)
         }

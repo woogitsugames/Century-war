@@ -48,6 +48,8 @@ internal class BattleSummarySamples {
         private set
     var maxGold = 1
         private set
+    // Napisy formatowane leniwie w formatLabels() (z BattleSummaryChart.prepare),
+    // a nie w write(), które działa co sekundę w update bitwy.
     var maxArmyText = "1"
         private set
     var maxHpText = "1"
@@ -62,6 +64,7 @@ internal class BattleSummarySamples {
         private set
     var enemyGoldText = "0"
         private set
+    private var labelsRevision = 0
 
     private fun slot(index: Int): Int = (start + index) % CAPACITY
     fun stepAt(index: Int): Int = steps[slot(index)]
@@ -125,18 +128,27 @@ internal class BattleSummarySamples {
         hpEnemy[i] = battle.enemy.baseHp.toInt().coerceAtLeast(0)
         goldPlayer[i] = battle.player.gold.toInt().coerceAtLeast(0)
         goldEnemy[i] = battle.enemy.gold.toInt().coerceAtLeast(0)
-        val armyPeak = maxOf(maxArmy, battle.player.cap, battle.enemy.cap, armyPlayer[i], armyEnemy[i])
-        if (armyPeak > maxArmy) { maxArmy = armyPeak; maxArmyText = armyPeak.toString() }
-        val hpPeak = maxOf(maxHp, battle.player.baseMaxHp.toInt(), battle.enemy.baseMaxHp.toInt(),
+        maxArmy = maxOf(maxArmy, battle.player.cap, battle.enemy.cap, armyPlayer[i], armyEnemy[i])
+        maxHp = maxOf(maxHp, battle.player.baseMaxHp.toInt(), battle.enemy.baseMaxHp.toInt(),
             hpPlayer[i], hpEnemy[i])
-        if (hpPeak > maxHp) { maxHp = hpPeak; maxHpText = hpPeak.toString() }
-        val goldPeak = maxOf(maxGold, goldPlayer[i], goldEnemy[i])
-        if (goldPeak > maxGold) { maxGold = goldPeak; maxGoldText = goldPeak.toString() }
-        playerGoldText = goldPlayer[i].toString()
-        enemyGoldText = goldEnemy[i].toString()
-        firstTimeText = clock(stepAt(0))
-        lastTimeText = clock(step)
+        maxGold = maxOf(maxGold, goldPlayer[i], goldEnemy[i])
         revision++
+    }
+
+    /** Odświeża napisy osi tylko po zmianie próbek; wołane poza pętlą bitwy. */
+    fun formatLabels() {
+        if (labelsRevision == revision) return
+        labelsRevision = revision
+        maxArmyText = maxArmy.toString()
+        maxHpText = maxHp.toString()
+        maxGoldText = maxGold.toString()
+        if (count > 0) {
+            val last = slot(count - 1)
+            playerGoldText = goldPlayer[last].toString()
+            enemyGoldText = goldEnemy[last].toString()
+            firstTimeText = clock(stepAt(0))
+            lastTimeText = clock(steps[last])
+        }
     }
 
     private fun clock(step: Int): String {
@@ -187,6 +199,7 @@ internal class BattleSummaryChart {
 
     /** Przeliczane przy zakończeniu bitwy, zmianie wymiarów albo dopisaniu próbek. */
     fun prepare(samples: BattleSummarySamples, area: RectF, scale: Float) {
+        samples.formatLabels()
         if (cachedRevision == samples.revision && cachedLeft == area.left && cachedTop == area.top &&
             cachedRight == area.right && cachedBottom == area.bottom && cachedDp == scale) return
         cachedRevision = samples.revision

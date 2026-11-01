@@ -528,6 +528,23 @@ class Profile(private val file: File) {
         hintWriter.execute { writeJson(json, seq) }
     }
 
+    /**
+     * Jak save(), ale zwraca numer migawki. Po awaitWrites() isPersisted(numer) mówi,
+     * czy na dysk trafiła ta migawka albo dowolna późniejsza (zawierająca ten sam stan).
+     * Long.MAX_VALUE oznacza, że zapis jest zablokowany (profil z nowszej wersji gry).
+     */
+    @Synchronized
+    fun saveTracked(): Long {
+        if (newerProfileVersion) return Long.MAX_VALUE
+        val json = try { toJson() } catch (_: Exception) { return Long.MAX_VALUE }
+        val seq = ++saveSeq
+        hintWriter.execute { writeJson(json, seq) }
+        return seq
+    }
+
+    /** Czy migawka [seq] lub nowsza została zapisana (rename na profile.json się udał). */
+    fun isPersisted(seq: Long): Boolean = writtenSeq >= seq
+
     /** Migawka powstaje na wątku gry; zapis pliku trafia do istniejącego wątku I/O. */
     fun saveAsync() {
         val json: String
@@ -556,7 +573,8 @@ class Profile(private val file: File) {
 
     /** Numery kolejnych migawek kontroluje zamek profilu, plik zapisuje jeden wykonawca. */
     @Volatile private var saveSeq = 0L
-    private var writtenSeq = 0L
+    // Zapisuje tylko wątek I/O; odczyt z innych wątków (isPersisted) wymaga @Volatile.
+    @Volatile private var writtenSeq = 0L
 
     private fun writeJson(json: String, seq: Long) {
         // Pomijamy przestarzałe migawki z kolejki, by pauza nie czekała na wiele fsync.

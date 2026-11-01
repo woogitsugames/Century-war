@@ -1,17 +1,8 @@
 name: Symulacja 82 - limity i balans
 
+# Raport lustrzanych wyników doktryn (DOCTRINE_82 / DOKTRYNA_69) uruchamiany ręcznie;
+# zwykłe testy tych klas wykonuje android.yml (fastTest/balanceTest).
 on:
-  push:
-    branches: ['gpt/82-sim-balance-caps']
-  pull_request:
-    branches: ['claude/**']
-    paths:
-      - 'sim/**'
-      - 'app/src/main/java/com/centurywar/engine/L.kt'
-      - 'app/src/main/java/com/centurywar/screens/BattleScreen.kt'
-      - 'app/src/test/java/com/centurywar/game/SimBalanceCaps82Test.kt'
-      - 'app/src/test/java/com/centurywar/game/DoctrineBalance82Test.kt'
-      - '.github/workflows/sim-balance-82.yml'
   workflow_dispatch:
 
 concurrency:

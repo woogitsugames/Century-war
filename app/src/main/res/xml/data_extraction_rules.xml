@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+: blokuj kopię w chmurze i transfer na nowe urządzenie.
-     Niezależny zapis Play Games nie obejmuje sekretu instalacji. -->
+<!-- Android 12+: kopia w chmurze i transfer na nowe urządzenie obejmują tylko postęp
+     (profile.json, history.json). Wszystko inne jest pominięte, bo reguły include
+     wyłączają pozostałe pliki: kolejka wyników (score-queue*), crash/, battle.snap,
+     replays/, profile-backups/, pliki .tmp, SharedPreferences.
+     Kopia w chmurze tylko przy szyfrowaniu end-to-end (blokada ekranu), bo profile.json
+     zawiera sekret rankingu (docs/SECURITY.md). -->
 <data-extraction-rules>
-    <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="file" path="profile.json" />
+        <include domain="file" path="history.json" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+        <include domain="file" path="profile.json" />
+        <include domain="file" path="history.json" />
     </device-transfer>
 </data-extraction-rules>
