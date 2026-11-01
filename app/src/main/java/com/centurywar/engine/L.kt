@@ -116,6 +116,7 @@ object L {
         putAll(part71())
         putAll(part70())
         putAll(part72())
+        putAll(part85())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1391,5 +1392,13 @@ object L {
         "day_gold_d" to t("Start w 3. epoce (żelaza). Obie armie dostają dużo złota.", "Start in the 3rd era (Iron Age). Both armies receive extra gold.", "Start in der 3. Epoche (Eisenzeit). Beide Armeen erhalten viel Gold.", "Inicio en la 3. era (Hierro). Ambos ejércitos reciben mucho oro.", "Départ à la 3e ère (âge du fer). Les deux armées reçoivent beaucoup d'or.", "Si parte dalla 3ª era (ferro). Entrambi gli eserciti ricevono molto oro.", "Início na 3.ª era (ferro). Ambos os exércitos recebem muito ouro.", "Початок у 3-й епосі (залізо). Обидві армії отримують багато золота.", "Start in het 3e tijdperk (ijzer). Beide legers krijgen veel goud.", "3. çağda (Demir Çağı) başla. İki orduya da bol altın verilir."),
         "day_mirror" to t("Dzień lustrzanych armii", "Mirror Armies Day", "Tag der Spiegelarmeen", "Día de ejércitos espejo", "Jour des armées miroirs", "Giorno degli eserciti specchio", "Dia dos exércitos espelho", "День дзеркальних армій", "Dag van spiegellegers", "Ayna Ordular Günü"),
         "day_mirror_d" to t("Równe limity armii i wież. AI ma siłę 100% i jeden styl dowódcy.", "Equal army and turret limits. AI power is 100%, with one commander style.", "Gleiche Armee- und Turmlimits. KI-Stärke 100 %, ein Kommandantenstil.", "Límites iguales de ejército y torres. IA al 100 % y un estilo de mando.", "Mêmes limites d'armée et de tours. IA à 100 % et un seul style de commandement.", "Limiti uguali per truppe e torri. IA al 100% e stesso stile di comando.", "Limites iguais de tropas e torres. IA a 100% e mesmo estilo de comando.", "Однакові ліміти військ і веж. Сила ШІ 100% та спільний стиль командира.", "Gelijke leger- en torenlimieten. AI op 100% en één commandostijl.", "Ordu ve kule sınırları eşit. Yapay zekâ %100 güçte, tek komutan tarzı."),
+    )
+
+    /** Zlecenie 85: bezpieczne pomijanie samouczka. */
+    private fun part85(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "tut85_skip_title" to t("Pominąć samouczek?", "Skip tutorial?", "Tutorial überspringen?", "¿Saltar el tutorial?", "Passer le tutoriel ?", "Saltare il tutorial?", "Pular o tutorial?", "Пропустити навчання?", "Tutorial overslaan?", "Eğitimi atla?"),
+        "tut85_skip_body" to t("Możesz go powtórzyć w Ustawieniach.", "You can replay it from Settings.", "Du kannst es in den Einstellungen erneut starten.", "Puedes repetirlo desde Ajustes.", "Vous pourrez le relancer dans les Paramètres.", "Puoi ripeterlo dalle Impostazioni.", "Você pode repeti-lo nas Configurações.", "Ти можеш пройти його знову в Налаштуваннях.", "Je kunt hem opnieuw starten via Instellingen.", "Ayarlar'dan yeniden başlatabilirsin."),
+        "tut85_skip_yes" to t("Tak, pomiń", "Yes, skip", "Ja, überspringen", "Sí, saltar", "Oui, passer", "Sì, salta", "Sim, pular", "Так, пропустити", "Ja, overslaan", "Evet, atla"),
+        "tut85_cancel" to t("Wróć", "Go back", "Zurück", "Volver", "Retour", "Indietro", "Voltar", "Назад", "Terug", "Geri dön"),
     )
 }
