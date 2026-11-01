@@ -881,6 +881,11 @@ class Battle(val cfg: BattleConfig) {
             bossRewardsPending--
             offerEndlessCards()
         }
+        // Ten sam twardy koniec w grze, powtórkach i weryfikatorze serwera.
+        if (!over && stepCount >= Replay.MAX_STEPS) {
+            pendingVariant = null; pendingChoice = null; pendingCards = null
+            finish(1)
+        }
     }
 
     /** Darmowa jednostka tej samej losowej roli dla obu stron co minutę. */

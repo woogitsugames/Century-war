@@ -10,7 +10,6 @@ services:
     environment:
       CW_HMAC_KEY: ${CW_HMAC_KEY:?Ustaw CW_HMAC_KEY w pliku .env}
       CW_PUBLIC_ID_KEY: ${CW_PUBLIC_ID_KEY:?Ustaw CW_PUBLIC_ID_KEY w pliku .env}
-      CW_GAME_VERSION: ${CW_GAME_VERSION:-0.4.0}
       CW_TRUSTED_PROXY_IPS: ${CW_TRUSTED_PROXY_IPS:-127.0.0.1}
       CW_RATE_POST_IP: ${CW_RATE_POST_IP:-20}
       CW_RATE_DELETE_IP: ${CW_RATE_DELETE_IP:-20}

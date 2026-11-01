@@ -92,7 +92,16 @@ object Replay {
      * Weryfikacja bez renderera i AI gracza. Każda niedozwolona komenda
      * lub rozbieżność liczby kroków powoduje odrzucenie powtórki.
      */
-    fun verify(cfg: BattleConfig, log: Log): Result {
+    fun verify(cfg: BattleConfig, log: Log): Result = simulate(cfg, log, false)
+
+    /**
+     * Drugi, rankingowy przebieg bez badań. Rozkazy niemożliwe bez ulepszeń
+     * są pomijane, a brakujący wybór zastępuje pierwsza dostępna opcja.
+     * Wynik pochodzi wyłącznie z legalnych działań w neutralnej symulacji.
+     */
+    fun normalized(cfg: BattleConfig, log: Log): Result = simulate(cfg, log, true)
+
+    private fun simulate(cfg: BattleConfig, log: Log, normalized: Boolean): Result {
         validate(log)
         require(cfg.dailyEvent == log.dailyEvent) { "Nieprawidłowe zdarzenie dnia" }
         val battle = Battle(cfg)
@@ -104,17 +113,34 @@ object Replay {
             while (index < log.commands.size && log.commands[index].step == step && !battle.over) {
                 val command = log.commands[index]
                 val accepted = applyCommand(controller, command)
-                require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
+                if (!normalized) require(accepted) { "Niedozwolona komenda nr $index w kroku $step" }
                 index++
             }
             if (battle.over) break
-            require(step < log.steps) { "Bitwa nie zakończyła się w zadanym kroku" }
+            if (normalized) {
+                // Wzmocnienia z badań mogą zmienić dostępność wyborów w danym kroku.
+                if (battle.pendingVariant != null) controller.variant(0)
+                if (battle.pendingChoice != null) controller.doctrine(0)
+                if (battle.pendingCards != null) controller.card(0)
+                if (step >= log.steps) {
+                    battle.surrender()
+                    break
+                }
+            } else require(step < log.steps) { "Bitwa nie zakończyła się w zadanym kroku" }
             battle.step()
-            require(battle.stepCount == step + 1) { "Brak decyzji wariantu, doktryny lub karty w kroku $step" }
+            if (normalized && battle.stepCount == step) {
+                battle.surrender()
+                break
+            }
+            if (!normalized) require(battle.stepCount == step + 1) {
+                "Brak decyzji wariantu, doktryny lub karty w kroku $step"
+            }
             battle.fx.count = 0
         }
-        require(index == log.commands.size && battle.over && battle.stepCount == log.steps) {
+        if (!normalized) require(index == log.commands.size && battle.over && battle.stepCount == log.steps) {
             "Niekompletna lub przedłużona bitwa"
+        } else require(battle.over && battle.stepCount <= log.steps) {
+            "Nie udało się znormalizować powtórki"
         }
         return Result(
             score = battle.score(),

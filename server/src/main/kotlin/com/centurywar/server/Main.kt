@@ -2,6 +2,7 @@ package com.centurywar.server
 
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import com.centurywar.game.SimVersion
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -27,7 +28,7 @@ fun main(args: Array<String>) {
         .toByteArray(Charsets.UTF_8)
     require(secret.size >= 32) { "CW_HMAC_KEY must be at least 32 UTF-8 bytes" }
     val port = (System.getenv("PORT") ?: "8080").toInt().also { require(it in 1..65535) }
-    val gameVersion = System.getenv("CW_GAME_VERSION") ?: "0.4.0"
+    val gameVersion = SimVersion.PROTOCOL
     File(dbPath).absoluteFile.parentFile?.mkdirs()
     val store = SqliteStore("jdbc:sqlite:" + dbPath, ids)
     val trustedProxies = (System.getenv("CW_TRUSTED_PROXY_IPS") ?: "127.0.0.1")

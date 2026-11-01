@@ -4,6 +4,7 @@ import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.Research
+import com.centurywar.game.SimVersion
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-enum class ScoreSendStatus { DISABLED, QUEUED, SENDING, SENT, REJECTED, OFFLINE, INVALID_NICK }
+enum class ScoreSendStatus { DISABLED, QUEUED, SENDING, SENT, REJECTED, OFFLINE, INVALID_NICK, REPLAY_TOO_LONG }
 
 data class GlobalEntry(val rank: Long, val player: String, val nick: String, val score: Long) {
     val rankLabel = rank.toString() + "."
@@ -149,7 +150,12 @@ class ScoreClient(
         if (!enabled || !profile.globalRanking || playerId.isEmpty() || score <= 0L ||
             playerId == deletingPlayerId) return
         if (cfg.mode == Mode.DAILY && !rankedDaily) return
-        if (cfg.tutorial && (cfg.mode != Mode.CAMPAIGN || cfg.stageIndex != 0)) return
+        // Samouczek nie jest wynikiem rankingowym, również w etapie pierwszym.
+        if (cfg.tutorial) return
+        if (log.steps > Replay.MAX_STEPS || log.steps < 0) {
+            status = ScoreSendStatus.REPLAY_TOO_LONG
+            return
+        }
         if (!validNick(nick)) {
             status = ScoreSendStatus.INVALID_NICK
             return
@@ -417,7 +423,7 @@ class ScoreClient(
     }
 
     companion object {
-        const val GAME_VERSION = "0.4.0"
+        const val GAME_VERSION = SimVersion.PROTOCOL
         private const val CACHE_MS = 120_000L
         private val PERIODS = setOf("day", "week", "all")
         private val NICK_REGEX = Regex("^[\\p{L}\\p{N} ._-]{1,24}$")

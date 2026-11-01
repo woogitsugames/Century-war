@@ -1,5 +1,7 @@
 package com.centurywar.meta
 
+import com.centurywar.game.SimVersion
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,6 +10,10 @@ import java.nio.file.Files
 import java.util.UUID
 
 class ScoreClientTest {
+    @Test fun protocolVersionComesFromSimulation() {
+        assertEquals(SimVersion.PROTOCOL, ScoreClient.GAME_VERSION)
+    }
+
     @Test fun hmacMatchesServerReferenceVector() {
         val signature = ScoreClient.sign(
             "test-secret-at-least-32-characters-long!".toByteArray(Charsets.UTF_8),

@@ -13,8 +13,15 @@ data class VerifiedReplay(val board: String, val score: Long, val steps: Int, va
 
 /** Odtwarza kod BattleController/Replay z symulacji bez udziału rendererów. */
 object ReplayVerifier {
-    private const val MAX_BATTLE_STEPS = 90_000
-    private const val MAX_ENDLESS_STEPS = 216_000
+    private const val DAY_MS = 86_400_000L
+    private const val DAILY_GRACE_MS = 2L * 60 * 60 * 1_000
+
+    /** Zgłoszenie z wczoraj jest ważne do 01:59:59.999 UTC włącznie. */
+    internal fun dailyDayAllowed(day: Long, nowMillis: Long): Boolean {
+        val today = todayUtc(nowMillis)
+        return day == today ||
+            (day == today - 1L && Math.floorMod(nowMillis, DAY_MS) < DAILY_GRACE_MS)
+    }
 
     fun verify(input: ScoreSubmission, nowMillis: Long, supportedVersion: String): VerifiedReplay {
         require(input.gameVersion == supportedVersion) { "unsupported_version" }
@@ -27,17 +34,15 @@ object ReplayVerifier {
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("invalid_replay", e)
         }
-        val stepsLimit = if (board == "endless" || board.startsWith("weekly_")) MAX_ENDLESS_STEPS else MAX_BATTLE_STEPS
-        require(log.steps in 60..stepsLimit) { "invalid_ticks" }
+        require(log.steps in 60..Replay.MAX_STEPS) { "invalid_ticks" }
         require(log.commands.none { it.kind == Replay.Kind.SURRENDER && it.step < 60 }) { "early_surrender" }
-        require(board == "campaign_0" && input.tutorial ||
-            log.commands.none { it.kind == Replay.Kind.TUTORIAL_GOLD }) { "illegal_command" }
+        require(log.commands.none { it.kind == Replay.Kind.TUTORIAL_GOLD }) { "illegal_command" }
 
         val bonuses = Research.bonuses(input.research.toIntArray())
         val cfg = when (input.board) {
             "daily" -> {
                 val day = requireNotNull(input.day) { "invalid_day" }
-                require(day == todayUtc(nowMillis) && input.seed == day) { "invalid_day_or_seed" }
+                require(dailyDayAllowed(day, nowMillis) && input.seed == day) { "invalid_day_or_seed" }
                 Daily.config(day, bonuses)
             }
             "weekly" -> {
@@ -70,6 +75,20 @@ object ReplayVerifier {
             throw IllegalArgumentException("illegal_replay", e)
         }
         require(result.score == input.score) { "score_mismatch" }
-        return VerifiedReplay(board, result.score, result.steps, input.research.sum())
+
+        // Podane badania służą wyłącznie do sprawdzenia oryginalnej powtórki.
+        // Wynik globalny przeliczamy drugi raz bez ulepszeń, niezależnie od deklaracji klienta.
+        val normalizedScore = if (input.board in setOf("endless", "skirmish", "campaign") &&
+            input.research.any { it != 0 }) {
+            val zero = Research.bonuses(IntArray(Research.defs.size))
+            val normalizedConfig = when (input.board) {
+                "endless" -> BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = zero)
+                "skirmish" -> BattleConfig(Mode.SKIRMISH, input.seed,
+                    Skirmish.power(input.difficulty!!), playerBonuses = zero)
+                else -> Campaign.config(Campaign.stages[input.stage!!], zero, input.seed)
+            }
+            Replay.normalized(normalizedConfig, log).score
+        } else result.score
+        return VerifiedReplay(board, normalizedScore, result.steps, input.research.sum())
     }
 }

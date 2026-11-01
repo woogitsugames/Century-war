@@ -242,7 +242,8 @@ class SqliteStore(
         replayHash: String,
         installationSecretHash: String? = null,
     ): SavedScore = synchronized(lock) {
-        val day = todayUtc(nowMillis)
+        // Daily zachowuje datę wyzwania, także przy wysyłce po północy UTC.
+        val day = if (replay.board == "daily") requireNotNull(input.day) else todayUtc(nowMillis)
         val nowSeconds = Math.floorDiv(nowMillis, 1000L)
         connection.autoCommit = false
         try {
@@ -331,11 +332,14 @@ class SqliteStore(
         limit: Int,
     ): List<RankingEntry> = synchronized(lock) {
         val start = firstSecond(period, nowMillis)
+        // Dla daily filtr opiera się na dniu wyzwania, nie sekundzie odbioru.
+        val boundary = if (board == "daily") Math.floorDiv(start, 86_400L) else start
+        val timeColumn = if (board == "daily") "day" else "verified_at"
         val sql = """
             WITH best AS (
                 SELECT player_id, MAX(score) AS score
                 FROM scores
-                WHERE board=? AND verified_at>=?
+                WHERE board=? AND $timeColumn>=?
                   AND NOT EXISTS (SELECT 1 FROM blocked_players b WHERE b.player_id=scores.player_id)
                 GROUP BY player_id
             ), ranked AS (
@@ -351,7 +355,7 @@ class SqliteStore(
         }
         connection.prepareStatement(sql).use {
             it.setString(1, board)
-            it.setLong(2, start)
+            it.setLong(2, boundary)
             if (player != null) {
                 it.setString(3, player)
                 it.setInt(4, limit)

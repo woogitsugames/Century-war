@@ -1,5 +1,6 @@
 package com.centurywar.server
 
+import com.centurywar.game.SimVersion
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -9,6 +10,7 @@ import io.ktor.server.request.receiveChannel
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
 import io.ktor.server.request.uri
+import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -37,7 +39,7 @@ fun Application.leaderboardModule(
     store: SqliteStore,
     secret: ByteArray,
     nowMillis: () -> Long = System::currentTimeMillis,
-    supportedVersion: String = "0.4.0",
+    supportedVersion: String = SimVersion.PROTOCOL,
     trustedProxies: Set<String> = setOf("127.0.0.1"),
     limits: RateLimits = RateLimits(),
     verificationGate: VerificationGate = VerificationGate(),
