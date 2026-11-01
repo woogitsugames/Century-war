@@ -709,3 +709,65 @@ wzorce kampanii używają etapów 1 i 29, a wzorce Endless/tygodnia nie dochodz�
 **Testy:** poprawiono dwa testy nieaktualne po 108 (`Doctrine69SnapshotTest`
 oczekiwał `BattleSnapshot.VERSION` 13 zamiast 14; `EndlessExpansion71Test`
 liczył wszystkie karty za 34. pozycją zamiast ośmiu kart zlecenia 71).
+
+- 2026-11-01 — regeneracja złotych powtórek: 122 ARMORED_FOE w Endless.
+
+## Zlecenie 122 — trwałość modyfikatorów w Endless i oblężeniu tygodnia (1.11.2026)
+
+**Przyczyna:** dyrektor nadpisywał mnożniki `e.hpMul` i `e.dmgMul` przy
+przejściu do następnej fali. Efekty `ARMORED_FOE` (+30% HP) i `GLASS_CANNON`
+(−30% HP, +50% obrażeń) przestawały działać; `VETERANS` (+6% dwa razy)
+był już uwzględniony. Dyrektor wylicza teraz z zapisanej konfiguracji
+`cfg.modifiers` bazowe mnożniki obu parametrów, bez nowych pól stanu.
+Skalowanie fal i zwykłe Endless bez tych modyfikatorów pozostały identyczne.
+
+**Regresja:** `EndlessModifier122Test` porównuje statystyki rzeczywiście
+stworzonych jednostek na fali 10, wszystkie trzy modyfikatory i ich kombinację,
+historyczny tydzień 2000 oraz identyczne binarnie snapshoty po odtworzeniu
+bitwy między falami 9–12. Bez zmiany `BattleSnapshot.VERSION` i `Replay.VERSION`.
+
+### Pomiar zwykłego Endless: 100 seedów weterana (1001–1100)
+
+Uruchomiono w GitHub Actions
+[porównanie przed i po](https://github.com/woogitsugames/Century-war/actions/runs/41341087387),
+`EndlessBalanceReportTest`, AI gracza z 80% badań, limit fala 60.
+Bez modyfikatorów wynik nie zmienia się ani o jedną falę.
+
+| Metryka | Przed | Po | Cel |
+|---|---:|---:|---|
+| Przetrwanie fali 20 | 100/100 | **100/100** | ≥95/100 |
+| Przetrwanie fali 30 | 95/100 | **95/100** | raport |
+| Przetrwanie fali 40 | 83/100 | **83/100** | raport |
+| Przetrwanie fali 50 | 77/100 | **77/100** | raport |
+| Żywa baza przy fali 60 | 11/100 | **11/100** | 5–15/100 |
+| Mediana fali porażki | 54 | **54** | 45–55 |
+| Średnia fala (ucięcie na 60) | 50,55 | **50,55** | bez regresji |
+| Średnia fala 20 seedów | 51,15 | **51,15** | bez regresji |
+| Timeouty | 0 | **0** | 0 |
+
+### Oblężenie tygodnia: pomiar parowany
+
+`EndlessBalanceReportTest.weeklyModifierPairs122` mierzy po 8 pierwszych
+tygodni po premierze z każdym modyfikatorem. Dla każdego porównuje tę samą
+konfigurację (seed, start/max epoki, karta, drugi modyfikator) po usunięciu
+tylko badanego modyfikatora. Gracz sterowany AI, bez badań (reguły tygodnia),
+próba ucięta na fali 60.
+
+| Modyfikator | Śr. fala z efektem | Śr. fala bez efektu | Mediana z / bez | Fala 20 z / bez |
+|---|---:|---:|---|---|
+| `ARMORED_FOE` | 9,625 | 10,625 | 9 / 11 | 0/8 / 0/8 |
+| `GLASS_CANNON` | 10,000 | 10,125 | 10,5 / 9,5 | 0/8 / 0/8 |
+| `VETERANS` | 13,125 | 13,250 | 12,5 / 12,5 | 1/8 / 1/8 |
+
+Wszystkie próby ukończyły się przed limitem kroków; nikt w tej krótkiej próbie
+nie dotarł do fali 60. Próba 8 tygodni na modyfikator nie uzasadnia
+statystycznego wniosku o jego globalnej trudności: tygodnie mają
+różne epoki/karty i wcześnie kończą się dla AI bez badań.
+O zgodności mechaniki decydują testy dokładnych mnożników HP/obrażeń.
+
+**Złota powtórka:** zmienił się snapshot i liczba zabójstw przeciwnika
+w `weekly-start-card.json` (tydzień 3024, `GLASS_CANNON`).
+Wygenerowano aktualny wzorzec przez `:sim:regenerateGolden`
+z `-PgoldenReason="122 ARMORED_FOE w Endless"`.
+Pozostałe wzorce bez zmian. Nie zmieniano kampanii,
+`Daily.RELEASE_DAY` ani wersji protokołów; wersję rankingu aktualizuje koordynator.

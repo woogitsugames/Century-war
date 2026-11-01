@@ -138,4 +138,61 @@ class EndlessBalanceReportTest {
             "Mediana porażek: $median (dopuszczalny zakres 38–60, cel 45–55)")
     }
 
+
+    /** Próbka tygodni po premierze: ten sam seed i karta z modyfikatorem oraz bez niego. */
+    @Test fun weeklyModifierPairs122() {
+        val firstWeek = com.centurywar.game.Weekly.weekNumber(com.centurywar.game.Daily.RELEASE_DAY)
+        val pool = (firstWeek until firstWeek + 300L)
+            .map { com.centurywar.game.Weekly.config(it) }
+        for (modifier in listOf(
+            com.centurywar.game.Modifier.ARMORED_FOE,
+            com.centurywar.game.Modifier.GLASS_CANNON,
+            com.centurywar.game.Modifier.VETERANS,
+        )) {
+            val sample = pool.filter { modifier in it.modifiers }.take(8)
+            assertTrue(sample.size == 8, "Brak 8 tygodni dla $modifier")
+            val with = ArrayList<Int>(8)
+            val without = ArrayList<Int>(8)
+            for (cfg in sample) {
+                fun simulate(config: BattleConfig): Int {
+                    val battle = Battle(config)
+                    battle.playerAi = Ai(battle, 0)
+                    var steps = 0
+                    while (!battle.over && battle.wave < 60 && steps < 90_000) {
+                        battle.step()
+                        battle.fx.count = 0
+                        steps++
+                    }
+                    assertTrue(steps < 90_000, "Timeout tygodnia ${config.weekly} ($modifier)")
+                    return battle.wave
+                }
+                val control = BattleConfig(
+                    mode = cfg.mode, seed = cfg.seed, aiPower = cfg.aiPower,
+                    startEra = cfg.startEra, maxEra = cfg.maxEra,
+                    modifiers = cfg.modifiers - modifier, playerBonuses = cfg.playerBonuses,
+                    stageIndex = cfg.stageIndex, tutorial = cfg.tutorial,
+                    aiPersonality = cfg.aiPersonality, variantsEnabled = cfg.variantsEnabled,
+                    weather = cfg.weather, weekly = cfg.weekly, weeklyCard = cfg.weeklyCard,
+                    dailyEvent = cfg.dailyEvent,
+                )
+                val currentWave = simulate(cfg)
+                val controlWave = simulate(control)
+                with.add(currentWave)
+                without.add(controlWave)
+                println("WEEKLY122_CASE MOD=${modifier.name} WEEK=${cfg.weekly} WITH=$currentWave WITHOUT=$controlWave")
+            }
+            fun median(values: List<Int>): Double {
+                val v = values.sorted()
+                return (v[3] + v[4]) / 2.0
+            }
+            println("WEEKLY122_SUMMARY MOD=${modifier.name} N=8 " +
+                "WITH_MEAN=${with.average()} WITHOUT_MEAN=${without.average()} " +
+                "WITH_MEDIAN=${median(with)} WITHOUT_MEDIAN=${median(without)} " +
+                "WITH_WAVE20=${with.count { it >= 20 }}/8 " +
+                "WITHOUT_WAVE20=${without.count { it >= 20 }}/8 " +
+                "WITH_WAVE60=${with.count { it >= 60 }}/8 " +
+                "WITHOUT_WAVE60=${without.count { it >= 60 }}/8")
+        }
+    }
+
 }
