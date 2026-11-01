@@ -106,9 +106,8 @@ internal class BarrageAiming(private val owner: BattleScreen) {
 
     fun drawHint(c: Canvas) {
         with(owner) {
-                ui.ribbon(c, w * 0.5f, fieldRect.top + 22 * dp, L["barrage_aim_hint"],
-                    15f, Ui.PLAYER, 0f, Ui.TEXT, w - g.insetL - g.insetR - 24 * dp)
-            }
+            ui.ribbon(c, w * 0.5f, fieldRect.top + 22 * dp, L["barrage_aim_hint"],
+                15f, Ui.PLAYER, 0f, Ui.TEXT, w - g.insetL - g.insetR - 24 * dp)
         }
     }
 
