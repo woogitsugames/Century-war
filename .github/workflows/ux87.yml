@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Testujemy tylko najnowszy commit gałęzi; starsze przebiegi są zbędne.
+concurrency:
+  group: ux87-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
