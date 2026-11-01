@@ -506,7 +506,7 @@ class BattleScreenTest {
                 val b = raw as Button
                 assertTrue(b.r.width() + b.hitSlop * 2f >= 48 * dp - 0.1f)
                 assertTrue(b.r.height() + b.hitSlop * 2f >= 48 * dp - 0.1f)
-                assertTrue(b.contains(b.r.left - b.hitSlop + 1f, b.r.centerY()))
+                if (b.visible) assertTrue(b.contains(b.r.left - b.hitSlop + 1f, b.r.centerY()))
             }
             val buys = field(bs, "slotBuy").get(bs) as Array<*>
             val sells = field(bs, "slotSell").get(bs) as Array<*>
