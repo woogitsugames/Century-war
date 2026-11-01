@@ -82,6 +82,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var rowsPerColumn = 10
     private var columnWidth = 0f
     private var lastAvailable = false
+    private var lastScoresAvailable = false
     private val panel = RectF()
     private val rowR = RectF()
     private var resetArmed = 0f
@@ -110,6 +111,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         rebuildRows()
         val rows = rows()
         lastAvailable = g.online.available
+        lastScoresAvailable = g.scores != null
         for (b in buttons) if (b !== back) b.visible = false
         val avail = h - chrome.top - g.insetB - 20 * dp
         // Powiększony tekst na wąskim Foldzie potrzebuje miejsca na długie etykiety.
@@ -174,7 +176,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         notifications.color = if (p.notifications) Ui.BTN_GREEN else Ui.BTN
         notifyHour.label = hourLabels[p.notifyHour.coerceIn(0, 23)]
         // PGS loguje się asynchronicznie: gdy dostępność się zmieni, przelicz układ wierszy.
-        if (g.online.available != lastAvailable) layout()
+        if (g.online.available != lastAvailable || (g.scores != null) != lastScoresAvailable) layout()
         playGames.label = L[when (g.online.state) {
             OnlineState.CONNECTED -> "pgs_connected"
             OnlineState.SYNCING -> "pgs_syncing"
