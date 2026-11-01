@@ -19,6 +19,7 @@ enum class AchievementMetric {
     STEAM_VARIANTS, SILICON_VARIANTS, RAIN_WINS, WIND_WINS, NIGHT_WINS,
     BARRAGE_EIGHT, BOSS_KNOCKBACK, BOSS_AURA, BOSS_SHIELD, BOSS_RECRUITER,
     BOSS_RAGE, WEEKLY_GOLD, CUSTOM_THREE, REPLAY_RECORD,
+    HARD_CAMPAIGN,
 }
 
 data class AchievementDef(
@@ -96,6 +97,7 @@ object Achievements {
         def("weekly_gold", AchievementMetric.WEEKLY_GOLD, 1, 200, AchievementCategory.ENDLESS),
         def("custom_three", AchievementMetric.CUSTOM_THREE, 1, 105, AchievementCategory.TACTICS),
         def("replay_record", AchievementMetric.REPLAY_RECORD, 1, 90, AchievementCategory.TACTICS),
+        def("campaign_hard", AchievementMetric.HARD_CAMPAIGN, Campaign.stages.size.toLong(), 600, AchievementCategory.CAMPAIGN),
     )
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
@@ -108,6 +110,7 @@ object Achievements {
         AchievementMetric.BATTLES -> profile.battles.toLong()
         AchievementMetric.STARS -> profile.totalStars().toLong()
         AchievementMetric.STAGES -> profile.stars.count { it > 0 }.toLong()
+        AchievementMetric.HARD_CAMPAIGN -> profile.hardStagesCleared().toLong()
         AchievementMetric.WAVES -> profile.bestWave.toLong()
         AchievementMetric.KILLS -> profile.totalKills
         AchievementMetric.RESEARCH_LEVELS -> Profile.research.sumOf { profile.level(it.key).toLong() }

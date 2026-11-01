@@ -67,8 +67,10 @@ object ReplayVerifier {
             }
             "campaign" -> {
                 require(input.day == null) { "invalid_day" }
+                require(!input.tutorial) { "tutorial_unranked" }
                 val stage = requireNotNull(input.stage) { "invalid_stage" }
-                Campaign.config(Campaign.stages[stage], bonuses, input.seed, tutorial = input.tutorial)
+                // Ranking kampanii jest wyłącznie Normalny; serwer sam oblicza siłę AI.
+                Campaign.config(Campaign.stages[stage], bonuses, input.seed)
             }
             else -> throw IllegalArgumentException("invalid_board")
         }

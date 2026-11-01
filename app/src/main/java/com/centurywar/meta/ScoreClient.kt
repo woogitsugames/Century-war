@@ -1,6 +1,8 @@
 package com.centurywar.meta
 
 import com.centurywar.game.BattleConfig
+import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.Research
@@ -151,7 +153,8 @@ class ScoreClient(
             playerId == deletingPlayerId) return
         if (cfg.mode == Mode.DAILY && !rankedDaily) return
         // Samouczek nie jest wynikiem rankingowym, również w etapie pierwszym.
-        if (cfg.tutorial) return
+        if (cfg.tutorial || (cfg.mode == Mode.CAMPAIGN &&
+                Campaign.difficulty(cfg) != CampaignDifficulty.NORMAL)) return
         if (log.steps > Replay.MAX_STEPS || log.steps < 0) {
             status = ScoreSendStatus.REPLAY_TOO_LONG
             return

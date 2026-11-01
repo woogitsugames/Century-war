@@ -3,6 +3,7 @@ package com.centurywar.meta
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
@@ -121,6 +122,17 @@ class Profile(private val file: File) {
     var medals = 0
     val levels = HashMap<String, Int>()
     val stars = IntArray(Campaign.stages.size)
+    /** Lokalne i globalne rekordy gwiazdek zdobytych na Normalnym poziomie. */
+    val normalStars = IntArray(Campaign.stages.size)
+    var campaignDifficulty = CampaignDifficulty.NORMAL
+    private var hardStageWins = 0L
+
+    fun normalStarTotal(): Int = normalStars.sum()
+    fun hardStagesCleared(): Int = java.lang.Long.bitCount(hardStageWins)
+    fun recordHardVictory(index: Int) {
+        if (index in stars.indices && index < 63) hardStageWins = hardStageWins or (1L shl index)
+    }
+
     var bestWave = 0
     var lastRankedDaily = -1L
     /** Maska brąz/srebro/złoto dla bieżącego tygodnia. */
@@ -413,6 +425,9 @@ class Profile(private val file: File) {
         o.put("medals", medals)
         o.put("levels", JSONObject(levels as Map<*, *>))
         o.put("stars", JSONArray().apply { stars.forEach { put(it) } })
+        o.put("normalStars", JSONArray().apply { normalStars.forEach { put(it) } })
+        o.put("campaignDifficulty", campaignDifficulty.ordinal)
+        o.put("hardStageWins", hardStageWins)
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("weeklyWeek", weeklyWeek)
@@ -668,6 +683,19 @@ class Profile(private val file: File) {
                 if (i < newStars.size) newStars[i] = a.optInt(i).coerceIn(0, 3)
             }
         }
+        // W dotychczasowych profilach wszystkie gwiazdki pochodzą z Normalnego.
+        val newNormalStars = newStars.copyOf()
+        arr("normalStars")?.let { a ->
+            newNormalStars.fill(0)
+            for (i in 0 until minOf(a.length(), newNormalStars.size)) {
+                if (strict && a.opt(i) !is Number) error("Niepoprawna gwiazdka Normalnego: $i")
+                newNormalStars[i] = a.optInt(i).coerceIn(0, newStars[i])
+            }
+        }
+        val difficultyIndex = json.optInt("campaignDifficulty", CampaignDifficulty.NORMAL.ordinal)
+        val newDifficulty = CampaignDifficulty.entries.getOrNull(difficultyIndex) ?: CampaignDifficulty.NORMAL
+        val maxHardMask = (1L shl Campaign.stages.size) - 1L
+        val newHardWins = json.optLong("hardStageWins", 0L) and maxHardMask
         val newBoards = HashMap<String, MutableList<ScoreEntry>>()
         obj("boards")?.let { b ->
             b.keys().forEach { key ->
@@ -792,6 +820,9 @@ class Profile(private val file: File) {
         medals = json.optInt("medals", 0).coerceAtLeast(0)
         levels.clear(); levels.putAll(newLevels)
         newStars.copyInto(stars)
+        newNormalStars.copyInto(normalStars)
+        campaignDifficulty = newDifficulty
+        hardStageWins = newHardWins
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
         lastRankedDaily = json.optLong("lastRankedDaily", -1L).coerceAtLeast(-1L)
         weeklyWeek = loadedWeek
