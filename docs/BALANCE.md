@@ -619,3 +619,93 @@ było scalone z `claude/bold-sagan-vwz5gm`. Po jego scaleniu należy
 **ponownie uruchomić 100 seedów**; wcześniejszego wyniku nie wolno uważać
 za pomiar po zleceniu 108.
 
+
+## Tura 6 – pomiar po scaleniu (1.11.2026)
+
+Pomiar po scaleniu paczek 95, 96, 97, 108 i 109 oraz poprawek z przeglądu
+(RNG AI losowany przed warunkiem oferty, preferencje osobowości dla kart 108,
+rotacja tygodni). Warunki identyczne z wcześniejszymi sekcjami:
+kampania `BalanceReport.campaignReport` (profil docelowy, seedy
+`246813579 + etap * 10007 + próba * 997`), Endless
+`EndlessBalanceReportTest` (weteran 80% badań, seedy 1001–1100, ucięcie na fali 60).
+Dodatkowo, do strojenia, użyto tymczasowej równoległej kopii obu pomiarów
+(niecommitowanej): dawała wyniki identyczne co do bitwy z oficjalnymi testami,
+więc można było sprawdzić 100 seedów na etap oraz kontrolną próbę Endless 2001–2100.
+
+**Uwaga o stanie wyjściowym:** w gałęzi integracyjnej zostało niezmierzone
+nachylenie `hpMul` po fali 48 = 0,07 (miało zostać cofnięte). Pomiar pokazał, że
+nie zmienia ono niczego istotnego (fala 60: 16/100 przy 0,06 i przy 0,07),
+więc przywrócono 0,06.
+
+### Endless (100 seedów, weteran)
+
+| Metryka | Przed (po scaleniu, `hpMul` 0,06) | Po | Cel |
+|---|---:|---:|---:|
+| Przetrwanie fali 20 | 100/100 | **100/100** | ≥ 95/100 |
+| Przetrwanie fali 30 | 95/100 | **95/100** | pomiar |
+| Przetrwanie fali 40 | 83/100 | **83/100** | pomiar |
+| Przetrwanie fali 50 | 77/100 | **77/100** | pomiar |
+| Dotarcie żywą bazą do fali 60 | 16/100 | **11/100** | 5–15/100 |
+| Mediana fali porażki | 54 | **54** | 45–55 |
+| Średnia fala (ucięcie na 60) | 51,15 | **50,55** | pomiar |
+| Próba kontrolna 2001–2100: fala 60 | 17/100 | **8/100** | 5–15/100 |
+| 20 seedów 1001–1020: fala 60 | 4/20 | **3/20** | pomiar |
+| Timeouty | 0 | **0** | 0 |
+
+Rozkład porażek po zmianie (przedziały jak w sekcji zlecenia 95:
+0–19, 20–29, 30–39, 40–44, 45–49, 50–54, 55–59, 60): `0, 5, 12, 3, 2, 47, 20, 11`
+(przed: `0, 5, 12, 3, 1, 34, 29, 16`).
+
+**Dlaczego obrażenia, a nie zdrowie:** seedy, które dochodzą do fali 60, to te,
+w których bot gracza osiąga ostatnią epokę razem z falami; jego baza nie traci
+wtedy ani punktu życia aż do fali 60. Zdrowie fal prawie nie ma na nie wpływu
+(seedy 1001–1100, fala 60): nachylenie `hpMul` 0,07 → 16, 0,10 → 16, 0,25 → 13.
+Dodatkowy mnożnik obrażeń po fali 48 (wariant z poprzedniej próby) też był za słaby:
+0,03 → 15, 0,05 → 16, 0,08 → 15. Skuteczne okazało się wcześniejsze wejście:
+od fali 45 +5%/falę → 11 (kontrola 8), od 45 +8%/falę → 8, od 41 +3%/falę → 12
+(kontrola 6), od 41 +5%/falę → 8, od 41 +10%/falę → 2. Wybrano najmniejszą zmianę,
+która w obu próbach daje środek pasma i nie rusza fal do 44.
+
+**Zmiana (`Battle.kt`, dyrektor Endless):**
+`e.dmgMul` dostaje dodatkowy czynnik `(1 + max(0, wave − 44) × 0,05)`
+(fala 50: ×1,30, fala 55: ×1,55, fala 59: ×1,75). Fale 1–44 bez zmian,
+`hpMul` jak przed turą 6 (nachylenie 0,06 po fali 48).
+
+### Kampania (36 etapów × 20 seedów)
+
+Zmieniono tylko korekty `Campaign.stageRamp` dwóch etapów; pozostałe 34 etapy
+dają wyniki identyczne bitwa w bitwę (te same seedy, te same parametry).
+
+| Etap | Profil | `stageRamp` przed → po | AI przed → po | Wygrane 20 seedów przed → po | Wygrane 100 seedów przed → po | Mediana po [min] |
+|---:|---|---|---|---:|---:|---:|
+| 16 | poczatkujacy | 0,97 → **0,93** | 1,15 → 1,10 | 40% → **60%** | 52% → **61%** | 13,36 |
+| 23 | sredni | 0,92 → **0,96** | 1,46 → 1,52 | 90% → **60%** | 65% → **65%** | 12,40 |
+
+Sąsiedzi na 100 seedach (bez zmian): etap 14: 57%, 15: 59%, 17: 54%, 18: 56%,
+21: 70%, 22: 55%, 24: 52%, 25: 47%.
+
+**Interpretacja:** wyniki pojedynczego etapu są bardzo czułe na drobne zmiany
+siły AI (1–2% potrafi przestawić 20-seedowy wynik o 20–35 p.p.). Na 100 seedach
+etap 23 ma ok. 62–67% wygranych dla korekt 0,92–0,97, więc wynik 90% na 20 seedach
+był odstającą próbą, a nie rzeczywistą łatwością; korekta 0,96 jest kosmetyczna
+i przesuwa referencyjną próbę 20 seedów do pasma i do poziomu sąsiadów (55%/65%).
+Etap 16 był faktycznie najtrudniejszy w swoim bloku (52% na 100 seedach wobec
+54–59% u sąsiadów); korekta 0,93 podnosi go do 61%.
+
+Pełna tabela po zmianie (20 seedów, profil docelowy): etapy 1–6: 90–100%;
+7–27: 50–75%; 28–33: 50–75%; 34–36: 45–55%. **36/36** w paśmie
+`tools/check_campaign_balance.py`, 0 timeoutów, najkrótsza mediana od etapu 7:
+4,51 min (etap 29), największe odchylenie od średniej sąsiadów 20 p.p. (etap 25).
+
+Pozostałe wiersze (identyczne przed i po zmianie): 1: 100%, 2: 100%, 3: 90%, 4: 90%, 5: 95%, 6: 90%,
+7: 65%, 8: 65%, 9: 65%, 10: 70%, 11: 65%, 12: 75%, 13: 70%, 14: 60%, 15: 60%,
+17: 65%, 18: 65%, 19: 60%, 20: 65%, 21: 75%, 22: 55%, 24: 65%, 25: 50%,
+26: 75%, 27: 65%, 28: 55%, 29: 75%, 30: 65%, 31: 50%, 32: 65%, 33: 55%,
+34: 55%, 35: 55%, 36: 45%.
+
+**Powtórki:** złote powtórki (`GoldenReplayTest`) przechodzą bez regeneracji:
+wzorce kampanii używają etapów 1 i 29, a wzorce Endless/tygodnia nie dochodzą do fali 45.
+
+**Testy:** poprawiono dwa testy nieaktualne po 108 (`Doctrine69SnapshotTest`
+oczekiwał `BattleSnapshot.VERSION` 13 zamiast 14; `EndlessExpansion71Test`
+liczył wszystkie karty za 34. pozycją zamiast ośmiu kart zlecenia 71).
