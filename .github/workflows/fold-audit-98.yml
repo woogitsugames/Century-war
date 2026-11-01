@@ -48,6 +48,13 @@ jobs:
             --tests '*ScreenshotTest.layoutCollisions*' \
             --tests '*ScreenshotTest.menus*' \
             --tests '*LTest*' \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
             --console=plain --no-configuration-cache -PtestForks=1
       - name: Zrzuty i raporty
         if: always()
