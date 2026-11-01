@@ -36,7 +36,8 @@ class ReplayStore(private val directory: File) {
         require(pattern.matches(id))
         io.execute {
             try {
-                // Nie twórz plików niezgodnych z formatem.
+                // Nie zapisuj niepełnych ani zbyt dużych powtórek.
+                require(bytes.size in 24..MAX_RECORD_BYTES)
                 ReplayRecord.decode(bytes)
                 writeAtomic(File(directory, "$id.cwr"), bytes)
                 prune()
@@ -52,7 +53,7 @@ class ReplayStore(private val directory: File) {
     fun importAsync(bytes: ByteArray, callback: (String?) -> Unit) {
         io.execute {
             val id = try {
-                require(bytes.size in 24..ReplayImport.MAX_BYTES)
+                require(bytes.size in 24..MAX_RECORD_BYTES)
                 val record = ReplayRecord.decode(bytes)
                 require(record.playable) { "Niekompatybilna wersja powtórki" }
                 val result = Replay.verify(record.cfg, requireNotNull(record.log))
@@ -104,7 +105,7 @@ class ReplayStore(private val directory: File) {
     fun loadAsync(id: String, callback: (ByteArray?) -> Unit) {
         io.execute {
             val data = if (pattern.matches(id)) try {
-                File(directory, "$id.cwr").takeIf { it.isFile && it.length() <= MAX_BYTES }?.readBytes()
+                File(directory, "$id.cwr").takeIf { it.isFile && it.length() in 24L..MAX_RECORD_BYTES.toLong() }?.readBytes()
             } catch (_: Exception) { null } else null
             callback(data)
         }
@@ -124,7 +125,7 @@ class ReplayStore(private val directory: File) {
         val set = pinned()
         val result = ArrayList<Entry>()
         for (file in directory.listFiles().orEmpty()) {
-            if (!file.name.endsWith(".cwr") || !file.isFile || file.length() > MAX_BYTES) continue
+            if (!file.name.endsWith(".cwr") || !file.isFile || file.length() !in 24L..MAX_RECORD_BYTES.toLong()) continue
             val id = file.name.removeSuffix(".cwr")
             if (!pattern.matches(id)) continue
             val record = try { ReplayRecord.decode(file.readBytes()) } catch (_: Exception) { continue }
@@ -180,8 +181,8 @@ class ReplayStore(private val directory: File) {
     companion object {
         const val MAX_RECENT = 20
         const val MAX_PINNED = 20
-        const val MAX_SHARE_BYTES = 2 * 1024 * 1024
-        private const val MAX_BYTES = 1 shl 20
+        const val MAX_RECORD_BYTES = 1 shl 20
+        const val MAX_SHARE_BYTES = MAX_RECORD_BYTES
         fun isImportedId(id: String): Boolean = id.startsWith("friend_")
     }
 }

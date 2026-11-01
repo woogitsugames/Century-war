@@ -10,6 +10,7 @@ import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import java.io.File
 import java.io.FileNotFoundException
+import java.nio.file.Files
 
 /**
  * Wąski provider eksportujący tylko pliki .cwr z katalogu replays.
@@ -33,12 +34,21 @@ class ReplayShareProvider : ContentProvider() {
             if (!fileName.endsWith(".cwr")) return null
             val id = fileName.removeSuffix(".cwr")
             if (!idPattern.matches(id)) return null
-            val directory = File(root, "replays").canonicalFile
-            val candidate = File(directory, fileName).canonicalFile
-            return candidate.takeIf {
-                it.parentFile == directory && it.isFile &&
-                    it.length() in 24L..ReplayStore.MAX_SHARE_BYTES.toLong()
-            }
+            val directory = File(root, "replays")
+            val candidate = File(directory, fileName)
+            // Zakaz dowiązań na poziomie pliku i katalogu.
+            if (Files.isSymbolicLink(directory.toPath()) ||
+                Files.isSymbolicLink(candidate.toPath())) return null
+            return runCatching {
+                val canonicalRoot = root.canonicalFile
+                val canonicalDirectory = directory.canonicalFile
+                val canonicalCandidate = candidate.canonicalFile
+                canonicalCandidate.takeIf {
+                    canonicalDirectory.parentFile == canonicalRoot &&
+                        it.parentFile == canonicalDirectory && it.isFile &&
+                        it.length() in 24L..ReplayStore.MAX_SHARE_BYTES.toLong()
+                }
+            }.getOrNull()
         }
     }
 
