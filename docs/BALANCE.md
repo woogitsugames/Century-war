@@ -808,3 +808,5 @@ przeanalizować, ponieważ 1 wygrana z 20 odpowiada 5 p.p.
 
 Wyniki liczbowe należy przenieść z ukończonego przebiegu CI do opisu PR.
 Do czasu ukończenia pomiarów nie zakładamy, że limit ±5 p.p. jest spełniony.
+
+- 2026-11-01 — regeneracja złotych powtórek: 127 osobowosci AI.
