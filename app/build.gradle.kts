@@ -266,6 +266,55 @@ tasks.register("balanceTest") {
 }
 
 
+
+// ---- Wersjonowane zrzuty ekranów (zlecenie 100) --------------------------------------------
+val updateScreenshotsRequested = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':') == "updateScreenshots"
+}
+val screenshotReason = providers.gradleProperty("screenReason").orNull?.trim().orEmpty()
+if (updateScreenshotsRequested) {
+    require(screenshotReason.length >= 8) {
+        "Użyj :app:updateScreenshots -PscreenReason='powód (min. 8 znaków)'."
+    }
+    check(providers.environmentVariable("CW_SCREENSHOT_DEVICE").orNull.isNullOrBlank()) {
+        "Aktualizacja wzorców musi objąć oba urządzenia; usuń CW_SCREENSHOT_DEVICE."
+    }
+}
+
+// Wykorzystuje standardowy Robolectric, nie osobną konfigurację bez zasobów Androida.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    if (updateScreenshotsRequested && name == "testDebugUnitTest") {
+        filter { includeTestsMatching("com.centurywar.screens.ScreenshotTest.regression100") }
+        systemProperty("cw.screens.update", "true")
+        systemProperty("cw.screens.reason", screenshotReason)
+        outputs.upToDateWhen { false }
+    }
+}
+
+tasks.register("updateScreenshots") {
+    group = "verification"
+    description = "Aktualizuje 30 wzorców PNG wyłącznie z podanym -PscreenReason."
+    dependsOn("testDebugUnitTest")
+    doLast {
+        val directory = file("src/test/resources/screens")
+        val scenes = listOf(
+            "menu", "campaign", "campaign_info", "research", "achievements",
+            "mode_endless", "mode_skirmish", "skirmish_setup", "rankings", "settings",
+            "accessibility", "about", "codex", "battle_hud", "battle_pause",
+        )
+        val missing = listOf("phone720", "foldOpen").flatMap { device ->
+            scenes.map { scene -> "${device}_reg100_${scene}.png" }
+        }.filterNot { directory.resolve(it).isFile }
+        check(missing.isEmpty()) {
+            "Niekompletne wzorce (${missing.size}/30): ${missing.joinToString()}"
+        }
+        directory.resolve("UPDATES.md").appendText(
+            "- ${LocalDate.now(ZoneOffset.UTC)} UTC: ${screenshotReason.replace("\n", " ").replace("\r", " ")}\n",
+        )
+        logger.lifecycle("Zaktualizowano 30 wzorców PNG w ${directory.path}; sprawdź diff i commit.")
+    }
+}
+
 // ---- Kontrola przed publikacją ---------------------------------------------------------------
 // Nie podpinaj do zadań debug. Każdy release (APK i AAB) wymaga tej samej kontroli.
 val dailySourceFile = rootProject.file("sim/src/main/kotlin/com/centurywar/game/Modes.kt")

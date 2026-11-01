@@ -1694,4 +1694,82 @@ class ScreenshotTest {
             L.lang = oldLang
         }
     }
+
+    /**
+     * Trwały zestaw 15 ekranów w 720p i na rozłożonym Foldzie.
+     * Oddzielne nazwy nie kolidują ze zrzutami innych testów.
+     */
+    @Test
+    fun regression100() {
+        val originalLanguage = L.lang
+        try {
+            L.lang = L.PL
+            val devices = mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+            )
+            val requested = System.getenv("CW_SCREENSHOT_DEVICE")?.trim().orEmpty()
+            val selected = if (requested.isEmpty()) devices else devices.filterKeys { it == requested }
+            for ((tag, dims) in selected) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "pl"
+                g.onLanguageChanged()
+                g.profile.hintsEnabled = false
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                g.profile.stars[0] = 3
+                g.profile.stars[1] = 2
+                g.profile.medals = 340
+                // Baner nagrody za logowanie nie jest częścią stabilnego wzorca.
+                (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+                (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+                field(g, "achievementSeconds").setFloat(g, 0f)
+
+                fun capture(scene: String, frames: Int = 2) {
+                    val name = "${tag}_reg100_$scene"
+                    // dt=0 zamraża chmury i animacje niezależnie od System.nanoTime().
+                    g.finishScreenTransition()
+                    val bitmap = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+                    try {
+                        val canvas = Canvas(bitmap)
+                        repeat(frames) { g.frame(canvas, 0f) }
+                        File(out, "$name.png").outputStream().use {
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                    ScreenshotGolden.verify(name)
+                }
+
+                g.setScreen(MenuScreen(g)); capture("menu", 8)
+                val campaign = CampaignScreen(g)
+                g.setScreen(campaign); capture("campaign")
+                field(campaign, "selected").set(campaign, Campaign.stages[2])
+                capture("campaign_info")
+                g.setScreen(ResearchScreen(g)); capture("research")
+                g.setScreen(AchievementsScreen(g)); capture("achievements")
+                g.setScreen(ModeScreen(g, Mode.ENDLESS)); capture("mode_endless")
+                g.setScreen(ModeScreen(g, Mode.SKIRMISH)); capture("mode_skirmish")
+                g.setScreen(SkirmishSetupScreen(g)); capture("skirmish_setup")
+                g.setScreen(RankingsScreen(g)); capture("rankings")
+                g.setScreen(SettingsScreen(g)); capture("settings")
+                g.setScreen(AccessibilityScreen(g)); capture("accessibility")
+                g.setScreen(AboutScreen(g)); capture("about")
+                g.setScreen(CodexScreen(g, 0)); capture("codex")
+
+                val battleScreen = BattleScreen(g, BattleConfig(
+                    Mode.SKIRMISH, 100100L, 1f, startEra = 2, maxEra = 7,
+                ))
+                g.setScreen(battleScreen)
+                val battle = field(battleScreen, "battle").get(battleScreen) as Battle
+                battle.player.gold = 900f
+                capture("battle_hud", 6)
+                battleScreen.onClick(field(battleScreen, "pauseBtn").get(battleScreen) as Button)
+                capture("battle_pause", 3)
+            }
+        } finally {
+            L.lang = originalLanguage
+        }
+    }
 }
