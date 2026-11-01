@@ -1563,7 +1563,7 @@ class Battle(val cfg: BattleConfig) {
         }
     }
 
-    private fun waveRole(roll: Int, slot: Int): Role = when (currentWaveTheme) {
+    internal fun waveRole(roll: Int, slot: Int): Role = when (currentWaveTheme) {
         EndlessWaveTheme.MIXED -> when {
             wave >= 4 && roll < 10 -> Role.ELITE
             roll < 30 -> Role.HEAVY
