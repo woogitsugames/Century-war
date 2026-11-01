@@ -23,9 +23,10 @@ class AboutScreen(g: Game) : Screen(g) {
     private val privacy = btn(1)
     private val fullLicense = btn(2)
     private val report = btn(3)
+    private val deleteData = btn(4)
     private val entries = LicenseCatalog.app
     private val links = Array(entries.size) { i -> btn(100 + i).apply { iconId = Icons.GLOBE } }
-    private val privacyUrl = BuildConfig.CW_PRIVACY_URL
+    private val privacyUrl = BuildConfig.PRIVACY_URL
     private val hasPrivacy = SecureLinks.isHttps(privacyUrl)
     private val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
     private val panel = RectF()
@@ -42,6 +43,9 @@ class AboutScreen(g: Game) : Screen(g) {
     private var authorText = ""
     private var creditText = ""
     private var licenseTitle = ""
+    private var deleteConfirmSeconds = 0f
+    private var deleteInFlight = false
+    private var deleteResultKey = "privacy93_delete_hint"
 
     init { refreshLabels() }
 
@@ -49,6 +53,7 @@ class AboutScreen(g: Game) : Screen(g) {
         back.label = L["back"]
         privacy.label = L["about_privacy"]
         privacy.iconId = Icons.GLOBE
+        deleteData.iconId = Icons.RESTART
         report.label = L["report_problem"]
         report.iconId = Icons.BOOK
         fullLicense.label = L["about_apache_full"]
@@ -79,7 +84,7 @@ class AboutScreen(g: Game) : Screen(g) {
         panel.set(left, chrome.top + 7 * dp, left + pw, h - g.insetB - 11 * dp)
         contentTop = panel.top + 11 * dp
         contentBottom = panel.bottom - 11 * dp
-        val introDp = if (hasPrivacy) 242f else 190f
+        val introDp = 322f
         val step = 103 * dp
         val fullHeight = (introDp + 24 + 70) * dp + entries.size * step
         maxScroll = max(0f, fullHeight - (contentBottom - contentTop))
@@ -88,8 +93,11 @@ class AboutScreen(g: Game) : Screen(g) {
         firstRow = textStart + introDp * dp
         footerTop = firstRow + entries.size * step + 12 * dp
         privacy.set(panel.left + 20 * dp, textStart + 98 * dp, min(250 * dp, pw - 40 * dp), 48 * dp)
-        privacy.visible = hasPrivacy && inContent(privacy)
-        report.set(panel.left + 20 * dp, textStart + (if (hasPrivacy) 154 else 98) * dp,
+        privacy.visible = inContent(privacy)
+        deleteData.set(panel.left + 20 * dp, textStart + 154 * dp,
+            min(310 * dp, pw - 40 * dp), 48 * dp)
+        deleteData.visible = inContent(deleteData)
+        report.set(panel.left + 20 * dp, textStart + 210 * dp,
             min(250 * dp, pw - 40 * dp), 48 * dp)
         report.visible = inContent(report)
         fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 48 * dp)
@@ -107,7 +115,17 @@ class AboutScreen(g: Game) : Screen(g) {
      */
     private fun inContent(b: Button) = b.r.top >= contentTop && b.r.bottom <= contentBottom
 
-    override fun update(dt: Float) { this.dt = dt }
+    override fun update(dt: Float) {
+        this.dt = dt
+        if (deleteConfirmSeconds > 0f) deleteConfirmSeconds = max(0f, deleteConfirmSeconds - dt)
+        deleteData.label = when {
+            deleteInFlight -> L["privacy93_saving_short"]
+            deleteConfirmSeconds > 0f -> L["privacy93_confirm"]
+            else -> L["privacy93_delete"]
+        }
+        deleteData.enabled = !deleteInFlight
+        deleteData.color = if (deleteConfirmSeconds > 0f) Ui.BTN_RED else Ui.BTN
+    }
 
     override fun render(c: Canvas) {
         bg.draw(c, w, h, dt)
@@ -123,7 +141,14 @@ class AboutScreen(g: Game) : Screen(g) {
         ui.textO(c, creditText, tx, textStart + 84 * dp,
             ui.fit(creditText, 15f, textWidth, 10f), Ui.TEXT)
         if (privacy.visible) ui.button(c, privacy, 13f)
+        if (deleteData.visible) ui.button(c, deleteData, 13f)
         if (report.visible) ui.button(c, report, 13f)
+        val deletionStatus = L[deleteResultKey]
+        val statusY = textStart + 283 * dp
+        if (statusY >= contentTop && statusY <= contentBottom) {
+            ui.textO(c, deletionStatus, tx, statusY,
+                ui.fit(deletionStatus, 13f, textWidth, 9f), Ui.DIM)
+        }
         ui.textO(c, licenseTitle, tx, firstRow - 18 * dp, 19f, Ui.GOLD)
         val step = 103 * dp
         for (i in entries.indices) {
@@ -156,11 +181,50 @@ class AboutScreen(g: Game) : Screen(g) {
         when (b.id) {
             -1 -> g.pop()
             1 -> if (hasPrivacy) g.host.openExternalUrl(privacyUrl)
+                else g.push(PrivacySummaryScreen(g))
             2 -> g.host.showApacheLicense()
             3 -> g.host.shareProblemReport()
+            4 -> requestDataDeletion()
             else -> if (b.id >= 100) entries.getOrNull(b.id - 100)?.let {
                 if (SecureLinks.isHttps(it.url)) g.host.openExternalUrl(it.url)
             }
+        }
+    }
+
+    /** Zapis żądania jest potwierdzeniem kolejki, nie odpowiedzią serwera. */
+    private fun requestDataDeletion() {
+        if (deleteInFlight) return
+        val id = g.profile.playerId
+        val client = g.scores
+        if (id.isEmpty()) {
+            deleteResultKey = "privacy93_no_data"
+            deleteConfirmSeconds = 0f
+            return
+        }
+        if (client == null) {
+            deleteResultKey = "privacy93_unavailable"
+            deleteConfirmSeconds = 0f
+            return
+        }
+        if (deleteConfirmSeconds <= 0f) {
+            deleteConfirmSeconds = 8f
+            deleteResultKey = "privacy93_confirm_body"
+            return
+        }
+        deleteConfirmSeconds = 0f
+        deleteInFlight = true
+        deleteResultKey = "privacy93_saving"
+        client.deletePlayerData(id) { queued ->
+            g.post(Runnable {
+                if (queued && g.profile.playerId == id) {
+                    // Stary sekret pozostaje w trwałej kolejce; nic już nie wysyłamy na nowy ID.
+                    g.profile.disableGlobalRanking()
+                    client.setEnabled(false)
+                    g.profile.renewRankingId()
+                }
+                deleteResultKey = if (queued) "privacy93_queued" else "privacy93_failed"
+                deleteInFlight = false
+            })
         }
     }
 }
