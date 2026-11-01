@@ -132,6 +132,51 @@ class LTestReview116 {
         }
     }
 
+
+    /** Konkretne regresje znalezione podczas przeglądu gałęzi 104/105/106/108. */
+    @Test
+    fun newTextUsesCanonicalNamesForGameplayConcepts() {
+        reviewKeys()
+
+        // Wykres rozwoju epoki nie może mylić awansu z postawą armii "Advance".
+        L.raw("bs104_evolution")?.let { row ->
+            assertFalse("bs104_evolution/en: 'Advance' to postawa armii",
+                row[L.EN].contains("advance", ignoreCase = true))
+        }
+
+        // Nazwa trybu nie powinna pozostawać w języku angielskim w lokalizacjach.
+        L.raw("bh105_best_wave")?.let { row ->
+            for (i in L.CODES.indices) {
+                if (i == L.EN) continue
+                assertFalse("bh105_best_wave/" + L.CODES[i] + ": Endless bez tłumaczenia",
+                    row[i].contains("Endless", ignoreCase = true))
+            }
+        }
+
+        // W ogłoszeniu nowości należy użyć tych samych nazw wież co w Kodeksie.
+        L.raw("wn_010_iron")?.let { row ->
+            val canonical = L.raw("cx_turret")!!
+            for (i in L.CODES.indices) {
+                assertTrue("wn_010_iron/" + L.CODES[i] + ": wieża musi być " + canonical[i],
+                    row[i].contains(canonical[i], ignoreCase = true))
+            }
+        }
+
+        // Karta odnawia dokładnie dwie zdolności. Nie należy ich nazywać
+        // "atakiem", "salwą" ani nazwą badania odblokowującego zdolność.
+        L.raw("ec_boss_recall_d")?.let { row ->
+            val barrage = L.raw("cx_barrage")!!
+            val rally = L.raw("rally")!!
+            for (i in L.CODES.indices) {
+                val code = L.CODES[i]
+                assertTrue("ec_boss_recall_d/" + code + ": brak " + barrage[i],
+                    row[i].contains(barrage[i], ignoreCase = true))
+                assertTrue("ec_boss_recall_d/" + code + ": brak " + rally[i],
+                    row[i].contains(rally[i], ignoreCase = true))
+            }
+        }
+    }
+
     @Test
     fun newPluralsAndShortActionLabels() {
         val keys = reviewKeys()
