@@ -1,5 +1,6 @@
 package com.centurywar.server
 
+import java.nio.file.Path
 import java.sql.Connection
 import java.sql.DriverManager
 import java.security.MessageDigest
@@ -29,7 +30,7 @@ data class NickReportRow(
 
 /** Jeden uchwyt JDBC, wszystkie operacje szeregowane; nadaje się dla jednej instancji. */
 class SqliteStore(
-    jdbcUrl: String,
+    private val jdbcUrl: String,
     private val publicIds: PublicPlayerIds = PublicPlayerIds.temporary(),
 ) : AutoCloseable {
     private val lock = Any()
@@ -220,6 +221,19 @@ class SqliteStore(
             s.executeQuery("SELECT 1").use { rs -> rs.next() && rs.getInt(1) == 1 }
         }
     }
+
+    /** Liczba wszystkich zapisanych wyników, także ukrytych przez moderację. */
+    fun countScores(): Long = synchronized(lock) {
+        connection.createStatement().use { s ->
+            s.executeQuery("SELECT COUNT(*) FROM scores").use { rs ->
+                check(rs.next())
+                rs.getLong(1)
+            }
+        }
+    }
+
+    /** Spójna kopia online na osobnym połączeniu; nie trzyma blokady API. */
+    fun backupTo(destination: Path): Path = DatabaseMaintenance.backup(jdbcUrl, destination)
 
     fun consumeNonce(nonce: String, nowSeconds: Long): Boolean = synchronized(lock) {
         connection.prepareStatement("DELETE FROM used_nonces WHERE expires_at <= ?").use {
