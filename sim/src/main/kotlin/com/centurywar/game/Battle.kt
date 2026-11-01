@@ -696,18 +696,18 @@ class Battle(val cfg: BattleConfig) {
                 side.turretDmgMul *= 1f + 0.2f * power
             }
             Doctrine.BULWARK -> {
-                val bonus = 0.1f * power
+                val bonus = (if (endless) 0.2f else 0.1f) * power
                 side.baseHpMul *= 1f + bonus
                 val add = side.baseMaxHp * bonus
                 side.baseMaxHp += add; side.baseHp += add
-                side.hpMul *= 1f + 0.05f * power
+                side.hpMul *= 1f + (if (endless) 0.1f else 0.05f) * power
             }
             Doctrine.SWIFT -> {
                 side.trainMul *= 1f + 0.25f * power
                 side.speedMul *= 1f + 0.1f * power
             }
             Doctrine.VETERAN -> side.xpMul *= 1f + 0.3f * power
-            Doctrine.FURY -> side.dmgMul *= 1f + 0.08f * power
+            Doctrine.FURY -> side.dmgMul *= 1f + (if (endless) 0.12f else 0.08f) * power
             Doctrine.ARSENAL -> {
                 // Modyfikator zakazu wież ma pierwszeństwo przed doktryną.
                 if (Modifier.NO_TURRETS !in cfg.modifiers && side.slots > 0) {
@@ -717,7 +717,7 @@ class Battle(val cfg: BattleConfig) {
             }
             Doctrine.TACTICS ->
                 side.abilityCdMul = max(MIN_ABILITY_CD_MUL, side.abilityCdMul * (1f - 0.25f * power))
-            Doctrine.PLUNDER -> side.killGoldMul *= 1f + 0.12f * power
+            Doctrine.PLUNDER -> side.killGoldMul *= 1f + (if (endless) 0.35f else 0.12f) * power
             Doctrine.BANNER -> side.rallyArmorMul *= 1f - 0.15f * power
             Doctrine.SUPPLY -> {
                 side.gold += SUPPLY_INSTANT_GOLD * Defs.costScale(side.era) * power

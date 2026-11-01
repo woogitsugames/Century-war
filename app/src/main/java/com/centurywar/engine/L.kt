@@ -1395,6 +1395,10 @@ object L {
     )
     /** Zlecenie 82: opis Czujności bez mgły, w komplecie 10 języków. */
     private fun part82(): Array<Pair<String, Array<out String>>> = arrayOf(
+        // Pierwsze karty Endless pozostają bez zmian mimo strojenia doktryn poza Endless.
+        "d_bulwark_endless_d" to t("+20% HP bazy, +10% HP jednostek", "+20% base HP, +10% unit HP", "+20% Basis-LP, +10% Einheiten-LP", "+20% PV de base, +10% PV de unidades", "+20% PV de base, +10% PV des unités", "+20% PS base, +10% PS unità", "+20% PV da base, +10% PV das unidades", "+20% ОЗ бази, +10% ОЗ бійців", "+20% basis-HP, +10% eenheid-HP", "+%20 üs canı, +%10 birim canı"),
+        "d_fury_endless_d" to t("+12% obrażeń jednostek", "+12% unit damage", "+12% Einheitenschaden", "+12% daño de unidades", "+12% dégâts des unités", "+12% danni delle unità", "+12% dano das unidades", "+12% шкоди бійців", "+12% eenheidsschade", "+%12 birim hasarı"),
+        "d_plunder_endless_d" to t("+35% złota za zabójstwa", "+35% gold per kill", "+35% Gold pro Abschuss", "+35% oro por baja", "+35% d’or par élimination", "+35% oro per uccisione", "+35% ouro por abate", "+35% золота за вбивство", "+35% goud per kill", "Öldürme başına +%35 altın"),
         "d_vigilance_clear_d" to t(
             "+18% zasięgu wież (w tej bitwie nie ma mgły)",
             "+18% turret range (no fog in this battle)",

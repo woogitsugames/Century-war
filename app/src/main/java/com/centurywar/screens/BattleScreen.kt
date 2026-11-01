@@ -169,6 +169,13 @@ class BattleScreen(
     private val cardDescKeys = EndlessCard.values().map { it.textKey + "_d" }.toTypedArray()
 
     private fun choiceDescriptionKey(card: EndlessCard?, doctrine: Doctrine?): String {
+        // Karty Endless zachowują pierwotną siłę pierwszego stosu.
+        when (card) {
+            EndlessCard.BULWARK -> return "d_bulwark_endless_d"
+            EndlessCard.FURY -> return "d_fury_endless_d"
+            EndlessCard.PLUNDER -> return "d_plunder_endless_d"
+            else -> Unit
+        }
         if ((card?.doctrine ?: doctrine) == Doctrine.VIGILANCE && !battle.fog)
             return "d_vigilance_clear_d"
         return if (card != null) cardDescKeys[card.ordinal]

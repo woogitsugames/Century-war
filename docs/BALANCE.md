@@ -398,7 +398,8 @@ z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
 - `abilityCdMul` nie spada poniżej **0,35** (badania, karty, doktryny i zdarzenie dnia; również przy nałożeniu odnowienia).
 - Karty, których ograniczony efekt osiągnął limit, przestają być losowane: klonowanie (0,6), elity na falę (4), leczenie na falę (0,3), limit armii (72), autoostrzał (15 s), sloty wież, odnowienie przy 0,35 i leczenie pełnej bazy. `BANNER` wymaga Zrywu, `VIGILANCE` bez mgły wzmacnia tylko zasięg wież.
 - Trwałe efekty kart otrzymują pełny pierwszy stos; kolejne mają odpowiednio **60%, 40%, 30%, 20%, 15%, 10%, 5%** siły pojedynczej premii. Po ośmiu stosach karta nie pojawia się ponownie. Skumulowana *addytywna* siła premii wynosi maksymalnie 2,8 jednostki pierwszego stosu, a mnożniki nadal składają się multiplikatywnie.
-- `SUPPLY`: natychmiastowe 80 złota w skali epoki i dotychczasowe +30% złota z zabójstw przez 60 s. Opis w dziesięciu językach uwzględnia obie nagrody.
+- `SUPPLY`: natychmiastowe 80 złota w skali epoki i dotychczasowe +30% złota z zabójstw przez 60 s.
+- W zwykłych pojedynkach doktryny `BULWARK`, `FURY` i `PLUNDER` mają osłabione wartości (odpowiednio 10%/5%, 8% i 12%) po audycie lustrzanym. **Karty Endless zachowują pierwszą historyczną premię** (20%/10%, 12% i 35%); ich kolejne stosy są wygaszane według powyższej tabeli. Opisy ofert rozróżniają te tryby. Opis w dziesięciu językach uwzględnia obie nagrody.
 
 **Pomiar Endless A/B:** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
 

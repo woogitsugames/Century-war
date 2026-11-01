@@ -119,6 +119,27 @@ class SimBalanceCaps82Test {
         assertFalse(Doctrine.ARSENAL in offer)
     }
 
+    @Test fun firstEndlessDoctrineCardKeepsItsHistoricalStrength() {
+        val bulwark = endless()
+        bulwark.applyEndlessCard(bulwark.player, EndlessCard.BULWARK)
+        assertEquals(1.2f, bulwark.player.baseHpMul, 0.00001f)
+        assertEquals(1.1f, bulwark.player.hpMul, 0.00001f)
+
+        val fury = endless()
+        fury.applyEndlessCard(fury.player, EndlessCard.FURY)
+        assertEquals(1.12f, fury.player.dmgMul, 0.00001f)
+
+        val plunder = endless()
+        plunder.applyEndlessCard(plunder.player, EndlessCard.PLUNDER)
+        assertEquals(1.35f, plunder.player.killGoldMul, 0.00001f)
+
+        // W zwykłym pojedynku doktryny mają osobny, słabszy balans.
+        val skirmish = Battle(BattleConfig(Mode.SKIRMISH, 82L, 1f))
+        skirmish.applyDoctrine(skirmish.player, Doctrine.BULWARK)
+        assertEquals(1.1f, skirmish.player.baseHpMul / Battle.BALANCE_BASE_HP_MUL, 0.00001f)
+        assertEquals(1.05f, skirmish.player.hpMul, 0.00001f)
+    }
+
     @Test fun supplyGrantsScaledGoldImmediatelyAndKeepsTemporaryKillBonus() {
         val b = endless()
         val p = b.player
