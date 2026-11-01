@@ -259,12 +259,17 @@ class ReplayScreen(
         var batches = 0
         while (!sampler.broken && !sampler.finished && batches < 8 &&
             (batches == 0 || System.nanoTime() - started < 3_000_000L)) {
-            // Kończ porcję dokładnie na granicy następnej sekundy symulacji.
-            val amount = 60 - sampler.step % 60
-            val moved = sampler.advance(amount)
-            battleSummary.capture(sampler.battle)
+            // Każdy krok jest obserwowany osobno: znaczniki awansów trafiają w dokładny krok.
+            var advanced = 0
+            var count = 0
+            while (count < 60 && !sampler.broken && !sampler.finished) {
+                if (sampler.advance(1) == 0) break
+                battleSummary.capture(sampler.battle)
+                advanced++
+                count++
+            }
             batches++
-            if (moved == 0) break
+            if (advanced == 0) break
         }
         if (sampler.finished || sampler.broken) {
             timelineReady = sampler.finished && !sampler.broken
