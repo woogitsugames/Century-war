@@ -126,10 +126,10 @@ class EndlessBalanceReportTest {
         }
         println("ENDLESS100_DISTRIBUTION=${buckets.joinToString(",")}")
         // Stała próba seedów wykrywa regresję po kolejnych zmianach silnika i kart.
-        assertTrue("Przeżycie fali 20: ${survived[0]}/100 (min. 95)", survived[0] >= 95)
-        assertTrue("Przeżycie fali 60: ${survived[4]}/100 (cel 5–15)", survived[4] in 5..15)
-        assertTrue("Mediana porażek: $median (cel 45–55)",
-            median.toDoubleOrNull()?.let { it in 45.0..55.0 } == true)
+        assertTrue(survived[0] >= 95, "Przeżycie fali 20: ${survived[0]}/100 (min. 95)")
+        assertTrue(survived[4] in 5..15, "Przeżycie fali 60: ${survived[4]}/100 (cel 5–15)")
+        assertTrue(median.toDoubleOrNull()?.let { it in 45.0..55.0 } == true,
+            "Mediana porażek: $median (cel 45–55)")
     }
 
 }
