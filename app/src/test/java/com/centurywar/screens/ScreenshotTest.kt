@@ -1471,6 +1471,13 @@ class ScreenshotTest {
                 field(g, "achievementSeconds").setFloat(g, 0f)
                 val state = Missions(g.profile).refresh(System.currentTimeMillis())
                 state.daily.firstOrNull()?.let { it.progress = it.target }
+                // Trzy wyniki jednego dowódcy: w Rekordach mają być daty, nie trzy pseudonimy.
+                val today = Missions.utcDay(System.currentTimeMillis())
+                g.profile.boards[Profile.BOARD_ENDLESS] = mutableListOf(
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 195_000L, today),
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 163_000L, today - 1L),
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 121_000L, today - 2L),
+                )
                 g.setScreen(MenuScreen(g))
                 shot(g, "${tag}_87_menu", 2)
                 g.setScreen(RankingsScreen(g))
