@@ -118,3 +118,89 @@ kampanii i kodeksu, pauzę i dymek; odczytaj `U/R/p95`, FPS, `GPU/post`,
 zużycie RAM i temperaturę w LOW i automacie. Podczas odtwarzania muzyki
 porównaj p95 z wyłączoną muzyką oraz sprawdź trzaski i underruny.
 Zrzuty ekranu w HIGH i LOW zweryfikuj przy 720p oraz na Foldzie.
+
+
+## Zlecenie 101 — pomiar rozruchu i budżet bitmap
+
+### Zimny start (pierwsza klatka menu)
+
+W debug APK jednorazowa linia `CWStartup` pojawia się **po pomyślnym
+`unlockCanvasAndPost()` pierwszej klatki `MenuScreen`**, nie przy samym
+`setContentView()`. Początek pomiaru to utworzenie `CenturyWarApp`, tuż
+przed `Application.onCreate()`. Nie obejmuje ładowania procesu/zależności
+przez system przed stworzeniem `Application`; tę część mierzy Android.
+
+Log pokazuje całkowity czas i koszty: `Application` (raporty awarii, Play
+Games SDK), ekran startowy, profil, snapshot, raport awarii, wykrywanie klasy
+RAM/CPU, tabelę 10 języków, konstrukcję `Game`, uruchomienie ładowania
+historii, Play Games, muzykę i montaż `SurfaceView`. Poszczególne koszty
+dotyczą różnych wątków; ich suma **nie musi** równać się całemu czasowi.
+
+Wykonanie na fizycznym urządzeniu z 2–3 GB RAM:
+
+```bash
+adb shell am force-stop com.centurywar.game
+adb logcat -c
+adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity
+adb logcat -d -s CWStartup:I
+```
+
+Powtórz 5–10 razy po `force-stop` (pierwszy start po instalacji osobno),
+podaj medianę i p95. `am start -W` jest pomiarem systemowego uruchamiania
+Activity, a `CWStartup` obejmuje dodatkowo pierwszą opublikowaną ramkę gry.
+Nie traktuj pomiaru JVM/Robolectric jako rzeczywistego zimnego startu telefonu.
+
+**Przeniesione koszty:** profil, snapshot, wykrywanie RAM/CPU i inicjalizacja
+pełnej tabeli `L` są w wątku `startup-io`. Tekst ekranu wczytywania nie
+tworzy całej tabeli na UI. `SoundPool`, synteza i prewarm SFX startują dopiero
+po pierwszej klatce menu (`audio-init` + `sfx-gen`), a muzyka / odświeżanie
+przypomnień po jej publikacji. Pierwszy bardzo szybki dotyk może jeszcze nie
+mieć gotowego dźwięku, ale gra i sterowanie działają niezależnie od audio.
+
+### Pamięć cache rozbłysków
+
+`ActivityManager.memoryClass` (limit sterty aplikacji, a nie całkowity RAM)
+ustala udział **maksymalnie 1/32 klasy pamięci**. Dodatkowe pułapy:
+LOW 2 MiB, MED 4 MiB, HIGH 8 MiB. Cache `BaseFlashCache` nie alokuje nic
+przy wejściu w bitwę: bitmapa ARGB_8888 (460×580, 1 067 200 B) powstaje
+dopiero podczas rozbłysku. Na LOW obie bazy współdzielą jedną bitmapę, na
+HIGH przy wystarczającej stercie istnieją dwie. Zmiana jakości z HIGH na LOW
+zwalnia nadmiarową bitmapę; przy limicie mniejszym niż jedna bitmapa efekt
+rozbłysku jest pomijany i korpus bazy nadal jest rysowany z `Picture`.
+
+Przykładowe maksima:
+
+| memoryClass | LOW: budżet | Liczba bitmap LOW | HIGH: liczba bitmap |
+|---|---:|---:|---:|
+| 32 MiB | 1 MiB | 0 | 0 |
+| 64 MiB | 2 MiB | 1 | 1 |
+| 128 MiB | 2 MiB | 1 | 2 |
+| 256 MiB | 2 MiB | 1 | 2 |
+
+`BitmapCacheBudgetTest` sprawdza limity oraz rzeczywistą liczbę
+przydzielonych bitmap, przełączenie LOW i brak przydziału przy małej stercie.
+Wygląd na HIGH nie został zmieniony.
+
+### Test budżetu klatki z 72 jednostkami
+
+`BattleCrowdPerformance101Test` mierzy pełne `BattleScreen.update()` +
+`render()` na `Canvas(Bitmap)` w Robolectric NATIVE i profilu LOW. Po
+120 klatkach rozgrzewki wykonuje 240 pomiarów w scenariuszu 36 jednostek
+i 72 jednostek (maksymalna pula). Raportuje medianę, p95 i iloraz median;
+asercja regresyjna to **ratio < 8×** w tej samej JVM. Jest to kontrola
+nadmiernego wzrostu kosztu wraz z liczbą jednostek, **nie** gwarancja
+16,67 ms ani odczyt czasu GPU na telefonie.
+
+```bash
+./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+./gradlew :app:testDebugUnitTest \
+  --tests '*StartupTimingsTest*' \
+  --tests '*BitmapCacheBudgetTest*' \
+  --tests '*BattleCrowdPerformance101Test*' \
+  --tests '*BaseFlashCache90Test*' \
+  --tests '*StartupTest*' \
+  --tests '*LTest*' --console=plain --no-configuration-cache
+```
+
+Wyniki liczbowe startupu i GPU trzeba zebrać na fizycznym telefonie; w
+repozytorium nie zakładamy, że pomiar hosta jest pomiarem telefonu.
