@@ -45,7 +45,7 @@ Testy kompatybilności aplikacji:
 ### API v1
 
 Podpisy wymagane dla `/v1/score`, `/v1/player/delete`, `/v1/top`, `/v1/around`.
-`/v1/report` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
+`/v1/report`, `/health` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
 
 Każde podpisane żądanie musi mieć nagłówki:
 
@@ -92,9 +92,9 @@ Callback klienta potwierdza **trwałe zapisanie żądania**, nie usunięcie na s
 Przed usunięciem danych na serwerze stare wyniki mogą nadal być publiczne.
 Odinstalowanie gry przed przetworzeniem kolejki może usunąć samo żądanie.
 
-#### GET /healthz
+#### GET /health i /healthz
 
-Bez podpisu HMAC; sprawdza dostęp do SQLite. HTTP 200 i tekst ok lub
+Bez podpisu HMAC; oba adresy sprawdzają dostęp do SQLite. HTTP 200 i tekst ok lub
 HTTP 503 i unavailable, bez informacji o użytkownikach.
 
 #### POST /v1/score
@@ -270,6 +270,91 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
 - Dane wyników i pseudonimy wymagają polityki retencji, informacji o
   przetwarzaniu i funkcji usunięcia/zmiany identyfikatora przed publikacją.
 
+## Zdrowie, metryki i kopie zapasowe
+
+**Dostępność:** `GET /health` to lekki, publiczny test SQLite (200 `ok`, a przy błędzie
+503 `unavailable`). Starszy adres `/healthz` nadal działa. Healthcheck Compose wywołuje
+`/health` co 30 s; można sprawdzić go przez `docker compose ps` i:
+
+~~~bash
+curl -fsS http://127.0.0.1:8080/health
+~~~
+
+**Metryki (opcjonalne):** wygeneruj osobny klucz `openssl rand -hex 32` i ustaw
+`CW_METRICS_TOKEN` w prywatnym pliku `.env`, a potem wykonaj `docker compose up -d`.
+Pusta wartość wyłącza `/metrics` (404); skonfigurowana wymaga nagłówka
+`Authorization: Bearer <token>` (brak lub zły token: 401). Przykład z serwera VPS:
+
+~~~bash
+# Docker Compose czyta .env, ale nie eksportuje z niego zmiennych do powłoki.
+export CW_METRICS_TOKEN="$(sed -n 's/^CW_METRICS_TOKEN=//p' .env)"
+curl -fsS -H "Authorization: Bearer $CW_METRICS_TOKEN" \
+  http://127.0.0.1:8080/metrics
+~~~
+
+Odpowiedź JSON zawiera `scoreCount` (wszystkie wiersze `scores` w SQLite, także
+zablokowane), `verificationAccepted`, `verificationRejected` (HTTP 422 po
+niepoprawnej powtórce), `verificationUnavailable` (kolejka pełna/timeout),
+`verificationSamples`, `verificationMeanMs`, `verificationMaxMs` i
+`uptimeSeconds`. Czasy mierzą samą funkcję weryfikacji, nie oczekiwanie
+w kolejce. Liczniki weryfikacji są pamięciowe i zerują się przy restarcie;
+`scoreCount` jest odczytywane bezpośrednio z bazy. Nie udostępniaj tokenu w APK,
+logach ani repozytorium; endpointu nie wystawiaj publicznie przez reverse proxy
+bez kontroli dostępu.
+
+**Kopia online:** nie zatrzymuj działającego serwera. Skrypt wykonuje SQLite
+`VACUUM INTO` na osobnym połączeniu, sprawdza integralność kopii, przenosi plik
+poza wolumen Dockera i dopiero po udanym zapisie usuwa kopie starsze niż
+domyślne 14 dni. Nazwy zawierają czas UTC i PID, uprawnienia plików: 0600.
+
+~~~bash
+sudo env CW_BACKUP_DIR=/var/backups/century-war \
+  CW_BACKUP_RETENTION_DAYS=14 bash server/backup-sqlite.sh
+# Alternatywnie, bez Dockera (przy ustawionych CW_PUBLIC_ID_KEY i CW_DATABASE_PATH):
+./gradlew :server:run -PserverOnly=true --args="admin backup /tmp/ranking.sqlite"
+~~~
+
+Zaplanuj skrypt w cron/systemd timer, codziennie po godzinach szczytu.
+Przykładowy wpis cron po dostosowaniu `/srv/century-war` do katalogu wdrożenia:
+
+~~~cron
+0 3 * * * cd /srv/century-war && /usr/bin/bash server/backup-sqlite.sh >> /var/log/cw-backup.log 2>&1
+~~~
+
+Utrzymuj też **kopię poza VPS**: backup na tym samym dysku nie zabezpiecza
+przed awarią dysku. Rotacja dotyczy tylko plików `cw-backup-*.sqlite`
+w katalogu `CW_BACKUP_DIR`; katalog `cw-data` nie jest miejscem docelowym
+trwałych kopii. Kopię można wykonać także przy aktywnym trybie WAL.
+
+**Przywracanie:** jest operacją offline. Zatrzymaj usługę, przekaż plik
+ze standardowego wejścia (bez dodatkowych mountów i zmiany praw własności
+pliku na hoście), a następnie uruchom serwer:
+
+~~~bash
+docker compose stop leaderboard
+docker compose run --rm --no-deps -T leaderboard admin restore - \
+  < /var/backups/century-war/cw-backup-YYYYMMDD-HHMMSS-PID.sqlite
+docker compose up -d leaderboard
+curl -fsS http://127.0.0.1:8080/health
+~~~
+
+Podmień nazwę na faktyczną kopię; polecenie ze znakiem `<` czyta
+lokalny plik na serwerze, więc konto użytkownika musi mieć prawo jego odczytu.
+Alternatywa bez strumienia: `server admin restore /ścieżka/kopia.sqlite`,
+jeśli plik jest dostępny wewnątrz uruchomionego kontenera administracyjnego.
+Tryb `restore` wchodzi do programu **przed** otwarciem połączenia SQLite.
+Blokada pliku `leaderboards.db.server.lock` uniemożliwia przywrócenie,
+gdy główny proces serwera działa (plik blokady może pozostać po restarcie,
+ale blokada systemowa zostaje zwolniona). Uszkodzona lub obca baza jest
+odrzucana przez `PRAGMA integrity_check` i sprawdzenie schematu.
+
+Przy przywróceniu poprzedni plik bazy oraz ewentualne pliki WAL/SHM
+zostają zachowane w `cw-pre-restore-*` na wolumenie jako kopia ratunkowa.
+Po weryfikacji działania nowej bazy można je ręcznie usunąć. Przywrócenie
+cofa wszystkie operacje wykonane po momencie utworzenia kopii, w tym
+usunięcia danych przez użytkowników. Taką operację należy odnotować
+i sprawdzić skutki dla retencji i żądań usunięcia danych.
+
 ## Moderacja administracyjna
 
 Bez panelu WWW: polecenia w tym samym programie `server admin ...` to
@@ -293,7 +378,7 @@ cp .env.example .env
 chmod 600 .env
 docker compose up -d --build
 docker compose ps
-curl -f http://127.0.0.1:8080/healthz
+curl -f http://127.0.0.1:8080/health
 ~~~
 
 Przykładowy Caddyfile: server/Caddyfile.example (HTTPS na domenie).

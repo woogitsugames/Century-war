@@ -16,12 +16,13 @@ services:
       CW_RATE_READ_IP: ${CW_RATE_READ_IP:-120}
       CW_RATE_REPORT_IP: ${CW_RATE_REPORT_IP:-5}
       CW_RATE_POST_PLAYER: ${CW_RATE_POST_PLAYER:-6}
+      CW_METRICS_TOKEN: ${CW_METRICS_TOKEN:-}
       CW_DATABASE_PATH: /var/lib/cw/leaderboards.db
       PORT: "8080"
     volumes:
       - cw-data:/var/lib/cw
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3

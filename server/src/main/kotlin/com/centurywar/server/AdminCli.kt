@@ -1,5 +1,10 @@
 package com.centurywar.server
 
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
 private val ADMIN_USAGE = """
     Użycie: server admin <polecenie> [argumenty]
       recent [limit]                         Ostatnie 20 (maks. 200) wpisów
@@ -7,6 +12,8 @@ private val ADMIN_USAGE = """
       delete-score <UUID> <board> <day>      Usuń jeden wynik z dnia UTC
       block <UUID>                           Ukryj gracza i zablokuj nowe wyniki
       unblock <UUID>                         Przywróć widoczność gracza
+      backup <plik.sqlite>                  Utwórz spójną kopię podczas pracy serwera
+      restore <plik.sqlite|->               Przywróć kopię offline (- = stdin)
       export-csv                             Wypisz wszystkie wyniki jako CSV na stdout
       help                                   Pokaż pomoc
 """.trimIndent()
@@ -81,6 +88,13 @@ internal fun runAdmin(
                 out.appendLine(if (changed) "updated" else "unchanged")
                 0
             }
+            "backup" -> {
+                if (args.size != 2) return invalid("Podaj ścieżkę nowej kopii .sqlite")
+                val path = store.backupTo(Path.of(args[1]))
+                out.appendLine("backup: $path")
+                0
+            }
+            "restore" -> invalid("Przywracanie uruchom osobno: server admin restore <plik.sqlite>")
             "export-csv" -> {
                 if (args.size != 1) return invalid("Eksport używa stdout: przekieruj do pliku")
                 store.exportCsv(out)
@@ -91,5 +105,39 @@ internal fun runAdmin(
     } catch (e: Exception) {
         err.appendLine("Błąd administracji: " + e.message)
         1
+    }
+}
+
+/** Uruchamiane przed otwarciem SQLite, by nie nadpisywać aktywnego uchwytu JDBC. */
+internal fun runRestore(
+    args: List<String>,
+    database: Path,
+    out: Appendable = System.out,
+    err: Appendable = System.err,
+    input: InputStream = System.`in`,
+): Int {
+    if (args.size != 2 || args[0] != "restore") {
+        err.appendLine("Użycie: server admin restore <plik.sqlite|->")
+        return 2
+    }
+    var temporary: Path? = null
+    return try {
+        val snapshot = if (args[1] == "-") {
+            val db = database.toAbsolutePath().normalize()
+            Files.createDirectories(db.parent)
+            Files.createTempFile(db.parent, ".cw-stdin-", ".sqlite").also {
+                temporary = it
+                Files.copy(input, it, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } else Path.of(args[1])
+        val previous = DatabaseMaintenance.restore(snapshot, database)
+        out.appendLine("restored: ${database.toAbsolutePath().normalize()}")
+        if (previous != null) out.appendLine("previous-files: $previous")
+        0
+    } catch (e: Exception) {
+        err.appendLine("Błąd przywracania: " + e.message)
+        1
+    } finally {
+        temporary?.let { Files.deleteIfExists(it) }
     }
 }
