@@ -459,3 +459,100 @@ powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
 **Wniosek dla pomiaru przed końcowym strojeniem:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
 
 - 2026-11-01 — regeneracja złotych powtórek: scalenie paczek 80–91 (limity 82, natychmiastowe złoto Zaopatrzenia obniżone do 15).
+
+## Zlecenie 96 — ponowny pomiar kampanii po limitach 82 (1.11.2026)
+
+Ponownie zmierzono **36 etapów × 20 seedów** z profilem badań docelowym dla etapu,
+po zmianach odnowienia, stosowania kart i doktryn w zleceniu 82 oraz po obniżeniu
+natychmiastowego złota `SUPPLY` do 15. Nie zmieniono `Defs.kt`, globalnej
+symulacji ani algorytmu AI. Seedy pozostają identyczne dla porównania:
+`246813579 + stage.index * 10007 + trial * 997` (`trial = 0..19`),
+sterowanie `Ai` po obu stronach, maksimum 30 minut.
+
+**Źródła rzeczywistych pomiarów:**
+- [Baza po 82, przed 96 — pełne 36 etapów](https://github.com/woogitsugames/Century-war/actions/runs/41323297221).
+- [Drugi pełny pomiar po korekcie etapów 3, 12 i 24](https://github.com/woogitsugames/Century-war/actions/runs/41323558033).
+- [Strojenie mocy AI — 7 mnożników, po 20 seedów](https://github.com/woogitsugames/Century-war/actions/runs/41323715034):
+  etap 2 przy skali 0,90; etap 19 przy 1,10; etap 27 przy 0,90.
+- [Pełna kontrola parametrów docelowych](https://github.com/woogitsugames/Century-war/actions/runs/41325254365)
+  uruchomiona po wpisaniu wybranych mnożników bezpośrednio do `Modes.kt`.
+
+**Pasmo akceptacji** (`tools/check_campaign_balance.py`): etapy 1–6:
+85–100% wygranych; 7–27: 45–85%; 28–33: 40–75%; 34–36: 25–55%.
+Dodatkowo: zero timeoutów, mediana od etapu 7 co najmniej 4 minuty,
+odchylenie wewnętrznego etapu od średniej sąsiadów najwyżej 25 p.p.
+
+### Tabela przed/po (N=20 na etap)
+
+W kolumnie „Po” trzy etapy (2, 19, 27) wykorzystują pomiar celowanego
+mnożnika `BALANCE_POWER_SCALE`; dla etapów 3, 12 i 24 użyto drugiego
+pełnego pomiaru. Dla pozostałych 30 etapów nie zmieniano żadnych parametrów,
+więc wyniki są identyczne z przebiegiem bazowym. Finalny, niezależny
+przebieg pełnych 36 etapów weryfikuje równoważność parametrów
+przeniesionych do `Campaign.stageRamp` (różnice zaokrągleń Float).
+
+| Etap | Profil | AI przed | Zakres epok | Wygrane przed | Wygrane po | Mediana po [min] | Timeouty po |
+|---:|---|---:|---|---:|---:|---:|---:|
+| 1 | nowy | 0.72 | 0–0 | 100% | **100%** | 13.91 | 0 |
+| 2 | nowy | 0.77 | 0–0 | 80% | **100%** | 13.72 | 0 |
+| 3 | nowy | 0.83 | 0–1 | 80% | **90%** | 13.72 | 0 |
+| 4 | nowy | 0.88 | 0–1 | 90% | **90%** | 13.63 | 0 |
+| 5 | nowy | 0.82 | 1–1 | 95% | **95%** | 13.45 | 0 |
+| 6 | nowy | 0.87 | 1–1 | 90% | **90%** | 13.53 | 0 |
+| 7 | poczatkujacy | 0.93 | 1–2 | 60% | **60%** | 11.35 | 0 |
+| 8 | poczatkujacy | 0.98 | 0–2 | 65% | **65%** | 12.33 | 0 |
+| 9 | poczatkujacy | 0.92 | 2–2 | 65% | **65%** | 10.46 | 0 |
+| 10 | poczatkujacy | 0.97 | 2–2 | 70% | **70%** | 11.47 | 0 |
+| 11 | poczatkujacy | 1.00 | 2–3 | 60% | **60%** | 11.44 | 0 |
+| 12 | poczatkujacy | 1.04 | 1–3 | 40% | **75%** | 10.47 | 0 |
+| 13 | poczatkujacy | 1.02 | 3–3 | 70% | **70%** | 8.20 | 0 |
+| 14 | poczatkujacy | 1.07 | 3–3 | 60% | **60%** | 12.12 | 0 |
+| 15 | poczatkujacy | 1.13 | 3–4 | 55% | **55%** | 11.71 | 0 |
+| 16 | poczatkujacy | 1.15 | 2–4 | 45% | **45%** | 13.67 | 0 |
+| 17 | poczatkujacy | 1.12 | 4–4 | 65% | **65%** | 11.67 | 0 |
+| 18 | poczatkujacy | 1.17 | 4–4 | 65% | **65%** | 8.80 | 0 |
+| 19 | sredni | 1.27 | 4–5 | 100% | **70%** | 7.90 | 0 |
+| 20 | sredni | 1.38 | 2–5 | 80% | **80%** | 13.34 | 0 |
+| 21 | sredni | 1.47 | 5–5 | 75% | **75%** | 9.35 | 0 |
+| 22 | sredni | 1.66 | 5–5 | 55% | **55%** | 9.53 | 0 |
+| 23 | sredni | 1.46 | 5–6 | 75% | **75%** | 12.25 | 0 |
+| 24 | sredni | 1.70 | 3–6 | 40% | **70%** | 12.66 | 0 |
+| 25 | sredni | 1.67 | 6–6 | 50% | **50%** | 7.74 | 0 |
+| 26 | sredni | 1.80 | 6–6 | 75% | **75%** | 6.41 | 0 |
+| 27 | sredni | 1.92 | 6–7 | 40% | **70%** | 11.21 | 0 |
+| 28 | weteran | 2.14 | 4–7 | 55% | **55%** | 12.55 | 0 |
+| 29 | weteran | 2.44 | 7–7 | 75% | **75%** | 4.51 | 0 |
+| 30 | weteran | 2.45 | 7–7 | 65% | **65%** | 4.72 | 0 |
+| 31 | weteran | 2.55 | 7–8 | 50% | **50%** | 8.97 | 0 |
+| 32 | weteran | 2.88 | 5–8 | 60% | **60%** | 10.54 | 0 |
+| 33 | weteran | 2.90 | 8–8 | 55% | **55%** | 7.09 | 0 |
+| 34 | weteran | 3.00 | 8–8 | 55% | **55%** | 7.65 | 0 |
+| 35 | weteran | 3.01 | 8–8 | 55% | **55%** | 7.08 | 0 |
+| 36 | weteran | 2.99 | 6–8 | 40% | **40%** | 11.81 | 0 |
+
+### Zmiany tylko w parametrach etapów
+
+| Etap | Współczynnik `stageRamp` przed | Po | Wygrane przed → po |
+|---:|---:|---:|---|
+| 2 | 1,000 | 0,837 | 80% → 100% |
+| 3 | 1,000 | 0,900 | 80% → 90% |
+| 12 | 0,960 | 0,900 | 40% → 75% |
+| 19 | 1,000 | 1,265 | 100% → 70% |
+| 24 | 1,000 | 0,940 | 40% → 70% |
+| 27 | 1,000 | 0,846 | 40% → 70% |
+
+Pozostałych 30 etapów nie zmieniono. Analiza porównawcza powyższych
+pomiarów: **36/36** w docelowym paśmie, **0 timeoutów** i brak
+przekroczenia progu 25 p.p. względem sąsiadów; najkrótsza mediana po
+etapie 6 to ponad 4 minuty. Etap 2 wykazywał odpowiedź nieliniową:
+sam spadek korekty do 0,93 pogorszył wynik z 80% do 75%, podczas gdy
+mnożnik wybrany w teście skali 0,90 dał 100%. Nie zastępuje to
+odrębnej walidacji pełnego końcowego przebiegu.
+
+**Powtórki:** wzorce kampanii w `GoldenFixtures.kt` korzystają z etapów
+1 i 29. Żaden z nich nie został zmieniony, więc regeneracja wzorców
+nie jest wymagana. Testy `:sim:test`, `:app:assembleDebug` i testy
+aplikacji w [CI JVM i Android](https://github.com/woogitsugames/Century-war/actions/runs/41323558058)
+przeszły na wcześniejszej wersji korekt; aktualne testy końcowe
+obejmują ponownie te same ścieżki.
+
