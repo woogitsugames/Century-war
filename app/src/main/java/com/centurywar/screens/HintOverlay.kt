@@ -65,6 +65,7 @@ class HintOverlay(
         const val ENDLESS_MENU = 16
         const val VARIANT = 18
         const val WEATHER = 19
+        const val FIRST_BATTLE = 20
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -152,10 +153,15 @@ class HintOverlay(
 
     /** Dymek tylko przy pierwszym wejściu na ekran, używa tej samej maski co bitwa. */
     fun showScreen(id: Int, focus: RectF) {
-        if (battle != null || id !in RESEARCH..ENDLESS_MENU || activeId >= 0 ||
+        val key = when (id) {
+            in RESEARCH..ENDLESS_MENU -> SCREEN_KEYS[id - RESEARCH]
+            FIRST_BATTLE -> "first_next_steps"
+            else -> return
+        }
+        if (battle != null || activeId >= 0 ||
             !g.profile.hintsEnabled || g.profile.hintsSeen and (1L shl id) != 0L) return
         screenFocus = focus
-        activate(id, SCREEN_KEYS[id - RESEARCH])
+        activate(id, key)
     }
 
     private fun nearEnemyCount(): Int {
