@@ -293,7 +293,7 @@ class BattleScreen(
     private val bottomHudView = BattleBottomHud(this)
     private val resultsView = BattleResultsPanel(this)
     internal val upgradesView = BattleUpgradePanel(this)
-    private val barrageView = BarrageAiming(this)
+    internal val barrageView = BarrageAiming(this)
 
     init {
         // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.

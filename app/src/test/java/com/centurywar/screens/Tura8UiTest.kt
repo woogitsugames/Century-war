@@ -399,4 +399,44 @@ class Tura8UiTest {
             assertFalse("$tag: plakietka po zakupie", menu.eliteReady)
         }
     }
+
+    /** G: cel ostrzału nie wypada bliżej niż rozrzut (120) od własnej jednostki, gdy jest wolne miejsce. */
+    @Test
+    fun barrageTargetAvoidsOwnUnits() {
+        val g = game(devices.getValue("phone720"))
+        val screen = battle(g, 14201L)
+        val b = field(screen, "battle") as Battle
+        val p = b.player
+        p.gold = 5000f
+        repeat(4) { (field(screen, "commands") as BattleController).queue(com.centurywar.game.Role.MELEE) }
+        var steps = 0
+        while (b.units.count { it.alive && it.side == 0 } < 3 && steps++ < 4000) b.step()
+        val own = b.units.filter { it.alive && it.side == 0 }
+        assertTrue("Za mało własnych jednostek: ${own.size}", own.size >= 3)
+        val near = p.baseFront + 220f
+        val far = p.baseFront + 1370f
+        // Własne jednostki w środku zasięgu; za nimi jest wolne miejsce.
+        val positions = floatArrayOf(near + 80f, near + 260f, near + 430f)
+        for (i in positions.indices) own[i].x = positions[i]
+        for (k in own.indices) if (k >= positions.size) own[k].x = p.baseFront + 10f
+        var x = near
+        while (x <= far) {
+            val t = screen.barrageView.snapBarrageTarget(x)
+            assertTrue("Cel poza zasięgiem: $t", t in near..far)
+            for (u in b.units) if (u.alive && u.side == 0) {
+                assertTrue("Cel $t za blisko własnej jednostki ${u.x} (palec $x)", kotlin.math.abs(u.x - t) >= 120f)
+            }
+            x += 25f
+        }
+        // Cały zasięg zajęty: najdalszy możliwy punkt.
+        var pos = near - 100f
+        var idx = 0
+        while (pos <= far + 100f) {
+            if (idx >= own.size) break
+            own[idx++].x = pos
+            pos += 180f
+        }
+        if (idx == own.size && pos <= far + 100f) return // za mało jednostek, by zapełnić zasięg
+        assertEquals(far, screen.barrageView.snapBarrageTarget(near + 300f), 0.01f)
+    }
 }
