@@ -39,6 +39,10 @@ object BattleSnapshot {
         mix(Defs.ERA_COUNT); mixF(Defs.LANE); mixF(Defs.BASE_FRONT); mix(Defs.MAX_TURRET_SLOTS)
         mix(Defs.MAX_UNIT_TIER); mixF(Defs.tierStatMul(2)); mixF(Defs.tierStatMul(3))
         mixF(Battle.BALANCE_BASE_HP_MUL); mixF(Battle.SIEGE_START); mixF(Battle.SIEGE_ATTRITION)
+        // Reguły kart i doktryn wpływają na odtwarzalność tak samo jak parametry jednostek.
+        mixF(Battle.MIN_ABILITY_CD_MUL); mixF(Battle.SUPPLY_INSTANT_GOLD)
+        mix(EndlessCards.MAX_PERSISTENT_STACKS)
+        for (stack in 1..EndlessCards.MAX_PERSISTENT_STACKS) mixF(EndlessCards.stackPower(stack))
         for (u in Defs.allUnits) {
             mix(u.id); mix(u.era); mix(u.variant); mix(u.art.ordinal); mix(u.role.ordinal); mix(u.cost); mixF(u.hp); mixF(u.dmg); mixF(u.range)
             mixF(u.cooldown); mixF(u.speed); mixF(u.trainTime); mixF(u.size); mixF(u.splash); mix(u.projectile); mixF(u.siegeMul)
