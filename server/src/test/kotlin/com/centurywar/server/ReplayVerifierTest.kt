@@ -89,6 +89,17 @@ class ReplayVerifierTest {
         )
     }
 
+    @Test
+    fun rejectsEasyCampaignReplaySubmittedToNormalLeaderboard() {
+        val stage = Campaign.stages[4]
+        val cfg = Campaign.config(stage, Research.bonuses(IntArray(Research.defs.size)), 123455L,
+            difficulty = com.centurywar.game.CampaignDifficulty.EASY)
+        val submission = weatherSubmission(cfg, "campaign", stage = stage.index)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(submission, now, "0.1.0")
+        }
+    }
+
     @Test fun verifiesCampaignWithRain() {
         val stage = Campaign.stages[4]
         val cfg = Campaign.config(stage, Research.bonuses(IntArray(Research.defs.size)), 9991L)

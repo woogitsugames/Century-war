@@ -27,8 +27,9 @@ class ProfileTest {
         val source = Profile(tmpFile())
         source.stars[0] = 3
         source.stars[12] = 2
-        val legacy = JSONObject(source.toJson())
-            .remove("normalStars").remove("campaignDifficulty").remove("hardStageWins")
+        val legacy = JSONObject(source.toJson()).apply {
+            remove("normalStars"); remove("campaignDifficulty"); remove("hardStageWins")
+        }
         val migrated = Profile(tmpFile())
         migrated.fromJson(legacy.toString())
         assertEquals(CampaignDifficulty.NORMAL, migrated.campaignDifficulty)
