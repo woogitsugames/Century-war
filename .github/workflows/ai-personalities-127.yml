@@ -109,8 +109,8 @@ jobs:
                   a = profiles['baseline'][persona][field]
                   b = profiles['candidate'][persona][field]
                   lines.append(f'| {persona} | {field} | {a} | {b} |')
-          Path('ai127-profiles-comparison.md').write_text('\\n'.join(lines) + '\\n', encoding='utf-8')
-          print('\\n'.join(lines))
+          Path('ai127-profiles-comparison.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
           PY
           cat ai127-profiles-comparison.md >> "$GITHUB_STEP_SUMMARY"
       - name: Dołącz liczbową tabelę do PR
