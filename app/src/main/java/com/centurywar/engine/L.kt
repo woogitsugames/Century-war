@@ -153,8 +153,17 @@ object L {
         putAll(part130())
         putAll(part126())
         putAll(part124())
+        putAll(part139())
         }
     }
+
+    /** Zlecenie 139: baner dostępnego awansu epoki w bitwie. */
+    private fun part139(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "evo139_title" to t("Możesz awansować!", "You can advance!", "Du kannst aufsteigen!", "¡Puedes avanzar!", "Vous pouvez évoluer !", "Puoi avanzare!", "Você pode avançar!", "Можна перейти далі!", "Je kunt doorgroeien!", "İlerleyebilirsin!"),
+        "evo139_next" to t("Następna epoka: %s", "Next era: %s", "Nächste Epoche: %s", "Siguiente era: %s", "Ère suivante : %s", "Prossima epoca: %s", "Próxima era: %s", "Наступна епоха: %s", "Volgend tijdperk: %s", "Sonraki çağ: %s"),
+        "evo139_go" to t("Awansuj", "Advance", "Aufsteigen", "Avanzar", "Évoluer", "Avanza", "Avançar", "Перейти", "Doorgroeien", "İlerle"),
+        "evo139_wait" to t("Czekaj", "Wait", "Warten", "Esperar", "Attendre", "Aspetta", "Esperar", "Чекати", "Wachten", "Bekle"),
+    )
 
     /** Zlecenie 126: trudność kampanii i osiągnięcie. */
     private fun part126(): Array<Pair<String, Array<out String>>> = arrayOf(

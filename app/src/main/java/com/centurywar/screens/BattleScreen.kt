@@ -239,6 +239,8 @@ class BattleScreen(
     internal val closeBtn = btn(CLOSE)
     /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
     internal val queueInfoBtn = btn(90)
+    /** Zlecenie 139: baner dostępnego awansu (prealokowane przyciski). */
+    internal val evolveBanner = EvolveBanner(this, btn(EvolveBanner.GO), btn(EvolveBanner.WAIT))
     private val introTooltip = TooltipBubble()
     private val missingXpTooltip = TooltipBubble()
     private var missingXpRemaining = 0f
@@ -387,6 +389,7 @@ class BattleScreen(
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
         layoutPause()
+        evolveBanner.layout()
         pauseModifierWidth = -1f
         resultsView.layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
@@ -507,6 +510,7 @@ class BattleScreen(
         variantDescLanguage = -1
         choiceDescLanguage = -1
         enemyEraLanguage = -1
+        if (evolveBanner.active) evolveBanner.refreshTexts()
         resultChart.refreshLanguage()
         if (missingXpRemaining > 0f && battle.player.era < cfg.maxEra) {
             val missing = kotlin.math.ceil(
@@ -640,11 +644,16 @@ class BattleScreen(
                 }
             }
         }
+        evolveBanner.update(dt, battle.player.era, cfg.maxEra, evolveBtn.enabled && evolveBtn.visible,
+            finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
+                battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null ||
+                showTurrets || showUpgrade >= 0 || aimingBarrage || hints.activeId >= 0)
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
         hints.update(dt, finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
-            showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f)
+            showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f ||
+            evolveBanner.goBtn.visible)
 
     }
 
@@ -805,6 +814,9 @@ class BattleScreen(
                 g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
                 g.profile.save()
             }
+            // „Awansuj” z banera: dokładnie ta sama ścieżka co przycisk Ewolucji.
+            EvolveBanner.GO -> { evolveBanner.dismiss(); onClick(evolveBtn) }
+            EvolveBanner.WAIT -> evolveBanner.dismiss()
             EVOLVE -> if (commands.evolve()) {
                 missingXpRemaining = 0f
                 haptics.onEvolve()
@@ -1380,10 +1392,12 @@ class BattleScreen(
         for (b in unitUpgrade) ui.button(c, b, 9f)
         bottomHudView.drawQueue(c)
         ui.button(c, evolveBtn, 15f)
+        evolveBanner.drawEvolveGlow(c, evolveBtn, evolveBtn.enabled)
         ui.button(c, pauseBtn, 15f)
         if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawTurretPanel(c)
         if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawUpgradePanel(c)
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
+        if (!finished && !paused) evolveBanner.draw(c, ui)
         if (!finished) {
             tut?.draw(c)
             hints.draw(c)
