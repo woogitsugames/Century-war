@@ -3,6 +3,8 @@ package com.centurywar.meta
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Campaign
+import com.centurywar.game.ChallengeRuleSets
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
@@ -19,6 +21,9 @@ enum class AchievementMetric {
     STEAM_VARIANTS, SILICON_VARIANTS, RAIN_WINS, WIND_WINS, NIGHT_WINS,
     BARRAGE_EIGHT, BOSS_KNOCKBACK, BOSS_AURA, BOSS_SHIELD, BOSS_RECRUITER,
     BOSS_RAGE, WEEKLY_GOLD, CUSTOM_THREE, REPLAY_RECORD,
+    CARD_MEDICS_30, CARD_SPARK_30, CARD_GUARD_30, CARD_RECALL_30,
+    CARD_NEW_50, WEEKLY_RULESETS, HARD_PERFECT, DAILY_EVENTS,
+    MODIFIER_VICTORIES, DOCTRINE_VICTORIES,
 }
 
 data class AchievementDef(
@@ -96,6 +101,19 @@ object Achievements {
         def("weekly_gold", AchievementMetric.WEEKLY_GOLD, 1, 200, AchievementCategory.ENDLESS),
         def("custom_three", AchievementMetric.CUSTOM_THREE, 1, 105, AchievementCategory.TACTICS),
         def("replay_record", AchievementMetric.REPLAY_RECORD, 1, 90, AchievementCategory.TACTICS),
+        // Nowe karty, cykliczne reguły i zróżnicowane taktyki (zlecenie 130).
+        def("card_medics_30", AchievementMetric.CARD_MEDICS_30, 1, 140, AchievementCategory.ENDLESS),
+        def("card_spark_30", AchievementMetric.CARD_SPARK_30, 1, 180, AchievementCategory.ENDLESS),
+        def("card_guard_30", AchievementMetric.CARD_GUARD_30, 1, 180, AchievementCategory.ENDLESS),
+        def("card_recall_30", AchievementMetric.CARD_RECALL_30, 1, 240, AchievementCategory.ENDLESS),
+        def("card_new_50", AchievementMetric.CARD_NEW_50, 1, 330, AchievementCategory.ENDLESS, true),
+        def("weekly_rules_3", AchievementMetric.WEEKLY_RULESETS, 3, 190, AchievementCategory.ENDLESS),
+        def("weekly_rules_6", AchievementMetric.WEEKLY_RULESETS, 6, 480, AchievementCategory.ENDLESS),
+        def("hard_perfect", AchievementMetric.HARD_PERFECT, 1, 175, AchievementCategory.CAMPAIGN),
+        def("daily_events_6", AchievementMetric.DAILY_EVENTS, 6, 300, AchievementCategory.DAILY),
+        def("modifier_victories_10", AchievementMetric.MODIFIER_VICTORIES, 10, 230, AchievementCategory.TACTICS),
+        def("doctrine_victories_13", AchievementMetric.DOCTRINE_VICTORIES,
+            com.centurywar.game.Doctrine.values().size.toLong(), 400, AchievementCategory.TACTICS),
     )
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
@@ -117,6 +135,14 @@ object Achievements {
         AchievementMetric.DOCTRINES -> Integer.bitCount(profile.achievementDoctrineMask).toLong()
         AchievementMetric.STEAM_VARIANTS, AchievementMetric.SILICON_VARIANTS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 3L).toLong()
+        AchievementMetric.WEEKLY_RULESETS, AchievementMetric.DAILY_EVENTS ->
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 63L).toLong()
+        AchievementMetric.MODIFIER_VICTORIES ->
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
+                ((1L shl Modifier.values().size) - 1L)).toLong()
+        AchievementMetric.DOCTRINE_VICTORIES ->
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
+                ((1L shl com.centurywar.game.Doctrine.values().size) - 1L)).toLong()
         else -> profile.achievementCounters[definition.metric.name] ?: 0L
     }
 
@@ -132,6 +158,17 @@ object Achievements {
         val key = metric.name
         profile.achievementCounters[key] =
             (((profile.achievementCounters[key] ?: 0L).toInt() or mask) and 3).toLong()
+    }
+
+    /** Maski rozliczane tylko po zakończonej bitwie; brak nowych pól w symulacji. */
+    private fun rememberMask(profile: Profile, metric: AchievementMetric, mask: Int) {
+        if (mask == 0) return
+        val key = metric.name
+        profile.achievementCounters[key] = (profile.achievementCounters[key] ?: 0L) or mask.toLong()
+    }
+
+    private fun markOnce(profile: Profile, metric: AchievementMetric) {
+        profile.achievementCounters[metric.name] = 1L
     }
 
     private fun defeatedBossMask(battle: Battle): Int {
@@ -194,6 +231,9 @@ object Achievements {
             add(profile, AchievementMetric.ELITE_SAVED_WINS)
         }
         if (won && player.baseDamageTaken <= 0f) add(profile, AchievementMetric.PERFECT_WINS)
+        if (won && cfg.mode == Mode.CAMPAIGN && cfg.stageIndex >= 0 &&
+            cfg.aiPower >= 1.2f && player.baseDamageTaken <= 0f
+        ) markOnce(profile, AchievementMetric.HARD_PERFECT)
         if (player.armory >= 10) add(profile, AchievementMetric.ARMORY_TEN)
         if (cfg.startEra < Defs.ERA_COUNT - 1 && player.era == Defs.ERA_COUNT - 1 &&
             player.erasAdvanced > 0
@@ -217,9 +257,37 @@ object Achievements {
             }
             if (cfg.mode == Mode.SKIRMISH && cfg.modifiers.size == 3)
                 add(profile, AchievementMetric.CUSTOM_THREE)
+            if (cfg.mode == Mode.DAILY && cfg.dailyEvent != null)
+                rememberMask(profile, AchievementMetric.DAILY_EVENTS, 1 shl cfg.dailyEvent.ordinal)
+            var modifierMask = 0
+            for (modifier in cfg.modifiers) modifierMask = modifierMask or (1 shl modifier.ordinal)
+            rememberMask(profile, AchievementMetric.MODIFIER_VICTORIES, modifierMask)
+            var winningDoctrineMask = 0
+            for (doctrine in player.doctrines)
+                winningDoctrineMask = winningDoctrineMask or (1 shl doctrine.ordinal)
+            rememberMask(profile, AchievementMetric.DOCTRINE_VICTORIES, winningDoctrineMask)
         }
         if (events?.barrageEight == true) add(profile, AchievementMetric.BARRAGE_EIGHT)
         if (cfg.mode == Mode.ENDLESS) {
+            val newCardMask = events?.newCardMask ?: AchievementBattleTracker.newCardMaskFor(battle)
+            if (battle.wave >= 30) {
+                if ((newCardMask and 1) != 0) markOnce(profile, AchievementMetric.CARD_MEDICS_30)
+                if ((newCardMask and 2) != 0) markOnce(profile, AchievementMetric.CARD_SPARK_30)
+                if ((newCardMask and 4) != 0) markOnce(profile, AchievementMetric.CARD_GUARD_30)
+                if ((newCardMask and 8) != 0) markOnce(profile, AchievementMetric.CARD_RECALL_30)
+            }
+            if (battle.wave >= 50 && newCardMask != 0)
+                markOnce(profile, AchievementMetric.CARD_NEW_50)
+            val rule = if (cfg.weekly >= 0L) Weekly.ruleSet(cfg.weekly) else null
+            if (rule != null && battle.wave >= Weekly.threshold(1) &&
+                cfg.weeklyCard == rule.weeklyCard &&
+                cfg.modifiers.size == 2 &&
+                rule.first in cfg.modifiers && rule.second in cfg.modifiers
+            ) {
+                val offset = (cfg.weekly - Weekly.firstRuleSetWeek()) / Weekly.RULE_SET_EVERY
+                val ruleIndex = (offset % ChallengeRuleSets.COUNT).toInt()
+                rememberMask(profile, AchievementMetric.WEEKLY_RULESETS, 1 shl ruleIndex)
+            }
             val bossMask = events?.bossMask ?: defeatedBossMask(battle)
             val bossMetrics = arrayOf(AchievementMetric.BOSS_KNOCKBACK, AchievementMetric.BOSS_AURA,
                 AchievementMetric.BOSS_SHIELD, AchievementMetric.BOSS_RECRUITER, AchievementMetric.BOSS_RAGE)

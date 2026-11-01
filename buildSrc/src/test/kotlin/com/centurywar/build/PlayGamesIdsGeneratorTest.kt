@@ -71,8 +71,8 @@ class PlayGamesIdsGeneratorTest {
     }
 
     @Test fun propertiesSchemaCoversAllCatalogNames() {
-        assertEquals(54, PlayGamesIdsGenerator.achievementNames.size)
-        assertEquals(54, PlayGamesIdsGenerator.achievementNames.toSet().size)
-        assertEquals(59, PlayGamesIdsGenerator.requiredKeys.size)
+        assertEquals(65, PlayGamesIdsGenerator.achievementNames.size)
+        assertEquals(65, PlayGamesIdsGenerator.achievementNames.toSet().size)
+        assertEquals(70, PlayGamesIdsGenerator.requiredKeys.size)
     }
 }

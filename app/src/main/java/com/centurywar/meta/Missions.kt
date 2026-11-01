@@ -7,6 +7,7 @@ import com.centurywar.game.Modifier
 import com.centurywar.game.Rng
 import com.centurywar.game.Replay
 import com.centurywar.game.Weather
+import com.centurywar.game.Weekly
 import com.centurywar.game.Role
 import org.json.JSONArray
 import org.json.JSONObject
@@ -50,6 +51,14 @@ enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int =
     UNIT_UPGRADES(2, 12, 2, 2),
     REPLAYS_WATCHED(1, 3, 1, 2),
     ENDLESS_CARDS(2, 10, 2, 2),
+    // Cele osiągalne w trybach dostępnych już od pierwszej bitwy.
+    MODIFIER_BATTLES(2, 10, 1, 2),
+    DOUBLE_MOD_WINS(1, 4, 2, 2),
+    UNTOUCHED_BASE_WINS(1, 4, 3, 2),
+    DOCTRINE_WINS(1, 4, 2, 2),
+    CARD_VARIETY(2, 10, 2, 2),
+    WEEKLY_BRONZE(1, 3, 3, 2),
+    ADVANCED_BATTLES(1, 5, 1, 2),
 }
 
 /** Stałe nagrody i cele pozostają niezmienione do końca okresu. */
@@ -310,6 +319,17 @@ class Missions(private val profile: Profile) {
             MissionType.UNIT_UPGRADES -> item.add(upgrades)
             MissionType.REPLAYS_WATCHED -> Unit // Rozlicza odtwarzacz.
             MissionType.ENDLESS_CARDS -> if (endless) item.add(cards)
+            MissionType.MODIFIER_BATTLES -> if (battle.cfg.modifiers.isNotEmpty()) item.add(1)
+            MissionType.DOUBLE_MOD_WINS -> if (won && battle.cfg.modifiers.size >= 2) item.add(1)
+            MissionType.UNTOUCHED_BASE_WINS ->
+                if (won && player.baseDamageTaken <= 0f) item.add(1)
+            MissionType.DOCTRINE_WINS -> if (won && player.doctrines.isNotEmpty()) item.add(1)
+            MissionType.CARD_VARIETY -> if (endless) item.add(player.cardStacks.count { it > 0 })
+            MissionType.WEEKLY_BRONZE ->
+                if (endless && battle.cfg.weekly >= 0L &&
+                    battle.cfg.weekly == state.weeklyWeek && battle.wave >= Weekly.threshold(0)
+                ) item.add(1)
+            MissionType.ADVANCED_BATTLES -> if (player.erasAdvanced > 0) item.add(1)
         }
     }
 
