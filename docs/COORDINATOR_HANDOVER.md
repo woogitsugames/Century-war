@@ -135,3 +135,16 @@ Wersja release (R8) sprawdzona na telefonie, Play Games z prawdziwymi ID, wdroż
 - Dowódca na polu bitwy (zlecenie 125): TAK, w fali 2.
 - Poziomy trudności kampanii (126): do rankingu kampanii liczy się tylko poziom Normalny. Przy przeglądzie 126 sprawdzić, że wyniki z Łatwego/Trudnego nie trafiają do rankingu.
 - Banery powiadomień nie pokazują się na wynikach bitwy, tylko w menu (`BattleScreen.blocksNotices` zawsze true) — zostaje.
+
+## Stan na 1.11.2026 ok. 21:45 UTC (tura 8 w toku)
+
+- `main` = `claude/bold-sagan-vwz5gm` = `integ/tura7` (paczki 118–122, testy zielone).
+- **`integ/tura8`**: scalona fala 1 GPT (123, 124, 126–134) + poprawki koordynatora (L.kt, osiągnięcie `campaign_hard` w Play Games, testy 66 osiągnięć, Robolectric w Mission130/Achievement130, BackLocaleTest). NIE na `main`.
+- Pozostałe czerwone testy po scaleniu: sim `GoldenReplayTest`, `AiPersonalityProfileTest` (ECONOMIST 87,5% wygranych — 127 za silny), `ChallengeRules109Test` (archiwalna powtórka nie weryfikuje się po zmianie AI), app `DoctrineBalance82Test` (VETERAN 67,5%), `ScreenshotTest.regression100/foldAudit98/foldCoverOverlays123/campaignJourneyMap`.
+- Pracowali dwaj agenci (worktree; kopie zapasowe commitów: `claude/wip-tura8-balans`, `claude/wip-tura8-ui` — mogą być niekompletne):
+  - **balans:** przegląd 126/127, pomiary (126 i 127 nie mają wyników w BALANCE.md), naprawa testów sim + DoctrineBalance82, regeneracja złotych powtórek;
+  - **UI:** 4 testy zrzutów + zgłoszenia właściciela: (A) złote przyciski — ciemny tekst z ciemnym obrysem w `Ui.textO` jest rozmazany, usunąć obrys/cień dla ciemnego tekstu; (B) dymek podpowiedzi w bitwie ma być nad HUD, na pasie ziemi, nie zasłaniać przycisków; (C) półprzezroczysty baner „Możesz awansować!” z „Awansuj”/„Czekaj”, raz na epokę, bez pauzy, przez BattleController, teksty `part139()`; (D) w panelu pauzy (i innych) przyciski nachodzą na wewnętrzny obrys — odstęp 12–16 dp + test geometryczny.
+  Jeśli praca agentów przepadła — zlecić ponownie wg powyższego.
+- Potem: pełne testy, push na `main` + `claude/bold-sagan-vwz5gm`, APK dla właściciela, zip fali 2 (140 stopnie wież + 135 sklep), następnie fala 3 (125 dowódca), fala 4 (136 tłumaczenia).
+- Środowisko: init Gradle musi dodać mirror GCS na początek `pluginManagement` + `gradlePluginPortal()` (buildSrc); pełne testy app trwają teraz ok. 7 min (`forkEvery=0` z 131).
+- Pytanie otwarte do właściciela: muzyka z Suno (zaproponowano próbkę: menu + jedna epoka w wersji spokojnej i bojowej, ścieżki stem lub dwie wersje; licencja płatnego planu).
