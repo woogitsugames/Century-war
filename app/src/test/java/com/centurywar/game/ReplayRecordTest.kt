@@ -51,6 +51,52 @@ class ReplayRecordTest {
         assertEquals(Replay.verify(cfg, log), Replay.verify(record.cfg, record.log!!))
     }
 
+    @Test fun recordsSpecialDayConfigAlongsideReplay() {
+        val day = Daily.RELEASE_DAY + 3L
+        val eventCfg = Daily.config(day, Bonuses())
+        val b = Battle(eventCfg)
+        val controller = BattleController(b)
+        if (b.pendingVariant != null) controller.variant(0)
+        repeat(120) { if (!b.over) b.step() }
+        if (!b.over) controller.surrender()
+        val meta = ReplayRecord.Meta(Mode.DAILY, -1, b.winner, b.score(),
+            b.time, b.wave, 1793461200000L, "Dowódca")
+        val record = ReplayRecord.decode(ReplayRecord.encode(eventCfg, controller.log(), meta))
+        assertTrue(record.playable)
+        assertEquals(eventCfg.dailyEvent, record.cfg.dailyEvent)
+        assertEquals(eventCfg.dailyEvent, record.log!!.dailyEvent)
+        assertEquals(b.score(), Replay.verify(record.cfg, record.log!!).score)
+    }
+
+    @Test fun olderRecordKeepsMetadataAfterVersionUpgrade() {
+        val (log, meta) = example()
+        val bytes = ReplayRecord.encode(cfg, log, meta)
+        // Stary plik v1 miał konfigurację krótszą o 1 bajt i powtórkę v4.
+        val cfgStream = java.io.ByteArrayOutputStream()
+        java.io.DataOutputStream(cfgStream).use { BattleSnapshot.writeConfig(it, cfg) }
+        val cfgLen = cfgStream.size()
+        val body = bytes.copyOfRange(24, bytes.size)
+        val olderBody = body.copyOfRange(0, cfgLen - 1) +
+            body.copyOfRange(cfgLen, body.size)
+        val crc = java.util.zip.CRC32().apply { update(olderBody) }.value.toInt()
+        val out = java.io.ByteArrayOutputStream()
+        java.io.DataOutputStream(out).use {
+            it.writeInt(0x43575231)
+            it.writeInt(1)
+            it.writeInt(Replay.VERSION - 1)
+            it.writeInt(BattleSnapshot.defsFingerprint)
+            it.writeInt(olderBody.size)
+            it.writeInt(crc)
+            it.write(olderBody)
+        }
+        val old = ReplayRecord.decode(out.toByteArray())
+        assertEquals(cfg.mode, old.cfg.mode)
+        assertEquals(cfg.seed, old.cfg.seed)
+        assertEquals(meta, old.meta)
+        assertFalse(old.playable)
+        assertNull(old.log)
+    }
+
     @Test fun rejectsCorruptionTruncationForeignVersionAndExtraBytes() {
         val (log, meta) = example()
         val bytes = ReplayRecord.encode(cfg, log, meta)
