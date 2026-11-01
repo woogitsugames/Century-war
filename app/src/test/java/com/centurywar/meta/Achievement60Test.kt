@@ -204,7 +204,7 @@ class Achievement60Test {
             "boss_shield", "boss_recruiter", "boss_rage", "weekly_gold",
             "custom_three", "replay_record")
         assertEquals(14, newIds.size)
-        assertEquals(65, Achievements.all.size)
+        assertEquals(66, Achievements.all.size)
         for (id in newIds) {
             assertTrue(id, Achievements.byId(id) != null)
             assertTrue(Achievements.byId(id)!!.pgsKey == "cw_" + id)

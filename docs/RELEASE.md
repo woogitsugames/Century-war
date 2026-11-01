@@ -245,7 +245,7 @@ Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 **Jedynym źródłem identyfikatorów jest `docs/store/play_games_ids.properties`.**
 Nie edytuj ręcznie XML. Gradle generuje `games_ids.xml` osobno dla każdego wariantu
 w `app/build/generated/res/playGames/<wariant>/values/games_ids.xml`.
-Plik zawiera 70 kluczy: ID projektu, 4 rankingi i 65 osiągnięć.
+Plik zawiera 71 kluczy: ID projektu, 4 rankingi i 66 osiągnięć.
 
 1. Otwórz Google Play Console → **Century War** (`com.centurywar.game`) →
    **Play Games Services → Setup and management → Configuration**. Utwórz usługę
@@ -256,7 +256,7 @@ Plik zawiera 70 kluczy: ID projektu, 4 rankingi i 65 osiągnięć.
    `leaderboard_endless` (oblężenie), `leaderboard_campaign` (gwiazdki),
    `leaderboard_skirmish` (potyczka) i `leaderboard_daily` (wyzwanie dnia).
    Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
-3. W **Play Games Services → Achievements** utwórz 65 osiągnięć standardowych.
+3. W **Play Games Services → Achievements** utwórz 66 osiągnięć standardowych.
    Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego
    identyfikatora katalogu `id` skopiuj ID przyznane przez Play Console do
    `achievement_<id>`, np. `achievement_win_1`. Wszystkie klucze z szablonu

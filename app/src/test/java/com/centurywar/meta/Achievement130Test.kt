@@ -1,5 +1,8 @@
 package com.centurywar.meta
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import com.centurywar.engine.L
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
@@ -17,6 +20,8 @@ import org.junit.Test
 import org.json.JSONObject
 import java.io.File
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class Achievement130Test {
     private fun profileFile(): File = File.createTempFile("cw-ach-130-", ".json").apply {
         delete()
@@ -43,7 +48,7 @@ class Achievement130Test {
             "card_new_50", "weekly_rules_3", "weekly_rules_6", "hard_perfect",
             "daily_events_6", "modifier_victories_10", "doctrine_victories_13")
         assertEquals(11, ids.size)
-        assertEquals(65, Achievements.all.size)
+        assertEquals(66, Achievements.all.size)
         for (id in ids) {
             assertEquals("cw_" + id, Achievements.byId(id)?.pgsKey)
             assertEquals(10, L.raw("ach_" + id)?.size)

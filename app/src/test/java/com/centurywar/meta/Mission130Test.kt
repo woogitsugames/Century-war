@@ -1,5 +1,8 @@
 package com.centurywar.meta
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import com.centurywar.engine.L
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
@@ -17,6 +20,8 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.Locale
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class Mission130Test {
     private val now = LocalDate.of(2026, 11, 1)
         .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()

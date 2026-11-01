@@ -73,6 +73,8 @@ class BackLocaleTest {
             val activity = controller.get()
             val field = MainActivity::class.java.getDeclaredField("game").apply { isAccessible = true }
             val game = field.get(activity) as Game
+            // Zwykłe menu po samouczku (świeży profil pokazuje „Zagraj”, zlecenie 133).
+            game.profile.tutorialDone = true
             game.density = 2f
             game.resize(1600, 720, 1600, 720)
             val menu = game.current as MenuScreen
