@@ -44,6 +44,25 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_release_size_report.py' -v
           ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --console=plain
 
+      - name: Potwierdź blokadę release bez klucza upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          for task in :app:assembleRelease :app:bundleRelease; do
+            log="build/release-metrics/blocked-${task#*:app:}.log"
+            if ./gradlew "$task" \
+              -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode \
+              --console=plain --no-configuration-cache > "$log" 2>&1; then
+              echo "::error::$task bez klucza produkcyjnego zakończył się sukcesem"
+              exit 1
+            fi
+            grep -q 'Brak prawidłowego podpisu release' "$log" || {
+              cat "$log"
+              echo "::error::Brak oczekiwanego błędu podpisu w $task"
+              exit 1
+            }
+          done
+
       # Porownanie na tych samych SDK/runnerze: najnowszy wspolny commit z baza PR.
       - name: Zbuduj bazowe APK i AAB (porownanie rozmiaru)
         if: ${{ github.event_name == 'pull_request' }}
