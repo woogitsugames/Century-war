@@ -257,6 +257,77 @@ class LTest {
         }
     }
 
+    /** Kontrola krótkich etykiet przycisków i zakładek z części 53–67. */
+    @Test
+    fun passTwoInteractiveLabelsFitWithin18Characters() {
+        val keys = listOf(
+            "tip53_barrage_title", "tip53_speed_title", "tip53_queue_title",
+            "cx62_eras", "cx62_units", "cx62_variants", "cx62_towers",
+            "cx62_abilities", "cx62_doctrines", "cx62_weather",
+            "cx62_modifiers", "cx62_cards", "cx62_bosses", "cx62_no_variants",
+            "pause_quick", "report_problem", "report_send", "report_cancel",
+        )
+        for (key in keys) {
+            val translations = L.raw(key) ?: error("Brak klucza $key")
+            for (i in L.CODES.indices) {
+                val value = translations[i]
+                assertTrue(key + "/" + L.CODES[i] + ": " + value + " (" + value.length + ")",
+                    value.length <= 18)
+            }
+        }
+    }
+
+    @Test
+    fun passTwoBarrageTitleUsesCanonicalTranslation() {
+        val canonical = L.raw("cx_barrage")!!
+        val tooltip = L.raw("tip53_barrage_title")!!
+        for (i in L.CODES.indices) {
+            assertEquals(L.CODES[i], canonical[i], tooltip[i])
+        }
+    }
+
+    /** Przypadki 1/2/5/21/22/25 i turecki znak procentu przed liczbą. */
+    @Test
+    fun passTwoMissionPluralsAndTurkishPercentOrder() {
+        L.setCode("pl")
+        for ((count, suffix) in listOf(
+            1 to "bitwę", 2 to "bitwy", 5 to "bitew",
+            21 to "bitew", 22 to "bitwy", 25 to "bitew",
+        )) {
+            assertEquals("Wygraj $count $suffix przy niepogodzie",
+                L.plural("ms_weather_wins", count.toLong()))
+        }
+        L.setCode("uk")
+        for ((count, suffix) in listOf(
+            1 to "битву в негоду", 2 to "битви в негоду", 5 to "битв у негоду",
+            21 to "битву в негоду", 22 to "битви в негоду", 25 to "битв у негоду",
+        )) {
+            assertEquals("Виграй $count $suffix",
+                L.plural("ms_weather_wins", count.toLong()))
+        }
+        L.setCode("tr")
+        val rally = L.f("cx62_rally_d", 7, 3, 12)
+        assertTrue(rally, rally.contains("+%7"))
+        assertTrue(rally, !rally.contains("%d") && !rally.contains("%%"))
+        val rain = L.f("cx62_rain_d", 10, 20, 30)
+        assertTrue(rain, rain.contains("−%10"))
+        assertTrue(rain, rain.contains("−%20"))
+        assertTrue(rain, rain.contains("−%30"))
+        for (key in listOf(
+            "ms_weather_wins", "ms_custom_skirmish", "ms_endless_bosses",
+            "ms_unit_upgrades", "ms_replays_watched", "ms_endless_cards",
+        )) {
+            for (i in L.CODES.indices) {
+                L.lang = i
+                for (n in longArrayOf(1L, 2L, 5L, 21L, 22L, 25L)) {
+                    val result = L.plural(key, n)
+                    assertTrue(key + "/" + L.CODES[i] + "/" + n + ": " + result,
+                        result.contains(n.toString()) && !result.contains('|') && !result.contains("%d"))
+                }
+            }
+        }
+    }
+
     @Test
     fun fallbackAndCodes() {
         assertEquals("missing_key", L["missing_key"])
@@ -277,4 +348,119 @@ class LTest {
             Locale.setDefault(def)
         }
     }
+}
+
+
+/**
+ * Kadry lokalizacji 720p dla zlecenia 78. Osobna klasa w LTest.kt,
+ * bez edytowania współdzielonego ScreenshotTest.kt.
+ */
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+@org.robolectric.annotation.Config(sdk = [35])
+class ScreenshotTestTranslation78Test {
+    private val out = java.io.File("build/screenshots").apply { mkdirs() }
+
+    private fun game(): Game {
+        val host = object : Host {
+            override fun vibrate(ms: Long) {}
+            override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
+            override fun applyRenderScale(scale: Float) {}
+            override fun applyFrameRate(fps: Int) {}
+            override fun exit() {}
+        }
+        val file = java.io.File.createTempFile("pass78", ".json").apply { delete() }
+        val g = Game(host, com.centurywar.meta.Profile(file).apply {
+            tutorialDone = true
+            medals = 340
+        }, Quality.LOW)
+        g.density = 1.8f
+        g.resize(1600, 720, 1600, 720)
+        return g
+    }
+
+    private fun field(obj: Any, name: String) =
+        obj.javaClass.getDeclaredField(name).apply { isAccessible = true }
+
+    private fun shot(g: Game, code: String, screen: String) {
+        g.finishScreenTransition()
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            g.width, g.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        repeat(3) { g.frame(canvas, 1f / 60f) }
+        val image = java.io.File(out, "phone720_" + code + "_" + screen + ".png")
+        image.outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
+        org.junit.Assert.assertTrue("Pusty zrzut: " + image.name, image.length() > 1000L)
+    }
+
+    private fun capture(code: String) {
+        val previous = L.lang
+        try {
+            val g = game()
+            g.profile.lang = code
+            L.setCode(code)
+
+            val paused = com.centurywar.screens.BattleScreen(
+                g, com.centurywar.game.BattleConfig(
+                    com.centurywar.game.Mode.SKIRMISH, 7801L, 1.2f,
+                    weather = com.centurywar.game.Weather.NIGHT))
+            g.setScreen(paused)
+            val battle = field(paused, "battle").get(paused) as com.centurywar.game.Battle
+            battle.time = 125f
+            battle.player.kills = 17
+            battle.player.goldEarned = 1426f
+            paused.onClick(field(paused, "pauseBtn").get(paused) as Button)
+            (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+            (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+            field(g, "achievementSeconds").setFloat(g, 0f)
+            shot(g, code, "pause")
+
+            g.profile.hintsSeen = 0L
+            val weather = com.centurywar.screens.BattleScreen(
+                g, com.centurywar.game.BattleConfig(
+                    com.centurywar.game.Mode.SKIRMISH, 7802L, 1f,
+                    weather = com.centurywar.game.Weather.WIND))
+            g.setScreen(weather)
+            val hint = field(weather, "hints").get(weather) as com.centurywar.screens.HintOverlay
+            hint.update(0.26f)
+            org.junit.Assert.assertEquals(
+                com.centurywar.screens.HintOverlay.WEATHER, hint.activeId)
+            shot(g, code, "hint_weather")
+
+            val codex = com.centurywar.screens.CodexScreen(g, 5)
+            g.setScreen(codex)
+            codex.showCategory(4)
+            shot(g, code, "codex_abilities")
+            codex.showCategory(8)
+            shot(g, code, "codex_cards")
+
+            val missions = com.centurywar.meta.Missions(g.profile)
+                .refresh(System.currentTimeMillis())
+            missions.daily.clear()
+            missions.weekly.clear()
+            missions.daily.add(com.centurywar.meta.MissionItem(
+                "pass78_weather", com.centurywar.meta.MissionType.WEATHER_WINS, 1, 5))
+            missions.daily.add(com.centurywar.meta.MissionItem(
+                "pass78_custom", com.centurywar.meta.MissionType.CUSTOM_SKIRMISH, 2, 5))
+            missions.daily.add(com.centurywar.meta.MissionItem(
+                "pass78_bosses", com.centurywar.meta.MissionType.ENDLESS_BOSSES, 5, 5))
+            missions.weekly.add(com.centurywar.meta.MissionItem(
+                "pass78_upgrades", com.centurywar.meta.MissionType.UNIT_UPGRADES, 2, 5))
+            missions.weekly.add(com.centurywar.meta.MissionItem(
+                "pass78_replays", com.centurywar.meta.MissionType.REPLAYS_WATCHED, 5, 5))
+            missions.weekly.add(com.centurywar.meta.MissionItem(
+                "pass78_cards", com.centurywar.meta.MissionType.ENDLESS_CARDS, 21, 5))
+            g.setScreen(com.centurywar.screens.MissionsScreen(g))
+            shot(g, code, "missions")
+        } finally {
+            L.lang = previous
+        }
+    }
+
+    @org.junit.Test fun german720p() { capture("de") }
+    @org.junit.Test fun turkish720p() { capture("tr") }
+    @org.junit.Test fun ukrainian720p() { capture("uk") }
 }

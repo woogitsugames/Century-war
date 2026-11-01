@@ -153,6 +153,71 @@ Kolejność języków to `L.CODES`: **pl, en, de, es, fr, it, pt, uk, nl, tr**. 
 | Potyczka — wynik (`board_skirmish`) | Potyczka — wynik | Skirmish — score | Gefecht — Punkte | Escaramuza — puntos | Escarmouche — score | Schermaglia — punteggio | Escaramuça — pontos | Сутичка — очки | Schermutseling — score | Çatışma — puan |
 | Tydzień (`board_weekly`) | Tydzień | Weekly | Woche | Semana | Semaine | Settimana | Semana | Тиждень | Week | Haftalık |
 
+## Dymki, samouczek i podpowiedzi
+
+Dymek (HintOverlay) jest krótką wskazówką kontekstową. Opis po przytrzymaniu przycisku (tip53_*) to osobny element: nie należy traktować ich jako tego samego komunikatu ani mieszać terminów z nazwami zdolności.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Wskazówka (hint_title) | Wskazówka | Hint | Hinweis | Consejo | Astuce | Suggerimento | Dica | Підказка | Tip | İpucu |
+| Przycisk potwierdzenia wskazówki (hint_ok) | OK | OK | OK | Vale | OK | OK | OK | Гаразд | OK | Tamam |
+| Ostrzał — nagłówek opisu (tip53_barrage_title) | Ostrzał | Barrage | Sperrfeuer | Bombardeo | Barrage | Sbarramento | Bombardeio | Обстріл | Spervuur | Baraj ateşi |
+| Kolejka — nagłówek opisu (tip53_queue_title) | Kolejka | Queue | Warteschlange | Cola | File d'attente | Coda | Fila | Черга | Wachtrij | Sıra |
+| Zbrojownia w samouczku (tut_armory54_t) | Zbrojownia | Armory | Waffenkammer | Armería | Armurerie | Armeria | Arsenal | Зброярня | Wapenkamer | Cephanelik |
+| Zryw w samouczku (tut_rally54_t) | Zryw wojsk | Troop rally | Ansturm | Impulso de tropas | Élan des troupes | Slancio delle truppe | Ímpeto das tropas | Ривок війська | Troepenstoot | Atılım |
+
+## Zapowiedzi fal i bossów
+
+Zapowiedzi ew_* są nazwami konkretnych fal, a boss_* — nazwami typów bossów. W opisach osiągnięć ach_boss_*_d stosuj przetłumaczoną nazwę trybu z klucza endless zamiast nieprzetłumaczonego *Endless* (wyjątek: angielski).
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Nadciąga boss (ew_boss) | Nadciąga boss! | Boss incoming! | Boss im Anmarsch! | ¡Se acerca un jefe! | Boss en approche ! | Boss in arrivo! | Chefe a caminho! | Бос наближається! | Baas op komst! | Boss geliyor! |
+| Tabor oblężniczy (ew_siege_train) | Tabor oblężniczy | Siege train | Belagerungstross | Tren de asedio | Convoi de siège | Convoglio d'assedio | Comboio de cerco | Облоговий обоз | Belegeringstrein | Kuşatma konvoyu |
+| Harcownicy (ew_skirmishers) | Harcownicy | Skirmishers | Plänkler | Hostigadores | Tirailleurs | Schermagliatori | Escaramuçadores | Застрільники | Schermutselaars | Akıncılar |
+| Boss: odrzut (boss_knockback) | BOSS — ODRZUT | BOSS — KNOCKBACK | BOSS — RÜCKSTOSS | JEFE — EMPUJE | BOSS — REPOUSSEMENT | BOSS — RESPINTA | CHEFE — REPULSÃO | БОС — ВІДКИДАННЯ | BAAS — TERUGSLAG | BOSS — GERİ İTME |
+| Boss: aura tempa (boss_aura) | BOSS — AURA SZYBKOŚCI | BOSS — SPEED AURA | BOSS — TEMPOAURA | JEFE — AURA DE VELOCIDAD | BOSS — AURA DE VITESSE | BOSS — AURA DI VELOCITÀ | CHEFE — AURA DE VELOCIDADE | БОС — АУРА ШВИДКОСТІ | BAAS — SNELHEIDSAURA | BOSS — HIZ AURASI |
+
+## Karty, kodeks i doktryny — nowe etykiety
+
+Karta oblężenia (ec_*) nie jest doktryną (d_*): nie należy ich zamieniać. Kategoria zdolności i Zbrojowni (cx62_abilities) dotyczy **Zbrojowni**, a nie ogólnie broni. Skróty w zakładkach zachowują limit 18 znaków; pełne nazwy są w opisach i w istniejącej tabeli doktryn.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Kategorie: zdolności i Zbrojownia (cx62_abilities) | Zdoln. i zbroj. | Skills & Armory | Fähigk./Waffenk. | Habil. y armería | Pouvoirs/armurerie | Abilità/armeria | Poderes/arsenal | Уміння/зброярня | Vaardigh./Wapenk. | Yetenek/Cephanelik |
+| Kategorie: doktryny (cx62_doctrines) | Doktryny | Doctrines | Doktrinen | Doctrinas | Doctrines | Dottrine | Doutrinas | Доктрини | Doctrines | Doktrinler |
+| Kategorie: karty oblężenia (cx62_cards) | Karty oblężenia | Endless cards | Belagerungskarten | Cartas sin fin | Cartes sans fin | Carte senza fine | Cartas sem fim | Карти облоги | Belegkaarten | Kuşatma kartları |
+| Kategorie: modyfikatory (cx62_modifiers) | Modyfikatory | Modifiers | Modifikatoren | Modificadores | Modificateurs | Modificatori | Modificadores | Модифікатори | Modificatoren | Değiştiriciler |
+| Karta: dodatkowy slot wieży (ec_tower_slot) | Dodatkowa wieża | Extra turret slot | Zusätzlicher Turmplatz | Espacio para torreta | Emplacement tourelle | Slot torretta extra | Espaço de torre | Додатковий слот вежі | Extra torenslot | Ek kule yuvası |
+| Karta: elita bez kosztu (ec_free_elite) | Elitarne posiłki | Free elite | Gratis Elite | Élite gratis | Élite gratuite | Elite gratuita | Elite grátis | Безкоштовна еліта | Gratis elite | Ücretsiz elit |
+| Karta: automatyczny ostrzał (ec_auto_barrage) | Samoczynny ostrzał | Auto barrage | Automatisches Sperrfeuer | Bombardeo automático | Barrage automatique | Fuoco automatico | Bombardeio automático | Автоматичний обстріл | Automatisch spervuur | Otomatik bombardıman |
+
+## Raport błędu i moderacja
+
+Raport techniczny awarii nie jest zgłoszeniem gracza do moderacji: report_* oznacza raport zapisany lokalnie po awarii i świadomie udostępniany przez użytkownika. Przycisk zgłoszenia musi mieć najwyżej 18 znaków, stąd krótsze brzmienia niż pełne terminy w zdaniach.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Zgłoś problem (report_problem) | Zgłoś problem | Report a problem | Problem melden | Avisar de un fallo | Signaler un bug | Segnala un errore | Comunicar um erro | Повідомити про баг | Probleem melden | Sorun bildir |
+| Wykryto awarię (report_prompt_title) | Wykryto awarię | A crash was detected | Absturz erkannt | Se detectó un fallo | Un plantage a été détecté | Rilevato un arresto anomalo | Falha detetada | Виявлено збій | Crash gedetecteerd | Çökme algılandı |
+| Udostępnij raport (report_share_title) | Udostępnij raport | Share report | Bericht teilen | Compartir informe | Partager le rapport | Condividi rapporto | Partilhar relatório | Поділитися звітом | Rapport delen | Raporu paylaş |
+| Udostępnij (report_send) | Udostępnij | Share | Teilen | Compartir | Partager | Condividi | Partilhar | Поділитися | Delen | Paylaş |
+| Nie teraz (report_cancel) | Nie teraz | Not now | Nicht jetzt | Ahora no | Pas maintenant | Non ora | Agora não | Не зараз | Niet nu | Şimdi değil |
+
+**Moderacja (termin redakcyjny, bez istniejącego klucza UI):**
+
+| PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|
+| Moderacja | Moderation | Moderation | Moderación | Modération | Moderazione | Moderação | Модерація | Moderatie | Moderasyon |
+
+Nie dodawaj tego terminu do ekranu ani tabeli L.kt bez osobnego zlecenia i ustalenia rzeczywistego mechanizmu moderacji.
+
+## Kontrola form liczby mnogiej w misjach 61
+
+Dla kluczy ms_weather_wins, ms_custom_skirmish, ms_endless_bosses, ms_unit_upgrades, ms_replays_watched i ms_endless_cards obowiązują trzy warianty po polsku i ukraińsku, dwa w pozostałych językach poza tureckim (jeden). Kontroluj formy dla **1, 2, 5, 21, 22, 25**, a także zachowanie separatora pionowego. Klucz ms_weekly_waves podaje numer fali, a nie liczbę rzeczownika, więc nie wymaga wariantów.
+
+W języku tureckim znak procentu jest **przed** liczbą (np. +%8); w sformatowanych tekstach cx62_* odpowiada temu składnia +%%%d lub −%%%d. Nie należy automatycznie jej zamieniać na format innych języków.
+
 ## Reguły utrzymania
 
 Przy każdej zmianie nazwy porównuj `L.kt` z glosariuszem, aktualizuj równocześnie powiązane ekrany (`bh_ai_*`, `sk_person_*`, `cx_*`) i uruchom testy `LTest`. Klucze pozostają bez zmian, a liczba i kolejność dziesięciu tłumaczeń są obowiązkowe.
