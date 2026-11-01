@@ -71,103 +71,246 @@ class Machines(private val p: Pen, private val men: Soldiers) {
     }
 
     /**
-     * Cztery niezależne kontury machin wariantów (ciężka i elita).
-     * Nie są dekoracjami nakładanymi na standardową sylwetkę.
+     * Osiem sylwetek wariantowych: każda rola ma własny obrys i napęd.
+     * Wspólne z pozostałymi maszynami: faza chodu, odrzut i reakcja na Body.
+     * Brak obiektów tworzonych podczas rysowania.
      */
     fun variantMachine(art: EraArt, elite: Boolean, team: Int, walk: Float, atk: Float) {
-        val steel = 0xFF505960.toInt()
-        val deep = 0xFF2C343C.toInt()
-        val cyan = 0xFF84F2EF.toInt()
-        val organic = 0xFF426E5A.toInt()
         when (art) {
-            EraArt.COMBUSTION -> {
-                val wide = if (elite) 66f else 52f
-                tracks(-wide, wide, -20f, 0f, walk, if (elite) 6 else 5)
-                p.quad(-wide, -22f, -wide + 12f, -57f, wide - 15f, -57f, wide, -23f)
-                p.shape(if (elite) deep else steel)
-                p.rect(-wide + 8f, -51f, wide - 8f, -36f, team)
-                p.rr(-30f, if (elite) -82f else -73f, 26f, -48f, 7f, 0xFF6C6C60.toInt())
-                if (elite) {
-                    p.rect(-47f, -94f, -34f, -52f, deep)
-                    p.rect(-23f, -100f, -12f, -53f, deep)
-                    p.seg(5f, -74f, 70f - atk * 5f, -79f, 8f, steel)
-                    p.seg(5f, -60f, 61f - atk * 5f, -59f, 6f, steel)
-                    p.rr(-20f, -76f, 21f, -66f, 3f, team)
-                } else {
-                    p.rect(-34f, -88f, -23f, -50f, deep)
-                    p.seg(18f, -65f, 53f - atk * 4f, -73f, 6f, deep)
-                    p.circle(39f - atk * 4f, -69f, 6f, steel)
-                }
-            }
-            EraArt.GALVANIC -> {
-                val height = if (elite) 112f else 90f
-                for (i in 0..2) {
-                    val xx = (i - 1) * 18f
-                    p.seg(xx - 10f, -10f, xx, -height * 0.5f, 5f, deep)
-                    p.seg(xx, -height * 0.5f, xx - 6f, 0f, 4f, team)
-                }
-                p.rr(-29f, -height + 22f, 29f, -height * 0.42f, 8f, steel)
-                p.rr(-17f, -height + 15f, 18f, -height * 0.65f, 4f, team)
-                p.circle(0f, -height * 0.72f, if (elite) 18f else 12f, cyan)
-                p.circleF(0f, -height * 0.72f, 6f, deep)
-                p.seg(-23f, -height + 12f, -37f, -height - 16f, 6f, deep)
-                p.seg(24f, -height + 12f, 38f, -height - 16f, 6f, deep)
-                p.circle(-38f, -height - 15f, if (elite) 10f else 6f, team)
-                p.circle(38f, -height - 15f, if (elite) 10f else 6f, team)
-                if (elite) {
-                    p.seg(-38f, -height - 15f, 0f, -height - 34f, 2.4f, cyan)
-                    p.seg(0f, -height - 34f, 38f, -height - 15f, 2.4f, cyan)
-                }
-            }
-            EraArt.SWARM -> {
-                val big = if (elite) 48f else 34f
-                p.r.set(-big, -32f, big, -7f)
-                cv.drawOval(p.r, p.glp(0x8879F6FF.toInt(), 5f))
-                p.quad(-big, -22f, -big + 12f, -55f, big - 12f, -55f, big, -22f)
-                p.shape(team)
-                p.rr(-big * 0.6f, -44f, big * 0.6f, -24f, 7f, deep)
-                p.circleF(0f, -35f, 8f, cyan)
-                val count = if (elite) 5 else 3
-                for (i in 0 until count) {
-                    val off = (i - (count - 1) * 0.5f) * 25f
-                    val yy = -68f - (i % 2) * 16f + sin(time * 4f + i) * 2f
-                    p.tri(off - 10f, yy + 3f, off, yy - 9f, off + 10f, yy + 3f)
-                    p.shape(team)
-                    p.circle(off, yy, 3.2f, deep)
-                }
-                if (elite) {
-                    p.seg(-43f, -43f, -65f, -61f, 6f, deep)
-                    p.seg(43f, -43f, 65f, -61f, 6f, deep)
-                }
-            }
-            EraArt.BIOTECH -> {
-                val bodyHeight = if (elite) 98f else 73f
-                val spine = if (elite) 51f else 37f
-                for (i in 0..3) {
-                    val x = (i - 1.5f) * 23f
-                    p.seg(x, -27f, x + (if (i < 2) -9f else 9f), -4f + sin(walk + i) * 5f, 9f, organic)
-                    p.circle(x, -27f, 8f, deep)
-                }
-                p.quad(-spine, -34f, -spine * 0.7f, -bodyHeight, spine * 0.6f, -bodyHeight + 6f, spine, -30f)
-                p.shape(organic)
-                p.quad(-spine + 8f, -38f, -spine * 0.5f, -bodyHeight + 13f,
-                    spine * 0.5f, -bodyHeight + 18f, spine - 8f, -39f)
-                p.shape(team)
-                for (i in 0..2) {
-                    p.tri(-25f + i * 25f, -bodyHeight + 8f, -17f + i * 25f, -bodyHeight - (if (elite) 27f else 17f),
-                        -9f + i * 25f, -bodyHeight + 6f)
-                    p.shape(deep)
-                }
-                p.circle(21f, -bodyHeight * 0.68f, 11f, 0xFF79C9A0.toInt())
-                p.circleF(24f, -bodyHeight * 0.68f, 4f, deep)
-                if (elite) {
-                    p.seg(-32f, -bodyHeight + 12f, -49f, -bodyHeight - 24f, 9f, organic)
-                    p.seg(32f, -bodyHeight + 12f, 51f, -bodyHeight - 23f, 9f, organic)
-                    p.circle(-49f, -bodyHeight - 24f, 10f, team)
-                    p.circle(51f, -bodyHeight - 23f, 10f, team)
-                }
-            }
+            EraArt.COMBUSTION -> combustionVariant(elite, team, walk, atk)
+            EraArt.GALVANIC -> galvanicVariant(elite, team, walk, atk)
+            EraArt.SWARM -> swarmVariant(elite, team, walk, atk)
+            EraArt.BIOTECH -> biotechVariant(elite, team, walk, atk)
             else -> return
+        }
+    }
+
+    /** Spalinowy transporter i ciężki czołg: pas drużyny to cały pancerz, nie nalepka. */
+    private fun combustionVariant(elite: Boolean, team: Int, walk: Float, atk: Float) {
+        val armor = 0xFF545D60.toInt()
+        val shade = 0xFF30383D.toInt()
+        val copper = 0xFFD9A34F.toInt()
+        val kick = Motion.recoil(atk)
+        if (elite) {
+            tracks(-51f, 51f, -21f, 0f, walk, 6)
+            cv.save()
+            cv.rotate(-rock(walk, atk), -35f, -21f)
+            // Silnik, chłodnica i zwarte gąsienice mieszczą się w szerokości czołgu bazowego.
+            p.rect(-38f, -74f, -30f, -47f, shade)
+            p.rr(-40f, -78f, -28f, -73f, 2f, armor)
+            p.quad(-52f, -23f, -44f, -49f, 31f, -49f, 52f, -23f); p.shape(team)
+            p.quad(-52f, -23f, -46f, -31f, 50f, -31f, 52f, -23f); p.shape(dark(team, 0.24f))
+            p.segF(-40f, -46f, 30f, -46f, 2f, light(team, 0.32f))
+            if (p.hi) {
+                for (i in 0..3) p.segF(-42f + i * 5f, -38f, -42f + i * 5f, -32f, 1.3f, shade)
+                p.rivets(-43f, -27f, 42f, 11, 1.1f, copper)
+            }
+            // Wieża ma krótkie podwójne uzbrojenie, zamiast luf wykraczających poza kartę.
+            p.seg(10f - kick * 6f, -65f, 57f - kick * 6f, -68f, 6f, armor)
+            p.seg(15f - kick * 6f, -55f, 53f - kick * 6f, -54f, 4f, shade)
+            p.quad(-29f, -49f, -23f, -76f, 14f, -76f, 27f, -50f); p.shape(team)
+            p.rr(-20f, -72f, 17f, -63f, 3f, light(team, 0.18f))
+            p.rr(-18f, -82f, -3f, -76f, 2f, shade)
+            p.circle(13f, -59f, 4f, copper)
+            muzzle(60f - kick * 6f, -68f, atk, 1f)
+            cv.restore()
+        } else {
+            tracks(-46f, 45f, -18f, 0f, walk, 5)
+            cv.save()
+            cv.rotate(-rock(walk, atk), -31f, -18f)
+            p.rect(-32f, -70f, -25f, -41f, shade)
+            p.rect(-34f, -72f, -23f, -67f, armor)
+            p.quad(-46f, -19f, -38f, -46f, 27f, -46f, 46f, -22f); p.shape(team)
+            p.quad(-45f, -21f, -39f, -29f, 44f, -29f, 46f, -22f); p.shape(dark(team, 0.22f))
+            p.rr(-18f, -61f, 20f, -43f, 5f, team)
+            p.rr(-12f, -58f, 13f, -53f, 2f, light(team, 0.25f))
+            p.seg(14f - kick * 5f, -56f, 51f - kick * 5f, -60f, 5f, armor)
+            p.circle(52f - kick * 5f, -60f, 5f, shade)
+            if (p.hi) {
+                p.rivets(-37f, -25f, 35f, 8, 1f, copper)
+                for (i in 0..2) p.segF(-39f + i * 5f, -40f, -39f + i * 5f, -34f, 1.2f, shade)
+            }
+            muzzle(57f - kick * 5f, -60f, atk, 0.8f)
+            cv.restore()
+        }
+    }
+
+    /** Ciężki kroczący generator oraz elitarna platforma lewitująca. */
+    private fun galvanicVariant(elite: Boolean, team: Int, walk: Float, atk: Float) {
+        val metal = 0xFF566575.toInt()
+        val shade = 0xFF2D3F50.toInt()
+        val arc = 0xFF8AEBEF.toInt()
+        val kick = Motion.recoil(atk)
+        if (elite) {
+            // Typ HOVER: dysze w powietrzu, bez stóp; podlega animacji upadku HOVER.
+            val hover = sin(time * 3.6f + phase) * 2f * (1f - crashed)
+            cv.save()
+            cv.translate(0f, hover + crashed * 3f)
+            p.glow(0f, -16f, 43f * (1f - crashed * 0.35f), 0x666ADCE8)
+            for (i in 0..1) {
+                val x = if (i == 0) -34f else 34f
+                p.rr(x - 13f, -29f, x + 13f, -15f, 6f, shade)
+                p.circleF(x, -17f, 5f, arc)
+                if (p.hi) p.circleF(x, -17f, 2.5f, 0xFFEFFFFF.toInt())
+            }
+            p.quad(-49f, -31f, -33f, -58f, 31f, -58f, 49f, -31f); p.shape(team)
+            p.quad(-42f, -31f, -35f, -40f, 36f, -40f, 42f, -31f); p.shape(dark(team, 0.22f))
+            p.rr(-23f, -55f, 20f, -41f, 6f, metal)
+            p.circle(0f, -49f, 10f, arc)
+            p.circleF(0f, -49f, 4f, shade)
+            p.seg(-32f, -54f, -45f, -65f, 5f, team)
+            p.seg(30f, -54f, 43f, -65f, 5f, team)
+            if (p.hi) {
+                p.circle(-45f, -65f, 5f, arc); p.circle(43f, -65f, 5f, arc)
+                p.segF(-37f, -45f, 35f, -45f, 1.8f, light(team, 0.45f))
+            }
+            p.seg(14f - kick * 5f, -37f, 51f - kick * 5f, -37f, 4f, shade)
+            p.segF(25f - kick * 5f, -37f, 50f - kick * 5f, -37f, 1.5f, arc)
+            muzzle(53f - kick * 5f, -37f, atk, 0.85f)
+            cv.restore()
+        } else {
+            val left = sin(walk + phase) * 6f * stride
+            val right = sin(walk + phase + Motion.PI) * 6f * stride
+            p.seg(-17f, -37f, -26f + left, -18f, 10f, shade)
+            p.seg(-26f + left, -18f, -33f + left, -4f, 7f, metal)
+            p.rr(-43f + left, -6f, -24f + left, 0f, 3f, team)
+            p.seg(17f, -37f, 25f + right, -18f, 10f, shade)
+            p.seg(25f + right, -18f, 33f + right, -4f, 7f, metal)
+            p.rr(23f + right, -6f, 43f + right, 0f, 3f, team)
+            cv.save()
+            cv.translate(-kick * 3f, sin(walk * 2f + phase) * stride)
+            p.quad(-29f, -40f, -23f, -79f, 20f, -79f, 30f, -40f); p.shape(team)
+            p.quad(-26f, -43f, -20f, -53f, 23f, -53f, 27f, -43f); p.shape(dark(team, 0.2f))
+            p.rr(-18f, -75f, 17f, -58f, 6f, metal)
+            p.circle(0f, -66f, 11f, arc)
+            p.circleF(0f, -66f, 4f, shade)
+            p.seg(-23f, -73f, -31f, -88f, 5f, shade)
+            p.seg(20f, -73f, 29f, -88f, 5f, shade)
+            if (p.hi) {
+                p.circle(-31f, -88f, 5f, arc); p.circle(29f, -88f, 5f, arc)
+                p.segF(-22f, -53f, 22f, -53f, 1.6f, light(team, 0.4f))
+            }
+            p.rr(19f - kick * 5f, -61f, 44f - kick * 5f, -49f, 3f, team)
+            p.seg(42f - kick * 5f, -55f, 52f - kick * 5f, -55f, 3f, shade)
+            muzzle(54f - kick * 5f, -55f, atk, 0.8f)
+            cv.restore()
+        }
+    }
+
+    /** Rój: mały nosiciel dronów i skrzydlaty okręt dowodzenia. */
+    private fun swarmVariant(elite: Boolean, team: Int, walk: Float, atk: Float) {
+        val shade = 0xFF293E59.toInt()
+        val arc = 0xFF8DDEEB.toInt()
+        val width = if (elite) 50f else 39f
+        val kick = Motion.recoil(atk)
+        val hover = sin(time * 4f + phase) * 2.1f * (1f - crashed)
+        cv.save()
+        cv.translate(0f, hover + crashed * 2f)
+        p.glow(0f, -17f, width * 0.9f * (1f - crashed * 0.4f), 0x5551DCE8)
+        // Skrzydła i dysze: w locie nie ma nóg ani gąsienic.
+        p.quad(-width, -29f, -width + 8f, -50f, width - 9f, -50f, width, -29f); p.shape(team)
+        p.quad(-width - 4f, -26f, -width + 13f, -34f, width - 13f, -34f, width + 4f, -26f)
+        p.shape(dark(team, 0.19f))
+        p.rr(-22f, -42f, 20f, -23f, 8f, shade)
+        p.rr(-14f, -37f, 13f, -28f, 4f, team)
+        p.circleF(2f, -33f, 4f, arc)
+        for (i in 0..1) {
+            val x = if (i == 0) -width + 12f else width - 12f
+            p.rr(x - 8f, -29f, x + 8f, -18f, 5f, shade)
+            p.circleF(x, -20f, 4f, arc)
+            if (p.hi) p.segF(x - 4f, -25f, x + 4f, -25f, 1.4f, light(team, 0.4f))
+        }
+        // Autonomiczne satelity utrzymują zwartą formację także na karcie wyboru.
+        val count = if (elite) 3 else 2
+        for (i in 0 until count) {
+            val x = (i - (count - 1) * 0.5f) * (if (elite) 31f else 37f)
+            val y = -57f - ((i + 1) % 2) * 5f + sin(time * 3f + i + phase) * 2f
+            p.tri(x - 9f, y + 3f, x, y - 8f, x + 9f, y + 3f); p.shape(team)
+            p.circleF(x, y, 3f, arc)
+            if (p.hi) {
+                p.segF(x - 11f, y + 4f, x + 11f, y + 4f, 1.3f, shade)
+                p.circleF(x, y - 1f, 1.3f, 0xFFFFFFFF.toInt())
+            }
+        }
+        if (elite) {
+            p.rr(-16f, -54f, 13f, -44f, 3f, team)
+            p.circle(0f, -49f, 5f, shade)
+            p.circleF(0f, -49f, 2.5f, arc)
+            if (p.hi) p.rivets(-37f, -31f, 37f, 7, 1f, arc)
+        }
+        p.seg(18f - kick * 4f, -39f, width + 7f - kick * 4f, -39f, 3.5f, shade)
+        muzzle(width + 9f - kick * 4f, -39f, atk, if (elite) 0.9f else 0.7f)
+        cv.restore()
+    }
+
+    /** Biotechnika: niski chrząszcz bojowy i wyprostowany żywy kolos. */
+    private fun biotechVariant(elite: Boolean, team: Int, walk: Float, atk: Float) {
+        val shell = 0xFF456F58.toInt()
+        val shade = 0xFF25473F.toInt()
+        val glow = 0xFF8EDFB9.toInt()
+        val kick = Motion.recoil(atk)
+        if (elite) {
+            // Mechaniczne stawy i stopy: śmierć używa obniżenia korpusu Body.MECH.
+            for (i in 0..1) {
+                val sign = if (i == 0) -1f else 1f
+                val step = sin(walk + phase + i * Motion.PI) * 7f * stride
+                val hip = sign * 18f
+                p.seg(hip, -43f, hip + sign * 11f + step, -22f, 10f, shade)
+                p.seg(hip + sign * 11f + step, -22f, hip + sign * 19f + step, -5f, 8f, shell)
+                p.rr(hip + sign * 19f + step - 11f, -7f,
+                    hip + sign * 19f + step + 11f, 0f, 3f, team)
+            }
+            cv.save()
+            cv.translate(-kick * 3f, sin(walk * 2f + phase) * stride)
+            p.quad(-33f, -42f, -25f, -92f, 19f, -96f, 36f, -44f); p.shape(shell)
+            p.quad(-30f, -43f, -21f, -83f, 22f, -85f, 32f, -44f); p.shape(team)
+            p.quad(-25f, -49f, -19f, -61f, 24f, -63f, 28f, -48f); p.shape(dark(team, 0.19f))
+            p.rr(-12f, -82f, 13f, -64f, 7f, shell)
+            p.circle(2f, -72f, 9f, glow)
+            p.circleF(2f, -72f, 4f, shade)
+            for (i in 0..2) {
+                val x = -21f + i * 20f
+                p.tri(x - 8f, -88f, x, -105f - (i % 2) * 4f, x + 8f, -88f); p.shape(team)
+            }
+            p.seg(-26f, -79f, -42f, -86f, 7f, shell)
+            p.seg(24f, -79f, 39f, -85f, 7f, shell)
+            p.circle(-42f, -86f, 7f, team); p.circle(39f, -85f, 7f, team)
+            if (p.hi) {
+                p.segF(-22f, -54f, 24f, -55f, 1.7f, glow)
+                p.rivets(-25f, -46f, 25f, 7, 1f, shade)
+            }
+            p.seg(22f - kick * 4f, -69f, 48f - kick * 4f, -68f, 4f, shell)
+            muzzle(50f - kick * 4f, -68f, atk, 0.75f)
+            cv.restore()
+        } else {
+            // Naprzemienne kroki sześciu nóg, bez skoku fazy przy zatrzymaniu.
+            for (i in 0..2) {
+                val x = -26f + i * 25f
+                val step = sin(walk + phase + i * Motion.PI * 0.75f) * 5f * stride
+                p.seg(x, -29f, x - 10f + step, -12f, 8f, shell)
+                p.seg(x - 10f + step, -12f, x - 13f + step, -3f, 5f, shade)
+                p.seg(x + 7f, -29f, x + 16f - step, -11f, 7f, shell)
+                p.seg(x + 16f - step, -11f, x + 19f - step, -3f, 5f, shade)
+            }
+            cv.save()
+            cv.translate(-kick * 3f, sin(walk * 2f + phase) * stride)
+            p.quad(-40f, -33f, -29f, -64f, 27f, -64f, 41f, -31f); p.shape(shell)
+            p.quad(-36f, -34f, -25f, -58f, 25f, -59f, 38f, -33f); p.shape(team)
+            p.quad(-32f, -36f, -27f, -43f, 33f, -44f, 36f, -34f); p.shape(dark(team, 0.2f))
+            for (i in 0..2) {
+                val x = -24f + i * 23f
+                p.tri(x - 8f, -59f, x, -75f - (i % 2) * 5f, x + 8f, -59f); p.shape(team)
+            }
+            p.circle(24f, -44f, 9f, glow)
+            p.circleF(27f, -44f, 3.4f, shade)
+            if (p.hi) {
+                p.segF(-28f, -48f, 15f, -49f, 1.7f, glow)
+                p.circleF(-10f, -45f, 3f, shade)
+                p.circleF(1f, -45f, 3f, shade)
+            }
+            p.seg(25f - kick * 4f, -39f, 46f - kick * 4f, -39f, 4f, shell)
+            muzzle(48f - kick * 4f, -39f, atk, 0.7f)
+            cv.restore()
         }
     }
 
