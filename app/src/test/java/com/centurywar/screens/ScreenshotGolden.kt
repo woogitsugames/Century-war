@@ -9,11 +9,12 @@ import kotlin.math.max
 
 /**
  * Wzorce są wersjonowane. Zwykły test nigdy ich nie nadpisuje.
- * Porównanie ignoruje drobne różnice rasteryzacji i jawnie zamaskowaną animację.
+ * Porównanie ignoruje tylko drobne różnice rasteryzacji (zrzuty z dt=0 są deterministyczne,
+ * więc żaden obszar nie jest maskowany).
  */
 internal object ScreenshotGolden {
     const val CHANNEL_TOLERANCE = 20
-    const val MAX_CHANGED_FRACTION = 0.005
+    const val MAX_CHANGED_FRACTION = 0.001
 
     data class Comparison(
         val sameSize: Boolean,
@@ -27,11 +28,6 @@ internal object ScreenshotGolden {
         val passes: Boolean
             get() = sameSize && inspectedPixels > 0L && changedFraction <= maxChangedFraction
     }
-
-    /** Środkowy pas pola bitwy może zawierać animowane jednostki, ale nie HUD. */
-    private fun masked(name: String, y: Int, height: Int): Boolean =
-        name.endsWith("_battle_hud") &&
-            y >= (height * 0.22f).toInt() && y < (height * 0.68f).toInt()
 
     private fun delta(a: Int, b: Int): Int = max(
         max(abs(Color.red(a) - Color.red(b)), abs(Color.green(a) - Color.green(b))),
@@ -53,12 +49,7 @@ internal object ScreenshotGolden {
         val newLine = IntArray(width)
         var changed = 0L
         var inspected = 0L
-        var ignored = 0L
         for (y in 0 until height) {
-            if (masked(name, y, actual.height)) {
-                ignored += width
-                continue
-            }
             expected.getPixels(oldLine, 0, width, 0, y, width, 1)
             actual.getPixels(newLine, 0, width, 0, y, width, 1)
             for (x in 0 until width) {
@@ -70,12 +61,12 @@ internal object ScreenshotGolden {
             sameSize = expected.width == actual.width && expected.height == actual.height,
             inspectedPixels = inspected,
             changedPixels = changed,
-            maskedPixels = ignored,
+            maskedPixels = 0L,
             maxChangedFraction = maxChangedFraction,
         )
     }
 
-    /** Czerwony = regresja, granatowy = maska, ciemny = zgodny piksel. */
+    /** Czerwony = regresja, ciemny = zgodny piksel. */
     fun renderDiff(
         expected: Bitmap,
         actual: Bitmap,
@@ -95,7 +86,6 @@ internal object ScreenshotGolden {
                 diffLine[x] = when {
                     x >= expected.width || x >= actual.width ||
                         y >= expected.height || y >= actual.height -> Color.RED
-                    masked(name, y, actual.height) -> Color.rgb(27, 44, 82)
                     delta(oldLine[x], newLine[x]) > channelTolerance -> Color.rgb(255, 25, 65)
                     else -> {
                         val p = newLine[x]

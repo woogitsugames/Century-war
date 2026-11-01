@@ -6,6 +6,7 @@ import com.centurywar.engine.Quality
 import com.centurywar.meta.Profile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,5 +39,23 @@ class SettingsNotificationsTest {
         val saved = Profile(file).also { it.load() }
         assertFalse(saved.notifications)
         assertEquals(7, saved.notifyHour)
+    }
+
+    /** Wiersze nawigacyjne (dostępność, podpowiedzi, o grze) mają podpis na przycisku. */
+    @Test fun navigationButtonsHaveLabels() {
+        val file = File(Files.createTempDirectory("settings").toFile(), "profile.json")
+        val host = object : Host {
+            override fun vibrate(ms: Long) {}
+            override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
+            override fun applyRenderScale(scale: Float) {}
+            override fun applyFrameRate(fps: Int) {}
+            override fun exit() {}
+        }
+        val screen = SettingsScreen(Game(host, Profile(file), Quality.HIGH))
+        screen.update(0f)
+        for (id in intArrayOf(14, 15)) {
+            val button = screen.buttons.first { it.id == id }
+            assertTrue("Przycisk $id bez podpisu", button.label.isNotBlank())
+        }
     }
 }

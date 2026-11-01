@@ -1784,6 +1784,7 @@ class ScreenshotTest {
             )
             val requested = System.getenv("CW_SCREENSHOT_DEVICE")?.trim().orEmpty()
             val selected = if (requested.isEmpty()) devices else devices.filterKeys { it == requested }
+            require(selected.isNotEmpty()) { "Nieznane CW_SCREENSHOT_DEVICE=$requested" }
             for ((tag, dims) in selected) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1817,6 +1818,8 @@ class ScreenshotTest {
                 }
 
                 g.setScreen(MenuScreen(g)); capture("menu", 8)
+                // Zapowiedzi epok jako widziane: inaczej oba zrzuty kampanii pokazują nakładkę.
+                for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
                 val campaign = CampaignScreen(g)
                 g.setScreen(campaign); capture("campaign")
                 field(campaign, "selected").set(campaign, Campaign.stages[2])
@@ -1870,6 +1873,8 @@ class ScreenshotTest {
                 (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
                 (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
                 field(g, "achievementSeconds").setFloat(g, 0f)
+                // Zrzut kampanii ma pokazać mapę, nie nakładkę zapowiedzi epoki.
+                for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
 
                 for (lang in arrayOf("pl", "de")) for (scale in intArrayOf(100, 130)) {
                     g.profile.lang = lang

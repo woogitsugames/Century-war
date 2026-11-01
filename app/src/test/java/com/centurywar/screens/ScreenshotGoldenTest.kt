@@ -70,19 +70,21 @@ class ScreenshotGoldenTest {
     }
 
     @Test
-    fun animationIsMaskedButHudRemainsChecked() {
-        val a = image()
-        val b = image()
+    fun battleHudIsComparedWithoutMask() {
+        val a = image(100, 100)
+        val b = image(100, 100)
         try {
-            b.setPixel(10, 9, Color.WHITE)
             val name = "foldOpen_reg100_battle_hud"
-            val ignored = ScreenshotGolden.compare(a, b, name)
-            assertTrue(ignored.passes)
-            assertTrue(ignored.maskedPixels > 0)
-            b.setPixel(10, 0, Color.WHITE)
-            val outside = ScreenshotGolden.compare(a, b, name)
-            assertFalse(outside.passes)
-            assertEquals(1L, outside.changedPixels)
+            // Środek pola bitwy nie jest już maskowany: 11 pikseli > 0,1% z 10 000.
+            for (i in 0 until 11) b.setPixel(10 + i, 50, Color.WHITE)
+            val result = ScreenshotGolden.compare(a, b, name)
+            assertFalse(result.passes)
+            assertEquals(0L, result.maskedPixels)
+            assertEquals(11L, result.changedPixels)
+            assertEquals(10_000L, result.inspectedPixels)
+            // Do 0,1% zmian (10 pikseli) mieści się w tolerancji rasteryzacji.
+            b.setPixel(10, 50, Color.rgb(20, 50, 100))
+            assertTrue(ScreenshotGolden.compare(a, b, name).passes)
         } finally {
             a.recycle()
             b.recycle()
