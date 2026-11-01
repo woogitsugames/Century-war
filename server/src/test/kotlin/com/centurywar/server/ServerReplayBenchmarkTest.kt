@@ -15,7 +15,8 @@ import java.nio.file.Path
 
 /**
  * Ręczny benchmark granicy protokołu, uruchamiany wyłącznie przez SERVER_BENCH=true.
- * Ogromne HP bazy pozwala syntetycznej grze Endless dotrwać do twardego limitu.
+ * Niefizyczna baza z nieskończonym HP omija procentową presję Endless po fali 120.
+ * Tylko ten przypadek techniczny może odtworzyć 432 000 kroków bez zmian :sim.
  * Konfiguracja NIE jest zgłoszeniem akceptowanym przez API rankingu.
  */
 @EnabledIfEnvironmentVariable(named = "SERVER_BENCH", matches = "true")
@@ -26,7 +27,7 @@ class ServerReplayBenchmarkTest {
             Mode.ENDLESS,
             seed = 121_432_000L,
             aiPower = 1f,
-            playerBonuses = Bonuses(baseHpMul = 1.0e24f),
+            playerBonuses = Bonuses(baseHpMul = Float.POSITIVE_INFINITY),
         )
         val recording = Battle(config)
         recording.playerAi = null
