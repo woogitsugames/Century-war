@@ -205,9 +205,10 @@ class ScoreClient(
                 if (!enabled || !profile.globalRanking) return@execute
                 val topUri = "/v1/top?board=" + board + "&period=" + period
                 val top = parseEntries(get(topUri))
-                val aroundJson = if (validPlayerId(player)) {
+                // Stary gracz bez powiązanego sekretu może nadal czytać publiczny TOP.
+                val aroundJson = if (validPlayerId(player)) runCatching {
                     JSONObject(get("/v1/around?board=" + board + "&period=" + period + "&player=" + player))
-                } else null
+                }.getOrNull() else null
                 val around = if (aroundJson != null) parseEntries(aroundJson) else emptyList()
                 val self = aroundJson?.optString("self", "") ?: ""
                 if (enabled) cache[cacheKey] = GlobalRankingView(top, around,
