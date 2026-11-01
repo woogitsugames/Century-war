@@ -122,5 +122,6 @@ Tura 7 (118–122) scalona. Repozytorium: `woogitsugames/century-war`, baza `cla
 | Fala | Paczki |
 |---|---|
 | 1 (11 naraz) | 123 nakładki na Foldzie, 124 sztandary, 126 poziomy trudności, 127 osobowości AI, 128 wersja release, 129 test klient–serwer, 130 osiągnięcia i misje, 131 szybsze testy, 132 tablet i 21:9, 133 pierwsze minuty, 134 Kodeks: porównanie |
-| 2 | 125 dowódca na polu bitwy, 135 karta sklepu i „Co nowego” |
-| 3 (na końcu) | 136 przegląd tłumaczeń |
+| 2 | 140 stopnie rozbudowy wież, 135 karta sklepu i „Co nowego” |
+| 3 | 125 dowódca na polu bitwy (po 140 — oba zmieniają `Replay`/`BattleSnapshot`/HUD) |
+| 4 (na końcu) | 136 przegląd tłumaczeń |
