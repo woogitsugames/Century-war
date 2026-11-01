@@ -280,9 +280,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val maxX = left + contentW - 22 * dp
         for (i in categories.indices) {
             val b = categories[i]
-            b.set(minX + categoryOffsets[i] - categoryScroll, categoryRailTop,
-                categoryWidths[i], categoryRailHeight)
-            b.visible = b.r.left >= minX - 0.5f * dp && b.r.right <= maxX + 0.5f * dp
+            val rawLeft = minX + categoryOffsets[i] - categoryScroll
+            val clippedLeft = max(minX, rawLeft)
+            val clippedRight = min(maxX, rawLeft + categoryWidths[i])
+            b.set(clippedLeft, categoryRailTop,
+                max(0f, clippedRight - clippedLeft), categoryRailHeight)
+            b.visible = b.r.width() >= 24 * dp
         }
     }
 
@@ -291,9 +294,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val maxX = left + contentW - 22 * dp
         for (i in tabs.indices) {
             val b = tabs[i]
-            b.set(minX + eraOffsets[i] - eraScroll, eraRailTop,
-                eraWidths[i], eraRailHeight)
-            b.visible = b.r.left >= minX - 0.5f * dp && b.r.right <= maxX + 0.5f * dp
+            val rawLeft = minX + eraOffsets[i] - eraScroll
+            val clippedLeft = max(minX, rawLeft)
+            val clippedRight = min(maxX, rawLeft + eraWidths[i])
+            b.set(clippedLeft, eraRailTop,
+                max(0f, clippedRight - clippedLeft), eraRailHeight)
+            b.visible = b.r.width() >= 24 * dp
         }
     }
 
