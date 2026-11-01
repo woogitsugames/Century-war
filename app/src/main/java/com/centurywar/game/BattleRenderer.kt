@@ -13,6 +13,7 @@ import com.centurywar.engine.Palette
 import com.centurywar.engine.Ui
 import com.centurywar.game.art.Backdrops
 import com.centurywar.game.art.Bases
+import com.centurywar.game.art.Banners
 import com.centurywar.game.art.Machines
 import com.centurywar.game.art.Pen
 import com.centurywar.game.art.Soldiers
@@ -28,7 +29,8 @@ import kotlin.math.sin
  * więc APK jest malutki, a obraz jest ostry w każdej rozdzielczości, od 720p po Folda.
  * W pętli renderowania nic nie jest alokowane: pędzle, ścieżki i cząsteczki są tworzone raz.
  */
-class BattleRenderer(private val g: Game, private val b: Battle) {
+class BattleRenderer(private val g: Game, private val b: Battle,
+    private val bannerId: Int = g.profile.selectedBanner) {
 
     // kamera
     var camX = 0f
@@ -155,6 +157,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private val mach = Machines(pen, men)
     private var poseOverride = false
     private val bases = Bases(pen)
+    private val banners = Banners()
     /** Nagrane korpusy baz: indeks = strona * liczba epok + epoka. */
     private val basePics = arrayOfNulls<Picture>(EraArt.entries.size * 2)
     private var basePicDetail = -1
@@ -391,13 +394,18 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         val wave = sin(time * 5f + s.index) * 6f
         val wave2 = sin(time * 5f + s.index + 1.3f) * 5f
         val flagDir = if (b.weather == Weather.WIND) b.windDirection() * s.dir else 1f
-        val fp = pen.path
-        fp.reset(); fp.moveTo(fx0, flagTop); fp.quadTo(fx0 + flagDir * 34f, flagTop - 4f + wave2, fx0 + flagDir * 70f, flagTop + 4f + wave)
-        fp.lineTo(fx0 + flagDir * 70f, flagTop + 40f + wave); fp.quadTo(fx0 + flagDir * 34f, flagTop + 32f + wave2, fx0, flagTop + 40f); fp.close()
-        pen.shape(team)
-        if (g.quality.level >= 2) {
-            pen.circle(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 8f, 0xFFF4F0E4.toInt())
-            pen.circleF(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 3.5f, team)
+        if (s.index == 0) {
+            // Sztandar zatrzaśnięty przy tworzeniu renderera; powtórki używają wariantu 0.
+            banners.draw(c, bannerId, fx0, flagTop, 70f, 40f, flagDir, wave, wave2, team)
+        } else {
+            val fp = pen.path
+            fp.reset(); fp.moveTo(fx0, flagTop); fp.quadTo(fx0 + flagDir * 34f, flagTop - 4f + wave2, fx0 + flagDir * 70f, flagTop + 4f + wave)
+            fp.lineTo(fx0 + flagDir * 70f, flagTop + 40f + wave); fp.quadTo(fx0 + flagDir * 34f, flagTop + 32f + wave2, fx0, flagTop + 40f); fp.close()
+            pen.shape(team)
+            if (g.quality.level >= 2) {
+                pen.circle(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 8f, 0xFFF4F0E4.toInt())
+                pen.circleF(fx0 + flagDir * 34f, flagTop + 18f + (wave + wave2) * 0.4f, 3.5f, team)
+            }
         }
         pen.circle(fx0, flagTop - 3f, 5f, 0xFFE8C04A.toInt())
 
