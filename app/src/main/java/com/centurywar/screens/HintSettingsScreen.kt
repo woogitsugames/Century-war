@@ -44,7 +44,7 @@ class HintSettingsScreen(g: Game) : Screen(g) {
         val step = (ph - 44 * dp) / rows.size
         val bw = min(220 * dp, pw * 0.46f)
         for (i in rows.indices) rows[i].set(panel.right - bw - 13 * dp,
-            panel.top + 24 * dp + i * step + 5 * dp, bw, min(44 * dp, step - 10 * dp))
+            panel.top + 24 * dp + i * step + 5 * dp, bw, min(48 * dp, step - 4 * dp))
         tutorial.iconId = Icons.RESTART
         reset.iconId = Icons.CHEVRONS
         eraToggle.iconId = Icons.EVOLVE
