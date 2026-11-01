@@ -34,6 +34,7 @@ class Doctrine69BattleSimTest {
     }
 
     @Test fun mirroredAiMatchesRemainBelowSixtyPercent() {
+        val problems = StringBuilder()
         for (d in tested) {
             var wins = 0
             var losses = 0
@@ -50,11 +51,11 @@ class Doctrine69BattleSimTest {
             }
             val resolved = wins + losses
             println("DOKTRYNA_69 ${d.name}: seedy=20 mecze=40 wygrane=$wins przegrane=$losses nierozstrzygniete=$unfinished skutecznosc=${if (resolved > 0) wins * 100.0 / resolved else 0.0}%")
-            assertTrue("${d.name}: za mało rozstrzygniętych meczów: $resolved",
-                resolved >= 24)
-            assertTrue("${d.name}: przewaga ponad 60%: $wins/$resolved",
-                wins * 100 <= 60 * resolved)
+            if (resolved < 24) problems.append("${d.name}: zbyt mało rozstrzygnięć ($resolved); ")
+            if (resolved > 0 && wins * 100 > 60 * resolved)
+                problems.append("${d.name}: przewaga ponad 60% ($wins/$resolved); ")
         }
+        assertTrue(problems.toString(), problems.isEmpty())
     }
 
     @Test fun sameSeedAndSideGiveSameOutcome() {
