@@ -177,9 +177,10 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     override fun render(c: Canvas) {
-        val animated = g.quality.level != Quality.LOW && !g.profile.reduceFlash
-        val time = bg.draw(c, w, h, dt, animated)
-        battleScene.draw(c, w, h, time, animated, g.quality.level)
+        val detail = g.quality.menuDetail
+        val animated = g.quality.menuAnimated && !g.profile.reduceFlash
+        val time = bg.draw(c, w, h, dt, animated, detail)
+        battleScene.draw(c, w, h, time, animated, detail)
         drawLogo(c)
         for (b in buttons) if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
         drawPlayer(c)
