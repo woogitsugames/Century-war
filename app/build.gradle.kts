@@ -1,3 +1,4 @@
+import com.centurywar.build.GeneratePlayGamesIdsTask
 import com.centurywar.build.ReleaseChecklist
 import com.centurywar.build.ReleaseChecklistInput
 import java.time.LocalDate
@@ -149,6 +150,22 @@ dependencies {
 }
 
 
+
+// XML PGS powstaje tylko z properties, osobno dla debug i release.
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        val taskName = "generate" + variant.name.replaceFirstChar { it.uppercaseChar() } + "PlayGamesIds"
+        val generator = tasks.register<GeneratePlayGamesIdsTask>(taskName) {
+            configurationFiles.from(rootProject.file("docs/store/play_games_ids.properties"))
+            releaseVariant.set(variant.buildType == "release")
+            outputDirectory.set(layout.buildDirectory.dir("generated/res/playGames/" + variant.name))
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(
+            generator, GeneratePlayGamesIdsTask::outputDirectory,
+        )
+    }
+}
+
 // Szybka ścieżka uruchamiana przez :app:quickCheck albo zadanie główne quickCheck.
 val quickCheckRequested = gradle.startParameter.taskNames.any {
     it.substringAfterLast(':') == "quickCheck"
@@ -191,7 +208,7 @@ tasks.register("quickCheck") {
 // ---- Kontrola przed publikacją ---------------------------------------------------------------
 // Nie podpinaj do zadań debug. Każdy release (APK i AAB) wymaga tej samej kontroli.
 val dailySourceFile = rootProject.file("sim/src/main/kotlin/com/centurywar/game/Modes.kt")
-val gamesIdsFile = file("src/main/res/values/games_ids.xml")
+val gamesIdsFile = layout.buildDirectory.file("generated/res/playGames/release/values/games_ids.xml").get().asFile
 val gamesManifestFile = file("src/main/AndroidManifest.xml")
 val lastVersionCodeFile = rootProject.file("release/last_version_code.txt")
 val storeDocsDir = rootProject.file("docs/store")
@@ -206,6 +223,7 @@ val releaseHasHmacKey = scoreHmacKey.isNotBlank()
 val releaseChecklist = tasks.register("releaseChecklist") {
     group = "verification"
     description = "Sprawdza konfigurację, datę i numer publikacji przed release."
+    dependsOn("generateReleasePlayGamesIds")
     inputs.files(dailySourceFile, gamesIdsFile, gamesManifestFile, lastVersionCodeFile)
     inputs.files(fileTree(storeDocsDir) { include("*.md") })
     inputs.property("releaseVersionCode", releaseVersionCode)
