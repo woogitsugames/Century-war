@@ -1,6 +1,9 @@
 package com.centurywar.server
 
+import java.io.InputStream
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 private val ADMIN_USAGE = """
     Użycie: server admin <polecenie> [argumenty]
@@ -10,7 +13,7 @@ private val ADMIN_USAGE = """
       block <UUID>                           Ukryj gracza i zablokuj nowe wyniki
       unblock <UUID>                         Przywróć widoczność gracza
       backup <plik.sqlite>                  Utwórz spójną kopię podczas pracy serwera
-      restore <plik.sqlite>                 Przywróć kopię (tylko po zatrzymaniu serwera)
+      restore <plik.sqlite|->               Przywróć kopię offline (- = stdin)
       export-csv                             Wypisz wszystkie wyniki jako CSV na stdout
       help                                   Pokaż pomoc
 """.trimIndent()
@@ -111,18 +114,30 @@ internal fun runRestore(
     database: Path,
     out: Appendable = System.out,
     err: Appendable = System.err,
+    input: InputStream = System.`in`,
 ): Int {
     if (args.size != 2 || args[0] != "restore") {
-        err.appendLine("Użycie: server admin restore <plik.sqlite>")
+        err.appendLine("Użycie: server admin restore <plik.sqlite|->")
         return 2
     }
+    var temporary: Path? = null
     return try {
-        val previous = DatabaseMaintenance.restore(Path.of(args[1]), database)
+        val snapshot = if (args[1] == "-") {
+            val db = database.toAbsolutePath().normalize()
+            Files.createDirectories(db.parent)
+            Files.createTempFile(db.parent, ".cw-stdin-", ".sqlite").also {
+                temporary = it
+                Files.copy(input, it, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } else Path.of(args[1])
+        val previous = DatabaseMaintenance.restore(snapshot, database)
         out.appendLine("restored: ${database.toAbsolutePath().normalize()}")
         if (previous != null) out.appendLine("previous-files: $previous")
         0
     } catch (e: Exception) {
         err.appendLine("Błąd przywracania: " + e.message)
         1
+    } finally {
+        temporary?.let { Files.deleteIfExists(it) }
     }
 }
