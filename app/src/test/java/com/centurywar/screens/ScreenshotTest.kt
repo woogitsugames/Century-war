@@ -233,14 +233,14 @@ class ScreenshotTest {
     /** Mapa kampanii: cztery proporcje, cofanie po osi i szczegóły etapu. */
     @Test
     fun campaignJourneyMap() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
             "foldInner" to intArrayOf(1802, 2000, 4),
             "foldOuter" to intArrayOf(904, 2316, 3),
-        )) {
+        ))) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
             for (i in 0 until 12) g.profile.stars[i] = (i % 3) + 1

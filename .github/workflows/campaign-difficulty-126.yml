@@ -1,0 +1,102 @@
+name: Kampania 126 - testy i balans
+
+on:
+  push:
+    branches: ['gpt/126-campaign-difficulty']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-126-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Kompilacja i testy JUnit
+        run: |
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+          ./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache \
+            --tests '*CampaignDifficultyTest*' \
+            --tests '*ProfileTest*' \
+            --tests '*AchievementsTest*' \
+            --tests '*LTest*' \
+            --tests '*Replay*' \
+            --tests '*Snapshot*'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campaign126-smoke
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix: { device: [phone720, foldOpen] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zrzuty wyboru trudnosci
+        env: { CW_SCREENSHOT_DEVICE: ${{ matrix.device }} }
+        run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.campaignJourneyMap*' --console=plain --no-configuration-cache
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campaign126-screenshots-${{ matrix.device }}
+          path: app/build/screenshots/*campaign_difficulty_*.png
+          if-no-files-found: warn
+
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: '01-06', stages: '1,2,3,4,5,6' }
+          - { label: '07-12', stages: '7,8,9,10,11,12' }
+          - { label: '13-18', stages: '13,14,15,16,17,18' }
+          - { label: '19-24', stages: '19,20,21,22,23,24' }
+          - { label: '25-30', stages: '25,26,27,28,29,30' }
+          - { label: '31-36', stages: '31,32,33,34,35,36' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Dwadzieścia seedow dla kazdej trudnosci
+        env:
+          BALANCE_RUN: 'true'
+          BALANCE_RUNS: '20'
+          BALANCE_STAGES: ${{ matrix.stages }}
+        run: ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignDifficultyReport*' --console=plain --no-configuration-cache --rerun-tasks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campaign126-balance-${{ matrix.label }}
+          path: |
+            app/build/balance/campaign-difficulty-126.csv
+            app/build/balance/campaign-difficulty-126.md
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
