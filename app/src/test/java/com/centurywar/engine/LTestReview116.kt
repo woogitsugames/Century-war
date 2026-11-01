@@ -180,14 +180,17 @@ class LTestReview116 {
     @Test
     fun newPluralsAndShortActionLabels() {
         val keys = reviewKeys()
-        val action = Regex(
-            """_(?:btn|button|tab|cta|short|back|next|start|cancel|ok|yes|no|retry|done|apply|continue|save|load|export|import|restore)$"""
+        // Wyłącznie rzeczywiste przyciski. Np. profile_backup_export jest
+        // opisem wiersza ustawień, a nie krótką etykietą akcji.
+        val shortActions = setOf(
+            "wn_continue", "profile_export_action", "profile_import_action",
+            "profile_restore_action", "bs104_stats", "bs104_chart",
         )
         val saved = L.lang
         try {
             for (key in keys) {
                 val row = L.raw(key)!!
-                if (action.containsMatchIn(key)) {
+                if (key in shortActions) {
                     for (i in L.CODES.indices) {
                         val value = row[i]
                         assertTrue(key + "/" + L.CODES[i] + ": etykieta ma " +
