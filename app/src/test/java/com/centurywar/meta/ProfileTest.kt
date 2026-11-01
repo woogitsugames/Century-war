@@ -36,10 +36,13 @@ class ProfileTest {
 
         profile.enableGlobalRanking()
         val firstId = profile.playerId
+        val firstSecret = profile.playerSecret
+        assertTrue(ScoreClient.validInstallationSecret(firstSecret))
         assertTrue(profile.globalRanking)
         assertTrue(java.util.UUID.fromString(firstId).version() == 4)
         profile.reset()
         assertEquals(firstId, profile.playerId)
+        assertEquals(firstSecret, profile.playerSecret)
         assertTrue(profile.globalRanking)
 
         profile.disableGlobalRanking()
@@ -48,8 +51,10 @@ class ProfileTest {
         val fromFile = Profile(file).also { Profile.awaitHintWrites(); it.load() }
         assertFalse(fromFile.globalRanking)
         assertEquals(firstId, fromFile.playerId)
+        assertEquals(firstSecret, fromFile.playerSecret)
         fromFile.renewRankingId()
         assertTrue(fromFile.playerId != firstId)
+        assertTrue(fromFile.playerSecret != firstSecret)
     }
 
     @Test
@@ -60,6 +65,7 @@ class ProfileTest {
         remote.medals = 250
         assertFalse(remote.toCloudJson().contains("\"globalRanking\""))
         assertFalse(remote.toCloudJson().contains("\"playerId\""))
+        assertFalse(remote.toCloudJson().contains("\"playerSecret\""))
 
         local.fromJson(remote.toJson())
         assertFalse(local.globalRanking)
@@ -68,13 +74,41 @@ class ProfileTest {
 
         local.enableGlobalRanking()
         val id = local.playerId
+        val localSecret = local.playerSecret
         val other = Profile(tmpFile())
         other.enableGlobalRanking()
         other.medals = 300
         local.fromJson(other.toJson())
         assertTrue(local.globalRanking)
         assertEquals(id, local.playerId)
+        assertEquals(localSecret, local.playerSecret)
         assertEquals(300, local.medals)
+    }
+
+    @Test
+    fun missingOrMalformedSecretMigratesWithSamePlayerId() {
+        val file = tmpFile()
+        val profile = Profile(file)
+        profile.enableGlobalRanking()
+        Profile.awaitHintWrites()
+        val id = profile.playerId
+        val originalSecret = profile.playerSecret
+        val old = JSONObject(profile.toJson()).apply { remove("playerSecret") }
+        file.writeText(old.toString())
+        val migrated = Profile(file)
+        migrated.load()
+        assertEquals(id, migrated.playerId)
+        assertTrue(ScoreClient.validInstallationSecret(migrated.playerSecret))
+        Profile.awaitHintWrites()
+        assertEquals(migrated.playerSecret,
+            Profile(file).also { it.load() }.playerSecret)
+        assertTrue(migrated.playerSecret != originalSecret)
+        val bad = JSONObject(migrated.toJson()).put("playerSecret", "wrong")
+        file.writeText(bad.toString())
+        val sanitized = Profile(file)
+        sanitized.load()
+        assertEquals(id, sanitized.playerId)
+        assertTrue(ScoreClient.validInstallationSecret(sanitized.playerSecret))
     }
 
     @Test
