@@ -112,6 +112,8 @@ class CampaignScreen(g: Game) : Screen(g) {
         } else {
             max(310 * dp, viewportW * 0.54f)
         }
+        // Węzeł (z większym węzłem co czwarty) nie może być szerszy niż odstęp między etapami.
+        nodeR = min(nodeR, regionSpan / 4f / 3.3f)
         val visibleSpan = if (portraitMap) viewportH else viewportW
         val previousMax = maxScroll
         val previousScroll = scroll
