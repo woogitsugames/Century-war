@@ -1,0 +1,36 @@
+name: Regeneracja zlotej powtorki 122
+on:
+  push:
+    branches: ['gpt/122-endless-modifiers']
+    paths:
+      - '.github/workflows/regenerate-golden-122.yml'
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Odtworz wzorce
+        continue-on-error: true
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :sim:regenerateGolden -PserverOnly=true -PgoldenReason="122 ARMORED_FOE w Endless" --no-configuration-cache --console=plain
+      - name: Zapisz wzorce na galezi zlecenia
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add sim/src/test/resources/golden docs/BALANCE.md
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "Brak zmian wzorcow"
+          else
+            git -c user.name='Century War CI' -c user.email='actions@users.noreply.github.com' commit -m "Odswiez zlote powtorki po naprawie Endless"
+            git push origin HEAD:gpt/122-endless-modifiers
+          fi
