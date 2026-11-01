@@ -116,6 +116,7 @@ object L {
         putAll(part71())
         putAll(part70())
         putAll(part72())
+        putAll(part84())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1392,4 +1393,22 @@ object L {
         "day_mirror" to t("Dzień lustrzanych armii", "Mirror Armies Day", "Tag der Spiegelarmeen", "Día de ejércitos espejo", "Jour des armées miroirs", "Giorno degli eserciti specchio", "Dia dos exércitos espelho", "День дзеркальних армій", "Dag van spiegellegers", "Ayna Ordular Günü"),
         "day_mirror_d" to t("Równe limity armii i wież. AI ma siłę 100% i jeden styl dowódcy.", "Equal army and turret limits. AI power is 100%, with one commander style.", "Gleiche Armee- und Turmlimits. KI-Stärke 100 %, ein Kommandantenstil.", "Límites iguales de ejército y torres. IA al 100 % y un estilo de mando.", "Mêmes limites d'armée et de tours. IA à 100 % et un seul style de commandement.", "Limiti uguali per truppe e torri. IA al 100% e stesso stile di comando.", "Limites iguais de tropas e torres. IA a 100% e mesmo estilo de comando.", "Однакові ліміти військ і веж. Сила ШІ 100% та спільний стиль командира.", "Gelijke leger- en torenlimieten. AI op 100% en één commandostijl.", "Ordu ve kule sınırları eşit. Yapay zekâ %100 güçte, tek komutan tarzı."),
     )
+
+    /** Zlecenie 84: czytelniejszy interfejs i przyczyny porażki. */
+    private fun part84(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "battle84_enemy_era" to t("Wróg: %s", "Enemy: %s", "Feind: %s", "Enemigo: %s", "Ennemi : %s", "Nemico: %s", "Inimigo: %s", "Ворог: %s", "Vijand: %s", "Düşman: %s"),
+        "battle84_barrage_short" to t("Ostrzał", "Barrage", "Salve", "Salva", "Salve", "Salva", "Salva", "Обстріл", "Salvo", "Atış"),
+        "battle84_rally_short" to t("Zryw", "Rally", "Sturm", "Impulso", "Élan", "Slancio", "Ímpeto", "Ривок", "Aanval", "Hücum"),
+        "battle84_armory_short" to t("Zbroj.", "Armory", "Rüst.", "Armería", "Arsenal", "Armeria", "Arsenal", "Арсен.", "Arsenaal", "Cephane"),
+        "battle84_watch_replay" to t("Obejrzyj powtórkę", "Watch replay", "Replay ansehen", "Ver repetición", "Voir le replay", "Guarda replay", "Ver repetição", "Переглянути повтор", "Herhaling bekijken", "Tekrarı izle"),
+        "battle84_missing_xp" to t("Brakuje %d XP", "Need %d XP", "Noch %d XP", "Faltan %d XP", "Il manque %d XP", "Mancano %d XP", "Faltam %d XP", "Бракує %d XP", "Nog %d XP nodig", "%d XP eksik"),
+        "battle84_kept" to t("Zapisano: %d zabitych, postęp %d misji", "Saved: %d kills, %d missions advanced", "Gespeichert: %d Kills, %d Missionen", "Guardado: %d bajas, %d misiones", "Conservé : %d éliminations, %d missions", "Salvati: %d abbattimenti, %d missioni", "Guardado: %d baixas, %d missões", "Збережено: %d убивств, %d місій", "Bewaard: %d verslagen, %d missies", "Kaydedildi: %d skor, %d görev"),
+        "battle84_cause_surrender" to t("Bitwę zakończono kapitulacją", "Battle ended by surrender", "Die Schlacht endete durch Aufgabe", "La batalla terminó por rendición", "La bataille s'est terminée par un abandon", "Battaglia terminata con la resa", "A batalha terminou com rendição", "Битву завершено капітуляцією", "Gevecht geëindigd door overgave", "Savaş teslimiyetle bitti"),
+        "battle84_cause_era" to t("Wróg osiągnął wyższą epokę", "Enemy reached a higher era", "Der Feind erreichte eine höhere Epoche", "El enemigo alcanzó una era superior", "L'ennemi a atteint une ère supérieure", "Il nemico ha raggiunto un'epoca superiore", "O inimigo chegou a uma era superior", "Ворог досяг вищої епохи", "Vijand bereikte een hoger tijdperk", "Düşman daha ileri bir çağa ulaştı"),
+        "battle84_cause_gold" to t("Pozostało %d niewydanego złota", "%d gold left unspent", "%d Gold nicht ausgegeben", "Quedaron %d de oro sin gastar", "%d pièces d'or non dépensées", "%d oro rimasto inutilizzato", "%d de ouro por gastar", "Залишилося %d невитраченого золота", "%d goud niet uitgegeven", "%d altın harcanmadı"),
+        "battle84_cause_turrets" to t("Nie zbudowano żadnej wieży", "No defensive turret was built", "Kein Verteidigungsturm gebaut", "No se construyeron torres", "Aucune tour défensive construite", "Nessuna torre difensiva costruita", "Nenhuma torre defensiva construída", "Не збудовано жодної вежі", "Geen verdedigingstoren gebouwd", "Savunma kulesi kurulmadı"),
+        "battle84_cause_army" to t("Wysłano %d jednostek, wróg %d", "You deployed %d units, enemy %d", "Eigene Einheiten: %d, Gegner: %d", "Tus unidades: %d, enemigo: %d", "Vos unités : %d, ennemi : %d", "Unità schierate: %d, nemico: %d", "Unidades enviadas: %d, inimigo: %d", "Ваших бійців: %d, ворожих: %d", "Eigen troepen: %d, vijand: %d", "Birliklerin: %d, düşman: %d"),
+        "battle84_cause_eco" to t("Zdobyto %d złota, wróg %d", "Gold earned: %d, enemy: %d", "Gold verdient: %d, Feind: %d", "Oro ganado: %d, enemigo: %d", "Or gagné : %d, ennemi : %d", "Oro guadagnato: %d, nemico: %d", "Ouro ganho: %d, inimigo: %d", "Здобуто золота: %d, ворог: %d", "Goud verdiend: %d, vijand: %d", "Kazanılan altın: %d, düşman: %d"),
+    )
+
 }
