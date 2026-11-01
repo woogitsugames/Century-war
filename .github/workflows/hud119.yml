@@ -27,6 +27,26 @@ jobs:
       - name: Testy 110/119 i Golden 100
         run: |
           ./gradlew :app:testDebugUnitTest --tests '*LeftHandedHudTest*' --tests '*LeftHandedHudScreenshotTest*' --tests '*ScreenshotTest.regression100*' --tests '*ScreenshotGoldenTest*' --console=plain --no-configuration-cache
+      - name: Krytyczne testy regresyjne rozgrywki
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*LTest*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
+            --console=plain --no-configuration-cache
+      - name: APK debug do testów na telefonie
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud119-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 14
       - name: Artefakty testów i zrzuty
         if: always()
         uses: actions/upload-artifact@v4
