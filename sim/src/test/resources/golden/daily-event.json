@@ -2,7 +2,7 @@
   "id": "daily-event",
   "config": {"mode":"DAILY","seed":21156,"aiPower":1.0,"startEra":4,"maxEra":7,"modifiers":["RANGED_HORDE","SLOW_XP","MERCENARIES"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":14,"abilityCdMul":1.0,"turretSlots":3,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":"ECONOMIST","variantsEnabled":true,"weather":"NIGHT","weekly":-1,"weeklyCard":null,"dailyEvent":"MIRROR_ARMY"},
   "replayVersion": 5,
-  "replay": "BQXwFRIAAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAA1wEIaQAAoAEAAEEAAf8BAAAjAAGdAgAABQABuwIAAPcCCw",
+  "replay": "BQXwFRMAAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAA1wEIaQAAoAEAAEEAAf8BAACgAQAAoAEAAKABAADAAgAAoAEAADcL",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -17,11 +17,12 @@
     {"step":1465,"kind":"QUEUE","argument":0},
     {"step":1530,"kind":"QUEUE","argument":1},
     {"step":1785,"kind":"QUEUE","argument":0},
-    {"step":1820,"kind":"QUEUE","argument":1},
+    {"step":1945,"kind":"QUEUE","argument":0},
     {"step":2105,"kind":"QUEUE","argument":0},
-    {"step":2110,"kind":"QUEUE","argument":1},
-    {"step":2425,"kind":"QUEUE","argument":0},
+    {"step":2265,"kind":"QUEUE","argument":0},
+    {"step":2585,"kind":"QUEUE","argument":0},
+    {"step":2745,"kind":"QUEUE","argument":0},
     {"step":2800,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":219,"winner":1,"wave":0,"steps":2800,"kills":4,"enemyKills":9,"timeBits":1111141035,"snapshotSha256":"938cda72f5cc6856155a2987fb7596fd63dc5384a860ff09084dee5230bcbc94"}
+  "expected": {"score":219,"winner":1,"wave":0,"steps":2800,"kills":4,"enemyKills":8,"timeBits":1111141035,"snapshotSha256":"87eac9ad545b80216779893dda30f32e7611c192b340d1f3a711f0317ab3abcb"}
 }

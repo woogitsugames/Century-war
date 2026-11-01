@@ -771,3 +771,42 @@ Wygenerowano aktualny wzorzec przez `:sim:regenerateGolden`
 z `-PgoldenReason="122 ARMORED_FOE w Endless"`.
 Pozostałe wzorce bez zmian. Nie zmieniano kampanii,
 `Daily.RELEASE_DAY` ani wersji protokołów; wersję rankingu aktualizuje koordynator.
+
+## Zlecenie 127 — wyraźniejsze osobowości AI (1.11.2026)
+
+Zmiany obejmują wyłącznie **decyzje** botów: bez zmian statystyk, kosztów,
+mnożników trudności i formatów zapisu. Nie dodano żadnych pól stanu ani nowych
+źródeł losowości; wybór ról nadal używa `Rng.nextAiInt`.
+
+- **ECONOMIST:** opóźnia wyprawę od 105. sekundy, zbiera co najmniej 7 żołnierzy,
+  a przy braku zagrożenia przeznacza więcej nadwyżek na ulepszenia; rzadziej buduje wieże.
+- **SIEGER:** rozpoczyna inwestycje w wieże od 18. sekundy, utrzymuje większą falę
+  i kieruje ostrzał na najdalej wysuniętą widoczną jednostkę w legalnym zasięgu.
+- **BALANCED:** zwiększona waga doboru kontr na obserwowane role przeciwnika.
+
+**Istotne ograniczenie:** celowany ostrzał ma zasięg 220–1370 jednostek od
+bazy rzucającego. Nie może bezpośrednio uderzyć w bazę przeciwnika z drugiego
+końca pasa; nie rozszerzono zasięgu zdolności tylko dla jednego bota.
+
+### Powtarzalne pomiary A/B
+
+`AiPersonality127ReportTest.compareThreeStylesOnFiftySeeds` mierzy trzy style
+na **50 tych samych seedach** (50021 + 9973 × indeks), w potyczce epok 2–3
+z modyfikatorami RICH_START i FRAGILE_BASES. Graczem kieruje BALANCED,
+przeciwnik ma wymuszoną osobowość. Zapis CSV obejmuje rozkład czterech ról,
+czas pierwszego ataku i pierwszego skutecznego trafienia gracza, pierwszą wieżę i ewolucję,
+wieże/ostrzały/zrywy/ulepszenia na mecz oraz czas spędzony w obronie.
+Niezaobserwowane zdarzenia mają pustą średnią („-”) i osobny licznik prób.
+
+`BalanceReport.campaignReport`: **36 etapów × 20 seedów** na profil docelowy
+danego etapu, identyczne seedy na kodzie bazowym i zmienionym.
+Wykres A/B jest budowany przez `.github/workflows/ai-personalities-127.yml`
+(oddzielne wykonania bazy i propozycji). Kryterium zmiany **średniej**
+częstości zwycięstw gracza: ±5 punktów procentowych, przy pełnej tabeli
+odchyleń poszczególnych etapów. Różnice pojedynczych etapów również należy
+przeanalizować, ponieważ 1 wygrana z 20 odpowiada 5 p.p.
+
+Wyniki liczbowe należy przenieść z ukończonego przebiegu CI do opisu PR.
+Do czasu ukończenia pomiarów nie zakładamy, że limit ±5 p.p. jest spełniony.
+
+- 2026-11-01 — regeneracja złotych powtórek: 127 osobowosci AI.

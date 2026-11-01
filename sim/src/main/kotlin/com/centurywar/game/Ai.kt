@@ -108,7 +108,10 @@ class Ai(
         if (!full && me.era < b.cfg.maxEra &&
             me.xp > Defs.evolveXp[me.era] * personality.upgradeXpLimit) return
         val meleeCost = me.unit(Role.MELEE).cost
-        val reserve = meleeCost * (if (full) 2f else 5f) * personality.upgradeReserve
+        // Gospodarz inwestuje nadwyżki w ulepszenia, ale nie zaniedbuje obrony.
+        val safeInvestment = if (personality == AiPersonality.ECONOMIST && danger == 0) 0.65f else 1f
+        val reserve = meleeCost * (if (full) 2f else 5f) *
+            personality.upgradeReserve * safeInvestment
         for (role in upgradeOrder) {
             if (role == Role.ELITE && !me.eliteUnlocked) continue
             val cost = b.unitUpgradeCost(me, role)
@@ -169,9 +172,9 @@ class Ai(
             }
             return
         }
-        // Gospodarz nie wysyła zebranej w końcowej epoce elity pojedynczo.
-        if (personality == AiPersonality.ECONOMIST && me.era == b.cfg.maxEra &&
-            b.time >= 90f
+        // Gospodarz opóźnia natarcie, by zebrać silniejszą falę już przed końcową epoką.
+        if (personality == AiPersonality.ECONOMIST &&
+            me.era >= b.cfg.maxEra - 1 && b.time >= 105f
         ) {
             val ready = me.aliveCount >= personality.pushArmySize
             if (me.hold) {
@@ -218,11 +221,16 @@ class Ai(
 
     private fun useAbilities() {
         val threatened = danger >= 2 && me.baseHp < me.baseMaxHp * 0.6f
+        // Oblężnik osłania wysuniętą armię ostrzałem w kierunku bazy w granicach zasięgu.
+        val siegeAdvance = personality == AiPersonality.SIEGER &&
+            (me.front - me.baseFront) * me.dir >= 450f &&
+            me.aliveCount >= 3 && barrageTargets > 0
         if (b.abilityReady(me, 0) &&
             (danger >= personality.barrageDanger || threatened ||
-                barrageTargets >= personality.barrageTargets)
+                barrageTargets >= personality.barrageTargets || siegeAdvance)
         ) {
-            val target = biggestVisibleCluster()
+            val forward = if (siegeAdvance) forwardVisibleTarget() else Float.NaN
+            val target = if (forward.isFinite()) forward else biggestVisibleCluster()
             if (target.isFinite()) barrage(target)
         }
         if (b.abilityReady(me, 1) && me.aliveCount >= personality.rallyMin &&
@@ -250,6 +258,17 @@ class Ai(
         }
         if (best == 0) return Float.NaN
         return me.baseFront + me.dir * bestD.coerceIn(220f, 1370f)
+    }
+
+    /** Najdalszy widoczny cel w legalnym zasięgu ostrzału. */
+    private fun forwardVisibleTarget(): Float {
+        var farthest = -1f
+        for (u in b.units) {
+            if (!canSeeEnemy(u)) continue
+            val dist = (u.x - me.baseFront) * me.dir
+            if (dist >= 220f && dist <= 1370f && dist > farthest) farthest = dist
+        }
+        return if (farthest < 0f) Float.NaN else me.baseFront + me.dir * farthest
     }
 
     private fun pushing(): Boolean = abs(me.front - me.baseFront) > Defs.LANE * 0.45f
@@ -330,9 +349,11 @@ class Ai(
         var we = 0
 
         // Kontry: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
-        if (enemyRanged >= 2 && enemyRanged > enemyMelee) wm += 35
-        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) wr += 35
-        if (enemyMelee >= 3) wh += 25
+        // Zrównoważony dowódca obserwuje role wroga i mocniej reaguje kontrami.
+        val counterWeight = if (profile == AiPersonality.BALANCED) 55 else 35
+        if (enemyRanged >= 2 && enemyRanged > enemyMelee) wm += counterWeight
+        if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) wr += counterWeight
+        if (enemyMelee >= 3) wh += if (profile == AiPersonality.BALANCED) 45 else 25
         if (danger >= 3) wm += 15
         if (melee > ranged + heavy + 3) wm = wm * 2 / 3
         if (ranged < melee) wr += 10

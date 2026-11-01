@@ -453,8 +453,14 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     percentUp(Battle.RALLY_SPEED_BONUS), Battle.RALLY_TIME.roundToInt(),
                     Battle.RALLY_CD.roundToInt()))
             }
-            PAGE_DOCTRINES -> for (d in com.centurywar.game.Doctrine.entries) {
-                addGuide(Icons.doctrineIcon(d), L[d.key], L[d.key + "_d"])
+            PAGE_DOCTRINES -> {
+                for (d in com.centurywar.game.Doctrine.entries) {
+                    addGuide(Icons.doctrineIcon(d), L[d.key], L[d.key + "_d"])
+                }
+                // Opisy dowódców są liczone tylko przy przebudowie Kodeksu.
+                addGuide(Icons.FLASK, L["cx127_economist"], L["cx127_economist_d"], L["cx127_ai"])
+                addGuide(Icons.TOWER, L["cx127_sieger"], L["cx127_sieger_d"], L["cx127_ai"])
+                addGuide(Icons.CROSSED_SWORDS, L["cx127_balanced"], L["cx127_balanced_d"], L["cx127_ai"])
             }
             PAGE_WEATHER -> for (type in Weather.entries) {
                 val detail = when (type) {
