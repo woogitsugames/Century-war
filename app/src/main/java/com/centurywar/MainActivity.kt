@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.Context
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -45,6 +46,10 @@ import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
+import com.centurywar.engine.Icons
+import com.centurywar.meta.ReplayImport
+import com.centurywar.meta.ReplayShareProvider
+import com.centurywar.screens.ReplayListScreen
 import com.centurywar.engine.SecureLinks
 import com.centurywar.notifications.DailyReminders
 import com.centurywar.notifications.DailyReminderProfile
@@ -76,9 +81,12 @@ class MainActivity : Activity(), Host {
     private val gameBackCallback by lazy { OnBackInvokedCallback { game.requestBack() } }
     private var gameBackRegistered = false
     private var resumed = false
+    private var pendingReplayUri: Uri? = null
+    private val replayImportRunning = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingReplayUri = replayUri(intent)
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
@@ -177,6 +185,49 @@ class MainActivity : Activity(), Host {
         applyFrameRate(profile.fpsCap)
         hideSystemBars()
         if (resumed) resumeGame()
+        pendingReplayUri?.let { uri ->
+            pendingReplayUri = null
+            importReplay(uri)
+        }
+    }
+
+    private fun replayUri(next: Intent?): Uri? =
+        if (next?.action == Intent.ACTION_VIEW && next.data?.scheme == "content") next.data else null
+
+    override fun onNewIntent(next: Intent) {
+        super.onNewIntent(next)
+        setIntent(next)
+        replayUri(next)?.let { uri ->
+            if (::game.isInitialized) importReplay(uri) else pendingReplayUri = uri
+        }
+    }
+
+    /** Odczyt zewnętrznego URI i weryfikacja bitwy nigdy nie obciążają wątku gry. */
+    private fun importReplay(uri: Uri) {
+        if (!replayImportRunning.compareAndSet(false, true)) return
+        Thread({
+            val bytes = try {
+                contentResolver.openInputStream(uri)?.use { ReplayImport.readLimited(it) }
+            } catch (_: Exception) { null }
+            val store = if (::game.isInitialized) game.replays else null
+            if (bytes == null || store == null) {
+                finishReplayImport(null)
+            } else {
+                store.importAsync(bytes) { id -> finishReplayImport(id) }
+            }
+        }, "replay-import").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    private fun finishReplayImport(id: String?) {
+        replayImportRunning.set(false)
+        if (!::game.isInitialized) return
+        game.post {
+            if (id == null) game.showNotice(L["replay_import_failed"], Icons.CLOSE)
+            else {
+                game.push(ReplayListScreen(game))
+                game.showNotice(L["replay_import_ok"], Icons.CHECK)
+            }
+        }
     }
 
     private fun safeInsets(insets: WindowInsets): IntArray {
@@ -376,6 +427,25 @@ class MainActivity : Activity(), Host {
             .setOnDismissListener { hideSystemBars() }
             .show()
         if (dialog.isShowing) CrashReports.markOffered(this, name)
+    }
+
+    override fun shareReplay(id: String) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            val uri = runCatching { ReplayShareProvider.uriFor(this, id) }.getOrNull()
+                ?: return@runOnUiThread
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = ReplayShareProvider.MIME
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newUri(contentResolver, "Century War", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            try {
+                startActivity(Intent.createChooser(send, L["replay_share_title"]))
+            } catch (_: Exception) {
+                game.post { game.showNotice(L["replay_share_failed"], Icons.CLOSE) }
+            }
+        }
     }
 
     override fun shareProblemReport() {

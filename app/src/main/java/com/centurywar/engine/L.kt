@@ -110,6 +110,7 @@ object L {
         putAll(part67())
         putAll(part61())
         putAll(part65())
+        putAll(part73())
     }
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */
@@ -1293,4 +1294,15 @@ object L {
         "report_share_title" to t("Udostępnij raport", "Share report", "Bericht teilen", "Compartir informe", "Partager le rapport", "Condividi rapporto", "Partilhar relatório", "Поділитися звітом", "Rapport delen", "Raporu paylaş"),
         "report_subject" to t("Century War - raport błędu", "Century War - error report", "Century War - Fehlerbericht", "Century War - informe de error", "Century War - rapport d'erreur", "Century War - rapporto errore", "Century War - relatório de erro", "Century War - звіт про помилку", "Century War - foutrapport", "Century War - hata raporu"),
     )
+
+    /** Zlecenie 73: udostępnianie i import powtórek. */
+    private fun part73(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "replay_share" to t("Udostępnij", "Share", "Teilen", "Compartir", "Partager", "Condividi", "Partilhar", "Поділитися", "Delen", "Paylaş"),
+        "replay_share_title" to t("Udostępnij powtórkę", "Share replay", "Wiederholung teilen", "Compartir repetición", "Partager le replay", "Condividi replay", "Partilhar repetição", "Поділитися повтором", "Herhaling delen", "Tekrarı paylaş"),
+        "replay_share_failed" to t("Nie można udostępnić powtórki", "Could not share replay", "Wiederholung konnte nicht geteilt werden", "No se pudo compartir", "Impossible de partager le replay", "Impossibile condividere il replay", "Não foi possível partilhar", "Не вдалося поділитися повтором", "Delen mislukt", "Tekrar paylaşılamadı"),
+        "replay_from_friend" to t("Od znajomego", "From a friend", "Von Freunden", "De un amigo", "D'un ami", "Da un amico", "De um amigo", "Від друга", "Van een vriend", "Arkadaştan"),
+        "replay_import_ok" to t("Powtórka od znajomego została dodana", "Friend's replay imported", "Wiederholung importiert", "Repetición importada", "Replay importé", "Replay importato", "Repetição importada", "Повтор друга імпортовано", "Herhaling geïmporteerd", "Arkadaşın tekrarı aktarıldı"),
+        "replay_import_failed" to t("Powtórka jest nieprawidłowa lub niezgodna z wersją gry", "Replay is invalid or incompatible", "Wiederholung ungültig oder inkompatibel", "Repetición dañada o incompatible", "Replay invalide ou incompatible", "Replay non valido o incompatibile", "Repetição inválida ou incompatível", "Повтор пошкоджено або несумісний", "Herhaling ongeldig of incompatibel", "Tekrar geçersiz veya uyumsuz"),
+    )
+
 }

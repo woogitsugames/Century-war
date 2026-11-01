@@ -37,6 +37,7 @@ interface Host {
     fun openExternalUrl(url: String) {}
     fun showApacheLicense() {}
     fun shareProblemReport() {}
+    fun shareReplay(id: String) {}
 }
 
 /**
