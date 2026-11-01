@@ -19,8 +19,31 @@ internal object HintFrame {
             rect.width() * 0.45f, Ui.GOLD, rect.width() - 20 * dp)
     }
 
-    /** Łamie tekst wyłącznie przy przygotowaniu dymka, nigdy podczas renderowania. */
+    /** Łamie tekst tylko przy zmianie treści/szerokości; wynik jest cache'owany przez ekran. */
     fun wrapInto(ui: Ui, s: String, width: Float, size: Float, out: Array<String?>): Int {
+        var n = 0
+        var start = 0
+        var lastFit = -1
+        var i = 0
+        while (i <= s.length && n < out.size) {
+            if (i == s.length || s[i] == ' ') {
+                val wpx = ui.measure(s.substring(start, i), size)
+                if (wpx > width && lastFit > start) {
+                    out[n++] = s.substring(start, lastFit)
+                    start = lastFit + 1
+                    lastFit = -1
+                    continue
+                }
+                if (i == s.length) { out[n++] = s.substring(start); break }
+                lastFit = i
+            }
+            i++
+        }
+        return n
+    }
+
+    /** Łamie długie teksty wskazówek przed renderowaniem; nie zmienia samouczka. */
+    fun wrapHintInto(ui: Ui, s: String, width: Float, size: Float, out: Array<String?>): Int {
         var n = 0
         var line = ""
         for (word in s.split(' ')) {
