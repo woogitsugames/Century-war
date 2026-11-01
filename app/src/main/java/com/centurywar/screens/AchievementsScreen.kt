@@ -17,8 +17,10 @@ import kotlin.math.min
 /** Lista osiągnięć z postępem, nagrodami i ukrytymi wyzwaniami. */
 class AchievementsScreen(g: Game) : Screen(g) {
     override val crashName get() = "AchievementsScreen"
+    override val blocksNotices: Boolean get() = true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
+    private val recordsTabs = RecordsTabs(this, 3)
     private val back = btn(-1)
     private val defs = Achievements.all
     private val panel = RectF()
@@ -39,9 +41,10 @@ class AchievementsScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         chrome.layoutBack(back)
+        recordsTabs.layout()
         val width = min(920 * dp, w - g.insetL - g.insetR - 24 * dp)
         val cx = (w + g.insetL - g.insetR) / 2f
-        panel.set(cx - width / 2, chrome.top + 8 * dp,
+        panel.set(cx - width / 2, recordsTabs.contentTop + 8 * dp,
             cx + width / 2, h - g.insetB - 12 * dp)
         rowH = 88 * dp
         val contentH = defs.size * (rowH + 8 * dp) + 20 * dp
@@ -104,8 +107,10 @@ class AchievementsScreen(g: Game) : Screen(g) {
         ui.textO(c, completeText, panel.centerX(), panel.bottom - 16 * dp,
             14f, Ui.GOLD, Paint.Align.CENTER)
         ui.button(c, back, 16f)
-        chrome.title(c, L["achievements"])
+        recordsTabs.draw(c)
+        chrome.title(c, L["records"])
         chrome.badges(c, g.profile.medals)
+        drawHeldTooltip(c)
     }
 
     private fun drawAchievement(c: Canvas, i: Int, y: Float) {
@@ -134,6 +139,7 @@ class AchievementsScreen(g: Game) : Screen(g) {
     }
 
     override fun onClick(b: Button) {
+        if (recordsTabs.onClick(b)) return
         if (b.id == -1) g.pop()
     }
 }

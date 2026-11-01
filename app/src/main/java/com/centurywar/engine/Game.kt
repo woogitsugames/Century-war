@@ -243,12 +243,14 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
             // Podczas konstruktora Game dźwięk jeszcze nie jest gotowy.
             if (width <= 1 || sound == null) pendingLoginReward = reward
             else celebrateReward(width * 0.5f, height * 0.62f, reward, Sound.MEDALS)
-            showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7 · " + L.f("ms_login_paid", L.plural("medals_n", reward.toLong())), Icons.CALENDAR)
+            showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7 · " + L.f("ms_login_paid", L.plural("medals_n", reward.toLong())), Icons.FLAME)
         }
     }
 
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
         achievementSeconds -= dt
+        // Powiadomienie nie może zasłaniać nawigacji ani okien modalnych.
+        if (screen?.blocksNotices == true) return
         if (achievementSeconds <= 0f && noticeQueue.isNotEmpty() && screen?.blocksNotices != true) {
             achievementMessage = noticeQueue.removeFirst()
             noticeIcon = noticeIcons.removeFirst()
@@ -370,6 +372,19 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val previous = screen
         previous?.resetTouch()
         previous?.let { stack.add(it) }
+        screen = s
+        CrashReports.screenChanged(s.crashName)
+        syncMusicScreen(s)
+        s.layout()
+        startScreenTransition(previous, s, 1f)
+        refreshBackHandling()
+    }
+
+    /** Zmienia zakładkę Rekordów bez dokładania ekranów do stosu Wstecz. */
+    fun replace(s: Screen) {
+        val previous = screen
+        previous?.onPause()
+        previous?.resetTouch()
         screen = s
         CrashReports.screenChanged(s.crashName)
         syncMusicScreen(s)

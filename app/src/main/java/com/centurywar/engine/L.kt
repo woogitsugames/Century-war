@@ -128,6 +128,15 @@ object L {
         "global_report_nick" to t("Zgłoś nick", "Report name", "Namen melden", "Denunciar nombre", "Signaler le pseudo", "Segnala nome", "Denunciar nome", "Поскаржитись", "Naam melden", "Adı bildir"),
         "global_report_sent" to t("Zgłoszono do moderacji", "Report submitted", "Meldung gesendet", "Denuncia enviada", "Signalement envoyé", "Segnalazione inviata", "Denúncia enviada", "Скаргу надіслано", "Melding verzonden", "Bildirim gönderildi"),
         "global_report_failed" to t("Nie udało się zgłosić", "Report failed", "Meldung fehlgeschlagen", "Error al denunciar", "Échec du signalement", "Segnalazione non riuscita", "Falha na denúncia", "Не вдалося надіслати", "Melden mislukt", "Bildirim başarısız"),
+        putAll(part87())
+    }
+
+    /** Teksty nawigacji Rekordów i siedmiodniowej serii logowań. */
+    private fun part87(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "records" to t("Rekordy", "Records", "Rekorde", "Récords", "Records", "Record", "Recordes", "Рекорди", "Records", "Rekorlar"),
+        "records_local" to t("Twoje najlepsze wyniki", "Your best scores", "Deine besten Ergebnisse", "Tus mejores resultados", "Vos meilleurs scores", "I tuoi migliori punteggi", "Os teus melhores resultados", "Твої найкращі результати", "Je beste scores", "En iyi skorların"),
+        "records_result" to t("Wynik", "Score", "Ergebnis", "Puntuación", "Score", "Punteggio", "Pontuação", "Результат", "Score", "Puan"),
+        "records_day_short" to t("D%d", "D%d", "T%d", "D%d", "J%d", "G%d", "D%d", "Д%d", "D%d", "G%d"),
     )
 
     /** Dodatki zlecenia 60: nazwa i opis każdej nagrody w 10 językach. */

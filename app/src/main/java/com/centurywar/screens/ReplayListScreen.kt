@@ -18,10 +18,12 @@ import java.util.Locale
 /** Lista metadanych odczytywana na osobnym wątku; bez odczytu dysku podczas renderowania. */
 class ReplayListScreen(g: Game) : Screen(g) {
     override val crashName get() = "ReplayListScreen"
+    override val blocksNotices: Boolean get() = true
     private data class Display(val entry: ReplayStore.Entry, val title: String, val detail: String)
 
     private val bg = MenuBg()
     private val chrome = Chrome(this)
+    private val recordsTabs = RecordsTabs(this, 2)
     private val back = btn(-1)
     private val panel = RectF()
     private val row = RectF()
@@ -55,8 +57,9 @@ class ReplayListScreen(g: Game) : Screen(g) {
 
     override fun layout() {
         chrome.layoutBack(back)
+        recordsTabs.layout()
         val pw = minOf(940 * dp, w - g.insetL - g.insetR - 24 * dp)
-        panel.set((w - pw) / 2, chrome.top + 12 * dp,
+        panel.set((w - pw) / 2, recordsTabs.contentTop + 8 * dp,
             (w + pw) / 2, h - g.insetB - 12 * dp)
         offset = offset.coerceIn(0f, maxOffset())
     }
@@ -72,10 +75,12 @@ class ReplayListScreen(g: Game) : Screen(g) {
         chrome.dim(c, 120)
         ui.panel(c, panel)
         ui.button(c, back, 15f)
-        chrome.title(c, L["replay_list"])
+        recordsTabs.draw(c)
+        chrome.title(c, L["records"])
         if (loading || entries.isEmpty()) {
             ui.textO(c, L[if (loading) "replay_loading" else "replay_empty"],
                 panel.centerX(), panel.centerY(), 17f, Ui.DIM, Paint.Align.CENTER)
+            drawHeldTooltip(c)
             return
         }
         val left = panel.left + 14 * dp
@@ -109,6 +114,7 @@ class ReplayListScreen(g: Game) : Screen(g) {
             }
         }
         c.restore()
+        drawHeldTooltip(c)
     }
 
     override fun isDragScreen() = true
@@ -132,6 +138,9 @@ class ReplayListScreen(g: Game) : Screen(g) {
         }
     }
 
-    override fun onClick(b: Button) { if (b.id == -1) g.pop() }
+    override fun onClick(b: Button) {
+        if (recordsTabs.onClick(b)) return
+        if (b.id == -1) g.pop()
+    }
     override fun onBack(): Boolean { g.pop(); return true }
 }

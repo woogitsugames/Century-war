@@ -1604,4 +1604,88 @@ class ScreenshotTest {
             L.lang = originalLang
         }
     }
+
+    /**
+     * Pauza z danymi bitwy i ustawieniami: telefony 16:9 i 20:9 (640×360 i 800×360 dp),
+     * 1080p, oba ułożenia rozłożonego Folda i telefon pionowo. Gęstość bez skali 0,9,
+     * czyli najciaśniejszy wariant danego ekranu.
+     */
+    @Test
+    fun quickPauseSettings() {
+        for ((tag, dims) in mapOf(
+            "phone720" to intArrayOf(1600, 720, 2),
+            "phone1280" to intArrayOf(1280, 720, 2),
+            "phone1080" to intArrayOf(2400, 1080, 3),
+            "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldPortrait" to intArrayOf(1968, 2184, 3),
+            "phonePortrait" to intArrayOf(1080, 2400, 3),
+        )) {
+            val g = game(dims[0], dims[1], dims[2].toFloat(),
+                if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
+            g.profile.musicVolume = 0.65f
+            g.profile.sfxVolume = 0.35f
+            g.profile.vibration = false
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 6701L, 1.2f,
+                startEra = 2, maxEra = 7, weather = Weather.NIGHT,
+                modifiers = setOf(Modifier.FOG_OF_WAR, Modifier.FAST_UNITS),
+                aiPersonality = AiPersonality.ENGINEER))
+            g.setScreen(bs)
+            val battle = field(bs, "battle").get(bs) as Battle
+            battle.time = 125f
+            battle.player.kills = 17
+            battle.player.goldEarned = 1426f
+            bs.onClick(field(bs, "pauseBtn").get(bs) as Button)
+            // Baner serii logowań zasłaniałby suwaki; zrzut dokumentuje sam panel pauzy.
+            (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+            (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+            field(g, "achievementSeconds").setFloat(g, 0f)
+            shot(g, "${tag}_pause_quick_settings")
+        }
+    }
+    /** Menu, cztery zakładki Rekordów i tor logowania na czterech formatach. */
+    @Test
+    fun recordsUxFourFormats() {
+        val oldLang = L.lang
+        try {
+            L.lang = L.PL
+            for ((tag, dims) in screenshotDevices(mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldOpen" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            ))) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = "pl"
+                L.setCode("pl")
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+                (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+                field(g, "achievementSeconds").setFloat(g, 0f)
+                val state = Missions(g.profile).refresh(System.currentTimeMillis())
+                state.daily.firstOrNull()?.let { it.progress = it.target }
+                // Trzy wyniki jednego dowódcy: w Rekordach mają być daty, nie trzy pseudonimy.
+                val today = Missions.utcDay(System.currentTimeMillis())
+                g.profile.boards[Profile.BOARD_ENDLESS] = mutableListOf(
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 195_000L, today),
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 163_000L, today - 1L),
+                    com.centurywar.meta.ScoreEntry(g.profile.name, 121_000L, today - 2L),
+                )
+                g.setScreen(MenuScreen(g))
+                shot(g, "${tag}_87_menu", 2)
+                g.setScreen(RankingsScreen(g))
+                shot(g, "${tag}_87_records_rankings", 2)
+                g.setScreen(StatsScreen(g))
+                shot(g, "${tag}_87_records_stats", 2)
+                g.setScreen(ReplayListScreen(g))
+                shot(g, "${tag}_87_records_replays", 2)
+                g.setScreen(AchievementsScreen(g))
+                shot(g, "${tag}_87_records_achievements", 2)
+                g.setScreen(MissionsScreen(g))
+                shot(g, "${tag}_87_streak", 2)
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
 }
