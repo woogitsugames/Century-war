@@ -161,7 +161,10 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private var basePicPalette = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
-    private val baseFlashCache = BaseFlashCache((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
+    private val baseFlashCache = BaseFlashCache(
+        (PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt(),
+        g.bitmapCacheMemoryClassMb, g.effectiveQualityLevel()
+    )
 
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {
         viewW = w
@@ -263,6 +266,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
         time += dt.coerceAtLeast(0f)
         renderDt = dt.coerceIn(0f, 0.05f)
         val q = g.quality
+        baseFlashCache.setQuality(q.level)
         // Przy zmianie jakości istniejąca pula również musi spełniać nowy limit.
         if (pcount > q.maxParticles) pcount = q.maxParticles
         fill.isAntiAlias = q.antialias
