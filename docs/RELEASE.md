@@ -22,11 +22,18 @@ Jeden schemat dla CI i lokalnie (szczegóły i generowanie klucza: [`docs/CI.md`
 | `RELEASE_KEY_ALIAS` | alias klucza |
 | `RELEASE_KEY_PASSWORD` | hasło klucza |
 
-- Wszystkie cztery ustawione → release podpisany kluczem upload.
-- Żadna nieustawiona → lokalny release zostanie podpisany **kluczem debug**,
-  ale bez spełnionej listy kontrolnej kompilacja release zostanie zablokowana.
-  Takich plików **nie wolno publikować**.
-- Część ustawiona → błąd konfiguracji Gradle (zamiast cichego użycia klucza debug).
+- **Wszystkie cztery ustawione i poprawne:** release jest podpisywany kluczem upload.
+  Wskazany plik JKS musi istnieć i nie może być standardowym plikiem debug.keystore;
+  alias androiddebugkey jest odrzucany.
+- **Żadna nieustawiona:** polecenia assembleRelease, bundleRelease i releaseChecklist
+  **kończą się błędem**. Nie ma automatycznego przełączenia na podpis debug.
+  Nie można obejść tego warunku przez -PskipCheck.
+- **Część ustawiona:** Gradle kończy konfigurację błędem.
+- **Wyjątek CI:** -PciTestDebugSigning=true jest dostępne wyłącznie dla jawnie
+  oznaczonego smoke-testu GitHub Actions (zdarzenie pull_request albo
+  workflow_dispatch, GITHUB_ACTIONS=true i CW_RELEASE_SMOKE=true).
+  Taki artefakt jest podpisany debugowo i **NIE NADAJE SIĘ DO GOOGLE PLAY**.
+  Lokalnie ani w produkcyjnym workflow z taga nie można używać tej flagi.
 
 W CI job `release` (push taga `v*`) odtwarza keystore z sekretów GitHub i przerywa pracę,
 jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgraj
@@ -65,9 +72,10 @@ jeśli któregoś brakuje. Skonfiguruj **Play App Signing** w Play Console i wgr
 ## Pomiar wydania i R8 (zlecenie 66)
 
 - `.github/workflows/release-check.yml` działa dla PR do `main` i `claude/**`
-  oraz uruchomienia ręcznego. Buduje **APK i AAB z R8 i shrinkResources**,
-  z pominięciem wyłącznie kontrolek publikacji przez `-PskipCheck=...`
-  i z domyślnym **kluczem debug**. To nie jest wydanie do sklepu.
+  oraz uruchomienia ręcznego. Buduje **APK i AAB z R8 i shrinkResources**
+  z jawną flagą `-PciTestDebugSigning=true` i dodatkowymi ograniczeniami środowiska CI.
+  Tylko ten smoke-test może pominąć pola właściciela przez
+  `-PskipCheck=ownerInput`. Artefakt debugowo podpisany **nie nadaje się do sklepu**.
 - Przy PR workflow kompiluje również commit wspólny z gałęzią docelową
   (`git merge-base`) na tym samym runnerze i SDK. Skrypt
   `scripts/release_size_report.py` porównuje wielkość plików APK/AAB
@@ -112,6 +120,7 @@ Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):
 ```bash
 ./gradlew -p buildSrc test --console=plain
 ./gradlew :app:testDebugUnitTest --tests '*ReleaseConfigTest*' --tests '*DailyTest*' --console=plain
+./gradlew :app:renderStorePolicies --console=plain
 ./gradlew :app:releaseChecklist --console=plain
 ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
 ```
@@ -129,6 +138,15 @@ Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 ## Lista kontrolna dnia wydania — dla właściciela
 
 Przed pierwszą publikacją i przed **każdą kolejną** aktualizacją przejdź kroki w podanej kolejności.
+
+**Krok 0 — dane wydawcy (obowiązkowy):** otwórz
+[docs/store/OWNER_INPUT.md](store/OWNER_INPUT.md), uzupełnij sześć pól:
+pełna nazwa prawna wydawcy, e-mail kontaktowy, adres korespondencyjny,
+publiczny URL polityki HTTPS, rzeczywista data pierwszego wydania UTC,
+numeryczny identyfikator projektu Play Games. Nie wpisuj tutaj sekretów.
+Następnie uruchom `./gradlew :app:renderStorePolicies` i opublikuj
+**wygenerowane** pliki PL/EN z `build/store-policies/` pod wskazanym adresem.
+Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
 
 1. **Ustal dzień pierwszej publicznej publikacji w UTC.** W
    `sim/src/main/kotlin/com/centurywar/game/Modes.kt` ustaw jedną stałą
@@ -157,9 +175,13 @@ Przed pierwszą publikacją i przed **każdą kolejną** aktualizacją przejdź 
    `local.properties` albo zmiennych środowiskowych na etapie kompilacji.
    Adres serwera oraz adres opublikowanej polityki prywatności muszą być HTTPS.
    Nie wprowadzaj wartości produkcyjnych ani sekretów do repozytorium.
-6. **Polityka prywatności i Data safety.** Opublikuj aktualną politykę pod
-   `CW_PRIVACY_URL`, uzupełnij deklaracje w Play Console, uwzględniając dane
-   konta Play Games, rankingi, chmurę i serwer; przetestuj publiczny adres.
+6. **Polityka prywatności i Data safety.** Sprawdź, że wygenerowane z
+   `OWNER_INPUT.md` polityki PL i EN są publicznie dostępne pod HTTPS,
+   a `CW_PRIVACY_URL` prowadzi do właściwej strony. W Play Console uwzględnij
+   dane PGS, chmurę, publiczne pseudonimy w rankingach PGS i własnych,
+   moderowanie nicków po wdrożeniu zlecenia 80, ręcznie udostępniane
+   raporty awarii ze zlecenia 65, dane techniczne i usuwanie danych.
+   Potwierdź faktyczne działanie własnego backendu oraz aktualny formularz Data safety.
 7. **Materiały sklepu.** Sprawdź nazwy, opisy i tłumaczenia, ikonę, grafikę
    promocyjną i prawdziwe zrzuty z telefonu 720p oraz dużego ekranu/Folda.
    Zrzuty aktualnej wersji i zawartość sklepu muszą być zgodne z grą.
@@ -195,18 +217,45 @@ jednym polskim komunikatem i blokuje `:app:assembleRelease` oraz
 - `CW_SERVER_URL` lub `CW_PRIVACY_URL` nie jest poprawnym adresem HTTPS;
 - `CW_HMAC_KEY` jest pusty;
 - `releaseVersionCode` nie przewyższa `release/last_version_code.txt`
-  albo ten plik ma niepoprawną zawartość.
+  albo ten plik ma niepoprawną zawartość;
+- nie istnieje kompletny i poprawnie wskazany keystore upload lub podano
+  standardowy podpis debug (ta kontrola jest **niepomijalna** przy normalnym release);
+- brakuje `docs/store/OWNER_INPUT.md`, któreś z jego sześciu pól pozostaje
+  niewypełnione albo ma nieprawidłowy format (e-mail, URL, data, ID PGS);
+- brakuje dokumentów `privacy_policy_pl.md`, `privacy_policy_en.md`,
+  `data_safety.md` lub `content_rating.md`, lub jakikolwiek dokument
+  `docs/store/*.md` zawiera znacznik do uzupełnienia typu INSERT,
+  UZUPEŁNIJ albo DO DECYZJI. Dozwolone są tylko znane pola szablonu
+  OWNER, podstawiane przez `renderStorePolicies`.
 
-Przy **świadomej decyzji** można pominąć pojedyncze kontrole przez
-`-PskipCheck=releaseDay`, `playGames`, `serverUrl`, `privacyUrl`,
-`hmacKey` lub `versionCode`; wiele wartości oddziel przecinkami, np.:
+Przy **świadomej decyzji** można pominąć pojedyncze kontrole zewnętrznej
+konfiguracji przez `-PskipCheck=releaseDay`, `playGames`, `serverUrl`,
+`privacyUrl`, `hmacKey` lub `versionCode`; wiele wartości oddziel przecinkami.
+**Nie umożliwia to pominięcia podpisu ani znaczników dokumentów.**
+`ownerInput` można pominąć jedynie w oznaczonym smoke-teście CI
+z `-PciTestDebugSigning=true`; nie jest to opcja publikacyjna. Przykład:
 
 ```bash
 ./gradlew :app:assembleRelease -PskipCheck=playGames,releaseDay
 ```
 
 Wyjątek **nie konfiguruje** brakującej usługi ani nie naprawia podpisu.
-Przeznaczony jest do lokalnych testów i świadomych decyzji właściciela,
-nie do obejścia wymogów sklepu. Workflow `release-check.yml` pomija
-kontrole zewnętrznej konfiguracji **wyłącznie** podczas smoke-testu
-podpisanego kluczem debug. Produkcyjny workflow z taga nie pomija niczego.
+Ostateczna publikacja wymaga zaliczenia całej listy kontrolnej bez flag pomijających.
+Workflow `release-check.yml` świadomie pomija konfigurację niezbędną
+wyłącznie do publikacji; produkcyjny workflow z taga nie pomija niczego.
+
+### Kontrola rzeczywistego podpisu
+
+Po zbudowaniu sprawdź certyfikat APK i porównaj jego SHA-256 z kluczem upload
+właściciela (certyfikat Play App Signing w Google Play może być inny):
+
+```bash
+"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+keytool -list -v -keystore /bezpieczna/sciezka/upload-key.jks -alias TWOJ_ALIAS
+jarsigner -verify -verbose -certs app/build/outputs/bundle/release/app-release.aab
+```
+
+Na potrzeby publikacji uruchom oba polecenia build bez `ciTestDebugSigning`
+i bez `skipCheck`. W Play Console wybierz najpierw tor testów wewnętrznych,
+potwierdź działanie rankingu, chmury, usuwania danych i polityki, dopiero potem
+uruchom publikację.
