@@ -12,6 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -140,11 +141,14 @@ class Profile(private val file: File) {
     /** Identyfikator powstaje dopiero po świadomym włączeniu rankingu. */
     var playerId = ""
         private set
+    @Volatile var playerSecret = ""
+        private set
     var globalRanking = false
         private set
 
     fun enableGlobalRanking() {
         if (playerId.isEmpty()) playerId = UUID.randomUUID().toString()
+        if (!validRankingSecret(playerSecret)) playerSecret = newRankingSecret()
         globalRanking = true
         save()
     }
@@ -156,8 +160,17 @@ class Profile(private val file: File) {
 
     fun renewRankingId() {
         playerId = UUID.randomUUID().toString()
+        playerSecret = newRankingSecret()
         save()
     }
+
+    private fun newRankingSecret(): String {
+        val bytes = ByteArray(32)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    private fun validRankingSecret(value: String): Boolean = value.matches(Regex("[0-9a-f]{64}"))
 
     private fun validRankingId(id: String): Boolean {
         val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return false
@@ -402,6 +415,7 @@ class Profile(private val file: File) {
         o.put("eraIntrosSeen", eraIntrosSeen and ((1L shl Defs.ERA_COUNT) - 1L))
         o.put("eraIntrosEnabled", eraIntrosEnabled)
         o.put("playerId", playerId)
+        o.put("playerSecret", playerSecret)
         o.put("globalRanking", globalRanking)
         o.put("quality", quality)
         o.put("fpsCap", fpsCap)
@@ -470,12 +484,14 @@ class Profile(private val file: File) {
         // Zgoda na serwer rankingu i UUID są wyłącznie lokalne: chmura nie może
         // aktywować wysyłki na innym urządzeniu.
         val localId = playerId
+        val localSecret = playerSecret
         val localConsent = globalRanking
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
         restore(migrate(o, version), version >= CURRENT_VERSION)
         playerId = localId
+        playerSecret = localSecret
         globalRanking = localConsent && localId.isNotEmpty()
     }
 
@@ -485,6 +501,7 @@ class Profile(private val file: File) {
 
     private fun cloudJson(json: String): String = JSONObject(json).apply {
         remove("playerId")
+        remove("playerSecret")
         remove("globalRanking")
     }.toString()
 
@@ -755,6 +772,12 @@ class Profile(private val file: File) {
         eraIntrosEnabled = json.optBoolean("eraIntrosEnabled", true)
         val storedId = json.optString("playerId", "")
         playerId = if (validRankingId(storedId)) storedId else ""
+        val storedSecret = json.optString("playerSecret", "")
+        playerSecret = when {
+            playerId.isEmpty() -> ""
+            validRankingSecret(storedSecret) -> storedSecret
+            else -> newRankingSecret() // migracja z profilu bez sekretu
+        }
         globalRanking = json.optBoolean("globalRanking", false) && playerId.isNotEmpty()
         quality = json.optInt("quality", 0).let { if (it in 0..3) it else 0 }
         fpsCap = json.optInt("fpsCap", 0).let { if (it == 0 || it == 30 || it == 60) it else 0 }
@@ -816,7 +839,7 @@ class Profile(private val file: File) {
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
-        playerId = ""; globalRanking = false
+        playerId = ""; playerSecret = ""; globalRanking = false
         weeklyWeek = -1L; weeklyClaimed = 0; weeklyClaimHistory.clear()
         quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
         palette = 0; teamMarkers = false; textScale = 100
@@ -877,6 +900,8 @@ class Profile(private val file: File) {
                 }
                 restore(migrate(json, version), version >= CURRENT_VERSION)
                 newerProfileVersion = false
+                // Migracja starego profilu: sekret musi trafić na dysk przed siecią.
+                if (playerId.isNotEmpty() && !validRankingSecret(json.optString("playerSecret", ""))) save()
                 if (candidate == tmp) {
                     // Przerwany zapis: odtwarzamy pełną, zweryfikowaną zawartość .tmp.
                     if (!tmp.renameTo(file)) {
