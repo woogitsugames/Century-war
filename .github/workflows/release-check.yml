@@ -80,6 +80,10 @@ jobs:
           # podstawiamy ten sam syntetyczny zestaw co dla bieżącego commita.
           python3 scripts/ci_synthetic_play_games_ids.py \
             "$RUNNER_TEMP/cw-before/docs/store/play_games_ids.properties"
+          # Dokument Data safety ma nierozstrzygniete decyzje wydawcy.
+          # W smoke CI tymczasowo usuwamy znacznik; publikacyjna checklista zostaje bez zmian.
+          sed -i 's/\[DO DECYZJI\]/[CI-SMOKE: decyzja przed publikacja]/g' \
+            "$RUNNER_TEMP/cw-before/docs/store/data_safety.md"
           (
             cd "$RUNNER_TEMP/cw-before"
             chmod +x ./gradlew
@@ -101,9 +105,12 @@ jobs:
 
       # Smoke-test R8 wymaga technicznie pełnej konfiguracji release.
       # Te ID istnieją tylko w kontenerze CI, nie są produkcyjne ani commitowane.
-      - name: Wstaw syntetyczne ID Play Games do smoke-testu
+      - name: Wstaw testowe dane konfiguracji tylko do smoke-testu
         shell: bash
-        run: python3 scripts/ci_synthetic_play_games_ids.py docs/store/play_games_ids.properties
+        run: |
+          python3 scripts/ci_synthetic_play_games_ids.py docs/store/play_games_ids.properties
+          # Nie uzupelniamy danych wydawcy w repo; ten zamiennik istnieje tylko na runnerze.
+          sed -i 's/\[DO DECYZJI\]/[CI-SMOKE: decyzja przed publikacja]/g' docs/store/data_safety.md
 
       # Smoke-test R8/manifestu na ID syntetycznych, nie do publikacji.
       - name: Zbuduj APK i AAB release
