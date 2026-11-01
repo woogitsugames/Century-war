@@ -110,7 +110,7 @@ class Ui {
         val GOLD = Color.rgb(255, 205, 64)
         val XP = Color.rgb(110, 200, 255)
         val TEXT = Color.rgb(244, 242, 236)
-        val DIM = Color.rgb(160, 168, 184)
+        val DIM = Color.rgb(182, 190, 204)
         val GOOD: Int get() = Palette.active.good
         val BAD: Int get() = Palette.active.bad
         val PLAYER: Int get() = Palette.active.player
@@ -119,7 +119,7 @@ class Ui {
         val FRAME: Int get() = Palette.active.frame
         val FRAME_L = Color.rgb(120, 132, 158)
         val TRIM = Color.rgb(222, 170, 70)
-        val RIBBON = Color.rgb(196, 54, 46)
+        val RIBBON = Color.rgb(156, 48, 43)
 
         /** Barwy epok pochodzą z ich definicji, nie z indeksów UI. */
         val ERA: IntArray = IntArray(Defs.ERA_COUNT) { Defs.spec(it).accent }
@@ -478,6 +478,41 @@ class Ui {
         }
     }
 
+    /**
+     * Znaczniki minimapy: przy włączonej opcji trójkąt gracza i wcięty szewron wroga.
+     * Wykorzystuje wspólną ścieżkę, bez tworzenia obiektów w pętli renderowania.
+     */
+    fun miniTeamMarker(c: Canvas, x: Float, y: Float, radius: Float, side: Int, shapes: Boolean) {
+        val color = if (side == 0) PLAYER else ENEMY
+        if (!shapes) {
+            fill.color = OUTLINE
+            c.drawCircle(x, y, radius + dp, fill)
+            fill.color = color
+            c.drawCircle(x, y, radius, fill)
+            return
+        }
+        val r = max(3.5f * dp, radius)
+        path.reset()
+        if (side == 0) {
+            path.moveTo(x, y - r)
+            path.lineTo(x + r, y + r)
+            path.lineTo(x - r, y + r)
+        } else {
+            path.moveTo(x - r, y - r)
+            path.lineTo(x, y - r * 0.2f)
+            path.lineTo(x + r, y - r)
+            path.lineTo(x + r, y + r)
+            path.lineTo(x, y + r * 0.3f)
+            path.lineTo(x - r, y + r)
+        }
+        path.close()
+        fill.color = color
+        c.drawPath(path, fill)
+        stroke.color = OUTLINE
+        stroke.strokeWidth = max(1.1f * dp, r * 0.25f)
+        c.drawPath(path, stroke)
+    }
+
     // ------------------------------------------------------------ przyciski
 
     /** Rysuje korpus przycisku (kontur, fazowanie, połysk). Zwraca przesunięcie treści w dół. */
@@ -518,8 +553,10 @@ class Ui {
         if (!b.enabled) col = blend(col, Color.rgb(30, 32, 40), 0.55f)
         val dy = body(c, r, col, b.pressed && b.enabled, b.selected, rad)
         val cy = r.centerY() + dy
-        val tc = if (b.enabled) TEXT else DIM
-        val subC = if (!b.enabled) DIM else if (b.subColor != 0) b.subColor else GOLD
+        // Złoty aktywny przycisk wymaga ciemnych liter; kolor tekstu nie może sygnalizować stanu.
+        val tc = if (!b.enabled) DIM else if (col == BTN_HI) OUTLINE else TEXT
+        val subC = if (!b.enabled) DIM else if (col == BTN_HI) OUTLINE
+            else if (b.subColor != 0) b.subColor else if (col == BTN) GOLD else TEXT
 
         val ic = b.icon
         if (ic != null) {
