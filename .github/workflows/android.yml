@@ -39,6 +39,8 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Android SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Testy narzędzi CI
+        run: python3 -m unittest discover -s tests -p 'test_ci_tools.py' -v
       - name: Zbuduj APK i sprawdź listę wydania
         run: |
           chmod +x ./gradlew
