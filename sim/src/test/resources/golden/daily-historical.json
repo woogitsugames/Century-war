@@ -1,0 +1,22 @@
+{
+  "id": "daily-historical",
+  "config": {"mode":"DAILY","seed":21152,"aiPower":1.1167345,"startEra":3,"maxEra":6,"modifiers":["FRAGILE_BASES","FAST_UNITS","FOG_OF_WAR"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":14,"abilityCdMul":1.0,"turretSlots":3,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":false,"weather":"CLEAR","weekly":-1,"weeklyCard":null,"dailyEvent":null},
+  "replayVersion": 5,
+  "replay": "Bf-YEQ0AAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAA1wEIaQAA4QEAAZ8DAAD_AQs",
+  "commands": [
+    {"step":0,"kind":"QUEUE","argument":0},
+    {"step":0,"kind":"BUY_TURRET","argument":0},
+    {"step":25,"kind":"QUEUE","argument":0},
+    {"step":80,"kind":"QUEUE","argument":1},
+    {"step":185,"kind":"QUEUE","argument":0},
+    {"step":665,"kind":"QUEUE","argument":0},
+    {"step":900,"kind":"BARRAGE","argument":0},
+    {"step":985,"kind":"QUEUE","argument":0},
+    {"step":1200,"kind":"RALLY","argument":0},
+    {"step":1305,"kind":"QUEUE","argument":0},
+    {"step":1530,"kind":"QUEUE","argument":1},
+    {"step":1945,"kind":"QUEUE","argument":0},
+    {"step":2200,"kind":"SURRENDER","argument":0}
+  ],
+  "expected": {"score":20,"winner":1,"wave":0,"steps":2200,"kills":1,"enemyKills":7,"timeBits":1108519595,"snapshotSha256":"e225092ee82b083f2e39680f2bc05ae24a75fcac5e196e65665312af5e872db6"}
+}

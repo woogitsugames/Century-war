@@ -184,7 +184,7 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
 tasks.register("quickCheck") {
     group = "verification"
     description = "Buduje debug APK i wykonuje szybki zestaw testów symulacji oraz UI."
-    dependsOn("assembleDebug", "testDebugUnitTest")
+    dependsOn("assembleDebug", "testDebugUnitTest", ":sim:test")
 }
 
 
