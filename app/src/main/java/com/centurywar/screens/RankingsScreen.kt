@@ -36,6 +36,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val row = RectF()
     private val titleRect = RectF()
     private var dt = 0f
+    private var rowScroll = 0f
     private var existingReplayIds: Set<String> = emptySet()
     private var day = Daily.dayNumber()
     private var week = Weekly.weekNumber(day)
@@ -69,6 +70,7 @@ class RankingsScreen(g: Game) : Screen(g) {
             if (dayValue in 0L..100_000L) java.time.LocalDate.ofEpochDay(dayValue).toString()
             else L["records_result"]
         }
+        rowScroll = rowScroll.coerceIn(0f, maxRowScroll())
     }
 
     override fun layout() {
@@ -119,6 +121,7 @@ class RankingsScreen(g: Game) : Screen(g) {
             globalScores.iconId = Icons.GLOBE
             globalScores.set(panel.centerX() + if (both) 6 * dp else -gw / 2, panel.bottom - 79 * dp, gw, 48 * dp)
         }
+        rowScroll = rowScroll.coerceIn(0f, maxRowScroll())
     }
 
     override fun update(dt: Float) {
@@ -162,7 +165,7 @@ class RankingsScreen(g: Game) : Screen(g) {
         val inner = 16 * dp
         val l = panel.left + inner
         val r = panel.right - inner
-        var y = rowsTop()
+        var y = rowsTop() - rowScroll
         if (tab == 4) {
             ui.textO(c, periodLabel, panel.centerX(), panel.top + 114 * dp,
                 12f, Ui.GOLD, Paint.Align.CENTER)
@@ -179,8 +182,11 @@ class RankingsScreen(g: Game) : Screen(g) {
                     Ui.DIM, Paint.Align.CENTER)
         }
         val lh = 34 * dp
+        c.save()
+        c.clipRect(panel.left + 3 * dp, rowsTop(), panel.right - 3 * dp, bottomLimit)
         for (i in list.indices) {
             if (y + lh > bottomLimit) break
+            if (y + lh < rowsTop()) { y += lh; continue }
             val e = list[i]
             row.set(l, y, r, y + lh - 4 * dp)
             ui.fill.color = when {
@@ -205,6 +211,7 @@ class RankingsScreen(g: Game) : Screen(g) {
                 cy + 5 * dp, 15f, col, Paint.Align.RIGHT, 1.8f)
             y += lh
         }
+        c.restore()
         // Stan usługi jest pokazywany wyłącznie po połączeniu.
         if (g.online.available && g.online.state == OnlineState.CONNECTED && tab != 4)
             ui.text(c, L["pgs_connected"], panel.centerX(),
@@ -217,11 +224,20 @@ class RankingsScreen(g: Game) : Screen(g) {
     private fun rowsBottom(): Float =
         panel.bottom - (if (global.visible || globalScores.visible) 88f else 12f) * dp
 
+    private fun maxRowScroll(): Float =
+        (cachedEntries.size * 34 * dp - (rowsBottom() - rowsTop())).coerceAtLeast(0f)
+
+    override fun isDragScreen() = true
+
+    override fun onDrag(dx: Float, dy: Float) {
+        rowScroll = (rowScroll - dy).coerceIn(0f, maxRowScroll())
+    }
+
     override fun onTap(x: Float, y: Float) {
         if (x < panel.left || x > panel.right) return
         val top = rowsTop()
         if (y < top || y >= rowsBottom()) return
-        val index = ((y - top) / (34 * dp)).toInt()
+        val index = ((y - top + rowScroll) / (34 * dp)).toInt()
         if (index !in cachedEntries.indices || top + (index + 1) * 34 * dp > rowsBottom()) return
         val id = cachedEntries[index].replay ?: return
         if (id in existingReplayIds) g.push(ReplayScreen(g, id))
@@ -231,11 +247,11 @@ class RankingsScreen(g: Game) : Screen(g) {
         if (recordsTabs.onClick(b)) return
         when (b.id) {
             -1 -> g.pop()
-            104 -> previousWeek = !previousWeek
+            104 -> { previousWeek = !previousWeek; rowScroll = 0f }
             -3 -> if (g.online.available && g.online.state == OnlineState.CONNECTED && tab != 4) g.online.showUi(board(tab))
             -4 -> if (g.scores != null && g.profile.globalRanking) g.push(GlobalRankingsScreen(g))
             -2 -> g.host.requestText(L["name"], g.profile.name) { n -> g.profile.name = n; g.profile.save() }
-            in 0..4 -> { tab = b.id; cacheRows() }
+            in 0..4 -> { tab = b.id; rowScroll = 0f; cacheRows() }
         }
     }
 }
