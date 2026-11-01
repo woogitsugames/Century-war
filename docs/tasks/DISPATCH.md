@@ -89,3 +89,15 @@ Po fali 1 (42, 46) koordynator mierzy balans i podbija wersję gry rankingu (`0.
 | Wydanie | 83 podpis i dokumenty |
 | Ekrany i wygoda | 84 bitwa i wyniki, 85 samouczek, 86 podpowiedzi, 87 menu i rankingi, 89 ustawienia/kodeks, 90 nagrody i drobna wydajność |
 | Teksty | 88 poprawki tłumaczeń |
+
+---
+
+# Wysyłka zleceń 92–117 (tura 6)
+
+1.11.2026. Zlecenia 80–91 scalone. Trzy fale; **następną falę wysyłaj dopiero po scaleniu poprzedniej** przez koordynatora.
+
+| Fala | Paczki |
+|---|---|
+| 1 (20 naraz) | 92 Play Games konfiguracja, 93 link do polityki i usuwanie danych, 94 przewodnik Play Console, 96 pomiar kampanii, 97 AI po limitach, 99 szybsze testy, 100 regresja zrzutów, 101 tanie telefony, 102 dźwięki, 103 muzyka, 104 wykres po bitwie, 105 wykresy statystyk, 106 „Co nowego”, 107 kopia profilu, 108 nowe karty Endless, 109 nowe wyzwania dnia, 111 daltonizm, 112 serwer: kopie i zdrowie, 113 serwer: limity weryfikacji, 114 audyt bezpieczeństwa |
+| 2 | 95 balans późnego Endless (po 108), 98 audyt ekranów Folda, 110 HUD dla leworęcznych |
+| 3 (na końcu) | 115 podział `BattleScreen.kt`, 116 przegląd tłumaczeń, 117 grafiki sklepu |
