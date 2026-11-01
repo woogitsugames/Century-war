@@ -90,7 +90,32 @@ python3 scripts/ci_test_timings.py ci-test-artifacts --top 20 --output ci-test-t
 nr `41291246736`, 1 listopada 2026. W archiwum było **140 przypadków
 w 17 klasach**, więc nie jest to pomiar wszystkich testów w repozytorium.
 `ScreenshotTest`: 22 testy i **983,91 s** (16 min 24 s). Top 20
-zarejestrowanych metod:
+zarejestrowanych metod.
+
+W archiwum występuje 17 klas (pozostałych trzech pozycji top 20 nie
+można zmierzyć z tego przebiegu). Najwolniejsze klasy:
+
+| Klasa | Czas |
+|---|---:|
+| `ScreenshotTest` | 983,91 s |
+| `BattleScreenTest` | 14,36 s |
+| `AiPersonalityProfileTest` | 6,92 s |
+| `AppIconScreenshotTest` | 5,11 s |
+| `BackLocaleTest` | 3,02 s |
+| `ArtGalleryTest` | 2,51 s |
+| `RendererStressTest` | 2,43 s |
+| `ProfileCloudTest` | 0,67 s |
+| `ProfileTest` | 0,58 s |
+| `BackdropsTest` | 0,31 s |
+| `MissionsTest` | 0,30 s |
+| `StartupTest` | 0,29 s |
+| `BattleHistoryTest` | 0,27 s |
+| `SkirmishSetupTest` | 0,14 s |
+| `HintOverlayTest` | 0,13 s |
+| `ScreenTransitionScreenshotTest` | 0,13 s |
+| `AchievementPersistenceTest` | 0,09 s |
+
+Top 20 najwolniejszych metod:
 
 | Metoda | Czas |
 |---|---:|
