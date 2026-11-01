@@ -1,6 +1,9 @@
 name: Zlecenie 93 - prywatność i dane rankingu
 
 on:
+  push:
+    branches:
+      - 'gpt/93-privacy-link'
   pull_request:
     branches:
       - 'claude/**'
