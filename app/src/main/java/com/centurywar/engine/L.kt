@@ -120,6 +120,7 @@ object L {
         putAll(part81())
         putAll(part82())
         putAll(part85())
+        putAll(part89())
     }
 
     /** Zlecenie 80: zgłoszenia pseudonimów w rankingu globalnym. */
@@ -1435,5 +1436,8 @@ object L {
         "tut85_skip_body" to t("Możesz go powtórzyć w Ustawieniach.", "You can replay it from Settings.", "Du kannst es in den Einstellungen erneut starten.", "Puedes repetirlo desde Ajustes.", "Vous pourrez le relancer dans les Paramètres.", "Puoi ripeterlo dalle Impostazioni.", "Você pode repeti-lo nas Configurações.", "Ти можеш пройти його знову в Налаштуваннях.", "Je kunt hem opnieuw starten via Instellingen.", "Ayarlar'dan yeniden başlatabilirsin."),
         "tut85_skip_yes" to t("Tak, pomiń", "Yes, skip", "Ja, überspringen", "Sí, saltar", "Oui, passer", "Sì, salta", "Sim, pular", "Так, пропустити", "Ja, overslaan", "Evet, atla"),
         "tut85_cancel" to t("Wróć", "Go back", "Zurück", "Volver", "Retour", "Indietro", "Voltar", "Назад", "Terug", "Geri dön"),
+    /** Zlecenie 89: nagłówek zwijanych ustawień technicznych. */
+    private fun part89(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "settings_advanced" to t("Zaawansowane", "Advanced", "Erweitert", "Avanzado", "Avancé", "Avanzate", "Avançado", "Додатково", "Geavanceerd", "Gelişmiş"),
     )
 }

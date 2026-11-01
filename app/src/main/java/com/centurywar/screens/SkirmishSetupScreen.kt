@@ -22,6 +22,7 @@ import kotlin.random.Random
 class SkirmishSetupScreen(g: Game) : Screen(g) {
     override val crashName get() = "SkirmishSetupScreen"
     private val bg = MenuBg()
+    private val scrollCue = ScrollCue()
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val play = btn(-2)
@@ -110,7 +111,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         shuffle.set(bx + minW + gap, by, minW, 43 * dp)
         play.set(bx + 2 * (minW + gap), by, bigW, 43 * dp)
         defaults.label = L["sk_defaults"]; defaults.iconId = Icons.RESTART
-        shuffle.label = L["sk_shuffle"]; shuffle.iconId = Icons.SPEED
+        shuffle.label = L["sk_shuffle"]; shuffle.iconId = Icons.DICE
         play.label = L["play"]; play.iconId = Icons.PLAY; play.highlight = true
         rebuildLabels()
     }
@@ -263,6 +264,8 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         for (b in powerButtons) ui.button(c, b, 13f)
         for (b in mods) ui.button(c, b, 13f)
         c.restore()
+        scrollCue.vertical(c, panel.right - 12 * dp, contentTop + 5 * dp,
+            contentBottom - 5 * dp, scroll, maxScroll, dp)
 
         val mid = footer.centerX()
         ui.textO(c, summary, mid, footer.top + 25 * dp,

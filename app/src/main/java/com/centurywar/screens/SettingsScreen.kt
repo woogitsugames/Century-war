@@ -17,6 +17,7 @@ import kotlin.math.min
 class SettingsScreen(g: Game) : Screen(g) {
     override val crashName get() = "SettingsScreen"
     private val bg = MenuBg()
+    private val scrollCue = ScrollCue()
     private val chrome = Chrome(this)
     private val back = btn(-1)
     private val quality = btn(1)
@@ -39,16 +40,30 @@ class SettingsScreen(g: Game) : Screen(g) {
     private val globalRank = btn(16)
     private val newIdentity = btn(17)
     private val about = btn(19)
-    private val localRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, access, hintSettings, about, reset)
-    private val onlineRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, access, hintSettings, about, reset)
-    private val globalRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, globalRank, newIdentity, access, hintSettings, about, reset)
-    private val bothRows = listOf(quality, fps, lang, snd, sfxLevel, music, vib, shakeBtn, showFps, name, notifications, notifyHour, playGames, globalRank, newIdentity, access, hintSettings, about, reset)
-    /** Wiersz Play Games tylko, gdy PGS jest dostępne (prawdziwe ID w games_ids.xml). */
-    private fun rows() = when {
-        g.scores != null && g.online.available -> bothRows
-        g.scores != null -> globalRows
-        g.online.available -> onlineRows
-        else -> localRows
+    private val advanced = btn(20)
+    private var advancedExpanded = false
+    private val visibleRows = ArrayList<Button>(22)
+    private val soundRows = listOf(snd, music, sfxLevel, lang, vib, shakeBtn)
+    private val personalRows = listOf(name, notifications, notifyHour)
+    private val navigationRows = listOf(access, hintSettings, about)
+    private val technicalRows = listOf(quality, fps, showFps)
+
+    /** Kolejność jest stała na klatkę; lista zmienia się tylko przy przebudowie układu. */
+    private fun rows(): List<Button> = visibleRows
+
+    private fun rebuildRows() {
+        visibleRows.clear()
+        visibleRows.addAll(soundRows)
+        visibleRows.addAll(personalRows)
+        if (g.online.available) visibleRows.add(playGames)
+        if (g.scores != null) {
+            visibleRows.add(globalRank)
+            visibleRows.add(newIdentity)
+        }
+        visibleRows.addAll(navigationRows)
+        visibleRows.add(advanced)
+        if (advancedExpanded) visibleRows.addAll(technicalRows)
+        visibleRows.add(reset)
     }
     private fun iconOf(b: Button) = when (b) {
         quality -> Icons.MONITOR; fps -> Icons.STOPWATCH; lang -> Icons.GLOBE; snd -> Icons.SPEAKER; sfxLevel -> Icons.SPEAKER; music -> Icons.NOTE
@@ -67,6 +82,7 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var rowsPerColumn = 10
     private var columnWidth = 0f
     private var lastAvailable = false
+    private var lastScoresAvailable = false
     private val panel = RectF()
     private val rowR = RectF()
     private var resetArmed = 0f
@@ -92,9 +108,11 @@ class SettingsScreen(g: Game) : Screen(g) {
     override fun layout() {
         chrome.layoutBack(back)
         val pw = min(620 * dp, w - g.insetL - g.insetR - 32 * dp)
+        rebuildRows()
         val rows = rows()
         lastAvailable = g.online.available
-        playGames.visible = lastAvailable
+        lastScoresAvailable = g.scores != null
+        for (b in buttons) if (b !== back) b.visible = false
         val avail = h - chrome.top - g.insetB - 20 * dp
         // Powiększony tekst na wąskim Foldzie potrzebuje miejsca na długie etykiety.
         val columns = if (pw >= 470 * dp && (ui.textScale <= 1.15f || pw >= 600 * dp)) 2 else 1
@@ -114,7 +132,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             val line = i % rowsPerColumn
             val left = panel.left + 12 * dp + col * columnWidth
             val y = panel.top + 24 * dp + line * step
-            if (b === reset) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
+            if (b === reset || b === advanced) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
             else if (b === music || b === sfxLevel) {
                 // Suwak potrzebuje więcej miejsca niż przycisk, inaczej na 720p ma kilka dp.
                 val sw = max(bw, columnWidth * 0.52f)
@@ -125,6 +143,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         // Nie pozostawiaj klikalnych połówek przycisków pod przyciętą krawędzią listy.
         for (b in rows) b.visible = b !== music && b !== sfxLevel &&
             b.r.top >= contentTop && b.r.bottom <= contentBottom
+        advanced.iconId = if (advancedExpanded) Icons.BACK else Icons.ADVANCE
         reset.iconId = Icons.RESTART
         access.iconId = Icons.PERSON
     }
@@ -157,7 +176,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         notifications.color = if (p.notifications) Ui.BTN_GREEN else Ui.BTN
         notifyHour.label = hourLabels[p.notifyHour.coerceIn(0, 23)]
         // PGS loguje się asynchronicznie: gdy dostępność się zmieni, przelicz układ wierszy.
-        if (g.online.available != lastAvailable) layout()
+        if (g.online.available != lastAvailable || (g.scores != null) != lastScoresAvailable) layout()
         playGames.label = L[when (g.online.state) {
             OnlineState.CONNECTED -> "pgs_connected"
             OnlineState.SYNCING -> "pgs_syncing"
@@ -169,6 +188,8 @@ class SettingsScreen(g: Game) : Screen(g) {
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
         access.label = L["access_open"]
         about.label = L["about_link"]
+        advanced.label = L["settings_advanced"]
+        advanced.selected = advancedExpanded
         globalRank.label = if (p.globalRanking) L["on"] else L["off"]
         globalRank.color = if (p.globalRanking) Ui.BTN_GREEN else Ui.BTN
         newIdentity.label = if (identityArmed > 0f) L["reset_confirm"] else L["global_new_id"]
@@ -184,7 +205,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         c.clipRect(g.insetL, contentTop, w - g.insetR, contentBottom)
         ui.panel(c, panel)
         for ((i, b) in rows().withIndex()) {
-            if (b !== reset && b.r.bottom > contentTop && b.r.top < contentBottom) {
+            if (b !== reset && b !== advanced && b.r.bottom > contentTop && b.r.top < contentBottom) {
                 val col = i / rowsPerColumn
                 val left = panel.left + 12 * dp + col * columnWidth
                 rowR.set(left + 2 * dp, b.r.top - 3 * dp, left + columnWidth - 2 * dp, b.r.bottom + 3 * dp)
@@ -203,6 +224,8 @@ class SettingsScreen(g: Game) : Screen(g) {
             } else ui.button(c, b, 15f)
         }
         c.restore()
+        scrollCue.vertical(c, panel.right - 12 * dp, contentTop, contentBottom,
+            scroll, maxScroll, dp)
         chrome.title(c, L["settings"])
         ui.button(c, back, 16f)
     }
@@ -294,6 +317,7 @@ class SettingsScreen(g: Game) : Screen(g) {
                 return
             }
             19 -> { g.push(AboutScreen(g)); return }
+            20 -> { advancedExpanded = !advancedExpanded; layout(); return }
             17 -> {
                 if (p.playerId.isNotEmpty()) {
                     if (identityArmed > 0f) {
