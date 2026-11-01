@@ -481,6 +481,44 @@ class MainActivity : Activity(), Host {
         }
     }
 
+
+    override fun requestProfileRestorePrevious() {
+        if (!profileImportRunning.compareAndSet(false, true)) return
+        Thread({
+            // Kopie znajdują się w katalogu prywatnym i nie wymagają uprawnień SAF.
+            val directory = File(filesDir, "profile-backups")
+            val previous = directory.listFiles()
+                ?.asSequence()
+                ?.filter { it.isFile && it.name.startsWith("before-import-") && it.name.endsWith(".cwprofile") }
+                ?.sortedByDescending { it.lastModified() }
+                ?.mapNotNull { file ->
+                    runCatching { file.inputStream().use { ProfileBackup.decode(it) } }.getOrNull()
+                }
+                ?.firstOrNull()
+            runOnUiThread {
+                if (isFinishing || isDestroyed || !::game.isInitialized) {
+                    profileImportRunning.set(false)
+                    return@runOnUiThread
+                }
+                if (previous == null) {
+                    profileImportRunning.set(false)
+                    game.post { game.showNotice(L["profile_restore_missing"], Icons.CLOSE) }
+                    return@runOnUiThread
+                }
+                AlertDialog.Builder(this)
+                    .setTitle(L["profile_restore_title"])
+                    .setMessage(L["profile_restore_confirm"])
+                    .setPositiveButton(L["profile_restore_action"]) { _, _ -> applyProfileImport(previous) }
+                    .setNegativeButton(L["global_cancel"]) { _, _ -> profileImportRunning.set(false) }
+                    .setOnCancelListener { profileImportRunning.set(false) }
+                    .setOnDismissListener { hideSystemBars() }
+                    .show()
+            }
+        }, "profile-restore-check").apply {
+            isDaemon = true; priority = Thread.MIN_PRIORITY; start()
+        }
+    }
+
     private fun exportProfile(uri: Uri) {
         game.post {
             val snapshot = game.profile.toCloudJson()
