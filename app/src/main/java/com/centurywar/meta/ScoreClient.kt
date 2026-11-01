@@ -16,8 +16,6 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import javax.net.ssl.HttpsURLConnection
 
 enum class ScoreSendStatus { DISABLED, QUEUED, SENDING, SENT, REJECTED, OFFLINE, INVALID_NICK, REPLAY_TOO_LONG }
@@ -168,25 +166,8 @@ class ScoreClient(
         worker.execute {
             if (!enabled || !profile.globalRanking) return@execute
             try {
-                val json = JSONObject()
-                    .put("board", when (cfg.mode) {
-                        Mode.DAILY -> "daily"
-                        Mode.ENDLESS -> if (weekly) "weekly" else "endless"
-                        Mode.SKIRMISH -> "skirmish"
-                        Mode.CAMPAIGN -> "campaign"
-                    })
-                    .put("player", playerId).put("nick", nick)
-                    .put("gameVersion", GAME_VERSION).put("seed", cfg.seed)
-                    .put("replay", Replay.encode(log)).put("score", score)
-                    .put("research", JSONArray().apply { levels.forEach { put(it) } })
-                if (cfg.mode == Mode.DAILY) json.put("day", cfg.seed)
-                if (weekly) json.put("day", cfg.weekly)
-                if (cfg.mode == Mode.CAMPAIGN) {
-                    json.put("stage", cfg.stageIndex)
-                    if (cfg.tutorial) json.put("tutorial", true)
-                }
-                if (cfg.mode == Mode.SKIRMISH) json.put("difficulty", difficulty.coerceIn(0, 3))
-                queue.add(ScoreQueue.Entry(System.currentTimeMillis(), json.toString()), System.currentTimeMillis())
+                val payload = ScoreWire.submission(cfg, log, score, nick, playerId, levels, difficulty)
+                queue.add(ScoreQueue.Entry(System.currentTimeMillis(), payload), System.currentTimeMillis())
                 persistQueue()
                 pump()
             } catch (_: Exception) {
@@ -304,16 +285,13 @@ class ScoreClient(
             sending = false
             return
         }
-        if (code == -1 || code == 408 || code == 429 || code in 500..599) {
+        val retryDelay = queue.recordResponse(code)
+        persistQueue()
+        if (retryDelay != null) {
             status = ScoreSendStatus.OFFLINE
-            item.attempts++
-            persistQueue()
-            val delay = (2_000L * (1L shl item.attempts.coerceIn(0, 11))).coerceAtMost(3_600_000L)
-            worker.schedule({ sendNext(token) }, delay, TimeUnit.MILLISECONDS)
+            worker.schedule({ sendNext(token) }, retryDelay, TimeUnit.MILLISECONDS)
             return
         }
-        queue.entries.removeFirst()
-        persistQueue()
         status = if (code in 200..299) ScoreSendStatus.SENT else ScoreSendStatus.REJECTED
         worker.execute { sendNext(token) }
     }
@@ -337,6 +315,7 @@ class ScoreClient(
         }
         val timestamp = (System.currentTimeMillis() / 1000L).toString()
         val nonce = UUID.randomUUID().toString()
+        val signed = ScoreWire.headers(key, timestamp, nonce, method, target, body, installationSecret)
         val conn = URL(origin + target).openConnection() as? HttpsURLConnection
             ?: throw IOException("https_required")
         try {
@@ -344,11 +323,11 @@ class ScoreClient(
             conn.readTimeout = 10_000
             conn.requestMethod = method
             conn.instanceFollowRedirects = false
-            conn.setRequestProperty("X-CW-Timestamp", timestamp)
-            conn.setRequestProperty("X-CW-Nonce", nonce)
-            if (installationSecret != null) conn.setRequestProperty("X-CW-Player-Secret", installationSecret)
-            conn.setRequestProperty("X-CW-Signature",
-                sign(key, timestamp, nonce, method, target, body, installationSecret))
+            conn.setRequestProperty("X-CW-Timestamp", signed.timestamp)
+            conn.setRequestProperty("X-CW-Nonce", signed.nonce)
+            if (signed.installationSecret != null)
+                conn.setRequestProperty("X-CW-Player-Secret", signed.installationSecret)
+            conn.setRequestProperty("X-CW-Signature", signed.signature)
             if (method == "POST") {
                 val bytes = body.toByteArray(StandardCharsets.UTF_8)
                 conn.doOutput = true
@@ -473,19 +452,7 @@ class ScoreClient(
 
         /** Wektor testowy jest wspólny z Security.kt na serwerze. */
         fun sign(secret: ByteArray, timestamp: String, nonce: String, method: String,
-                 target: String, body: String, installationSecret: String? = null): String {
-            val msg = listOf(timestamp, nonce, method, target, body).joinToString("\n") +
-                (if (installationSecret != null) "\n" + installationSecret else "")
-            val mac = Mac.getInstance("HmacSHA256")
-            mac.init(SecretKeySpec(secret, "HmacSHA256"))
-            val digest = mac.doFinal(msg.toByteArray(StandardCharsets.UTF_8))
-            val hex = "0123456789abcdef"
-            return buildString(64) {
-                for (b in digest) {
-                    append(hex[(b.toInt() ushr 4) and 15])
-                    append(hex[b.toInt() and 15])
-                }
-            }
-        }
+                 target: String, body: String, installationSecret: String? = null): String =
+            ScoreWire.sign(secret, timestamp, nonce, method, target, body, installationSecret)
     }
 }
