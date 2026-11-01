@@ -130,3 +130,8 @@ Wersja release (R8) sprawdzona na telefonie, Play Games z prawdziwymi ID, wdroż
   - `Battle.kt` skalowanie fal Endless: `hpMul` nachylenie po fali 48 z 0,06 na 0,07 albo dodatkowy mnożnik `dmgMul` `(1 + max(0, wave-48)*0.05)`;
   - `Modes.kt` `stageRamp`: etap 16 0,97→0,94, etap 23 0,92→0,966.
   Do zrobienia: pełny pomiar (Endless 100 seedów, kampania 36 etapów × 20 seedów), strojenie, wpis w `docs/BALANCE.md` (sekcja „Tura 6 – pomiar po scaleniu”), regeneracja złotych powtórek, jeśli się zmienią.
+
+## Decyzje właściciela (tura 7, 1.11.2026)
+- Dowódca na polu bitwy (zlecenie 125): TAK, w fali 2.
+- Poziomy trudności kampanii (126): do rankingu kampanii liczy się tylko poziom Normalny. Przy przeglądzie 126 sprawdzić, że wyniki z Łatwego/Trudnego nie trafiają do rankingu.
+- Banery powiadomień nie pokazują się na wynikach bitwy, tylko w menu (`BattleScreen.blocksNotices` zawsze true) — zostaje.

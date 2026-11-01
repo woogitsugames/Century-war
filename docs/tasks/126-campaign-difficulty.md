@@ -99,7 +99,7 @@ Kampania ma jeden poziom trudności. Dodaj wybór **Łatwy / Normalny / Trudny**
 1. Trudność to jawny mnożnik siły AI (`BattleConfig.aiPower` już istnieje) — np. 0,8 / 1,0 / 1,2 (zmierz i dobierz). AI gra według tych samych zasad.
 2. Wybór na ekranie kampanii (`CampaignScreen`) lub przed bitwą; zapamiętany w `Profile` (kompatybilnie wstecz, domyślnie Normalny).
 3. Nagrody: gwiazdki niezależne od trudności albo osobne — zaproponuj i opisz; medale na Łatwym mniejsze, na Trudnym większe. Osiągnięcie za ukończenie kampanii na Trudnym.
-4. Ranking: wyniki kampanii do rankingów tylko z Normalnego (albo osobne tablice) — trudność musi trafić do powtórki/konfiguracji tak, by serwer weryfikował ją poprawnie (`Replay`, `ScoreClient`; jeśli zmieniasz format — `Replay.VERSION` +1 i test).
+4. Ranking (**decyzja właściciela: tylko poziom Normalny**): wyniki kampanii trafiają do rankingów wyłącznie z Normalnego — trudność musi trafić do powtórki/konfiguracji tak, by serwer weryfikował ją poprawnie (`Replay`, `ScoreClient`; jeśli zmieniasz format — `Replay.VERSION` +1 i test).
 5. `BalanceReport` dla trzech poziomów (36 etapów × 20 seedów); wpis w `docs/BALANCE.md`.
 6. Teksty w `part126()`; zrzuty 720p i Fold.
 
