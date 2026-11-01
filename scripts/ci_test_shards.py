@@ -43,7 +43,7 @@ def discover(root: Path = TEST_ROOT) -> list[Source]:
             r"@Test(?:\([^)]*\))?\s*(?:@[^\n]*\n\s*)*(?:(?:internal|public)\s+)?fun\s+([A-Za-z_]\w*)\s*\(",
             code,
         )
-        annotation_count = len(re.findall(r"(?m)^\\s*@Test\\b", code))
+        annotation_count = len(re.findall(r"(?m)^\s*@Test\b", code))
         if package is None or len(classes) != 1 or len(methods) != annotation_count:
             raise ValueError(f"Nie można odczytać klasy/metod @Test: {path}")
         name = f"{package.group(1)}.{classes[0]}"
