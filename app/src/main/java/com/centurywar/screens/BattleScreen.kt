@@ -167,6 +167,13 @@ class BattleScreen(
     /** Klucze opisów są składane raz, nie przy każdym renderowaniu modala. */
     private val doctrineDescKeys = Doctrine.values().map { it.key + "_d" }.toTypedArray()
     private val cardDescKeys = EndlessCard.values().map { it.textKey + "_d" }.toTypedArray()
+
+    private fun choiceDescriptionKey(card: EndlessCard?, doctrine: Doctrine?): String {
+        if ((card?.doctrine ?: doctrine) == Doctrine.VIGILANCE && !battle.fog)
+            return "d_vigilance_clear_d"
+        return if (card != null) cardDescKeys[card.ordinal]
+            else doctrineDescKeys[doctrine!!.ordinal]
+    }
     private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
     private val unitUpgrade = Array(4) { i -> btn(UNIT_UPGRADE0 + i) }
     private val upgradeBuy = btn(UNIT_UPGRADE_BUY)
@@ -846,7 +853,7 @@ class BattleScreen(
                 val doctrine = battle.pendingChoice?.get(i)
                 if (card == null && doctrine == null) return false
                 title = L[card?.textKey ?: doctrine!!.key]
-                body = L[if (card != null) cardDescKeys[card.ordinal] else doctrineDescKeys[doctrine!!.ordinal]]
+                body = L[choiceDescriptionKey(card, doctrine)]
             }
             in VARIANT0..VARIANT0 + 1 -> {
                 val era = battle.pendingVariant ?: return false
@@ -1919,8 +1926,7 @@ class BattleScreen(
                 ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
                     10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
-            val descKey = if (cards == null) doctrineDescKeys[doctrines!![i].ordinal]
-                else cardDescKeys[cards[i].ordinal]
+            val descKey = choiceDescriptionKey(cards?.get(i), doctrines?.get(i))
             val wrapWidth = tmpR.width() - 22 * dp
             val choiceKey = if (cards == null) doctrines!![i].ordinal else 100 + cards[i].ordinal
             if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
