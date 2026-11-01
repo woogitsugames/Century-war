@@ -363,7 +363,10 @@ class BattleScreen(
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         val t = g.insetT + 6 * dp
-        evolveBtn.set(l + 196 * dp, t, 118 * dp, 48 * dp)
+        // Na bardzo wąskich ekranach awans ma własne miejsce przy minimapie.
+        // W pierwszym rzędzie nachodziłby na pauzę; układ zwykły jest nietknięty.
+        if (twoRowHud) evolveBtn.set(l, t + 54 * dp, 118 * dp, 48 * dp)
+        else evolveBtn.set(l + 196 * dp, t, 118 * dp, 48 * dp)
         pauseBtn.set(rr - 48 * dp, t, 48 * dp, 48 * dp)
         if (compactTop) {
             // Wąski ekran: osobny rząd na minimapę, paski baz i zegar.
