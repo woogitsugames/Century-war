@@ -181,6 +181,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         info.set(w / 2 - iw / 2, h / 2 - ih / 2 + 22 * dp,
             w / 2 + iw / 2, h / 2 + ih / 2 + 22 * dp)
         start.set(info.centerX() - 90 * dp, info.bottom - 62 * dp, 180 * dp, 44 * dp)
+        start.hitSlop = 2 * dp
         close.set(info.right - 34 * dp, info.top - 18 * dp, 48 * dp, 48 * dp)
         val gap = 6 * dp
         val buttonWidth = (info.width() - 48 * dp - gap * 2) / 3f
@@ -190,6 +191,7 @@ class CampaignScreen(g: Game) : Screen(g) {
             b.highlight = g.profile.campaignDifficulty == CampaignDifficulty.entries[i]
             b.set(info.left + 24 * dp + i * (buttonWidth + gap),
                 start.r.top - 43 * dp, buttonWidth, 34 * dp)
+            b.hitSlop = 7 * dp
         }
         place()
         eraIntro?.layout()

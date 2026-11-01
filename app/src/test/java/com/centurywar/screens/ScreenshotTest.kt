@@ -265,8 +265,10 @@ class ScreenshotTest {
             shot(g, tag + "_campaign_journey_info")
             if (tag == "phone720" || tag == "foldOpen") {
                 for (difficulty in listOf(CampaignDifficulty.EASY, CampaignDifficulty.HARD)) {
-                    g.profile.campaignDifficulty = difficulty
+                    val button = screen.buttons.first { it.id == -10 - difficulty.ordinal }
+                    tap(g, button.r.centerX(), button.r.centerY())
                     shot(g, tag + "_campaign_difficulty_" + difficulty.name.lowercase())
+                    assertTrue("Zapis trudności po dotknięciu", g.profile.campaignDifficulty == difficulty)
                 }
             }
             field(screen, "selected").set(screen, null)
