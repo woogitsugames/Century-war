@@ -313,7 +313,8 @@ class BattleScreen(
             // Wąski ekran (np. rozłożony Fold, telefon w pionie): minimapa, HP baz, zegar i pogoda
             // w drugim rzędzie paska zamiast znikać.
             topH = 52 * dp + 60 * dp // drugi rząd z miejscem na liczby HP i zegar pod minimapą
-            mini.set(l + 22 * dp, t + 46 * dp + 15 * dp, rr - 120 * dp, t + 46 * dp + 31 * dp)
+            // Minimapa na środku; po lewej liczebność armii, po prawej pogoda (po 120 dp).
+            mini.set(l + 120 * dp, t + 46 * dp + 15 * dp, rr - 120 * dp, t + 46 * dp + 31 * dp)
             if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
         }
         topBar.set(0f, 0f, w, topH + g.insetT)
@@ -1581,8 +1582,11 @@ class BattleScreen(
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
             // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
+            val secondRow = mini.top > pauseBtn.r.bottom
             val wx = mini.right + 14 * dp
-            val wy = mini.top - 13 * dp
+            // W drugim rzędzie pogoda na wysokości liczb pod minimapą (dolny wiersz).
+            val wy = if (secondRow) mini.bottom else mini.top - 13 * dp
+            if (secondRow) drawArmyCounts(c, p, e, mini.left - 108 * dp, wy + 11 * dp)
             Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             val weatherName = L[battle.weather.key]
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
@@ -2018,6 +2022,22 @@ class BattleScreen(
         ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
         ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
         return y + lh
+    }
+
+    private var armyP = -1
+    private var armyE = -1
+    private var armyPText = ""
+    private var armyEText = ""
+
+    /** Lewy blok drugiego rzędu: żywe jednostki gracza i wroga (przy mgle liczba wroga ukryta). */
+    private fun drawArmyCounts(c: Canvas, p: com.centurywar.game.Side, e: com.centurywar.game.Side, x: Float, cy: Float) {
+        val ec = if (battle.fog) -2 else e.aliveCount
+        if (p.aliveCount != armyP) { armyP = p.aliveCount; armyPText = armyP.toString() }
+        if (ec != armyE) { armyE = ec; armyEText = if (ec < 0) "?" else ec.toString() }
+        Icons.draw(c, Icons.CROSSED_SWORDS, x + 10 * dp, cy, 20 * dp, dp = dp)
+        ui.textO(c, armyPText, x + 46 * dp, cy + 5 * dp, 14f, Ui.PLAYER, Paint.Align.RIGHT, 1.8f)
+        ui.textO(c, ":", x + 54 * dp, cy + 5 * dp, 14f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
+        ui.textO(c, armyEText, x + 62 * dp, cy + 5 * dp, 14f, Ui.ENEMY, Paint.Align.LEFT, 1.8f)
     }
 
     private fun drawResults(c: Canvas) {
