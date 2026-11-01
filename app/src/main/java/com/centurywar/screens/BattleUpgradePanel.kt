@@ -52,10 +52,10 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
     fun layoutUpgradePanel() {
         with(owner) {
         val pw = min(425 * dp, w - g.insetL - g.insetR - 32 * dp)
-        val ph = min(260 * dp, h - g.insetT - g.insetB - 20 * dp)
+        val ph = min(268 * dp, h - g.insetT - g.insetB - 20 * dp)
         val cy = (g.insetT + h - g.insetB) / 2f
         upgradePanel.set(w / 2 - pw / 2, cy - ph / 2, w / 2 + pw / 2, cy + ph / 2)
-        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 62 * dp, pw - 50 * dp, 48 * dp)
+        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 72 * dp, pw - 50 * dp, 48 * dp)
         upgradeClose.set(upgradePanel.right - 38 * dp, upgradePanel.top - 12 * dp, 48 * dp, 48 * dp)
         }
     }

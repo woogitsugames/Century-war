@@ -180,10 +180,12 @@ class CampaignScreen(g: Game) : Screen(g) {
         moving = false
 
         val iw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
-        val ih = min(330 * dp, h - g.insetT - g.insetB - 58 * dp)
+        // Dwa rzędy pełnych pól dotyku (48 dp): trudność i start etapu.
+        val ih = min(362 * dp, h - g.insetT - g.insetB - 58 * dp)
         info.set(w / 2 - iw / 2, h / 2 - ih / 2 + 22 * dp,
             w / 2 + iw / 2, h / 2 + ih / 2 + 22 * dp)
-        start.set(info.centerX() - 90 * dp, info.bottom - 62 * dp, 180 * dp, 44 * dp)
+        // Dolna krawędź startu 12 dp nad złotą lamówką ramki (Ui.PANEL_TRIM_INSET).
+        start.set(info.centerX() - 90 * dp, info.bottom - 71 * dp, 180 * dp, 48 * dp)
         start.hitSlop = 2 * dp
         close.set(info.right - 34 * dp, info.top - 18 * dp, 48 * dp, 48 * dp)
         val gap = 6 * dp
@@ -193,8 +195,8 @@ class CampaignScreen(g: Game) : Screen(g) {
             b.label = L[CampaignDifficulty.entries[i].key]
             b.highlight = g.profile.campaignDifficulty == CampaignDifficulty.entries[i]
             b.set(info.left + 24 * dp + i * (buttonWidth + gap),
-                start.r.top - 43 * dp, buttonWidth, 34 * dp)
-            b.hitSlop = 7 * dp
+                start.r.top - 52 * dp, buttonWidth, 48 * dp)
+            b.hitSlop = 0f
         }
         place()
         eraIntro?.layout()
@@ -567,6 +569,8 @@ class CampaignScreen(g: Game) : Screen(g) {
         ui.panel(c, info)
         ui.ribbon(c, info.centerX(), info.top + 4 * dp, infoTitle, 20f, Ui.ERA[s.index / 4].let { Ui.blend(it, Ui.RIBBON, 0.35f) }, info.width() * 0.55f)
         var y = info.top + 48 * dp
+        // Niski panel (telefon 720p w poziomie): ciaśniejsze wiersze, by zmieścić chipy nad trudnością.
+        val row = if (info.height() < 352 * dp) 25 * dp else 28 * dp
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
         // gwiazdki
@@ -575,15 +579,15 @@ class CampaignScreen(g: Game) : Screen(g) {
         val isz = 20 * dp
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoRange, x + isz + 8 * dp, y, 14f, Ui.TEXT)
-        y += 28 * dp
+        y += row
         val pw = s.aiPower * g.profile.campaignDifficulty.powerMultiplier
         Icons.draw(c, if (pw > 1f) Icons.SKULL else Icons.CHECK, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoPower, x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
-        y += 28 * dp
+        y += row
         Icons.draw(c, Icons.weatherIcon(s.weather), x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, L[s.weather.key], x + isz + 8 * dp, y, 14f, Ui.TEXT)
-        y += 28 * dp
+        y += row
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
         y += 10 * dp
@@ -607,7 +611,7 @@ class CampaignScreen(g: Game) : Screen(g) {
             val label = L[m.key]
             val cw = ui.measure(label, 12f, true) + 18 * dp
             if (x + cw > x0 + width && x > x0) { x = x0; y += hh + 6 * dp }
-            if (y + hh > difficultyButtons[0].r.top - 24 * dp) break
+            if (y + hh > difficultyButtons[0].r.top - 21 * dp) break
             tmp.set(x, y, x + cw, y + hh)
             ui.card(c, tmp, Color.rgb(84, 60, 110), 10f)
             ui.textO(c, label, x + cw / 2, y + hh * 0.62f, 12f, Ui.TEXT, Paint.Align.CENTER, 1.6f)

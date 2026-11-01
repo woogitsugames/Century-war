@@ -104,6 +104,10 @@ class Ui {
     companion object {
         val BTN = Color.rgb(58, 74, 98)
         val BTN_HI = Color.rgb(226, 162, 44)
+        /** Odległość złotej lamówki od krawędzi panelu (6,5 + 1,4 + 2,5 dp). */
+        const val PANEL_TRIM_INSET = 10.4f
+        /** Odstęp przycisków od lamówki (cień przycisku sięga 3,5 dp poniżej). */
+        const val PANEL_BUTTON_MARGIN = 12f
         val BTN_GREEN: Int get() = Palette.active.buttonGood
         val BTN_RED: Int get() = Palette.active.buttonBad
         val PANEL: Int get() = Palette.active.panel
@@ -206,12 +210,17 @@ class Ui {
         val sz = sizeDp * dp * textScale
         val ow = if (outlineDp > 0f) outlineDp * dp else max(2f * dp, sz * 0.16f)
         val tf = face ?: bold
-        textLine.textSize = sz; textLine.textAlign = align; textLine.typeface = tf
-        textLine.strokeWidth = ow
-        textLine.color = Color.argb(120, 0, 0, 0)
-        c.drawText(s, x, y + ow * 0.6f, textLine)
-        textLine.color = OUTLINE
-        c.drawText(s, x, y, textLine)
+        // Ciemne litery (np. na złotym przycisku BTN_HI) z ciemnym obrysem i cieniem zlewają się
+        // w rozmytą plamę wyglądającą na nieaktywną: rysujemy je bez obrysu i cienia.
+        val dark = Color.red(color) * 299 + Color.green(color) * 587 + Color.blue(color) * 114 < 90_000
+        if (!dark) {
+            textLine.textSize = sz; textLine.textAlign = align; textLine.typeface = tf
+            textLine.strokeWidth = ow
+            textLine.color = Color.argb(120, 0, 0, 0)
+            c.drawText(s, x, y + ow * 0.6f, textLine)
+            textLine.color = OUTLINE
+            c.drawText(s, x, y, textLine)
+        }
         text.textSize = sz; text.textAlign = align; text.typeface = tf; text.shader = null
         text.color = color
         c.drawText(s, x, y, text)
@@ -281,6 +290,13 @@ class Ui {
     // ------------------------------------------------------------ panele
 
     /** Panel z ramą: cień, ciemny kontur, metalowa rama, złota lamówka, ciemne wnętrze. */
+    /** Wewnętrzna złota lamówka panelu [panel]; przyciski panelu muszą leżeć w niej z marginesem. */
+    fun panelInner(r: RectF, out: RectF): RectF {
+        val i = PANEL_TRIM_INSET * dp
+        out.set(r.left + i, r.top + i, r.right - i, r.bottom - i)
+        return out
+    }
+
     fun panel(c: Canvas, r: RectF, color: Int = PANEL, radiusDp: Float = 14f) {
         val rad = radiusDp * dp
         val o = (if (Palette.highContrast) 3.4f else 2.5f) * dp

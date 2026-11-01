@@ -26,6 +26,7 @@ import com.centurywar.game.BattleRenderer
 import com.centurywar.game.EndlessWaveTheme
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Stage
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Role
@@ -266,7 +267,8 @@ class ScreenshotTest {
             val pictures = field(screen, "regionPictures").get(screen) as Array<*>
             assertTrue("Dziewięć buforowanych regionów", pictures.size == Defs.ERA_COUNT)
             assertTrue("Każde tło nagrane", pictures.all { it != null })
-            assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.id >= 0 } == 36)
+            // Przycisk "OK" wskazówki (HintOverlay.OK_ID) też ma nieujemne id, więc liczymy kafelki etapów.
+            assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.tag is Stage } == 36)
             assertTrue("Orientacja mapy", field(screen, "portraitMap").getBoolean(screen) == (g.height > g.width))
             shot(g, tag + "_campaign_journey", 90)
 

@@ -432,8 +432,10 @@ class BattleScreen(
         val cy = (g.insetT + h - g.insetB) * 0.5f
         pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
 
-        val buttonH = if (ph < 380 * dp) 38 * dp else 42 * dp
-        val buttonTop = pausePanel.bottom - 12 * dp - buttonH
+        // Pełne 48 dp i wyraźny odstęp od złotej lamówki ramki (zgłoszenie z Folda).
+        val buttonH = 48 * dp
+        val buttonTop = pausePanel.bottom -
+            (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp - buttonH
         val contentTop = pausePanel.top + 48 * dp
         val contentBottom = buttonTop - 10 * dp
         val avail = contentBottom - contentTop
@@ -476,9 +478,10 @@ class BattleScreen(
         pauseSpeedBtn.hitSlop = pauseVibrationBtn.hitSlop
 
         val buttonGap = 12 * dp
-        val buttonW = (pw - 36 * dp - buttonGap * 2) / 3f
+        val side = (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp
+        val buttonW = (pw - side * 2 - buttonGap * 2) / 3f
         for (i in pauseMenu.indices) {
-            pauseMenu[i].set(pausePanel.left + 18 * dp + i * (buttonW + buttonGap),
+            pauseMenu[i].set(pausePanel.left + side + i * (buttonW + buttonGap),
                 buttonTop, buttonW, buttonH)
             pauseMenu[i].hitSlop = (48 * dp - buttonH).coerceAtLeast(0f) / 2f
         }
@@ -1556,8 +1559,9 @@ class BattleScreen(
             if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
                 choiceDescWidth != wrapWidth || choiceDescScale != ui.textScale) {
                 choiceDescKey[i] = choiceKey
-                choiceDescCount[i] = HintFrame.wrapInto(ui, L[descKey],
-                    wrapWidth, 12f, choiceDescLines[i])
+                // Wąskie karty (zewnętrzny ekran Folda): długie złożenia dzielone z dywizem.
+                choiceDescCount[i] = HintFrame.wrapHintInto(ui, L[descKey],
+                    wrapWidth, 12f, choiceDescLines[i], hyphen = true)
             }
             drawWrappedLines(c, choiceDescLines[i], choiceDescCount[i],
                 tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,

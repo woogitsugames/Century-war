@@ -312,6 +312,46 @@ class HintOverlay(
         }
     }
 
+    /** Ostatnio narysowany dymek (pusty, gdy niewidoczny); do testów geometrii. */
+    internal val panelRect: RectF get() = panel
+
+    /**
+     * W bitwie dymek mieszka wyłącznie na polu bitwy (między paskiem górnym a dolnym HUD),
+     * więc nigdy nie zasłania przycisków. Cel w dolnym HUD: dymek stoi tuż nad paskiem, na pasie
+     * ziemi, ze strzałką w dół; cel w pasku górnym: dymek pod paskiem ze strzałką w górę.
+     */
+    private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
+                           dp: Float): Boolean {
+        val f = targets?.field
+        if (battle == null || f == null || f.height() <= 0f || activeId == VARIANT) {
+            return HintFrame.place(target, safeL, safeT, safeR, safeB,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        val gap = 6f * dp
+        val top = max(safeT, f.top + gap)
+        val bottom = min(safeB, f.bottom - gap)
+        val left = max(safeL, f.left)
+        val right = min(safeR, f.right)
+        if (hintWidth > right - left || hintHeight > bottom - top) {
+            panel.setEmpty(); connector.setEmpty()
+            return false
+        }
+        if (target == null || target.width() <= 0f || target.height() <= 0f ||
+            (target.top >= f.top - 0.5f && target.bottom <= f.bottom + 0.5f)) {
+            return HintFrame.place(target, left, top, right, bottom,
+                hintWidth, hintHeight, 4f * dp, panel, connector)
+        }
+        val below = target.centerY() > f.centerY()
+        val x = (target.centerX() - hintWidth * 0.5f).coerceIn(left, right - hintWidth)
+        val y = if (below) bottom - hintHeight else top
+        panel.set(x, y, x + hintWidth, y + hintHeight)
+        val inset = min(14f * dp, hintWidth * 0.2f)
+        val ax = target.centerX().coerceIn(x + inset, x + hintWidth - inset)
+        connector.set(ax, if (below) panel.bottom else panel.top,
+            target.centerX(), if (below) target.top - 3f * dp else target.bottom + 3f * dp)
+        return true
+    }
+
     fun draw(c: Canvas) {
         if (activeId < 0 || !g.profile.hintsEnabled || hintWidth <= 0f) return
         val dp = g.ui.dp
@@ -320,8 +360,7 @@ class HintOverlay(
         val safeT = g.insetT + 4f * dp
         val safeB = g.height - g.insetB - 4f * dp
         val target = focus()
-        if (!HintFrame.place(target, safeL, safeT, safeR, safeB,
-                hintWidth, hintHeight, 4f * dp, panel, connector)) return
+        if (!placePanel(target, safeL, safeT, safeR, safeB, dp)) return
 
         // Wskaźnik kończy się na krawędzi celu; nie przesłania samych przycisków.
         if (target != null && target.width() > 0f && target.height() > 0f) {
