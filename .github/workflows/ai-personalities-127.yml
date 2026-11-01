@@ -61,13 +61,7 @@ jobs:
       fail-fast: false
       matrix:
         version: [baseline, candidate]
-        include:
-          - { range: '01-06', from: 1, to: 6 }
-          - { range: '07-12', from: 7, to: 12 }
-          - { range: '13-18', from: 13, to: 18 }
-          - { range: '19-24', from: 19, to: 24 }
-          - { range: '25-30', from: 25, to: 30 }
-          - { range: '31-36', from: 31, to: 36 }
+        range: ['01-06', '07-12', '13-18', '19-24', '25-30', '31-36']
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,10 +79,11 @@ jobs:
           BALANCE_RUN: 'true'
           BALANCE_RUNS: '20'
           BALANCE_PROFILE: target
-          BALANCE_STAGE_FROM: ${{ matrix.from }}
-          BALANCE_STAGE_TO: ${{ matrix.to }}
+          BALANCE_RANGE: ${{ matrix.range }}
           BALANCE_OUT: ${{ runner.temp }}/balance
         run: |
+          export BALANCE_STAGE_FROM=$((10#${BALANCE_RANGE%-*}))
+          export BALANCE_STAGE_TO=$((10#${BALANCE_RANGE#*-}))
           ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignReport*' --console=plain --no-configuration-cache
       - uses: actions/upload-artifact@v4
         if: always()
