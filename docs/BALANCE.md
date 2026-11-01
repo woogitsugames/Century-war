@@ -391,3 +391,19 @@ przed wydaniem warto sprawdzić większą próbę seedów.
 **Zgodność:** zmiana symulacji wymaga od koordynatora aktualizacji wersji
 rankingu w aplikacji i serwerze. `BattleSnapshot.VERSION` podniesiono do 13
 z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
+
+## Złote powtórki symulacji (zlecenie 91)
+
+Dziesięć scenariuszy w `sim/src/test/resources/golden/` przypina konfigurację (w tym bonusy,
+modyfikatory, pogodę, kartę tygodnia i wydarzenie dnia), przyjęte komendy kontrolera,
+wynik, zwycięzcę, falę, licznik kroków i SHA-256 całego końcowego
+`BattleSnapshot.encode`. Odtworzenie przechodzi też przez `Replay.verify`
+(weryfikator serwera) i `ReplayPlayer`; różnica choćby jednego bajtu stanu jest błędem testu.
+
+Bez Android SDK: `./gradlew :sim:test -PserverOnly=true`.
+
+**Świadoma aktualizacja po zmianie balansu:**
+`./gradlew :sim:regenerateGolden -PserverOnly=true -PgoldenReason="konkretna przyczyna zmiany"`.
+Zadanie nadpisuje wyłącznie pliki golden i dopisuje uzasadnienie z datą na końcu
+`docs/BALANCE.md`. Przed scaleniem sprawdź diff JSON, zmianę wyników i wpływ na
+powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
