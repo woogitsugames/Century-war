@@ -28,3 +28,10 @@ Ten plik jest **jedynym źródłem danych właściciela** dla dokumentów sklepu
 4. Uruchom `./gradlew :app:releaseChecklist` i kompletne testy przed tworzeniem AAB.
 
 `releaseChecklist` blokuje wydanie, jeśli plik nie istnieje, którekolwiek pole jest niewypełnione albo ma niepoprawny podstawowy format. Pominięcie danych właściciela jest możliwe **wyłącznie** w podpisywanym debugowo smoke-teście CI i nigdy podczas publikacji.
+
+## Decyzje właściciela (1.11.2026)
+
+- Data premiery: jeszcze nieustalona (`Daily.RELEASE_DAY` pozostaje 2027-12-01 do czasu decyzji).
+- Wydawca: firma / JDG (konto organizacji w Play Console, wymagany D-U-N-S); nazwa prawna i adres do uzupełnienia.
+- Polityka prywatności: miejsce publikacji do ustalenia później.
+- Google Play Games: włączone. Potrzebne: ID projektu Play Games i ID czterech rankingów do `games_ids.xml`.
