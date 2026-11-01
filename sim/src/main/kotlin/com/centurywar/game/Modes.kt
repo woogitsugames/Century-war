@@ -220,23 +220,22 @@ object ChallengeRuleSets {
         val descriptionKey: String,
         val first: Modifier,
         val second: Modifier,
-        val weather: Weather,
         val weeklyCard: EndlessCard,
     )
 
     private val SETS = arrayOf(
         RuleSet("day109_gold", "day109_gold_d", Modifier.DOUBLE_INCOME, Modifier.FRAGILE_BASES,
-            Weather.WIND, EndlessCard.ECONOMY),
+            EndlessCard.ECONOMY),
         RuleSet("day109_march", "day109_march_d", Modifier.FAST_UNITS, Modifier.FOG_OF_WAR,
-            Weather.NIGHT, EndlessCard.MARCH),
+            EndlessCard.MARCH),
         RuleSet("day109_rain", "day109_rain_d", Modifier.RANGED_HORDE, Modifier.EXPENSIVE_TOWERS,
-            Weather.RAIN, EndlessCard.SHARPSHOOTERS),
+            EndlessCard.SHARPSHOOTERS),
         RuleSet("day109_veterans", "day109_veterans_d", Modifier.RICH_START, Modifier.VETERANS,
-            Weather.CLEAR, EndlessCard.VETERAN),
+            EndlessCard.VETERAN),
         RuleSet("day109_hired", "day109_hired_d", Modifier.SLOW_XP, Modifier.MERCENARIES,
-            Weather.WIND, EndlessCard.EXTRA_GOLD),
+            EndlessCard.EXTRA_GOLD),
         RuleSet("day109_iron", "day109_iron_d", Modifier.GLASS_CANNON, Modifier.ARMORED_FOE,
-            Weather.NIGHT, EndlessCard.BULWARK),
+            EndlessCard.BULWARK),
     )
 
     const val COUNT = 6
@@ -271,9 +270,9 @@ object Weekly {
     fun medalReward(index: Int): Int = MEDAL_REWARDS[index]
     const val TIER_COUNT = 3
 
-    /** Pierwszy pełny tydzień po RELEASE_DAY; historyczne tygodnie są nietknięte. */
+    /** Dwa pierwsze tygodnie po premierze są częścią istniejących wzorców rankingu. */
     fun ruleSet(week: Long): ChallengeRuleSets.RuleSet? {
-        val first = weekNumber(Daily.RELEASE_DAY) + 1L
+        val first = weekNumber(Daily.RELEASE_DAY) + 3L
         return if (week < first) null else ChallengeRuleSets.forWeek(week - first)
     }
 
@@ -327,13 +326,13 @@ object Daily {
     }
 
     private fun pairFor(day: Long): Pair<Modifier, Modifier> {
-        val position = Math.floorMod(day - RELEASE_DAY, RULE_PAIRS.size.toLong()).toInt()
+        val position = Math.floorMod(day - RULES_V2_DAY, RULE_PAIRS.size.toLong()).toInt()
         // 37 i 90 są względnie pierwsze: każde 90 kolejnych dni ma inne pary.
         return RULE_PAIRS[(position * 37 + 13) % RULE_PAIRS.size]
     }
 
     fun ruleSet(day: Long): ChallengeRuleSets.RuleSet? {
-        if (day < RELEASE_DAY) return null
+        if (day < RULES_V2_DAY) return null
         val pair = pairFor(day)
         return ChallengeRuleSets.forModifiers(pair.first, pair.second)
     }
@@ -342,6 +341,9 @@ object Daily {
     // Przed pierwszym wydaniem ustaw na faktyczny dzień publikacji; potem NIGDY nie zmieniaj.
     // 21153 (2027-12-01 UTC) to wyłącznie data zastępcza do czasu ustalenia premiery.
     const val RELEASE_DAY = 21153L
+
+    /** Zestawy v2 od następnego cyklu; dni 0–3 po premierze mają przypięte powtórki. */
+    const val RULES_V2_DAY = RELEASE_DAY + 4L
 
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
@@ -357,10 +359,9 @@ object Daily {
         val rolledMods = HashSet<Modifier>()
         val count = 2 + rng.nextInt(2)
         while (rolledMods.size < count) rolledMods.add(all[rng.nextInt(all.size)])
-        val pair = if (historical) null else pairFor(day)
+        val pair = if (historical || day < RULES_V2_DAY) null else pairFor(day)
         val mods: Set<Modifier> = if (pair == null) rolledMods
             else linkedSetOf(pair.first, pair.second)
-        val rule = if (pair == null) null else ChallengeRuleSets.forModifiers(pair.first, pair.second)
         // Stare dni zachowują losowanie sprzed dodania żelaza. Numer epoki >=2
         // otrzymuje tylko nowy indeks, nie zmieniając historycznej pary epok.
         val rolledStart = if (historical) rng.nextInt(3) else rng.nextInt(6) // zamrożone: kolejna epoka nie może przelosować przyszłych dni
@@ -370,7 +371,7 @@ object Daily {
         val power = 1.1f + rng.nextFloat() * 0.25f
         // Drugi, niezależny strumień: nie przesuwa żadnego starego losowania.
         val weather = if (historical) Weather.CLEAR
-            else rule?.weather ?: Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
+            else Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
 
         // Osobny strumień nie wpływa na losowania epok, AI, modyfikatorów i pogody.
         // Czwarty dzień cyklu to RELEASE_DAY + 3; przeszłe dni pozostają bez zmian.
