@@ -94,6 +94,10 @@ object GoldenFixtures {
                     if (step % 2200 == 1200) controller.rally()
                 }
             }
+            // Awans może otworzyć kolejny wybór w tym samym kroku.
+            if (battle.pendingVariant != null) check(controller.variant(1))
+            if (battle.pendingChoice != null) check(controller.doctrine(0))
+            if (battle.pendingCards != null) check(controller.card(1))
             val before = battle.stepCount
             battle.step()
             check(battle.stepCount == before + 1) {
