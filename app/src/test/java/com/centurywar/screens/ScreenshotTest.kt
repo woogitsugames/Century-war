@@ -1799,6 +1799,9 @@ class ScreenshotTest {
                 (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
                 (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
                 field(g, "achievementSeconds").setFloat(g, 0f)
+                // Wspólny zegar tła menu jest statyczny: po innych testach w tej samej JVM
+                // chmury i góry byłyby przesunięte względem wzorca.
+                MenuBg::class.java.getDeclaredField("time").apply { isAccessible = true }.setFloat(null, 0f)
 
                 fun capture(scene: String, frames: Int = 2) {
                     val name = "${tag}_reg100_$scene"
