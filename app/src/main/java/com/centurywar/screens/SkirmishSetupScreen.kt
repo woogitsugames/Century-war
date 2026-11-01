@@ -106,10 +106,10 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         val bigW = min(205 * dp, width - 44 * dp - 2 * minW - 2 * gap)
         val total = 2 * minW + bigW + 2 * gap
         val bx = footer.centerX() - total / 2
-        val by = footer.bottom - 51 * dp
-        defaults.set(bx, by, minW, 43 * dp)
-        shuffle.set(bx + minW + gap, by, minW, 43 * dp)
-        play.set(bx + 2 * (minW + gap), by, bigW, 43 * dp)
+        val by = footer.bottom - 55 * dp
+        defaults.set(bx, by, minW, 48 * dp)
+        shuffle.set(bx + minW + gap, by, minW, 48 * dp)
+        play.set(bx + 2 * (minW + gap), by, bigW, 48 * dp)
         defaults.label = L["sk_defaults"]; defaults.iconId = Icons.RESTART
         shuffle.label = L["sk_shuffle"]; shuffle.iconId = Icons.DICE
         play.label = L["play"]; play.iconId = Icons.PLAY; play.highlight = true
@@ -126,12 +126,12 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         sectionX[0] = x; labelsY[0] = y + 17 * dp
         y += 32 * dp
         fromY = y + 29 * dp
-        place(eraButtons[0], x + 4 * dp, y, 45 * dp, 43 * dp)
-        place(eraButtons[1], x + colW - 49 * dp, y, 45 * dp, 43 * dp)
+        place(eraButtons[0], x + 4 * dp, y, 48 * dp, 48 * dp)
+        place(eraButtons[1], x + colW - 52 * dp, y, 48 * dp, 48 * dp)
         y += 56 * dp
         toY = y + 29 * dp
-        place(eraButtons[2], x + 4 * dp, y, 45 * dp, 43 * dp)
-        place(eraButtons[3], x + colW - 49 * dp, y, 45 * dp, 43 * dp)
+        place(eraButtons[2], x + 4 * dp, y, 48 * dp, 48 * dp)
+        place(eraButtons[3], x + colW - 52 * dp, y, 48 * dp, 48 * dp)
         for (i in eraButtons.indices) {
             eraButtons[i].iconId = if (i % 2 == 0) Icons.BACK else Icons.ADVANCE
             eraButtons[i].label = ""
@@ -143,12 +143,12 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         val bw = (colW - gap) / 2
         for (i in personalities.indices) {
             val b = personalities[i]
-            place(b, x + (i % 2) * (bw + gap), y + (i / 2) * 47 * dp, bw, 41 * dp)
+            place(b, x + (i % 2) * (bw + gap), y + (i / 2) * 54 * dp, bw, 48 * dp)
             b.label = if (i == 0) L["sk_random"] else L["sk_person_" + (i - 1)]
             b.iconId = if (i == 0) Icons.CROSSED_SWORDS else personIcons[i - 1]
             b.selected = setup.personality == i - 1
         }
-        y += 145 * dp
+        y += 166 * dp
         descriptionY = y + 10 * dp
         y += 45 * dp
         sectionX[2] = x; labelsY[2] = y + 14 * dp
@@ -157,15 +157,15 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         val pw = (colW - pGap * 3) / 4
         for (i in presets.indices) {
             val b = presets[i]
-            place(b, x + i * (pw + pGap), y, pw, 38 * dp)
+            place(b, x + i * (pw + pGap), y, pw, 48 * dp)
             b.label = L["diff_" + i]
             b.selected = setup.powerPercent == SkirmishSetup.PRESET_POWER[i]
         }
         y += 51 * dp
         powerY = y + 13 * dp
         y += 18 * dp
-        place(powerButtons[0], x + 4 * dp, y, 43 * dp, 39 * dp)
-        place(powerButtons[1], x + colW - 47 * dp, y, 43 * dp, 39 * dp)
+        place(powerButtons[0], x + 4 * dp, y, 48 * dp, 48 * dp)
+        place(powerButtons[1], x + colW - 52 * dp, y, 48 * dp, 48 * dp)
         powerButtons[0].iconId = Icons.BACK
         powerButtons[1].iconId = Icons.ADVANCE
         slider.set(x + 59 * dp, y + 10 * dp, x + colW - 59 * dp, y + 28 * dp)
