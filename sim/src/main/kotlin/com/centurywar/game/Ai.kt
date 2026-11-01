@@ -174,7 +174,7 @@ class Ai(
         }
         // Gospodarz opóźnia natarcie, by zebrać silniejszą falę już przed końcową epoką.
         if (personality == AiPersonality.ECONOMIST &&
-            me.era >= b.cfg.maxEra - 1 && b.time >= 60f
+            me.era >= b.cfg.maxEra - 1 && b.time >= 105f
         ) {
             val ready = me.aliveCount >= personality.pushArmySize
             if (me.hold) {
@@ -349,10 +349,10 @@ class Ai(
 
         // Kontry: wręcz > dystans, dystans > ciężcy, ciężcy > wręcz.
         // Zrównoważony dowódca obserwuje role wroga i mocniej reaguje kontrami.
-        val counterWeight = if (profile == AiPersonality.BALANCED) 75 else 35
+        val counterWeight = if (profile == AiPersonality.BALANCED) 55 else 35
         if (enemyRanged >= 2 && enemyRanged > enemyMelee) wm += counterWeight
         if (enemyHeavy >= 2 && enemyHeavy > enemyRanged) wr += counterWeight
-        if (enemyMelee >= 3) wh += if (profile == AiPersonality.BALANCED) 65 else 25
+        if (enemyMelee >= 3) wh += if (profile == AiPersonality.BALANCED) 45 else 25
         if (danger >= 3) wm += 15
         if (melee > ranged + heavy + 3) wm = wm * 2 / 3
         if (ranged < melee) wr += 10
