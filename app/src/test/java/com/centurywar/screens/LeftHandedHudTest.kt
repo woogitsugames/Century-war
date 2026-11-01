@@ -124,6 +124,24 @@ class LeftHandedHudTest {
         assertTrue("Akcje powinny znaleźć się po lewej", button(s, 15).r.left < button(s, 0).r.left)
         assertTrue("Dolny pasek zasłania pole bitwy", field(s, "fieldRect").bottom <= button(s, 0).r.top)
         assertControlsDoNotOverlap(s, g)
+        g.profile.leftHandedHud = false
+        s.layout()
+        assertEquals("Domyślny HUD także na wąskim ekranie pozostaje jednorzędowy",
+            button(s, 0).r.top, button(s, 10).r.top, 0.01f)
+    }
+
+    @Test
+    fun accessibilitySwitchUpdatesProfile() {
+        val g = game(720, 1280)
+        val s = AccessibilityScreen(g)
+        g.setScreen(s)
+        s.onDrag(0f, -3000f)
+        val toggle = s.buttons.first { it.id == 43 }
+        assertTrue("Przełącznik musi być dostępny po przewinięciu", toggle.visible)
+        g.pushTouch(TouchEvent.DOWN, toggle.r.centerX(), toggle.r.centerY(), 0)
+        g.pushTouch(TouchEvent.UP, toggle.r.centerX(), toggle.r.centerY(), 0)
+        g.frame(canvas, 1f / 60f)
+        assertTrue(g.profile.leftHandedHud)
     }
 
     @Test
