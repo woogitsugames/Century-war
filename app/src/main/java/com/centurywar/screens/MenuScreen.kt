@@ -203,7 +203,11 @@ class MenuScreen(g: Game) : Screen(g) {
         val time = bg.draw(c, w, h, dt, animated, detail)
         battleScene.draw(c, w, h, time, animated, detail)
         drawLogo(c)
-        for (b in buttons) if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
+        // Pętla po indeksie: iterator ArrayList byłby alokacją na każdą klatkę.
+        for (i in buttons.indices) {
+            val b = buttons[i]
+            if (b !== resumeYes && b !== resumeNo) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
+        }
         drawPlayer(c)
         ui.textO(c, "v0.2", w - g.insetR - 12 * dp, h - g.insetB - 10 * dp, 10f, Ui.DIM, Paint.Align.RIGHT, 1.5f)
         if (g.resumeOffer != null) drawResume(c)
