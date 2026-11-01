@@ -54,7 +54,10 @@ class EraIntroOverlay private constructor(
     private val units = Array(4) { Defs.unit(era, Role.entries[it]) }
     private val unitNames = Array(4) { "" }
     private val cards = Array(4) { RectF() }
+    private val portraitAreas = Array(4) { RectF() }
     private val panel = RectF()
+    private val storyLines = arrayOfNulls<String>(4)
+    private var storyLineCount = 0
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var landscape: Picture? = null
     private var figures: Picture? = null
@@ -75,6 +78,12 @@ class EraIntroOverlay private constructor(
         newUnitsLabel = L["era_intro_new_units"]
         skipLabel = L["era_intro_skip"]
         for (i in units.indices) unitNames[i] = L[units[i].nameKey]
+        if (panel.width() > 0f) wrapStory()
+    }
+
+    private fun wrapStory() {
+        storyLineCount = HintFrame.wrapHintInto(g.ui, story,
+            (panel.width() - 36f * g.ui.dp).coerceAtLeast(1f), 14f, storyLines)
     }
 
     fun update(dt: Float) {
@@ -104,7 +113,12 @@ class EraIntroOverlay private constructor(
         for (i in cards.indices) {
             val x = panel.left + inner + i * (cw + gap)
             cards[i].set(x, cardTop, x + cw, cardBottom)
+            val margin = min(8f * d, cw * 0.12f)
+            val top = cardTop + 8f * d
+            val bottom = max(top + 1f, cardBottom - 32f * d)
+            portraitAreas[i].set(x + margin, top, x + cw - margin, bottom)
         }
+        wrapStory()
 
         // Krajobraz epoki, wykorzystujący tę samą klasę Backdrops co bitwa.
         val bg = Picture()
@@ -121,10 +135,14 @@ class EraIntroOverlay private constructor(
         val portraits = Picture()
         val portraitCanvas = portraits.beginRecording(g.width, g.height)
         for (i in cards.indices) {
-            val r = cards[i]
-            val figureHeight = min(r.width() * 1.45f, (r.height() - 42f * d).coerceAtLeast(12f * d))
-            renderer.drawUnitIcon(portraitCanvas, units[i], r.centerX(),
-                r.bottom - 29f * d, figureHeight, Ui.PLAYER)
+            val art = portraitAreas[i]
+            val figureHeight = min(art.width() * 1.45f, art.height())
+            // Szerokie bestie i pojazdy ograniczamy po szerokości, a detale przycinamy.
+            portraitCanvas.save()
+            portraitCanvas.clipRect(art)
+            renderer.drawUnitIcon(portraitCanvas, units[i], art.centerX(),
+                art.bottom, figureHeight, Ui.PLAYER, maxWidth = art.width())
+            portraitCanvas.restore()
         }
         portraits.endRecording()
         figures = portraits
@@ -140,10 +158,16 @@ class EraIntroOverlay private constructor(
         g.ui.panel(c, panel, Color.argb(245, 26, 34, 52), 16f)
         g.ui.ribbon(c, panel.centerX(), panel.top + 7f * d, title,
             23f, Ui.RIBBON, panel.width() * 0.58f, Ui.GOLD, panel.width() - 22f * d)
-        g.ui.textO(c, story, panel.centerX(), panel.top + min(96f * d, panel.height() * 0.23f),
-            g.ui.fit(story, 14f, panel.width() - 34f * d, 8f), Ui.TEXT, Paint.Align.CENTER)
+        val storyY = panel.top + min(96f * d, panel.height() * 0.23f)
+        val lineH = 18f * d * g.ui.textScale
+        for (i in 0 until storyLineCount) {
+            g.ui.textO(c, storyLines[i] ?: "", panel.centerX(),
+                storyY + (i - (storyLineCount - 1) * 0.5f) * lineH,
+                14f, Ui.TEXT, Paint.Align.CENTER)
+        }
         g.ui.textO(c, newUnitsLabel, panel.centerX(), cards[0].top - 10f * d,
-            12f, Ui.GOLD, Paint.Align.CENTER)
+            g.ui.fit(newUnitsLabel, 12f, panel.width() - 34f * d),
+            Ui.GOLD, Paint.Align.CENTER)
 
         for (i in cards.indices) {
             val r = cards[i]
@@ -159,7 +183,7 @@ class EraIntroOverlay private constructor(
         for (i in cards.indices) {
             val r = cards[i]
             g.ui.textO(c, unitNames[i], r.centerX(), r.bottom - 10f * d,
-                g.ui.fit(unitNames[i], 11f, r.width() - 8f * d, 8f),
+                g.ui.fit(unitNames[i], 11f, r.width() - 8f * d, 5f),
                 Ui.TEXT, Paint.Align.CENTER)
         }
         g.ui.textO(c, skipLabel, panel.centerX(), panel.bottom - 14f * d,
