@@ -401,11 +401,12 @@ z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
 - `SUPPLY`: natychmiastowe 80 złota w skali epoki i dotychczasowe +30% złota z zabójstw przez 60 s.
 - W zwykłych pojedynkach doktryny `BULWARK`, `FURY` i `PLUNDER` mają osłabione wartości (odpowiednio 10%/5%, 8% i 12%) po audycie lustrzanym. **Karty Endless zachowują pierwszą historyczną premię** (20%/10%, 12% i 35%); ich kolejne stosy są wygaszane według powyższej tabeli. Opisy ofert rozróżniają te tryby. Opis w dziesięciu językach uwzględnia obie nagrody.
 
-**Pomiar Endless A/B:** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
+**Pomiar referencyjny Endless A/B na wcześniejszej rewizji (przed końcową korektą doktryn i złota SUPPLY; wynik nie jest pomiarem bieżącego HEAD):** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
 
-| Metryka (20 seedów) | Przed (gałąź bazowa) | Po (zlecenie 82) |
+| Metryka (20 seedów) | Przed (gałąź bazowa) | Po (pierwsza wersja zlecenia 82) |
 |---|---:|---:|
-| Średnia osiągnięta fala (`ENDLESS_MEAN`) | 50,05 | **50,10** |
+| Średnia osiągnięta fala (`ENDLESS_MEAN`, z uciętymi na 60) | 50,05 | **50,10** |
+| Średnia fala porażki (wyłącznie przegrane) | 48,29 (17 porażek) | **50,10 (20 porażek)** |
 | Zmiana średniej | — | **+0,05 fali (+0,10%)** |
 | Mediana fali porażki (tylko zakończone porażką) | 53 | **54** |
 | Porażki przed falą 60 | 17/20 | **20/20** |
@@ -432,4 +433,6 @@ z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
 
 `*` — osiągnięto limit pomiaru (fala 60), baza nie została pokonana.
 
-**Wniosek:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
+**Pierwszy test lustrzany doktryn** ([CI #41309004688](https://github.com/woogitsugames/Century-war/actions/runs/41309004688), 20 seedów × 2 strony, buff kontra brak buffa) wykrył zbyt wysoką skuteczność czterech doktryn: `BULWARK` 29/39 (74,4%, jeden remis), `FURY` 26/40 (65%), `PLUNDER` 34/40 (85%) i `SUPPLY` 32/40 (80%). Pozostałych dziewięć doktryn było w paśmie 40–60%. Testy 69 wykryły `SUPPLY` 29/40 (72,5%) na osobnych seedach. Na tej podstawie osłabiono zwykłe doktryny i zmniejszono natychmiastową premię `SUPPLY`, zachowując pierwsze karty Endless. **Wyniki po tych korektach trzeba zmierzyć ponownie**; nie wpisuje się niezweryfikowanych wartości jako końcowych.
+
+**Wniosek dla pomiaru przed końcowym strojeniem:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
