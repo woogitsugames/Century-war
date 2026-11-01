@@ -40,6 +40,7 @@ interface Host {
     fun shareReplay(id: String) {}
     fun requestProfileExport() {}
     fun requestProfileImport() {}
+    fun requestProfileRestorePrevious() {}
 }
 
 /**
