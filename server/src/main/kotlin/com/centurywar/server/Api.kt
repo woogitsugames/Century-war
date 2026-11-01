@@ -14,8 +14,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,6 +23,7 @@ import java.security.MessageDigest
 private val json = Json { ignoreUnknownKeys = false; encodeDefaults = true }
 private const val MAX_REQUEST_BYTES = 1_048_576
 private const val MAX_DELETE_BYTES = 1_024
+private const val MAX_REPORT_BYTES = 512
 
 private suspend fun ApplicationCall.fail(status: HttpStatusCode, code: String) {
     respondText(json.encodeToString(ErrorResponse(code)), ContentType.Application.Json, status)
@@ -38,10 +38,16 @@ fun Application.leaderboardModule(
     secret: ByteArray,
     nowMillis: () -> Long = System::currentTimeMillis,
     supportedVersion: String = "0.4.0",
+    trustedProxies: Set<String> = setOf("127.0.0.1"),
+    limits: RateLimits = RateLimits(),
+    verificationGate: VerificationGate = VerificationGate(),
+    verifyReplay: (ScoreSubmission, Long, String) -> VerifiedReplay = ReplayVerifier::verify,
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)
-    val workers = Semaphore(2)
+    val addresses = ClientAddress(trustedProxies)
+    fun clientIp(call: ApplicationCall): String =
+        addresses.resolve(call.request.local.remoteHost, call.request.headers["X-Forwarded-For"])
 
     routing {
         get("/healthz") {
@@ -56,7 +62,7 @@ fun Application.leaderboardModule(
         }
 
         post("/v1/player/delete") {
-            if (!limiter.allow("delete-ip:" + call.request.local.remoteHost, 20)) {
+            if (!limiter.allow("delete-ip:" + clientIp(call), limits.deleteIp)) {
                 call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
                 return@post
             }
@@ -71,12 +77,14 @@ fun Application.leaderboardModule(
                 return@post
             }
             val body = raw.toString(Charsets.UTF_8)
-            if (!auth.valid(
+            val installationSecret = call.request.headers["X-CW-Player-Secret"]
+            if (!validInstallSecret(installationSecret) || !auth.valid(
                     "POST", call.request.uri, body,
                     call.request.headers["X-CW-Timestamp"],
                     call.request.headers["X-CW-Nonce"],
                     call.request.headers["X-CW-Signature"],
                     true,
+                    installationSecret,
                 )
             ) {
                 call.fail(HttpStatusCode.Unauthorized, "invalid_signature_or_nonce")
@@ -87,7 +95,13 @@ fun Application.leaderboardModule(
                 call.fail(HttpStatusCode.BadRequest, "invalid_player")
                 return@post
             }
-            withContext(Dispatchers.IO) { store.deletePlayer(input.player) }
+            val deleted = withContext(Dispatchers.IO) {
+                store.deleteOwnedPlayer(input.player, installSecretHash(installationSecret!!))
+            }
+            if (!deleted) {
+                call.fail(HttpStatusCode.Forbidden, "not_player_owner")
+                return@post
+            }
             limiter.forget("post-player:" + input.player)
             call.respondText(
                 json.encodeToString(DeletePlayerReceipt(true)),
@@ -97,8 +111,8 @@ fun Application.leaderboardModule(
         }
 
         post("/v1/score") {
-            val remote = call.request.local.remoteHost
-            if (!limiter.allow("post-ip:" + remote, 20)) {
+            val remote = clientIp(call)
+            if (!limiter.allow("post-ip:" + remote, limits.postIp)) {
                 call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
                 return@post
             }
@@ -114,12 +128,14 @@ fun Application.leaderboardModule(
                 return@post
             }
             val body = raw.toString(Charsets.UTF_8)
-            if (!auth.valid(
+            val installationSecret = call.request.headers["X-CW-Player-Secret"]
+            if (!validInstallSecret(installationSecret) || !auth.valid(
                     "POST", call.request.uri, body,
                     call.request.headers["X-CW-Timestamp"],
                     call.request.headers["X-CW-Nonce"],
                     call.request.headers["X-CW-Signature"],
                     true,
+                    installationSecret,
                 )
             ) {
                 call.fail(HttpStatusCode.Unauthorized, "invalid_signature_or_nonce")
@@ -144,16 +160,24 @@ fun Application.leaderboardModule(
                 call.fail(HttpStatusCode.Forbidden, "blocked_player")
                 return@post
             }
-            if (!limiter.allow("post-player:" + input.player, 6)) {
+            val ownerHash = installSecretHash(installationSecret!!)
+            if (!store.mayClaim(input.player, ownerHash)) {
+                call.fail(HttpStatusCode.Forbidden, "not_player_owner")
+                return@post
+            }
+            if (!limiter.allow("post-player:" + input.player, limits.postPlayer)) {
                 call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
                 return@post
             }
 
             val receivedAt = nowMillis()
-            val verification = withContext(Dispatchers.Default) {
-                workers.withPermit {
-                    runCatching { ReplayVerifier.verify(input, receivedAt, supportedVersion) }
-                }
+            val verification = verificationGate.run {
+                withContext(Dispatchers.Default) { verifyReplay(input, receivedAt, supportedVersion) }
+            }
+            if (verification == null || verification.exceptionOrNull() is TimeoutCancellationException) {
+                call.response.header(HttpHeaders.RetryAfter, "30")
+                call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")
+                return@post
             }
             if (verification.isFailure) {
                 call.fail(HttpStatusCode.UnprocessableEntity, "invalid_replay")
@@ -161,9 +185,12 @@ fun Application.leaderboardModule(
             }
             val replay = verification.getOrThrow()
             val result = try {
-                store.save(input, replay, receivedAt, sha256(body))
+                store.save(input, replay, receivedAt, sha256(body), ownerHash)
             } catch (_: BlockedPlayerException) {
                 call.fail(HttpStatusCode.Forbidden, "blocked_player")
+                return@post
+            } catch (_: PlayerOwnershipException) {
+                call.fail(HttpStatusCode.Forbidden, "not_player_owner")
                 return@post
             }
             if (!result.inserted && replay.board == "daily") {
@@ -178,7 +205,7 @@ fun Application.leaderboardModule(
         }
 
         get("/v1/top") {
-            if (!limiter.allow("read-ip:" + call.request.local.remoteHost, 120)) {
+            if (!limiter.allow("read-ip:" + clientIp(call), limits.readIp)) {
                 call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
                 return@get
             }
@@ -206,17 +233,56 @@ fun Application.leaderboardModule(
             )
         }
 
+        post("/v1/report") {
+            if (!limiter.allow("report-ip:" + clientIp(call), limits.reportIp)) {
+                call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
+                return@post
+            }
+            val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+            if (length != null && length > MAX_REPORT_BYTES) {
+                call.fail(HttpStatusCode.PayloadTooLarge, "body_too_large")
+                return@post
+            }
+            val raw = call.receiveChannel().readRemaining(MAX_REPORT_BYTES + 1L).readByteArray()
+            if (raw.size > MAX_REPORT_BYTES) {
+                call.fail(HttpStatusCode.PayloadTooLarge, "body_too_large")
+                return@post
+            }
+            val input = runCatching {
+                json.decodeFromString<NickReportRequest>(raw.toString(Charsets.UTF_8))
+            }.getOrNull()
+            if (input == null || !PublicPlayerIds.valid(input.publicId) ||
+                input.reason !in setOf("offensive", "impersonation", "other")) {
+                call.fail(HttpStatusCode.BadRequest, "invalid_report")
+                return@post
+            }
+            if (!limiter.allow("report-target:" + input.publicId, 15)) {
+                call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
+                return@post
+            }
+            if (!withContext(Dispatchers.IO) { store.reportNick(input.publicId, input.reason, nowMillis()) }) {
+                call.fail(HttpStatusCode.NotFound, "unknown_player")
+                return@post
+            }
+            call.respondText(
+                json.encodeToString(NickReportReceipt(true)), ContentType.Application.Json,
+                HttpStatusCode.Accepted,
+            )
+        }
+
         get("/v1/around") {
-            if (!limiter.allow("read-ip:" + call.request.local.remoteHost, 120)) {
+            if (!limiter.allow("read-ip:" + clientIp(call), limits.readIp)) {
                 call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
                 return@get
             }
-            if (!auth.valid(
+            val installationSecret = call.request.headers["X-CW-Player-Secret"]
+            if (!validInstallSecret(installationSecret) || !auth.valid(
                     "GET", call.request.uri, "",
                     call.request.headers["X-CW-Timestamp"],
                     call.request.headers["X-CW-Nonce"],
                     call.request.headers["X-CW-Signature"],
                     false,
+                    installationSecret,
                 )
             ) {
                 call.fail(HttpStatusCode.Unauthorized, "invalid_signature")
@@ -229,8 +295,16 @@ fun Application.leaderboardModule(
                 call.fail(HttpStatusCode.BadRequest, "invalid_query")
                 return@get
             }
+            val ownerHash = installSecretHash(installationSecret!!)
+            if (!store.isOwner(player, ownerHash)) {
+                call.fail(HttpStatusCode.Forbidden, "not_player_owner")
+                return@get
+            }
             call.respondText(
-                json.encodeToString(RankingResponse(board, period, store.around(board, period, nowMillis(), player))),
+                json.encodeToString(RankingResponse(
+                    board, period, store.around(board, period, nowMillis(), player),
+                    store.publicIdFor(player),
+                )),
                 ContentType.Application.Json,
                 HttpStatusCode.OK,
             )
