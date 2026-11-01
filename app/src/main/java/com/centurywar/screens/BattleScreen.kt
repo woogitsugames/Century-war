@@ -1185,8 +1185,11 @@ class BattleScreen(
                 if (st > old) {
                     earnedStars = st - old
                     pr.stars[stage] = st
-                    newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day, replayId)
-                    g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
+                    // Samouczek daje postęp kampanii, lecz bez wpisu w rankingach.
+                    if (!cfg.tutorial) {
+                        newRecord = pr.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong(), day, replayId)
+                        g.online.submit(Profile.BOARD_CAMPAIGN, pr.totalStars().toLong())
+                    }
                 }
                 if (won) pr.tutorialDone = true
             }

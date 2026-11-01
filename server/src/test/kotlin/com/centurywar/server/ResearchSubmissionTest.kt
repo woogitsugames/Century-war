@@ -81,9 +81,36 @@ class ResearchSubmissionTest {
             val input = played(board, levels, resume = board == "skirmish")
             val wire = json.decodeFromString<ScoreSubmission>(json.encodeToString(input))
             val result = ReplayVerifier.verify(wire, now, version)
-            assertEquals(input.score, result.score, board)
+            val expected = if (board == "daily") input.score else {
+                val zero = Research.bonuses(IntArray(Research.defs.size))
+                val normalizedCfg = when (board) {
+                    "endless" -> BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = zero)
+                    "skirmish" -> BattleConfig(Mode.SKIRMISH, input.seed,
+                        Skirmish.power(input.difficulty!!), playerBonuses = zero)
+                    else -> Campaign.config(Campaign.stages[input.stage!!], zero, input.seed)
+                }
+                Replay.normalized(normalizedCfg, Replay.decode(input.replay)).score
+            }
+            assertEquals(expected, result.score, board)
             assertEquals(if (board == "campaign") "campaign_0" else board, result.board)
             assertEquals(levels.sum(), result.researchSum)
+        }
+    }
+
+    @Test fun researchCannotIncreaseGlobalScore() {
+        // To samo żądanie daje wynik z symulacji bez badań, a nie liczbę
+        // zadeklarowaną przez klienta. Protokół wymaga jednak prawdziwego wyniku bitwy.
+        val input = played("endless", full, seed = 117L)
+        val verified = ReplayVerifier.verify(input, now, version)
+        val normalized = Replay.normalized(
+            BattleConfig(Mode.ENDLESS, input.seed, 1f,
+                playerBonuses = Research.bonuses(IntArray(Research.defs.size))),
+            Replay.decode(input.replay),
+        )
+        assertEquals(normalized.score, verified.score)
+        assertEquals(full.sum(), verified.researchSum)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(input.copy(score = input.score + 1L), now, version)
         }
     }
 
@@ -106,7 +133,11 @@ class ResearchSubmissionTest {
         val input = ScoreSubmission("endless", UUID.randomUUID().toString(), "Dowodca", version,
             seed = 441L, replay = Replay.encode(controller.log()), score = battle.score(),
             research = research.toList())
-        assertEquals(input.score, ReplayVerifier.verify(input, now, version).score)
+        val zero = Research.bonuses(IntArray(Research.defs.size))
+        val normalized = Replay.normalized(
+            BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = zero),
+            Replay.decode(input.replay))
+        assertEquals(normalized.score, ReplayVerifier.verify(input, now, version).score)
         val changed = input.copy(research = List(research.size) { 0 })
         assertThrows(IllegalArgumentException::class.java) {
             ReplayVerifier.verify(changed, now, version)

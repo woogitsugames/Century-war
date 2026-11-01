@@ -12,6 +12,7 @@ import com.centurywar.game.Weather
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.Research
+import com.centurywar.game.SimVersion
 import com.centurywar.game.Role
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -43,7 +44,7 @@ class ReplayVerifierTest {
                 board = "endless",
                 player = player,
                 nick = "Dowodca",
-                gameVersion = "0.4.0",
+                gameVersion = SimVersion.PROTOCOL,
                 seed = seed,
                 replay = Replay.encode(controller.log()),
                 score = battle.score(),
@@ -170,10 +171,54 @@ class ReplayVerifierTest {
             ReplayVerifier.verify(withLog(input, replayOf(input).copy(commands = emptyList())), now, "0.4.0")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(withLog(input, replayOf(input).copy(steps = 216_001)), now, "0.4.0")
+            Replay.encode(replayOf(input).copy(steps = Replay.MAX_STEPS + 1))
         }
         assertThrows(IllegalArgumentException::class.java) {
             ReplayVerifier.verify(input.copy(replay = "!!nie-base64!!"), now, "0.4.0")
+        }
+    }
+
+    @Test fun dailyAcceptsPreviousDayUntilTwoHoursUtc() {
+        val day = 21_000L
+        val cfg = Daily.config(day, Bonuses())
+        val input = weatherSubmission(cfg, "daily", day = day)
+        val midnight = (day + 1L) * 86_400_000L
+        assertEquals(input.score, ReplayVerifier.verify(input, midnight, "0.1.0").score)
+        assertEquals(input.score,
+            ReplayVerifier.verify(input, midnight + 2L * 60L * 60L * 1000L - 1L, "0.1.0").score)
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(input, midnight + 2L * 60L * 60L * 1000L, "0.1.0")
+        }
+        assertEquals("invalid_day_or_seed", error.message)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(input, midnight + 86_400_000L, "0.1.0")
+        }
+    }
+
+    @Test fun tutorialIsNeverEligibleForRanking() {
+        val input = validEndless().copy(board = "campaign", stage = 0, tutorial = true)
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(input, now, SimVersion.PROTOCOL)
+        }
+        assertEquals("invalid_tutorial", error.message)
+        val full = validEndless()
+        val gold = replayOf(full).copy(commands = listOf(
+            Replay.Command(0, Replay.Kind.TUTORIAL_GOLD, 100),
+        ) + replayOf(full).commands)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReplayVerifier.verify(withLog(full, gold), now, SimVersion.PROTOCOL)
+        }
+    }
+
+    @Test fun replayStepLimitIsSharedWithSimulation() {
+        val sample = validEndless()
+        val log = replayOf(sample)
+        assertEquals(432_000, Replay.MAX_STEPS)
+        assertEquals(216_001, Replay.decode(Replay.encode(log.copy(steps = 216_001))).steps)
+        assertEquals(Replay.MAX_STEPS, Replay.decode(
+            Replay.encode(log.copy(steps = Replay.MAX_STEPS))).steps)
+        assertThrows(IllegalArgumentException::class.java) {
+            Replay.encode(log.copy(steps = Replay.MAX_STEPS + 1))
         }
     }
 

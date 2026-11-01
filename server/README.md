@@ -28,7 +28,6 @@ SDK 36. Aby kompilować sam serwer bez instalowania SDK Android:
 ```bash
 export CW_HMAC_KEY="$(openssl rand -hex 32)"
 export CW_DATABASE_PATH="./data/leaderboards.db"
-export CW_GAME_VERSION="0.4.0"
 ./gradlew :server:test -PserverOnly=true --console=plain
 ./gradlew :server:run -PserverOnly=true --console=plain
 ```
@@ -118,30 +117,54 @@ wielkość liter, niektóre podobne znaki i rozdzielanie liter. Wcześniej
 zapisane obraźliwe nicki są maskowane przy odczycie.
 
 Serwer **nie przyjmuje** modyfikacji rozgrywki od klienta. Konfiguracje:
-- `daily`: `day` = dzisiejszy dzień UTC, `seed=day`, `Daily.config()`
-  (badania wyłączone), **pierwszy poprawny wynik dziennie**.
+- `daily`: `day` = dzisiejszy dzień UTC albo dzień poprzedni do 02:00 UTC
+  (od północy do 01:59:59.999 UTC), `seed=day`, `Daily.config()`
+  (badania wyłączone). Zgłoszenie rozpoczęte przed północą otrzymuje 2 h
+  na wysyłkę; nadal tylko **pierwszy poprawny wynik dziennie**.
 - `weekly`: `day` oznacza bieżący lub poprzedni numer tygodnia UTC, a `seed` musi
   odpowiadać `Weekly.config(day).seed`. Serwer odtwarza zamrożone reguły i kartę
   startową; przyjmuje kolejne próby i zapisuje najlepszy wynik na `weekly_<day>`.
 - `endless`: `BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses=Research.bonuses(research))`.
 - `skirmish`: `BattleConfig(Mode.SKIRMISH, seed, Skirmish.power(difficulty), playerBonuses=Research.bonuses(research))`.
-- `campaign`: `Campaign.config(stages[stage], Research.bonuses(research), seed, tutorial)`;
+- `campaign`: `Campaign.config(stages[stage], Research.bonuses(research), seed)`;
   ranking oddzielny dla każdego etapu, np. `campaign_7`. **Nie** jest to
   globalna suma gwiazdek kampanii: jej weryfikacja wymagałaby dziennika 36 etapów.
+
+**Weryfikacja badań i normalizacja rankingu** dla Endless, potyczki i kampanii:
+1. Najpierw serwer odtwarza dokładnie zgłoszony przebieg z deklarowanymi
+   bonusami badań; wszystkie rozkazy i `score` muszą się zgadzać.
+2. Następnie powtarza seed i rozkazy **bez ulepszeń** (poziomy badań = 0).
+   Rozkazy niewykonalne bez ulepszeń pomija, a brakujący wybór rozstrzyga
+   pierwszą opcją. Wynik z **drugiej symulacji** zapisuje w rankingu globalnym.
+   Może różnić się od wyniku lokalnego i oryginalnego `score`. Gra wyświetla
+   tę informację w rankingu globalnym.
+
+Dzienna i tygodniowa rozgrywka mają już stałe zasady, bez przeliczenia.
+`research_sum` pozostaje informacją pomocniczą, nigdy premią rankingową.
+
+**Przed wdrożeniem:** wcześniejszych wyników liczonych z badaniami nie da
+się poprawnie przeliczyć, bo serwer przechowuje skrót, a nie powtórkę.
+Należy wyczyścić albo zarchiwizować stare wyniki w tabeli `scores`,
+żeby nie mieszać wartości z różnych reguł.
 
 `replay` to zapis `Replay.encode()` z modułu `:sim` (Base64 URL bez dopełnienia),
 czyli dokładnie to, co nagrywa w grze `BattleController`. Serwer odtwarza go
 funkcją `Replay.verify()`, więc obsługuje wszystkie komendy gry (jednostki,
 wieże, ostrzał zwykły i celowany, Zryw, postawa, doktryny, karty Endless,
-kapitulacja). Dodatkowo odrzuca kapitulację przed 60. krokiem i złoto samouczka
-poza etapem `campaign_0`. Każda komenda musi się udać, bitwa musi być
-zakończona w zadeklarowanym kroku, a `score` musi być równe `Battle.score()`.
+kapitulacja). Odrzuca kapitulację przed 60. krokiem, każdy wynik samouczka
+(`tutorial=true`) i każdą komendę `TUTORIAL_GOLD`. W podstawowej kontroli
+każda komenda musi się udać, bitwa musi zakończyć się w zadanym kroku,
+a zgłoszone `score` musi odpowiadać faktycznemu wynikowi.
+
 Niepoprawne logi nie zajmują miejsca w rankingu.
 
-Ograniczenia: 1 MiB żądania, limity formatu `Replay` (32 768 komend),
-maks. 90 000 kroków (pozostałe tryby) lub 216 000 (endless i weekly). Wynik musi być dodatni. Błędy: `400` (format),
-`401` (podpis / nonce), `409` (drugie zgłoszenie daily),
-`413` (rozmiar), `422` (niezgodna powtórka), `429` (limit),
+Ograniczenia: 1 MiB żądania, 32 768 komend, wspólny
+`Replay.MAX_STEPS = 432000` (120 minut przy 60 Hz) dla wszystkich trybów.
+Bitwa automatycznie kończy się na granicy, a Endless zachowuje osiągniętą falę.
+Klient pokazuje komunikat, gdy starsza powtórka przekracza limit.
+Wynik musi być dodatni. Błędy: `400` (format), `401` (podpis / nonce),
+`409` (drugie zgłoszenie daily), `413` (rozmiar),
+`422` (niezgodna powtórka), `429` (limit),
 `403` (UUID zablokowane przez moderatora).
 
 Odpowiedź `200`:
@@ -177,17 +200,14 @@ Brak wyniku gracza daje pustą listę. JSON:
   serwerze w tym samym module \`:sim\` co na telefonie.
 - \`difficulty\`: **wymagane** \`0..3\` wyłącznie przy \`skirmish\`, pozostałe
   tryby pomijają pole.
-- \`tutorial\`: opcjonalne, \`true\` tylko przy \`board=campaign,stage=0\`.
-  Weryfikator odtwarza wówczas łagodniejszy \`Campaign.config\`, dopuszczając
-  legalne komendy złota samouczka.
+- `tutorial`: pole zgodności wstecznej. `true` jest zawsze odrzucane
+  (`invalid_tutorial`), a komendy `TUTORIAL_GOLD` są nielegalne w rankingu.
 - Daily musi mieć 13 zer; \`Daily.config\` normalizuje bonusy.
 - Nieobsługiwana \`gameVersion\`/błędne poziomy i konfiguracja to HTTP 400
   (\`unsupported_version\`, \`invalid_research\`, \`invalid_difficulty\`...),
   niezgodna powtórka to HTTP 422. Wersja \`0.1.0\` nie jest akceptowana.
-- Baza przechowuje dodatkowo sumę poziomów \`research_sum\`; migracja dodaje
-  tę kolumnę z domyślną wartością 0, bez usuwania starych wyników.
-- Rankingi nadal obejmują wyniki z badaniami i bez badań. Osobny filtr na
-  \`research_sum=0\` oraz \`research_sum>0\` można dodać później.
+- Baza przechowuje pomocniczo sumę deklarowanych poziomów `research_sum`.
+  Nie zmienia to globalnego wyniku: zapisuje się wynik z symulacji bez badań.
 - Po stronie Androida wymagane są \`CW_SERVER_URL\` (HTTPS),
   \`CW_HMAC_KEY\` (min. 32 bajty) i \`CW_PRIVACY_URL\` (HTTPS): zmienne CI lub
   prywatny \`local.properties\`. Wszystkie puste domyślnie. Brak choć jednego
@@ -206,16 +226,14 @@ Brak wyniku gracza daje pustą listę. JSON:
 - Dowolny klient może generować wiele legalnych powtórek offline. Serwer
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
   Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.
-- Weryfikator jest ściśle związany z wersją symulacji. Podbij
-  `CW_GAME_VERSION` (i `Replay.VERSION` w `:sim`) przy zmianach balansu/protokołu.
-  Przed wdrożeniem sprawdź **te same** powtórki na Android/JVM (Float).
-- **Warianty epok (format powtórki v4):** komenda `Replay.Kind.VARIANT`
-  jest zapisywana po awansie (przed doktryną) albo w kroku 0 na starcie
-  wariantowej epoki. Przed wdrożeniem tej wersji klienta ustaw nową wartość
-  `CW_GAME_VERSION` na serwerze, uruchom testy `:server:test` i zsynchronizuj
-  kod `:sim` klienta/serwera. Starsze powtórki z wersją 3 nie przejdą
-  dekodera v4. `Daily.config` sprzed `VARIANTS_DAY` działa bez wariantów;
-  nie zmieniaj tej daty wstecz i nie modyfikuj historycznej puli modyfikatorów.
+- Wspólna wersja protokołu jest zdefiniowana jako `SimVersion.PROTOCOL`
+  w `:sim` (obecnie `0.4.0`). Używa jej klient oraz domyślny serwer.
+  `CW_GAME_VERSION` nie jest już konfigurowana w Docker Compose.
+  Jej podbicie po zmianach przebiegu symulacji wykonuje koordynator.
+  `Replay.VERSION` (obecnie 5) wersjonuje tylko format powtórek.
+  Przed wydaniem sprawdź identyczne odtwarzanie Android/JVM (Float).
+- Komenda `Replay.Kind.VARIANT` pozostaje częścią formatu; `Daily.config`
+  utrzymuje historyczne reguły przed `Daily.RELEASE_DAY`.
 - Ograniczenia: POST 20/min/IP i 6/min/UUID; GET 120/min/IP,
   maks. 2 równoczesne weryfikacje; nonce POST trwały w SQLite
   (10 minut). Rate limiter IP jest **w pamięci jednej instancji**.
