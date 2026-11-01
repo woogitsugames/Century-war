@@ -61,19 +61,19 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         val tw = (pw - 3 * gap) / 4
         val left = (w - pw) / 2f
         for (i in 0..3) {
-            tabs[i].label = chrome.tabLabel(L[names[i]], L[shortNames[i]], tw, 42 * dp)
+            tabs[i].label = chrome.tabLabel(L[names[i]], L[shortNames[i]], tw, 48 * dp)
             tabs[i].iconId = icons[i]
-            tabs[i].set(left + i * (tw + gap), chrome.top + 4 * dp, tw, 42 * dp)
+            tabs[i].set(left + i * (tw + gap), chrome.top + 4 * dp, tw, 48 * dp)
         }
         panel.set(left, chrome.top + 56 * dp, left + pw, h - g.insetB - 12 * dp)
         val filterWidth = min(150 * dp, (pw - 40 * dp) / 2f)
-        periodBtn.set(panel.left + 12 * dp, panel.top + 8 * dp, filterWidth, 38 * dp)
-        stageBtn.set(panel.left + 22 * dp + filterWidth, panel.top + 8 * dp, filterWidth, 38 * dp)
+        periodBtn.set(panel.left + 12 * dp, panel.top + 8 * dp, filterWidth, 48 * dp)
+        stageBtn.set(panel.left + 22 * dp + filterWidth, panel.top + 8 * dp, filterWidth, 48 * dp)
         periodBtn.iconId = Icons.CALENDAR
         stageBtn.iconId = Icons.MAP
         val reportWidth = min(180 * dp, (pw - 35 * dp) / 3f)
         reportBtn.set(panel.right - 12 * dp - reportWidth, panel.top + 8 * dp,
-            reportWidth, 38 * dp)
+            reportWidth, 48 * dp)
         update(0f)
         refresh()
     }

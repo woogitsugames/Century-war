@@ -170,7 +170,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         info.set(w / 2 - iw / 2, h / 2 - ih / 2 + 22 * dp,
             w / 2 + iw / 2, h / 2 + ih / 2 + 22 * dp)
         start.set(info.centerX() - 90 * dp, info.bottom - 66 * dp, 180 * dp, 48 * dp)
-        close.set(info.right - 30 * dp, info.top - 14 * dp, 42 * dp, 42 * dp)
+        close.set(info.right - 34 * dp, info.top - 18 * dp, 48 * dp, 48 * dp)
         place()
         eraIntro?.layout()
     }

@@ -138,13 +138,13 @@ class SettingsScreen(g: Game) : Screen(g) {
             val line = i % rowsPerColumn
             val left = panel.left + 12 * dp + col * columnWidth
             val y = panel.top + 24 * dp + line * step
-            if (b === reset || b === advanced) b.set(left + 9 * dp, y + 4 * dp, columnWidth - 18 * dp, step - 10 * dp)
+            if (b === reset || b === advanced) b.set(left + 9 * dp, y + (step - 48 * dp) / 2, columnWidth - 18 * dp, 48 * dp)
             else if (b === music || b === sfxLevel) {
                 // Suwak potrzebuje więcej miejsca niż przycisk, inaczej na 720p ma kilka dp.
                 val sw = max(bw, columnWidth * 0.52f)
-                b.set(left + columnWidth - 10 * dp - sw, y + 4 * dp, sw, step - 10 * dp)
+                b.set(left + columnWidth - 10 * dp - sw, y + (step - 48 * dp) / 2, sw, 48 * dp)
             }
-            else b.set(left + columnWidth - 10 * dp - bw, y + 4 * dp, bw, step - 10 * dp)
+            else b.set(left + columnWidth - 10 * dp - bw, y + (step - 48 * dp) / 2, bw, 48 * dp)
         }
         // Nie pozostawiaj klikalnych połówek przycisków pod przyciętą krawędzią listy.
         for (b in rows) b.visible = b !== music && b !== sfxLevel &&

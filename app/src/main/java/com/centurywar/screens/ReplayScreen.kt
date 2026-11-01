@@ -182,15 +182,22 @@ class ReplayScreen(
         val right = w - g.insetR - 10 * dp
         val top = g.insetT + 6 * dp
         back.label = L["back"]; back.iconId = Icons.BACK
-        back.set(left, top, minOf(100 * dp, (right - left) * 0.22f), 37 * dp)
+        back.set(left, top, minOf(100 * dp, (right - left) * 0.22f), 48 * dp)
         hud.set(0f, 0f, w, g.insetT + 56 * dp)
-        footer.set(0f, h - g.insetB - 112 * dp, w, h)
-        progressBar.set(left + 12 * dp, footer.top + 18 * dp, right - 12 * dp, footer.top + 29 * dp)
         val gap = 5 * dp
-        val y = footer.top + 47 * dp
-        val seven = minOf(100 * dp, (right - left - 6 * gap) / 7f)
-        val start = (left + right - (7 * seven + 6 * gap)) / 2f
-        for (i in controls.indices) controls[i].set(start + i * (seven + gap), y, seven, 43 * dp)
+        // Pełne strefy 48 dp; na węższych ekranach dwa rzędy.
+        val stacked = right - left < (controls.size * 48 + (controls.size - 1) * 5) * dp
+        val perRow = if (stacked) (controls.size + 1) / 2 else controls.size
+        val footerH = if (stacked) 170 * dp else 112 * dp
+        footer.set(0f, h - g.insetB - footerH, w, h)
+        progressBar.set(left + 12 * dp, footer.top + 18 * dp, right - 12 * dp, footer.top + 29 * dp)
+        val bw = minOf(100 * dp, (right - left - (perRow - 1) * gap) / perRow)
+        val start = (left + right - (perRow * bw + (perRow - 1) * gap)) / 2f
+        for (i in controls.indices) {
+            val row = i / perRow
+            val column = i % perRow
+            controls[i].set(start + column * (bw + gap), footer.top + (47 + 56 * row) * dp, bw, 48 * dp)
+        }
         backward.label = "-10s"; backward.iconId = Icons.BACK
         forward.label = "+10s"; forward.iconId = Icons.PLAY
         slower.label = "−"; slower.iconId = -1
@@ -201,7 +208,7 @@ class ReplayScreen(
         minimap.set(right - 172 * dp, top + 4 * dp, right - 53 * dp, top + 20 * dp)
         chartArea.set(left, hud.bottom + 10 * dp, right, footer.top - 10 * dp)
         resultChart.prepare(battleSummary, chartArea, dp)
-        renderer?.layout(w, h, g.insetT + 63 * dp, 114 * dp + g.insetB)
+        renderer?.layout(w, h, g.insetT + 63 * dp, footerH + 2 * dp + g.insetB)
     }
 
     override fun update(dt: Float) {

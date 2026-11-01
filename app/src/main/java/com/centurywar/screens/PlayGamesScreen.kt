@@ -29,7 +29,7 @@ class PlayGamesScreen(g: Game) : Screen(g) {
         val top = chrome.top + (h - chrome.top - g.insetB - ph) * 0.5f
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
         val bw = min(260 * dp, pw - 36 * dp)
-        action.set(panel.centerX() - bw / 2, panel.bottom - 64 * dp, bw, 43 * dp)
+        action.set(panel.centerX() - bw / 2, panel.bottom - 69 * dp, bw, 48 * dp)
         action.iconId = Icons.GLOBE
     }
 

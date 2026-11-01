@@ -98,11 +98,16 @@ class MenuScreen(g: Game) : Screen(g) {
         campaign.highlight = true
 
         val availW = w - g.insetL - g.insetR - 32 * dp
-        val gap = 12 * dp
-        val bw = min(min(260 * dp, w * 0.36f), (availW - gap) / 2)
-        val bh = min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
-        val mh = min(44 * dp, bh * 0.8f)
-        val gridH = bh * 3 + gap * 3 + mh
+        // Wąski ekran zewnętrzny Folda: pełna, pojedyncza kolumna zamiast miniaturowej siatki.
+        val singleColumn = w - g.insetL - g.insetR < 420 * dp &&
+            h - g.insetT - g.insetB > 620 * dp
+        val gap = (if (singleColumn) 16f else 12f) * dp
+        val bw = if (singleColumn) min(310 * dp, availW)
+            else min(min(260 * dp, w * 0.36f), (availW - gap) / 2)
+        val bh = if (singleColumn) min(64 * dp, (h - g.insetT - g.insetB) * 0.09f)
+            else min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
+        val mh = 48 * dp
+        val gridH = if (singleColumn) 6 * (bh + gap) + mh else bh * 3 + gap * 3 + mh
 
         // logo: wielkość wg szerokości i wysokości ekranu
         logoFill.typeface = ui.heavy; logoLine.typeface = ui.heavy
@@ -117,11 +122,14 @@ class MenuScreen(g: Game) : Screen(g) {
         logoSize = max(26 * dp, layoutLogoSize * (if (compact) 0.65f else 0.83f))
         logoFill.textSize = logoSize; logoLine.textSize = logoSize
 
-        val headerH = layoutLogoSize * 2.75f
+        // Odrębny pas na komunikat logowania; nie zasłania pierwszych przycisków.
+        val headerH = layoutLogoSize * 2.75f +
+            (if (w - g.insetL - g.insetR < 560 * dp) 24 * dp else 0f)
         val freeTop = g.insetT + 8 * dp
         val bottomPad = g.insetB + 22 * dp
         val total = headerH + gridH + 14 * dp
-        val startY = freeTop + max(0f, (h - freeTop - bottomPad - total) * 0.3f)
+        val startY = freeTop + max(0f, (h - freeTop - bottomPad - total) *
+            (if (singleColumn) 0.45f else 0.3f))
         logoY = startY + logoSize * 1.75f
         subY = logoY + logoSize * 0.62f
         val top = startY + headerH + 14 * dp
@@ -131,13 +139,24 @@ class MenuScreen(g: Game) : Screen(g) {
             floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
 
         val cx = w / 2 + (g.insetL - g.insetR) / 2
-        campaign.set(cx - bw - gap / 2, top, bw, bh)
-        endless.set(cx + gap / 2, top, bw, bh)
-        daily.set(cx - bw - gap / 2, top + bh + gap, bw, bh)
-        skirmish.set(cx + gap / 2, top + bh + gap, bw, bh)
-        research.set(cx - bw - gap / 2, top + (bh + gap) * 2, bw, bh)
-        rankings.set(cx + gap / 2, top + (bh + gap) * 2, bw, bh)
-        missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw * 2 + gap, mh)
+        if (singleColumn) {
+            val left = cx - bw / 2
+            campaign.set(left, top, bw, bh)
+            endless.set(left, top + (bh + gap), bw, bh)
+            daily.set(left, top + 2 * (bh + gap), bw, bh)
+            skirmish.set(left, top + 3 * (bh + gap), bw, bh)
+            research.set(left, top + 4 * (bh + gap), bw, bh)
+            rankings.set(left, top + 5 * (bh + gap), bw, bh)
+            missions.set(left, top + 6 * (bh + gap), bw, mh)
+        } else {
+            campaign.set(cx - bw - gap / 2, top, bw, bh)
+            endless.set(cx + gap / 2, top, bw, bh)
+            daily.set(cx - bw - gap / 2, top + bh + gap, bw, bh)
+            skirmish.set(cx + gap / 2, top + bh + gap, bw, bh)
+            research.set(cx - bw - gap / 2, top + (bh + gap) * 2, bw, bh)
+            rankings.set(cx + gap / 2, top + (bh + gap) * 2, bw, bh)
+            missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw * 2 + gap, mh)
+        }
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         codex.set(settings.r.left - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)

@@ -1,0 +1,70 @@
+name: Audyt Fold 98
+
+on:
+  push:
+    branches:
+      - gpt/98-fold-inner-audit
+  pull_request:
+    branches:
+      - claude/bold-sagan-vwz5gm
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fold:
+    name: Zrzuty i testy ${{ matrix.device }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [foldInner, foldOuter]
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Platforma SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Kompilacja aplikacji
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Audyt geometrii i zrzuty obu ekranów
+        env:
+          CW_SCREENSHOT_DEVICE: ${{ matrix.device }}
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*ScreenshotTest.foldAudit98*' \
+            --tests '*ScreenshotTest.layoutCollisions*' \
+            --tests '*ScreenshotTest.menus*' \
+            --tests '*LTest*' \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
+            --console=plain --no-configuration-cache -PtestForks=1
+      - name: Zrzuty i raporty
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-fold98-${{ matrix.device }}
+          path: |
+            app/build/screenshots/audit98_*.png
+            app/build/screenshots/${{ matrix.device }}_*.png
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 21

@@ -133,7 +133,7 @@ class MissionsScreen(g: Game) : Screen(g) {
             val r = rects[i]
             r.set(left, y, left + cardWidth, y + rowH)
             val bw = min(120 * dp, cardWidth * 0.26f)
-            claimButtons[i].set(r.right - bw - 10 * dp, y + 17 * dp, bw, 42 * dp)
+            claimButtons[i].set(r.right - bw - 10 * dp, y + (rowH - 48 * dp) / 2, bw, 48 * dp)
             claimButtons[i].visible = i < items.size &&
                 claimButtons[i].r.top >= contentTop && claimButtons[i].r.bottom <= bottom
         }

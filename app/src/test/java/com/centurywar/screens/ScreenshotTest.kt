@@ -147,6 +147,8 @@ class ScreenshotTest {
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
         )) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -235,6 +237,8 @@ class ScreenshotTest {
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
         )) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -293,13 +297,15 @@ class ScreenshotTest {
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             // Rozłożony Fold trzymany pionowo: na dużych ekranach orientacja jest dowolna.
             "foldPortrait" to intArrayOf(1968, 2184, 3),
-        )) {
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
+        ))) {
             val g = game(dims[0], dims[1], dims[2] / 1.0f * 0.9f, if (tag == "phone720") Quality.LOW else Quality.HIGH)
             g.profile.stars[0] = 3; g.profile.stars[1] = 2; g.profile.stars[2] = 1
             g.profile.submit(Profile.BOARD_ENDLESS, 12345, 1)
@@ -473,12 +479,14 @@ class ScreenshotTest {
             cfg.mode, cfg.stageIndex, original.winner, original.score(),
             original.time, original.wave, 1793461200000L, "Dowódca",
         ))
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
-        )) {
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
+        ))) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
             val store = ReplayStore(File.createTempFile("cw-replay", "").apply { delete(); mkdirs() })
@@ -794,6 +802,8 @@ class ScreenshotTest {
             "phone20x9" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
         )) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -983,6 +993,8 @@ class ScreenshotTest {
         for ((tag, dims) in mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "foldOpen" to intArrayOf(2184, 1968, 3),
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
         )) {
             val g = game(dims[0], dims[1], dims[2] * 0.9f,
                 if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1099,6 +1111,8 @@ class ScreenshotTest {
             for ((tag, dims) in mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
             )) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1257,13 +1271,15 @@ class ScreenshotTest {
     fun layoutCollisions() {
         val originalLang = L.lang
         try {
-            for ((tag, dims) in mapOf(
+            for ((tag, dims) in screenshotDevices(mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
                 "phone1280" to intArrayOf(1280, 720, 2),
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
-            )) {
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
+            ))) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
                 if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
@@ -1310,6 +1326,8 @@ class ScreenshotTest {
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
             )) for (lang in arrayOf("de", "pt", "uk", "tr")) for (scale in intArrayOf(100, 130)) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1534,14 +1552,16 @@ class ScreenshotTest {
      */
     @Test
     fun quickPauseSettings() {
-        for ((tag, dims) in mapOf(
+        for ((tag, dims) in screenshotDevices(mapOf(
             "phone720" to intArrayOf(1600, 720, 2),
             "phone1280" to intArrayOf(1280, 720, 2),
             "phone1080" to intArrayOf(2400, 1080, 3),
             "foldOpen" to intArrayOf(2184, 1968, 3),
             "foldPortrait" to intArrayOf(1968, 2184, 3),
+            "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3),
             "phonePortrait" to intArrayOf(1080, 2400, 3),
-        )) {
+        ))) {
             val g = game(dims[0], dims[1], dims[2].toFloat(),
                 if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
             g.profile.musicVolume = 0.65f
@@ -1575,6 +1595,8 @@ class ScreenshotTest {
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
             ))) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1665,6 +1687,8 @@ class ScreenshotTest {
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
             ))) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
@@ -1713,6 +1737,8 @@ class ScreenshotTest {
                 "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
             )
             for ((tag, dimensions) in screenshotDevices(devices)) {
                 val g = game(dimensions[0], dimensions[1], dimensions[2] * 0.9f,
@@ -1818,6 +1844,68 @@ class ScreenshotTest {
             }
         } finally {
             L.lang = originalLanguage
+        }
+    }
+
+    /**
+     * Zlecenie 98: rzeczywisty obszar 1802x2000 i wąski ekran zewnętrzny.
+     * Audytuje wszystkie stany menu przy zwykłym i powiększonym tekście.
+     * PNG z polskiego interfejsu są publikowane jako artefakt CI.
+     */
+    @Test
+    fun foldAudit98() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in screenshotDevices(linkedMapOf(
+                "foldInner" to intArrayOf(1802, 2000, 4),
+                "foldOuter" to intArrayOf(904, 2316, 3),
+            ))) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f, Quality.HIGH)
+                g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                g.profile.hintsEnabled = false
+                g.profile.medals = 900
+                g.profile.stars[0] = 3
+                g.profile.stars[1] = 2
+                // Zapisane powiadomienie o logowaniu nie przesłania badanych ekranów.
+                (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
+                (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
+                field(g, "achievementSeconds").setFloat(g, 0f)
+
+                for (lang in arrayOf("pl", "de")) for (scale in intArrayOf(100, 130)) {
+                    g.profile.lang = lang
+                    g.profile.textScale = scale
+                    g.onLanguageChanged()
+                    g.applyAccessibility()
+                    visitAuditScreens(g) { name, screen, title ->
+                        assertNoCollisions(g, screen, name, title)
+                        val buttons = screen.buttons.filter { it.visible && it.r.width() > 0f && it.r.height() > 0f }
+                        for (button in buttons) {
+                            assertTrue("$tag/$lang/$scale/$name: przycisk ${button.id} za niski: ${button.r.height() / g.ui.dp} dp",
+                                button.r.height() + 0.5f >= 48 * g.ui.dp)
+                            assertTrue("$tag/$lang/$scale/$name: przycisk ${button.id} za wąski: ${button.r.width() / g.ui.dp} dp",
+                                button.r.width() + 0.5f >= 48 * g.ui.dp)
+                        }
+                        if (lang == "pl" && scale == 100) shot(g, "audit98_${tag}_${name}", 1)
+                    }
+                }
+
+                g.profile.lang = "pl"
+                g.profile.textScale = 100
+                g.onLanguageChanged()
+                g.applyAccessibility()
+                val battleScreen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 98001L, 1f))
+                g.setScreen(battleScreen)
+                // Nie zmieniamy zatwierdzonego układu HUD na wąskich ekranach.
+                shot(g, "audit98_${tag}_battle_hud", 2)
+                battleScreen.onClick(field(battleScreen, "pauseBtn").get(battleScreen) as Button)
+                shot(g, "audit98_${tag}_battle_pause", 2)
+                field(battleScreen, "paused").setBoolean(battleScreen, false)
+                val battle = field(battleScreen, "battle").get(battleScreen) as Battle
+                battle.surrender()
+                shot(g, "audit98_${tag}_battle_results", 90)
+            }
+        } finally {
+            L.lang = originalLang
         }
     }
 }

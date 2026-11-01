@@ -24,12 +24,15 @@ class Chrome(private val s: Screen) {
     private var shadeA = -1
 
     /** Wysokość paska nagłówka (od góry ekranu, z wcięciem). */
-    val top get() = s.g.insetT + 64 * s.dp
+    private val narrowTitleRow get() =
+        s.w - s.g.insetL - s.g.insetR < 560 * s.dp
+
+    val top get() = s.g.insetT + (if (narrowTitleRow) 112 else 64) * s.dp
 
     fun layoutBack(b: Button) {
         b.label = L["back"]
         b.iconId = Icons.BACK
-        b.set(s.g.insetL + 12 * s.dp, s.g.insetT + 10 * s.dp, 118 * s.dp, 44 * s.dp)
+        b.set(s.g.insetL + 12 * s.dp, s.g.insetT + 10 * s.dp, 118 * s.dp, 48 * s.dp)
     }
 
     /** Przyciemnia ilustrowane tło (mocniej u góry i u dołu), żeby treść była czytelna. */
@@ -48,7 +51,7 @@ class Chrome(private val s: Screen) {
         val ui = s.ui
         val cx = s.w / 2 + (s.g.insetL - s.g.insetR) / 2
         val maxW = s.w - s.g.insetL - s.g.insetR - 2 * 150 * s.dp - 260 * s.dp
-        ui.ribbon(c, cx, s.g.insetT + 32 * s.dp, text, 20f, Ui.RIBBON, 220 * s.dp, Ui.GOLD,
+        ui.ribbon(c, cx, s.g.insetT + (if (narrowTitleRow) 82 else 32) * s.dp, text, 20f, Ui.RIBBON, 220 * s.dp, Ui.GOLD,
             maxW.coerceAtLeast(160 * s.dp))
     }
 
@@ -57,7 +60,7 @@ class Chrome(private val s: Screen) {
         val d = s.dp
         val ui = s.ui
         val cx = (s.w + s.g.insetL - s.g.insetR) / 2f
-        val cy = s.g.insetT + 32 * d
+        val cy = s.g.insetT + (if (narrowTitleRow) 82 else 32) * d
         val maxW = (s.w - s.g.insetL - s.g.insetR - 560 * d).coerceAtLeast(160 * d)
         val hh = 20f * d * ui.textScale * 1.05f
         var tw = ui.measure(text, 20f, true)
