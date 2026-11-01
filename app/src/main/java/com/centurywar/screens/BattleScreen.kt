@@ -487,6 +487,9 @@ class BattleScreen(
                     achievementEvents.afterStep()
                     acc -= Battle.STEP
                     steps++
+                    // Nie wykonuj dalszych kroków po pierwszym awansie w tej klatce.
+                    maybeShowEraIntro()
+                    if (eraIntro?.active == true) break
                 }
                 if (steps > 0) {
                     val sample = (System.nanoTime() - startedNs).toFloat() / steps
