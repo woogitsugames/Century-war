@@ -90,6 +90,10 @@ class BattleScreen(
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
+    /** Gest zaczął się na polu bitwy; tylko wtedy przeciąganie przesuwa kamerę. */
+    private var dragStartedInField = false
+    /** Narastanie śledzenia po ręcznym przesunięciu (0..1): łagodny powrót zamiast skoku. */
+    private var followRamp = 1f
     /** Stan wyłącznie interfejsu, nie wchodzi do zapisu bitwy. */
     internal var aimingBarrage = false
     internal var aimWorldX = 0f
@@ -621,7 +625,10 @@ class BattleScreen(
         }
         BattleSfx.play(g, battle, r.camX, r.worldVisible)
         if (finished) resultTime += dt
-        if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
+        if (manualCam > 0f) manualCam -= dt else if (!finished) {
+            followRamp = (followRamp + dt * 0.8f).coerceAtMost(1f)
+            r.follow(dt, followRamp)
+        }
         bottomHudView.refreshButtons()
         if (missingXpRemaining > 0f) {
             if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
@@ -891,6 +898,8 @@ class BattleScreen(
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
+        // Kamera rusza się tylko w geście zaczętym na polu bitwy (nie z HUD ani paska górnego).
+        if (e.action == TouchEvent.DOWN) dragStartedInField = fieldRect.contains(e.x, e.y)
         if (eraIntro?.active == true) {
             if (e.action == TouchEvent.UP) eraIntro?.dismiss()
             return true
@@ -934,6 +943,9 @@ class BattleScreen(
         if (finished || paused) return
         // Podczas celowania palec przesuwa celownik, a nie kamerę.
         if (aimingBarrage && aimStartedInField) return
+        // Drobny ruch palca przy tapnięciu w odstęp między przyciskami HUD nie przesuwa widoku.
+        if (!dragStartedInField) return
+        followRamp = 0f
         r.camX -= dx / r.k
         r.clampCam()
         if (aimingBarrage) aimWorldX = barrageView.snapBarrageTarget(r.worldX(aimScreenX))
@@ -968,7 +980,7 @@ class BattleScreen(
         }
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
             r.camX = (x - mini.left) / mini.width() * Defs.LANE - r.worldVisible / 2
-            r.clampCam(); manualCam = 5f
+            r.clampCam(); manualCam = 5f; followRamp = 0f
             tut?.onCamera()
             return
         }

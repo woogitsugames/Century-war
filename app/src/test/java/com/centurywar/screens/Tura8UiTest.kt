@@ -8,6 +8,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Host
 import com.centurywar.engine.L
 import com.centurywar.engine.Quality
+import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
@@ -272,5 +273,74 @@ class Tura8UiTest {
             }
         }
         L.lang = L.PL
+    }
+
+    private fun touch(screen: BattleScreen, action: Int, x: Float, y: Float) {
+        screen.handle(TouchEvent().also { it.action = action; it.x = x; it.y = y; it.pointer = 0 })
+    }
+
+    /** Gest zaczęty na HUD (odstęp między przyciskami) albo na pasku górnym nie przesuwa kamery. */
+    @Test
+    fun hudGestureDoesNotMoveCamera() {
+        for ((tag, dims) in devices) {
+            val g = game(dims)
+            val screen = battle(g)
+            frame(g)
+            val dp = g.ui.dp
+            val gapX = (screen.unitBtn[0].r.right + screen.unitBtn[1].r.left) / 2f
+            val starts = listOf(
+                gapX to screen.unitBtn[0].r.centerY(),
+                g.width / 2f to (screen.fieldRect.top - 4 * dp),
+            )
+            for ((x, y) in starts) {
+                val before = screen.r.camX
+                touch(screen, TouchEvent.DOWN, x, y)
+                touch(screen, TouchEvent.MOVE, x - 30 * dp, y)
+                touch(screen, TouchEvent.MOVE, x - 90 * dp, y)
+                touch(screen, TouchEvent.UP, x - 90 * dp, y)
+                assertEquals("$tag: gest z HUD przesunął kamerę", before, screen.r.camX, 0.001f)
+            }
+            // Kontrola: gest na polu bitwy nadal przesuwa widok.
+            val fx = g.width / 2f
+            val fy = screen.fieldRect.centerY()
+            screen.r.camX = 400f
+            screen.r.clampCam()
+            val before = screen.r.camX
+            touch(screen, TouchEvent.DOWN, fx, fy)
+            touch(screen, TouchEvent.MOVE, fx + 30 * dp, fy)
+            touch(screen, TouchEvent.MOVE, fx + 90 * dp, fy)
+            touch(screen, TouchEvent.UP, fx + 90 * dp, fy)
+            assertTrue("$tag: przeciąganie pola bitwy nie działa", screen.r.camX < before)
+        }
+    }
+
+    /** Starcie blisko własnej bazy: kamera pokazuje bazę i front wroga, a zbiegły żołnierz jej nie ciągnie. */
+    @Test
+    fun cameraFollowsClashNearBase() {
+        for ((tag, dims) in devices) {
+            val g = game(dims)
+            val screen = battle(g)
+            frame(g)
+            val b = field(screen, "battle") as Battle
+            val r = screen.r
+            val p = b.player
+            val e = b.enemy
+            p.aliveCount = 5
+            e.aliveCount = 6
+            p.front = p.baseFront + r.worldVisible * 1.4f // jeden żołnierz daleko z przodu
+            e.front = p.baseFront + r.worldVisible * 0.45f // główne starcie przy bazie
+            r.camX = Defs.LANE.toFloat()
+            r.clampCam()
+            var last = r.camX
+            var maxJump = 0f
+            repeat(200) {
+                r.follow(1f / 30f)
+                maxJump = maxOf(maxJump, kotlin.math.abs(r.camX - last))
+                last = r.camX
+            }
+            assertTrue("$tag: baza poza kadrem (camX=${r.camX})", r.camX <= p.baseFront)
+            assertTrue("$tag: front wroga poza kadrem", e.front <= r.camX + r.worldVisible)
+            assertTrue("$tag: skok kamery $maxJump", maxJump <= r.worldVisible * 0.9f / 30f + 0.01f)
+        }
     }
 }
