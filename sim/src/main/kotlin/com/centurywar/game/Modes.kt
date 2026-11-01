@@ -174,17 +174,17 @@ object Campaign {
         }
         // Korekty trudności pojedynczych etapów, bez wpływu na jednostki ani AI.
         val correction = when (i + 1) {
-            2 -> 0.93f
+            2 -> 0.837f
             3 -> 0.90f
             11 -> 0.97f
             12 -> 0.90f
             16 -> 0.97f
-            19 -> 1.15f
+            19 -> 1.265f
             21 -> 1.08f
             22 -> 1.13f
             23 -> 0.92f
             24 -> 0.94f
-            27 -> 0.94f
+            27 -> 0.846f
             29 -> 1.12f
             30 -> 1.02f
             31 -> 0.97f
