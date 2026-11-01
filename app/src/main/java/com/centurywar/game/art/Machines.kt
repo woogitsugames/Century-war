@@ -76,13 +76,24 @@ class Machines(private val p: Pen, private val men: Soldiers) {
      * Brak obiektów tworzonych podczas rysowania.
      */
     fun variantMachine(art: EraArt, elite: Boolean, team: Int, walk: Float, atk: Float) {
+        // Podstawowe ciężkie mechy i elity krzemowe są węższe od pojazdów.
+        // Cały obrys, łącznie z kołami i bronią, nie przekracza 1,3 ich szerokości.
+        val sx = when {
+            art == EraArt.COMBUSTION && !elite -> 0.87f
+            art == EraArt.SWARM && elite -> 0.93f
+            art == EraArt.BIOTECH && elite -> 0.90f
+            else -> 1f
+        }
+        cv.save()
+        cv.scale(sx, 1f)
         when (art) {
             EraArt.COMBUSTION -> combustionVariant(elite, team, walk, atk)
             EraArt.GALVANIC -> galvanicVariant(elite, team, walk, atk)
             EraArt.SWARM -> swarmVariant(elite, team, walk, atk)
             EraArt.BIOTECH -> biotechVariant(elite, team, walk, atk)
-            else -> return
+            else -> { }
         }
+        cv.restore()
     }
 
     /** Spalinowy transporter i ciężki czołg: pas drużyny to cały pancerz, nie nalepka. */
