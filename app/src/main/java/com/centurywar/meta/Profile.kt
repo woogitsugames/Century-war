@@ -721,6 +721,12 @@ class Profile(private val file: File) {
                     newCounters[key] = when (key) {
                         AchievementMetric.STEAM_VARIANTS.name,
                         AchievementMetric.SILICON_VARIANTS.name -> value and 3L
+                        AchievementMetric.WEEKLY_RULESETS.name,
+                        AchievementMetric.DAILY_EVENTS.name -> value and 63L
+                        AchievementMetric.MODIFIER_VICTORIES.name ->
+                            value and ((1L shl com.centurywar.game.Modifier.values().size) - 1L)
+                        AchievementMetric.DOCTRINE_VICTORIES.name ->
+                            value and ((1L shl com.centurywar.game.Doctrine.values().size) - 1L)
                         AchievementMetric.BARRAGE_EIGHT.name,
                         AchievementMetric.BOSS_KNOCKBACK.name,
                         AchievementMetric.BOSS_AURA.name,
@@ -729,7 +735,13 @@ class Profile(private val file: File) {
                         AchievementMetric.BOSS_RAGE.name,
                         AchievementMetric.WEEKLY_GOLD.name,
                         AchievementMetric.CUSTOM_THREE.name,
-                        AchievementMetric.REPLAY_RECORD.name -> value.coerceAtMost(1L)
+                        AchievementMetric.REPLAY_RECORD.name,
+                        AchievementMetric.CARD_MEDICS_30.name,
+                        AchievementMetric.CARD_SPARK_30.name,
+                        AchievementMetric.CARD_GUARD_30.name,
+                        AchievementMetric.CARD_RECALL_30.name,
+                        AchievementMetric.CARD_NEW_50.name,
+                        AchievementMetric.HARD_PERFECT.name -> value.coerceAtMost(1L)
                         AchievementMetric.RAIN_WINS.name,
                         AchievementMetric.WIND_WINS.name,
                         AchievementMetric.NIGHT_WINS.name -> value.coerceAtMost(10_000_000L)
