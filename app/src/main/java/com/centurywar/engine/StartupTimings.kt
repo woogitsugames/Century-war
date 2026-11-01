@@ -16,6 +16,7 @@ internal class StartupTimings(private val startedNs: Long) {
         LANGUAGES("tabela języków"),
         GAME("Game"),
         HISTORY("historia"),
+        PLAY_GAMES("Play Games"),
         MUSIC("muzyka"),
         VIEW("SurfaceView")
     }
