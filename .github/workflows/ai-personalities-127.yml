@@ -1,0 +1,195 @@
+name: Osobowości dowódców - pomiar 127
+
+on:
+  push:
+    branches: ['gpt/127-ai-personalities']
+    paths:
+      - 'sim/**'
+      - 'docs/BALANCE.md'
+      - 'app/src/test/java/com/centurywar/game/BalanceReport.kt'
+      - '.github/workflows/ai-personalities-127.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profiles:
+    name: 50 seedów / ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [baseline, candidate]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Kod bazowy z tą samą sondą pomiarową
+        if: matrix.version == 'baseline'
+        run: |
+          cp sim/src/test/kotlin/com/centurywar/game/AiPersonality127ReportTest.kt "$RUNNER_TEMP/ai127-test.kt"
+          git fetch --no-tags origin claude/bold-sagan-vwz5gm
+          git checkout --detach FETCH_HEAD
+          cp "$RUNNER_TEMP/ai127-test.kt" sim/src/test/kotlin/com/centurywar/game/AiPersonality127ReportTest.kt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Profil zachowania 50 seedów
+        env:
+          AI127_RUN: 'true'
+          AI127_OUT: ${{ runner.temp }}/profiles
+        run: |
+          ./gradlew :sim:test -PserverOnly=true --tests '*AiPersonality127ReportTest*' --console=plain --no-configuration-cache
+          cat "$AI127_OUT/profiles.csv"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai127-profiles-${{ matrix.version }}
+          path: ${{ runner.temp }}/profiles/profiles.csv
+          if-no-files-found: warn
+          retention-days: 14
+
+  campaign:
+    name: Kampania ${{ matrix.version }} / ${{ matrix.range }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [baseline, candidate]
+        include:
+          - { range: '01-06', from: 1, to: 6 }
+          - { range: '07-12', from: 7, to: 12 }
+          - { range: '13-18', from: 13, to: 18 }
+          - { range: '19-24', from: 19, to: 24 }
+          - { range: '25-30', from: 25, to: 30 }
+          - { range: '31-36', from: 31, to: 36 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.version == 'baseline' && 'claude/bold-sagan-vwz5gm' || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Balans kampanii 20 seedów na etap
+        env:
+          BALANCE_RUN: 'true'
+          BALANCE_RUNS: '20'
+          BALANCE_PROFILE: target
+          BALANCE_STAGE_FROM: ${{ matrix.from }}
+          BALANCE_STAGE_TO: ${{ matrix.to }}
+          BALANCE_OUT: ${{ runner.temp }}/balance
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignReport*' --console=plain --no-configuration-cache
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai127-campaign-${{ matrix.version }}-${{ matrix.range }}
+          path: ${{ runner.temp }}/balance/report-*.csv
+          if-no-files-found: warn
+          retention-days: 14
+
+  balance-comparison:
+    name: Porównanie trudności (próg 5 pp)
+    needs: campaign
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai127-campaign-*
+          path: comparison
+      - name: Porównaj te same seedy i profile
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+
+          values = {'baseline': {}, 'candidate': {}}
+          for file in Path('comparison').rglob('*.csv'):
+              phase = 'baseline' if 'baseline' in str(file) else 'candidate'
+              for row in csv.DictReader(file.open(encoding='utf-8')):
+                  stage = int(row['stage'])
+                  if stage in values[phase]:
+                      raise RuntimeError(f'Powtórzony etap {stage} w {phase}')
+                  if int(row['n']) != 20:
+                      raise RuntimeError(f'Błędne N: {row}')
+                  values[phase][stage] = row
+          expected = set(range(1, 37))
+          for phase, rows in values.items():
+              if rows.keys() != expected:
+                  raise RuntimeError(f'Brakujące etapy {phase}: {sorted(expected - rows.keys())}')
+
+          before = sum(int(v['wins']) for v in values['baseline'].values())
+          after = sum(int(v['wins']) for v in values['candidate'].values())
+          delta = (after - before) * 100.0 / (36 * 20)
+          lines = [
+              '# Osobowości AI 127 — porównanie 36 × 20 seedów',
+              '',
+              f'Baza: {before}/720 ({before / 7.2:.2f}%), po zmianie: {after}/720 ({after / 7.2:.2f}%).',
+              f'**Zmiana średnia: {delta:+.2f} pp.** Limit: ±5 pp.',
+              '',
+              '| Etap | Baza | Nowa | Zmiana pp |',
+              '|---:|---:|---:|---:|',
+          ]
+          outliers = 0
+          for stage in range(1, 37):
+              old = int(values['baseline'][stage]['wins']) * 5
+              new = int(values['candidate'][stage]['wins']) * 5
+              change = new - old
+              outliers += abs(change) > 5
+              lines.append(f'| {stage} | {old}% | {new}% | {change:+d} |')
+          lines.append('')
+          lines.append(f'Etapy z odchyleniem >5 pp: {outliers}/36 (wynik szczegółowy, próg dotyczy średniej).')
+          Path('ai127-balance-comparison.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
+          if abs(delta) > 5:
+              raise SystemExit('Średnia trudność poza tolerancją ±5 pp')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai127-balance-comparison
+          path: ai127-balance-comparison.md
+          if-no-files-found: warn
+
+  golden:
+    name: Aktualizacja złotych powtórek 127
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Odtwórz i przetestuj złote powtórki
+        run: |
+          ./gradlew :sim:regenerateGolden -PserverOnly=true -PgoldenReason="127 osobowosci AI" --no-configuration-cache --console=plain
+          ./gradlew :sim:test -PserverOnly=true --tests '*GoldenReplayTest*' --tests '*ReplayTest*' --console=plain --no-configuration-cache
+      - name: Commituj zmienione wzorce na własnej gałęzi
+        run: |
+          if ! git diff --quiet -- sim/src/test/resources/golden/; then
+            git config user.name "century-war-ci"
+            git config user.email "actions@users.noreply.github.com"
+            git add sim/src/test/resources/golden/ docs/BALANCE.md
+            git commit -m "Odśwież złote powtórki po zmianie decyzji AI"
+            git push origin HEAD:gpt/127-ai-personalities
+          else
+            git restore docs/BALANCE.md
+            echo "Wzorce bez zmian."
+          fi
