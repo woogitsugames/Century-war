@@ -9,7 +9,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
-import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -19,6 +18,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import javax.net.ssl.HttpsURLConnection
 
 enum class ScoreSendStatus { DISABLED, QUEUED, SENDING, SENT, REJECTED, OFFLINE, INVALID_NICK, REPLAY_TOO_LONG }
 
@@ -337,7 +337,8 @@ class ScoreClient(
         }
         val timestamp = (System.currentTimeMillis() / 1000L).toString()
         val nonce = UUID.randomUUID().toString()
-        val conn = URL(origin + target).openConnection() as HttpURLConnection
+        val conn = URL(origin + target).openConnection() as? HttpsURLConnection
+            ?: throw IOException("https_required")
         try {
             conn.connectTimeout = 10_000
             conn.readTimeout = 10_000
@@ -357,7 +358,17 @@ class ScoreClient(
             }
             val code = conn.responseCode
             val result = (if (code in 200..299) conn.inputStream else conn.errorStream)
-                ?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText().take(1_048_576) } ?: ""
+                ?.bufferedReader(StandardCharsets.UTF_8)?.use { reader ->
+                    // Limit bufora odpowiedzi przed dekodowaniem JSON (wątek I/O).
+                    val out = StringBuilder()
+                    val buffer = CharArray(4096)
+                    while (out.length < 1_048_576) {
+                        val count = reader.read(buffer, 0, minOf(buffer.size, 1_048_576 - out.length))
+                        if (count <= 0) break
+                        out.append(buffer, 0, count)
+                    }
+                    out.toString()
+                } ?: ""
             return code to result
         } finally {
             conn.disconnect()

@@ -34,7 +34,13 @@ class ScoreClientTest {
         assertFalse(ScoreClient.configured("https://scores.example", "short"))
         assertFalse(ScoreClient.configured("https://scores.example/other", key))
         assertFalse(ScoreClient.configured("https://user@scores.example", key))
+        assertFalse(ScoreClient.configured("https://scores.example@attacker.example", key))
+        assertFalse(ScoreClient.configured("https://scores.example?token=abc", key))
+        assertFalse(ScoreClient.configured("https://scores.example#fragment", key))
+        assertFalse(ScoreClient.configured("https://scores.example:abc", key))
+        assertFalse(ScoreClient.configured("https://scores.example/../../else", key))
         assertTrue(ScoreClient.configured("https://scores.example", key))
+        assertTrue(ScoreClient.configured("https://scores.example/", key))
     }
 
     @Test fun deletionQueuePersistsAndDoesNotExpire() {

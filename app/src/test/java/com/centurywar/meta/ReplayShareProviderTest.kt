@@ -51,13 +51,32 @@ class ReplayShareProviderTest {
         assertNull(provider.getType(Uri.parse("content://" + app.packageName +
             ".replays/../profile.json")))
         assertNull(ReplayShareProvider.fileFor(app.filesDir, "/profile.json"))
+        assertNull(provider.getType(Uri.parse(uri.toString() + "?unexpected=1")))
+        val short = File(directory, "short.cwr").apply { writeBytes(ByteArray(23)) }
+        val oversized = File(directory, "oversized.cwr").apply {
+            writeBytes(ByteArray(ReplayStore.MAX_SHARE_BYTES + 1))
+        }
+        assertNull(ReplayShareProvider.fileFor(app.filesDir, "/short.cwr"))
+        assertNull(ReplayShareProvider.fileFor(app.filesDir, "/oversized.cwr"))
         val outside = File(app.filesDir, "outside.cwr").apply { writeBytes(ByteArray(24)) }
         val link = File(directory, "linked.cwr")
         Files.createSymbolicLink(link.toPath(), outside.toPath())
         assertNull(ReplayShareProvider.fileFor(app.filesDir, "/linked.cwr"))
+        val fakeRoot = File(app.cacheDir, "replay-share-symlink-root").apply { mkdirs() }
+        val externalReplays = File(app.cacheDir, "replay-share-external").apply { mkdirs() }
+        val privateReplay = File(externalReplays, "private.cwr").apply { writeBytes(ByteArray(24)) }
+        val directoryLink = File(fakeRoot, "replays")
+        Files.createSymbolicLink(directoryLink.toPath(), externalReplays.toPath())
+        assertNull(ReplayShareProvider.fileFor(fakeRoot, "/private.cwr"))
         assertTrue(profile.exists())
         allowed.delete()
+        short.delete()
+        oversized.delete()
         outside.delete()
         link.delete()
+        directoryLink.delete()
+        privateReplay.delete()
+        fakeRoot.delete()
+        externalReplays.delete()
     }
 }

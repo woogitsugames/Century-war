@@ -1,0 +1,58 @@
+name: Sprawdzenie bezpieczeństwa aplikacji 114
+
+on:
+  push:
+    branches:
+      - gpt/114-app-security
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Kompilacja i testy zabezpieczeń
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zbuduj APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+      - name: Testy zabezpieczeń
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*ReleaseConfigTest*' \
+            --tests '*ReplayImportTest*' \
+            --tests '*ReplayShareProviderTest*' \
+            --tests '*ScoreClientTest*' \
+            --console=plain --no-configuration-cache -PtestForks=1
+      - name: Testy krytycznych reguł gry
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*LTest*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
+            --console=plain --no-configuration-cache -PtestForks=1
+      - name: Raporty JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-114-test-reports
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn

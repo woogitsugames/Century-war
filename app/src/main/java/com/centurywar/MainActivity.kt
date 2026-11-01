@@ -55,7 +55,6 @@ import com.centurywar.notifications.DailyReminders
 import com.centurywar.notifications.DailyReminderProfile
 import com.centurywar.meta.PlayGamesLeaderboards
 import java.io.File
-import java.net.URI
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -126,10 +125,7 @@ class MainActivity : Activity(), Host {
         game.density = resources.displayMetrics.density
         game.sound = Sound(this)
         // Nie wystawiamy zgody bez skonfigurowanego HTTPS i polityki prywatności.
-        val privacyOk = runCatching {
-            val policy = URI(BuildConfig.CW_PRIVACY_URL)
-            policy.scheme == "https" && !policy.host.isNullOrEmpty()
-        }.getOrDefault(false)
+        val privacyOk = SecureLinks.isHttps(BuildConfig.CW_PRIVACY_URL)
         if (privacyOk && ScoreClient.configured(BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY)) {
             game.scores = ScoreClient(File(root, "score-queue.json"),
                 BuildConfig.CW_SERVER_URL, BuildConfig.CW_HMAC_KEY, profile)
