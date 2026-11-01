@@ -250,6 +250,7 @@ class BattleScreen(
     private var choiceDescScale = -1f
     private var choiceDescLanguage = -1
     private var hudH = 0f
+    private var twoRowHud = false
     private var topH = 0f
     private var compactTop = false
     private var enemyEraShown = -1
@@ -332,24 +333,33 @@ class BattleScreen(
         topH = if (compactTop) 108 * dp else 58 * dp
         val n = 10
         val gap = 5 * dp
-        val size = min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
-        hudH = size + pad * 2 + 4 * dp + g.insetB
+        // Domyślny pasek pozostaje bez zmian; na wąskim ekranie tryb leworęczny
+        // układa cztery jednostki nad sześcioma akcjami zamiast zmniejszać cele dotyku.
+        twoRowHud = g.profile.leftHandedHud && avail < 560 * dp
+        val size = if (twoRowHud) min(70 * dp, (avail - gap * 5) / 6f)
+            else min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
+        hudH = (if (twoRowHud) 2 * size + gap else size) + pad * 2 + 4 * dp + g.insetB
         val y = h - g.insetB - pad - size
         var x = l
-        for (b in unitBtn) { b.set(x, y, size, size); x += size + gap }
+        for (b in unitBtn) {
+            b.set(x, if (twoRowHud) y - size - gap else y, size, size)
+            x += size + gap
+        }
         val arrow = min(24 * dp, size * 0.36f)
         for (i in 0..3) {
-            unitUpgrade[i].set(unitBtn[i].r.right - arrow, y, arrow, arrow)
-            unitUpgrade[i].hitSlop = (48 * dp - arrow).coerceAtLeast(0f) / 2f
-            // 48 dp mieści się nad i po lewej od ikony; nie nachodzi na kolejną jednostkę.
+            val ur = unitBtn[i].r
+            unitUpgrade[i].set(ur.right - arrow, ur.top, arrow, arrow)
+            val target = if (twoRowHud) min(48 * dp, size) else 48 * dp
+            unitUpgrade[i].hitSlop = (target - arrow).coerceAtLeast(0f) / 2f
+            // Powiększony obszar strzałki leży wewnątrz przycisku jednostki.
             unitUpgrade[i].hitOffsetX = -unitUpgrade[i].hitSlop
             unitUpgrade[i].hitOffsetY = -unitUpgrade[i].hitSlop
         }
-        queueInfoBtn.set(unitBtn[0].r.left, y - 23 * dp, 92 * dp, 22 * dp)
+        queueInfoBtn.set(unitBtn[0].r.left, unitBtn[0].r.top - 23 * dp, 92 * dp, 22 * dp)
         queueInfoBtn.hitSlop = 13 * dp
         queueInfoBtn.hitOffsetX = queueInfoBtn.hitSlop
         queueInfoBtn.hitOffsetY = -queueInfoBtn.hitSlop
-        x += 10 * dp
+        if (twoRowHud) x = l else x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         val t = g.insetT + 6 * dp
@@ -376,6 +386,24 @@ class BattleScreen(
         xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
         fieldRect.set(0f, topH + g.insetT, w, h - hudH)
 
+        if (g.profile.leftHandedHud) {
+            // Lustrzane są wyłącznie kontrolki; kamera i pole bitwy zachowują kierunek.
+            for (b in unitBtn) mirrorHudButton(b, l, rr)
+            for (b in actionBtns) mirrorHudButton(b, l, rr)
+            for (b in unitUpgrade) {
+                mirrorHudButton(b, l, rr)
+                b.hitOffsetX = -b.hitOffsetX
+            }
+            mirrorHudButton(queueInfoBtn, l, rr)
+            queueInfoBtn.hitOffsetX = -queueInfoBtn.hitOffsetX
+            mirrorHudButton(evolveBtn, l, rr)
+            mirrorHudButton(pauseBtn, l, rr)
+            mirrorHudRect(goldRect, l, rr)
+            mirrorHudRect(xpRect, l, rr)
+            mirrorHudRect(mini, l, rr)
+            mirrorHudRect(weatherRect, l, rr)
+        }
+
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
         layoutPause()
@@ -395,6 +423,18 @@ class BattleScreen(
         variantDescWidth = -1f
         choiceDescWidth = -1f
         eraIntro?.layout()
+    }
+
+    /** Odbicie na obszarze bez wycięć ekranu, bez nowych obiektów. */
+    private fun mirrorHudRect(rect: RectF, left: Float, right: Float) {
+        if (rect.width() <= 0f) return
+        val oldLeft = rect.left
+        val oldRight = rect.right
+        rect.set(left + right - oldRight, rect.top, left + right - oldLeft, rect.bottom)
+    }
+
+    private fun mirrorHudButton(button: Button, left: Float, right: Float) {
+        mirrorHudRect(button.r, left, right)
     }
 
     /**
@@ -1695,23 +1735,27 @@ class BattleScreen(
         ui.fill.color = Color.argb(160, 222, 170, 70)
         c.drawRect(0f, topBar.bottom - 1.5f * dp, w, topBar.bottom, ui.fill)
         val l = g.insetL + 8 * dp
+        val right = w - g.insetR - 8 * dp
+        val leftHud = g.profile.leftHandedHud
         val t = g.insetT + 6 * dp
         // złoto
         val gi = p.gold.toInt()
         if (gi != goldShown) { goldShown = gi; goldText = gi.toString() }
-        ui.badge(c, l, t + 11 * dp, Icons.COIN, goldText, 15f, Ui.GOLD, minTextW = ui.measure("0000", 15f, true))
+        ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldText,
+            15f, Ui.GOLD, alignRight = leftHud, minTextW = ui.measure("0000", 15f, true))
         // armia
         val ck = p.aliveCount * 100 + p.cap
         if (ck != capKey) { capKey = ck; capText = "${p.aliveCount}/${p.cap}" }
-        val ax = l + 118 * dp
+        val ax = if (leftHud) right - 178 * dp else l + 118 * dp
         Icons.draw(c, Icons.HELMET, ax + 8 * dp, t + 10 * dp, 17 * dp, dp = dp)
         ui.textO(c, capText, ax + 19 * dp, t + 15 * dp, 13f, if (p.aliveCount >= p.cap) Ui.BAD else Ui.TEXT, Paint.Align.LEFT, 1.8f)
         // XP: klejnot + pasek z nazwą epoki
         val need = if (p.era < cfg.maxEra) Defs.evolveXp[p.era].toFloat() else battle.rankXp(p)
-        val bx = l + 22 * dp
+        val bx = if (leftHud) right - 182 * dp else l + 22 * dp
         val bw = 160 * dp
         ui.bar(c, bx, t + 28 * dp, bw, 11 * dp, p.xp / need, Ui.XP)
-        Icons.draw(c, Icons.XP, l + 10 * dp, t + 33.5f * dp, 19 * dp, dp = dp)
+        Icons.draw(c, Icons.XP, if (leftHud) right - 10 * dp else l + 10 * dp,
+            t + 33.5f * dp, 19 * dp, dp = dp)
         ui.textO(c, L[Defs.eraKeys[p.era]], bx + bw / 2, t + 37 * dp, 10f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
@@ -1724,22 +1768,37 @@ class BattleScreen(
             val wx = if (secondRow) {
                 val tw = ui.measure(weatherName, 12f, true)
                 val block = 21 * dp + 4 * dp + tw
-                val free = (w - g.insetR - 8 * dp - mini.right) - 4 * dp
-                if (block <= free) mini.right + 2 * dp + (free - block) * 0.5f + 10 * dp
-                else mini.right + 14 * dp
-            } else mini.right + 14 * dp
-            if (secondRow) drawArmyCounts(c, p, e, (l + mini.left) * 0.5f - 38 * dp, wy + 11 * dp)
+                val free = if (leftHud) mini.left - l - 4 * dp else right - mini.right - 4 * dp
+                if (leftHud) {
+                    if (block <= free) mini.left - 2 * dp - (free - block) * 0.5f - 10 * dp
+                    else mini.left - 14 * dp
+                } else {
+                    if (block <= free) mini.right + 2 * dp + (free - block) * 0.5f + 10 * dp
+                    else mini.right + 14 * dp
+                }
+            } else if (leftHud) mini.left - 14 * dp else mini.right + 14 * dp
+            if (secondRow) drawArmyCounts(c, p, e,
+                (if (leftHud) mini.right + (right - mini.right) * 0.5f
+                 else (l + mini.left) * 0.5f) - 38 * dp, wy + 11 * dp)
             Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
             // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
             // gdy brak miejsca, zostaje sama ikona.
             // W drugim rzędzie (wąski ekran) nazwa epoki wroga jest wyżej, więc miejsce sięga krawędzi.
-            val eraLeft = if (secondRow) w - g.insetR - 6 * dp
+            val eraEdge = if (leftHud) {
+                if (secondRow) g.insetL + 6 * dp
+                else pauseBtn.r.right + 10 * dp + ui.measure(L[Defs.eraKeys[e.era]], 12f, true) + 4 * dp
+            } else {
+                if (secondRow) w - g.insetR - 6 * dp
                 else pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
-            val wAvail = eraLeft - (wx + 14 * dp) - 6 * dp
+            }
+            val wAvail = if (leftHud) wx - 14 * dp - eraEdge - 6 * dp
+                else eraEdge - (wx + 14 * dp) - 6 * dp
             if (wAvail >= 30 * dp) {
                 val size = ui.fit(weatherName, 12f, wAvail, 8f)
                 if (ui.measure(weatherName, size, true) <= wAvail)
-                    ui.textO(c, weatherName, wx + 14 * dp, wy + 15 * dp, size, Ui.TEXT)
+                    ui.textO(c, weatherName, if (leftHud) wx - 14 * dp else wx + 14 * dp,
+                        wy + 15 * dp, size, Ui.TEXT,
+                        if (leftHud) Paint.Align.RIGHT else Paint.Align.LEFT)
             }
             if (!compactTop && battle.weather == Weather.WIND) {
                 val dir = battle.windDirection().toFloat()
@@ -1873,21 +1932,29 @@ class BattleScreen(
                 Ui.GOLD, Paint.Align.CENTER, 1.7f)
         }
         // Epoka wroga w osobnej linii na szerokim HUD; nie nachodzi na pogodę.
-        val ex = pauseBtn.r.left - 10 * dp
-        val enemyWidth = if (compactTop) ex - evolveBtn.r.right - 10 * dp
-            else ex - mini.right - 12 * dp
+        val ex = if (leftHud) pauseBtn.r.right + 10 * dp else pauseBtn.r.left - 10 * dp
+        val enemyWidth = if (leftHud) {
+            if (compactTop) evolveBtn.r.left - ex - 10 * dp else mini.left - ex - 12 * dp
+        } else {
+            if (compactTop) ex - evolveBtn.r.right - 10 * dp else ex - mini.right - 12 * dp
+        }
         val enemyY = t + (if (compactTop) 15f else 49f) * dp
         ui.textO(c, enemyEraText, ex, enemyY,
             ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
-            Ui.ENEMY, Paint.Align.RIGHT, 2f)
+            Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
-            var x = ex - isz / 2
+            var x = if (leftHud) ex + isz / 2 else ex - isz / 2
             var i = p.doctrines.size - 1
             while (i >= 0) {
-                if (x < (if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp)) break
+                val boundary = if (leftHud) {
+                    if (mini.width() > 0f) mini.left - 10 * dp else evolveBtn.r.left - 10 * dp
+                } else {
+                    if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp
+                }
+                if ((leftHud && x > boundary) || (!leftHud && x < boundary)) break
                 Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)
-                x -= isz + 3 * dp
+                x += if (leftHud) isz + 3 * dp else -isz - 3 * dp
                 i--
             }
         }
@@ -1922,10 +1989,17 @@ class BattleScreen(
         c.drawRect(0f, top - 2.5f * dp, w, top, ui.fill)
         ui.fill.color = Color.argb(160, 222, 170, 70)
         c.drawRect(0f, top, w, top + 1.5f * dp, ui.fill)
-        // separator między jednostkami a akcjami
-        val sx = (unitBtn[3].r.right + turretBtn.r.left) / 2
+        // Separator między jednostkami a akcjami: pionowy lub między dwoma rzędami.
         ui.fill.color = Color.argb(90, 255, 255, 255)
-        c.drawRect(sx - 1 * dp, unitBtn[0].r.top + 6 * dp, sx + 1 * dp, unitBtn[0].r.bottom - 6 * dp, ui.fill)
+        if (twoRowHud) {
+            val sy = (unitBtn[0].r.bottom + turretBtn.r.top) * 0.5f
+            c.drawRect(g.insetL + 6 * dp, sy - 1 * dp, w - g.insetR - 6 * dp, sy + 1 * dp, ui.fill)
+        } else {
+            val sx = if (g.profile.leftHandedHud) (unitBtn[3].r.left + turretBtn.r.right) / 2f
+                else (unitBtn[3].r.right + turretBtn.r.left) / 2f
+            c.drawRect(sx - 1 * dp, unitBtn[0].r.top + 6 * dp,
+                sx + 1 * dp, unitBtn[0].r.bottom - 6 * dp, ui.fill)
+        }
     }
 
     /** Trzy belki na przycisku; złote oznaczają już kupione stopnie. */
@@ -1980,7 +2054,8 @@ class BattleScreen(
         if (p.queueSize == 0 || !unitBtn[0].visible) return
         val y = unitBtn[0].r.top - 10 * dp
         for (i in 0 until p.queueSize) {
-            val x = unitBtn[0].r.left + 9 * dp + i * 16 * dp
+            val x = if (g.profile.leftHandedHud) unitBtn[0].r.right - 9 * dp - i * 16 * dp
+                else unitBtn[0].r.left + 9 * dp + i * 16 * dp
             ui.fill.color = Ui.OUTLINE
             c.drawCircle(x, y, 6.5f * dp, ui.fill)
             ui.fill.color = if (i == 0) Ui.GOLD else Color.rgb(220, 224, 232)
