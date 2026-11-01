@@ -1,0 +1,35 @@
+name: Tymczasowa regeneracja zlotych powtorek 95
+on:
+  push:
+    branches: ['gpt/95-endless-late-balance']
+    paths: ['.github/workflows/golden-95.yml']
+permissions:
+  contents: read
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Regeneruj 10 zlotych powtorek z uzasadnieniem
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :sim:regenerateGolden -PserverOnly=true -PgoldenReason="Zlecenie 95: audyt 100 seedow, bez zmiany skalowania" --console=plain --no-configuration-cache
+      - name: Sprawdz zmiany wzorcow i podaj sumy
+        run: |
+          git status --short
+          git diff --stat -- sim/src/test/resources/golden docs/BALANCE.md
+          sha256sum sim/src/test/resources/golden/*.json
+      - name: Zachowaj regenerowane wzorce
+        uses: actions/upload-artifact@v4
+        with:
+          name: zlecenie-95-golden
+          path: |
+            sim/src/test/resources/golden/
+            docs/BALANCE.md
+          retention-days: 14
