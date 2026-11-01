@@ -359,7 +359,7 @@ class BattleScreen(
         queueInfoBtn.hitSlop = 13 * dp
         queueInfoBtn.hitOffsetX = queueInfoBtn.hitSlop
         queueInfoBtn.hitOffsetY = -queueInfoBtn.hitSlop
-        if (twoRowHud) x = l else x += 10 * dp
+        if (twoRowHud) x = rr - (6 * size + 5 * gap) else x += 10 * dp
         for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
 
         val t = g.insetT + 6 * dp
