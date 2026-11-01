@@ -459,3 +459,58 @@ powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
 **Wniosek dla pomiaru przed końcowym strojeniem:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
 
 - 2026-11-01 — regeneracja złotych powtórek: scalenie paczek 80–91 (limity 82, natychmiastowe złoto Zaopatrzenia obniżone do 15).
+## Zlecenie 95 — Endless: weteran, 100 seedów, fale 40–60 (1.11.2026)
+
+**Wynik:** bieżące skalowanie fal i bossów już spełnia wszystkie trzy kryteria
+akceptacji na większej próbie. Nie osłabiano późnych fal tylko dlatego,
+że wcześniejsza próba 20 seedów (zlecenie 82) nie miała zwycięskiego przebiegu.
+Zapobiega to nieuzasadnionemu ułatwieniu gry i zmianie historycznych powtórek.
+
+**Warunki pomiaru:** `EndlessBalanceReportTest.veteranHundredSeeds`, seedy
+**1001–1100**, `BattleConfig(Mode.ENDLESS, seed, 1f)`, dokładnie 80% poziomów
+badań (jak w pomiarze 20-seedowym), gracz sterowany przez `Ai(b, 0)`,
+limit 90 000 kroków oraz przerwanie na początku fali 60 z żywą bazą.
+Wpis „60” jest **prawostronnie ucięty**: nie oznacza zwycięstwa nad falą 60
+ani pokonania bossa tej fali. Mediana liczona jest **wyłącznie z porażek**.
+Porażka podczas fali progowej nie liczy się do jej przeżycia.
+
+| Metryka | Przed (bazowy `487a82b`) | Po audycie (bez zmiany symulacji) | Cel |
+|---|---:|---:|---:|
+| Przetrwanie fali 20 | 100/100 | **100/100** | co najmniej 95/100 |
+| Przetrwanie fali 30 | 94/100 | **94/100** | pomiar |
+| Przetrwanie fali 40 | 75/100 | **75/100** | pomiar |
+| Przetrwanie fali 50 | 69/100 | **69/100** | pomiar |
+| Dotarcie żywą bazą do fali 60 | 7/100 | **7/100** | 5–15/100 |
+| Mediana fali porażki | 54 | **54** | 45–55 |
+| Średnia osiągnięta fala (ucięcie na 60) | 49,15 | **49,15** | pomiar |
+| Porażki przed falą 60 | 93/100 | **93/100** | pomiar |
+| Timeouty | 0/100 | **0/100** | 0 |
+
+**Rozkład porażek — 100 seedów:**
+
+| Fala porażki | Liczba seedów |
+|---|---:|
+| 0–19 | 0 |
+| 20–29 | 6 |
+| 30–39 | 18 |
+| 40–44 | 4 |
+| 45–49 | 3 |
+| 50–54 | 36 |
+| 55–59 | 26 |
+| 60 (żywa baza, pomiar ucięty) | 7 |
+
+Pomiar uruchomiono w
+[GitHub Actions #41323340840](https://github.com/woogitsugames/Century-war/actions/runs/41323340840)
+(test na zmodyfikowanym drzewie przeszedł; weryfikacja porównania A/B zakończyła
+się błędem technicznym, gdy drugie uruchomienie Gradle użyło cache i nie
+wypisało ponownie `ENDLESS_MEAN`). Workflow poprawiono przez
+`--rerun-tasks` i dodano porównanie średnich z 100 seedów.
+
+**Ochrona przed regresją:** test 100-seedowy ma asercje dla trzech celów
+(20: ≥95, 60: 5–15, mediana porażek: 45–55). Nie zmieniono kart, doktryn,
+wartości skalowania, pól stanu, `BattleSnapshot.VERSION` ani `Replay.VERSION`.
+
+**Zależność:** podczas pomiaru zlecenie 108 (nowe karty i motywy fal) nie
+było scalone z `claude/bold-sagan-vwz5gm`. Po jego scaleniu należy
+**ponownie uruchomić 100 seedów**; wcześniejszego wyniku nie wolno uważać
+za pomiar po zleceniu 108.
