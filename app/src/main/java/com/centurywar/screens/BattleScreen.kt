@@ -52,7 +52,7 @@ import kotlin.math.min
  */
 class BattleScreen(
     g: Game,
-    private val cfg: BattleConfig,
+    internal val cfg: BattleConfig,
     private val rankedDaily: Boolean = false,
     restored: RestoredBattle? = null,
 ) : Screen(g) {
@@ -61,92 +61,92 @@ class BattleScreen(
     // „Wynik/Wykres”. Kolejka czeka do następnego ekranu (menu, kampania).
     override val blocksNotices: Boolean get() = true
 
-    private val battle = restored?.battle ?: Battle(cfg)
-    private val achievementEvents = AchievementBattleTracker(battle)
+    internal val battle = restored?.battle ?: Battle(cfg)
+    internal val achievementEvents = AchievementBattleTracker(battle)
     init {
         CrashReports.battleStarted(if (cfg.mode == Mode.CAMPAIGN) cfg.stageIndex + 1 else 0)
         g.music?.setThemeSeed((cfg.seed xor (cfg.seed ushr 32)).toInt())
     }
-    private val commands = battle.commandController ?: BattleController(battle)
-    private val haptics = BattleHaptics(g, battle)
-    private val r = BattleRenderer(g, battle)
-    private val battleSummary = BattleSummarySamples().apply { capture(battle) }
+    internal val commands = battle.commandController ?: BattleController(battle)
+    internal val haptics = BattleHaptics(g, battle)
+    internal val r = BattleRenderer(g, battle)
+    internal val battleSummary = BattleSummarySamples().apply { capture(battle) }
     /** Bitwa wznowiona ze zrzutu nie ma próbek sprzed przerwania: powtórka odbuduje je z logu. */
     private val summaryComplete = restored == null
-    private val resultChart = BattleSummaryChart()
-    private val resultChartArea = RectF()
-    private var showResultChart = false
+    internal val resultChart = BattleSummaryChart()
+    internal val resultChartArea = RectF()
+    internal var showResultChart = false
     private var acc = 0f
-    private var speed = 1
+    internal var speed = 1
     /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
-    private var effectiveSpeed = 1f
+    internal var effectiveSpeed = 1f
     private var avgStepNs = 0f
     private var sampledStepFrames = 0
-    private var paused = restored != null
+    internal var paused = restored != null
     /** Czas bitwy ostatniego autozapisu. */
     private var lastAutosave = battle.time
     /** Ekran porzucony (restart): nie zapisuj już jego zrzutu. */
     private var closed = false
     private var manualCam = 0f
     /** Stan wyłącznie interfejsu, nie wchodzi do zapisu bitwy. */
-    private var aimingBarrage = false
-    private var aimWorldX = 0f
-    private var aimScreenX = 0f
-    private var aimDownX = 0f
-    private var aimDownY = 0f
-    private var aimStartedInField = false
-    private var aimMoved = false
+    internal var aimingBarrage = false
+    internal var aimWorldX = 0f
+    internal var aimScreenX = 0f
+    internal var aimDownX = 0f
+    internal var aimDownY = 0f
+    internal var aimStartedInField = false
+    internal var aimMoved = false
     private var preparedPlayerEra = -1
     private var preparedEnemyEra = -1
     private var preparedPlayerVariant = -2
     private var preparedEnemyVariant = -2
-    private var showTurrets = false
+    internal var showTurrets = false
     /** Indeks roli z otwartym panelem ulepszenia (-1 = zamknięty). */
-    private var showUpgrade = -1
-    private var finished = false
+    internal var showUpgrade = -1
+    internal var finished = false
     private var surrendered = false
-    private var resultTime = 0f
-    private var replayBytes: ByteArray? = null
+    internal var resultTime = 0f
+    internal var replayBytes: ByteArray? = null
     private var replayId: String? = null
 
 
     // wynik
-    private var reward = 0
-    private var rewardText = ""
-    private var totalMedalsGained = 0
-    private var missionsAdvanced = 0
-    private var retainedProgressText = ""
-    private val defeatReasons = arrayOfNulls<String>(2)
-    private var defeatReasonCount = 0
-    private var newRecord = false
-    private var tipKey = ""
-    private var tipText = ""
-    private var resultReasonText1 = ""
-    private var resultReasonText2 = ""
-    private var tipIcon = Icons.BOLT
-    private var weeklyResultLabel = ""
-    private var weeklyResultKey = ""
-    private var resultTitle = ""
-    private var resultTimeText = ""
-    private var resultKillsText = ""
-    private var resultWaveLabel = ""
-    private var resultWaveText = ""
-    private var resultBossesText = ""
-    private var resultScoreText = ""
-    private var resultUnrankedText = ""
-    private var resultTimeLabel = ""
-    private var resultKillsLabel = ""
-    private var resultBossesLabel = ""
-    private var resultWeeklyTiersLabel = ""
-    private var resultScoreLabel = ""
-    private var resultRewardLabel = ""
-    private var resultNewRecordLabel = ""
-    private var resultStars = 0
-    private var resultCustomSkirmish = false
-    private val resultTipLines = arrayOfNulls<String>(16)
-    private var resultTipCount = 0
+    internal var reward = 0
+    internal var rewardText = ""
+    internal var totalMedalsGained = 0
+    internal var missionsAdvanced = 0
+    internal var retainedProgressText = ""
+    internal val defeatReasons = arrayOfNulls<String>(2)
+    internal var defeatReasonCount = 0
+    internal var newRecord = false
+    internal var tipKey = ""
+    internal var tipText = ""
+    internal var resultReasonText1 = ""
+    internal var resultReasonText2 = ""
+    internal var tipIcon = Icons.BOLT
+    internal var weeklyResultLabel = ""
+    internal var weeklyResultKey = ""
+    internal var resultTitle = ""
+    internal var resultTimeText = ""
+    internal var resultKillsText = ""
+    internal var resultWaveLabel = ""
+    internal var resultWaveText = ""
+    internal var resultBossesText = ""
+    internal var resultScoreText = ""
+    internal var resultUnrankedText = ""
+    internal var resultTimeLabel = ""
+    internal var resultKillsLabel = ""
+    internal var resultBossesLabel = ""
+    internal var resultWeeklyTiersLabel = ""
+    internal var resultScoreLabel = ""
+    internal var resultRewardLabel = ""
+    internal var resultNewRecordLabel = ""
+    internal var resultStars = 0
+    internal var resultCustomSkirmish = false
+    internal val resultTipLines = arrayOfNulls<String>(16)
+    internal var resultTipCount = 0
 
-    private companion object {
+    internal companion object {
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
         val CARD_RARITY = intArrayOf(
             android.graphics.Color.rgb(150, 104, 60), android.graphics.Color.rgb(84, 112, 150),
@@ -187,7 +187,7 @@ class BattleScreen(
     }
 
     /** Role.values() alokuje nową tablicę przy każdym wywołaniu, więc trzymamy kopię. */
-    private val roles = Role.values()
+    internal val roles = Role.values()
     /** Klucze opisów są składane raz, nie przy każdym renderowaniu modala. */
     private val doctrineDescKeys = Doctrine.values().map { it.key + "_d" }.toTypedArray()
     private val cardDescKeys = EndlessCard.values().map { it.textKey + "_d" }.toTypedArray()
@@ -205,38 +205,38 @@ class BattleScreen(
         return if (card != null) cardDescKeys[card.ordinal]
             else doctrineDescKeys[doctrine!!.ordinal]
     }
-    private val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
-    private val unitUpgrade = Array(4) { i -> btn(UNIT_UPGRADE0 + i) }
-    private val upgradeBuy = btn(UNIT_UPGRADE_BUY)
-    private val upgradeClose = btn(UNIT_UPGRADE_CLOSE)
-    private val turretBtn = btn(TURRET)
-    private val armoryBtn = btn(ARMORY)
-    private val barrageBtn = btn(BARRAGE)
-    private val rallyBtn = btn(RALLY)
-    private val stanceBtn = btn(STANCE)
-    private val speedBtn = btn(SPEED)
-    private val evolveBtn = btn(EVOLVE)
-    private val pauseBtn = btn(PAUSE)
-    private val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
-    private val pauseVibrationBtn = btn(PAUSE_VIBRATION)
-    private val pauseSpeedBtn = btn(PAUSE_SPEED)
+    internal val unitBtn = Array(4) { i -> btn(UNIT0 + i) }
+    internal val unitUpgrade = Array(4) { i -> btn(UNIT_UPGRADE0 + i) }
+    internal val upgradeBuy = btn(UNIT_UPGRADE_BUY)
+    internal val upgradeClose = btn(UNIT_UPGRADE_CLOSE)
+    internal val turretBtn = btn(TURRET)
+    internal val armoryBtn = btn(ARMORY)
+    internal val barrageBtn = btn(BARRAGE)
+    internal val rallyBtn = btn(RALLY)
+    internal val stanceBtn = btn(STANCE)
+    internal val speedBtn = btn(SPEED)
+    internal val evolveBtn = btn(EVOLVE)
+    internal val pauseBtn = btn(PAUSE)
+    internal val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
+    internal val pauseVibrationBtn = btn(PAUSE_VIBRATION)
+    internal val pauseSpeedBtn = btn(PAUSE_SPEED)
     private val pauseSfxRect = RectF()
     private val pauseMusicRect = RectF()
     private var pauseWide = false
     private var pauseSliderPointer = -1
     private var pauseSliderMusic = false
-    private val continueBtn = btn(CONTINUE)
-    private val restartEnd = btn(RESTART + 100)
-    private val replayEnd = btn(WATCH_REPLAY)
-    private val resultStatsTab = btn(RESULT_STATS_TAB)
-    private val resultChartTab = btn(RESULT_CHART_TAB)
-    private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
-    private val variantBtn = Array(2) { btn(VARIANT0 + it) }
-    private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
-    private val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
-    private val closeBtn = btn(CLOSE)
+    internal val continueBtn = btn(CONTINUE)
+    internal val restartEnd = btn(RESTART + 100)
+    internal val replayEnd = btn(WATCH_REPLAY)
+    internal val resultStatsTab = btn(RESULT_STATS_TAB)
+    internal val resultChartTab = btn(RESULT_CHART_TAB)
+    internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
+    internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
+    internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
+    internal val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
+    internal val closeBtn = btn(CLOSE)
     /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
-    private val queueInfoBtn = btn(90)
+    internal val queueInfoBtn = btn(90)
     private val introTooltip = TooltipBubble()
     private val missingXpTooltip = TooltipBubble()
     private var missingXpRemaining = 0f
@@ -244,20 +244,20 @@ class BattleScreen(
     private var introRemaining = 0f
     private var introChecked = false
 
-    private val topBar = RectF()
-    private val mini = RectF()
-    private val goldRect = RectF()
-    private val xpRect = RectF()
-    private val fieldRect = RectF()
-    private val weatherRect = RectF()
+    internal val topBar = RectF()
+    internal val mini = RectF()
+    internal val goldRect = RectF()
+    internal val xpRect = RectF()
+    internal val fieldRect = RectF()
+    internal val weatherRect = RectF()
     /** Obszar liczebności armii w drugim rzędzie paska (pusty w układzie szerokim). */
-    private val armyRect = RectF()
-    private val panel = RectF()
-    private val upgradePanel = RectF()
-    private val upgradeRoleKeys = arrayOf("unit_upgrade_melee", "unit_upgrade_ranged", "unit_upgrade_heavy", "unit_upgrade_elite")
-    private var upgradeRoleShown = -1
-    private var upgradeTierShown = -1
-    private var upgradeTierText = ""
+    internal val armyRect = RectF()
+    internal val panel = RectF()
+    internal val upgradePanel = RectF()
+    internal val upgradeRoleKeys = arrayOf("unit_upgrade_melee", "unit_upgrade_ranged", "unit_upgrade_heavy", "unit_upgrade_elite")
+    internal var upgradeRoleShown = -1
+    internal var upgradeTierShown = -1
+    internal var upgradeTierText = ""
     private val variantDescLines = Array(2) { arrayOfNulls<String>(16) }
     private val variantDescCount = IntArray(2)
     private val variantDescKey = IntArray(2) { -1 }
@@ -270,13 +270,19 @@ class BattleScreen(
     private var choiceDescWidth = -1f
     private var choiceDescScale = -1f
     private var choiceDescLanguage = -1
-    private var hudH = 0f
-    private var twoRowHud = false
-    private var topH = 0f
-    private var compactTop = false
-    private var enemyEraShown = -1
-    private var enemyEraLanguage = -1
-    private var enemyEraText = ""
+    internal var hudH = 0f
+    internal var twoRowHud = false
+    internal var topH = 0f
+    internal var compactTop = false
+    internal var enemyEraShown = -1
+    internal var enemyEraLanguage = -1
+    internal var enemyEraText = ""
+    // Komponenty powstają raz; bez instancjonowania w render()/update().
+    private val topBarView = BattleTopBar(this)
+    private val bottomHudView = BattleBottomHud(this)
+    private val resultsView = BattleResultsPanel(this)
+    internal val upgradesView = BattleUpgradePanel(this)
+    private val barrageView = BarrageAiming(this)
 
     init {
         // Obie strony zamawiają swoje pierwsze próbki przed pierwszym krokiem bitwy.
@@ -313,7 +319,7 @@ class BattleScreen(
     }
 
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
-    private val tut: TutorialOverlay? =
+    internal val tut: TutorialOverlay? =
         if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, commands, TutorialOverlay.Targets(
             unitBtn, evolveBtn, turretBtn, armoryBtn, stanceBtn, rallyBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
@@ -352,63 +358,9 @@ class BattleScreen(
         val avail = rr - l
         compactTop = avail < 790 * dp
         topH = if (compactTop) 108 * dp else 58 * dp
-        val n = 10
-        val gap = 5 * dp
-        // Domyślny pasek pozostaje bez zmian; na wąskim ekranie tryb leworęczny
-        // układa cztery jednostki nad sześcioma akcjami zamiast zmniejszać cele dotyku.
-        twoRowHud = g.profile.leftHandedHud && avail < 560 * dp
-        val size = if (twoRowHud) min(70 * dp, (avail - gap * 5) / 6f)
-            else min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
-        hudH = (if (twoRowHud) 2 * size + gap else size) + pad * 2 + 4 * dp + g.insetB
-        val y = h - g.insetB - pad - size
-        var x = l
-        for (b in unitBtn) {
-            b.set(x, if (twoRowHud) y - size - gap else y, size, size)
-            x += size + gap
-        }
-        val arrow = min(24 * dp, size * 0.36f)
-        for (i in 0..3) {
-            val ur = unitBtn[i].r
-            unitUpgrade[i].set(ur.right - arrow, ur.top, arrow, arrow)
-            val target = if (twoRowHud) min(48 * dp, size) else 48 * dp
-            unitUpgrade[i].hitSlop = (target - arrow).coerceAtLeast(0f) / 2f
-            // Powiększony obszar strzałki leży wewnątrz przycisku jednostki.
-            unitUpgrade[i].hitOffsetX = -unitUpgrade[i].hitSlop
-            unitUpgrade[i].hitOffsetY = -unitUpgrade[i].hitSlop
-        }
-        queueInfoBtn.set(unitBtn[0].r.left, unitBtn[0].r.top - 23 * dp, 92 * dp, 22 * dp)
-        queueInfoBtn.hitSlop = 13 * dp
-        queueInfoBtn.hitOffsetX = queueInfoBtn.hitSlop
-        queueInfoBtn.hitOffsetY = -queueInfoBtn.hitSlop
-        if (twoRowHud) x = rr - (6 * size + 5 * gap) else x += 10 * dp
-        for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
+        bottomHudView.layout(l, rr, avail, pad)
 
-        val t = g.insetT + 6 * dp
-        pauseBtn.set(rr - 48 * dp, t, 48 * dp, 48 * dp)
-        // Awans zawsze w pierwszym rzędzie. Na wąskim ekranie (np. 360 dp) w obu trybach
-        // zwęża się przed pauzą (min. 48 dp), by nie nachodzić na nią ani na drugi rząd.
-        val evolveW = min(118 * dp, pauseBtn.r.left - 6 * dp - (l + 196 * dp)).coerceAtLeast(48 * dp)
-        evolveBtn.set(l + 196 * dp, t, evolveW, 48 * dp)
-        if (compactTop) {
-            // Wąski ekran: osobny rząd na minimapę, paski baz i zegar.
-            // Minimapa na środku; po lewej liczebność armii, po prawej pogoda (po 120 dp),
-            // liczby HP i zegar pod minimapą.
-            mini.set(l + 120 * dp, t + 64 * dp, rr - 120 * dp, t + 80 * dp)
-            if (mini.width() < 60 * dp) mini.set(0f, 0f, 0f, 0f)
-            if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, mini.centerY() - 13 * dp, rr, mini.centerY() + 13 * dp)
-            else weatherRect.setEmpty()
-        } else {
-            mini.set(evolveBtn.r.right + 16 * dp, t + 15 * dp,
-                pauseBtn.r.left - 112 * dp, t + 31 * dp)
-            if (mini.width() < 190 * dp) mini.set(0f, 0f, 0f, 0f)
-            if (mini.width() > 0f) weatherRect.set(mini.right + 3 * dp, t,
-                mini.right + 27 * dp, t + 25 * dp)
-            else weatherRect.setEmpty()
-        }
-        topBar.set(0f, 0f, w, topH + g.insetT)
-        goldRect.set(l + 2 * dp, t - 4 * dp, l + 110 * dp, t + 26 * dp)
-        xpRect.set(l, t + 22 * dp, l + 186 * dp, t + 44 * dp)
-        fieldRect.set(0f, topH + g.insetT, w, h - hudH)
+        topBarView.layout(l, rr)
 
         if (g.profile.leftHandedHud) {
             // Lustrzane są wyłącznie kontrolki; kamera i pole bitwy zachowują kierunek.
@@ -427,19 +379,13 @@ class BattleScreen(
             mirrorHudRect(mini, l, rr)
             mirrorHudRect(weatherRect, l, rr)
         }
-        // Liczebność armii w drugim rzędzie: wyśrodkowana w polu po stronie przeciwnej
-        // do pogody (tej samej, co przy rysowaniu); prostokąt służy też testom kolizji.
-        if (compactTop && mini.width() > 0f) {
-            val ax = (if (g.profile.leftHandedHud) mini.right + (w - g.insetR - 8 * dp - mini.right) * 0.5f
-                else (g.insetL + 8 * dp + mini.left) * 0.5f) - 38 * dp
-            armyRect.set(ax, mini.centerY() - 11 * dp, ax + ARMY_COUNTS_W * dp, mini.centerY() + 11 * dp)
-        } else armyRect.setEmpty()
+        topBarView.layoutArmy()
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
 
         layoutPause()
         pauseModifierWidth = -1f
-        layoutResults()
+        resultsView.layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
         val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
         for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
@@ -448,8 +394,8 @@ class BattleScreen(
         val vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
         for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
             (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
-        layoutTurretPanel()
-        layoutUpgradePanel()
+        upgradesView.layoutTurretPanel()
+        upgradesView.layoutUpgradePanel()
         // Szerokość paneli zmienia łamanie opisów wariantów i kart.
         variantDescWidth = -1f
         choiceDescWidth = -1f
@@ -535,52 +481,8 @@ class BattleScreen(
         }
     }
 
-    private fun layoutResults() {
-        val rw = min(460 * dp, w - g.insetL - g.insetR - 40 * dp)
-        val rh = min(h - g.insetT - g.insetB - 40 * dp, 430 * dp)
-        resultPanel.set(w / 2 - rw / 2, h / 2 - rh / 2 + 16 * dp,
-            w / 2 + rw / 2, h / 2 + rh / 2 + 16 * dp)
-        val gap = 5 * dp
-        val usable = rw - 32 * dp - gap * 2
-        val bh = 50 * dp
-        val first = usable * 0.26f
-        val middle = usable * 0.44f
-        restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, first, bh)
-        replayEnd.set(restartEnd.r.right + gap, restartEnd.r.top, middle, bh)
-        continueBtn.set(replayEnd.r.right + gap, restartEnd.r.top, usable - first - middle, bh)
-        val tw = (rw - 36 * dp - gap) / 2f
-        resultStatsTab.set(resultPanel.left + 16 * dp, resultPanel.top + 39 * dp, tw, 30 * dp)
-        resultChartTab.set(resultStatsTab.r.right + gap, resultStatsTab.r.top, tw, 30 * dp)
-        resultChartArea.set(resultPanel.left + 15 * dp, resultPanel.top + 73 * dp,
-            resultPanel.right - 15 * dp, restartEnd.r.top - 7 * dp)
-        resultChart.prepare(battleSummary, resultChartArea, dp)
-        if (finished) prepareResultTipLines()
-    }
 
-    private fun layoutUpgradePanel() {
-        val pw = min(425 * dp, w - g.insetL - g.insetR - 32 * dp)
-        val ph = min(260 * dp, h - g.insetT - g.insetB - 20 * dp)
-        val cy = (g.insetT + h - g.insetB) / 2f
-        upgradePanel.set(w / 2 - pw / 2, cy - ph / 2, w / 2 + pw / 2, cy + ph / 2)
-        upgradeBuy.set(upgradePanel.left + 25 * dp, upgradePanel.bottom - 62 * dp, pw - 50 * dp, 48 * dp)
-        upgradeClose.set(upgradePanel.right - 38 * dp, upgradePanel.top - 12 * dp, 48 * dp, 48 * dp)
-    }
 
-    private fun layoutTurretPanel() {
-        val pw = min(480 * dp, w - 40 * dp)
-        val rowH = 50 * dp
-        turretSlotsLaid = battle.player.slots
-        val ph = 62 * dp + rowH * turretSlotsLaid + 10 * dp
-        panel.set(w / 2 - pw / 2, (h - hudH - ph) / 2 + topH / 2, w / 2 + pw / 2, (h - hudH - ph) / 2 + topH / 2 + ph)
-        val bw = min(140 * dp, pw * 0.3f)
-        val sw = min(116 * dp, pw * 0.25f)
-        for (i in 0 until Defs.MAX_TURRET_SLOTS) {
-            val y = panel.top + 50 * dp + i * rowH
-            slotSell[i].set(panel.right - 20 * dp - sw, y, sw, 48 * dp)
-            slotBuy[i].set(slotSell[i].r.left - 8 * dp - bw, y, bw, 48 * dp)
-        }
-        closeBtn.set(panel.right - 38 * dp, panel.top - 12 * dp, 48 * dp, 48 * dp)
-    }
 
 
     // ---------------------------------------------------------------- logika
@@ -609,7 +511,7 @@ class BattleScreen(
         tut?.onLanguageChanged()
         super.onLanguageChanged()
         eraIntro?.onLanguageChanged()
-        if (finished) refreshResultTexts()
+        if (finished) resultsView.refreshResultTexts()
     }
 
     private var frameDt = 0f
@@ -710,7 +612,7 @@ class BattleScreen(
         BattleSfx.play(g, battle, r.camX, r.worldVisible)
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) r.follow(dt)
-        refreshButtons()
+        bottomHudView.refreshButtons()
         if (missingXpRemaining > 0f) {
             if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
             else missingXpRemaining = (missingXpRemaining - dt).coerceAtLeast(0f)
@@ -740,206 +642,34 @@ class BattleScreen(
 
     }
 
-    private var turretSlotsLaid = -1
+    internal var turretSlotsLaid = -1
 
-    private fun refreshButtons() {
-        val p = battle.player
-        if (p.slots != turretSlotsLaid) layoutTurretPanel()
-        if (p.era != turretHeadingEra || p.eraVariant != turretHeadingVariant || turretHeadingLanguage != L.lang) {
-            turretHeadingEra = p.era
-            turretHeadingVariant = p.eraVariant
-            turretHeadingLanguage = L.lang
-            turretHeading = "${L["turrets"]} — ${L[Defs.turret(p.era, p.eraVariant).nameKey]}"
-            // Nie zmieniamy dotychczasowego układu podpisów slotów.
-        }
-        refreshPauseTexts()
-        val modal = paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
-        for (i in 0..3) {
-            val role = roles[i]
-            val def = p.unit(role)
-            val b = unitBtn[i]
-            b.visible = !modal
-            val locked = role == Role.ELITE && !p.eliteUnlocked
-            b.enabled = !locked && battle.canQueue(p, role)
-            b.sub = if (locked) "" else costStr(i, battle.unitCost(p, role))
-            b.subIcon = if (locked) Icons.LOCK else Icons.COIN
-            b.progress = if (p.queueSize > 0 && p.queue[0] == def.id) p.trainT / def.trainTime else -1f
-            val up = unitUpgrade[i]
-            up.visible = !modal && !locked && (tut == null || tut.finished) && p.unitTier[i] < Defs.MAX_UNIT_TIER
-            up.enabled = true // Dostęp do opisu także wtedy, gdy brakuje złota.
-            up.iconId = Icons.CHEVRONS
-            up.iconTint = Ui.GOLD
-            up.highlight = battle.canUpgradeUnit(p, role)
-        }
-        upgradeBuy.visible = showUpgrade >= 0 && !paused && !finished && battle.pendingChoice == null
-        upgradeClose.visible = upgradeBuy.visible
-        if (showUpgrade >= 0) {
-            val role = roles[showUpgrade]
-            val tier = p.unitTier[role.ordinal]
-            if (showUpgrade != upgradeRoleShown || tier != upgradeTierShown || upgradeTierLanguage != L.lang) {
-                upgradeRoleShown = showUpgrade
-                upgradeTierShown = tier
-                upgradeTierLanguage = L.lang
-                upgradeTierText = L.f("unit_upgrade_tier", tier, min(Defs.MAX_UNIT_TIER, tier + 1))
-            }
-            val cost = battle.unitUpgradeCost(p, role)
-            upgradeBuy.label = if (cost < 0) L["unit_upgrade_max"] else L["upgrade"]
-            upgradeBuy.sub = if (cost < 0) "" else costStr(5, cost)
-            upgradeBuy.subIcon = if (cost < 0) -1 else Icons.COIN
-            upgradeBuy.enabled = battle.canUpgradeUnit(p, role)
-            upgradeBuy.highlight = upgradeBuy.enabled
-        }
-        queueInfoBtn.visible = !modal && p.queueSize > 0
-        queueInfoBtn.enabled = false
-        turretBtn.visible = !modal; turretBtn.label = L["turrets"]; turretBtn.enabled = p.slots > 0
-        turretBtn.iconId = Icons.TOWER; turretBtn.iconTint = Ui.PLAYER
-        turretBtn.selected = showTurrets
-        armoryBtn.visible = !modal
-        armoryBtn.iconId = Icons.ANVIL
-        if (armoryLv != p.armory) { armoryLv = p.armory; armoryBtn.label = p.armory.toString() }
-        armoryBtn.sub = costStr(4, battle.armoryCost(p))
-        armoryBtn.subIcon = Icons.COIN
-        armoryBtn.enabled = p.gold >= battle.armoryCost(p) && p.armory < 15
-        barrageBtn.visible = !modal
-        barrageBtn.label = L["battle84_barrage_short"]
-        barrageBtn.iconId = Icons.METEOR
-        barrageBtn.enabled = battle.abilityReady(p, 0)
-        barrageBtn.progress = if (p.abilityCd[0] > 0f) 1f - p.abilityCd[0] / (Battle.BARRAGE_CD * p.abilityCdMul) else -1f
-        if (modal || !barrageBtn.enabled) aimingBarrage = false
-        barrageBtn.selected = aimingBarrage
-        barrageBtn.highlight = aimingBarrage
-        rallyBtn.visible = !modal && p.rallyUnlocked
-        rallyBtn.label = L["battle84_rally_short"]
-        rallyBtn.iconId = Icons.FLAG; rallyBtn.iconTint = Ui.PLAYER
-        rallyBtn.sub = ""
-        rallyBtn.enabled = battle.abilityReady(p, 1)
-        rallyBtn.progress = if (p.abilityCd[1] > 0f) 1f - p.abilityCd[1] / (Battle.RALLY_CD * p.abilityCdMul) else -1f
-        rallyBtn.highlight = p.rallyT > 0f
-        stanceBtn.visible = !modal
-        stanceBtn.label = if (p.hold) L["hold"] else L["advance"]
-        stanceBtn.iconId = if (p.hold) Icons.SHIELD else Icons.ADVANCE
-        stanceBtn.iconTint = Ui.PLAYER
-        stanceBtn.highlight = p.hold
-        speedBtn.visible = !modal
-        speedBtn.iconId = Icons.SPEED
-        val shownSpeed = effectiveSpeed.toInt().coerceIn(1, speed)
-        speedBtn.label = if (shownSpeed == speed) speedLabels[speed] else limitedSpeedLabels[speed][shownSpeed]
-        evolveBtn.visible = !modal
-        val canEvo = battle.canEvolve(p)
-        evolveBtn.enabled = canEvo
-        evolveBtn.highlight = canEvo
-        evolveBtn.iconId = if (p.era >= cfg.maxEra) Icons.CHEVRONS else Icons.EVOLVE
-        if (shownRank != p.rank || shownRankLanguage != L.lang) {
-            shownRank = p.rank; shownRankLanguage = L.lang; shownRankText = L.f("rank", p.rank)
-        }
-        evolveBtn.label = if (p.era >= cfg.maxEra) shownRankText else L["evolve"]
-        if (p.era >= cfg.maxEra) evolveBtn.enabled = false
-        pauseBtn.visible = !finished
-        pauseBtn.iconId = Icons.PAUSE
-        pauseBtn.label = ""
-
-        for (i in pauseMenu.indices) pauseMenu[i].visible = paused && !finished
-        pauseMenu[0].label = L["resume"]; pauseMenu[1].label = L["restart"]; pauseMenu[2].label = L["quit"]
-        pauseMenu[0].iconId = Icons.PLAY; pauseMenu[1].iconId = Icons.RESTART; pauseMenu[2].iconId = Icons.WHITE_FLAG
-        pauseMenu[0].highlight = true; pauseMenu[2].color = Ui.BTN_RED
-        pauseVibrationBtn.visible = paused && !finished
-        // Te same trzy poziomy i napisy co w Ustawieniach (0 wył., 1 słabe, 2 pełne).
-        val vibLevel = g.profile.vibrationLevel
-        pauseVibrationBtn.label = L[when (vibLevel) { 0 -> "shake_off"; 1 -> "shake_low"; else -> "shake_full" }]
-        pauseVibrationBtn.color = if (vibLevel > 0) Ui.BTN_GREEN else Ui.BTN
-        pauseSpeedBtn.visible = paused && !finished
-        pauseSpeedBtn.label = speedLabels[speed]
-        continueBtn.visible = finished && resultTime > 0.8f
-        continueBtn.label = L["continue"]
-        continueBtn.iconId = Icons.PLAY
-        continueBtn.highlight = true
-        restartEnd.visible = finished && resultTime > 0.8f
-        restartEnd.label = L["restart"]
-        restartEnd.iconId = Icons.RESTART
-        replayEnd.visible = finished && resultTime > 0.8f && replayBytes != null
-        replayEnd.label = L["battle84_watch_replay"]
-        replayEnd.iconId = Icons.WATCH_EYE
-        resultStatsTab.visible = finished && resultTime > 0.8f
-        resultChartTab.visible = resultStatsTab.visible
-        resultStatsTab.label = L["bs104_stats"]
-        resultChartTab.label = L["bs104_chart"]
-        resultStatsTab.selected = !showResultChart
-        resultChartTab.selected = showResultChart
-
-        val choiceOpen = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
-        for (i in 0..2) {
-            doctrineBtn[i].visible = choiceOpen && battle.pendingVariant == null && !paused
-            doctrineBtn[i].label = ""
-        }
-        for (i in 0..1) {
-            variantBtn[i].visible = battle.pendingVariant != null && !paused && !finished
-            variantBtn[i].label = ""
-        }
-        val tp = showTurrets && !modal
-        for (i in 0 until Defs.MAX_TURRET_SLOTS) {
-            val active = tp && i < p.slots
-            slotBuy[i].visible = active
-            slotSell[i].visible = active && p.turretEra[i] >= 0
-            if (!active) continue
-            val te = p.turretEra[i]
-            if (te < 0) {
-                val price = p.turretCost()
-                val key = price
-                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
-                    slotBuyKey[i] = key
-                    slotBuy[i].label = "${L["buy"]} $price"
-                }
-                slotBuy[i].iconId = Icons.COIN
-                slotBuy[i].enabled = p.gold >= price
-                slotBuy[i].highlight = slotBuy[i].enabled
-            } else {
-                val uc = battle.upgradeCost(p, i)
-                val key = -uc - 2
-                if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
-                    slotBuyKey[i] = key
-                    slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
-                }
-                slotBuy[i].iconId = if (uc < 0) Icons.CHECK else Icons.EVOLVE
-                slotBuy[i].enabled = uc >= 0 && p.gold >= uc
-                slotBuy[i].highlight = slotBuy[i].enabled
-            }
-            val sell = if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0
-            if (slotSellKey[i] != sell || slotLabelLanguage != L.lang) {
-                slotSellKey[i] = sell
-                slotSell[i].label = "${L["sell"]} $sell"
-            }
-            slotSell[i].iconId = Icons.COIN
-            slotSell[i].color = Ui.BTN_RED
-        }
-        closeBtn.visible = tp
-        if (tp) slotLabelLanguage = L.lang
-    }
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
     private val costCache = IntArray(6) { -1 }
     private val costText = Array(6) { "" }
-    private var armoryLv = -1
-    private var turretHeadingEra = -1
-    private var turretHeadingVariant = -1
-    private var turretHeadingLanguage = -1
-    private var turretHeading = ""
-    private val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
-    private val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
+    internal var armoryLv = -1
+    internal var turretHeadingEra = -1
+    internal var turretHeadingVariant = -1
+    internal var turretHeadingLanguage = -1
+    internal var turretHeading = ""
+    internal val slotLabels = Array(Defs.MAX_TURRET_SLOTS) { "" }
+    internal val slotNumbers = Array(Defs.MAX_TURRET_SLOTS) { (it + 1).toString() }
     private var lastSfxRank = battle.player.rank
-    private var upgradeTierLanguage = -1
-    private var shownRank = -1
-    private var shownRankLanguage = -1
-    private var shownRankText = ""
-    private val slotBuyKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
-    private val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
-    private var slotLabelLanguage = -1
+    internal var upgradeTierLanguage = -1
+    internal var shownRank = -1
+    internal var shownRankLanguage = -1
+    internal var shownRankText = ""
+    internal val slotBuyKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    internal val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    internal var slotLabelLanguage = -1
     /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
-    private val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
-    private val limitedSpeedLabels = Array(6) { target ->
+    internal val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
+    internal val limitedSpeedLabels = Array(6) { target ->
         Array(6) { actual -> "×$target → ×$actual" }
     }
 
-    private fun costStr(slot: Int, v: Int): String {
+    internal fun costStr(slot: Int, v: Int): String {
         if (costCache[slot] != v) { costCache[slot] = v; costText[slot] = v.toString() }
         return costText[slot]
     }
@@ -1061,21 +791,7 @@ class BattleScreen(
             TURRET -> showTurrets = !showTurrets
             CLOSE -> showTurrets = false
             ARMORY -> commands.armory()
-            BARRAGE -> {
-                if (aimingBarrage) {
-                    // Drugie dotknięcie: szybki ostrzał, liczony do osiągnięć jak celowany.
-                    achievementEvents.beforeAimedBarrage()
-                    val fired = commands.barrage()
-                    achievementEvents.afterAimedBarrage(fired)
-                    if (fired) haptics.onBarrage()
-                    aimingBarrage = false
-                } else if (battle.abilityReady(p, 0)) {
-                    showTurrets = false
-                    aimingBarrage = true
-                    aimScreenX = w * 0.5f
-                    aimWorldX = snapBarrageTarget(r.worldX(aimScreenX))
-                }
-            }
+            BARRAGE -> barrageView.onButton()
             RALLY -> commands.rally()
             STANCE -> commands.stance(!p.hold)
             SPEED, PAUSE_SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
@@ -1131,7 +847,7 @@ class BattleScreen(
         }
     }
 
-    private fun BattleConfig.copyWithSeed() = BattleConfig(
+    internal fun BattleConfig.copyWithSeed() = BattleConfig(
         mode, if (mode == Mode.DAILY || weekly >= 0L) seed else seed + 1, aiPower,
         startEra, maxEra, modifiers, playerBonuses, stageIndex,
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
@@ -1190,68 +906,10 @@ class BattleScreen(
                 return true
             }
         }
-        if (aimingBarrage) {
-            when (e.action) {
-                TouchEvent.DOWN -> {
-                    aimDownX = e.x
-                    aimDownY = e.y
-                    aimMoved = false
-                    aimStartedInField = fieldRect.contains(e.x, e.y)
-                }
-                TouchEvent.MOVE -> if (kotlin.math.abs(e.x - aimDownX) > 10f * dp ||
-                    kotlin.math.abs(e.y - aimDownY) > 10f * dp) aimMoved = true
-            }
-            if ((e.action == TouchEvent.DOWN || e.action == TouchEvent.MOVE) &&
-                aimStartedInField && fieldRect.contains(e.x, e.y)) {
-                aimScreenX = e.x
-                aimWorldX = snapBarrageTarget(r.worldX(e.x))
-            }
-            // Przeciągnięcie celownika: ostrzał spada po puszczeniu palca.
-            if (e.action == TouchEvent.UP && aimStartedInField && aimMoved) {
-                fireAimedBarrage(aimWorldX)
-                aimingBarrage = false
-                aimStartedInField = false
-                return true
-            }
-        }
-        return false // Ekran nadal rozpoznaje zwykły tap i przeciąganie.
+        return barrageView.onTouch(e)
     }
 
-    private fun fireAimedBarrage(worldX: Float) {
-        if (paused || finished || !battle.abilityReady(battle.player, 0)) return
-        achievementEvents.beforeAimedBarrage()
-        val fired = commands.barrage(worldX)
-        achievementEvents.afterAimedBarrage(fired)
-        if (fired) haptics.onBarrage()
-    }
 
-    /**
-     * Przyciąganie celownika do najbliższego widocznego skupiska wrogów (do 110 j. od palca):
-     * środek grupy w promieniu rozrzutu ostrzału. Bez alokacji; tylko interfejs, nie symulacja.
-     */
-    private fun snapBarrageTarget(x: Float): Float {
-        val p = battle.player
-        val near = p.baseFront + 220f
-        val far = p.baseFront + 1370f
-        var bestCount = 0
-        var bestX = x
-        var bestDist = Float.MAX_VALUE
-        for (u in battle.units) {
-            if (!u.alive || u.side != 1) continue
-            if (battle.fog && !p.fogSight && u.x - p.front > 650f) continue
-            if (u.x < near || u.x > far || kotlin.math.abs(u.x - x) > 110f) continue
-            var n = 0
-            var sum = 0f
-            for (v in battle.units) {
-                if (!v.alive || v.side != 1 || kotlin.math.abs(v.x - u.x) > 120f) continue
-                n++; sum += v.x
-            }
-            val cx = sum / n
-            val d = kotlin.math.abs(cx - x)
-            if (n > bestCount || (n == bestCount && d < bestDist)) { bestCount = n; bestX = cx; bestDist = d }
-        }
-        return bestX.coerceIn(near, far)
-    }
 
     override fun onDrag(dx: Float, dy: Float) {
         if (finished || paused) return
@@ -1259,7 +917,7 @@ class BattleScreen(
         if (aimingBarrage && aimStartedInField) return
         r.camX -= dx / r.k
         r.clampCam()
-        if (aimingBarrage) aimWorldX = snapBarrageTarget(r.worldX(aimScreenX))
+        if (aimingBarrage) aimWorldX = barrageView.snapBarrageTarget(r.worldX(aimScreenX))
         manualCam = 4f
         tut?.onCamera()
     }
@@ -1280,7 +938,7 @@ class BattleScreen(
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
                 fieldRect.contains(x, y) && (!showTurrets || !panel.contains(x, y))) {
-                fireAimedBarrage(snapBarrageTarget(r.worldX(x)))
+                barrageView.fireAimedBarrage(barrageView.snapBarrageTarget(r.worldX(x)))
             }
             aimingBarrage = false // Dotknięcie poza polem walki anuluje.
             return
@@ -1480,7 +1138,7 @@ class BattleScreen(
         haptics.onEnd(won)
         g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
         g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
-        refreshResultTexts()
+        resultsView.refreshResultTexts()
         if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
         if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
     }
@@ -1505,7 +1163,7 @@ class BattleScreen(
         if (defeatReasonCount == 0 && tipKey.isNotEmpty()) add(tipKey)
     }
 
-    private fun defeatReasonText(key: String): String = when (key) {
+    internal fun defeatReasonText(key: String): String = when (key) {
         "battle84_cause_gold" -> L.f(key, battle.player.gold.toInt())
         "battle84_cause_army" -> L.f(key, battle.player.spawned, battle.enemy.spawned)
         "battle84_cause_eco" -> L.f(key, battle.player.goldEarned.toInt(), battle.enemy.goldEarned.toInt())
@@ -1553,7 +1211,7 @@ class BattleScreen(
     private var pauseModifierWidth = -1f
 
     /** Aktualizacja rzadkich napisów poza render; liczby tylko, gdy stan się zmieni. */
-    private fun refreshPauseTexts() {
+    internal fun refreshPauseTexts() {
         if (!paused || finished) return
         val changedLanguage = pauseLanguage != L.lang
         if (changedLanguage) {
@@ -1632,20 +1290,20 @@ class BattleScreen(
     private var pauseCtrlX = 0f
     private var pauseCtrlLabelW = 0f
     private var pauseQuickY = 0f
-    private val resultPanel = RectF()
-    private val tmpR = RectF()
-    private val actionBtns get() = actionArr
+    internal val resultPanel = RectF()
+    internal val tmpR = RectF()
+    internal val actionBtns get() = actionArr
     private val actionArr = arrayOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)
-    private var goldShown = -1
-    private var goldText = ""
-    private var capKey = -1
-    private var capText = ""
-    private var hpP = -1
-    private var hpPText = ""
-    private var hpE = -1
-    private var hpEText = ""
+    internal var goldShown = -1
+    internal var goldText = ""
+    internal var capKey = -1
+    internal var capText = ""
+    internal var hpP = -1
+    internal var hpPText = ""
+    internal var hpE = -1
+    internal var hpEText = ""
 
-    private fun doctrineIcon(d: Doctrine) = Icons.doctrineIcon(d)
+    internal fun doctrineIcon(d: Doctrine) = Icons.doctrineIcon(d)
 
     private fun endlessIcon(card: EndlessCard): Int = when (card) {
         EndlessCard.ECONOMY, EndlessCard.EXTRA_GOLD -> Icons.COINS
@@ -1692,32 +1350,29 @@ class BattleScreen(
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
         r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
-        if (aimingBarrage) r.drawBarrageAim(c, aimWorldX, fieldRect)
+        if (aimingBarrage) barrageView.drawAim(c)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
         val regularTextScale = ui.textScale
         ui.textScale = min(regularTextScale, 1.15f)
-        drawTop(c)
-        if (aimingBarrage) {
-            ui.ribbon(c, w * 0.5f, fieldRect.top + 22 * dp, L["barrage_aim_hint"],
-                15f, Ui.PLAYER, 0f, Ui.TEXT, w - g.insetL - g.insetR - 24 * dp)
-        }
-        drawHudBack(c)
+        topBarView.drawTop(c)
+        if (aimingBarrage) barrageView.drawHint(c)
+        bottomHudView.drawHudBack(c)
         for (b in actionArr) ui.button(c, b, 13f)
         for (b in unitBtn) ui.button(c, b, 13f)
-        drawUnitTiers(c)
+        bottomHudView.drawUnitTiers(c)
         for (b in unitUpgrade) ui.button(c, b, 9f)
-        drawQueue(c)
+        bottomHudView.drawQueue(c)
         ui.button(c, evolveBtn, 15f)
         ui.button(c, pauseBtn, 15f)
-        if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawTurretPanel(c)
-        if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) drawUpgradePanel(c)
+        if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawTurretPanel(c)
+        if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawUpgradePanel(c)
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
         if (!finished) {
             tut?.draw(c)
             hints.draw(c)
         }
         if (paused && !finished) drawPausePanel(c)
-        if (finished) drawResults(c)
+        if (finished) resultsView.drawResults(c)
         if (!finished && !paused && introRemaining > 0f && !isTooltipHeld &&
             showUpgrade < 0 && !showTurrets && hints.activeId < 0 && tut == null) {
             ui.tooltip(c, unitBtn[0].r, introTooltip, g.insetL, g.insetT,
@@ -1785,391 +1440,26 @@ class BattleScreen(
         for (i in pauseMenu.indices) ui.button(c, pauseMenu[i], 17f)
     }
 
-    private fun drawTop(c: Canvas) {
-        val p = battle.player
-        val e = battle.enemy
-        if (e.era != enemyEraShown || enemyEraLanguage != L.lang) {
-            enemyEraShown = e.era
-            enemyEraLanguage = L.lang
-            enemyEraText = L.f("battle84_enemy_era", L[Defs.eraKeys[e.era]])
-        }
-        // pasek: ciemne tło, ciemny kontur i złota lamówka na dole
-        ui.fill.color = Color.argb(200, 16, 20, 32)
-        c.drawRect(topBar, ui.fill)
-        ui.fill.color = Ui.OUTLINE
-        c.drawRect(0f, topBar.bottom, w, topBar.bottom + 2.5f * dp, ui.fill)
-        ui.fill.color = Color.argb(160, 222, 170, 70)
-        c.drawRect(0f, topBar.bottom - 1.5f * dp, w, topBar.bottom, ui.fill)
-        val l = g.insetL + 8 * dp
-        val right = w - g.insetR - 8 * dp
-        val leftHud = g.profile.leftHandedHud
-        val t = g.insetT + 6 * dp
-        // złoto
-        val gi = p.gold.toInt()
-        if (gi != goldShown) { goldShown = gi; goldText = gi.toString() }
-        ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldText,
-            15f, Ui.GOLD, alignRight = leftHud, minTextW = ui.measure("0000", 15f, true))
-        // armia
-        val ck = p.aliveCount * 100 + p.cap
-        if (ck != capKey) { capKey = ck; capText = "${p.aliveCount}/${p.cap}" }
-        val ax = if (leftHud) right - 178 * dp else l + 118 * dp
-        Icons.draw(c, Icons.HELMET, ax + 8 * dp, t + 10 * dp, 17 * dp, dp = dp)
-        ui.textO(c, capText, ax + 19 * dp, t + 15 * dp, 13f, if (p.aliveCount >= p.cap) Ui.BAD else Ui.TEXT, Paint.Align.LEFT, 1.8f)
-        // XP: klejnot + pasek z nazwą epoki
-        val need = if (p.era < cfg.maxEra) Defs.evolveXp[p.era].toFloat() else battle.rankXp(p)
-        val bx = if (leftHud) right - 182 * dp else l + 22 * dp
-        val bw = 160 * dp
-        ui.bar(c, bx, t + 28 * dp, bw, 11 * dp, p.xp / need, Ui.XP)
-        Icons.draw(c, Icons.XP, if (leftHud) right - 10 * dp else l + 10 * dp,
-            t + 33.5f * dp, 19 * dp, dp = dp)
-        ui.textO(c, L[Defs.eraKeys[p.era]], bx + bw / 2, t + 37 * dp, 10f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
-        // HP baz po bokach minimapy
-        if (mini.width() > 0f) {
-            // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
-            val secondRow = compactTop
-            val weatherName = L[battle.weather.key]
-            // W drugim rzędzie: liczebność armii i pogoda na wysokości środka minimapy,
-            // każda wyśrodkowana w wolnym polu po swojej stronie.
-            val wy = if (secondRow) mini.centerY() - 11 * dp else mini.top - 13 * dp
-            val wx = if (secondRow) {
-                val tw = ui.measure(weatherName, 12f, true)
-                val block = 21 * dp + 4 * dp + tw
-                val free = if (leftHud) mini.left - l - 4 * dp else right - mini.right - 4 * dp
-                if (leftHud) {
-                    if (block <= free) mini.left - 2 * dp - (free - block) * 0.5f - 10 * dp
-                    else mini.left - 14 * dp
-                } else {
-                    if (block <= free) mini.right + 2 * dp + (free - block) * 0.5f + 10 * dp
-                    else mini.right + 14 * dp
-                }
-            } else if (leftHud) mini.left - 14 * dp else mini.right + 14 * dp
-            if (secondRow && armyRect.width() > 0f)
-                drawArmyCounts(c, p, e, armyRect.left, armyRect.centerY())
-            Icons.draw(c, Icons.weatherIcon(battle.weather), wx, wy + 11 * dp, 21 * dp, dp = dp)
-            // Nazwa pogody tylko w miejscu wolnym od nazwy epoki wroga (rysowanej przy pauzie);
-            // gdy brak miejsca, zostaje sama ikona.
-            // W drugim rzędzie (wąski ekran) nazwa epoki wroga jest wyżej, więc miejsce sięga krawędzi.
-            val eraEdge = if (leftHud) {
-                if (secondRow) g.insetL + 6 * dp
-                else pauseBtn.r.right + 10 * dp + ui.measure(L[Defs.eraKeys[e.era]], 12f, true) + 4 * dp
-            } else {
-                if (secondRow) w - g.insetR - 6 * dp
-                else pauseBtn.r.left - 10 * dp - ui.measure(L[Defs.eraKeys[e.era]], 12f, true) - 4 * dp
-            }
-            val wAvail = if (leftHud) wx - 14 * dp - eraEdge - 6 * dp
-                else eraEdge - (wx + 14 * dp) - 6 * dp
-            if (wAvail >= 30 * dp) {
-                val size = ui.fit(weatherName, 12f, wAvail, 8f)
-                if (ui.measure(weatherName, size, true) <= wAvail)
-                    ui.textO(c, weatherName, if (leftHud) wx - 14 * dp else wx + 14 * dp,
-                        wy + 15 * dp, size, Ui.TEXT,
-                        if (leftHud) Paint.Align.RIGHT else Paint.Align.LEFT)
-            }
-            if (!compactTop && battle.weather == Weather.WIND) {
-                val dir = battle.windDirection().toFloat()
-                // W odbitym układzie strzałka po zewnętrznej stronie ikony, nie na minimapie.
-                val mx = if (leftHud) wx - 24 * dp else wx + 24 * dp
-                val my = wy + 33 * dp
-                ui.stroke.color = Ui.GOLD
-                ui.stroke.strokeWidth = 2 * dp
-                c.drawLine(mx - 11 * dp * dir, my, mx + 11 * dp * dir, my, ui.stroke)
-                c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my - 5 * dp, ui.stroke)
-                c.drawLine(mx + 11 * dp * dir, my, mx + 5 * dp * dir, my + 5 * dp, ui.stroke)
-            }
-            val hw = max(24 * dp, mini.width() * 0.5f - 14 * dp)
-            val hy = mini.top - 11 * dp
-            ui.bar(c, mini.left + 12 * dp, hy, hw, 7 * dp, p.baseHp / p.baseMaxHp, Ui.PLAYER)
-            Icons.draw(c, Icons.TOWER, mini.left + 4 * dp, hy + 3 * dp, 16 * dp, Ui.PLAYER, dp = dp)
-            if (!battle.endless) {
-                val bx = mini.right - 12 * dp - hw
-                ui.bar(c, bx, hy, hw, 7 * dp, e.baseHp / e.baseMaxHp, Ui.ENEMY)
-                if (g.profile.teamMarkers) {
-                    // Pasek wroga: kreski dodatkowo do czerwieni/pomarańczu.
-                    val end = bx + hw * (e.baseHp / e.baseMaxHp).coerceIn(0f, 1f)
-                    ui.stroke.color = Ui.OUTLINE
-                    ui.stroke.strokeWidth = 1.3f * dp
-                    var xx = bx + 5f * dp
-                    while (xx < end) {
-                        c.drawLine(xx, hy, xx, hy + 7f * dp, ui.stroke)
-                        xx += 8f * dp
-                    }
-                }
-                Icons.draw(c, Icons.TOWER, mini.right - 4 * dp, hy + 3 * dp, 16 * dp, Ui.ENEMY, dp = dp)
-            }
-            // ramka minimapy
-            tmpR.set(mini.left - 2 * dp, mini.top - 2 * dp, mini.right + 2 * dp, mini.bottom + 2 * dp)
-            ui.fill.color = Ui.OUTLINE
-            c.drawRoundRect(tmpR, 6 * dp, 6 * dp, ui.fill)
-            ui.fill.color = Color.rgb(34, 46, 40)
-            c.drawRoundRect(mini, 4 * dp, 4 * dp, ui.fill)
-            ui.fill.color = Color.rgb(54, 72, 50)
-            c.drawRect(mini.left + 2 * dp, mini.centerY() + 2 * dp, mini.right - 2 * dp, mini.bottom - 2 * dp, ui.fill)
-            ui.fill.color = Ui.PLAYER
-            c.drawRect(mini.left + 2 * dp, mini.top + 3 * dp, mini.left + 5 * dp, mini.bottom - 3 * dp, ui.fill)
-            if (!battle.endless) {
-                ui.fill.color = Ui.ENEMY
-                c.drawRect(mini.right - 5 * dp, mini.top + 3 * dp, mini.right - 2 * dp, mini.bottom - 3 * dp, ui.fill)
-            }
-            // widoczny obszar
-            ui.stroke.color = Color.argb(220, 255, 236, 170)
-            ui.stroke.strokeWidth = 1.5f * dp
-            val vl = mini.left + (r.camX / Defs.LANE) * mini.width()
-            val vr = mini.left + ((r.camX + r.worldVisible) / Defs.LANE) * mini.width()
-            c.drawRoundRect(max(mini.left, vl), mini.top + 1 * dp, min(mini.right, vr), mini.bottom - 1 * dp, 3 * dp, 3 * dp, ui.stroke)
-            for (u in battle.units) {
-                if (!u.alive) continue
-                if (battle.fog && !p.fogSight && u.side == 1 && u.x - p.front > 650f) continue
-                val x = r.worldToMini(u.x, mini.left, mini.width())
-                val rad = 2.6f * dp * u.def.size.coerceAtMost(1.4f)
-                ui.miniTeamMarker(c, x, mini.centerY(), rad, u.side, g.profile.teamMarkers)
-            }
-            val pi = p.baseHp.toInt()
-            if (pi != hpP) { hpP = pi; hpPText = pi.toString() }
-            ui.textO(c, hpPText, mini.left, mini.bottom + 14 * dp,
-                ui.fit(hpPText, 11f, mini.width() * 0.28f, 8f),
-                Ui.PLAYER, Paint.Align.LEFT, 1.8f)
-            val rightLabel = if (battle.endless) {
-                if (battle.wave != waveShown) { waveShown = battle.wave; waveText = L.f("wave", battle.wave) }
-                waveText
-            } else {
-                val ei = e.baseHp.toInt()
-                if (ei != hpE) { hpE = ei; hpEText = ei.toString() }
-                hpEText
-            }
-            ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp,
-                ui.fit(rightLabel, 11f, mini.width() * 0.28f, 8f),
-                if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
-            val sp = battle.siegePressure()
-            if (sp > 1f) {
-                val k = kotlin.math.round(sp * 10f).toInt()
-                if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
-                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp,
-                    ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f),
-                    Ui.BAD, Paint.Align.CENTER, 1.8f)
-            } else {
-                val clock = timeStr(battle.time)
-                ui.textO(c, clock, mini.centerX(), mini.bottom + 14 * dp,
-                    ui.fit(clock, 11f, mini.width() * 0.40f, 8f),
-                    Ui.TEXT, Paint.Align.CENTER, 1.8f)
-            }
-        }
-        if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
-            val boss = battle.currentBoss()
-            if (boss != null) {
-                val bw = min(310 * dp, w - g.insetL - g.insetR - 30 * dp)
-                val bx = (w - bw) * 0.5f
-                if (boss.bossKind != bossShownKind || boss.bossSecondaryKind != bossShownSecondary) {
-                    bossShownKind = boss.bossKind
-                    bossShownSecondary = boss.bossSecondaryKind
-                    bossTitleText = L["eb_boss"] + " — " + L[EndlessBosses.nameKeys[bossShownKind]]
-                    bossDescText = L[EndlessBosses.descriptionKeys[bossShownKind]]
-                    bossSecondDescText = if (bossShownSecondary == EndlessBosses.NONE) "" else
-                        L[EndlessBosses.descriptionKeys[bossShownSecondary]]
-                    if (bossShownSecondary != EndlessBosses.NONE)
-                        bossTitleText += " + " + L[EndlessBosses.nameKeys[bossShownSecondary]]
-                }
-                ui.textO(c, bossTitleText, w * 0.5f, topBar.bottom + 16 * dp,
-                    ui.fit(bossTitleText, 12f, bw, 9f), Ui.ENEMY, Paint.Align.CENTER, 1.7f)
-                ui.textO(c, bossDescText, w * 0.5f, topBar.bottom + 32 * dp,
-                    ui.fit(bossDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
-                if (bossSecondDescText.isNotEmpty()) ui.textO(c, bossSecondDescText,
-                    w * 0.5f, topBar.bottom + 46 * dp,
-                    ui.fit(bossSecondDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
-                ui.bar(c, bx, topBar.bottom + (if (bossSecondDescText.isEmpty()) 40f else 54f) * dp, bw, 8 * dp,
-                    boss.hp / boss.maxHp, Ui.ENEMY)
-            }
-            if (battle.wave != nextThemeShown) {
-                nextThemeShown = battle.wave
-                val nextKind = battle.nextBossKind
-                nextThemeText = if (nextKind != EndlessBosses.NONE) {
-                    val second = battle.nextBossSecondaryKind
-                    L["next_wave"] + " " + L["eb_boss"] + " — " +
-                        L[EndlessBosses.nameKeys[nextKind]] +
-                        (if (second != EndlessBosses.NONE) " + " + L[EndlessBosses.nameKeys[second]] else "")
-                } else L["next_wave"] + " " + L[battle.nextWaveKey]
-            }
-            ui.textO(c, nextThemeText, w * 0.5f,
-                topBar.bottom + (if (boss == null) 20f else
-                    if (boss.bossSecondaryKind == EndlessBosses.NONE) 64f else 78f) * dp,
-                ui.fit(nextThemeText, 11f, w - g.insetL - g.insetR - 26 * dp, 8f),
-                Ui.GOLD, Paint.Align.CENTER, 1.7f)
-        }
-        // Epoka wroga w osobnej linii na szerokim HUD; nie nachodzi na pogodę.
-        val ex = if (leftHud) pauseBtn.r.right + 10 * dp else pauseBtn.r.left - 10 * dp
-        // W układzie dwurzędowym granicą jest najbliższy z: awansu, złota i paska XP
-        // (w trybie leworęcznym odbitych na prawą stronę).
-        val enemyWidth = if (leftHud) {
-            if (compactTop) min(evolveBtn.r.left, min(goldRect.left, xpRect.left)) - ex - 10 * dp
-            else mini.left - ex - 12 * dp
-        } else {
-            if (compactTop) ex - max(evolveBtn.r.right, max(goldRect.right, xpRect.right)) - 10 * dp
-            else ex - mini.right - 12 * dp
-        }
-        val enemyY = t + (if (compactTop) 15f else 49f) * dp
-        if (compactTop && mini.width() > 0f && enemyWidth < ENEMY_ERA_MIN_W * dp) {
-            // Wąski ekran (360 dp): pierwszy rząd zajmują złoto, XP, awans i pauza. Nazwa
-            // epoki wroga trafia do wolnego pola pod pogodą, na wysokości liczb HP baz.
-            val colL = if (leftHud) l else mini.right + 6 * dp
-            val colR = if (leftHud) mini.left - 6 * dp else right
-            ui.textO(c, enemyEraText, (colL + colR) * 0.5f, mini.bottom + 13 * dp,
-                ui.fit(enemyEraText, 11f, colR - colL, 7f), Ui.ENEMY, Paint.Align.CENTER, 2f)
-        } else if (!leftHud || enemyWidth >= 24 * dp) {
-            // Gdy w lustrzanym pasku nie ma miejsca, nazwa epoki wroga zostaje w pauzie.
-            ui.textO(c, enemyEraText, ex, enemyY,
-                ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
-                Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
-        }
-        if (p.doctrines.isNotEmpty()) {
-            val isz = 15 * dp
-            var x = if (leftHud) ex + isz / 2 else ex - isz / 2
-            var i = p.doctrines.size - 1
-            while (i >= 0) {
-                val boundary = if (leftHud) {
-                    val edge = if (mini.width() > 0f) mini.left - 10 * dp else evolveBtn.r.left - 10 * dp
-                    // Dwurzędowy pasek: awans dzieli pierwszy rząd z doktrynami.
-                    if (compactTop) min(edge, evolveBtn.r.left - 6 * dp) else edge
-                } else {
-                    val edge = if (mini.width() > 0f) mini.right + 10 * dp else evolveBtn.r.right + 10 * dp
-                    if (compactTop) max(edge, evolveBtn.r.right + 6 * dp) else edge
-                }
-                if ((leftHud && x > boundary) || (!leftHud && x < boundary)) break
-                Icons.draw(c, doctrineIcon(p.doctrines[i]), x, t + 31 * dp, isz, dp = dp)
-                x += if (leftHud) isz + 3 * dp else -isz - 3 * dp
-                i--
-            }
-        }
-    }
 
-    private var timeSec = -1
-    private var timeText = ""
-    private var siegeKey = -1
-    private var siegeText = ""
-    private var waveShown = -1
-    private var waveText = ""
-    private var nextThemeShown = -1
-    private var nextThemeText = ""
-    private var bossShownKind = -1
-    private var bossShownSecondary = -1
-    private var bossTitleText = ""
-    private var bossDescText = ""
-    private var bossSecondDescText = ""
+    internal var timeSec = -1
+    internal var timeText = ""
+    internal var siegeKey = -1
+    internal var siegeText = ""
+    internal var waveShown = -1
+    internal var waveText = ""
+    internal var nextThemeShown = -1
+    internal var nextThemeText = ""
+    internal var bossShownKind = -1
+    internal var bossShownSecondary = -1
+    internal var bossTitleText = ""
+    internal var bossDescText = ""
+    internal var bossSecondDescText = ""
 
-    /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
-    private fun timeStr(t: Float): String {
-        val s = t.toInt()
-        if (s != timeSec) { timeSec = s; timeText = "%d:%02d".format(s / 60, s % 60) }
-        return timeText
-    }
 
-    private fun drawHudBack(c: Canvas) {
-        val top = h - hudH
-        ui.fill.color = Color.argb(190, 16, 20, 32)
-        c.drawRect(0f, top, w, h, ui.fill)
-        ui.fill.color = Ui.OUTLINE
-        c.drawRect(0f, top - 2.5f * dp, w, top, ui.fill)
-        ui.fill.color = Color.argb(160, 222, 170, 70)
-        c.drawRect(0f, top, w, top + 1.5f * dp, ui.fill)
-        // Separator między jednostkami a akcjami: pionowy lub między dwoma rzędami.
-        ui.fill.color = Color.argb(90, 255, 255, 255)
-        if (twoRowHud) {
-            val sy = (unitBtn[0].r.bottom + turretBtn.r.top) * 0.5f
-            c.drawRect(g.insetL + 6 * dp, sy - 1 * dp, w - g.insetR - 6 * dp, sy + 1 * dp, ui.fill)
-        } else {
-            val sx = if (g.profile.leftHandedHud) (unitBtn[3].r.left + turretBtn.r.right) / 2f
-                else (unitBtn[3].r.right + turretBtn.r.left) / 2f
-            c.drawRect(sx - 1 * dp, unitBtn[0].r.top + 6 * dp,
-                sx + 1 * dp, unitBtn[0].r.bottom - 6 * dp, ui.fill)
-        }
-    }
 
-    /** Trzy belki na przycisku; złote oznaczają już kupione stopnie. */
-    private fun drawUnitTiers(c: Canvas) {
-        val p = battle.player
-        for (i in 0..3) {
-            val b = unitBtn[i]
-            if (!b.visible) continue
-            val bw = min(7 * dp, (b.r.width() - 15 * dp) / 3f)
-            for (t in 0 until Defs.MAX_UNIT_TIER) {
-                // Leworęczny HUD ma strzałkę ulepszenia w lewym rogu: belki od prawej.
-                val x = if (g.profile.leftHandedHud) b.r.right - 4 * dp - bw - t * (bw + 2 * dp)
-                    else b.r.left + 4 * dp + t * (bw + 2 * dp)
-                ui.fill.color = if (t < p.unitTier[i]) Ui.GOLD else Ui.FRAME
-                c.drawRoundRect(x, b.r.top + 4 * dp, x + bw, b.r.top + 7 * dp, 1.5f * dp, 1.5f * dp, ui.fill)
-            }
-        }
-    }
 
-    private fun drawUpgradePanel(c: Canvas) {
-        val idx = showUpgrade
-        if (idx !in 0..3) return
-        val role = roles[idx]
-        val current = battle.player.unitTier[idx]
-        val next = min(Defs.MAX_UNIT_TIER, current + 1)
-        val def = battle.player.unit(role)
-        val pr = upgradePanel
-        c.drawColor(Color.argb(158, 0, 0, 0))
-        ui.panel(c, pr)
-        ui.ribbon(c, pr.centerX(), pr.top + 4 * dp, L["unit_upgrade_title"], 18f,
-            Ui.RIBBON, pr.width() * 0.62f, Ui.GOLD, pr.width() - 30 * dp)
-        val name = L[def.tierNameKeys[next - 1]]
-        ui.textO(c, name, pr.centerX(), pr.top + 66 * dp,
-            ui.fit(name, 17f, pr.width() - 36 * dp), Ui.TEXT, Paint.Align.CENTER)
-        ui.textO(c, upgradeTierText, pr.centerX(), pr.top + 88 * dp, 13f, Ui.GOLD, Paint.Align.CENTER)
-        r.drawUnitIcon(c, def, pr.left + 64 * dp, pr.top + 172 * dp, 80 * dp, Ui.PLAYER, next)
-        val tx = pr.left + 122 * dp
-        val tw = pr.right - tx - 12 * dp
-        val stat = L["unit_upgrade_stats"]
-        val trait = L[upgradeRoleKeys[idx]]
-        ui.textO(c, stat, tx, pr.top + 116 * dp, ui.fit(stat, 12f, tw), Ui.TEXT)
-        ui.textO(c, trait, tx, pr.top + 140 * dp, ui.fit(trait, 12f, tw), Ui.GOLD)
-        val note = L["unit_upgrade_future"]
-        ui.textO(c, note, tx, pr.top + 162 * dp, ui.fit(note, 11f, tw), Ui.DIM)
-        val reset = L["unit_upgrade_reset"]
-        ui.textO(c, reset, pr.centerX(), upgradeBuy.r.top - 11 * dp, ui.fit(reset, 10f, pr.width() - 25 * dp),
-            Ui.DIM, Paint.Align.CENTER)
-        ui.button(c, upgradeBuy, 15f)
-        ui.closeButton(c, upgradeClose)
-    }
 
-    private fun drawQueue(c: Canvas) {
-        val p = battle.player
-        if (p.queueSize == 0 || !unitBtn[0].visible) return
-        val y = unitBtn[0].r.top - 10 * dp
-        for (i in 0 until p.queueSize) {
-            val x = if (g.profile.leftHandedHud) unitBtn[0].r.right - 9 * dp - i * 16 * dp
-                else unitBtn[0].r.left + 9 * dp + i * 16 * dp
-            ui.fill.color = Ui.OUTLINE
-            c.drawCircle(x, y, 6.5f * dp, ui.fill)
-            ui.fill.color = if (i == 0) Ui.GOLD else Color.rgb(220, 224, 232)
-            c.drawCircle(x, y, 4.5f * dp, ui.fill)
-        }
-    }
 
-    private fun drawTurretPanel(c: Canvas) {
-        val p = battle.player
-        ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, turretHeading, 16f,
-            Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
-        for (i in 0 until p.slots) {
-            val b = slotBuy[i]
-            val te = p.turretEra[i]
-            tmpR.set(panel.left + 14 * dp, b.r.top - 2 * dp, panel.right - 14 * dp, b.r.bottom + 2 * dp)
-            ui.fill.color = if (i % 2 == 0) Color.argb(34, 255, 255, 255) else Color.argb(14, 255, 255, 255)
-            c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-            val cy = b.r.centerY()
-            val mr = b.r.height() * 0.5f
-            ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
-            if (te < 0) ui.textO(c, slotNumbers[i], panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
-            val tx = panel.left + 28 * dp + mr * 2
-            val name = if (te >= 0) L[Defs.turret(te, p.turretVariant[i]).nameKey] else L["empty"]
-            val avail = b.r.left - tx - 6 * dp
-            ui.textO(c, slotLabels[i], tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
-            ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
-            ui.button(c, slotBuy[i], 13f)
-            ui.button(c, slotSell[i], 13f)
-        }
-        ui.closeButton(c, closeBtn)
-    }
 
 
     /** Modal dwóch wariantów: ikonki tych samych jednostek co na polu bitwy. */
@@ -2264,64 +1554,10 @@ class BattleScreen(
         choiceDescScale = ui.textScale
     }
 
-    /** Wynik i tłumaczenia wyliczamy przy końcu bitwy, nie w każdej klatce. */
-    private fun refreshResultTexts() {
-        if (!finished) return
-        val won = battle.winner == 0
-        resultTitle = when {
-            cfg.weekly >= 0L -> L["weekly_over"]
-            cfg.mode == Mode.ENDLESS -> L["siege_over"]
-            won -> L["victory"]
-            else -> L["defeat"]
-        }
-        val seconds = battle.time.toInt()
-        resultTimeText = "%d:%02d".format(seconds / 60, seconds % 60)
-        resultKillsText = battle.player.kills.toString()
-        resultWaveText = battle.wave.toString()
-        resultWaveLabel = L.f("wave", battle.wave).substringBefore(' ')
-        resultBossesText = battle.bossesDefeated.toString()
-        resultScoreText = battle.score().toString()
-        resultStars = if (cfg.mode == Mode.CAMPAIGN && won) battle.stars() else 0
-        resultCustomSkirmish = cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)
-        resultUnrankedText = L["sk_unranked"]
-        resultTimeLabel = L["time"]
-        resultKillsLabel = L["kills"]
-        resultBossesLabel = L["bosses_defeated"]
-        resultWeeklyTiersLabel = L["weekly_tiers"]
-        resultScoreLabel = L["score"]
-        resultRewardLabel = L["reward"]
-        resultNewRecordLabel = L["new_record"]
-        weeklyResultLabel = if (weeklyResultKey.isEmpty()) "" else L[weeklyResultKey]
-        rewardText = "+" + L.plural("medals_n", totalMedalsGained.toLong())
-        retainedProgressText = L.f("battle84_kept", battle.player.kills, missionsAdvanced)
-        if (defeatReasonCount > 0) {
-            resultReasonText1 = defeatReasonText(defeatReasons[0]!!)
-            resultReasonText2 = if (defeatReasonCount > 1) defeatReasonText(defeatReasons[1]!!) else ""
-            tipText = L["why_lost"] + ": " + resultReasonText1 +
-                (if (resultReasonText2.isNotEmpty()) "; " + resultReasonText2 else "")
-        } else {
-            resultReasonText1 = ""
-            resultReasonText2 = ""
-            tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
-        }
-        prepareResultTipLines()
-    }
 
-    /** Zawijanie tylko przy rozliczeniu, zmianie języka lub wymiarów ekranu. */
-    private fun prepareResultTipLines() {
-        if (tipText.isEmpty()) { resultTipCount = 0; return }
-        val scale = ui.textScale
-        ui.textScale = min(scale, 1.15f)
-        try {
-            resultTipCount = HintFrame.wrapInto(ui, tipText,
-                resultPanel.width() - 79 * dp, 13f, resultTipLines)
-        } finally {
-            ui.textScale = scale
-        }
-    }
 
     /** Rysowanie wcześniej złamanych wierszy nie tworzy nowych ciągów znaków. */
-    private fun drawWrappedLines(c: Canvas, lines: Array<String?>, count: Int,
+    internal fun drawWrappedLines(c: Canvas, lines: Array<String?>, count: Int,
                                  x: Float, y: Float, sizeDp: Float, color: Int, align: Paint.Align) {
         var yy = y
         val lineH = sizeDp * dp * ui.textScale * 1.3f
@@ -2333,127 +1569,16 @@ class BattleScreen(
     }
 
     /** Wysokość wiersza wyniku (26 dp, ściskana na 720p, gdy wierszy jest dużo). */
-    private var resultRowH = 0f
+    internal var resultRowH = 0f
     /** Wiersze pominięte z braku miejsca w ostatniej klatce (kontrola zrzutów 720p). */
-    private var resultRowsClipped = 0
+    internal var resultRowsClipped = 0
 
-    private fun drawResultRow(c: Canvas, y: Float, icon: Int, label: String, value: String, color: Int = Ui.TEXT): Float {
-        val lh = resultRowH
-        if (y + lh > restartEnd.r.top - 8 * dp) { resultRowsClipped++; return y }
-        val lx = resultPanel.left + 30 * dp
-        val rx = resultPanel.right - 30 * dp
-        tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
-        ui.fill.color = Color.argb(30, 255, 255, 255)
-        c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-        val cy = tmpR.centerY()
-        Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
-        ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
-        return y + lh
-    }
 
-    private var armyP = -1
-    private var armyE = -1
-    private var armyPText = ""
-    private var armyEText = ""
+    internal var armyP = -1
+    internal var armyE = -1
+    internal var armyPText = ""
+    internal var armyEText = ""
 
-    /** Lewy blok drugiego rzędu: żywe jednostki gracza i wroga (przy mgle liczba wroga ukryta). */
-    private fun drawArmyCounts(c: Canvas, p: com.centurywar.game.Side, e: com.centurywar.game.Side, x: Float, cy: Float) {
-        val ec = if (battle.fog) -2 else e.aliveCount
-        if (p.aliveCount != armyP) { armyP = p.aliveCount; armyPText = armyP.toString() }
-        if (ec != armyE) { armyE = ec; armyEText = if (ec < 0) "?" else ec.toString() }
-        Icons.draw(c, Icons.CROSSED_SWORDS, x + 10 * dp, cy, 20 * dp, dp = dp)
-        ui.textO(c, armyPText, x + 46 * dp, cy + 5 * dp, 14f, Ui.PLAYER, Paint.Align.RIGHT, 1.8f)
-        ui.textO(c, ":", x + 54 * dp, cy + 5 * dp, 14f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
-        ui.textO(c, armyEText, x + 62 * dp, cy + 5 * dp, 14f, Ui.ENEMY, Paint.Align.LEFT, 1.8f)
-    }
 
-    private fun drawResults(c: Canvas) {
-        val a = min(1f, resultTime * 2f)
-        c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
-        val won = battle.winner == 0
-        val rp = resultPanel
-        // Wjazd panelu od dołu.
-        val slide = (1f - a) * 60 * dp
-        c.save()
-        c.translate(0f, slide)
-        ui.panel(c, rp)
-        val good = won || cfg.mode == Mode.ENDLESS
-        ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, resultTitle, 26f,
-            if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
-            rp.width() * 0.7f, if (good) Color.rgb(255, 246, 200) else Ui.TEXT, rp.width() + 40 * dp)
-        if (showResultChart) {
-            resultChart.draw(c, ui, battleSummary, resultChartArea)
-        } else {
-        var y = rp.top + 73 * dp
-        if (cfg.mode == Mode.CAMPAIGN && won) {
-            ui.stars(c, rp.centerX(), y + 16 * dp, 32 * dp, resultStars, 3, 1.05f)
-            y += 36 * dp
-        } else {
-            val iconSize = if (won) 28f else 24f
-            Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL,
-                rp.centerX(), y + iconSize * 0.5f * dp, iconSize * dp, dp = dp)
-            y += (if (won) 34f else 28f) * dp
-        }
-        if (resultCustomSkirmish) {
-            ui.textO(c, resultUnrankedText, rp.centerX(), y + 7 * dp,
-                ui.fit(resultUnrankedText, 14f, rp.width() - 32 * dp), Ui.GOLD, Paint.Align.CENTER)
-            y += (if (won) 28f else 20f) * dp
-        }
-        // Treść zaczyna się pod zakładkami (73 dp), więc na 720p wiersze mogą się ścisnąć,
-        // zamiast znikać ostatnie (np. nagroda w tygodniowym Endless).
-        var rows = 2
-        if (cfg.mode == Mode.ENDLESS) rows += if (cfg.weekly >= 0L) 3 else 2
-        if (cfg.mode != Mode.CAMPAIGN) rows++
-        if (totalMedalsGained > 0) rows++
-        resultRowH = ((restartEnd.r.top - 8 * dp - y) / rows).coerceIn(20 * dp, 26 * dp)
-        resultRowsClipped = 0
-        y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
-        y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
-        if (cfg.mode == Mode.ENDLESS) {
-            y = drawResultRow(c, y, Icons.TOWER, resultWaveLabel, resultWaveText)
-            y = drawResultRow(c, y, Icons.CROWN, resultBossesLabel, resultBossesText)
-            if (cfg.weekly >= 0L)
-                y = drawResultRow(c, y, Icons.MEDAL, resultWeeklyTiersLabel, weeklyResultLabel, Ui.GOLD)
-        }
-        if (cfg.mode != Mode.CAMPAIGN)
-            y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
-        if (totalMedalsGained > 0) y = drawResultRow(c, y, Icons.MEDAL,
-            resultRewardLabel, rewardText, Ui.GOLD)
-        if (!won && y + 23 * dp < restartEnd.r.top) {
-            ui.textO(c, retainedProgressText, rp.centerX(), y + 17 * dp,
-                ui.fit(retainedProgressText, 11f, rp.width() - 32 * dp),
-                Ui.GOOD, Paint.Align.CENTER, 1.3f)
-            y += 23 * dp
-        }
-        if (newRecord && y + 26 * dp < restartEnd.r.top) {
-            ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
-            y += 28 * dp
-        }
-        if (resultReasonText1.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            // Dwa konkretne powody zawsze w osobnych wierszach; bez obcięcia drugiego przez zawijanie.
-            val lx = rp.left + 53 * dp
-            val reasonWidth = rp.right - 15 * dp - lx
-            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            ui.textO(c, resultReasonText1, lx, y + 16 * dp,
-                ui.fit(resultReasonText1, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
-            if (resultReasonText2.isNotEmpty() && y + 39 * dp < restartEnd.r.top)
-                ui.textO(c, resultReasonText2, lx, y + 34 * dp,
-                    ui.fit(resultReasonText2, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
-        } else if (tipText.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            val available = ((restartEnd.r.top - y - 14 * dp) /
-                (13f * dp * ui.textScale * 1.3f)).toInt().coerceAtLeast(0)
-            drawWrappedLines(c, resultTipLines, min(resultTipCount, available),
-                rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
-        }
-        }
-        c.restore()
-        if (resultStatsTab.visible) ui.button(c, resultStatsTab, 12f)
-        if (resultChartTab.visible) ui.button(c, resultChartTab, 12f)
-        ui.button(c, continueBtn, 17f)
-        ui.button(c, restartEnd, 17f)
-        if (replayEnd.visible) ui.button(c, replayEnd, 15f)
-    }
 
 }
