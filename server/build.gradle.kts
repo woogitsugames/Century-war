@@ -43,3 +43,41 @@ tasks.test {
         showStandardStreams = true
     }
 }
+
+
+// Serwer również dzieli testy według nazw, bez duplikowania ciężkich raportów.
+val requestedTestCategories = gradle.startParameter.taskNames
+    .map { it.substringAfterLast(':') }
+    .filter { it in setOf("fastTest", "screenshotTest", "balanceTest") }
+    .distinct()
+require(requestedTestCategories.size <= 1) {
+    "Uruchom kategorie testów w osobnych wywołaniach Gradle."
+}
+val requestedTestCategory = requestedTestCategories.singleOrNull()
+val categoryConfig = java.util.Properties().apply {
+    rootProject.file("gradle/test-categories.properties").inputStream().use { load(it) }
+}
+val balanceTestPatterns = categoryConfig.getProperty("balance")?.split(',')
+    ?.map { it.trim() }?.filter { it.isNotEmpty() }
+    ?: error("Brak kategorii testów balance")
+
+tasks.named<org.gradle.api.tasks.testing.Test>("test") {
+    filter {
+        when (requestedTestCategory) {
+            "fastTest" -> balanceTestPatterns.forEach { excludeTestsMatching(it) }
+            "balanceTest" -> balanceTestPatterns.forEach { includeTestsMatching(it) }
+        }
+    }
+}
+
+tasks.register("fastTest") {
+    group = "verification"
+    description = "Testy serwera bez długich raportów balansu."
+    dependsOn("test")
+}
+
+tasks.register("balanceTest") {
+    group = "verification"
+    description = "Długie testy balansu po stronie serwera."
+    dependsOn("test")
+}

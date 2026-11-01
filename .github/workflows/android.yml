@@ -25,10 +25,10 @@ concurrency:
 
 jobs:
   build:
-    name: Debug APK, lista wydania i licencje
+    name: Debug APK, narzędzia CI i licencje
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -39,9 +39,12 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Android SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Testy narzędzi CI
-        run: python3 -m unittest discover -s tests -p 'test_ci_tools.py' -v
-      - name: Zbuduj APK i sprawdź listę wydania
+      - name: Kontrola kompletności testów i testy narzędzi
+        run: |
+          python3 scripts/ci_test_shards.py verify
+          python3 scripts/ci_test_categories.py verify
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Zbuduj APK debug i przetestuj listę wydania
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
@@ -121,6 +124,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Zapisz debug APK
+      - name: Debug APK
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -139,21 +143,77 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  tests:
-    name: Testy (${{ matrix.shard }})
+  fast-tests:
+    name: Fast (app + sim + server)
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { shard: jvm, group: jvm, device: '' }
-          - { shard: robolectric, group: robolectric, device: '' }
-          - { shard: screen-phone720, group: screen-device, device: phone720 }
-          - { shard: screen-phone20x9, group: screen-device, device: phone20x9 }
-          - { shard: screen-foldOpen, group: screen-device, device: foldOpen }
-          - { shard: screens-other, group: visual, device: '' }
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Sprawdź, że :app:test nie uruchamia release
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew :app:test --dry-run --console=plain --no-configuration-cache > "$RUNNER_TEMP/app-test-graph.txt"
+          if grep -Eq ':app:(testReleaseUnitTest|releaseChecklist)( |$)' "$RUNNER_TEMP/app-test-graph.txt"; then
+            cat "$RUNNER_TEMP/app-test-graph.txt"
+            echo "::error::Domyślne testy uruchamiają release"
+            exit 1
+          fi
+      - name: Testy szybkie i pomiar czasu
+        env:
+          SFX_PREVIEW: 'true'
+          MUSIC_PREVIEW: 'true'
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          set +e
+          ./gradlew fastTest --console=plain --no-configuration-cache -PtestForks=2 > ci-test-fast.log 2>&1
+          result=$?
+          set -e
+          cat ci-test-fast.log
+          elapsed=$(( $(date +%s) - started ))
+          printf '%s\n' "$elapsed" > ci-test-fast.duration
+          printf 'Fast Gradle: **%s s** (cel: <600 s)\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          exit "$result"
+      - name: Raporty testów fast
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cw-tests-fast-results
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            sim/build/test-results/test/
+            server/build/test-results/test/
+            ci-test-fast.duration
+            ci-test-fast.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Podglądy dźwięków i muzyki
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cw-fast-audio-previews
+          path: |
+            app/build/music/*.wav
+            app/build/sfx/*.wav
+          if-no-files-found: warn
+          retention-days: 14
+
+  screenshot-tests:
+    name: Screenshots (Robolectric)
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -165,68 +225,48 @@ jobs:
       - name: Android SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Cache Robolectric
-        if: ${{ matrix.group != 'jvm' }}
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository/org/robolectric
           key: robolectric-${{ runner.os }}-sdk35-${{ hashFiles('app/build.gradle.kts') }}
           restore-keys: |
             robolectric-${{ runner.os }}-sdk35-
-      - name: Sprawdź i uruchom przypisane testy
-        env:
-          CW_SCREENSHOT_DEVICE: ${{ matrix.device }}
-          CI_TEST_GROUP: ${{ matrix.group }}
-          PERF_REPORT: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
-          SFX_PREVIEW: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
-          MUSIC_PREVIEW: ${{ matrix.group == 'jvm' && 'true' || 'false' }}
+      - name: Zrzuty wszystkich rozdzielczości i pomiar czasu
         run: |
           set -euo pipefail
           chmod +x ./gradlew
-          python3 scripts/ci_test_shards.py verify
-          python3 scripts/ci_test_shards.py args "$CI_TEST_GROUP" > "$RUNNER_TEMP/ci-filters"
-          mapfile -t filters < "$RUNNER_TEMP/ci-filters"
-          ./gradlew :app:testDebugUnitTest "${filters[@]}" --console=plain --no-configuration-cache -PtestForks=1
-      - name: Zrzuty PNG
-        if: ${{ always() && (matrix.group == 'visual' || matrix.group == 'screen-device') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: century-war-screenshots-${{ matrix.shard }}
-          path: app/build/screenshots/**/*.png
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Podglądy muzyki WAV
-        if: ${{ always() && matrix.group == 'jvm' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: century-war-music-preview
-          path: app/build/music/*.wav
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Podglądy SFX WAV
-        if: ${{ always() && matrix.group == 'jvm' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: era-sfx-preview
-          path: app/build/sfx/*.wav
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Raport testów
+          started=$(date +%s)
+          set +e
+          ./gradlew screenshotTest --console=plain --no-configuration-cache -PtestForks=1 > ci-test-screenshots.log 2>&1
+          result=$?
+          set -e
+          cat ci-test-screenshots.log
+          elapsed=$(( $(date +%s) - started ))
+          printf '%s\n' "$elapsed" > ci-test-screenshots.duration
+          printf 'Screenshots Gradle: **%s s**\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          exit "$result"
+      - name: Zrzuty PNG i raporty
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: cw-tests-${{ matrix.shard }}-results
+          name: cw-tests-screenshots-results
           path: |
-            app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
-            app/build/ai-personality-profile.tsv
+            app/build/screenshots/
+            ci-test-screenshots.duration
+            ci-test-screenshots.log
           if-no-files-found: warn
           retention-days: 14
 
-  server-tests:
-    name: Serwer i weryfikacja powtórek
+  balance-tests:
+    name: Balance (długie symulacje i raporty)
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
+    env:
+      BALANCE_RUN: 'true'
+      BALANCE_RUNS: '2'
+      BALANCE_PROFILE: target
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -234,8 +274,12 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Uruchom testy serwera
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Raporty balansu i pomiar czasu
         run: |
+          set -euo pipefail
           chmod +x ./gradlew
           ./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
       - name: Zapisz raporty serwera
@@ -243,15 +287,34 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cw-tests-server-results
+          started=$(date +%s)
+          set +e
+          ./gradlew balanceTest --console=plain --no-configuration-cache -PtestForks=2 > ci-test-balance.log 2>&1
+          result=$?
+          set -e
+          cat ci-test-balance.log
+          elapsed=$(( $(date +%s) - started ))
+          printf '%s\n' "$elapsed" > ci-test-balance.duration
+          printf 'Balance Gradle (2 seedy na etap): **%s s**\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          exit "$result"
+      - name: Raporty testów i balansu
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cw-tests-balance-results
           path: |
-            server/build/reports/tests/test/
+            app/build/test-results/testDebugUnitTest/
+            sim/build/test-results/test/
             server/build/test-results/test/
+            app/build/balance/
+            ci-test-balance.duration
+            ci-test-balance.log
           if-no-files-found: warn
           retention-days: 14
 
   test-timings:
-    name: Raport czasu testów (top 20)
-    needs: [tests, server-tests]
+    name: Czasy trzech kategorii i najwolniejsze testy
+    needs: [fast-tests, screenshot-tests, balance-tests]
     if: ${{ always() && !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -261,9 +324,29 @@ jobs:
         with:
           pattern: cw-tests-*-results
           path: ci-test-artifacts
-      - name: Raport najwolniejszych testów
+      - name: Podsumuj czas ścienny i XML JUnit
         run: |
-          python3 scripts/ci_test_timings.py ci-test-artifacts --top 20 --output ci-test-timings.md
+          set -euo pipefail
+          {
+            echo '# Czasy testów CI'
+            echo
+            echo '| Kategoria | Czas Gradle (s) |'
+            echo '|---|---:|'
+            for cat in fast screenshots balance; do
+              path=$(find ci-test-artifacts -name "ci-test-$cat.duration" -print -quit)
+              if [ -n "$path" ]; then
+                echo "| $cat | $(cat "$path") |"
+              else
+                echo "| $cat | brak danych |"
+              fi
+            done
+            echo
+          } > ci-test-timings.md
+          if find ci-test-artifacts -name 'TEST-*.xml' -print -quit | grep -q .; then
+            python3 scripts/ci_test_timings.py ci-test-artifacts --top 20 >> ci-test-timings.md
+          else
+            echo 'Brak wyników XML JUnit (przerwano przed uruchomieniem testów).' >> ci-test-timings.md
+          fi
           cat ci-test-timings.md >> "$GITHUB_STEP_SUMMARY"
       - name: Zapisz raport czasu
         if: ${{ always() }}
@@ -273,7 +356,6 @@ jobs:
           path: ci-test-timings.md
           if-no-files-found: warn
           retention-days: 14
-
 
   lint:
     name: Android Lint (nieblokujacy)
