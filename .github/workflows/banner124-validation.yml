@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: banner124-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Android SDK 36, testy i zrzuty
