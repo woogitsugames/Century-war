@@ -239,8 +239,8 @@ class StoreGraphicsTest {
             val alt = props.getProperty("alt." + i)
             check(!alt.isNullOrBlank() && alt.length <= 140)
         }
-        check(props.getProperty("alt.feature")?.length in 1..140)
-        check(props.getProperty("alt.icon")?.length in 1..140)
+        check(props.getProperty("alt.feature")?.let { it.length in 1..140 } == true)
+        check(props.getProperty("alt.icon")?.let { it.length in 1..140 } == true)
         return props
     }
 
