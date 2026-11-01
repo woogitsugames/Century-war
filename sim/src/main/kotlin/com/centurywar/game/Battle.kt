@@ -231,6 +231,7 @@ class Battle(val cfg: BattleConfig) {
         const val MAX_PROJ = 160
         const val QUEUE_CAP = 32
         const val HOLD_DIST = 430f
+        const val MIN_ABILITY_CD_MUL = 0.35f
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
@@ -349,7 +350,8 @@ class Battle(val cfg: BattleConfig) {
                 s.turretDmgMul *= 1.4f
             }
             if (cfg.dailyEvent == DailyEvent.FORTIFIED_BASES) s.baseHpMul *= 2f
-            if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES) s.abilityCdMul *= 0.5f
+            if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES)
+                s.abilityCdMul = max(MIN_ABILITY_CD_MUL, s.abilityCdMul * 0.5f)
             if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
                 s.autoBarrageInterval = 30f
                 s.autoBarrageTimer = 30f
@@ -369,7 +371,7 @@ class Battle(val cfg: BattleConfig) {
         p.trainMul *= b.trainMul
         p.xpMul *= b.xpMul
         p.cap = b.popCap
-        p.abilityCdMul *= b.abilityCdMul
+        p.abilityCdMul = max(MIN_ABILITY_CD_MUL, p.abilityCdMul * b.abilityCdMul)
         if (p.slots > 0) p.slots = b.turretSlots.coerceIn(0, Defs.MAX_TURRET_SLOTS)
         p.eliteUnlocked = b.eliteUnlocked
         p.rallyUnlocked = b.rallyUnlocked
@@ -508,7 +510,13 @@ class Battle(val cfg: BattleConfig) {
 
     private fun offerDoctrines(side: Side) {
         val pool = Doctrine.values().filter {
-            !(it == Doctrine.ARSENAL && (side.slots >= Defs.MAX_TURRET_SLOTS || side.slots == 0))
+            when (it) {
+                Doctrine.ARSENAL -> side.slots in 1 until Defs.MAX_TURRET_SLOTS
+                Doctrine.BANNER -> side.rallyUnlocked
+                Doctrine.VIGILANCE -> fog || side.slots > 0
+                Doctrine.TACTICS -> side.abilityCdMul > MIN_ABILITY_CD_MUL
+                else -> true
+            }
         }.toMutableList()
         val picks = Array(3) {
             val i = rng.nextInt(pool.size)
@@ -538,62 +546,72 @@ class Battle(val cfg: BattleConfig) {
     }
 
     fun applyEndlessCard(side: Side, card: EndlessCard) {
-        if (!endless || over || side.index != 0) return
+        if (!endless || over || side.index != 0 || !EndlessCards.canOffer(card, side, fog)) return
         side.cardStacks[card.ordinal]++
+        val power = if (EndlessCards.persistent(card))
+            EndlessCards.stackPower(side.cardStacks[card.ordinal]) else 1f
         if (card.doctrine != null) {
-            applyDoctrine(side, card.doctrine)
+            applyDoctrine(side, card.doctrine, power)
         } else when (card) {
             EndlessCard.TOWER_SLOT -> side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
             EndlessCard.FREE_ELITE -> side.freeElitesPerWave = min(4, side.freeElitesPerWave + 1)
-            EndlessCard.BURNING_TOWERS -> side.turretBurnRatio += 0.25f
+            EndlessCard.BURNING_TOWERS -> side.turretBurnRatio += 0.25f * power
             EndlessCard.AUTO_BARRAGE -> {
                 side.autoBarrageInterval = if (side.autoBarrageInterval == 0f) 30f else max(15f, side.autoBarrageInterval - 5f)
                 side.autoBarrageTimer = side.autoBarrageInterval
             }
             EndlessCard.BLOOD_GOLD -> {
-                side.incomeMul *= 1.5f
-                side.killGoldMul *= 1.5f
-                side.baseHpMul *= 0.8f
-                side.baseMaxHp *= 0.8f
-                side.baseHp *= 0.8f
+                side.incomeMul *= 1f + 0.5f * power
+                side.killGoldMul *= 1f + 0.5f * power
+                val penalty = 1f - 0.2f * power
+                side.baseHpMul *= penalty
+                side.baseMaxHp *= penalty
+                side.baseHp *= penalty
             }
             EndlessCard.CLONING -> side.cloneChance = min(0.6f, side.cloneChance + 0.1f)
-            EndlessCard.FRONTLINE_PLATE -> side.hpMul *= 1.2f
-            EndlessCard.DRILL_SERGEANT -> side.trainMul *= 1.2f
-            EndlessCard.RAPID_TOWERS -> side.turretRateMul *= 1.25f
+            EndlessCard.FRONTLINE_PLATE -> side.hpMul *= 1f + 0.2f * power
+            EndlessCard.DRILL_SERGEANT -> side.trainMul *= 1f + 0.2f * power
+            EndlessCard.RAPID_TOWERS -> side.turretRateMul *= 1f + 0.25f * power
             EndlessCard.MEDIC -> side.baseHp = min(side.baseMaxHp, side.baseHp + side.baseMaxHp * 0.25f)
             EndlessCard.EXTRA_GOLD -> side.gold += 500f * Defs.costScale(side.era)
             EndlessCard.MOBILIZATION -> side.cap = min(MAX_UNITS, side.cap + 3)
             EndlessCard.FORTRESS -> {
-                side.baseHpMul *= 1.25f
-                side.baseMaxHp *= 1.25f
-                side.baseHp *= 1.25f
+                val bonus = 1f + 0.25f * power
+                side.baseHpMul *= bonus
+                side.baseMaxHp *= bonus
+                side.baseHp *= bonus
             }
-            EndlessCard.SHARPSHOOTERS -> side.rangedDmgMul *= 1.25f
-            EndlessCard.BERSERK -> { side.dmgMul *= 1.3f; side.hpMul *= 0.9f }
-            EndlessCard.SCAVENGER -> side.killGoldMul *= 1.25f
-            EndlessCard.MARCH -> side.speedMul *= 1.2f
-            EndlessCard.RALLY_MASTER -> side.abilityCdMul *= 0.8f
-            EndlessCard.ELITE_SCHOOL -> side.eliteDmgMul *= 1.3f
-            EndlessCard.LAST_STAND -> side.lastStandMul *= 1.35f
+            EndlessCard.SHARPSHOOTERS -> side.rangedDmgMul *= 1f + 0.25f * power
+            EndlessCard.BERSERK -> {
+                side.dmgMul *= 1f + 0.3f * power
+                side.hpMul *= 1f - 0.1f * power
+            }
+            EndlessCard.SCAVENGER -> side.killGoldMul *= 1f + 0.25f * power
+            EndlessCard.MARCH -> side.speedMul *= 1f + 0.2f * power
+            EndlessCard.RALLY_MASTER ->
+                side.abilityCdMul = max(MIN_ABILITY_CD_MUL, side.abilityCdMul * (1f - 0.2f * power))
+            EndlessCard.ELITE_SCHOOL -> side.eliteDmgMul *= 1f + 0.3f * power
+            EndlessCard.LAST_STAND -> side.lastStandMul *= 1f + 0.35f * power
             EndlessCard.REPAIR_CREW -> side.repairPerWave = min(0.3f, side.repairPerWave + 0.06f)
             EndlessCard.WAR_DRUMS -> {
-                side.speedMul *= 1.08f
+                side.speedMul *= 1f + 0.08f * power
                 if (side.cardStacks[EndlessCard.MARCH.ordinal] > 0 ||
-                    side.cardStacks[EndlessCard.SWIFT.ordinal] > 0) side.speedMul *= 1.06f
+                    side.cardStacks[EndlessCard.SWIFT.ordinal] > 0)
+                    side.speedMul *= 1f + 0.06f * power
             }
             EndlessCard.TOWER_NETWORK -> {
-                side.turretDmgMul *= 1.08f
+                side.turretDmgMul *= 1f + 0.08f * power
                 val slots = side.cardStacks[EndlessCard.TOWER_SLOT.ordinal] +
                     side.cardStacks[EndlessCard.ARSENAL.ordinal]
-                repeat(slots) { side.turretDmgMul *= 1.04f }
+                repeat(slots) { side.turretDmgMul *= 1f + 0.04f * power }
             }
             EndlessCard.MUSTER_BANNER -> {
                 side.cap = min(MAX_UNITS, side.cap + 1)
-                side.trainMul *= 1.05f
-                if (side.cardStacks[EndlessCard.MOBILIZATION.ordinal] > 0) side.trainMul *= 1.08f
+                side.trainMul *= 1f + 0.05f * power
+                if (side.cardStacks[EndlessCard.MOBILIZATION.ordinal] > 0)
+                    side.trainMul *= 1f + 0.08f * power
             }
-            EndlessCard.EMBER_FORGE -> side.turretDmgMul *= 1.1f
+            EndlessCard.EMBER_FORGE -> side.turretDmgMul *= 1f + 0.1f * power
             EndlessCard.CITADEL_HEART -> {
                 val defenses = side.cardStacks[EndlessCard.BULWARK.ordinal] +
                     side.cardStacks[EndlessCard.FORTRESS.ordinal] +
@@ -604,32 +622,46 @@ class Battle(val cfg: BattleConfig) {
             EndlessCard.SUPPLY_LINE, EndlessCard.IRON_CURTAIN, EndlessCard.LAST_BASTION -> Unit
             else -> Unit
         }
-        applyCard71Synergies(side, card)
+        applyCard71Synergies(side, card, power)
     }
 
-    /** Dodatkowe premie zależą od stosów kart, niezależnie od kolejności ich zdobycia. */
-    private fun applyCard71Synergies(side: Side, card: EndlessCard) {
+    /** Synergie każdej pary stosów są symetryczne, niezależnie od kolejności kart. */
+    private fun applyCard71Synergies(side: Side, card: EndlessCard, power: Float) {
         if (card == EndlessCard.SUPPLY_LINE) {
-            val economic = side.cardStacks[EndlessCard.ECONOMY.ordinal] +
-                side.cardStacks[EndlessCard.PLUNDER.ordinal] +
-                side.cardStacks[EndlessCard.EXTRA_GOLD.ordinal] +
-                side.cardStacks[EndlessCard.BLOOD_GOLD.ordinal] +
-                side.cardStacks[EndlessCard.SCAVENGER.ordinal]
-            repeat(economic) { side.incomeMul *= 1.05f }
+            for (economic in arrayOf(EndlessCard.ECONOMY, EndlessCard.PLUNDER,
+                EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER)) {
+                val n = min(side.cardStacks[economic.ordinal], EndlessCards.MAX_PERSISTENT_STACKS)
+                for (stack in 1..n) {
+                    val economicPower = if (EndlessCards.persistent(economic))
+                        EndlessCards.stackPower(stack) else 1f
+                    side.incomeMul *= 1f + 0.05f * power * economicPower
+                }
+            }
         } else if (card == EndlessCard.ECONOMY || card == EndlessCard.PLUNDER ||
             card == EndlessCard.EXTRA_GOLD || card == EndlessCard.BLOOD_GOLD ||
             card == EndlessCard.SCAVENGER) {
-            repeat(side.cardStacks[EndlessCard.SUPPLY_LINE.ordinal]) { side.incomeMul *= 1.05f }
+            if (card != EndlessCard.EXTRA_GOLD ||
+                side.cardStacks[card.ordinal] <= EndlessCards.MAX_PERSISTENT_STACKS) {
+                for (stack in 1..side.cardStacks[EndlessCard.SUPPLY_LINE.ordinal]) {
+                    side.incomeMul *= 1f + 0.05f * power * EndlessCards.stackPower(stack)
+                }
+            }
         }
         if ((card == EndlessCard.MARCH && side.cardStacks[EndlessCard.SWIFT.ordinal] == 0) ||
             (card == EndlessCard.SWIFT && side.cardStacks[EndlessCard.MARCH.ordinal] == 0)) {
-            repeat(side.cardStacks[EndlessCard.WAR_DRUMS.ordinal]) { side.speedMul *= 1.06f }
+            for (stack in 1..side.cardStacks[EndlessCard.WAR_DRUMS.ordinal]) {
+                side.speedMul *= 1f + 0.06f * EndlessCards.stackPower(stack)
+            }
         }
         if (card == EndlessCard.TOWER_SLOT || card == EndlessCard.ARSENAL) {
-            repeat(side.cardStacks[EndlessCard.TOWER_NETWORK.ordinal]) { side.turretDmgMul *= 1.04f }
+            for (stack in 1..side.cardStacks[EndlessCard.TOWER_NETWORK.ordinal]) {
+                side.turretDmgMul *= 1f + 0.04f * EndlessCards.stackPower(stack)
+            }
         }
         if (card == EndlessCard.MOBILIZATION && side.cardStacks[EndlessCard.MOBILIZATION.ordinal] == 1) {
-            repeat(side.cardStacks[EndlessCard.MUSTER_BANNER.ordinal]) { side.trainMul *= 1.08f }
+            for (stack in 1..side.cardStacks[EndlessCard.MUSTER_BANNER.ordinal]) {
+                side.trainMul *= 1f + 0.08f * EndlessCards.stackPower(stack)
+            }
         }
         if (card == EndlessCard.BULWARK || card == EndlessCard.FORTRESS ||
             card == EndlessCard.REPAIR_CREW) {
@@ -639,7 +671,7 @@ class Battle(val cfg: BattleConfig) {
     }
 
     private fun offerEndlessCards() {
-        EndlessCards.draw(rng, player, cardOffer)
+        EndlessCards.draw(rng, player, cardOffer, fog)
         val brain = playerAi
         // Z kontrolerem powtórki wybór AI idzie przez log komend (jak doktryny).
         if (brain != null && commandController == null) applyEndlessCard(player, cardOffer[brain.chooseCard(cardOffer)])
@@ -651,33 +683,49 @@ class Battle(val cfg: BattleConfig) {
         return null
     }
 
-    fun applyDoctrine(side: Side, d: Doctrine) {
+    fun applyDoctrine(side: Side, d: Doctrine) = applyDoctrine(side, d, 1f)
+
+    private fun applyDoctrine(side: Side, d: Doctrine, power: Float) {
         side.doctrines.add(d)
         when (d) {
-            Doctrine.ECONOMY -> side.incomeMul *= 1.25f
-            Doctrine.SIEGE -> { side.siegeMul *= 1.3f; side.turretDmgMul *= 1.2f }
-            Doctrine.BULWARK -> {
-                side.baseHpMul *= 1.2f
-                val add = side.baseMaxHp * 0.2f
-                side.baseMaxHp += add; side.baseHp += add
-                side.hpMul *= 1.1f
+            Doctrine.ECONOMY -> side.incomeMul *= 1f + 0.25f * power
+            Doctrine.SIEGE -> {
+                side.siegeMul *= 1f + 0.3f * power
+                side.turretDmgMul *= 1f + 0.2f * power
             }
-            Doctrine.SWIFT -> { side.trainMul *= 1.25f; side.speedMul *= 1.1f }
-            Doctrine.VETERAN -> side.xpMul *= 1.3f
-            Doctrine.FURY -> side.dmgMul *= 1.12f
+            Doctrine.BULWARK -> {
+                val bonus = 0.2f * power
+                side.baseHpMul *= 1f + bonus
+                val add = side.baseMaxHp * bonus
+                side.baseMaxHp += add; side.baseHp += add
+                side.hpMul *= 1f + 0.1f * power
+            }
+            Doctrine.SWIFT -> {
+                side.trainMul *= 1f + 0.25f * power
+                side.speedMul *= 1f + 0.1f * power
+            }
+            Doctrine.VETERAN -> side.xpMul *= 1f + 0.3f * power
+            Doctrine.FURY -> side.dmgMul *= 1f + 0.12f * power
             Doctrine.ARSENAL -> {
                 // Modyfikator zakazu wież ma pierwszeństwo przed doktryną.
                 if (Modifier.NO_TURRETS !in cfg.modifiers && side.slots > 0) {
                     side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
-                    side.turretCostMul *= 0.8f
+                    side.turretCostMul *= 1f - 0.2f * power
                 }
             }
-            Doctrine.TACTICS -> side.abilityCdMul *= 0.75f
-            Doctrine.PLUNDER -> side.killGoldMul *= 1.35f
-            Doctrine.BANNER -> side.rallyArmorMul *= 0.85f
-            Doctrine.SUPPLY -> side.supplyUntil = max(side.supplyUntil, time + 60f)
-            Doctrine.SIEGE_MASTERS -> side.heavyBaseDmgMul *= 1.18f
-            Doctrine.VIGILANCE -> { side.turretRangeMul *= 1.18f; side.fogSight = true }
+            Doctrine.TACTICS ->
+                side.abilityCdMul = max(MIN_ABILITY_CD_MUL, side.abilityCdMul * (1f - 0.25f * power))
+            Doctrine.PLUNDER -> side.killGoldMul *= 1f + 0.35f * power
+            Doctrine.BANNER -> side.rallyArmorMul *= 1f - 0.15f * power
+            Doctrine.SUPPLY -> {
+                side.gold += 250f * Defs.costScale(side.era) * power
+                side.supplyUntil = max(side.supplyUntil, time + 60f)
+            }
+            Doctrine.SIEGE_MASTERS -> side.heavyBaseDmgMul *= 1f + 0.18f * power
+            Doctrine.VIGILANCE -> {
+                side.turretRangeMul *= 1f + 0.18f * power
+                if (fog) side.fogSight = true
+            }
         }
     }
 
@@ -747,7 +795,7 @@ class Battle(val cfg: BattleConfig) {
     fun castBarrage(side: Side, targetX: Float): Boolean {
         if (!abilityReady(side, 0)) return false
         if (!fireBarrage(side, targetX)) return false
-        side.abilityCd[0] = BARRAGE_CD * side.abilityCdMul
+        side.abilityCd[0] = BARRAGE_CD * max(MIN_ABILITY_CD_MUL, side.abilityCdMul)
         side.barragesUsed++
         return true
     }
@@ -800,7 +848,7 @@ class Battle(val cfg: BattleConfig) {
 
     fun castRally(side: Side): Boolean {
         if (!abilityReady(side, 1)) return false
-        side.abilityCd[1] = RALLY_CD * side.abilityCdMul
+        side.abilityCd[1] = RALLY_CD * max(MIN_ABILITY_CD_MUL, side.abilityCdMul)
         side.rallyT = RALLY_TIME
         side.ralliesUsed++
         return true
@@ -1162,7 +1210,7 @@ class Battle(val cfg: BattleConfig) {
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
         val bastionMul = if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.25f)
-            1f + 0.3f * s.cardStacks[EndlessCard.LAST_BASTION.ordinal] else 1f
+            1f + 0.3f * EndlessCards.totalStackPower(s.cardStacks[EndlessCard.LAST_BASTION.ordinal]) else 1f
         val attackDmg = (if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.35f)
             u.dmg * s.lastStandMul else u.dmg) * bastionMul *
             (if (u.bossRageActive) 1.5f else 1f)
@@ -1350,7 +1398,7 @@ class Battle(val cfg: BattleConfig) {
         val rallyArmor = if (sides[u.side].rallyT > 0f) sides[u.side].rallyArmorMul else 1f
         val emberStacks = if (endless && turretEra >= 0 && u.burnLeft > 0f)
             sides[attacker].cardStacks[EndlessCard.EMBER_FORGE.ordinal] else 0
-        val dealt = d * multiplier * rallyArmor * (1f + emberStacks * 0.10f) * (if (shield) 0.5f else 1f)
+        val dealt = d * multiplier * rallyArmor * (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
         if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
             sides[attacker].cardStacks[EndlessCard.IRON_CURTAIN.ordinal] > 0) {
