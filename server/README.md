@@ -45,6 +45,32 @@ Testy kompatybilności aplikacji:
 ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --console=plain
 ```
 
+### Test E2E klient–serwer (zlecenie 129)
+
+Test `ServerClientE2ETest` przechodzi ścieżkę: bot `Ai` i `BattleController`
+→ `Replay.encode` → kodowanie zgłoszenia i HMAC w `ScoreWire` (ten sam kod używany
+przez Androida) → żądanie Ktor → `ReplayVerifier.verify` → plikowa baza SQLite
+→ podpisany GET `/v1/top` i `/v1/around`. Weryfikuje osobno kampanię, Endless,
+wyzwanie dnia i tygodnia, sfałszowany wynik/seed/wersję, idempotencję i drugi
+wynik daily (409), limit dzienny 429 wraz z `Retry-After`, a także 503
+i opóźnione ponowienie. Zgłoszenia 429/503 pozostają w tej samej implementacji
+`ScoreQueue.recordResponse`, której używa aplikacja.
+
+```bash
+# Bez Android SDK: serwer i symulacja na JVM (JUnit 5)
+./gradlew :server:test -PserverOnly=true --console=plain --no-configuration-cache
+
+# Tylko test ścieżki E2E
+./gradlew :server:test -PserverOnly=true --tests '*ServerClientE2ETest*' \
+  --console=plain --no-configuration-cache
+```
+
+Transport w teście jest realizowany przez `testApplication` Ktor w pamięci,
+zamiast otwierać rzeczywiste połączenie TLS; sprawdza natomiast produkcyjny
+format zgłoszenia, podpisy i reguły kolejki. Czas cofnięcia/ponowienia jest
+sterowany zegarem testowym bez `sleep`, dlatego test nie sprawdza planisty
+wątku `ScoreClient` ani konfiguracji HTTPS konkretnego urządzenia.
+
 ### API v1
 
 Podpisy wymagane dla `/v1/score`, `/v1/player/delete`, `/v1/top`, `/v1/around`.
