@@ -55,6 +55,12 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     LAST_BASTION(EndlessRarity.RARE),
     EMBER_FORGE(EndlessRarity.RARE),
     CITADEL_HEART(EndlessRarity.LEGENDARY),
+
+    // Zlecenie 108: wyłącznie nowe pozycje, zachowana kolejność zapisanych ordinali.
+    FIELD_MEDICS(EndlessRarity.UNCOMMON),
+    FINAL_SPARK(EndlessRarity.RARE),
+    FIRST_GUARD(EndlessRarity.RARE),
+    BOSS_RECALL(EndlessRarity.LEGENDARY),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
@@ -69,6 +75,8 @@ enum class EndlessWaveTheme {
     ARTILLERY,
     SIEGE_TRAIN,
     SKIRMISHERS,
+    PIKE_SCREEN,
+    TWIN_RAID,
     ;
     val textKey: String = "ew_${name.lowercase()}"
 }
@@ -98,7 +106,8 @@ object EndlessCards {
         EndlessCard.ARSENAL, EndlessCard.TOWER_SLOT, EndlessCard.FREE_ELITE,
         EndlessCard.AUTO_BARRAGE, EndlessCard.CLONING, EndlessCard.MEDIC,
         EndlessCard.EXTRA_GOLD, EndlessCard.MOBILIZATION, EndlessCard.REPAIR_CREW,
-        EndlessCard.SUPPLY, EndlessCard.CITADEL_HEART -> false
+        EndlessCard.SUPPLY, EndlessCard.CITADEL_HEART,
+        EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL -> false
         else -> true
     }
 
@@ -141,6 +150,8 @@ object EndlessCards {
         if ((card == EndlessCard.TACTICS || card == EndlessCard.RALLY_MASTER) &&
             side.abilityCdMul <= Battle.MIN_ABILITY_CD_MUL) return false
         if (card == EndlessCard.MEDIC && side.baseHp >= side.baseMaxHp) return false
+        if ((card == EndlessCard.FIRST_GUARD || card == EndlessCard.BOSS_RECALL) &&
+            side.cardStacks[card.ordinal] >= 1) return false
         if (card == EndlessCard.IRON_CURTAIN &&
             side.cardStacks[card.ordinal] >= 3) return false
         return true
