@@ -435,6 +435,12 @@ class ScreenshotTestTranslation78Test {
         }
         bitmap.recycle()
         org.junit.Assert.assertTrue("Pusty zrzut: " + image.name, image.length() > 1000L)
+        if (screen == "battle" || screen == "pause") {
+            // Dodatkowa kopia w raporcie JUnit trafia do artefaktów CI.
+            val artifactDir = java.io.File("build/test-results/testDebugUnitTest/l10n88")
+                .apply { mkdirs() }
+            image.copyTo(java.io.File(artifactDir, image.name), overwrite = true)
+        }
     }
 
     internal fun capture(code: String, onlyBattle: Boolean = false) {
