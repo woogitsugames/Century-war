@@ -45,7 +45,7 @@ class ServerAbuseTest {
         val db = Files.createTempFile("cw-score-quotas-", ".sqlite")
         val url = "jdbc:sqlite:$db"
         try {
-            SqliteStore(url).use { store ->
+            SqliteStore(url, PublicPlayerIds(ByteArray(32) { 7 })).use { store ->
                 assertTrue(store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 2, 3))
                 assertTrue(store.consumeScoreSubmissionQuota("install-a", "203.0.113.1", now, 2, 3))
                 assertTrue(!store.consumeScoreSubmissionQuota("install-a", "203.0.113.2", now, 2, 3))
@@ -54,7 +54,7 @@ class ServerAbuseTest {
                 // Odrzucenie przez IP nie konsumuje limitu instalacji.
                 assertTrue(store.consumeScoreSubmissionQuota("install-c", "203.0.113.2", now, 2, 3))
             }
-            SqliteStore(url).use { store ->
+            SqliteStore(url, PublicPlayerIds(ByteArray(32) { 7 })).use { store ->
                 assertTrue(!store.consumeScoreSubmissionQuota("install-a", "203.0.113.3", now, 2, 3))
                 assertTrue(!store.consumeScoreSubmissionQuota("install-z", "203.0.113.1", now, 2, 3))
                 assertTrue(store.consumeScoreSubmissionQuota(
