@@ -360,6 +360,19 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         refreshBackHandling()
     }
 
+    /** Zmienia zakładkę Rekordów bez dokładania ekranów do stosu Wstecz. */
+    fun replace(s: Screen) {
+        val previous = screen
+        previous?.onPause()
+        previous?.resetTouch()
+        screen = s
+        CrashReports.screenChanged(s.crashName)
+        syncMusicScreen(s)
+        s.layout()
+        startScreenTransition(previous, s, 1f)
+        refreshBackHandling()
+    }
+
     fun pop() {
         if (stack.isEmpty()) { setScreen(MenuScreen(this)); return }
         val previous = screen
