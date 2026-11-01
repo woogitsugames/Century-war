@@ -41,6 +41,16 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     ELITE_SCHOOL(EndlessRarity.RARE),
     LAST_STAND(EndlessRarity.RARE),
     REPAIR_CREW(EndlessRarity.UNCOMMON),
+
+    // Zlecenie 71: nowe karty zawsze dopisujemy po istniejących (ordinal w zapisach).
+    SUPPLY_LINE(EndlessRarity.COMMON),
+    WAR_DRUMS(EndlessRarity.COMMON),
+    IRON_CURTAIN(EndlessRarity.UNCOMMON),
+    TOWER_NETWORK(EndlessRarity.UNCOMMON),
+    MUSTER_BANNER(EndlessRarity.UNCOMMON),
+    LAST_BASTION(EndlessRarity.RARE),
+    EMBER_FORGE(EndlessRarity.RARE),
+    CITADEL_HEART(EndlessRarity.LEGENDARY),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
@@ -86,7 +96,9 @@ object EndlessCards {
     private fun available(card: EndlessCard, side: Side, picks: Array<EndlessCard>, count: Int): Boolean {
         if ((card == EndlessCard.ARSENAL || card == EndlessCard.TOWER_SLOT) &&
             (side.slots == 0 || side.slots >= Defs.MAX_TURRET_SLOTS)) return false
-        if ((card == EndlessCard.BURNING_TOWERS || card == EndlessCard.RAPID_TOWERS) && side.slots == 0) return false
+        if ((card == EndlessCard.BURNING_TOWERS || card == EndlessCard.RAPID_TOWERS ||
+                card == EndlessCard.IRON_CURTAIN || card == EndlessCard.TOWER_NETWORK ||
+                card == EndlessCard.EMBER_FORGE) && side.slots == 0) return false
         for (i in 0 until count) if (picks[i] == card) return false
         return true
     }

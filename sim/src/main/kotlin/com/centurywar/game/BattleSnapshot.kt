@@ -27,7 +27,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 12
+    const val VERSION = 13
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -113,7 +113,7 @@ object BattleSnapshot {
             o.writeBoolean(u.moving); o.writeFloat(u.dying); o.writeInt(u.serial)
             o.writeByte(u.bossKind); o.writeByte(u.bossSecondaryKind)
             o.writeFloat(u.bossCd); o.writeFloat(u.bossSummonCd); o.writeBoolean(u.bossRageActive)
-            o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft)
+            o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft); o.writeFloat(u.slowLeft)
         }
         o.writeShort(b.projs.count { it.active })
         for ((i, p) in b.projs.withIndex()) {
@@ -280,6 +280,7 @@ object BattleSnapshot {
             u.bossCd = i.readFloat(); u.bossSummonCd = i.readFloat()
             u.bossRageActive = i.readBoolean()
             u.burnDps = i.readFloat(); u.burnLeft = i.readFloat()
+            u.slowLeft = i.readFloat().also { require(it.isFinite() && it in 0f..2f) }
         }
         val pn = i.readShort().toInt()
         require(pn in 0..Battle.MAX_PROJ)
