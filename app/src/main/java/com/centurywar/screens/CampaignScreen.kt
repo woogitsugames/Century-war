@@ -96,6 +96,11 @@ class CampaignScreen(g: Game) : Screen(g) {
 
     override fun isDragScreen() = selected == null
 
+    override fun onLanguageChanged() {
+        super.onLanguageChanged()
+        eraIntro?.onLanguageChanged()
+    }
+
     override fun layout() {
         chrome.layoutBack(back)
         start.label = L["start"]
