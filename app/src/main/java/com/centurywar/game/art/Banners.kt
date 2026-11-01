@@ -52,7 +52,7 @@ class Banners {
         val lighter = Pen.light(team, 0.34f)
         val darker = Pen.dark(team, 0.24f)
         fill.color = lighter
-        when (number % 4) {
+        if (number != 0) when (number % 4) {
             0 -> {
                 c.drawRect(10f, -10f, 24f, 75f, fill)
                 c.drawRect(78f, -10f, 89f, 75f, fill)
@@ -109,8 +109,8 @@ class Banners {
         motif.reset()
         when (id) {
             0 -> {
-                dot(c, 52f, 30f, 13f, accent)
-                dot(c, 52f, 30f, 4f, ivory)
+                dot(c, 52f, 30f, 12f, ivory)
+                dot(c, 52f, 30f, 5f, Ui.PLAYER)
             }
             1 -> {
                 motif.moveTo(37f, 13f); motif.lineTo(65f, 30f)
