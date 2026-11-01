@@ -1223,7 +1223,7 @@ class ScreenshotTest {
     fun layoutCollisions() {
         val originalLang = L.lang
         try {
-            for ((tag, dims) in mapOf(
+            for ((tag, dims) in screenshotDevices(mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
                 "phone1280" to intArrayOf(1280, 720, 2),
                 "phone20x9" to intArrayOf(2400, 1080, 3),
@@ -1231,7 +1231,7 @@ class ScreenshotTest {
                 "foldPortrait" to intArrayOf(1968, 2184, 3),
                 "foldInner" to intArrayOf(1802, 2000, 4),
                 "foldOuter" to intArrayOf(904, 2316, 3),
-            )) {
+            ))) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
                 if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
