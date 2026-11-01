@@ -150,7 +150,7 @@ class EndlessBalanceReportTest {
             com.centurywar.game.Modifier.VETERANS,
         )) {
             val sample = pool.filter { modifier in it.modifiers }.take(8)
-            assertTrue("Brak 8 tygodni dla $modifier", sample.size == 8)
+            assertTrue(sample.size == 8, "Brak 8 tygodni dla $modifier")
             val with = ArrayList<Int>(8)
             val without = ArrayList<Int>(8)
             for (cfg in sample) {
@@ -163,7 +163,7 @@ class EndlessBalanceReportTest {
                         battle.fx.count = 0
                         steps++
                     }
-                    assertTrue("Timeout tygodnia ${config.weekly} ($modifier)", steps < 90_000)
+                    assertTrue(steps < 90_000, "Timeout tygodnia ${config.weekly} ($modifier)")
                     return battle.wave
                 }
                 val control = BattleConfig(
