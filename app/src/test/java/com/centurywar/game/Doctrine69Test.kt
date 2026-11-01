@@ -88,7 +88,7 @@ class Doctrine69Test {
     @Test fun supplyIncreasesKillBountyAndExpires() {
         val bonus = goldAfterKill(true) - goldAfterKill(false)
         val cost = Defs.unit(2, Role.MELEE).cost
-        assertEquals(cost * 1.1f * 0.3f, bonus, 0.05f)
+        assertEquals(250f * Defs.costScale(2) + cost * 1.1f * 0.3f, bonus, 0.05f)
 
         val b = battle()
         b.ai!!.thinkTimer = 1000f
