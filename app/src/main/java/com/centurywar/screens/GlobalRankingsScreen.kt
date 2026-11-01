@@ -87,13 +87,16 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f)
         ui.button(c, periodBtn, 13f)
         if (stageBtn.visible) ui.button(c, stageBtn, 13f)
+        val normalized = L["global_normalized"]
+        ui.textO(c, normalized, panel.centerX(), panel.top + 66 * dp,
+            ui.fit(normalized, 11f, panel.width() - 24 * dp), Ui.DIM, Paint.Align.CENTER)
 
         val view = g.scores?.view(board(), periods[period], g.profile.playerId)
         val list = view?.top ?: emptyList()
         val around = view?.around ?: emptyList()
         val l = panel.left + 16 * dp
         val r = panel.right - 16 * dp
-        var y = panel.top + 52 * dp
+        var y = panel.top + 78 * dp
         val limit = panel.bottom - 120 * dp
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 30 * dp, 42 * dp, dp = dp)
@@ -136,6 +139,7 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
             ScoreSendStatus.SENT -> "global_sent"
             ScoreSendStatus.REJECTED -> "global_rejected"
             ScoreSendStatus.INVALID_NICK -> "global_nick_error"
+            ScoreSendStatus.REPLAY_TOO_LONG -> "global_replay_too_long"
             else -> null
         }
         if (sendStatus != null) ui.text(c, L[sendStatus],
