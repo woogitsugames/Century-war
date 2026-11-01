@@ -4,7 +4,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Picture
-import android.graphics.PorterDuff
 import android.graphics.Path
 import android.graphics.RectF
 import com.centurywar.engine.Game
@@ -162,6 +161,7 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
     private var basePicPalette = -1
     private val PIC_OX = 420f
     private val PIC_OY = 540f
+    private val baseFlashCache = BaseFlashCache((PIC_OX + 40f).toInt(), (PIC_OY + 40f).toInt())
 
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {
         viewW = w
@@ -376,12 +376,8 @@ class BattleRenderer(private val g: Game, private val b: Battle) {
             lastBaseFlash[s.index] = s.baseFlash
             if (time <= baseFlashUntil[s.index]) (s.baseFlash / 0.15f * 22f).toInt().coerceIn(0, 22) else 0
         } else (s.baseFlash / 0.15f * 110f).toInt().coerceIn(0, 255)
-        if (flashAlpha > 0) {
-            c.saveLayer(0f, 0f, PIC_OX + 40f, PIC_OY + 40f, null)
-            c.drawPicture(pic)
-            c.drawColor(Color.argb(flashAlpha, 255, 255, 255), PorterDuff.Mode.SRC_ATOP)
-            c.restore()
-        } else c.drawPicture(pic)
+        if (flashAlpha > 0) baseFlashCache.draw(c, pic, s.index, flashAlpha)
+        else c.drawPicture(pic)
         c.restore()
         bases.live(art, team)
 

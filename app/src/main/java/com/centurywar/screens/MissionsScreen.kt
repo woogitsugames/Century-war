@@ -9,6 +9,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Screen
+import com.centurywar.engine.Sound
 import com.centurywar.engine.Ui
 import com.centurywar.meta.MissionItem
 import com.centurywar.meta.MissionTexts
@@ -63,7 +64,7 @@ class MissionsScreen(g: Game) : Screen(g) {
     private fun updateData() {
         val now = System.currentTimeMillis()
         missions.refresh(now)
-        missions.claimLogin(now)
+        val loginReward = missions.claimLogin(now)
         shownDay = Missions.utcDay(now)
         items.clear()
         items.addAll(missions.state.daily)
@@ -87,6 +88,9 @@ class MissionsScreen(g: Game) : Screen(g) {
         loginText = L.f("ms_login_paid",
             L.plural("medals_n", missions.state.loginRewardToday.toLong()))
         place()
+        if (loginReward > 0) {
+            g.celebrateReward(loginRect.centerX(), loginRect.centerY(), loginReward, Sound.MEDALS)
+        }
     }
 
     private fun place() {
@@ -184,6 +188,11 @@ class MissionsScreen(g: Game) : Screen(g) {
         if (b.id == -1) { g.pop(); return }
         val index = b.id - 100
         if (index !in 0 until items.size) return
-        if (missions.claim(items[index].id) > 0) updateData()
+        val reward = missions.claim(items[index].id)
+        if (reward > 0) {
+            val source = claimButtons[index].r
+            g.celebrateReward(source.centerX(), source.centerY(), reward)
+            updateData()
+        }
     }
 }

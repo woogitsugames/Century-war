@@ -205,10 +205,23 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private val achievementBanner = RectF()
     private var achievementMessage = ""
     private var achievementSeconds = 0f
+    internal val rewardFeedback = RewardFeedback()
+    private var pendingLoginReward = 0
+
+    /** Jednorazowe efekty nagrody; cząstki są obsługiwane przez stałą pulę. */
+    fun celebrateReward(x: Float, y: Float, amount: Int, soundId: Int = Sound.REWARD) {
+        if (amount <= 0) return
+        sfx(soundId, 0.78f, 100L, priority = 3)
+        haptic(HapticKind.EVOLVE)
+        rewardFeedback.launch(this, x, y, amount)
+    }
 
     /** Kolejka powiadomień; tekst jest przygotowany przy odblokowaniu, nie w renderze. */
     fun showAchievements(unlocked: List<AchievementDef>) {
-        if (unlocked.isNotEmpty()) sfx(Sound.ACHIEVEMENT, 0.5f, 120L)
+        if (unlocked.isNotEmpty()) {
+            val earned = unlocked.sumOf { it.medalReward }
+            celebrateReward(width * 0.5f, height * 0.6f, earned, Sound.ACHIEVEMENT)
+        }
         for (a in unlocked) showNotice(L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")", Icons.CROWN)
     }
 
@@ -226,7 +239,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val m = Missions(profile)
         m.refresh(nowMillis)
         val reward = m.claimLogin(nowMillis)
-        if (reward > 0) showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7 · " + L.f("ms_login_paid", L.plural("medals_n", reward.toLong())), Icons.CALENDAR)
+        if (reward > 0) {
+            // Podczas konstruktora Game dźwięk jeszcze nie jest gotowy.
+            if (width <= 1 || sound == null) pendingLoginReward = reward
+            else celebrateReward(width * 0.5f, height * 0.62f, reward, Sound.MEDALS)
+            showNotice(L["ms_streak"] + " " + m.state.loginStreak + "/7 · " + L.f("ms_login_paid", L.plural("medals_n", reward.toLong())), Icons.CALENDAR)
+        }
     }
 
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
@@ -419,6 +437,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         }
         for (t in taskBuf) t.run()
         taskBuf.clear()
+        if (pendingLoginReward > 0 && width > 1 && sound != null) {
+            celebrateReward(width * 0.5f, height * 0.62f, pendingLoginReward, Sound.MEDALS)
+            pendingLoginReward = 0
+        }
         val s0 = screen
         for (e in frameEvents) {
             if (e.action == TouchEvent.CANCEL + 10) back()
@@ -440,6 +462,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val renderStart = System.nanoTime()
         drawScreen(c, dt)
         drawAchievementNotice(c, dt)
+        rewardFeedback.draw(c, this, dt)
         val renderEnd = System.nanoTime()
         frameMetrics.add(renderStart - updateStart, renderEnd - renderStart, simulatedSteps, discardedSteps)
         monitor(dt)
