@@ -24,6 +24,7 @@ class AboutScreen(g: Game) : Screen(g) {
     private val fullLicense = btn(2)
     private val report = btn(3)
     private val deleteData = btn(4)
+    private val history = btn(5)
     private val entries = LicenseCatalog.app
     private val links = Array(entries.size) { i -> btn(100 + i).apply { iconId = Icons.GLOBE } }
     private val privacyUrl = BuildConfig.PRIVACY_URL
@@ -57,6 +58,8 @@ class AboutScreen(g: Game) : Screen(g) {
         report.label = L["report_problem"]
         report.iconId = Icons.BOOK
         fullLicense.label = L["about_apache_full"]
+        history.label = L["wn_history"]
+        history.iconId = Icons.BOOK
         fullLicense.iconId = Icons.BOOK
         versionText = L["about_version"] + ": " + version
         authorText = L["about_author"]
@@ -84,7 +87,7 @@ class AboutScreen(g: Game) : Screen(g) {
         panel.set(left, chrome.top + 7 * dp, left + pw, h - g.insetB - 11 * dp)
         contentTop = panel.top + 11 * dp
         contentBottom = panel.bottom - 11 * dp
-        val introDp = 322f
+        val introDp = 378f
         val step = 103 * dp
         val fullHeight = (introDp + 24 + 70) * dp + entries.size * step
         maxScroll = max(0f, fullHeight - (contentBottom - contentTop))
@@ -100,6 +103,9 @@ class AboutScreen(g: Game) : Screen(g) {
         report.set(panel.left + 20 * dp, textStart + 210 * dp,
             min(250 * dp, pw - 40 * dp), 48 * dp)
         report.visible = inContent(report)
+        history.set(panel.left + 20 * dp, textStart + 266 * dp,
+            min(250 * dp, pw - 40 * dp), 48 * dp)
+        history.visible = inContent(history)
         fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 48 * dp)
         fullLicense.visible = inContent(fullLicense)
         for (i in entries.indices) {
@@ -143,8 +149,9 @@ class AboutScreen(g: Game) : Screen(g) {
         if (privacy.visible) ui.button(c, privacy, 13f)
         if (deleteData.visible) ui.button(c, deleteData, 13f)
         if (report.visible) ui.button(c, report, 13f)
+        if (history.visible) ui.button(c, history, 13f)
         val deletionStatus = L[deleteResultKey]
-        val statusY = textStart + 283 * dp
+        val statusY = textStart + 339 * dp
         if (statusY >= contentTop && statusY <= contentBottom) {
             ui.textO(c, deletionStatus, tx, statusY,
                 ui.fit(deletionStatus, 13f, textWidth, 9f), Ui.DIM)
@@ -185,6 +192,7 @@ class AboutScreen(g: Game) : Screen(g) {
             2 -> g.host.showApacheLicense()
             3 -> g.host.shareProblemReport()
             4 -> requestDataDeletion()
+            5 -> g.push(WhatsNewScreen(g))
             else -> if (b.id >= 100) entries.getOrNull(b.id - 100)?.let {
                 if (SecureLinks.isHttps(it.url)) g.host.openExternalUrl(it.url)
             }

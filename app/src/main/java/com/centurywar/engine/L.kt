@@ -142,6 +142,7 @@ object L {
         putAll(part93())
         }
         putAll(part105())
+        putAll(part106())
     }
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
@@ -1524,6 +1525,16 @@ object L {
         "bh105_max_wave" to t("Rekord: fala %d", "Record: wave %d", "Rekord: Welle %d", "Récord: oleada %d", "Record : vague %d", "Record: ondata %d", "Recorde: onda %d", "Рекорд: хвиля %d", "Record: golf %d", "Rekor: dalga %d"),
         "bh105_max_time" to t("Maksymalnie: %s", "Maximum: %s", "Maximum: %s", "Máximo: %s", "Maximum : %s", "Massimo: %s", "Máximo: %s", "Максимум: %s", "Maximum: %s", "En fazla: %s"),
         "bh105_13days" to t("13 dni temu", "13 days ago", "Vor 13 Tagen", "Hace 13 días", "Il y a 13 jours", "13 giorni fa", "Há 13 dias", "13 днів тому", "13 dagen geleden", "13 gün önce"),
+
+    /** Zlecenie 106: historia zmian i ekran aktualizacji. */
+    private fun part106(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "wn_title" to t("Co nowego", "What's new", "Was ist neu?", "Novedades", "Nouveautés", "Novità", "Novidades", "Що нового", "Wat is nieuw?", "Yenilikler"),
+        "wn_history" to t("Historia zmian", "Change history", "Änderungsverlauf", "Historial de cambios", "Historique des changements", "Cronologia modifiche", "Histórico de alterações", "Історія змін", "Wijzigingsgeschiedenis", "Değişiklik geçmişi"),
+        "wn_continue" to t("Dalej", "Continue", "Weiter", "Continuar", "Continuer", "Continua", "Continuar", "Далі", "Verder", "Devam"),
+        "wn_empty" to t("Brak informacji o zmianach.", "No release notes available.", "Keine Versionshinweise verfügbar.", "No hay notas de versión.", "Aucune note de version disponible.", "Nessuna nota di versione disponibile.", "Sem notas de versão disponíveis.", "Немає опису змін.", "Geen versie-informatie beschikbaar.", "Sürüm notu bulunmuyor."),
+        "wn_010_iron" to t("Epoka żelaza: cztery nowe jednostki, wieża i ostrzał.", "Iron Age: four new units, a turret and a barrage.", "Eisenzeit: vier neue Einheiten, ein Turm und ein Sperrfeuer.", "Edad del Hierro: cuatro unidades, una torre y una descarga nuevas.", "Âge du fer : quatre unités, une tour et un tir de barrage.", "Età del ferro: quattro unità, una torre e una salva.", "Idade do Ferro: quatro unidades, uma torre e uma salva.", "Залізна доба: чотири нові бійці, вежа та обстріл.", "IJzertijd: vier nieuwe eenheden, een toren en een salvo.", "Demir Çağı: dört yeni birlik, bir kule ve bir yaylım ateşi."),
+        "wn_010_replays" to t("Powtórki bitew i wznawianie przerwanej rozgrywki.", "Battle replays and resuming interrupted battles.", "Kampfwiederholungen und Fortsetzen unterbrochener Kämpfe.", "Repeticiones y reanudación de batallas interrumpidas.", "Replays et reprise des batailles interrompues.", "Replay e ripresa delle battaglie interrotte.", "Repetições e retoma de batalhas interrompidas.", "Повтори та відновлення перерваних битв.", "Gevechten terugkijken en onderbroken gevechten hervatten.", "Savaş tekrarları ve yarıda kalan savaşları sürdürme."),
+        "wn_010_accessibility" to t("Więcej opcji dostępności i ulepszony interfejs.", "More accessibility options and interface improvements.", "Mehr Barrierefreiheit und eine verbesserte Oberfläche.", "Más opciones de accesibilidad y mejoras de interfaz.", "Plus d'options d'accessibilité et une interface améliorée.", "Più opzioni di accessibilità e interfaccia migliorata.", "Mais opções de acessibilidade e melhorias na interface.", "Більше налаштувань доступності та поліпшений інтерфейс.", "Meer toegankelijkheidsopties en een verbeterde interface.", "Daha fazla erişilebilirlik seçeneği ve arayüz iyileştirmeleri."),
     )
 
 }

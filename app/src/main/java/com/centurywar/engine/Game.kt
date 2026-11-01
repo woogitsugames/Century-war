@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
+import com.centurywar.BuildConfig
 import com.centurywar.crash.CrashReports
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.SnapshotStore
@@ -16,8 +17,10 @@ import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.meta.Missions
+import com.centurywar.meta.WhatsNewCatalog
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
+import com.centurywar.screens.WhatsNewScreen
 import com.centurywar.screens.ReplayScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -327,7 +330,19 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val minDp = minOf(vW, vH) / density
         val boost = if (minDp > 560f) (minDp / 560f).coerceAtMost(1.35f) else 1f
         ui.dp = density * renderScale * boost * (if (minDp < 340f) minDp / 340f else 1f)
-        if (screen == null) setScreen(MenuScreen(this))
+        if (screen == null) {
+            val version = BuildConfig.VERSION_NAME
+            if (WhatsNewCatalog.shouldShow(profile.hasExistingSave, profile.whatsNewSeenVersion, version)) {
+                setScreen(WhatsNewScreen(this, automatic = true))
+            } else {
+                // Pierwsza instalacja i wersje bez notatek przechodzą od razu do menu.
+                if (profile.whatsNewSeenVersion != version) {
+                    profile.whatsNewSeenVersion = version
+                    profile.save()
+                }
+                setScreen(MenuScreen(this))
+            }
+        }
         screen?.layout()
         for (s in stack) s.layout()
     }

@@ -36,6 +36,7 @@ class Profile(private val file: File) {
     companion object {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
+        private val RELEASE_VERSION = Regex("[A-Za-z0-9._+-]{1,48}")
         const val HINT_COUNT = 20
         const val HINT_LONG_PRESS = 17
         // 20 bitów: 0–16 podpowiedzi, 17 przytrzymanie przycisku, 18 wariant epoki, 19 pogoda.
@@ -129,6 +130,12 @@ class Profile(private val file: File) {
         private set
     private val weeklyClaimHistory = HashMap<Long, Int>()
     var tutorialDone = false
+    /** Ostatnia wersja aplikacji, której komunikat już zamknięto; stan lokalny. */
+    var whatsNewSeenVersion = ""
+        set(value) { field = if (value.isEmpty() || RELEASE_VERSION.matches(value)) value else "" }
+    /** Prawda tylko po pomyślnym odczycie zapisanego profilu z dysku. */
+    var hasExistingSave = false
+        private set
     /** Jednorazowe podpowiedzi: bit oznacza już pokazany komunikat. */
     var hintsSeen = 0L
     var hintsEnabled = true
@@ -410,6 +417,7 @@ class Profile(private val file: File) {
         o.put("weeklyClaimed", weeklyClaimed)
         o.put("weeklyClaims", JSONObject(weeklyClaimHistory.mapKeys { it.key.toString() }))
         o.put("tutorialDone", tutorialDone)
+        o.put("whatsNewSeenVersion", whatsNewSeenVersion)
         o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
         o.put("hintsEnabled", hintsEnabled)
         o.put("eraIntrosSeen", eraIntrosSeen and ((1L shl Defs.ERA_COUNT) - 1L))
@@ -486,6 +494,7 @@ class Profile(private val file: File) {
         val localId = playerId
         val localSecret = playerSecret
         val localConsent = globalRanking
+        val localWhatsNewVersion = whatsNewSeenVersion
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
@@ -493,6 +502,7 @@ class Profile(private val file: File) {
         playerId = localId
         playerSecret = localSecret
         globalRanking = localConsent && localId.isNotEmpty()
+        whatsNewSeenVersion = localWhatsNewVersion
     }
 
     /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
@@ -503,6 +513,7 @@ class Profile(private val file: File) {
         remove("playerId")
         remove("playerSecret")
         remove("globalRanking")
+        remove("whatsNewSeenVersion")
     }.toString()
 
     /** Migawka jest spójna; wątek wywołujący nie dotyka dysku. */
@@ -766,6 +777,7 @@ class Profile(private val file: File) {
         weeklyClaimed = if (loadedWeek >= 0L) loadedClaimed else 0
         weeklyClaimHistory.clear(); weeklyClaimHistory.putAll(loadedClaims)
         tutorialDone = json.optBoolean("tutorialDone", false)
+        whatsNewSeenVersion = json.optString("whatsNewSeenVersion", "")
         hintsSeen = json.optLong("hintsSeen", 0L).coerceIn(0L, HINT_VALID_MASK)
         hintsEnabled = json.optBoolean("hintsEnabled", true)
         eraIntrosSeen = json.optLong("eraIntrosSeen", 0L).coerceIn(0L, (1L shl Defs.ERA_COUNT) - 1L)
@@ -836,6 +848,7 @@ class Profile(private val file: File) {
     private fun clearInMemory() {
         name = ""; medals = 0; levels.clear(); stars.fill(0)
         bestWave = 0; lastRankedDaily = -1L; tutorialDone = false
+        whatsNewSeenVersion = ""; hasExistingSave = false
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
@@ -870,6 +883,7 @@ class Profile(private val file: File) {
 
     @Synchronized
     fun load() {
+        hasExistingSave = false
         // Odczyt nigdy nie wyprzedza zapisu tego profilu czekającego w kolejce I/O.
         awaitWrites(2_000L)
         GameIoCounter.diskAccess()
@@ -899,6 +913,7 @@ class Profile(private val file: File) {
                     return
                 }
                 restore(migrate(json, version), version >= CURRENT_VERSION)
+                hasExistingSave = true
                 newerProfileVersion = false
                 // Migracja starego profilu: sekret musi trafić na dysk przed siecią.
                 if (playerId.isNotEmpty() && !validRankingSecret(json.optString("playerSecret", ""))) save()
