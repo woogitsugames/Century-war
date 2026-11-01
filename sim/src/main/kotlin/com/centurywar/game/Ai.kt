@@ -265,7 +265,7 @@ class Ai(
         for (u in b.units) {
             if (!canSeeEnemy(u)) continue
             val dist = (u.x - me.baseFront) * me.dir
-            if (dist in 220f..1370f && dist > farthest) farthest = dist
+            if (dist >= 220f && dist <= 1370f && dist > farthest) farthest = dist
         }
         return if (farthest < 0f) Float.NaN else me.baseFront + me.dir * farthest
     }
