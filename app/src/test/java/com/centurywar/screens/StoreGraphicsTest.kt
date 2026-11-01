@@ -345,7 +345,7 @@ class StoreGraphicsTest {
                 boss.x = 1485f
                 boss.prevX = boss.x
                 boss.attackAnim = 0.65f
-                battle.fx.add(FxBuffer.EXPLOSION, 1430f, 40f, 1, 24f)
+                battle.fx.add(FxBuffer.HIT, 1680f, 48f, 1)
             }
             4 -> {
                 val orders = BattleController(battle)
@@ -361,6 +361,8 @@ class StoreGraphicsTest {
 
     private fun drawBattle(c: Canvas, g: Game, scene: Int, width: Int, height: Int, feature: Boolean = false) {
         val battle = sceneBattle(scene)
+        // Na grafice promocyjnej pokazujemy wojska, nie zaslaniajacy je rozblysk.
+        if (feature) battle.fx.count = 0
         val renderer = BattleRenderer(g, battle)
         renderer.layout(width.toFloat(), height.toFloat(),
             if (feature) 12f else 92f * g.ui.dp,
@@ -379,10 +381,17 @@ class StoreGraphicsTest {
         }
         val maxWidth = width * 0.79f
         if (p.measureText(caption) > maxWidth) p.textSize *= maxWidth / p.measureText(caption)
-        val left = width * 0.047f
-        val top = height * (if (scene in 3..6) 0.125f else 0.84f)
-        val rect = RectF(left, top, left + p.measureText(caption) + 72f,
-            top + p.textSize * 1.65f)
+        val labelWidth = p.measureText(caption) + 72f
+        // Wyzwania i potyczka: nie zaslaniamy przyciskow w dolnym panelu.
+        val rightAligned = scene == 7 || scene == 8
+        val left = if (rightAligned) width - labelWidth - width * 0.047f
+            else width * 0.047f
+        val top = height * when (scene) {
+            3, 4 -> 0.125f
+            7, 8 -> 0.015f
+            else -> 0.84f
+        }
+        val rect = RectF(left, top, left + labelWidth, top + p.textSize * 1.65f)
         val panel = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(226, 23, 34, 52) }
         c.drawRoundRect(rect, 15f, 15f, panel)
         panel.style = Paint.Style.STROKE
