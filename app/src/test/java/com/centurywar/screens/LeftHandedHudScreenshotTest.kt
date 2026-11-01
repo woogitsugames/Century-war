@@ -26,6 +26,7 @@ class LeftHandedHudScreenshotTest {
         val devices = listOf(
             Pair("phone720", intArrayOf(1600, 720, 2)),
             Pair("narrow", intArrayOf(720, 1280, 2)),
+            Pair("foldCover", intArrayOf(904, 2316, 27)),
             Pair("fold", intArrayOf(2184, 1968, 3)),
             // Wewnętrzny ekran Folda z dużą skalą (gęstość 3.6): dwurzędowy pasek górny.
             Pair("foldInner", intArrayOf(1802, 2000, 36)),
@@ -55,6 +56,11 @@ class LeftHandedHudScreenshotTest {
                 val mode = if (leftHanded) "left" else "standard"
                 File(out, "hud110_${mode}_${tag}.png").outputStream().use {
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                if (tag == "narrow" || tag == "foldCover") {
+                    File(out, "hud119_${mode}_${tag}.png").outputStream().use {
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                    }
                 }
                 bitmap.recycle()
             }
