@@ -229,7 +229,8 @@ class Ai(
             (danger >= personality.barrageDanger || threatened ||
                 barrageTargets >= personality.barrageTargets || siegeAdvance)
         ) {
-            val target = if (siegeAdvance) forwardVisibleTarget() else biggestVisibleCluster()
+            val forward = if (siegeAdvance) forwardVisibleTarget() else Float.NaN
+            val target = if (forward.isFinite()) forward else biggestVisibleCluster()
             if (target.isFinite()) barrage(target)
         }
         if (b.abilityReady(me, 1) && me.aliveCount >= personality.rallyMin &&
