@@ -9,6 +9,26 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class ReplayTest {
+
+    @Test
+    fun dailyEventIsSignedByReplayAndCannotBeSwapped() {
+        val day = Daily.RELEASE_DAY + 3L
+        val cfg = Daily.config(day, Bonuses())
+        assertNotNull(cfg.dailyEvent)
+        val b = Battle(cfg)
+        val controller = BattleController(b)
+        if (b.pendingVariant != null) assertTrue(controller.variant(0))
+        repeat(120) { if (!b.over) b.step() }
+        if (!b.over) assertTrue(controller.surrender())
+        val log = controller.log()
+        assertEquals(cfg.dailyEvent, log.dailyEvent)
+        val encoded = Replay.encode(log)
+        assertEquals(log, Replay.decode(encoded))
+        assertEquals(b.score(), Replay.verify(cfg, encoded).score)
+        mustReject { Replay.verify(cfg, Replay.encode(log.copy(dailyEvent = null))) }
+        val wrong = DailyEvent.entries.first { it != cfg.dailyEvent }
+        mustReject { Replay.verify(cfg, Replay.encode(log.copy(dailyEvent = wrong))) }
+    }
     private fun mustReject(block: () -> Unit) {
         var rejected = false
         try {
