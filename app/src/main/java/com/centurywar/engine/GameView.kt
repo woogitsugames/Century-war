@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.StrictMode
 import com.centurywar.BuildConfig
 import com.centurywar.crash.CrashReports
+import com.centurywar.screens.MenuScreen
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -35,6 +36,9 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
         private set
     @Volatile private var thread: Thread? = null
     private var scale = 1f
+    /** Jednorazowy sygnał po opublikowaniu pierwszej rzeczywistej klatki menu. */
+    var onFirstMenuFrame: (() -> Unit)? = null
+    private var firstMenuFramePosted = false
 
     init {
         holder.addCallback(this)
@@ -141,6 +145,11 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                 if (c != null) try {
                     holder.unlockCanvasAndPost(c)
                     if (rendered) {
+                        if (!firstMenuFramePosted && game.current is MenuScreen) {
+                            firstMenuFramePosted = true
+                            onFirstMenuFrame?.invoke()
+                            onFirstMenuFrame = null
+                        }
                         // Pomiar obejmuje oczekiwanie na bufor, rysowanie i publikację.
                         game.frameMetrics.addPresentation(
                             System.nanoTime() - lockStart, frameIntervalNs,
