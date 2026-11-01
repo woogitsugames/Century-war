@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import com.centurywar.engine.Game
 import com.centurywar.engine.Palette
+import com.centurywar.engine.Quality
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
 import com.centurywar.game.Defs
@@ -105,7 +106,13 @@ class Backdrops(private val g: Game, private val b: Battle) {
         val art = Defs.sideArt(era, variant)
         if (art == EraArt.ORBITAL) {
             fill.color = Color.argb(200, 255, 255, 255)
-            for (i in 0 until 60) {
+            // Na słabych telefonach ograniczamy liczbę migoczących punktów nieba.
+            val starCount = when {
+                g.quality.level == Quality.LOW || g.quality.reduction >= 4 -> 16
+                g.quality.level == Quality.MED || g.quality.reduction > 0 -> 32
+                else -> 60
+            }
+            for (i in 0 until starCount) {
                 val x = ((i * 977) % 1000) / 1000f * w
                 val y = ((i * 613) % 1000) / 1000f * groundY * 0.7f
                 val twinkle = 0.6f + 0.4f * sin(time * 2f + i)
