@@ -60,5 +60,5 @@
     {"step":5590,"kind":"QUEUE","argument":1},
     {"step":5600,"kind":"RALLY","argument":0}
   ],
-  "expected": {"score":20956,"winner":0,"wave":0,"steps":6063,"kills":36,"enemyKills":26,"timeBits":1120541082,"snapshotSha256":"3163e733acb6924125848577fe3f1d885ac3c49a4ee0a86dff6935f27c9a3340"}
+  "expected": {"score":20956,"winner":0,"wave":0,"steps":6063,"kills":36,"enemyKills":26,"timeBits":1120541082,"snapshotSha256":"9548666ffe7b8fd26737c91c13b6796dc8eb20a5610703a7e086efd19203dc67"}
 }

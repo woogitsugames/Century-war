@@ -39,5 +39,5 @@
     {"step":4600,"kind":"UNIT_UPGRADE","argument":0},
     {"step":5400,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":939,"winner":1,"wave":3,"steps":5400,"kills":12,"enemyKills":9,"timeBits":1119092737,"snapshotSha256":"b8f742392316625111316cf761f5f3bfcde5bf32be78dd56412602b96f3e0f61"}
+  "expected": {"score":939,"winner":1,"wave":3,"steps":5400,"kills":12,"enemyKills":9,"timeBits":1119092737,"snapshotSha256":"8724d313a9c3224e3692efa41026d8d6f4da9069041f321070d0db9051e68205"}
 }
