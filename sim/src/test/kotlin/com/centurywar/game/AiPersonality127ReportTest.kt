@@ -21,6 +21,8 @@ class AiPersonality127ReportTest {
         var games = 0
         var completed = 0
         var wins = 0
+        var attacks = 0
+        var firstAttackSum = 0.0
         var contacts = 0
         var firstContactSum = 0.0
         var turretsFirst = 0
@@ -44,6 +46,7 @@ class AiPersonality127ReportTest {
             BattleController(b)
             val limit = (MAX_SECONDS / Battle.STEP).toInt()
             var ticks = 0
+            var firstAttack = -1f
             var firstContact = -1f
             var firstTurret = -1f
             var firstEvolve = -1f
@@ -58,6 +61,14 @@ class AiPersonality127ReportTest {
                 if (b.enemy.hold) heldSteps++
                 if (firstTurret < 0f && b.enemy.turretsBuilt > 0) firstTurret = b.time
                 if (firstEvolve < 0f && b.enemy.era > 2) firstEvolve = b.time
+                if (firstAttack < 0f) {
+                    for (u in b.units) {
+                        if (u.alive && u.side == 1 && u.attackAnim > 0f) {
+                            firstAttack = b.time
+                            break
+                        }
+                    }
+                }
                 if (firstContact < 0f) {
                     // Pierwsze skuteczne trafienie gracza, a nie sama kolejka rekrutacji.
                     var hit = b.player.baseHp < b.player.baseMaxHp - 0.1f
@@ -84,6 +95,10 @@ class AiPersonality127ReportTest {
             steps += ticks
             if (b.over) completed++
             if (b.over && b.winner == 1) wins++
+            if (firstAttack >= 0f) {
+                attacks++
+                firstAttackSum += firstAttack
+            }
             if (firstContact >= 0f) {
                 contacts++
                 firstContactSum += firstContact
@@ -114,6 +129,8 @@ class AiPersonality127ReportTest {
             columns.add(games.toString())
             columns.add(completed.toString())
             columns.add(mean(wins * 100.0, games))
+            columns.add(attacks.toString())
+            columns.add(mean(firstAttackSum, attacks))
             columns.add(contacts.toString())
             columns.add(mean(firstContactSum, contacts))
             columns.add(turretsFirst.toString())
@@ -134,8 +151,8 @@ class AiPersonality127ReportTest {
         assumeTrue(System.getenv("AI127_RUN") == "true")
         assertEquals(50, SEEDS)
         val report = StringBuilder(
-            "personality,seeds,finished,enemy_wins_pct,contacts,first_contact_s," +
-                "turret_battles,first_turret_s,evolve_battles,first_evolve_s," +
+            "personality,seeds,finished,enemy_wins_pct,attacks,first_attack_s," +
+                "contacts,first_contact_s,turret_battles,first_turret_s,evolve_battles,first_evolve_s," +
                 "melee_pct,ranged_pct,heavy_pct,elite_pct," +
                 "turrets_per_game,barrages_per_game,rallies_per_game," +
                 "unit_upgrades_per_game,hold_time_pct\n"
