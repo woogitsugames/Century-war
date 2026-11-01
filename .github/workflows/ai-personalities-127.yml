@@ -59,6 +59,71 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+
+  profile-comparison:
+    name: Tabela 50 seedów w PR
+    needs: profiles
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai127-profiles-*
+          path: comparison
+      - name: Zestaw profile z bazy i z proponowanych zmian
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+
+          profiles = {}
+          fields = ['first_attack_s', 'first_contact_s', 'first_turret_s',
+                    'first_evolve_s', 'melee_pct', 'ranged_pct', 'heavy_pct',
+                    'elite_pct', 'turrets_per_game', 'barrages_per_game',
+                    'rallies_per_game', 'unit_upgrades_per_game',
+                    'hold_time_pct', 'enemy_wins_pct']
+          for phase in ['baseline', 'candidate']:
+              files = list(Path('comparison').glob(f'ai127-profiles-{phase}/profiles.csv'))
+              if len(files) != 1:
+                  raise SystemExit(f'Brak wyników dla {phase}: {files}')
+              with files[0].open(encoding='utf-8') as stream:
+                  profiles[phase] = {r['personality']: r for r in csv.DictReader(stream)}
+              if len(profiles[phase]) != 3 or any(int(r['seeds']) != 50 for r in profiles[phase].values()):
+                  raise SystemExit(f'Niepełny pomiar {phase}')
+
+          lines = [
+              '## Zlecenie 127 — pomiar 50 seedów (identyczne seedy przed/po)',
+              '',
+              'Scenariusz: SKIRMISH 2–3, RICH_START + FRAGILE_BASES, gracz BALANCED.',
+              'Wyniki pochodzą z ukończonych przebiegów CI, nie z szacunków.',
+              '',
+              '| Osobowość | Miara | Baza | Po zmianie |',
+              '|---|---|---:|---:|',
+          ]
+          for persona in ['ECONOMIST', 'SIEGER', 'BALANCED']:
+              for field in fields:
+                  a = profiles['baseline'][persona][field]
+                  b = profiles['candidate'][persona][field]
+                  lines.append(f'| {persona} | {field} | {a} | {b} |')
+          Path('ai127-profiles-comparison.md').write_text('\\n'.join(lines) + '\\n', encoding='utf-8')
+          print('\\n'.join(lines))
+          PY
+          cat ai127-profiles-comparison.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Dołącz liczbową tabelę do PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 127 --repo "${{ github.repository }}" --body-file ai127-profiles-comparison.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai127-profiles-comparison
+          path: ai127-profiles-comparison.md
+          if-no-files-found: warn
+
   campaign:
     name: Kampania ${{ matrix.version }} / ${{ matrix.range }}
     runs-on: ubuntu-latest
