@@ -59,11 +59,11 @@ internal class BaseFlashCache(
             return
         }
         val slot = if (slots == 1) 0 else side
-        var image = images[slot]
-        if (image == null) {
-            image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            images[slot] = image
-            painters[slot] = Canvas(image)
+        val image = images[slot] ?: Bitmap.createBitmap(
+            width, height, Bitmap.Config.ARGB_8888
+        ).also {
+            images[slot] = it
+            painters[slot] = Canvas(it)
         }
         if (sources[slot] !== picture) {
             image.eraseColor(Color.TRANSPARENT)
