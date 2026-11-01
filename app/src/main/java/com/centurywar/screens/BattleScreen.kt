@@ -65,6 +65,10 @@ class BattleScreen(
     private val commands = battle.commandController ?: BattleController(battle)
     private val haptics = BattleHaptics(g, battle)
     private val r = BattleRenderer(g, battle)
+    private val battleSummary = BattleSummarySamples().apply { capture(battle) }
+    private val resultChart = BattleSummaryChart()
+    private val resultChartArea = RectF()
+    private var showResultChart = false
     private var acc = 0f
     private var speed = 1
     /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
@@ -211,6 +215,8 @@ class BattleScreen(
     private val continueBtn = btn(CONTINUE)
     private val restartEnd = btn(RESTART + 100)
     private val replayEnd = btn(WATCH_REPLAY)
+    private val resultStatsTab = btn(201)
+    private val resultChartTab = btn(202)
     private val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     private val variantBtn = Array(2) { btn(VARIANT0 + it) }
     private val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -477,6 +483,12 @@ class BattleScreen(
         restartEnd.set(resultPanel.left + 16 * dp, resultPanel.bottom - bh - 22 * dp, first, bh)
         replayEnd.set(restartEnd.r.right + gap, restartEnd.r.top, middle, bh)
         continueBtn.set(replayEnd.r.right + gap, restartEnd.r.top, usable - first - middle, bh)
+        val tw = (rw - 36 * dp - gap) / 2f
+        resultStatsTab.set(resultPanel.left + 16 * dp, resultPanel.top + 39 * dp, tw, 30 * dp)
+        resultChartTab.set(resultStatsTab.r.right + gap, resultStatsTab.r.top, tw, 30 * dp)
+        resultChartArea.set(resultPanel.left + 15 * dp, resultPanel.top + 73 * dp,
+            resultPanel.right - 15 * dp, restartEnd.r.top - 7 * dp)
+        resultChart.prepare(battleSummary, resultChartArea, dp)
         if (finished) prepareResultTipLines()
     }
 
@@ -522,6 +534,7 @@ class BattleScreen(
         variantDescLanguage = -1
         choiceDescLanguage = -1
         enemyEraLanguage = -1
+        resultChart.refreshLanguage()
         if (missingXpRemaining > 0f && battle.player.era < cfg.maxEra) {
             val missing = kotlin.math.ceil(
                 (Defs.evolveXp[battle.player.era] - battle.player.xp).coerceAtLeast(0f).toDouble()).toInt()
@@ -560,6 +573,7 @@ class BattleScreen(
                 val startedNs = System.nanoTime()
                 while (acc >= Battle.STEP && steps < 20) {
                     battle.step()
+                    battleSummary.capture(battle)
                     achievementEvents.afterStep()
                     acc -= Battle.STEP
                     steps++
@@ -770,6 +784,12 @@ class BattleScreen(
         replayEnd.visible = finished && resultTime > 0.8f && replayBytes != null
         replayEnd.label = L["battle84_watch_replay"]
         replayEnd.iconId = Icons.WATCH_EYE
+        resultStatsTab.visible = finished && resultTime > 0.8f
+        resultChartTab.visible = resultStatsTab.visible
+        resultStatsTab.label = L["bs104_stats"]
+        resultChartTab.label = L["bs104_chart"]
+        resultStatsTab.selected = !showResultChart
+        resultChartTab.selected = showResultChart
 
         val choiceOpen = battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null
         for (i in 0..2) {
@@ -1002,7 +1022,9 @@ class BattleScreen(
             }
             QUIT -> { paused = false; surrendered = commands.surrender() }
             CONTINUE -> g.setScreen(nextScreen())
-            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, replayId, it)) }
+            WATCH_REPLAY -> replayBytes?.let { g.push(ReplayScreen(g, replayId, it, battleSummary)) }
+            201 -> showResultChart = false
+            202 -> showResultChart = true
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 val cards = battle.pendingCards
                 if (cards != null) {
@@ -1244,6 +1266,8 @@ class BattleScreen(
     private fun onFinished() {
         aimingBarrage = false
         finished = true
+        battleSummary.finish(battle)
+        resultChart.prepare(battleSummary, resultChartArea, dp)
         // Kolejka I/O usuwa zrzut w tej samej kolejności co wcześniejsze zapisy.
         g.snapshots?.deleteAsync()
         val pr = g.profile
@@ -2220,15 +2244,18 @@ class BattleScreen(
         ui.ribbon(c, rp.centerX(), rp.top + 2 * dp, resultTitle, 26f,
             if (good) Color.rgb(206, 140, 30) else Color.rgb(140, 40, 40),
             rp.width() * 0.7f, if (good) Color.rgb(255, 246, 200) else Ui.TEXT, rp.width() + 40 * dp)
-        var y = rp.top + 44 * dp
-        if (cfg.mode == Mode.CAMPAIGN && won) {
-            ui.stars(c, rp.centerX(), y + 22 * dp, 46 * dp, resultStars, 3, 1.05f)
-            y += 54 * dp
+        if (showResultChart) {
+            resultChart.draw(c, ui, battleSummary, resultChartArea)
         } else {
-            val iconSize = if (won) 40f else 32f
+        var y = rp.top + 73 * dp
+        if (cfg.mode == Mode.CAMPAIGN && won) {
+            ui.stars(c, rp.centerX(), y + 16 * dp, 32 * dp, resultStars, 3, 1.05f)
+            y += 36 * dp
+        } else {
+            val iconSize = if (won) 28f else 24f
             Icons.draw(c, if (good) Icons.TROPHY else Icons.SKULL,
                 rp.centerX(), y + iconSize * 0.5f * dp, iconSize * dp, dp = dp)
-            y += (if (won) 48f else 36f) * dp
+            y += (if (won) 34f else 28f) * dp
         }
         if (resultCustomSkirmish) {
             ui.textO(c, resultUnrankedText, rp.centerX(), y + 7 * dp,
@@ -2274,7 +2301,10 @@ class BattleScreen(
             drawWrappedLines(c, resultTipLines, min(resultTipCount, available),
                 rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
         }
+        }
         c.restore()
+        if (resultStatsTab.visible) ui.button(c, resultStatsTab, 12f)
+        if (resultChartTab.visible) ui.button(c, resultChartTab, 12f)
         ui.button(c, continueBtn, 17f)
         ui.button(c, restartEnd, 17f)
         if (replayEnd.visible) ui.button(c, replayEnd, 15f)
