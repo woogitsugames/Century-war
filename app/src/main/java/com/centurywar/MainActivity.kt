@@ -437,7 +437,7 @@ class MainActivity : Activity(), Host {
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = ReplayShareProvider.MIME
                 putExtra(Intent.EXTRA_STREAM, uri)
-                clipData = ClipData.newUri(contentResolver, "Century War", uri)
+                clipData = ClipData.newRawUri("Century War", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             try {

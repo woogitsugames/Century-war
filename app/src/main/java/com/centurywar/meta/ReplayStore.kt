@@ -59,13 +59,13 @@ class ReplayStore(private val directory: File) {
                 require(result.winner == record.meta.winner &&
                     result.score == record.meta.score && result.wave == record.meta.wave &&
                     result.time == record.meta.time) { "Wynik nie zgadza się z dziennikiem" }
-                var newId: String
-                do { newId = "friend_" + newId() }
-                while (File(directory, "$newId.cwr").exists())
-                if (!writeAtomic(File(directory, "$newId.cwr"), bytes)) null
+                var importedId: String
+                do { importedId = "friend_" + newId() }
+                while (File(directory, "$importedId.cwr").exists())
+                if (!writeAtomic(File(directory, "$importedId.cwr"), bytes)) null
                 else {
                     prune()
-                    newId.takeIf { File(directory, "$it.cwr").isFile }
+                    importedId.takeIf { File(directory, "$it.cwr").isFile }
                 }
             } catch (_: Exception) { null }
             callback(id)
