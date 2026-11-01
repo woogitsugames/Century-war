@@ -44,6 +44,8 @@ fun Application.leaderboardModule(
     limits: RateLimits = RateLimits(),
     verificationGate: VerificationGate = VerificationGate(),
     verifyReplay: (ScoreSubmission, Long, String) -> VerifiedReplay = ReplayVerifier::verify,
+    metrics: ServerMetrics = ServerMetrics(),
+    metricsToken: String? = null,
 ) {
     val auth = RequestAuthenticator(secret, store, nowMillis)
     val limiter = RateLimiter(nowMillis)
@@ -51,16 +53,43 @@ fun Application.leaderboardModule(
     fun clientIp(call: ApplicationCall): String =
         addresses.resolve(call.request.local.remoteHost, call.request.headers["X-Forwarded-For"])
 
+    suspend fun reportHealth(call: ApplicationCall) {
+        val healthy = withContext(Dispatchers.IO) {
+            runCatching { store.healthy() }.getOrDefault(false)
+        }
+        call.respondText(
+            if (healthy) "ok\n" else "unavailable\n",
+            ContentType.Text.Plain,
+            if (healthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable,
+        )
+    }
+
     routing {
-        get("/healthz") {
-            val healthy = withContext(Dispatchers.IO) {
-                runCatching { store.healthy() }.getOrDefault(false)
+        get("/health") { reportHealth(call) }
+        // Stary adres pozostaje dostępny dla istniejących instalacji.
+        get("/healthz") { reportHealth(call) }
+
+        if (metricsToken != null) {
+            get("/metrics") {
+                val provided = call.request.headers[HttpHeaders.Authorization] ?: ""
+                val expected = "Bearer " + metricsToken
+                if (!MessageDigest.isEqual(
+                        provided.toByteArray(Charsets.UTF_8),
+                        expected.toByteArray(Charsets.UTF_8),
+                    )
+                ) {
+                    call.respondText("unauthorized\n", ContentType.Text.Plain, HttpStatusCode.Unauthorized)
+                    return@get
+                }
+                val count = withContext(Dispatchers.IO) {
+                    runCatching { store.countScores() }.getOrNull()
+                }
+                if (count == null) {
+                    call.respondText("unavailable\n", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
+                    return@get
+                }
+                call.respondText(json.encodeToString(metrics.snapshot(count)), ContentType.Application.Json)
             }
-            call.respondText(
-                if (healthy) "ok\n" else "unavailable\n",
-                ContentType.Text.Plain,
-                if (healthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable,
-            )
         }
 
         post("/v1/player/delete") {
@@ -174,17 +203,27 @@ fun Application.leaderboardModule(
 
             val receivedAt = nowMillis()
             val verification = verificationGate.run {
-                withContext(Dispatchers.Default) { verifyReplay(input, receivedAt, supportedVersion) }
+                withContext(Dispatchers.Default) {
+                    val started = System.nanoTime()
+                    try {
+                        verifyReplay(input, receivedAt, supportedVersion)
+                    } finally {
+                        metrics.verificationDuration(System.nanoTime() - started)
+                    }
+                }
             }
             if (verification == null || verification.exceptionOrNull() is TimeoutCancellationException) {
+                metrics.unavailable()
                 call.response.header("Retry-After", "30")
                 call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")
                 return@post
             }
             if (verification.isFailure) {
+                metrics.invalidReplay()
                 call.fail(HttpStatusCode.UnprocessableEntity, "invalid_replay")
                 return@post
             }
+            metrics.verified()
             val replay = verification.getOrThrow()
             val result = try {
                 store.save(input, replay, receivedAt, sha256(body), ownerHash)
