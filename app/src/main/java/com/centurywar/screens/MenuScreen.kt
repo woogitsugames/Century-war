@@ -40,6 +40,10 @@ class MenuScreen(g: Game) : Screen(g) {
     private val resumeNo = btn(RESUME_NO)
     private val resumePanel = RectF()
     private var resumeInfo = ""
+    private val resumeDescLines = arrayOfNulls<String>(5)
+    private var resumeDescCount = 0
+    private var resumeDescWidth = -1f
+    private var resumeDescLanguage = -1
     private var dt = 0f
 
     private companion object {
@@ -129,6 +133,12 @@ class MenuScreen(g: Game) : Screen(g) {
         val by = resumePanel.bottom - bh - 20 * dp
         resumeNo.set(resumePanel.left + 24 * dp, by, bw, bh)
         resumeYes.set(resumeNo.r.right + gap, by, bw, bh)
+        val descWidth = pw - 48 * dp
+        if (resumeDescWidth != descWidth || resumeDescLanguage != L.lang) {
+            resumeDescWidth = descWidth
+            resumeDescLanguage = L.lang
+            resumeDescCount = HintFrame.wrapInto(ui, L["resume_desc"], descWidth, 14f, resumeDescLines)
+        }
         resumeInfo = g.resumeOffer?.let { o ->
             val b = o.battle
             val mode = when (b.cfg.mode) {
@@ -193,7 +203,11 @@ class MenuScreen(g: Game) : Screen(g) {
         val p = resumePanel
         ui.panel(c, p)
         ui.ribbon(c, p.centerX(), p.top + 4 * dp, L["resume_title"], 22f, Ui.RIBBON, p.width() * 0.6f, Ui.GOLD, p.width() + 20 * dp)
-        ui.wrap(c, L["resume_desc"], p.centerX(), p.top + 52 * dp, p.width() - 48 * dp, 14f, Ui.TEXT, Paint.Align.CENTER)
+        var y = p.top + 52 * dp
+        for (i in 0 until resumeDescCount) {
+            ui.text(c, resumeDescLines[i] ?: "", p.centerX(), y, 14f, Ui.TEXT, Paint.Align.CENTER)
+            y += 14 * dp * ui.textScale * 1.3f
+        }
         if (resumeInfo.isNotEmpty()) {
             ui.textO(c, resumeInfo, p.centerX(), resumeYes.r.top - 16 * dp, ui.fit(resumeInfo, 15f, p.width() - 40 * dp), Ui.GOLD, Paint.Align.CENTER)
         }
