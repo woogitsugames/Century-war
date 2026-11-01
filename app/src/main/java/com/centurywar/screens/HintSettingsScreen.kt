@@ -22,19 +22,23 @@ class HintSettingsScreen(g: Game) : Screen(g) {
     private val toggle = btn(1)
     private val tutorial = btn(2)
     private val reset = btn(3)
-    private val rows = arrayOf(toggle, tutorial, reset)
-    private val keys = arrayOf("hint_enabled", "hint_replay_label", "hint_reset_label")
-    private val icons = intArrayOf(Icons.BOOK, Icons.RESTART, Icons.CHEVRONS)
+    private val eraToggle = btn(4)
+    private val eraReplay = btn(5)
+    private val rows = arrayOf(toggle, tutorial, reset, eraToggle, eraReplay)
+    private val keys = arrayOf("hint_enabled", "hint_replay_label", "hint_reset_label",
+        "era_intro_enabled", "era_intro_again_label")
+    private val icons = intArrayOf(Icons.BOOK, Icons.RESTART, Icons.CHEVRONS, Icons.EVOLVE, Icons.RESTART)
     private val panel = RectF()
     private val row = RectF()
     private var tutorialArmed = 0f
     private var resetArmed = 0f
+    private var eraArmed = 0f
     private var dt = 0f
 
     override fun layout() {
         chrome.layoutBack(back)
         val pw = min(660 * dp, w - g.insetL - g.insetR - 26 * dp)
-        val ph = min(302 * dp, h - chrome.top - g.insetB - 26 * dp)
+        val ph = min(424 * dp, h - chrome.top - g.insetB - 26 * dp)
         val top = chrome.top + 10 * dp + max(0f, (h - chrome.top - g.insetB - ph - 16 * dp) * 0.3f)
         panel.set(w / 2f - pw / 2, top, w / 2f + pw / 2, top + ph)
         val step = (ph - 44 * dp) / rows.size
@@ -43,12 +47,15 @@ class HintSettingsScreen(g: Game) : Screen(g) {
             panel.top + 24 * dp + i * step + 5 * dp, bw, min(44 * dp, step - 10 * dp))
         tutorial.iconId = Icons.RESTART
         reset.iconId = Icons.CHEVRONS
+        eraToggle.iconId = Icons.EVOLVE
+        eraReplay.iconId = Icons.RESTART
     }
 
     override fun update(dt: Float) {
         this.dt = dt
         if (tutorialArmed > 0f) tutorialArmed -= dt
         if (resetArmed > 0f) resetArmed -= dt
+        if (eraArmed > 0f) eraArmed -= dt
         back.label = L["back"]
         toggle.label = L[if (g.profile.hintsEnabled) "on" else "off"]
         toggle.color = if (g.profile.hintsEnabled) Ui.BTN_GREEN else Ui.BTN
@@ -56,6 +63,10 @@ class HintSettingsScreen(g: Game) : Screen(g) {
         tutorial.color = if (tutorialArmed > 0f) Ui.BTN_RED else Ui.BTN
         reset.label = L[if (resetArmed > 0f) "hint_confirm" else "hint_reset"]
         reset.color = if (resetArmed > 0f) Ui.BTN_RED else Ui.BTN
+        eraToggle.label = L[if (g.profile.eraIntrosEnabled) "on" else "off"]
+        eraToggle.color = if (g.profile.eraIntrosEnabled) Ui.BTN_GREEN else Ui.BTN
+        eraReplay.label = L[if (eraArmed > 0f) "hint_confirm" else "era_intro_again"]
+        eraReplay.color = if (eraArmed > 0f) Ui.BTN_RED else Ui.BTN
     }
 
     override fun render(c: Canvas) {
@@ -93,11 +104,23 @@ class HintSettingsScreen(g: Game) : Screen(g) {
                 }
             }
             reset -> {
-                if (resetArmed <= 0f) { resetArmed = 4f; tutorialArmed = 0f }
+                if (resetArmed <= 0f) { resetArmed = 4f; tutorialArmed = 0f; eraArmed = 0f }
                 else {
                     g.profile.replayHints()
                     resetArmed = 0f
                     g.showNotice(L["hint_reset_done"], Icons.CHECK)
+                }
+            }
+            eraToggle -> {
+                g.profile.eraIntrosEnabled = !g.profile.eraIntrosEnabled
+                g.profile.save()
+            }
+            eraReplay -> {
+                if (eraArmed <= 0f) { eraArmed = 4f; tutorialArmed = 0f; resetArmed = 0f }
+                else {
+                    g.profile.replayEraIntros()
+                    eraArmed = 0f
+                    g.showNotice(L["era_intro_again_done"], Icons.CHECK)
                 }
             }
         }
