@@ -58,6 +58,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var renderScale = 1f
     var viewW = 1
     var viewH = 1
+    /** Limit sterty z ActivityManager.memoryClass; testy mogą podstawić słaby telefon. */
+    var bitmapCacheMemoryClassMb = 128
     var quality = Quality(Quality.HIGH)
         private set
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
