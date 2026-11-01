@@ -24,6 +24,14 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Install Android 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Sprawdź kompletność selektorów testów
+        run: |
+          python3 scripts/ci_test_shards.py verify
+          python3 scripts/ci_test_categories.py verify
+      - name: Sprawdź generator Play Games
+        run: |
+          chmod +x ./gradlew
+          ./gradlew -p buildSrc test --console=plain --no-configuration-cache
       - name: Assemble debug
         run: |
           chmod +x ./gradlew
@@ -38,6 +46,13 @@ jobs:
             --tests '*MissionsTest*' \
             --tests '*LTest*' \
             --tests '*PlayGamesIdsTest*' \
+            --tests '*BattleSimTest*' \
+            --tests '*BattleRulesTest*' \
+            --tests '*Snapshot*' \
+            --tests '*Replay*' \
+            --tests '*Counter*' \
+            --tests '*Endless*' \
+            --tests '*AiPersonality*' \
             --console=plain --no-configuration-cache
       - name: Upload test results
         if: ${{ always() }}
