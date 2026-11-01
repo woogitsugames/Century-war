@@ -147,8 +147,19 @@ object L {
         putAll(part109())
         putAll(part108())
         putAll(part110())
+        putAll(part126())
         }
     }
+
+    /** Zlecenie 126: trudność kampanii i osiągnięcie. */
+    private fun part126(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "campaign126_difficulty" to t("Trudność", "Difficulty", "Schwierigkeit", "Dificultad", "Difficulté", "Difficoltà", "Dificuldade", "Складність", "Moeilijkheid", "Zorluk"),
+        "campaign126_easy" to t("Łatwy", "Easy", "Leicht", "Fácil", "Facile", "Facile", "Fácil", "Легкий", "Makkelijk", "Kolay"),
+        "campaign126_normal" to t("Normalny", "Normal", "Normal", "Normal", "Normal", "Normale", "Normal", "Звичайний", "Normaal", "Normal"),
+        "campaign126_hard" to t("Trudny", "Hard", "Schwer", "Difícil", "Difficile", "Difficile", "Difícil", "Складний", "Moeilijk", "Zor"),
+        "ach_campaign_hard" to t("Mistrz trudnej kampanii", "Hard Campaign Master", "Meister der schweren Kampagne", "Maestro de campaña difícil", "Maître de la campagne difficile", "Maestro della campagna difficile", "Mestre da campanha difícil", "Майстер складної кампанії", "Meester van de moeilijke campagne", "Zor sefer ustası"),
+        "ach_campaign_hard_d" to t("Wygraj wszystkie etapy kampanii na Trudnym.", "Win every campaign stage on Hard.", "Gewinne alle Kampagnenstufen auf Schwer.", "Gana todas las etapas en Difícil.", "Gagnez toutes les étapes en Difficile.", "Vinci tutte le tappe a Difficile.", "Vence todas as fases no Difícil.", "Переможи на всіх етапах на Складному.", "Win alle campagnelevels op Moeilijk.", "Tüm sefer bölümlerini Zor'da kazan."),
+    )
 
     /** Zlecenie 92: stan PGS w kompilacji bez identyfikatorów. */
     private fun part92(): Array<Pair<String, Array<out String>>> = arrayOf(
