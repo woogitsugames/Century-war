@@ -81,7 +81,9 @@ class ScreenshotTest {
             override fun exit() {}
         }
         val f = File.createTempFile("profile", ".json").apply { delete() }
-        val g = Game(host, Profile(f).apply { tutorialDone = true; medals = 340 }, q)
+        // Język profilu musi być znany przed Game, który nadaje domyślne imię.
+        val profile = Profile(f).apply { lang = "pl"; tutorialDone = true; medals = 340 }
+        val g = Game(host, profile, q)
         g.density = density
         g.resize(w, h, w, h)
         return g
