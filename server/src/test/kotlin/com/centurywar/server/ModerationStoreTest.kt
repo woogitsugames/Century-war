@@ -51,7 +51,7 @@ class ModerationStoreTest {
                 assertEquals(1, store.top("campaign_7", "all", now).size)
                 store.blockPlayer(first.player)
                 store.deletePlayer(first.player)
-                assertFalse(store.isBlocked(first.player))
+                assertTrue(store.isBlocked(first.player)) // Usunięcie danych nie zdejmuje blokady.
                 assertTrue(store.around("endless", "all", now, first.player).isEmpty())
             }
         } finally {

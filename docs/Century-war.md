@@ -90,7 +90,9 @@ Scalone do `main` wszystkie zlecenia GPT 19–38 (kolejność: 19, 20, 24, 27, 2
 
 1. Warianty epok (28) zbalansowane (STEAM 0,5 pp, SILICON 4 pp przy 400 pojedynkach; `docs/BALANCE.md`). Po zmianach wariantów warto powtórzyć pomiar kampanii.
 2. Zebrać wrażenia użytkownika z APK (telefon, Galaxy Fold) i poprawiać.
-3. Zlecenia 19–38 są zamknięte; nowe zlecenia GPT pisać według wzoru w `docs/tasks/`.
+3. Zlecenia 19–67 są zamknięte i scalone (tura 3: 39–52, tura 4: 53–67). Nowe zlecenia GPT pisać według wzoru w `docs/tasks/` (każde zlecenie dodaje teksty we własnej funkcji `partNN()` w `L.kt`).
+4. Testy Robolectric widzą zasoby aplikacji (`isIncludeAndroidResources`). Zapis profilu jest w tle — w testach po `save()` wołaj `Profile.awaitHintWrites()`.
+5. Długie komendy (pełne testy ok. 45 min) uruchamiaj narzędziem Bash z `run_in_background`, nie przez `&` — procesy z `&` giną po zakończeniu tury.
 
 ## Otwarte sprawy i ryzyka
 
