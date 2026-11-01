@@ -38,9 +38,10 @@ class ReplayShareProviderTest {
             FileInputStream(fd.fileDescriptor).use { it.readBytes().toList() }
         })
         provider.query(uri, null, null, null, null).use { cursor ->
-            assertTrue(cursor!!.moveToFirst())
-            assertEquals("share73.cwr", cursor.getString(
-                cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)))
+            val row = requireNotNull(cursor)
+            assertTrue(row.moveToFirst())
+            assertEquals("share73.cwr", row.getString(
+                row.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)))
         }
         try {
             provider.openFile(uri, "w")

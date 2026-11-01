@@ -26,7 +26,9 @@ class ReplayImportTest {
         val cfg = BattleConfig(Mode.SKIRMISH, 117L, 1f)
         val battle = Battle(cfg)
         val controller = BattleController(battle)
-        controller.surrender()
+        repeat(180) { if (!battle.over) battle.step() }
+        if (!battle.over) controller.surrender()
+        assertTrue("Test wymaga rzeczywistego przebiegu bitwy", controller.log().steps >= 120)
         return ReplayRecord.encode(cfg, controller.log(),
             ReplayRecord.Meta(cfg.mode, cfg.stageIndex, battle.winner, battle.score(),
                 battle.time, battle.wave, 1_792_000_000_000L, "Przyjaciel"))
@@ -78,6 +80,16 @@ class ReplayImportTest {
         assertNull(import(store, broken))
         val wrongVersion = recording().also { it[11] = (it[11].toInt() + 1).toByte() }
         assertNull(import(store, wrongVersion))
+        val cfg = BattleConfig(Mode.SKIRMISH, 117L, 1f)
+        val battle = Battle(cfg)
+        val ctrl = BattleController(battle)
+        ctrl.surrender()
+        val valid = ReplayRecord.Meta(cfg.mode, cfg.stageIndex, battle.winner,
+            battle.score(), battle.time, battle.wave, 1_792_000_000_000L, "Przyjaciel")
+        val falseScore = ReplayRecord.encode(cfg, ctrl.log(),
+            valid.copy(score = valid.score + 1000))
+        assertNull("Poprawny CRC nie wystarcza: wynik musi zgadzać się z bitwą",
+            import(store, falseScore))
         var count = -1
         val done = CountDownLatch(1)
         store.listAsync { count = it.size; done.countDown() }
