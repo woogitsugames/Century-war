@@ -391,3 +391,44 @@ przed wydaniem warto sprawdzić większą próbę seedów.
 **Zgodność:** zmiana symulacji wymaga od koordynatora aktualizacji wersji
 rankingu w aplikacji i serwerze. `BattleSnapshot.VERSION` podniesiono do 13
 z uwagi na `Fighter.slowLeft`. Dotychczasowe snapshoty v12 są odrzucane.
+
+## Zlecenie 82 — limity odnowienia, eliminacja pustych ofert i malejące stosy (1.11.2026)
+
+**Reguły:**
+- `abilityCdMul` nie spada poniżej **0,35** (badania, karty, doktryny i zdarzenie dnia; również przy nałożeniu odnowienia).
+- Karty, których ograniczony efekt osiągnął limit, przestają być losowane: klonowanie (0,6), elity na falę (4), leczenie na falę (0,3), limit armii (72), autoostrzał (15 s), sloty wież, odnowienie przy 0,35 i leczenie pełnej bazy. `BANNER` wymaga Zrywu, `VIGILANCE` bez mgły wzmacnia tylko zasięg wież.
+- Trwałe efekty kart otrzymują pełny pierwszy stos; kolejne mają odpowiednio **60%, 40%, 30%, 20%, 15%, 10%, 5%** siły pojedynczej premii. Po ośmiu stosach karta nie pojawia się ponownie. Skumulowana *addytywna* siła premii wynosi maksymalnie 2,8 jednostki pierwszego stosu, a mnożniki nadal składają się multiplikatywnie.
+- `SUPPLY`: natychmiastowe 250 złota w skali epoki i dotychczasowe +30% złota z zabójstw przez 60 s. Opis w dziesięciu językach uwzględnia obie nagrody.
+
+**Pomiar Endless A/B:** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
+
+| Metryka (20 seedów) | Przed (gałąź bazowa) | Po (zlecenie 82) |
+|---|---:|---:|
+| Średnia osiągnięta fala (`ENDLESS_MEAN`) | 50,05 | **50,10** |
+| Zmiana średniej | — | **+0,05 fali (+0,10%)** |
+| Mediana fali porażki (tylko zakończone porażką) | 53 | **54** |
+| Porażki przed falą 60 | 17/20 | **20/20** |
+| Przetrwanie fali 20 | 20/20 | 20/20 |
+| Przetrwanie fali 30 | 20/20 | 19/20 |
+| Przetrwanie fali 40 | 16/20 | 16/20 |
+| Przetrwanie fali 50 | 13/20 | 15/20 |
+| Przetrwanie fali 60 | 3/20 | **0/20** |
+
+**Rozkład osiągniętych fal przed/po (ten sam seed):**
+
+| Seed | Przed | Po | Seed | Przed | Po |
+|---|---:|---:|---|---:|---:|
+| 1001 | 60* | 54 | 1011 | 55 | 55 |
+| 1002 | 41 | 54 | 1012 | 60* | 35 |
+| 1003 | 53 | 54 | 1013 | 46 | 56 |
+| 1004 | 53 | 56 | 1014 | 36 | 53 |
+| 1005 | 54 | 56 | 1015 | 58 | 57 |
+| 1006 | 53 | 54 | 1016 | 53 | 23 |
+| 1007 | 53 | 38 | 1017 | 58 | 36 |
+| 1008 | 38 | 57 | 1018 | 45 | 44 |
+| 1009 | 35 | 54 | 1019 | 34 | 54 |
+| 1010 | 60* | 57 | 1020 | 56 | 55 |
+
+`*` — osiągnięto limit pomiaru (fala 60), baza nie została pokonana.
+
+**Wniosek:** średnia fala praktycznie się nie zmieniła (+0,10%, poniżej limitu +10% w CI), ale ogon wyników się zmienił: w nowych regułach żaden z 20 seedów nie dotarł do fali 60, podczas gdy poprzednio trzy. To nie dowodzi równego balansu późnych fal; wymaga ponownej oceny przy większej liczbie seedów i sterowaniu człowieka. Regresję mechaniki pokrywają `SimBalanceCaps82Test`, `DoctrineBalance82Test`, testy snapshotów i powtórek. Test AI obejmuje 13 doktryn × 20 seedów × dwie strony, z progiem 40–60%; szczegółowe wyniki należy odczytać z `sim-balance-82.yml` (nie należy zakładać, że wszystkie mieszczą się w przedziale bez odczytania wyniku).
