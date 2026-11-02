@@ -220,58 +220,58 @@ import/eksport powtórek i wznawianie zapisów.
 
 ## Audyt trwałych danych po R8 (zlecenie 148)
 
-Smoke-test \`.github/workflows/release-check.yml\` buduje \`:app:assembleRelease\`
-i \`:app:bundleRelease\` z **syntetycznymi** identyfikatorami Play Games
-(\`scripts/ci_synthetic_play_games_ids.py\`) i podpisem debugowym dozwolonym
+Smoke-test `.github/workflows/release-check.yml` buduje `:app:assembleRelease`
+i `:app:bundleRelease` z **syntetycznymi** identyfikatorami Play Games
+(`scripts/ci_synthetic_play_games_ids.py`) i podpisem debugowym dozwolonym
 **wyłącznie** w CI. Te paczki nie są przeznaczone do Play Console.
 
-\`app/proguard-rules.pro\` chroni nazwy klas i pól odpowiedzialnych za:
-JSON profilu (\`Profile\`, \`ScoreEntry\`), zrzut bitwy (\`BattleSnapshot\`,
-\`RestoredBattle\`, \`SnapshotStore\`, \`BattleConfig\`, \`Bonuses\`) oraz
-powtórki (\`Replay\`, \`Replay.Command\`, \`Replay.Log\`, \`ReplayRecord\`
-i jego modele). Dodano też \`CampaignDifficulty\` do listy enumów o
+`app/proguard-rules.pro` chroni nazwy klas i pól odpowiedzialnych za:
+JSON profilu (`Profile`, `ScoreEntry`), zrzut bitwy (`BattleSnapshot`,
+`RestoredBattle`, `SnapshotStore`, `BattleConfig`, `Bonuses`) oraz
+powtórki (`Replay`, `Replay.Command`, `Replay.Log`, `ReplayRecord`
+i jego modele). Dodano też `CampaignDifficulty` do listy enumów o
 trwałych ordinalach. Osobne reguły Play Games dostarcza SDK.
 
 **Uwaga o kompatybilności:** zapis JSON używa jawnych kluczy tekstowych,
 a snapshoty i powtórki zapisują jawne bajty, nie serializują pól przez
 refleksję. Nazwy JVM nie są częścią formatu plików. Zachowanie nazw pól
-jest dodatkową barierą, a nie zamiennikiem testów \`ProfileTest\`,
-\`BattleSnapshotTest\`, \`ReplayTest\` i testu na rzeczywistym urządzeniu.
+jest dodatkową barierą, a nie zamiennikiem testów `ProfileTest`,
+`BattleSnapshotTest`, `ReplayTest` i testu na rzeczywistym urządzeniu.
 Nie zmieniaj kolejności enumów ani wersji formatów bez osobnej migracji.
 
-Po kompilacji release skrypt \`scripts/verify_release_mapping.py\`
-weryfikuje \`mapping.txt\` i \`usage.txt\`: wymagane klasy istnieją
+Po kompilacji release skrypt `scripts/verify_release_mapping.py`
+weryfikuje `mapping.txt` i `usage.txt`: wymagane klasy istnieją
 pod niezmienionymi nazwami, krytyczne pola nie są usunięte ani
 przemianowane, a wybrane stałe enumów zachowują nazwy. Niezależny
-\`verify_release_dex.py\` potwierdza obecność klas w rzeczywistym DEX.
+`verify_release_dex.py` potwierdza obecność klas w rzeczywistym DEX.
 Nie wystarczy sam test debug.
 
-\`\`\`bash
+```bash
 python3 -m unittest discover -s tests -p 'test_verify_release_mapping.py' -v
 python3 scripts/verify_release_mapping.py \
   --mapping app/build/outputs/mapping/release/mapping.txt \
   --usage app/build/outputs/mapping/release/usage.txt
-\`\`\`
+```
 
-Wynik trafia do \`build/release-metrics/mapping-audit.txt\` w artefakcie
-\`release-walidacja\`. Błąd mapowania przerywa workflow przed testem
+Wynik trafia do `build/release-metrics/mapping-audit.txt` w artefakcie
+`release-walidacja`. Błąd mapowania przerywa workflow przed testem
 na emulatorze.
 
 ### Rozmiar APK/AAB i czas uruchomienia
 
 **Nie wpisuj rozmiarów szacunkowych.** Wartości dla bieżącego commita
-należy odczytać po udanym przebiegu \`release-check.yml\` z
-\`build/release-metrics/rozmiary.md\` (APK i AAB oddzielnie).
+należy odczytać po udanym przebiegu `release-check.yml` z
+`build/release-metrics/rozmiary.md` (APK i AAB oddzielnie).
 Poniżej miejsce na wynik zweryfikowanego buildu R8:
 
 | Pomiar | Wynik | Źródło |
 | --- | --- | --- |
-| APK release / R8 / podpis CI | n/d do zakończenia CI | \`release-walidacja/rozmiary.md\` |
-| AAB release / R8 / podpis CI | n/d do zakończenia CI | \`release-walidacja/rozmiary.md\` |
-| Start debug / release (median z 5 prób) | n/d do pomiaru na telefonie | \`adb shell am start -W\` |
+| APK release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
+| AAB release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
+| Start debug / release (median z 5 prób) | n/d do pomiaru na telefonie | `adb shell am start -W` |
 
-\`n/d\` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms.
-Raport \`rozmiary.md\` zawiera też zmianę względem commita bazowego PR,
+`n/d` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms.
+Raport `rozmiary.md` zawiera też zmianę względem commita bazowego PR,
 największe składniki ZIP i liczbę zmapowanych klas.
 Rozmiar paczki nie odpowiada rozmiarowi instalacji z Google Play.
 
@@ -282,14 +282,14 @@ niedrogim telefonie z 2–3 GB RAM i na dużym ekranie. Używaj tej samej
 wersji danych gry w debug i release. Zapisz model telefonu, Androida,
 wersję aplikacji, datę UTC i wynik każdego punktu (OK / BŁĄD).
 
-- [ ] **Instalacja:** zainstaluj APK release z CI lokalnie przez \`adb install\`.
+- [ ] **Instalacja:** zainstaluj APK release z CI lokalnie przez `adb install`.
   Sprawdź uruchomienie bez crasha. Nie próbuj aktualizować APK o innym
   certyfikacie bez wcześniejszej deinstalacji; osobno przetestuj aktualizację
   podpisaną *tym samym* kluczem i zachowanie danych.
 - [ ] **Zimny start:** wymuś zatrzymanie procesu i uruchom aplikację
-  przez \`adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity\`.
+  przez `adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity`.
   Powtórz 5 razy dla debug i release na tym samym urządzeniu, zanotuj
-  medianę \`TotalTime\` / \`WaitTime\`. \`CWStartup\` w debug mierzy osobno
+  medianę `TotalTime` / `WaitTime`. `CWStartup` w debug mierzy osobno
   pierwszą klatkę menu, więc nie porównuj tych różnych metryk.
 - [ ] **Bitwa:** rozegraj i zakończ etap kampanii, potyczkę oraz
   wyzwanie dnia; sprawdź wyniki, medale, statystyki i ekran po walce.
@@ -303,11 +303,11 @@ wersję aplikacji, datę UTC i wynik każdego punktu (OK / BŁĄD).
 - [ ] **Język:** zmień język w ustawieniach (w tym PL, EN i drugi
   wybrany język), przejdź przez menu i HUD oraz uruchom ponownie.
   Teksty nie mogą znikać ani mieszać języków.
-- [ ] **Kopia profilu:** w Ustawieniach wyeksportuj plik \`.cwprofile\`,
+- [ ] **Kopia profilu:** w Ustawieniach wyeksportuj plik `.cwprofile`,
   zmień postęp lub ustawienia i zaimportuj kopię. Sprawdź zgodę
   na zastąpienie profilu oraz możliwość przywrócenia kopii sprzed importu.
-  Eksport nie powinien zawierać \`playerSecret\`; nie zawiera też
-  \`battle.snap\`, historii i powtórek. Osobno sprawdź systemowy backup
+  Eksport nie powinien zawierać `playerSecret`; nie zawiera też
+  `battle.snap`, historii i powtórek. Osobno sprawdź systemowy backup
   Androida, jeśli scenariusz testu dotyczy przenosin urządzenia.
 - [ ] **Powiadomienie:** włącz przypomnienie o wyzwaniu dnia, udziel
   uprawnienia do powiadomień na Androidzie 13+, ustaw godzinę,
@@ -343,7 +343,7 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
    e-mail albo URL do zgłaszania opinii. Skopiuj link zapisu
    **opt-in**. Samo dodanie adresu do listy **nie zapisuje testera**.
 4. Otwórz kartę **Releases → Create new release**. Wgraj
-   \`app/build/outputs/bundle/release/app-release.aab\` podpisany
+   `app/build/outputs/bundle/release/app-release.aab` podpisany
    prawdziwym kluczem upload. Uzupełnij notatki wydania, przejrzyj
    ostrzeżenia i wybierz **Review release / Start rollout to closed testing**.
    Po publikacji i ewentualnej weryfikacji link może aktywować się z
