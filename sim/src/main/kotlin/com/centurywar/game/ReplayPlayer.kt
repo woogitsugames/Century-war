@@ -7,7 +7,7 @@ package com.centurywar.game
 class ReplayPlayer(val cfg: BattleConfig, val log: Replay.Log) {
     private data class Keyframe(val step: Int, val commandIndex: Int, val bytes: ByteArray)
 
-    var battle: Battle = Battle(cfg, turretTiersEnabled = log.version >= 6)
+    var battle: Battle = Battle(cfg, turretTiersEnabled = log.version >= 6, commanderEnabled = log.version >= 7)
         private set
     private var controller = BattleController(battle)
     private val keyframes = ArrayList<Keyframe>()
@@ -112,7 +112,7 @@ class ReplayPlayer(val cfg: BattleConfig, val log: Replay.Log) {
         if (wanted < battle.stepCount || (battle.over && wanted != battle.stepCount)) {
             val frame = keyframes.lastOrNull { it.step <= wanted }
             if (frame == null) {
-                battle = Battle(cfg, turretTiersEnabled = log.version >= 6)
+                battle = Battle(cfg, turretTiersEnabled = log.version >= 6, commanderEnabled = log.version >= 7)
                 battle.playerAi = null
                 controller = BattleController(battle)
                 commandIndex = 0
