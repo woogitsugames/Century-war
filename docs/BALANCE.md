@@ -418,7 +418,7 @@ powtórki/ranking; nie wywołuj regeneracji automatycznie w zwykłym CI.
 - Karty, których ograniczony efekt osiągnął limit, przestają być losowane: klonowanie (0,6), elity na falę (4), leczenie na falę (0,3), limit armii (72), autoostrzał (15 s), sloty wież, odnowienie przy 0,35 i leczenie pełnej bazy. `BANNER` wymaga Zrywu, `VIGILANCE` bez mgły wzmacnia tylko zasięg wież.
 - Trwałe efekty kart otrzymują pełny pierwszy stos; kolejne mają odpowiednio **60%, 40%, 30%, 20%, 15%, 10%, 5%** siły pojedynczej premii. Po ośmiu stosach karta nie pojawia się ponownie. Skumulowana *addytywna* siła premii wynosi maksymalnie 2,8 jednostki pierwszego stosu, a mnożniki nadal składają się multiplikatywnie.
 - `SUPPLY`: natychmiastowe 15 złota w skali epoki (po scaleniu z innymi paczkami obniżone z 25, by lustrzany test doktryn mieścił się w 40–60%) i dotychczasowe +30% złota z zabójstw przez 60 s.
-- W zwykłych pojedynkach doktryny `BULWARK`, `FURY` i `PLUNDER` mają osłabione wartości (odpowiednio 5%/3%, 8% i 8%) po audycie lustrzanym. **Karty Endless zachowują pierwszą historyczną premię** (20%/10%, 12% i 35%); ich kolejne stosy są wygaszane według powyższej tabeli. Opisy ofert rozróżniają te tryby. Opis w dziesięciu językach uwzględnia obie nagrody.
+- W zwykłych pojedynkach doktryny `BULWARK`, `FURY` i `PLUNDER` mają osłabione wartości (odpowiednio 5%/3%, 8% i 8%; od tury 10 `PLUNDER` 6%) po audycie lustrzanym. **Karty Endless zachowują pierwszą historyczną premię** (20%/10%, 12% i 35%); ich kolejne stosy są wygaszane według powyższej tabeli. Opisy ofert rozróżniają te tryby. Opis w dziesięciu językach uwzględnia obie nagrody.
 
 **Pomiar referencyjny Endless A/B na wcześniejszej rewizji (przed końcową korektą doktryn i złota SUPPLY; wynik nie jest pomiarem bieżącego HEAD):** [GitHub Actions #41309004679](https://github.com/woogitsugames/Century-war/actions/runs/41309004679), zadanie `EndlessBalanceReportTest.veteranTwentySeeds`. Seedy **1001–1020**, badania weterana 80%, sterowanie `Ai`, maksymalnie 90 000 kroków albo fala 60. Przebieg bazowy i zmodyfikowany wykonano w tej samej akcji, z osobnego worktree dla bazy. Fala 60 w tych danych oznacza również ucięcie pomiaru, niekoniecznie porażkę.
 
@@ -1340,3 +1340,72 @@ Mediany czasu bitwy po zmianie (z dowódcą, docelowy): 16–18 12,4–13,8 min,
   z pełnymi badaniami. Gracz „z medali” nadal ma tam ok. 50%.
 
 - 2026-11-02 — regeneracja złotych powtórek: Tura 10: lzejsze etapy 16-18 i 34-36.
+
+- 2026-11-02 — regeneracja złotych powtórek: Tura 10: doktryny Grabież i Arsenał.
+
+## Tura 10 — wyrównanie Grabieży i Arsenału (2.11.2026)
+
+**Decyzja właściciela:** lekko wyrównać dwie doktryny z brzegów pasma testu lustrzanego
+(PLUNDER 63,5%, ARSENAL 42%); cel obu ok. 47–58%.
+
+**Zmiany reguł (`Battle.applyDoctrine`):**
+
+| Doktryna | Przed | Po | Zakres |
+|---|---|---|---|
+| PLUNDER (Grabież) | +8% złota za zabójstwa | **+6%** | kampania, potyczka, dzienne itd.; karta Endless bez zmian (+35%) |
+| ARSENAL (Arsenał) | +1 slot wieży, −20% kosztu wież | +1 slot, **−35%** kosztu wież | wszystkie tryby, także karta Endless |
+
+ARSENAL zmieniono również w Endless, bo karta Endless „Arsenał” korzysta z tego samego opisu
+`d_arsenal_d` (osobny opis wymagałby zmiany ekranu bitwy). Opisy `d_plunder_d` i `d_arsenal_d`
+poprawione w 10 językach, klucze bez zmian. `SimVersion.PROTOCOL` 0.8.1 → 0.8.2; złote powtórki
+zregenerowane bez zmian wyników (żadna nie używa tych doktryn).
+
+**Siatka strojenia (DoctrineBalance82, 200 bitew na wartość):** PLUNDER 0,08/0,06/0,05/0,04 →
+63,5/58/51/55%; ARSENAL koszt −20/−30/−35/−40/−50% → 42/56,5/52,5/48/48%; dodatkowe +10–15%
+obrażeń wież przy ARSENAL nie pomagało (−20% i +15%: 42,5%). Pierwszy wybór 0,05 i −35%
+(51% / 52,5%) łamał `AiPersonalityProfileTest` (sim): osobowość SIEGER, która czasem bierze
+Grabież, spadała do 27,5% wygranych przy progu 30% (przy 0,08 i −35%: 32,5%; 0,04: 27,5%;
+0,05 z −30%: 25%). Ostatecznie **+6% i −35%**: SIEGER 30% (test zielony), PLUNDER 58% —
+na górnej granicy celu 47–58%. SIEGER był na granicy progu już przed zmianą.
+
+**DoctrineBalance82 (lustrzany, seedy 82000–82099 z zamianą stron, z dowódcą):**
+
+| Doktryna | Przed | Po |
+|---|---:|---:|
+| ECONOMY | 57,5% | 57,5% |
+| SIEGE | 50,5% | 50,5% |
+| BULWARK | 58,5% | 58,5% |
+| SWIFT | 47,5% | 47,5% |
+| VETERAN | 57,5% | 57,5% |
+| FURY | 59,5% | 59,5% |
+| ARSENAL | 42% | **52,5%** |
+| TACTICS | 53,5% | 53,5% |
+| PLUNDER | 63,5% | **58%** |
+| BANNER | 46,5% | 46,5% |
+| SUPPLY | 57,5% | 57,5% |
+| SIEGE_MASTERS | 50% | 50% |
+| VIGILANCE | 52,5% | 52,5% |
+
+Pozostałe doktryny są deterministycznie identyczne (zmiana dotyczy tylko strony z PLUNDER/ARSENAL).
+Rozrzut po zmianie: 46,5–59,5% (wcześniej 42–63,5%).
+
+**Endless (`BalanceReport.endlessCommanderReport`, weteran, 100 seedów, dowódca obu stron;
+zmienia go tylko ARSENAL −35%, Grabież w Endless bez zmian):**
+śr. fala 50,50 → 50,85, fala 40 82 → 84/100, fala 50 79 → 80/100, **fala 60 7 → 8/100**
+(cel 5–15/100 zachowany).
+
+**Kampania (`BalanceReport.campaignReport`, profil docelowy, AI kampanii wybiera doktryny wg osobowości;
+„po” = ostateczne +6% / −35%):**
+
+| Etap | Profil | N | Przed | Po |
+|---:|---|---:|---:|---:|
+| 6 | nowy | 40 | 100% | 100% |
+| 12 | początkujący | 40 | 70% | 70% |
+| 18 | początkujący | 40 | 62,5% | 62,5% |
+| 24 | średni | 100 | 56% | 58% |
+| 30 | weteran | 40 | 60% | 60% |
+| 34 | weteran | 100 | 70% | 70% |
+| 35 | weteran | 100 | 67% | 67% |
+| 36 | weteran | 100 | 76% | 74% |
+
+Bez wyraźnych zmian w kampanii (różnice ±2 bitwy na 100; mediany czasu ±0,5 min).

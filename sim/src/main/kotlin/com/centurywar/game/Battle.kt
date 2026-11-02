@@ -760,12 +760,14 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                 // Modyfikator zakazu wież ma pierwszeństwo przed doktryną.
                 if (Modifier.NO_TURRETS !in cfg.modifiers && side.slots > 0) {
                     side.slots = min(Defs.MAX_TURRET_SLOTS, side.slots + 1)
-                    side.turretCostMul *= 1f - 0.2f * power
+                    // Tura 10: -35% (wcześniej -20%), także w Endless (fala 60: 7 -> 8/100).
+                    side.turretCostMul *= 1f - 0.35f * power
                 }
             }
             Doctrine.TACTICS ->
                 side.abilityCdMul = max(MIN_ABILITY_CD_MUL, side.abilityCdMul * (1f - 0.25f * power))
-            Doctrine.PLUNDER -> side.killGoldMul *= 1f + (if (endless) 0.35f else 0.08f) * power
+            // Tura 10: poza Endless +6% (wcześniej +8%); karta Endless bez zmian.
+            Doctrine.PLUNDER -> side.killGoldMul *= 1f + (if (endless) 0.35f else 0.06f) * power
             Doctrine.BANNER -> side.rallyArmorMul *= 1f - 0.15f * power
             Doctrine.SUPPLY -> {
                 side.gold += SUPPLY_INSTANT_GOLD * Defs.costScale(side.era) * power
