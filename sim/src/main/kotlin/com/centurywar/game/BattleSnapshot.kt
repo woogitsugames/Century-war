@@ -444,6 +444,8 @@ object BattleSnapshot {
  */
 class SnapshotStore(private val file: File) {
     private val tmp = File(file.parentFile, file.name + ".tmp")
+    private val backup = File(file.parentFile, file.name + ".bak")
+    private val backupTmp = File(file.parentFile, file.name + ".bak.tmp")
     private val lock = Any()
     private var seq = 0L
     private var written = 0L
@@ -451,7 +453,7 @@ class SnapshotStore(private val file: File) {
         Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
     }
 
-    /** Zapis w tle. Zamek chroni wyłącznie numerację, nigdy fsync. */
+    /** Zapis w tle. Zamek chroni tylko numerację, nigdy fsync. */
     fun saveAsync(bytes: ByteArray) {
         val my = synchronized(lock) { ++seq }
         io.execute {
@@ -468,7 +470,10 @@ class SnapshotStore(private val file: File) {
                 if (synchronized(lock) { my != seq || my <= written }) false
                 else writeAtomic(bytes).also { if (it) synchronized(lock) { written = my } }
             }.get(10, TimeUnit.SECONDS)
-        } catch (_: Exception) { false }
+        } catch (e: Exception) {
+            SaveGuard.report("snapshot-save", e)
+            false
+        }
     }
 
     /** Usunięcie z wątku gry odbywa się także poza nim. */
@@ -476,9 +481,7 @@ class SnapshotStore(private val file: File) {
         val my = synchronized(lock) { ++seq }
         io.execute {
             if (synchronized(lock) { my != seq }) return@execute
-            GameIoCounter.diskAccess()
-            file.delete()
-            tmp.delete()
+            removeFiles()
             synchronized(lock) { written = my }
         }
     }
@@ -500,65 +503,87 @@ class SnapshotStore(private val file: File) {
         val my = synchronized(lock) { ++seq }
         try {
             io.submit {
-                GameIoCounter.diskAccess()
-                file.delete()
-                tmp.delete()
+                removeFiles()
                 synchronized(lock) { written = my }
             }.get(10, TimeUnit.SECONDS)
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            SaveGuard.report("snapshot-delete", e)
+        }
+    }
+
+    private fun removeFiles() {
+        GameIoCounter.diskAccess()
+        for (candidate in arrayOf(file, tmp, backup, backupTmp))
+            if (candidate.exists() && !candidate.delete()) SaveGuard.report("snapshot-delete")
     }
 
     fun load(): ByteArray? = synchronized(lock) {
         GameIoCounter.diskAccess()
         try {
             if (!file.isFile || file.length() > (1 shl 20)) null else file.readBytes()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            SaveGuard.report("snapshot-read", e)
             null
         }
     }
 
-    /** Poprawny .tmp po przerwanym rename jest odzyskiwany bez utraty starego pliku. */
+    /** Wczytuje poprawny zapis główny, .tmp albo ostatnią bezpieczną kopię. */
     fun loadBattle(): RestoredBattle? {
         GameIoCounter.diskAccess()
-        val candidates = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
+        val originals = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
             else arrayOf(file, tmp)
-        var found = false
-        for (candidate in candidates) {
+        val backups = if (backupTmp.lastModified() >= backup.lastModified()) arrayOf(backupTmp, backup)
+            else arrayOf(backup, backupTmp)
+        for (candidate in originals + backups) {
+            if (!candidate.exists()) continue
             val bytes = try {
-                if (!candidate.isFile || candidate.length() > (1 shl 20)) null
-                else candidate.readBytes()
-            } catch (_: Exception) { null }
-            if (bytes == null) continue
-            found = true
-            val restored = BattleSnapshot.decode(bytes)
-            if (restored != null && !restored.battle.over) {
-                if (candidate == tmp) {
-                    try {
-                        java.nio.file.Files.move(tmp.toPath(), file.toPath(),
-                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-                    } catch (_: Exception) { }
-                }
-                return restored
+                if (!candidate.isFile || candidate.length() !in 16L..(1 shl 20).toLong()) {
+                    SaveGuard.report("snapshot-size")
+                    null
+                } else candidate.readBytes()
+            } catch (e: Exception) {
+                SaveGuard.report("snapshot-read", e)
+                null
+            } ?: continue
+            // Nie nadpisuj zrzutu stworzonego przez nowszą wersję aplikacji.
+            val header = DataInputStream(ByteArrayInputStream(bytes))
+            if (header.readInt() == 0x43575342 && header.readInt() > BattleSnapshot.VERSION) {
+                SaveGuard.report("snapshot-version")
+                return null
             }
+            val restored = BattleSnapshot.decode(bytes)
+            if (restored == null) {
+                SaveGuard.report("snapshot-format")
+                continue
+            }
+            if (restored.battle.over) {
+                delete()
+                return null
+            }
+            if (candidate != file) {
+                try {
+                    SaveGuard.atomicWrite(file, bytes)
+                } catch (e: Exception) {
+                    SaveGuard.report("snapshot-recovery", e)
+                }
+            }
+            return restored
         }
-        if (found) delete()
+        // Zapis niekompatybilny zostaje do diagnostyki / migracji, profil nie jest dotykany.
         return null
     }
 
     private fun writeAtomic(bytes: ByteArray): Boolean = try {
         GameIoCounter.diskAccess()
-        file.parentFile?.mkdirs()
-        FileOutputStream(tmp).use { it.write(bytes); it.flush(); it.fd.sync() }
-        if (tmp.renameTo(file)) true
-        else try {
-            java.nio.file.Files.move(tmp.toPath(), file.toPath(),
-                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-            true
-        } catch (_: Exception) { false }
-    } catch (_: Exception) {
-        // Niedokończony .tmp może być odzyskany przy następnym starcie.
+        SaveGuard.atomicWrite(file, bytes)
+        try {
+            SaveGuard.writeBackup(file, bytes)
+        } catch (e: Exception) {
+            SaveGuard.report("snapshot-backup", e)
+        }
+        true
+    } catch (e: Exception) {
+        SaveGuard.report("snapshot-write", e)
         false
     }
 }

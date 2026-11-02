@@ -163,8 +163,24 @@ object L {
         putAll(part145())
         putAll(part150())
         putAll(part151())
+        putAll(part154())
         }
     }
+
+    /** Ostrzeżenie o nieudanym zapisie lub odzyskaniu danych. */
+    private fun part154(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "save154_problem" to t(
+            "Problem z zapisem. Sprawdź wolne miejsce. Postęp odzyskano, jeśli było to możliwe.",
+            "Save problem. Check available storage. Progress was recovered where possible.",
+            "Speicherproblem. Prüfe den freien Speicher. Fortschritt wurde nach Möglichkeit gerettet.",
+            "Error al guardar. Comprueba el espacio libre. Se recuperó el progreso si fue posible.",
+            "Problème de sauvegarde. Vérifiez l'espace libre. Progression récupérée si possible.",
+            "Problema di salvataggio. Controlla lo spazio libero. Progressi recuperati se possibile.",
+            "Problema ao guardar. Verifique o espaço livre. Progresso recuperado se possível.",
+            "Помилка збереження. Перевірте вільне місце. Прогрес відновлено, якщо можливо.",
+            "Opslagprobleem. Controleer de vrije ruimte. Voortgang is zo mogelijk hersteld.",
+            "Kaydetme hatası. Boş alanı kontrol et. İlerleme mümkünse kurtarıldı."),
+    )
 
     /** Zlecenie 125: dowódca, zdolność i podpowiedzi. */
     private fun part125(): Array<Pair<String, Array<out String>>> = arrayOf(
@@ -205,8 +221,7 @@ object L {
             "Taraf başına bir özel birim. Bedeli bir ağır birliğin iki katı. %180 ağır birlik canı ve %115 ağır birlik hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
     )
 
-    /** Tura 10 (szlif przed premierą): odnowienie misji, puste powtórki, potwierdzenie usuwania. */
-    /** Tura 10, szlif 2: krótka zakładka Oblężenia w Rekordach, wczytywanie listy powtórek. */
+    /** Tura 10, szlif 2: zakładka Oblężenia w Rekordach i ładowanie powtórek. */
     private fun part151(): Array<Pair<String, Array<out String>>> = arrayOf(
         "endless151_tab" to t("Oblężenie", "Endless", "Endlos", "Asedio", "Siège", "Assedio",
             "Cerco", "Облога", "Beleg", "Kuşatma"),
@@ -215,6 +230,7 @@ object L {
             "Завантаження повторів…", "Herhalingen laden…", "Tekrarlar yükleniyor…"),
     )
 
+    /** Tura 10 (szlif przed premierą): odnowienie misji, puste powtórki, potwierdzenie usuwania. */
     private fun part150(): Array<Pair<String, Array<out String>>> = arrayOf(
         "ms150_reset" to t("Nowe za %s", "New in %s", "Neu in %s", "Nuevas en %s", "Nouvelles dans %s",
             "Nuove tra %s", "Novas em %s", "Нові через %s", "Nieuw over %s", "Yenileri %s sonra"),

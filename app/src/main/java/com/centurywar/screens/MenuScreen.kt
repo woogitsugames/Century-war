@@ -16,6 +16,7 @@ import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
+import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
@@ -180,9 +181,7 @@ class MenuScreen(g: Game) : Screen(g) {
         logoY = startY + logoSize * 1.75f
         subY = logoY + logoSize * 0.62f
         val baseTop = startY + headerH + 14 * dp
-        // Tura 10 (szlif 2): na 720p pas na baner miał ~11 dp, a baner ma co najmniej 24 dp —
-        // dotykał kafelka Kampania. Siatkę zsuwamy w dół o brakujące miejsce (z 6 dp odstępu),
-        // o ile pod siatką jest zapas; na większych ekranach pas już wystarcza.
+        // Na 720p zachowujemy odstęp między wstęgą a kafelkiem Kampania.
         val bannerNeed = subY + max(10 * dp, logoSize * 0.26f) + 24 * dp + 6 * dp - baseTop
         val roomBelow = h - g.insetB - 10 * dp - (baseTop + gridH)
         val top = baseTop + bannerNeed.coerceIn(0f, max(0f, roomBelow))
@@ -326,6 +325,7 @@ class MenuScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        if (SaveGuard.takeWarning()) g.showNotice(L["save154_problem"], Icons.CLOSE)
         missionBadgePoll -= dt
         if (missionBadgePoll <= 0f) {
             missionBadgePoll = 10f

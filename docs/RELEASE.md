@@ -1,5 +1,42 @@
 # Wydanie Android / Google Play
 
+## Testy ręczne aktualizacji i odporności zapisu (154)
+
+Przeprowadzić na urządzeniu z Androidem 8+ i na aktualnym emulatorze. Do aktualizacji
+używać tego samego identyfikatora pakietu i certyfikatu podpisu; **nie odinstalowywać**
+poprzedniego APK (odinstalowanie usuwa dane aplikacji).
+
+- [ ] Zainstalować **poprzednią wydaną wersję**, rozegrać co najmniej dwa etapy,
+  zdobyć medale, kupić badanie, zmienić ustawienia, ukończyć bitwę i zapisać powtórkę.
+- [ ] Zanotować medale, badania, gwiazdki, serię misji, liczbę wpisów historii i
+  stan przypiętych powtórek. Przerwać kolejną bitwę w połowie, wysłać aplikację w tło.
+- [ ] Zaktualizować APK poleceniem `adb install -r nowa-wersja.apk`. Potwierdzić,
+  że **profil i historia pozostały**, a ustawienia i odblokowania nie zostały wyzerowane.
+- [ ] Zweryfikować okno wznowienia starej bitwy. Zgodny snapshot musi wznowić
+  symulację; snapshot z niezgodnym formatem lub balansem wolno bezpiecznie odrzucić,
+  ale menu musi pokazać **jedno ostrzeżenie**, a profil i historia muszą pozostać.
+  Powtórzyć na zapisie sprzed dowódcy oraz sprzed stopni wież.
+- [ ] Sprawdzić powtórki ze starszych wersji 5 i 6 oraz wersji 7.
+  Nieodtwarzalne wersje mają pozostawić metadane na liście i wyraźnie sygnalizować
+  brak zgodności; zgodna powtórka 7 powinna się uruchamiać.
+- [ ] Na kopii danych testowych uszkodzić osobno `profile.json`, `history.json`,
+  `battle.snap` i jeden plik `replays/*.cwr` (obcięcie oraz losowe bajty).
+  Po restarcie gra nie może się wysypać; poprawne lokalne pliki `.bak` lub `.tmp`
+  muszą umożliwić odzyskanie danych. Uszkodzona powtórka nie może być uruchomiona.
+- [ ] W debug buildzie zasymulować zabicie procesu podczas zapisu (pozostawiony
+  pełny lub ucięty `.tmp`). Po uruchomieniu ma zostać wybrany ostatni **poprawny**
+  zapis, nigdy częściowy JSON lub snapshot.
+- [ ] Zasymulować brak miejsca i brak zapisu do katalogu danych (na urządzeniu
+  testowym lub przez wstrzyknięcie błędu I/O): gra nie kończy się awarią,
+  w menu pojawia się **jedno powiadomienie**, a poprzedni zapis pozostaje poprawny.
+- [ ] Po ukończeniu bitwy sprawdzić, że usunięty `battle.snap` nie wraca z `.bak`
+  i że wyczyszczenie historii nie odtwarza starych wpisów.
+- [ ] Wykonać próbę na urządzeniu 2–3 GB RAM oraz po obrocie/złożeniu Folda.
+  Sprawdzić, że I/O pozostaje poza pętlą gry.
+
+Pliki `.bak` są lokalnymi kopiami awaryjnymi; systemowy backup Androida nadal
+obejmuje tylko `profile.json` i `history.json` według reguł poniżej.
+
 ## Numer wersji
 
 - `releaseVersionCode` w `gradle.properties` to dodatni, rosnący numer publikacji w Google Play.

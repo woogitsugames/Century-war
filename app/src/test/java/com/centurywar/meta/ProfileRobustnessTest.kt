@@ -248,7 +248,7 @@ class ProfileRobustnessTest {
     }
 
     @Test
-    fun malformedScalarInV2IsNotSilentlyConvertedToZero() {
+    fun malformedScalarRecoversLastCompleteBackupWithoutCoercion() {
         val file = profileFile()
         val original = Profile(file).apply { medals = 8123; name = "Stary postęp"; save() }
         Profile.awaitHintWrites()
@@ -256,8 +256,9 @@ class ProfileRobustnessTest {
         val broken = JSONObject(file.readText()).put("medals", JSONObject().put("złe", 1)).toString()
         file.writeText(broken)
         val loaded = Profile(file).apply { load() }
-        assertEquals("", loaded.name)
-        assertEquals(0, loaded.medals)
+        // Poprawny backup ma pierwszeństwo przed utratą postępu.
+        assertEquals("Stary postęp", loaded.name)
+        assertEquals(8123, loaded.medals)
         assertEquals(broken, File(file.parentFile, file.name + ".corrupt").readText())
     }
 

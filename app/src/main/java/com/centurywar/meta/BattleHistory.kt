@@ -5,6 +5,7 @@ import com.centurywar.game.Battle
 import com.centurywar.game.Doctrine
 import com.centurywar.game.EndlessCard
 import com.centurywar.game.GameIoCounter
+import com.centurywar.game.SaveGuard
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
 import org.json.JSONArray
@@ -249,6 +250,7 @@ class BattleHistory(private val file: File) {
     private val writer = Executors.newSingleThreadExecutor { task ->
         Thread(task, "century-history").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
     }
+    @Volatile private var newerHistoryVersion = false
     @Volatile var loaded = false
         private set
     private var clearedBeforeLoad = false
@@ -256,26 +258,75 @@ class BattleHistory(private val file: File) {
     /** Parsowanie nie trzyma zamka historii podczas operacji dyskowych. */
     private fun readEntries(): List<Record> {
         GameIoCounter.diskAccess()
+        newerHistoryVersion = false
         val tmp = File(file.parentFile, file.name + ".tmp")
-        for (candidate in listOf(file, tmp)) {
-            if (!candidate.exists() || candidate.length() > 1_000_000L) continue
+        val backup = File(file.parentFile, file.name + ".bak")
+        val backupTmp = File(file.parentFile, file.name + ".bak.tmp")
+        // Aktualizacji z nowszego formatu nigdy nie przykrywamy starszym .tmp.
+        if (file.isFile && file.length() in 1L..1_000_000L) {
             try {
-                val root = JSONObject(candidate.readText(Charsets.UTF_8))
-                if (root.optInt("v") != VERSION) continue
-                val array = root.optJSONArray("entries") ?: continue
+                if (JSONObject(file.readText(Charsets.UTF_8)).optInt("v") > VERSION) {
+                    newerHistoryVersion = true
+                    SaveGuard.report("history-version")
+                    return emptyList()
+                }
+            } catch (_: Exception) {
+                // Uszkodzony główny plik spróbujemy odzyskać poniżej.
+            }
+        }
+        val originals = if (tmp.isFile && (!file.isFile || tmp.lastModified() >= file.lastModified()))
+            listOf(tmp, file) else listOf(file, tmp)
+        val backups = if (backupTmp.isFile && (!backup.isFile || backupTmp.lastModified() >= backup.lastModified()))
+            listOf(backupTmp, backup) else listOf(backup, backupTmp)
+        for (candidate in originals + backups) {
+            if (!candidate.exists()) continue
+            if (candidate.length() !in 1L..1_000_000L) {
+                SaveGuard.report("history-size")
+                continue
+            }
+            try {
+                val bytes = candidate.readBytes()
+                val root = JSONObject(String(bytes, Charsets.UTF_8))
+                val version = root.optInt("v", -1)
+                if (version > VERSION) {
+                    // Starsza aplikacja nie może skasować historii z przyszłej wersji.
+                    newerHistoryVersion = true
+                    SaveGuard.report("history-version")
+                    return emptyList()
+                }
+                if (version != VERSION) {
+                    SaveGuard.report("history-version")
+                    continue
+                }
+                val array = root.optJSONArray("entries")
+                if (array == null) {
+                    SaveGuard.report("history-entries")
+                    continue
+                }
                 val result = ArrayList<Record>(LIMIT)
+                var badEntry = false
                 for (i in 0 until array.length()) {
-                    val o = array.optJSONObject(i) ?: continue
+                    val o = array.optJSONObject(i)
+                    if (o == null) { badEntry = true; continue }
                     try {
-                        val record = parse(o) ?: continue
-                        if (result.size < LIMIT) result.add(record)
+                        val record = parse(o)
+                        if (record != null && result.size < LIMIT) result.add(record)
+                        else if (record == null) badEntry = true
                     } catch (_: Exception) {
-                        // Uszkodzony wpis nie blokuje reszty historii.
+                        badEntry = true
+                    }
+                }
+                if (badEntry) SaveGuard.report("history-entry")
+                if (candidate != file) {
+                    try {
+                        SaveGuard.atomicWrite(file, bytes)
+                    } catch (e: Exception) {
+                        SaveGuard.report("history-recovery", e)
                     }
                 }
                 return result
-            } catch (_: Exception) {
-                // Uszkodzony plik główny: spróbuj odzyskać tymczasowy.
+            } catch (e: Exception) {
+                SaveGuard.report("history-load", e)
             }
         }
         return emptyList()
@@ -330,22 +381,19 @@ class BattleHistory(private val file: File) {
     }
 
     private fun persist() {
-        val content = synchronized(this) { toJson() }
+        if (newerHistoryVersion) return
         try {
+            val bytes = synchronized(this) { toJson().toByteArray(Charsets.UTF_8) }
             GameIoCounter.diskAccess()
-            file.parentFile?.mkdirs()
-            val tmp = File(file.parentFile, file.name + ".tmp")
-            FileOutputStream(tmp).use {
-                it.write(content.toByteArray(Charsets.UTF_8))
-                it.flush()
-                try { it.fd.sync() } catch (_: Exception) { }
+            SaveGuard.atomicWrite(file, bytes)
+            try {
+                SaveGuard.writeBackup(file, bytes)
+            } catch (e: Exception) {
+                SaveGuard.report("history-backup", e)
             }
-            if (!tmp.renameTo(file)) {
-                Files.move(tmp.toPath(), file.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            }
-        } catch (_: Exception) {
-            // Brak miejsca lub niedostępny plik: zachowujemy bieżącą pamięć historii.
+        } catch (e: Exception) {
+            // Brak miejsca lub niedostępny plik: zachowujemy stan w pamięci.
+            SaveGuard.report("history", e)
         }
     }
 
