@@ -157,8 +157,14 @@ object L {
         putAll(part141())
         putAll(part135())
         putAll(part143())
+        putAll(part144())
         }
     }
+
+    /** Tura 9 (UX 2): wyjaśnienie wyszarzonego przycisku Play Games w Ustawieniach. */
+    private fun part144(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "pgs144_why" to t("Play Games nie działa w tej wersji gry. Postęp zapisuje się na tym urządzeniu.", "Play Games is not available in this version. Progress is saved on this device.", "Play Games ist in dieser Version nicht verfügbar. Der Fortschritt wird auf diesem Gerät gespeichert.", "Play Games no está disponible en esta versión. El progreso se guarda en este dispositivo.", "Play Games n’est pas disponible dans cette version. La progression est enregistrée sur cet appareil.", "Play Games non è disponibile in questa versione. I progressi sono salvati su questo dispositivo.", "O Play Games não está disponível nesta versão. O progresso é guardado neste dispositivo.", "Play Games недоступні в цій версії. Прогрес зберігається на цьому пристрої.", "Play Games is niet beschikbaar in deze versie. Voortgang wordt op dit apparaat opgeslagen.", "Play Games bu sürümde kullanılamıyor. İlerleme bu cihazda kaydedilir."),
+    )
 
     /** Tura 9 (UX nowego gracza): zablokowane badania i etapy mówią, co zrobić dalej. */
     private fun part143(): Array<Pair<String, Array<out String>>> = arrayOf(

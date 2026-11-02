@@ -481,6 +481,14 @@ class TutorialOverlay(
         other.width() > 0f && l < other.right + gap && r > other.left - gap &&
             t0 < other.bottom + gap && b > other.top - gap
 
+    /** Cztery pola wokół celu; żadne nie zaczyna się wyżej niż [minTop]. */
+    private fun setRegions(sl: Float, sr: Float, sb: Float, gap: Float, minTop: Float) {
+        regions[0].set(sl, minTop, sr, hole.top - gap)
+        regions[1].set(sl, max(minTop, hole.bottom + gap), sr, sb)
+        regions[2].set(sl, minTop, hole.left - gap, sb)
+        regions[3].set(hole.right + gap, minTop, sr, sb)
+    }
+
     /** Najpierw wybiera miejsce obok celu; tekst może przejść do mniejszej czcionki. */
     private fun layoutPanel(sl: Float, sr: Float, st: Float, sb: Float, hasHole: Boolean, wantsHand: Boolean) {
         val ui = g.ui
@@ -495,13 +503,16 @@ class TutorialOverlay(
         var bestScore = -1f
         var handSpace = false
 
-        for (pass in 0..1) {
-            val gap = if (pass == 0) firstGap else 8 * dp
+        // Tura 9: w pierwszych przebiegach dymek nie wchodzi na pasek górny bitwy (złoto, epoka,
+        // „Wróg: …”); dopiero gdy nigdzie się nie mieści, wolno mu sięgnąć do górnej krawędzi.
+        val barTop = max(st + 8 * dp, t.area.top + 6 * dp)
+        var chosenTop = st + 8 * dp
+        for (pass in 0..3) {
+            val gap = if (pass % 2 == 0) firstGap else 8 * dp
+            val minTop = if (pass < 2) barTop else st + 8 * dp
             if (hasHole) {
-                regions[0].set(sl, st + 8 * dp, sr, hole.top - gap)
-                regions[1].set(sl, hole.bottom + gap, sr, sb)
-                regions[2].set(sl, st + 8 * dp, hole.left - gap, sb)
-                regions[3].set(hole.right + gap, st + 8 * dp, sr, sb)
+                setRegions(sl, sr, sb, gap, minTop)
+                chosenTop = minTop
             } else {
                 regions[0].set(sl, max(st + 8 * dp, t.area.top + 8 * dp), sr,
                     min(sb, t.area.bottom - 8 * dp))
@@ -537,7 +548,7 @@ class TutorialOverlay(
                     if (best == i && bestFont == si) break
                 }
             }
-            if (best >= 0) break
+            if (best >= 0) { chosenTop = minTop; break }
         }
 
         if (best < 0) {
@@ -559,12 +570,7 @@ class TutorialOverlay(
         selectedHand = handSpace
         // Regiony z ostatniego przebiegu ponownie obliczamy dla wybranego odstępu.
         val gap = if (handSpace) firstGap else if (hasHole) 8 * dp else 0f
-        if (hasHole) {
-            regions[0].set(sl, st + 8 * dp, sr, hole.top - gap)
-            regions[1].set(sl, hole.bottom + gap, sr, sb)
-            regions[2].set(sl, st + 8 * dp, hole.left - gap, sb)
-            regions[3].set(hole.right + gap, st + 8 * dp, sr, sb)
-        }
+        if (hasHole) setRegions(sl, sr, sb, gap, chosenTop)
         val r = regions[best]
         val left = when (best) {
             2 -> r.right - bestWidth
@@ -650,6 +656,21 @@ class TutorialOverlay(
         ui.button(c, skipBtn, 14f)
     }
 
+    /** Tura 9: zewnętrzna krawędź ostatnio narysowanej obwódki celu (do testów). */
+    internal val ringBounds = RectF()
+
+    /**
+     * Obwódka celu przy krawędzi ekranu (np. przycisk jednostki na rozłożonym Foldzie) nie może
+     * wychodzić poza bezpieczny obszar: linia o połowie grubości [halfStroke] zostaje w środku.
+     */
+    private fun clampRing(r: RectF, halfStroke: Float) {
+        val l = g.insetL + halfStroke
+        val tp = g.insetT + halfStroke
+        val rr = g.width - g.insetR - halfStroke
+        val b = g.height - g.insetB - halfStroke
+        r.set(max(r.left, l), max(r.top, tp), min(r.right, rr), min(r.bottom, b))
+    }
+
     fun draw(c: Canvas) {
         if (finished || battle.over) { hideButtons(); return }
         val ui = g.ui
@@ -670,6 +691,7 @@ class TutorialOverlay(
             return
         }
         val hasHole = target()
+        ringBounds.setEmpty()
         val big = hasHole && hole.height() > (sb - st) * 0.35f
         val wantsHand = hasHole && !big && step != S_DOCTRINE &&
             !(step == S_BARRAGE && t.barrageAiming())
@@ -688,10 +710,14 @@ class TutorialOverlay(
             ringPaint.strokeWidth = 3 * dp
             ringPaint.color = Color.argb(((1f - wave) * 200).toInt(), 255, 220, 120)
             tmp.set(hole); tmp.inset(-(4 + wave * 18) * dp, -(4 + wave * 18) * dp)
+            clampRing(tmp, 1.5f * dp)
+            ringBounds.set(tmp)
             c.drawRoundRect(tmp, rad + wave * 18 * dp, rad + wave * 18 * dp, ringPaint)
             ringPaint.strokeWidth = 5 * dp
             ringPaint.color = Ui.OUTLINE
             tmp.set(hole); tmp.inset(-(1 + pulse * 4) * dp, -(1 + pulse * 4) * dp)
+            clampRing(tmp, 2.5f * dp)
+            ringBounds.union(tmp)
             c.drawRoundRect(tmp, rad, rad, ringPaint)
             ringPaint.strokeWidth = 3 * dp
             ringPaint.color = Ui.blend(Ui.GOLD, Color.WHITE, pulse * 0.5f)

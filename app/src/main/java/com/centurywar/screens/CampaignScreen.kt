@@ -30,6 +30,8 @@ import kotlin.math.sin
  */
 class CampaignScreen(g: Game) : Screen(g) {
     override val crashName get() = "CampaignScreen"
+    /** Tura 9: baner powiadomień nie przykrywa tytułu planszy nowej epoki (okno modalne). */
+    override val blocksNotices: Boolean get() = eraIntro?.active == true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
@@ -117,6 +119,24 @@ class CampaignScreen(g: Game) : Screen(g) {
         eraIntro?.onLanguageChanged()
     }
 
+    /** Wysokość zarezerwowana na nagłówek epoki na początku regionu (tylko w pionie). */
+    private var headSpan = 0f
+
+    /** Położenie etapu wzdłuż szlaku; w pionie z pominięciem pasa nagłówka epoki. */
+    private fun progressOf(era: Int, step: Int): Float =
+        era * regionSpan + headSpan + (step + 0.5f) / 4f * (regionSpan - headSpan)
+
+    /** Nagłówek epoki [era] we współrzędnych ekranu (bez przewijania); do testów nachodzenia. */
+    internal fun headingRect(era: Int, out: RectF): RectF {
+        val x = if (portraitMap) viewportL else viewportL + era * regionSpan - scroll
+        val y = if (portraitMap) top + era * regionSpan - scroll else top
+        val name = L[Defs.eraKeys[era]]
+        val available = if (portraitMap) viewportW - 110 * dp else regionSpan - 118 * dp
+        val tw = ui.measure(name, ui.fit(name, 17f, available.coerceAtLeast(75 * dp)), true)
+        out.set(x + 11 * dp, y + 7 * dp, x + 68 * dp + max(tw, 60 * dp), y + 53 * dp)
+        return out
+    }
+
     override fun layout() {
         chrome.layoutBack(back)
         start.label = L["start"]
@@ -131,14 +151,17 @@ class CampaignScreen(g: Game) : Screen(g) {
         viewportH = max(1f, bottom - top)
         nodeR = min(27 * dp, min(viewportW, viewportH) * 0.12f)
         regionSpan = if (portraitMap) {
-            max(270 * dp, viewportH * 0.38f)
+            max(270 * dp, viewportH * 0.38f) + HEADING_DP * dp
         } else {
             max(310 * dp, viewportW * 0.54f)
         }
         // Węzeł (z większym węzłem co czwarty) nie może być szerszy niż odstęp między etapami.
         // W pionie pole dotyku ma 3,1 r wysokości, a para „duży + zwykły” zajmuje 3,31 r,
         // więc na wąskich ekranach (zewnętrzny ekran Folda) potrzebny jest większy zapas.
-        nodeR = min(nodeR, regionSpan / 4f / if (portraitMap) 3.45f else 3.3f)
+        // Tura 9: w pionie węzły zaczynają się pod nagłówkiem epoki (medalion i nazwa zajmują
+        // ok. 56 dp od początku regionu), inaczej pierwszy etap epoki nachodzi na „Epoka Brązu”.
+        headSpan = if (portraitMap) HEADING_DP * dp else 0f
+        nodeR = min(nodeR, (regionSpan - headSpan) / 4f / if (portraitMap) 3.45f else 3.3f)
         val visibleSpan = if (portraitMap) viewportH else viewportW
         val previousMax = maxScroll
         val previousScroll = scroll
@@ -147,7 +170,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         for (i in tiles.indices) {
             val era = i / 4
             val step = i % 4
-            val progress = (era + (step + 0.5f) / 4f) * regionSpan
+            val progress = progressOf(era, step)
             if (portraitMap) {
                 cx[i] = viewportL + viewportW * 0.52f +
                     sin(i * 1.05f) * min(viewportW * 0.23f, 90 * dp)
@@ -163,7 +186,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         if (!laidOut) {
             // Wjazd z sąsiedniego fragmentu szlaku: bez długiego przelotu przez 36 etapów.
             val last = g.profile.unlockedStage().coerceIn(0, tiles.lastIndex)
-            val position = (last / 4f + (last % 4 + 0.5f) / 4f) * regionSpan
+            val position = progressOf(last / 4, last % 4)
             scrollTarget = (position - visibleSpan * 0.53f).coerceIn(0f, maxScroll)
             scroll = (scrollTarget - visibleSpan * 0.72f).coerceAtLeast(0f)
             autoScroll = scroll < scrollTarget
@@ -308,7 +331,6 @@ class CampaignScreen(g: Game) : Screen(g) {
             c.translate(x, y)
             c.drawPicture(picture)
             c.restore()
-            drawRegionHeading(c, e, x, y)
         }
         // Najpierw cały szlak, potem punkty etapu, aby drogę zawsze zasłaniała tarcza.
         for (i in 0 until tiles.lastIndex) {
@@ -323,6 +345,14 @@ class CampaignScreen(g: Game) : Screen(g) {
             pathPaint.color = if (i < g.profile.unlockedStage()) Ui.GOLD else Color.rgb(112, 122, 138)
             c.drawLine(cx[i], cy[i], cx[i + 1], cy[i + 1], pathPaint)
         }
+        // Tura 9: nagłówki epok nad drogą (w pionie droga przecinała napis „Epoka Brązu”).
+        for (e in 0 until Defs.ERA_COUNT) {
+            val begin = e * regionSpan - scroll
+            val span = if (portraitMap) viewportH else viewportW
+            if (begin + regionSpan < 0f || begin > span) continue
+            drawRegionHeading(c, e, if (portraitMap) viewportL else viewportL + e * regionSpan,
+                if (portraitMap) top + e * regionSpan else top)
+        }
         val unlocked = g.profile.unlockedStage()
         for (i in tiles.indices) {
             val t = tiles[i]
@@ -335,6 +365,7 @@ class CampaignScreen(g: Game) : Screen(g) {
         chrome.title(c, L["campaign"])
         chrome.badges(c, g.profile.medals, g.profile.totalStars())
         selected?.let { drawInfo(c, it) }
+        chrome.titleBounds(L["campaign"], hints.titleRect)
         hints.draw(c)
         eraIntro?.draw(c)
     }
@@ -671,5 +702,10 @@ class CampaignScreen(g: Game) : Screen(g) {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (selected != null) { selected = null; return true }
         return false
+    }
+
+    private companion object {
+        /** Pas nagłówka epoki w pionie: medalion (7–53 dp) i gwiazdki, plus oddech. */
+        const val HEADING_DP = 58f
     }
 }
