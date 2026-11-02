@@ -1440,7 +1440,8 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h,
+            realDt = frameDt)
         if (aimingBarrage) barrageView.drawAim(c)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
         val regularTextScale = ui.textScale
