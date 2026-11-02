@@ -17,6 +17,8 @@ class CategoryTest(unittest.TestCase):
         cases = {
             "com.centurywar.engine.LTest.languages": "fast",
             "com.centurywar.screens.ScreenshotTest.menus": "screenshots",
+            "com.centurywar.screens.PrereleasePolishTest.prereleaseTour": "screenshots",
+            "com.centurywar.screens.PrereleasePolishTest.replayDeleteNeedsSecondTap": "screenshots",
             "com.centurywar.screens.ScreenshotGoldenTest.identicalPixelsPass": "screenshots",
             "com.centurywar.game.ArtGalleryTest.gallery": "screenshots",
             "com.centurywar.game.BalanceReport.campaignReport": "balance",
