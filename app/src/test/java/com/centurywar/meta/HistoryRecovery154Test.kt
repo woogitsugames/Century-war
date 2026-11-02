@@ -88,4 +88,34 @@ class HistoryRecovery154Test {
         assertFalse(tmp.exists())
         recovered.close()
     }
+
+    @Test fun newestCompleteTempWinsButBrokenTempCannotDestroyMain() {
+        val file = File(folder.root, "history.json")
+        val history = BattleHistory(file)
+        history.add(record(60))
+        history.awaitWrites()
+        history.close()
+
+        val original = file.readText()
+        val tmp = File(folder.root, "history.json.tmp")
+        val other = BattleHistory(File(folder.root, "updated.json"))
+        other.add(record(90))
+        other.awaitWrites()
+        other.close()
+        tmp.writeText(File(folder.root, "updated.json").readText())
+        assertTrue(tmp.setLastModified(file.lastModified() + 10_000L))
+        val latest = BattleHistory(file)
+        latest.load()
+        assertEquals(listOf(90L), latest.snapshot().map { it.score })
+        latest.close()
+
+        // Urwany plik tymczasowy nie może zastąpić prawidłowego zapisu.
+        tmp.writeText("{\"v\":1,\"entries\":[")
+        assertTrue(tmp.setLastModified(file.lastModified() + 10_000L))
+        val safe = BattleHistory(file)
+        safe.load()
+        assertEquals(listOf(90L), safe.snapshot().map { it.score })
+        safe.close()
+        assertTrue(file.readText() != original)
+    }
 }
