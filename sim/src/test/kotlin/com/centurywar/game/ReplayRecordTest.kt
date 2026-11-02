@@ -133,4 +133,25 @@ class ReplayRecordTest {
         catch (_: IllegalArgumentException) { rejected = true }
         assertTrue(rejected)
     }
+
+    @Test fun replay154VersionsFiveToSevenRemainReadableOrClearlyUnplayable() {
+        val (log, meta) = example()
+        for (version in 5..7) {
+            val versioned = log.copy(version = version)
+            val bytes = ReplayRecord.encode(cfg, versioned, meta).copyOf()
+            // Nagłówek rekordu nie jest objęty CRC payloadu.
+            bytes[11] = version.toByte()
+            val restored = ReplayRecord.decode(bytes)
+            assertEquals(version, restored.replayVersion)
+            assertEquals(meta, restored.meta)
+            assertEquals(versioned, Replay.decode(Replay.encode(versioned)))
+            if (version == Replay.VERSION) {
+                assertTrue(restored.playable)
+                assertEquals(versioned, restored.log)
+            } else {
+                assertFalse(restored.playable)
+                assertNull(restored.log)
+            }
+        }
+    }
 }
