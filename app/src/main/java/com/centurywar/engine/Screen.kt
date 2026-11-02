@@ -38,6 +38,18 @@ abstract class Screen(val g: Game) {
     abstract fun render(c: Canvas)
     open fun onClick(b: Button) {}
 
+    /** Opis elementu dla czytnika, bez dodawania tekstów do renderera. */
+    open fun accessibilityLabel(b: Button): String {
+        val title = if (b.label.isNotBlank()) b.label else b.tooltipTitle
+        return when {
+            title.isBlank() -> b.sub
+            b.sub.isBlank() -> title
+            else -> "$title, ${b.sub}"
+        }
+    }
+    open fun accessibilityCheckable(b: Button): Boolean = false
+    open fun accessibilityChecked(b: Button): Boolean = b.selected
+
     /** Nadpisz dla dynamicznych opisów; domyślnie odczytuje opis przycisku. */
     open fun onLongPress(b: Button): Boolean {
         if (b.tooltipTitle.isEmpty()) return false
