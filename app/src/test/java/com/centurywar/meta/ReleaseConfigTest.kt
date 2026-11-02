@@ -9,7 +9,7 @@ import org.junit.Test
 /** Brak kluczy w CI/debug nie może ujawnić przełącznika rankingu. */
 class ReleaseConfigTest {
     @Test fun defaultFieldsAreSafeAndClientCannotUsePartialConfiguration() {
-        assertEquals("0.8.1", ScoreClient.GAME_VERSION)
+        assertEquals("0.8.2", ScoreClient.GAME_VERSION)
         val server = BuildConfig.CW_SERVER_URL
         val key = BuildConfig.CW_HMAC_KEY
         val policy = BuildConfig.CW_PRIVACY_URL

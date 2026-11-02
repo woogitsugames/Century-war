@@ -7,7 +7,8 @@ import org.junit.Test
  * Lustrzany test skuteczności wszystkich doktryn: 100 seedów i zamiana stron.
  * Od dowódcy (125) AI przywołuje go w potyczce, co zwiększa rozrzut wyników; przy
  * 20 seedach ECONOMY dawała 70%, a przy 100 seedach 57%. Pomiar tury 9 z dowódcą:
- * 42% (ARSENAL) – 63,5% (PLUNDER), szczegóły w docs/BALANCE.md.
+ * 42% (ARSENAL) – 63,5% (PLUNDER); po wyrównaniu w turze 10: 46,5% (BANNER) – 59,5% (FURY),
+ * szczegóły w docs/BALANCE.md.
  */
 class DoctrineBalance82Test {
     private fun duel(doctrine: Doctrine, boostedSide: Int, seed: Long): Int {

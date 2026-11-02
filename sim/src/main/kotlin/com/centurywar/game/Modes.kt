@@ -11,9 +11,9 @@ enum class Doctrine(val key: String) {
     SWIFT("d_swift"),          // +25% szybkości szkolenia, +10% szybkości ruchu
     VETERAN("d_veteran"),      // +30% XP
     FURY("d_fury"),            // +8% obrażeń jednostek
-    ARSENAL("d_arsenal"),      // +1 slot wieży (do limitu) i -20% kosztu wież
+    ARSENAL("d_arsenal"),      // +1 slot wieży (do limitu) i -35% kosztu wież
     TACTICS("d_tactics"),      // -25% odnowienia zdolności
-    PLUNDER("d_plunder"),      // +8% złota za zabójstwa
+    PLUNDER("d_plunder"),      // +6% złota za zabójstwa (karta Endless +35%)
     BANNER("d_banner"),       // -15% obrażeń podczas Zrywu
     SUPPLY("d_supply"),       // +15 złota w skali epoki, +30% za zabójstwa przez 60 s
     SIEGE_MASTERS("d_siege_masters"), // +18% ciężkich przeciw bazom
