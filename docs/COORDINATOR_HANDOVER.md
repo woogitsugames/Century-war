@@ -1,3 +1,52 @@
+# Century War: przekazanie koordynacji (2.11.2026, ok. 11:00 UTC, tura 9)
+
+Plik dla nowej sesji Claude Code. Przeczytaj w całości przed działaniem. Starsza historia (tury 6–8) jest niżej w sekcji „Archiwum”.
+
+## Rola i zasady
+- Koordynator projektu **Century War**: oryginalna strategia na Androida (Kotlin, SDK 36, minSdk 26, bez bibliotek poza Play Games, grafika rysowana kodem). Repo `woogitsugames/century-war`.
+- Właściciel nie jest programistą: odpowiadaj po polsku, zwięźle, tłumacz skutki. Decyzje dawaj w formie klikalnej (AskUserQuestion).
+- Commity po polsku z liniami atrybucji sesji. Bez PR. Bez identyfikatorów modeli w repo.
+- Gałęzie: `main` = `claude/bold-sagan-vwz5gm` (baza zleceń GPT). Pracuj na `integ/turaN`, po zielonych pełnych testach wypychaj na oba. Właściciel pozwala scalać wszystko do main bez pytania.
+- Agenci: **najwyżej 1 dodatkowy agent opus naraz** (limit konta). Agentom każ uruchamiać Gradle przez `flock /tmp/claude-0/gradle.lock ./gradlew ...` (dwa Gradle naraz = OOM). Długie komendy tylko Bash `run_in_background`.
+- Po większych scaleniach wysyłaj APK (`app/build/outputs/apk/debug/app-debug.apk`, skopiuj do scratchpadu i SendUserFile). Właściciel testuje na telefonie i Galaxy Fold (zewnętrzny 904x2316, wewnętrzny 2184x1968).
+
+## Środowisko (nowy kontener)
+1. Android SDK: jak w sekcji archiwalnej (cmdline-tools → `platforms;android-36`, `build-tools;36.0.0`, `platform-tools`; `local.properties` z `sdk.dir`).
+2. Init Gradle `~/.gradle/init.d/mirror.gradle`: mirror GCS `https://maven-central.storage-download.googleapis.com/maven2/` — podmiana URL repo.maven.apache.org we wszystkich repozytoriach ORAZ w `beforeSettings` dodanie mirrora na początek `pluginManagement.repositories` + `gradlePluginPortal()` (inaczej buildSrc dostaje 429). Nie dodawaj repozytoriów w `allprojects` (FAIL_ON_PROJECT_REPOS).
+3. Robolectric: ręcznie pobierz `android-all-instrumented` 15-robolectric-13954326-i7, 9-robolectric-4913185-2-i7, 10-robolectric-5803371-i7 z mirrora do `~/.m2/repository/org/robolectric/android-all-instrumented/<wersja>/`.
+4. Pełne testy: `./gradlew :app:testDebugUnitTest :sim:test :server:test --continue --console=plain` — teraz **ok. 8–11 min**. Narzędzia scalania: `docs/coord-tools/` (res.py, mergeauto.sh, fixL.py). Po każdym scaleniu `L.kt`: liczba `putAll(part` = liczba `private fun part` (teraz 49).
+5. `-PscreenReason=...` przy `updateScreenshots` podawaj bez polskich znaków (inaczej krzaki w UPDATES.md).
+
+## Stan na moment przekazania
+- `main` = `claude/bold-sagan-vwz5gm` = **969b0414** (tura 9 bez dowódcy): GPT 135 (sklep, „Co nowego”), 140 (stopnie wież 1–3), przeglądy UX nowego gracza (143, 144), naprawa „Porzuć” w oknie wznowienia, uczciwe elity i Zryw wroga, PROTOCOL 0.7.0. Pełne testy zielone. APK wysłane.
+- **`integ/tura9` = 17da424a**: main + scalona paczka GPT **125 (dowódca)** + PROTOCOL **0.8.0** + rozszerzone zlecenie 136. **NIE na main — 12 czerwonych testów:**
+  - `HintOverlayTest` (5) i `ScreenshotTestTranslation78Test` (de/tr/uk): podpowiedzi w bitwie się nie pojawiają („expected:<0>/<19> but was:<-1>”) — 125 zmienił `HintOverlay`.
+  - `LeftHandedHudTest.widerHud119KeepsExistingRows` / `twoRowActionsStayAtLeftOnMediumWidth`: siódmy przycisk (dowódca) zmienia układ akcji w `BattleBottomHud`. Przed odblokowaniem przycisk ma być ukryty i układ identyczny jak przed 125.
+  - `ScreenshotTest.regression100`: `phone720_reg100_battle_hud` różni się o 1,2% (sprawdź, czy przycisk dowódcy nie pojawia się przed etapem 8).
+  - `DoctrineBalance82Test`: ECONOMY 70%, ARSENAL 37,5%, PLUNDER 62,5% (cel 40–60%) — AI używa dowódcy samodzielnie w potyczce.
+  - Agent naprawczy został zatrzymany przed pierwszym commitem (kopia pusta: `claude/wip-tura9-fix125`). **Pierwsze zadanie nowej sesji: naprawić te testy, pełne testy, wypchnąć integ/tura9 na main + bold-sagan, APK dla właściciela.**
+- **GPT:** fala 4 (**136** przegląd tłumaczeń, zakres part124–part144) — zip dany właścicielowi z prośbą, by wysłał DOPIERO gdy 125 będzie na main. Daj mu znać po wypchnięciu. Następnie sprawdzaj `origin/gpt/136-*`, przejrzyj, usuń tymczasowe workflowy i zrzuty z `docs/reports`, scal.
+- **142 (muzyka Suno):** opisy w `docs/music/SUNO_PROMPTS.md`; zlecenie `docs/tasks/142-recorded-music.md` czeka na pliki w `music-src/`.
+- Zaplanowane zadanie „Century War: nocne wznawianie pracy” (trig_01AzV7aUMNZTRAk489MEmYEL, co godzinę o :33) wznawia STARĄ sesję — w nowej sesji wyłącz je albo utwórz własne (właściciel o nie prosił).
+
+## Decyzje właściciela (obowiązujące)
+- Uczciwe AI: w kampanii/potyczce wróg ma elity i Zryw tylko gdy gracz je zbadał; limit armii wroga 12; ranking kampanii tylko z poziomu Normalny.
+- Zatwierdzony układ paska bitwy `compactTop` i celowanie ostrzału (przeciągnij-puść; celownik omija własnych żołnierzy) — nie zmieniać bez zgody.
+- Powiadomienia nie pokazują się na wynikach bitwy (tylko w menu).
+- Dowódca (125) — tak; stopnie wież (140) — tak; muzyka Suno — opisy dla wszystkich epok.
+- `Daily.RELEASE_DAY` = 2027-12-01, nie zmieniać bez decyzji.
+
+## Otwarte do decyzji właściciela
+- Etapy 28–36: gracz zbierający medale tylko z kampanii wygrywa tam 10–54% (szczegóły w `docs/BALANCE.md`, „Tura 8 — uczciwe elity wroga”).
+- Pion telefonu w menu (podzielony ekran): podpisy kafelków ok. 8 sp; propozycja układu jednej kolumny w raporcie UX 2 (manifest wymusza `sensorLandscape`, więc dotyczy tylko podzielonego ekranu).
+
+## Kolejne pomysły (gdy nic nie czeka)
+- Przegląd UX po dowódcy i wieżach (jak `NewPlayerJourneyTest`), test balansu kampanii z dowódcą dla profilu „nowy gracz”, wydanie testowe (R8 release na telefonie, Play Console testy zamknięte), wdrożenie serwera rankingu (`docs/SERVER_DEPLOY.md`).
+
+---
+
+# Archiwum
+
 # Century War: przekazanie koordynacji (1.11.2026, wieczór, tura 6)
 
 Plik dla nowej sesji Claude Code (inne konto). Przeczytaj w całości przed działaniem.
