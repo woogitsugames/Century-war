@@ -250,7 +250,7 @@ class StoreGraphicsTest {
                 val feature = File(languageDir, "feature_1024x500.png")
                 val featureGame = game(Device("feature153", 1024, 500, 1f), language)
                 writePng(feature, 1024, 500, false) { c ->
-                    val battle = commander153Battle()
+                    val battle = commander153Battle(forFeature = true)
                     battle.fx.count = 0
                     val renderer = BattleRenderer(featureGame, battle)
                     renderer.layout(1024f, 500f, 12f, 10f)
@@ -271,8 +271,30 @@ class StoreGraphicsTest {
         }
     }
 
+    @Test
+    fun spotlight153HudScenes() {
+        val commander = commander153Battle()
+        assertEquals(327f, commander.time, 0.05f)
+        assertTrue(commander.player.baseHp < commander.player.baseMaxHp)
+        assertTrue(commander.enemy.baseHp < commander.enemy.baseMaxHp)
+        assertEquals(1120f, commander.player.gold, 0.01f)
+        val feature = commander153Battle(forFeature = true)
+        assertEquals(0f, feature.time, 0.01f)
+        assertEquals(feature.player.baseMaxHp, feature.player.baseHp, 0.01f)
+    }
+
+    /** Stan przygotowany tylko dla zrzutów HUD; nie zmienia grafiki promocyjnej. */
+    private fun stage153Hud(battle: Battle, seconds: Int, playerHp: Float, enemyHp: Float, gold: Float) {
+        battle.stepCount = seconds * 60
+        battle.time = battle.stepCount * Battle.STEP
+        battle.player.baseHp = battle.player.baseMaxHp * playerHp
+        battle.enemy.baseHp = battle.enemy.baseMaxHp * enemyHp
+        battle.player.gold = gold
+        battle.enemy.gold = 1250f
+    }
+
     /** Ustalony seed, wyraźnie widoczny Wódz i aura przy wojskach gracza. */
-    private fun commander153Battle(): Battle {
+    private fun commander153Battle(forFeature: Boolean = false): Battle {
         val battle = sceneBattle(2)
         battle.player.gold = 30000f
         check((battle.commandController ?: BattleController(battle)).summonCommander())
@@ -283,6 +305,7 @@ class StoreGraphicsTest {
         unit.prevAnim = unit.anim
         // Wybuch przy przywołaniu zasłaniał Wodza; pokazujemy trwałą aurę, nie jednorazowy efekt.
         battle.fx.count = 0
+        if (!forFeature) stage153Hud(battle, 327, 0.72f, 0.43f, 1120f)
         return battle
     }
 
@@ -301,6 +324,7 @@ class StoreGraphicsTest {
         check(orders.upgradeTurretTier(1))
         check(orders.upgradeTurretTier(1))
         check(side.turretTier[0] == 2 && side.turretTier[1] == 3)
+        stage153Hud(battle, 284, 0.68f, 0.56f, 820f)
         render153Battle(c, g, battle, true)
     }
 
@@ -334,26 +358,40 @@ class StoreGraphicsTest {
         }
     }
 
-    /** Wykres z rzeczywistych próbek symulacji; ekran końca uruchamia gra. */
+    /** Rzeczywista symulacja przez 4:30; stan baz prowadzi do finału na wykresie. */
     private fun draw153BattleChart(c: Canvas, g: Game) {
-        val config = BattleConfig(Mode.SKIRMISH, 153005L, 0.95f,
-            startEra = 3, maxEra = Defs.ERA_COUNT - 1, variantsEnabled = false)
+        val config = BattleConfig(Mode.SKIRMISH, 153005L, 0.65f,
+            startEra = 3, maxEra = 3, variantsEnabled = false)
         val screen = BattleScreen(g, config)
         g.setScreen(screen)
         g.finishScreenTransition()
         val battle = screen.battle
         battle.player.gold = 1500f
-        for (step in 0 until 900) {
-            if (battle.over) break
+        val durationSteps = 270 * 60
+        for (step in 0 until durationSteps) {
+            check(!battle.over) { "Bitwa zakonczyla sie przed finałem wykresu" }
             if (step % 180 == 0) {
                 screen.commands.queue(Role.MELEE)
                 screen.commands.queue(Role.RANGED)
             }
+            val progress = step.toFloat() / durationSteps
+            val enemyCeiling = 0.99f - 0.83f * progress * progress
+            // Utrzymujemy oba forty do finału; przewaga rośnie w ostatniej fazie.
+            battle.player.baseHp = battle.player.baseHp.coerceIn(
+                battle.player.baseMaxHp * 0.63f,
+                battle.player.baseMaxHp * (0.99f - 0.20f * progress))
+            battle.enemy.baseHp = battle.enemy.baseHp.coerceIn(
+                battle.enemy.baseMaxHp * 0.14f,
+                battle.enemy.baseMaxHp * enemyCeiling)
             battle.step()
             screen.battleSummary.capture(battle)
         }
-        check(screen.battleSummary.count >= 3) { "Brak próbek wykresu" }
-        if (!battle.over) check(screen.commands.surrender())
+        // Ostatni cios rozstrzyga zwykły krok symulacji, nie kapitulacja.
+        battle.enemy.baseHp = 0f
+        battle.step()
+        screen.battleSummary.capture(battle)
+        check(battle.over && battle.winner == 0) { "Zrzut wykresu wymaga zwycięstwa" }
+        check(screen.battleSummary.count >= 200) { "Za mało próbek wykresu" }
         val tinyBitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
         try {
             g.frame(Canvas(tinyBitmap), 1f / 60f)
