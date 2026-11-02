@@ -218,6 +218,172 @@ normalny release wymaga prawdziwego klucza upload i kompletnej
 ścieżki zewnętrznych providerów, osiągnięcia i rankingi Play Games,
 import/eksport powtórek i wznawianie zapisów.
 
+## Audyt trwałych danych po R8 (zlecenie 148)
+
+Smoke-test `.github/workflows/release-check.yml` buduje `:app:assembleRelease`
+i `:app:bundleRelease` z **syntetycznymi** identyfikatorami Play Games
+(`scripts/ci_synthetic_play_games_ids.py`) i podpisem debugowym dozwolonym
+**wyłącznie** w CI. Te paczki nie są przeznaczone do Play Console.
+
+`app/proguard-rules.pro` chroni nazwy klas i pól odpowiedzialnych za:
+JSON profilu (`Profile`, `ScoreEntry`), zrzut bitwy (`BattleSnapshot`,
+`RestoredBattle`, `SnapshotStore`, `BattleConfig`, `Bonuses`) oraz
+powtórki (`Replay`, `Replay.Command`, `Replay.Log`, `ReplayRecord`
+i jego modele). Dodano też `CampaignDifficulty` do listy enumów o
+trwałych ordinalach. Osobne reguły Play Games dostarcza SDK.
+
+**Uwaga o kompatybilności:** zapis JSON używa jawnych kluczy tekstowych,
+a snapshoty i powtórki zapisują jawne bajty, nie serializują pól przez
+refleksję. Nazwy JVM nie są częścią formatu plików. Zachowanie nazw pól
+jest dodatkową barierą, a nie zamiennikiem testów `ProfileTest`,
+`BattleSnapshotTest`, `ReplayTest` i testu na rzeczywistym urządzeniu.
+Nie zmieniaj kolejności enumów ani wersji formatów bez osobnej migracji.
+
+Po kompilacji release skrypt `scripts/verify_release_mapping.py`
+weryfikuje `mapping.txt`, `usage.txt` i aktywne `configuration.txt`: wymagane klasy istnieją
+pod niezmienionymi nazwami, krytyczne pola nie są usunięte ani
+przemianowane, a wybrane stałe enumów zachowują nazwy. Niezależny
+`verify_release_dex.py` potwierdza obecność klas w rzeczywistym DEX.
+Nie wystarczy sam test debug.
+
+```bash
+python3 -m unittest discover -s tests -p 'test_verify_release_mapping.py' -v
+python3 scripts/verify_release_mapping.py \
+  --mapping app/build/outputs/mapping/release/mapping.txt \
+  --usage app/build/outputs/mapping/release/usage.txt \
+  --configuration app/build/outputs/mapping/release/configuration.txt
+```
+
+Wynik trafia do `build/release-metrics/mapping-audit.txt` w artefakcie
+`release-walidacja`. Błąd mapowania przerywa workflow przed testem
+na emulatorze.
+
+### Rozmiar APK/AAB i czas uruchomienia
+
+**Nie wpisuj rozmiarów szacunkowych.** Wartości dla bieżącego commita
+należy odczytać po udanym przebiegu `release-check.yml` z
+`build/release-metrics/rozmiary.md` (APK i AAB oddzielnie).
+Poniżej miejsce na wynik zweryfikowanego buildu R8:
+
+| Pomiar | Wynik | Źródło |
+| --- | --- | --- |
+| APK release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
+| AAB release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
+| Start debug / release (median z 5 prób) | n/d do pomiaru na telefonie | `adb shell am start -W` |
+
+`n/d` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms.
+Raport `rozmiary.md` zawiera też zmianę względem commita bazowego PR,
+największe składniki ZIP i liczbę zmapowanych klas.
+Rozmiar paczki nie odpowiada rozmiarowi instalacji z Google Play.
+
+### Test ręczny: ten sam telefon, debug i release
+
+Uruchom test na Androidzie 8+ (minimum API 26), najlepiej również na
+niedrogim telefonie z 2–3 GB RAM i na dużym ekranie. Używaj tej samej
+wersji danych gry w debug i release. Zapisz model telefonu, Androida,
+wersję aplikacji, datę UTC i wynik każdego punktu (OK / BŁĄD).
+
+- [ ] **Instalacja:** zainstaluj APK release z CI lokalnie przez `adb install`.
+  Sprawdź uruchomienie bez crasha. Nie próbuj aktualizować APK o innym
+  certyfikacie bez wcześniejszej deinstalacji; osobno przetestuj aktualizację
+  podpisaną *tym samym* kluczem i zachowanie danych.
+- [ ] **Zimny start:** wymuś zatrzymanie procesu i uruchom aplikację
+  przez `adb shell am start -W -n com.centurywar.game/com.centurywar.MainActivity`.
+  Powtórz 5 razy dla debug i release na tym samym urządzeniu, zanotuj
+  medianę `TotalTime` / `WaitTime`. `CWStartup` w debug mierzy osobno
+  pierwszą klatkę menu, więc nie porównuj tych różnych metryk.
+- [ ] **Bitwa:** rozegraj i zakończ etap kampanii, potyczkę oraz
+  wyzwanie dnia; sprawdź wyniki, medale, statystyki i ekran po walce.
+- [ ] **Zapis i wznowienie bitwy:** rozpocznij bitwę, zmień stan armii,
+  przejdź do tła, ubij proces bez czyszczenia danych, uruchom ponownie
+  i wybierz wznowienie. Sprawdź epokę, HP, złoto, jednostki i ostateczny
+  wynik. Powtórz przy zmianie orientacji / złożeniu Folda.
+- [ ] **Powtórka:** zapisz zakończoną bitwę, odtwórz ją do końca,
+  sprawdź wynik; przetestuj eksport, import i odrzucenie uszkodzonego
+  pliku powtórki bez crasha.
+- [ ] **Język:** zmień język w ustawieniach (w tym PL, EN i drugi
+  wybrany język), przejdź przez menu i HUD oraz uruchom ponownie.
+  Teksty nie mogą znikać ani mieszać języków.
+- [ ] **Kopia profilu:** w Ustawieniach wyeksportuj plik `.cwprofile`,
+  zmień postęp lub ustawienia i zaimportuj kopię. Sprawdź zgodę
+  na zastąpienie profilu oraz możliwość przywrócenia kopii sprzed importu.
+  Eksport nie powinien zawierać `playerSecret`; nie zawiera też
+  `battle.snap`, historii i powtórek. Osobno sprawdź systemowy backup
+  Androida, jeśli scenariusz testu dotyczy przenosin urządzenia.
+- [ ] **Powiadomienie:** włącz przypomnienie o wyzwaniu dnia, udziel
+  uprawnienia do powiadomień na Androidzie 13+, ustaw godzinę,
+  zminimalizuj grę i sprawdź nadejście przypomnienia oraz reakcję
+  po kliknięciu. Przetestuj też brak zgody na powiadomienia.
+- [ ] **Offline / online:** wyłącz sieć i Play Games, potwierdź
+  działanie lokalnego profilu i bitew, następnie przywróć połączenie.
+  Przy rzeczywistych ID i podpisie z Play Console sprawdź logowanie,
+  rankingi, osiągnięcia oraz synchronizację chmurową.
+
+**Warunek odbioru:** brak crasha i utraty danych, poprawne wznowienie,
+identyczny wynik powtórki oraz porównywalny (w granicach zmienności
+urządzenia) start w debug i release. Każdą różnicę zgłoś z logcat,
+wersją Androida i krokami reprodukcji.
+
+## Testy zamknięte w Play Console
+
+Poniższa instrukcja dotyczy **prawdziwie podpisanego AAB** i realnej
+konfiguracji Play Games. Wygenerowane w CI syntetyczne ID i podpis
+debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
+
+1. Wejdź na [Google Play Console](https://play.google.com/console),
+   wybierz aplikację **Century War**. Uzupełnij wymagane informacje:
+   stronę sklepu, politykę prywatności, Data safety, grupę wiekową,
+   deklaracje i kraje dostępności. Zweryfikuj numer wersji oraz Play App
+   Signing (patrz wcześniejsze sekcje).
+2. Otwórz **Test and release → Testing → Closed testing**
+   (w polskim interfejsie: **Testowanie i publikacja → Testowanie →
+   Testy zamknięte**). Wybierz istniejącą ścieżkę testową lub utwórz nową.
+3. Na karcie **Testers** wybierz **Email lists → Create email list**.
+   Nadaj listę, wpisz adresy kont Google testerów (możesz też użyć
+   Google Groups), zapisz i przypisz ją do ścieżki. Ustaw adres
+   e-mail albo URL do zgłaszania opinii. Skopiuj link zapisu
+   **opt-in**. Samo dodanie adresu do listy **nie zapisuje testera**.
+4. Otwórz kartę **Releases → Create new release**. Wgraj
+   `app/build/outputs/bundle/release/app-release.aab` podpisany
+   prawdziwym kluczem upload. Uzupełnij notatki wydania, przejrzyj
+   ostrzeżenia i wybierz **Review release / Start rollout to closed testing**.
+   Po publikacji i ewentualnej weryfikacji link może aktywować się z
+   opóźnieniem, więc nie zakładaj natychmiastowej dostępności.
+5. Wyślij testerom link opt-in, poproś, by **zalogowali się tym samym
+   kontem Google, które widnieje na liście**, zaakceptowali udział i
+   zainstalowali grę przez Google Play. Sprawdzaj aktywnych uczestników
+   w konsoli, a nie tylko listę zaproszonych.
+6. Przekaż testerom krótką listę: uruchomienie, samouczek, bitwa,
+   przerwanie i wznowienie, powtórka, zmiana języka, eksport/import
+   kopii profilu, powiadomienie, offline, logowanie Play Games,
+   ranking i osiągnięcia. Poproś o datę, model telefonu, wersję
+   Androida, zrzut i opis kroków dla każdego błędu. Zbieraj także
+   informację, co działało.
+7. **Minimum Google (stan: 2.11.2026):** dla **osobistych kont
+   deweloperskich utworzonych po 13 listopada 2023 r.** co najmniej
+   **12 testerów musi mieć nieprzerwanie aktywny opt-in przez 14 dni**
+   **przed złożeniem wniosku o dostęp do produkcji**. Nie wystarczy
+   12 wpisanych e-maili ani samo pobranie gry. Rezygnacja z testu
+   i ponowny zapis restartują 14-dniowy okres danej osoby.
+   To wymaganie dotyczy wskazanej kategorii kont; nie jest
+   uniwersalnym wymogiem dla wszystkich istniejących kont firmowych.
+8. W trakcie dwóch tygodni reaguj na problemy testerów, publikuj
+   poprawione AAB na tym samym torze i zachowaj ciągłość ich udziału.
+   Sprawdzaj raport przedpremierowy, stabilność i powtarzalność
+   zgłaszanych błędów. W dokumentacji testu zanotuj użycie kluczowych
+   funkcji i konkretne poprawki.
+9. Po spełnieniu wymagań wejdź na **Dashboard → Apply for production**
+   i odpowiedz na pytania o przebieg testów, opinię testerów, aplikację
+   oraz gotowość do wydania. Dostęp produkcyjny wymaga zatwierdzenia
+   przez Google; nie jest przyznawany automatycznie po 14 dniach.
+   Google może poprosić o dalsze testy.
+
+**Oficjalne źródła Google (sprawdzone 2.11.2026):**
+- [App testing requirements for new personal developer accounts](https://support.google.com/googleplay/android-developer/answer/14151465)
+  — kwalifikacja konta, 12 testerów, nieprzerwany okres 14 dni i wniosek.
+- [Set up an open, closed, or internal test](https://support.google.com/googleplay/android-developer/answer/9845334)
+  — tory testowania, lista e-mail, link opt-in, wydanie i opinie.
+
 ## Walidacja
 
 Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):
@@ -313,8 +479,8 @@ Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
    kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
    [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
    Nie publikuj APK/AAB podpisanych kluczem debug.
-4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 54
-   osiągnięcia w Play Console. Ich ID wpisz wyłącznie w
+4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 66
+   osiągnięć w Play Console. Ich ID wpisz wyłącznie w
    `docs/store/play_games_ids.properties` (bez ręcznego XML).
    Skonfiguruj testerów, OAuth i Saved Games; zweryfikuj logowanie,
    chmurę, rankingi i osiągnięcia na urządzeniu.
