@@ -5,6 +5,8 @@ on:
     branches: ['main', 'claude/**', 'gpt/**']
     paths:
       - 'sim/**'
+      - 'app/src/main/java/com/centurywar/meta/**'
+      - 'app/src/test/java/com/centurywar/meta/**'
       - 'docs/BALANCE.md'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -12,6 +14,8 @@ on:
   pull_request:
     paths:
       - 'sim/**'
+      - 'app/src/main/java/com/centurywar/meta/**'
+      - 'app/src/test/java/com/centurywar/meta/**'
       - 'docs/BALANCE.md'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
