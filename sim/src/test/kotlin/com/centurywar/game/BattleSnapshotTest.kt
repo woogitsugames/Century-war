@@ -261,7 +261,7 @@ class BattleSnapshotTest {
         assertEquals(2, a.wave)
 
         val b = roundTrip(a)
-        assertEquals(14, BattleSnapshot.VERSION)
+        assertEquals(15, BattleSnapshot.VERSION)
         assertArrayEquals(a.player.cardStacks, b.player.cardStacks)
         assertArrayEquals(a.enemy.queueWaveTheme.copyOf(a.enemy.queueSize),
             b.enemy.queueWaveTheme.copyOf(b.enemy.queueSize))
@@ -444,6 +444,7 @@ class BattleSnapshotTest {
         val battle = Battle(BattleConfig(Mode.SKIRMISH, 455L, 1f, startEra = 4, maxEra = 4))
         battle.ai!!.thinkTimer = 1000f
         battle.player.turretEra[0] = 4
+        battle.player.turretTier[0] = 1
         battle.player.turretCd[0] = 0f
         assertTrue(battle.spawn(battle.enemy, Defs.unit(4, Role.HEAVY)))
         val target = battle.units.first { it.alive && it.side == 1 }

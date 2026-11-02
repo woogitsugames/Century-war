@@ -98,6 +98,7 @@ class Side(val index: Int) {
     var trainT = 0f
     val turretEra = IntArray(Defs.MAX_TURRET_SLOTS) { -1 }
     val turretVariant = IntArray(Defs.MAX_TURRET_SLOTS) { -1 }
+    val turretTier = IntArray(Defs.MAX_TURRET_SLOTS)
     val turretCd = FloatArray(Defs.MAX_TURRET_SLOTS)
     val turretFire = FloatArray(Defs.MAX_TURRET_SLOTS)
     var slots = 2
@@ -212,7 +213,7 @@ class FxBuffer {
  * dla danego seeda. Dzięki temu da się ją testować i balansować w testach JVM
  * (AI kontra AI), a w przyszłości weryfikować wyniki rankingu na serwerze.
  */
-class Battle(val cfg: BattleConfig) {
+class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
     companion object {
         const val STEP = 1f / 60f
         /** Tempo narastania/wygaszania kroku marszu (czysto wizualne). */
@@ -761,6 +762,7 @@ class Battle(val cfg: BattleConfig) {
         side.gold -= cost
         side.turretEra[slot] = side.era
         side.turretVariant[slot] = side.eraVariant
+        side.turretTier[slot] = 1
         side.turretCd[slot] = 0.5f
         side.turretsBuilt++
         return true
@@ -782,6 +784,22 @@ class Battle(val cfg: BattleConfig) {
         return true
     }
 
+    fun turretTierCost(side: Side, slot: Int): Int {
+        if (!turretTiersEnabled || slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return -1
+        val era = side.turretEra[slot]
+        if (era < 0 || side.turretTier[slot] !in 1..2) return -1
+        val ratio = if (side.turretTier[slot] == 1) 0.6f else 0.9f
+        return max(1, (side.turretCost(era, side.turretVariant[slot]) * ratio).toInt())
+    }
+
+    fun upgradeTurretTier(side: Side, slot: Int): Boolean {
+        val cost = turretTierCost(side, slot)
+        if (over || cost < 0 || side.gold < cost) return false
+        side.gold -= cost
+        side.turretTier[slot]++
+        return true
+    }
+
     fun sellTurret(side: Side, slot: Int): Boolean {
         if (slot !in 0 until side.slots || slot !in 0 until Defs.MAX_TURRET_SLOTS) return false
         val te = side.turretEra[slot]
@@ -789,6 +807,7 @@ class Battle(val cfg: BattleConfig) {
         side.gold += side.turretCost(te, side.turretVariant[slot]) / 2
         side.turretEra[slot] = -1
         side.turretVariant[slot] = -1
+        side.turretTier[slot] = 0
         return true
     }
 
@@ -1159,12 +1178,13 @@ class Battle(val cfg: BattleConfig) {
             val td = Defs.turret(te, s.turretVariant[i])
             val dist = (target.x - s.baseFront) * s.dir
             if (dist > td.range * projectileRangeMul(s.index, turret = true) * s.turretRangeMul) continue
-            s.turretCd[i] = td.cooldown / s.turretRateMul
+            s.turretCd[i] = td.cooldown / (s.turretRateMul * (1f + 0.35f * (s.turretTier[i] - 1)))
             s.turretFire[i] = 0.15f
             val h = turretHeight(i)
-            val turretDmg = td.dmg * s.turretDmgMul
+            val turretDmg = td.dmg * s.turretDmgMul * (1f + 0.35f * (s.turretTier[i] - 1))
             launch(s.index, s.baseFront - s.dir * 40f, h, target.x, td.projectile,
-                turretDmg, td.splash, 0f, te, null, turretDmg * s.turretBurnRatio / 4f,
+                turretDmg, if (s.turretTier[i] == 3 && te % 2 == 0) max(td.splash, 45f) else td.splash, 0f, te, null,
+                turretDmg * (s.turretBurnRatio + if (s.turretTier[i] == 3 && te % 2 == 1) 0.2f else 0f) / 4f,
                 s.turretVariant[i])
             // Tylko wizualizacja: ostrzał wieży otrzymuje własny bank audio.
             fx.add(FxBuffer.MUZZLE, s.baseFront - s.dir * 40f, h, s.index,

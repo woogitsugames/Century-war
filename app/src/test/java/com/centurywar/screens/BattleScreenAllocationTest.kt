@@ -88,6 +88,7 @@ class BattleScreenAllocationTest {
         val f = fixture(4701L)
         val p = f.battle.player
         p.turretEra[0] = p.era
+        p.turretTier[0] = 1
         p.turretVariant[0] = p.eraVariant
         f.screen.onClick(field(f.screen, "turretBtn") as Button)
         check("Panel wież (z kupnem i sprzedażą)", f)

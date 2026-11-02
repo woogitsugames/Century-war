@@ -1,8 +1,8 @@
 {
   "id": "silicon-variant",
   "config": {"mode":"SKIRMISH","seed":91009,"aiPower":1.0,"startEra":6,"maxEra":7,"modifiers":[],"bonuses":{"startGold":9000.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":3.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":100.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"CLEAR","weekly":-1,"weeklyCard":null,"dailyEvent":null},
-  "replayVersion": 5,
-  "replay": "Bf-QLjQAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAACgAQAAIwABfQAAoAEAAAUAAZsBAACHAQABGQAAwAIAADcPAGQEAFAAAVUAAMACAADAAgAAoAEAAJMCAAHoAgcFAABfDwBBAAAjAAIUAAFpAADAAgAAxwMI",
+  "replayVersion": 6,
+  "replay": "Bv-QLjQAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAACgAQAAIwABfQAAoAEAAAUAAZsBAACHAQABGQAAwAIAADcPAGQEAFAAAVUAAMACAADAAgAAoAEAAJMCAAHoAgcFAABfDwBBAAAjAAIUAAFpAADAAgAAxwMI",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -57,5 +57,5 @@
     {"step":5145,"kind":"QUEUE","argument":0},
     {"step":5600,"kind":"RALLY","argument":0}
   ],
-  "expected": {"score":21007,"winner":0,"wave":0,"steps":5904,"kills":40,"enemyKills":23,"timeBits":1120193741,"snapshotSha256":"1a7f227b52060fdcbed04e627db4dc7eb68e5dd0ad455a199dd7bd73dd5deb49"}
+  "expected": {"score":21007,"winner":0,"wave":0,"steps":5904,"kills":40,"enemyKills":23,"timeBits":1120193741,"snapshotSha256":"a3cf05879e65a4be58b34bfc7141edb99ef504e83b824d8832d7ada822ada641"}
 }

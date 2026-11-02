@@ -63,16 +63,19 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
     fun layoutTurretPanel() {
         with(owner) {
         val pw = min(480 * dp, w - 40 * dp)
-        val rowH = 50 * dp
+        val narrow = pw < 350 * dp
+        val rowH = (if (narrow) 104 else 50) * dp
         turretSlotsLaid = battle.player.slots
         val ph = 62 * dp + rowH * turretSlotsLaid + 10 * dp
         panel.set(w / 2 - pw / 2, (h - hudH - ph) / 2 + topH / 2, w / 2 + pw / 2, (h - hudH - ph) / 2 + topH / 2 + ph)
-        val bw = min(140 * dp, pw * 0.3f)
-        val sw = min(116 * dp, pw * 0.25f)
+        val bw = 64 * dp
+        val sw = 54 * dp
+        val tw = 64 * dp
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
-            val y = panel.top + 50 * dp + i * rowH
+            val y = panel.top + 50 * dp + i * rowH + if (narrow) 50 * dp else 0f
             slotSell[i].set(panel.right - 20 * dp - sw, y, sw, 48 * dp)
-            slotBuy[i].set(slotSell[i].r.left - 8 * dp - bw, y, bw, 48 * dp)
+            slotTier[i].set(slotSell[i].r.left - 4 * dp - tw, y, tw, 48 * dp)
+            slotBuy[i].set(slotTier[i].r.left - 4 * dp - bw, y, bw, 48 * dp)
         }
         closeBtn.set(panel.right - 38 * dp, panel.top - 12 * dp, 48 * dp, 48 * dp)
         }
@@ -118,23 +121,33 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
         ui.panel(c, panel)
         ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, turretHeading, 16f,
             Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
+        val narrow = panel.width() < 350 * dp
         for (i in 0 until p.slots) {
             val b = slotBuy[i]
             val te = p.turretEra[i]
-            tmpR.set(panel.left + 14 * dp, b.r.top - 2 * dp, panel.right - 14 * dp, b.r.bottom + 2 * dp)
+            tmpR.set(panel.left + 14 * dp, b.r.top - (if (narrow) 50 else 2) * dp, panel.right - 14 * dp, b.r.bottom + 2 * dp)
             ui.fill.color = if (i % 2 == 0) Color.argb(34, 255, 255, 255) else Color.argb(14, 255, 255, 255)
             c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
-            val cy = b.r.centerY()
+            val cy = b.r.centerY() - if (narrow) 50 * dp else 0f
             val mr = b.r.height() * 0.5f
             ui.medallion(c, panel.left + 20 * dp + mr, cy, mr, if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78), if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
             if (te < 0) ui.textO(c, slotNumbers[i], panel.left + 20 * dp + mr, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             val tx = panel.left + 28 * dp + mr * 2
             val name = if (te >= 0) L[Defs.turret(te, p.turretVariant[i]).nameKey] else L["empty"]
-            val avail = b.r.left - tx - 6 * dp
+            val avail = (if (narrow) panel.right - 14 * dp else b.r.left) - tx - 6 * dp
             ui.textO(c, slotLabels[i], tx, cy - 3 * dp, 10f, Ui.DIM, Paint.Align.LEFT, 1.5f)
             ui.textO(c, name, tx, cy + 12 * dp, ui.fit(name, 13f, avail), if (te >= 0) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.8f)
-            ui.button(c, slotBuy[i], 13f)
-            ui.button(c, slotSell[i], 13f)
+            if (te >= 0) {
+                val barWidth = 8 * dp
+                for (tier in 0..2) {
+                    ui.fill.color = if (tier < p.turretTier[i]) Ui.GOLD else Ui.DIM
+                    val left = tx + tier * (barWidth + 2 * dp)
+                    c.drawRect(left, cy + 17 * dp, left + barWidth, cy + 20 * dp, ui.fill)
+                }
+            }
+            ui.button(c, slotBuy[i], 11f)
+            ui.button(c, slotTier[i], 11f)
+            ui.button(c, slotSell[i], 11f)
         }
         ui.closeButton(c, closeBtn)
         }

@@ -392,7 +392,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         titles[TURRET] = L[t.nameKey]
         roles[TURRET] = L["cx_turret"]
         counterHints[TURRET] = if (era >= 4) L["cx_counter_turret"] else null
-        wrapInto(TURRET, L["cx_turret_d"], textW)
+        wrapInto(TURRET, L["cx_turret_d"] + "\n" + L.f("turret140_tip", (t.cost * 0.6f).toInt().coerceAtLeast(1)), textW)
         val tdmg = t.dmg * b.turretDmgMul
         val tUp = b.turretDmgMul != 1f
         var n = 0
@@ -402,6 +402,9 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         n = stat(TURRET, n, Icons.CROSSHAIR, "cx_range", num(t.range), false)
         n = stat(TURRET, n, Icons.HOURGLASS, "cx_reload", sec(t.cooldown), false)
         n = stat(TURRET, n, Icons.BOMB, "cx_splash", if (t.splash > 0f) num(t.splash) else "—", false)
+        n = stat(TURRET, n, Icons.SWORD, "turret140_dmg", "${num(tdmg * 1.35f)} / ${num(tdmg * 1.7f)}", tUp)
+        n = stat(TURRET, n, Icons.HOURGLASS, "turret140_reload", "${sec(t.cooldown / 1.35f)} / ${sec(t.cooldown / 1.7f)}", false)
+        n = stat(TURRET, n, Icons.COIN, "turret140_cost", "${(t.cost * 0.6f).toInt().coerceAtLeast(1)} / ${(t.cost * 0.9f).toInt().coerceAtLeast(1)}", false)
         statN[TURRET] = n
 
         titles[BARRAGE] = if (variant == null) L[e.abilityKey] else L["ab_" + variant.key]

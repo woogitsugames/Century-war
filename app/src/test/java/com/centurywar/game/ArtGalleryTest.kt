@@ -456,6 +456,7 @@ class ArtGalleryTest {
                 side.slots = 3
                 for (i in 0 until side.slots) {
                     side.turretEra[i] = era
+                    side.turretTier[i] = 1
                     side.turretVariant[i] = variant
                 }
                 val renderer = BattleRenderer(g, battle)
@@ -484,7 +485,7 @@ class ArtGalleryTest {
                 val b = Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f, startEra = era, maxEra = Defs.ERA_COUNT - 1))
                 val s = b.sides[0]
                 s.slots = 4
-                for (i in 0 until 4) s.turretEra[i] = (era - i).coerceAtLeast(0)
+                for (i in 0 until 4) { s.turretEra[i] = (era - i).coerceAtLeast(0); s.turretTier[i] = 1 }
                 val r = BattleRenderer(g, b)
                 r.layout(pw.toFloat(), ph.toFloat(), 0f, 40f)
                 val px = (era % 2) * pw.toFloat(); val py = (era / 2) * ph.toFloat()

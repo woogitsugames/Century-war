@@ -1,8 +1,8 @@
 {
   "id": "skirmish-modifiers",
   "config": {"mode":"SKIRMISH","seed":91007,"aiPower":1.25,"startEra":2,"maxEra":5,"modifiers":["FAST_UNITS","GLASS_CANNON"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"RAIN","weekly":-1,"weeklyCard":null,"dailyEvent":null},
-  "replayVersion": 5,
-  "replay": "Bf-QHCEAAAAAAwAZAAA3AAFpAADgAwAA6wEHMgABIwAAoAEAADcIKAABQQAA4AMAACMAAX0AAKABAAAFAAGbAQAAhwEAARkAAKABAABpAAE3AAA3DwBpAABLAAFVAACgAQAAoAEAAKABAAAPAAEoCw",
+  "replayVersion": 6,
+  "replay": "Bv-QHCEAAAAAAwAZAAA3AAFpAADgAwAA6wEHMgABIwAAoAEAADcIKAABQQAA4AMAACMAAX0AAKABAAAFAAGbAQAAhwEAARkAAKABAABpAAE3AAA3DwBpAABLAAFVAACgAQAAoAEAAKABAAAPAAEoCw",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -38,5 +38,5 @@
     {"step":3560,"kind":"QUEUE","argument":1},
     {"step":3600,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":299,"winner":1,"wave":0,"steps":3600,"kills":20,"enemyKills":20,"timeBits":1114636289,"snapshotSha256":"ef3936df9bd664c9a5d655880545e71cba0e066588a0ab7dbc72d95282940939"}
+  "expected": {"score":299,"winner":1,"wave":0,"steps":3600,"kills":20,"enemyKills":20,"timeBits":1114636289,"snapshotSha256":"8291ecf265f3626cde14877356d72e27f673a211d67d96f93fe14052392c8abb"}
 }

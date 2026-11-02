@@ -178,6 +178,7 @@ class BattleScreen(
         const val VARIANT0 = 80 // 80..81
         const val SLOT_BUY0 = 40 // 40..43
         const val SLOT_SELL0 = 50 // 50..53
+        const val SLOT_TIER0 = 110 // 110..113
         const val CLOSE = 60
         const val UNIT_UPGRADE0 = 70 // 70..73
         const val UNIT_UPGRADE_BUY = 74
@@ -240,6 +241,7 @@ class BattleScreen(
     internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
     internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
     internal val slotSell = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_SELL0 + it) }
+    internal val slotTier = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_TIER0 + it) }
     internal val closeBtn = btn(CLOSE)
     /** Niewidoczny obszar nad ikonami kolejki: opis bez akcji przy krótkim tapnięciu. */
     internal val queueInfoBtn = btn(90)
@@ -689,6 +691,7 @@ class BattleScreen(
     internal var shownRankText = ""
     internal val slotBuyKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
     internal val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
+    internal val slotTierKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
     internal var slotLabelLanguage = -1
     /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
     internal val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
@@ -764,6 +767,19 @@ class BattleScreen(
                 val cost = if (p.turretEra[i] < 0) p.turretCost() else battle.upgradeCost(p, i)
                 body = if (cost < 0) L["unit_upgrade_max"] else L.f(
                     if (p.turretEra[i] < 0) "tip53_slot_buy" else "tip53_slot_upgrade", cost)
+            }
+            in SLOT_TIER0 until SLOT_TIER0 + Defs.MAX_TURRET_SLOTS -> {
+                val i = b.id - SLOT_TIER0
+                title = L["turret140_title"]
+                val cost = battle.turretTierCost(p, i)
+                body = if (cost < 0) L["unit_upgrade_max"] else {
+                    val def = Defs.turret(p.turretEra[i], p.turretVariant[i])
+                    val tier = p.turretTier[i]
+                    val base = def.dmg * p.turretDmgMul
+                    L.f("turret140_stats", (base * (1f + 0.35f * (tier - 1))).toInt(),
+                        (base * (1f + 0.35f * tier)).toInt(), 100 + 35 * (tier - 1), 100 + 35 * tier) +
+                        "\n" + L.f("turret140_tip", cost)
+                }
             }
             in SLOT_SELL0 until SLOT_SELL0 + Defs.MAX_TURRET_SLOTS -> {
                 val i = b.id - SLOT_SELL0
@@ -875,6 +891,7 @@ class BattleScreen(
                 val i = b.id - SLOT_BUY0
                 if (p.turretEra[i] < 0) commands.buyTurret(i) else commands.upgradeTurret(i)
             }
+            in SLOT_TIER0 until SLOT_TIER0 + Defs.MAX_TURRET_SLOTS -> commands.upgradeTurretTier(b.id - SLOT_TIER0)
             in SLOT_SELL0 until SLOT_SELL0 + Defs.MAX_TURRET_SLOTS -> commands.sellTurret(b.id - SLOT_SELL0)
         }
     }

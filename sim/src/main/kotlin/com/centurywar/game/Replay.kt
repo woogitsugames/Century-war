@@ -8,7 +8,7 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 5
+    const val VERSION = 6
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -17,7 +17,7 @@ object Replay {
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
         ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
-        BARRAGE_AT, CARD, UNIT_UPGRADE, VARIANT,
+        BARRAGE_AT, CARD, UNIT_UPGRADE, VARIANT, TURRET_TIER,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -38,7 +38,7 @@ object Replay {
     fun encode(log: Log): String {
         validate(log)
         val out = ByteArrayOutputStream(log.commands.size * 4 + 12)
-        out.write(VERSION)
+        out.write(log.version)
         out.write(log.dailyEvent?.ordinal ?: 255)
         writeVarint(out, log.steps)
         writeVarint(out, log.commands.size)
@@ -62,7 +62,7 @@ object Replay {
         }
         val input = Reader(raw)
         val version = input.byte()
-        require(version == VERSION) { "Nieobsługiwana wersja powtórki: $version" }
+        require(version in 5..VERSION) { "Nieobsługiwana wersja powtórki: $version" }
         val eventCode = input.byte()
         require(eventCode == 255 || eventCode in DailyEvent.entries.indices) { "Nieznane zdarzenie dnia" }
         val dailyEvent = if (eventCode == 255) null else DailyEvent.entries[eventCode]
@@ -108,7 +108,7 @@ object Replay {
     ): Result {
         validate(log)
         require(cfg.dailyEvent == log.dailyEvent) { "Nieprawidłowe zdarzenie dnia" }
-        val battle = Battle(cfg)
+        val battle = Battle(cfg, turretTiersEnabled = log.version >= 6)
         battle.playerAi = null
         val controller = BattleController(battle, record = false)
         var index = 0
@@ -178,25 +178,27 @@ object Replay {
         Kind.CARD -> controller.card(command.argument)
         Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
         Kind.VARIANT -> controller.variant(command.argument)
+        Kind.TURRET_TIER -> controller.upgradeTurretTier(command.argument)
     }
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
         Kind.QUEUE, Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET,
-        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD, Kind.UNIT_UPGRADE, Kind.VARIANT -> true
+        Kind.STANCE, Kind.DOCTRINE, Kind.TUTORIAL_GOLD, Kind.BARRAGE_AT, Kind.CARD, Kind.UNIT_UPGRADE, Kind.VARIANT, Kind.TURRET_TIER -> true
         else -> false
     }
 
     private fun validate(log: Log) {
-        require(log.version == VERSION) { "Nieobsługiwana wersja powtórki" }
+        require(log.version in 5..VERSION) { "Nieobsługiwana wersja powtórki" }
         require(log.steps in 0..MAX_STEPS) { "Nieprawidłowa liczba kroków" }
         require(log.commands.size <= MAX_COMMANDS) { "Przekroczony limit komend" }
         var previousStep = 0
         for (command in log.commands) {
             require(command.step >= previousStep && command.step <= log.steps) { "Komenda spoza zakresu kroków" }
+            require(log.version >= 6 || command.kind != Kind.TURRET_TIER) { "Komenda niedostępna w tej wersji" }
             val arg = command.argument
             val correct = when (command.kind) {
                 Kind.QUEUE, Kind.UNIT_UPGRADE -> arg in 0 until Role.values().size
-                Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET ->
+                Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET, Kind.TURRET_TIER ->
                     arg in 0 until Defs.MAX_TURRET_SLOTS
                 Kind.STANCE -> arg == 0 || arg == 1
                 Kind.DOCTRINE -> arg in 0..2

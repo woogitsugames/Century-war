@@ -237,6 +237,7 @@ class AiPersonalityTest {
         b.time = 70f
         me.gold = 0f
         me.turretEra[0] = 0
+        me.turretTier[0] = 1
         repeat(2) {
             assertTrue(b.spawn(b.player, Defs.unit(b.player.era, Role.RANGED)))
             b.units[it].x = me.baseFront - 350f

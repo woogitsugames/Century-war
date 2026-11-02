@@ -27,7 +27,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 14
+    const val VERSION = 15
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -78,6 +78,7 @@ object BattleSnapshot {
         o.writeBoolean(rankedDaily)
         o.writeFloat(camX)
         writeConfig(o, b.cfg)
+        o.writeBoolean(b.turretTiersEnabled)
         o.writeLong(b.rng.state)
         o.writeLong(b.rng.aiState(0)); o.writeLong(b.rng.aiState(1))
         o.writeFloat(b.time)
@@ -169,7 +170,7 @@ object BattleSnapshot {
         for (i in 0 until s.queueSize) o.writeShort(s.queue[i])
         for (i in 0 until s.queueSize) o.writeByte(s.queueWaveTheme[i])
         o.writeFloat(s.trainT)
-        for (i in 0 until Defs.MAX_TURRET_SLOTS) { o.writeByte(s.turretEra[i]); o.writeByte(s.turretVariant[i]); o.writeFloat(s.turretCd[i]); o.writeFloat(s.turretFire[i]) }
+        for (i in 0 until Defs.MAX_TURRET_SLOTS) { o.writeByte(s.turretEra[i]); o.writeByte(s.turretVariant[i]); o.writeByte(s.turretTier[i]); o.writeFloat(s.turretCd[i]); o.writeFloat(s.turretFire[i]) }
         o.writeByte(s.slots)
         o.writeFloat(s.abilityCd[0]); o.writeFloat(s.abilityCd[1])
         o.writeFloat(s.rallyT); o.writeBoolean(s.hold); o.writeShort(s.aliveCount); o.writeFloat(s.front); o.writeFloat(s.baseFlash)
@@ -231,7 +232,7 @@ object BattleSnapshot {
         val ranked = i.readBoolean()
         val camX = i.readFloat()
         val cfg = readConfig(i) ?: return null
-        val b = Battle(cfg)
+        val b = Battle(cfg, turretTiersEnabled = i.readBoolean())
         b.rng.state = i.readLong()
         b.rng.setAiState(0, i.readLong()); b.rng.setAiState(1, i.readLong())
         b.time = i.readFloat()
@@ -353,6 +354,7 @@ object BattleSnapshot {
             s.turretVariant[k] = if (s.turretEra[k] < 0) {
                 require(tv == -1); -1
             } else variant(s.turretEra[k], tv)
+            s.turretTier[k] = i.readUnsignedByte().also { require(if (s.turretEra[k] < 0) it == 0 else it in 1..3) }
             s.turretCd[k] = i.readFloat(); s.turretFire[k] = i.readFloat()
         }
         s.slots = i.readByte().toInt().also { require(it in 0..Defs.MAX_TURRET_SLOTS) }

@@ -74,6 +74,7 @@ class Ai(
     private fun stance(hold: Boolean) { commands?.stance(hold) ?: run { me.hold = hold } }
     private fun upgrade(slot: Int) = commands?.upgradeTurret(slot) ?: b.upgradeTurret(me, slot)
     private fun buyTurret(slot: Int) = commands?.buyTurret(slot) ?: b.buyTurret(me, slot)
+    private fun tierTurret(slot: Int) = commands?.upgradeTurretTier(slot) ?: b.upgradeTurretTier(me, slot)
     private fun sellTurret(slot: Int) = commands?.sellTurret(slot) ?: b.sellTurret(me, slot)
     private fun armory() = commands?.armory() ?: b.buyArmory(me)
     private fun queue(role: Role) = commands?.queue(role) ?: b.queueUnit(me, role)
@@ -302,6 +303,14 @@ class Ai(
             val cost = b.upgradeCost(me, i)
             if (cost >= 0 && cost <= budget && me.gold > cost + reserve * 0.5f) {
                 if (upgrade(i)) return
+            }
+        }
+        // W Endless bot najpierw inwestuje w armię, stopnie rozważa dopiero pod koniec próby.
+        if ((!b.endless || b.wave >= 55) &&
+            (personality == AiPersonality.ENGINEER || personality == AiPersonality.SIEGER)) {
+            for (i in 0 until me.slots) {
+                val cost = b.turretTierCost(me, i)
+                if (cost >= 0 && cost <= budget && me.gold > cost + reserve && tierTurret(i)) return
             }
         }
         val slot = b.freeSlot(me)

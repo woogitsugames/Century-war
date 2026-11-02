@@ -1058,3 +1058,38 @@ podąża za badaniem, Endless i dzień zachowują elity.
   bariera nie wynikała z ceny, tylko z asymetrii.
 
 - 2026-11-02 — regeneracja złotych powtórek: Tura 8 balans: osobowości 127, uczciwe elity wroga, stageRamp etapów 1-6/12/18/25/29/30/32.
+
+
+
+## 140 — stopnie rozbudowy wież
+
+Wieża ma stopnie 1–3. Kolejne poziomy kosztują odpowiednio 60% i 90% ceny
+wieży w jej obecnej epoce; awans wieży do nowej epoki zachowuje stopień.
+Każdy poziom dodaje 35% obrażeń oraz 35% szybkości strzelania względem
+wartości bazowej. Trzeci dodaje rozprysk w parzystych epokach lub podpalenie
+w nieparzystych. Sprzedaż zwraca połowę ceny podstawowej wieży, bez zwrotu
+kosztu jej stopni.
+
+Porównanie wykonano na bazie `a08c7987` i po zmianie, 36 etapów × 20 tych
+samych seedów, profil badań `target`, bot przeciw AI, do 30 minut bitwy.
+Przed: 494/720 zwycięstw (68,61%); po: 470/720 (65,28%), różnica −3,33 p.p.
+łącznie. Na dziewięciu pojedynczych etapach różnica przekracza 5 p.p.; przy
+20 seedach jedno zwycięstwo odpowiada 5 p.p., więc wyniki etapów są małymi próbami.
+Bot wydał łącznie na kupno i ulepszenia wież 3 034 891 złota przed i 5 050 121
+po, odpowiednio średnio 4 215 i 7 014 na bitwę. Pomiar wydatków wykonano
+w oddzielnych tymczasowych kopiach z licznikiem niewpływającym na decyzje
+symulacji; liczba zwycięstw w tych przebiegach była identyczna. Szczegóły
+etapów: `docs/balance-140-before.csv` i `docs/balance-140-after.csv`.
+
+Polecenie pomiaru zwycięstw: `BALANCE_RUN=true BALANCE_RUNS=20 BALANCE_PROFILE=target
+./gradlew :app:testDebugUnitTest --tests '*BalanceReport.campaignReport*'
+--no-configuration-cache`.
+
+
+Test `EndlessBalanceReportTest.veteranHundredSeeds`: seedy 1001–1100,
+weteran 80% badań; falę 60 osiągnięto w **13/100** przypadków (cel 5–15),
+mediana fali porażki 54, średnia osiągnięta fala 52,33. W trybie Endless AI
+zaczyna rozważać stopnie wież od fali 55; gracz może kupować je wcześniej.
+Pełny zestaw testów serwera i symulacji zakończył się powodzeniem.
+
+- 2026-11-02 — regeneracja złotych powtórek: 140 stopnie wiez.

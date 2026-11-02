@@ -94,7 +94,7 @@ class HintOverlayTest {
                     b.units[0].side = 1
                     b.units[0].bossKind = 1
                 }
-                HintOverlay.OLD_TURRET -> { p.era = 1; p.turretEra[0] = 0 }
+                HintOverlay.OLD_TURRET -> { p.era = 1; p.turretEra[0] = 0; p.turretTier[0] = 1 }
             }
             g.profile.hintsSeen = Profile.HINT_VALID_MASK and (1L shl id).inv()
             val hints = HintOverlay(g, b, targets(), id == HintOverlay.DAILY)
