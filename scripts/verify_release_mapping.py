@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sprawdza nazwy i obecnosc elementow trwalych formatow po R8."""
+"""Sprawdza stabilnosc trwalych formatow po R8: mapping, usage i keep."""
 
 import argparse
 import re
@@ -120,11 +120,24 @@ def removed_by_r8(usage: str) -> set[tuple[str, str | None]]:
     return removed
 
 
-def verify(mapping_text: str, usage_text: str | None = None) -> tuple[int, int]:
+def verify(mapping_text: str, usage_text: str | None = None,
+           configuration_text: str | None = None) -> tuple[int, int]:
     mapping = parse_mapping(mapping_text)
     removed = removed_by_r8(usage_text) if usage_text is not None else set()
     errors = []
     checked_fields = 0
+    # R8 nie umieszcza w mapping.txt wszystkich niezmienionych pol, nawet przy -keep.
+    # Kontrolujemy faktycznie zastosowane reguly i liste usunietych elementow.
+    if configuration_text is not None:
+        active_rules = {line.strip() for line in configuration_text.splitlines()}
+        for name in REQUIRED_FIELDS:
+            rule = f"-keep class {name} {{ <fields>; }}"
+            if rule not in active_rules:
+                errors.append(f"Brak zastosowanej reguly keep dla pol: {name}")
+        for name in REQUIRED_ENUM_FIELDS:
+            rule = f"-keep enum {name} {{ *; }}"
+            if rule not in active_rules:
+                errors.append(f"Brak zastosowanej reguly keep dla enum: {name}")
     for original, expected_fields in REQUIRED.items():
         cls = mapping.get(original)
         if cls is None:
@@ -136,10 +149,10 @@ def verify(mapping_text: str, usage_text: str | None = None) -> tuple[int, int]:
             errors.append(f"Usunieta klasa w usage.txt: {original}")
         for field in expected_fields:
             checked_fields += 1
-            new_name = cls[1].get(field)
-            if new_name is None:
-                errors.append(f"Brak pola w mapping.txt: {original}.{field}")
-            elif new_name != field:
+            # Brak wpisu oznacza niezmieniona nazwe albo usuniety element.
+            # W trybie CI kontrola usage.txt i zastosowanych -keep rozstrzyga to.
+            new_name = cls[1].get(field, field)
+            if new_name != field:
                 errors.append(f"Przemianowane pole: {original}.{field} -> {new_name}")
             if (original, field) in removed:
                 errors.append(f"Usuniete pole w usage.txt: {original}.{field}")
@@ -151,17 +164,22 @@ def verify(mapping_text: str, usage_text: str | None = None) -> tuple[int, int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mapping", type=Path, required=True)
-    parser.add_argument("--usage", type=Path)
+    parser.add_argument("--usage", type=Path, required=True)
+    parser.add_argument("--configuration", type=Path, required=True)
     args = parser.parse_args()
     if not args.mapping.is_file():
         parser.error(f"Brak mapping.txt: {args.mapping}")
-    if args.usage is not None and not args.usage.is_file():
+    if not args.usage.is_file():
         parser.error(f"Brak usage.txt: {args.usage}")
+    if not args.configuration.is_file():
+        parser.error(f"Brak configuration.txt: {args.configuration}")
     classes, fields = verify(
         args.mapping.read_text(encoding="utf-8", errors="replace"),
-        args.usage.read_text(encoding="utf-8", errors="replace") if args.usage else None,
+        args.usage.read_text(encoding="utf-8", errors="replace"),
+        args.configuration.read_text(encoding="utf-8", errors="replace"),
     )
-    print(f"Mapowanie R8 OK: {classes} klas (w tym enumy), {fields} pol bez zmiany nazw i usuniecia")
+    print(f"Mapowanie R8 OK: {classes} klas (w tym enumy), {fields} pol: "
+          "brak zmian nazw, brak usuniec w usage.txt, obecne reguly keep")
 
 
 if __name__ == "__main__":
