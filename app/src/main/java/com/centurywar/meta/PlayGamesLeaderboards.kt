@@ -395,9 +395,9 @@ class PlayGamesLeaderboards(
                 try {
                     game.profile.fromJson(cloudJson)
                     game.profile.save()
-                    game.applyLanguage()
-                    game.setQuality(game.effectiveQualityLevel())
-                    game.applyFrameRate()
+                    game.snapshots?.deleteAsync()
+                    game.resumeOffer = null
+                    game.applyLoadedProfile()
                     appliedCloud = true
                     Achievements.syncUnlocked(game.profile, this@PlayGamesLeaderboards)
                 } catch (e: Exception) {
