@@ -8,6 +8,8 @@ import android.os.StrictMode
 import com.centurywar.BuildConfig
 import com.centurywar.crash.CrashReports
 import android.view.MotionEvent
+import android.view.View
+import android.view.accessibility.AccessibilityNodeProvider
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -38,6 +40,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     /** Tożsamość ostatnio uruchomionego workera, również po stopThread(). */
     @Volatile private var lastStartedThread: Thread? = null
     private var scale = 1f
+    private val accessibility = GameAccessibility(this, game)
     /**
      * Jednorazowy sygnał po opublikowaniu pierwszej wyrenderowanej klatki dowolnego ekranu
      * (menu, Co nowego, wznowiona bitwa). Warunek „tylko menu” blokował start dźwięku
@@ -49,6 +52,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     init {
         holder.addCallback(this)
         isFocusable = true
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         keepScreenOn = true
     }
 
@@ -199,6 +203,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                     }
                 } catch (_: Exception) { }
             }
+            accessibility.refreshIfEnabled()
             val cap = frameCapFps
             if (cap > 0) {
                 val target = 1_000_000_000L / cap
@@ -209,6 +214,15 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
             }
         }
     }
+
+    override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider = accessibility.provider
+
+    /** Punkt testowy; w aplikacji migawka powstaje wyłącznie na wątku gry. */
+    internal fun refreshAccessibilityNodes() = accessibility.refresh()
+    internal val accessibilityRevision get() = accessibility.revision
+
+    override fun onHoverEvent(e: MotionEvent): Boolean =
+        if (accessibility.onHover(e)) true else super.onHoverEvent(e)
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(e: MotionEvent): Boolean {

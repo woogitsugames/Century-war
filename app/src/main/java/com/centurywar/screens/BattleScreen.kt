@@ -1053,6 +1053,13 @@ class BattleScreen(
         aimMoved = false
     }
 
+    override fun accessibilityLabel(b: Button): String = when (b) {
+        pauseBtn -> L["a164_pause"]
+        pauseVibrationBtn -> L["vibration"] + ": " + b.label
+        pauseSpeedBtn -> L["cx_speed"] + ": " + b.label
+        else -> super.accessibilityLabel(b)
+    }
+
     override fun onBack(): Boolean {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (aimingBarrage) { aimingBarrage = false; return true }

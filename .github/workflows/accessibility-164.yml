@@ -1,0 +1,53 @@
+name: TalkBack accessibility regression
+
+on:
+  push:
+    branches:
+      - gpt/164-accessibility-nodes
+    paths:
+      - '.github/workflows/accessibility-164.yml'
+      - 'app/src/main/java/com/centurywar/engine/GameAccessibility.kt'
+      - 'app/src/main/java/com/centurywar/engine/GameView.kt'
+      - 'app/src/main/java/com/centurywar/engine/Screen.kt'
+      - 'app/src/test/java/com/centurywar/engine/GameAccessibility164Test.kt'
+  pull_request:
+    paths:
+      - '.github/workflows/accessibility-164.yml'
+      - 'app/src/main/java/com/centurywar/engine/GameAccessibility.kt'
+      - 'app/src/main/java/com/centurywar/engine/GameView.kt'
+      - 'app/src/main/java/com/centurywar/engine/Screen.kt'
+      - 'app/src/test/java/com/centurywar/engine/GameAccessibility164Test.kt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talkback-164-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  virtual-nodes:
+    name: Węzły TalkBack i Switch Access
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Testy wirtualnych węzłów (164)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest --tests '*GameAccessibility164Test*' --console=plain --no-configuration-cache
+      - name: Raport wyników
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-164-test-results
+          path: app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn

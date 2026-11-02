@@ -502,6 +502,12 @@ class MenuScreen(g: Game) : Screen(g) {
         plateRight = plate.right
     }
 
+    override fun accessibilityLabel(b: Button): String = when (b) {
+        settings -> L["settings"]
+        codex -> L["codex"]
+        else -> super.accessibilityLabel(b)
+    }
+
     override fun onClick(b: Button) {
         val offer = g.resumeOffer
         if (offer != null) {

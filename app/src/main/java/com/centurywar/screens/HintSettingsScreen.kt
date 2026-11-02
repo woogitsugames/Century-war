@@ -97,6 +97,20 @@ class HintSettingsScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f)
     }
 
+    override fun accessibilityLabel(b: Button): String {
+        if (b.id == -1) return L["back"]
+        if (b.id !in 1..5) return super.accessibilityLabel(b)
+        return L[keys[b.id - 1]] + ": " + b.label
+    }
+
+    override fun accessibilityCheckable(b: Button): Boolean = b === toggle || b === eraToggle
+
+    override fun accessibilityChecked(b: Button): Boolean = when (b) {
+        toggle -> g.profile.hintsEnabled
+        eraToggle -> g.profile.eraIntrosEnabled
+        else -> super.accessibilityChecked(b)
+    }
+
     override fun onClick(b: Button) {
         when (b) {
             back -> g.pop()
