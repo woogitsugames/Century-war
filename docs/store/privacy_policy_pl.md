@@ -27,6 +27,7 @@ Na ten adres można kierować pytania o przetwarzanie danych i wnioski dotycząc
 Gra zapisuje w prywatnej pamięci aplikacji:
 - pseudonim dowódcy wybrany w grze;
 - etapy kampanii, gwiazdki, medale, badania, misje, osiągnięcia i lokalne rekordy;
+- historię rozegranych bitew (plik `history.json`);
 - statystyki (np. liczbę bitew, zwycięstw, pokonanych jednostek i czas gry);
 - ustawienia gry (np. język, jakość grafiki, dźwięk, wibracje, przypomnienia i ich godzinę);
 - tymczasowy zapis przerwanej bitwy do wznowienia (plik battle.snap);
@@ -34,7 +35,7 @@ Gra zapisuje w prywatnej pamięci aplikacji:
 - przy włączeniu własnego rankingu: losowy UUID i oddzielny, 32-bajtowy sekret
   instalacji (w `profile.json`), używany do potwierdzania własności wpisów.
 
-Podstawowa rozgrywka, lokalne rankingi i zapisywanie postępu **działają bez internetu**. Gra nie wymaga zakładania konta u wydawcy. Nie prosi o dostęp do lokalizacji, kontaktów, mikrofonu ani aparatu. Nie ma reklam, zakupów w aplikacji ani czatu.
+Podstawowa rozgrywka, lokalne rankingi i zapisywanie postępu **działają bez internetu**. Gra nie wymaga zakładania konta u wydawcy. Nie prosi o dostęp do lokalizacji, kontaktów, mikrofonu ani aparatu. Nie ma reklam, zakupów w aplikacji, czatu ani własnego SDK reklamowego lub analitycznego. SDK Google Play Games może niezależnie zbierać dane analityczne i diagnostyczne opisane w sekcji 3.
 
 Plik battle.snap służy wyłącznie lokalnemu wznowieniu bitwy, nie jest wysyłany w zapisie chmurowym Play Games i nie jest objęty regułami systemowej kopii zapasowej.
 
@@ -64,7 +65,7 @@ Po skonfigurowaniu usługi i uwierzytelnieniu aplikacja może wysyłać do Googl
 
 **Zapis w chmurze obejmuje profil gry w formacie JSON, z wyłączeniem lokalnych danych własnego rankingu (UUID, sekret instalacji i zgoda na publikację)**, nie tylko stan kampanii: pseudonim wybrany w grze, lokalne wyniki (także zapisane w nich nazwy i daty), postęp, medale, badania, misje, lokalne osiągnięcia, statystyki oraz ustawienia. Przesyłany profil może zostać odczytany po ponownym uruchomieniu gry lub na innym urządzeniu, na którym uwierzytelniono to samo konto PGS. W przypadku konfliktu wersji gra wybiera profil o większym postępie według własnych reguł.
 
-**Osiągnięcia Google Play Games:** w bieżącym kodzie działa system osiągnięć lokalnych, ale ich przesyłanie do usługi osiągnięć Google nie jest jeszcze podłączone. Osiągnięcia lokalne są jednak częścią profilu objętego kopią w chmurze.
+**Osiągnięcia Google Play Games:** po skonfigurowaniu identyfikatorów PGS i uwierzytelnieniu gracza gra przekazuje Google informacje o odblokowanych osiągnięciach. Nowe odblokowania są zgłaszane przez usługę osiągnięć PGS, a już zdobyte osiągnięcia są ponownie synchronizowane przy kolejnym uwierzytelnieniu. Osiągnięcia są też częścią zapisu profilu w chmurze Saved Games. Bez prawidłowej konfiguracji PGS osiągnięcia pozostają lokalne.
 
 Gra obsługuje również **opcjonalny własny serwer rankingowy** wydawcy. Funkcja działa wyłącznie w wydaniach ze skonfigurowanym adresem HTTPS, kluczem HMAC i adresem tej polityki oraz po osobnej zgodzie w grze. Aplikacja wysyła losowe UUID gracza, pseudonim, planszę, wynik, datę i parametry bitwy, komendy powtórki do weryfikacji oraz **sekret instalacji 32 B** przy żądaniach dotyczących własnego konta. Serwer porównuje jego skrót SHA-256 z wartością przypisaną do UUID; sam sekret jest przesyłany przez HTTPS i **nie jest zapisywany w bazie SQLite w postaci jawnej**. Baza zapisuje UUID, pseudonim, wyniki i metadane, skrót zgłoszenia oraz **publiczne, pseudonimowe ID** wyliczone jako HMAC z UUID z wykorzystaniem osobnego klucza dostępnego tylko na serwerze. Publiczne rankingi pokazują nick, wynik i publiczne ID, **nie pokazują surowego UUID**. Serwer nie przechowuje pełnej powtórki ani IP w SQLite. IP służy tymczasowo do ograniczania ruchu i może znajdować się w logach infrastruktury. Bez konfiguracji i zgody nie są przesyłane wyniki do własnego rankingu. Sam kod nie oznacza uruchomionego serwera.
 
@@ -95,9 +96,14 @@ Uprawnienie INTERNET nie oznacza, że każda funkcja gry wymaga stałego połąc
 
 ## 7. Systemowa kopia zapasowa Androida
 
-Android może przechowywać kopię danych aplikacji zgodnie z ustawieniami urządzenia i konta Google. Reguły aplikacji ograniczają chmurową kopię Androida i przenoszenie danych do **profile.json**; plik battle.snap jest pominięty. Wydawca nie otrzymuje automatycznie dostępu do kopii systemowej.
+Przy włączonej kopii systemowej Android może zapisać **dwa pliki**: `profile.json` (w tym pseudonim, postęp, ustawienia oraz UUID i sekret własnego rankingu, jeśli gracz go włączył) i `history.json` (historia bitew). Wynika to z `backup_rules.xml` i `data_extraction_rules.xml` w aplikacji. Reguły nie obejmują m.in. `battle.snap`, kolejki wyników i żądań usunięcia, lokalnych powtórek ani raportów awarii. Transfer danych między urządzeniami na Androidzie 12+ także obejmuje te dwa pliki.
 
-Kopia Androida jest **oddzielna** od synchronizacji Saved Games w Google Play Games i może podlegać innym zasadom usuwania oraz przywracania. Zobacz https://developer.android.com/identity/data/autobackup i https://policies.google.com/privacy.
+**Szyfrowanie zależy od wersji Androida i sposobu przenoszenia danych:**
+- **Android 12 i nowszy (API 31+):** reguły chmurowego backupu wymagają możliwości szyfrowania po stronie klienta (`disableIfNoEncryptionCapabilities="true"`). Transfer bezpośrednio między urządzeniami ma odrębne reguły; nie jest automatycznie kopią E2E w chmurze.
+- **Android 9–11 (API 28–30):** wpisy chmurowego backupu wymagają `clientSideEncryption`. Według Androida szyfrowanie end-to-end jest dostępne przy włączonej kopii i blokadzie ekranu (PIN, wzór lub hasło); niespełnienie warunku może uniemożliwić wykonanie takiej kopii.
+- **Android 8/8.1 (API 26–27):** platforma **nie gwarantuje szyfrowania end-to-end**. Aplikacja ustawia w starszym XML warunek `clientSideEncryption`, ale starsze systemy nie obsługują tej ochrony na zasadach Androida 9+. Dostępność i zachowanie backupu na tych wersjach wymagają sprawdzenia na urządzeniu; nie zapewniamy, że kopia powstanie ani że będzie E2E.
+
+Systemowy backup Androida jest **oddzielny** od synchronizacji Saved Games w Google Play Games; `history.json` nie należy do pliku profilu wysyłanego przez Saved Games. Wydawca nie uzyskuje automatycznie dostępu do kopii systemowej. Zasady i ograniczenia: https://developer.android.com/identity/data/autobackup oraz https://developer.android.com/privacy-and-security/risks/backup-best-practices.
 
 ## 8. Usuwanie danych i okres przechowywania
 
@@ -117,3 +123,5 @@ Gra przechowuje lokalne dane w prywatnej przestrzeni aplikacji Android. Przy akt
 Przed aktywacją własnego rankingu w opublikowanym wydaniu lub dodaniem nowych sposobów przetwarzania danych (np. reklam albo zakupów) zweryfikujemy politykę i informacje w Google Play.
 
 _Wersja angielska: /store/privacy-policy-en/._
+
+**Podstawy opisu usług i ochrony danych (zweryfikowane 2 listopada 2026 r.):** [Play Games SDK](https://developer.android.com/games/pgs/data-collection), [Google Play — polityka danych użytkownika](https://support.google.com/googleplay/android-developer/answer/10144311), [formularz Data safety](https://support.google.com/googleplay/android-developer/answer/10787469), [Android Auto Backup](https://developer.android.com/identity/data/autobackup).
