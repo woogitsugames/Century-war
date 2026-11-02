@@ -51,6 +51,24 @@ class MissionsScreen(g: Game) : Screen(g) {
     private var shownDay = Long.MIN_VALUE
     private var streakText = ""
     private var loginText = ""
+    /** Tura 10: zamiast samego „UTC” — ile zostało do nowych misji (odświeżane co 30 s). */
+    internal var dailyResetText = ""
+        private set
+    internal var weeklyResetText = ""
+        private set
+
+    private fun refreshResetTexts(now: Long) {
+        val sec = Math.floorDiv(now, 1000L)
+        val dayLeft = (Missions.utcDay(now) + 1L) * 86_400L - sec
+        val weekStartDay = (Missions.utcWeek(now) + 1L) * 7L - 3L
+        val weekLeft = weekStartDay * 86_400L - sec
+        val minutesDay = (dayLeft + 59L) / 60L
+        dailyResetText = L.f("ms150_reset", String.format(java.util.Locale.ROOT, "%02d:%02d",
+            minutesDay / 60L, minutesDay % 60L))
+        val minutesWeek = (weekLeft + 59L) / 60L
+        weeklyResetText = L.f("ms150_reset", String.format(java.util.Locale.ROOT, "%dd %02d:%02d",
+            minutesWeek / 1440L, minutesWeek / 60L % 24L, minutesWeek % 60L))
+    }
 
     override fun isDragScreen() = true
 
@@ -69,6 +87,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         missions.refresh(now)
         val loginReward = missions.claimLogin(now)
         shownDay = Missions.utcDay(now)
+        refreshResetTexts(now)
         items.clear()
         items.addAll(missions.state.daily)
         items.addAll(missions.state.weekly)
@@ -151,7 +170,8 @@ class MissionsScreen(g: Game) : Screen(g) {
         elapsed += dt
         if (elapsed >= 30f) {
             elapsed = 0f
-            if (Missions.utcDay(System.currentTimeMillis()) != shownDay) updateData()
+            val now = System.currentTimeMillis()
+            if (Missions.utcDay(now) != shownDay) updateData() else refreshResetTexts(now)
         }
     }
 
@@ -162,11 +182,12 @@ class MissionsScreen(g: Game) : Screen(g) {
         c.clipRect(g.insetL, contentTop, w - g.insetR, bottom)
         ui.panel(c, loginRect)
         val tx = loginRect.left + 16 * dp
-        ui.textO(c, L["ms_streak"], tx, loginRect.top + 23 * dp, 18f, Ui.GOLD)
-        ui.textO(c, streakText, tx, loginRect.top + 49 * dp, 17f, Ui.TEXT)
-        ui.textO(c, loginText, loginRect.right - 14 * dp, loginRect.top + 49 * dp,
+        // Tura 10: nagłówek 6 dp niżej — wcześniej leżał na złotej lamówce panelu.
+        ui.textO(c, L["ms_streak"], tx, loginRect.top + 29 * dp, 18f, Ui.GOLD)
+        ui.textO(c, streakText, tx, loginRect.top + 53 * dp, 17f, Ui.TEXT)
+        ui.textO(c, loginText, loginRect.right - 14 * dp, loginRect.top + 53 * dp,
             ui.fit(loginText, 13f, cardWidth * 0.56f), Ui.GOOD, Paint.Align.RIGHT)
-        ui.textO(c, L["ms_streak_info"], tx, loginRect.top + 68 * dp,
+        ui.textO(c, L["ms_streak_info"], tx, loginRect.top + 72 * dp,
             ui.fit(L["ms_streak_info"], 12f, cardWidth - 32 * dp), Ui.DIM)
         for (i in streakCells.indices) {
             val cell = streakCells[i]
@@ -185,9 +206,12 @@ class MissionsScreen(g: Game) : Screen(g) {
                 if (previous || current) Ui.GOLD else Ui.DIM, Paint.Align.CENTER)
         }
         ui.textO(c, L["ms_daily"], left + 10 * dp, dailyY + 22 * dp, 19f, Ui.GOLD)
-        ui.textO(c, "UTC", left + cardWidth - 12 * dp, dailyY + 22 * dp, 12f, Ui.DIM, Paint.Align.RIGHT)
+        val resetW = cardWidth - ui.measure(L["ms_daily"], 19f, true) - 40 * dp
+        ui.textO(c, dailyResetText, left + cardWidth - 12 * dp, dailyY + 22 * dp,
+            ui.fit(dailyResetText, 12f, resetW), Ui.DIM, Paint.Align.RIGHT)
         ui.textO(c, L["ms_weekly"], left + 10 * dp, weeklyY + 22 * dp, 19f, Ui.GOLD)
-        ui.textO(c, "UTC", left + cardWidth - 12 * dp, weeklyY + 22 * dp, 12f, Ui.DIM, Paint.Align.RIGHT)
+        ui.textO(c, weeklyResetText, left + cardWidth - 12 * dp, weeklyY + 22 * dp,
+            ui.fit(weeklyResetText, 12f, cardWidth - ui.measure(L["ms_weekly"], 19f, true) - 40 * dp), Ui.DIM, Paint.Align.RIGHT)
         for (i in items.indices) {
             val r = rects[i]
             if (r.bottom < contentTop || r.top > bottom) continue
@@ -199,8 +223,9 @@ class MissionsScreen(g: Game) : Screen(g) {
             ui.bar(c, r.left + 13 * dp, r.top + 40 * dp,
                 max(10 * dp, available), 9 * dp,
                 items[i].progress.toFloat() / items[i].target, if (items[i].completed) Ui.GOOD else Ui.XP)
-            ui.textO(c, progress[i], r.left + 13 * dp, r.bottom - 12 * dp, 12f, Ui.DIM)
-            ui.textO(c, rewards[i], b.r.left - 6 * dp, r.bottom - 12 * dp, 12f, Ui.GOLD, Paint.Align.RIGHT)
+            // Tura 10: postęp i nagroda nad lamówką (wcześniej na niej, 12 dp od dołu).
+            ui.textO(c, progress[i], r.left + 13 * dp, r.bottom - 15 * dp, 12f, Ui.DIM)
+            ui.textO(c, rewards[i], b.r.left - 6 * dp, r.bottom - 15 * dp, 12f, Ui.GOLD, Paint.Align.RIGHT)
             ui.button(c, b, 13f)
         }
         c.restore()

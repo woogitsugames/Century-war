@@ -151,7 +151,8 @@ class MenuScreen(g: Game) : Screen(g) {
         val bw = if (singleColumn) min(310 * dp, availW)
             else min(min(260 * dp, w * 0.36f), (availW - gap) / 2)
         val bh = if (singleColumn) min(64 * dp, (h - g.insetT - g.insetB) * 0.09f)
-            else min(56 * dp, (h - g.insetT - g.insetB) * 0.13f)
+            // Tura 10: na 720p (360 dp) wychodziło 46,8 dp — dolna granica 48 dp celu dotyku.
+            else min(56 * dp, max(48 * dp, (h - g.insetT - g.insetB) * 0.13f))
         val mh = 48 * dp
         val gridH = if (singleColumn) 6 * (bh + gap) + mh else bh * 3 + gap * 3 + mh
 

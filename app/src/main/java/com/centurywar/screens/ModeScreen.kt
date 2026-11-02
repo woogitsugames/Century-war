@@ -26,6 +26,10 @@ import java.util.Locale
 class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Boolean = false,
                  private val previewDailyDay: Long? = null) : Screen(g) {
     override val crashName get() = "ModeScreen"
+    // Pionowe karty trybów wypełniają wysokość okna; baner zasłaniał ich tytuł i zakładki.
+    // Tura 10: także w poziomie wstęga tytułu leży na panelu i baner (np. serii dni) ją zasłaniał.
+    // Ekran nie wysyła własnych powiadomień; kolejka czeka na następny ekran.
+    override val blocksNotices: Boolean get() = true
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
@@ -110,9 +114,6 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
 
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
-
-    // Pionowe karty trybów wypełniają wysokość okna; baner zasłaniał ich tytuł i zakładki.
-    override val blocksNotices: Boolean get() = h > w
 
     override fun layout() {
         chrome.layoutBack(back)
@@ -204,7 +205,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val cfg = Daily.config(day, g.profile.bonuses())
         dailyCfg = cfg
         val full = panel.width() - 40 * dp
-        val colWidth = (full - 16 * dp) / 2f
+        val colWidth = if (stackedColumns()) full else (full - 16 * dp) / 2f
         val event = cfg.dailyEvent
         val rule = Daily.ruleSet(day)
         dailyInfoLines = if (event == null && rule == null)
@@ -240,11 +241,21 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         dailyBest = if (score == null) "" else L["best"] + ": " + score
     }
 
+    /**
+     * Tura 10: wąski panel (zewnętrzny ekran Folda) ma kolumny po ~120 dp i drobne pismo;
+     * wtedy wiersze idą jedną kolumną na całą szerokość.
+     */
+    private fun stackedColumns() = (panel.width() - 56 * dp) / 2f < 190 * dp
+
+    /** Pierwszy wiersz treści pod zakładkami Dzień/Tydzień (wcześniej 81 dp: tekst dotykał zakładek). */
+    private fun contentTop() = max(panel.top + 81 * dp, dailyTab.r.bottom + 15 * dp)
+
     private fun drawDaily(c: Canvas, pr: Profile) {
         val x = panel.left + 20 * dp
         val full = panel.width() - 40 * dp
-        val colWidth = (full - 16 * dp) / 2f
-        var y = panel.top + 81 * dp
+        val stacked = stackedColumns()
+        val colWidth = if (stacked) full else (full - 16 * dp) / 2f
+        var y = contentTop()
         if (dailyEventTitle.isNotEmpty()) {
             Icons.draw(c, dailyEventIcon, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
             ui.textO(c, dailyEventTitle, x + 23 * dp, y,
@@ -262,13 +273,23 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             }
             y += 8 * dp
         }
-        val rowGap = if (dailyEventTitle.isNotEmpty()) 26 * dp else 29 * dp
-        val rightX = x + colWidth + 16 * dp
+        val cfg = dailyCfg
+        val leftRows = if (cfg != null) 4 else 3
+        val modsH = dailyModsLines.size * 16 * dp
+        val bestH = if (dailyBest.isNotEmpty()) 11 * dp else 0f
+        // Tura 10: na niskim panelu (720p) wiersz rankingowy wchodził na przycisk Graj.
+        val limit = start.r.top - 9 * dp
+        val natural = if (dailyEventTitle.isNotEmpty()) 26 * dp else 29 * dp
+        val rowGap = if (stacked)
+            min(natural, max(17 * dp, (limit - y - modsH - bestH) / leftRows))
+        else min(natural, max(17 * dp, (limit - y) / (leftRows - 1)))
+        val rightX = if (stacked) x else x + colWidth + 16 * dp
         Icons.draw(c, Icons.TOWER, x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, dailyEras, x + 23 * dp, y,
             ui.fit(dailyEras, 13f, colWidth - 23 * dp), Ui.TEXT)
-        Icons.draw(c, Icons.FLAG, rightX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
-        var modsY = y
+        val modsTop = if (stacked) y + leftRows * rowGap else y
+        Icons.draw(c, Icons.FLAG, rightX + 9 * dp, modsTop - 4 * dp, 18 * dp, dp = dp)
+        var modsY = modsTop
         for (line in dailyModsLines) {
             ui.textO(c, line, rightX + 23 * dp, modsY, 12f, Ui.GOLD)
             modsY += 16 * dp
@@ -284,7 +305,6 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         y += rowGap
         // Pogoda dnia (zlecenie 33) w lewej kolumnie, pod siłą AI.
-        val cfg = dailyCfg
         if (cfg != null) {
             Icons.draw(c, Icons.weatherIcon(cfg.weather), x + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
             ui.textO(c, dailyWeather, x + 23 * dp, y,
@@ -313,7 +333,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyCard = L["weekly_start_card"] + ": " + L[cfg.weeklyCard!!.textKey]
         val full = panel.width() - 40 * dp
         weeklyInfoLines = cachedWrap(weeklyInfo, full, 13f)
-        weeklyModsLines = cachedWrap(weeklyMods, (full - 16 * dp) / 2f - 23 * dp, 12f)
+        weeklyModsLines = cachedWrap(weeklyMods,
+            (if (stackedColumns()) full else (full - 16 * dp) / 2f) - 23 * dp, 12f)
         val score = g.profile.top(Profile.weeklyBoard(week)).firstOrNull()?.score
         weeklyBest = L["best"] + ": " + (score?.toString() ?: L["no_scores"])
         for (i in 0 until Weekly.TIER_COUNT) {
@@ -327,26 +348,36 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private fun drawWeekly(c: Canvas, pr: Profile) {
         val x = panel.left + 20 * dp
         val full = panel.width() - 40 * dp
-        val colWidth = (full - 16 * dp) / 2f
-        var y = panel.top + 81 * dp
+        val stacked = stackedColumns()
+        val colWidth = if (stacked) full else (full - 16 * dp) / 2f
+        var y = contentTop()
         for (line in weeklyInfoLines) {
             ui.textO(c, line, x, y, 13f)
             y += 17 * dp
         }
         y += 7 * dp
         val leftX = x
-        val rightX = x + colWidth + 16 * dp
-        val leftTop = y
+        val rightX = if (stacked) x else x + colWidth + 16 * dp
+        // Tura 10: progi medali nie mogą wchodzić na „Koniec za…” i „Najlepszy” (720p);
+        // w wąskim panelu każdy próg ma własny wiersz zamiast pisma 6 sp.
+        val medalRows = if (stacked) Weekly.TIER_COUNT else 1
+        val medalStep = 21 * dp
+        val lowestMedal = start.r.top - 16 * dp - (medalRows - 1) * medalStep
+        val modsH = weeklyModsLines.size * 16 * dp
+        val rowGap = if (stacked)
+            min(24 * dp, max(17 * dp, (lowestMedal - 17 * dp - y - modsH - 8 * dp) / 3f))
+        else min(24 * dp, max(17 * dp, (lowestMedal - 17 * dp - y) / 2f))
         Icons.draw(c, Icons.TOWER, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyEras, leftX + 23 * dp, y, ui.fit(weeklyEras, 13f, colWidth - 23 * dp), Ui.TEXT)
-        y += 24 * dp
+        val leftTop = y
+        y += rowGap
         Icons.draw(c, Icons.CROWN, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyCard, leftX + 23 * dp, y, ui.fit(weeklyCard, 13f, colWidth - 23 * dp), Ui.GOLD)
-        y += 24 * dp
+        y += rowGap
         Icons.draw(c, Icons.HOURGLASS, leftX + 9 * dp, y - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyCountdown, leftX + 23 * dp, y, ui.fit(weeklyCountdown, 13f, colWidth - 23 * dp), Ui.TEXT)
 
-        var ry = leftTop
+        var ry = if (stacked) y + rowGap else leftTop
         Icons.draw(c, Icons.FLAG, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
         for (line in weeklyModsLines) {
             ui.textO(c, line, rightX + 23 * dp, ry, 12f)
@@ -356,16 +387,25 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         Icons.draw(c, Icons.TROPHY, rightX + 9 * dp, ry - 4 * dp, 18 * dp, dp = dp)
         ui.textO(c, weeklyBest, rightX + 23 * dp, ry, ui.fit(weeklyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
 
-        val medalY = start.r.top - 42 * dp
+        val contentBottom = max(y, ry)
+        val medalY = min(lowestMedal,
+            max(start.r.top - 42 * dp - (medalRows - 1) * medalStep, contentBottom + 17 * dp))
         val mask = weeklyClaimMask
         for (i in 0 until Weekly.TIER_COUNT) {
-            val centerX = x + (i + 0.5f) * full / Weekly.TIER_COUNT
             val claimed = mask and (1 shl i) != 0
+            val tint = if (claimed) tierColors[i] else Ui.DIM
+            if (stacked) {
+                val my = medalY + i * medalStep
+                Icons.draw(c, Icons.MEDAL, x + 11 * dp, my - 1 * dp, 20 * dp, tint = tint, dp = dp)
+                ui.textO(c, tierNames[i], x + 27 * dp, my + 4 * dp,
+                    ui.fit(tierNames[i], 12f, full - 27 * dp), tint)
+                continue
+            }
+            val centerX = x + (i + 0.5f) * full / Weekly.TIER_COUNT
             Icons.draw(c, Icons.MEDAL, centerX - 38 * dp, medalY - 1 * dp,
-                24 * dp, tint = if (claimed) tierColors[i] else Ui.DIM, dp = dp)
+                24 * dp, tint = tint, dp = dp)
             ui.textO(c, tierNames[i], centerX - 23 * dp, medalY + 4 * dp,
-                ui.fit(tierNames[i], 11f, full / 3f - 35 * dp),
-                if (claimed) tierColors[i] else Ui.DIM)
+                ui.fit(tierNames[i], 11f, full / 3f - 35 * dp), tint)
         }
     }
 
