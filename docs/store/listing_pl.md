@@ -4,7 +4,7 @@
 Century War: Wojna epok
 
 ## Krótki opis
-Strategia przez 9 epok: kampania, oblężenie i bitwy offline.
+Wódz i stopnie wież w strategii 9 epok. Kampania i bitwy offline.
 
 ## Pełny opis
 
@@ -21,6 +21,8 @@ ODKRYJ SWOJĄ STRATEGIĘ
 - Wyzwanie dnia i oblężenie tygodnia — osobne zasady, wyniki i cele do osiągnięcia.
 - Potyczka własna — ustaw zakres epok, siłę i styl przeciwnika oraz modyfikatory bitwy.
 - Taktyczna walka — wieże, umiejętności specjalne, doktryny, ostrzał celowany i ulepszenia oddziałów.
+- Wódz — przywołaj dowódcę z aurą wzmacniającą pobliskie oddziały.
+- Stopnie wież — rozbuduj kupione wieże aż do trzeciego stopnia.
 - 13 ścieżek badań — rozwijaj armię między bitwami za zdobyte medale.
 - Powtórki — zapisuj zakończone starcia i odtwarzaj je z kontrolą tempa oraz osi czasu.
 - Poziomy trudności kampanii, sztandary do odblokowania i wykres po bitwie.
