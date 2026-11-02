@@ -1,5 +1,97 @@
 # Wydanie Android / Google Play
 
+## Kandydat do testów zamkniętych
+
+Stan: **3 listopada 2026 r.** Lista dla właściciela — bez wiedzy programistycznej.
+„Zrobione” znaczy: poprawka jest w kodzie i ma automatyczny test. „Zostało” znaczy:
+bez tego nie wysyłamy gry testerom w Google Play. Numery w nawiasach (np. A156-10)
+to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
+
+### Zrobione (gra i kod)
+
+- [x] **Wznawianie przerwanej bitwy** z wieżami ulepszonymi w każdym miejscu i z falą „bliźniaczy
+      najazd” w trybie Endless — wcześniej taki zapis był odrzucany (A156-01, A156-02).
+- [x] **Ranking przyjmuje tylko powtórki według obecnych zasad gry** — stara powtórka nie trafi
+      do bieżącej tabeli (A156-04).
+- [x] **Usunięcie danych gracza z serwera jest ostateczne** — wynik wysłany w tej samej chwili
+      nie przywróci nicku ani wyniku (A156-05).
+- [x] **Postęp nie cofa się przy wolnym zapisie** (np. przeciążony telefon) — nowy odczyt czeka
+      na zaległy zapis (A156-06).
+- [x] **Gra nie rusza sama w tle** po wygaszeniu ekranu lub zmianie okna (A156-07); Wstecz
+      podczas ekranu startowego nie zamyka gry z błędem (A156-17).
+- [x] **Opcja „mniej błysków”** działa tak samo przy prędkości ×1, ×3 i ×5, także dla nocnych
+      trafień w bazę (A156-08).
+- [x] **Przyciski wież na niskim ekranie** są większe i nie nachodzą na siebie; cena jednostki
+      mieści się w przycisku w ostatniej epoce (A156-09, A156-24, A156-25).
+- [x] **Nagroda za bitwę liczona dokładnie raz** — także gdy Android zamknie grę w trakcie
+      zapisu. Najpierw trwale zapisujemy profil (medale, gwiazdki, misje) razem z numerem
+      bitwy, dopiero potem kasujemy zapis przerwanej bitwy. Po ponownym uruchomieniu gra
+      rozpoznaje już rozliczoną bitwę i nie da za nią drugiej nagrody; nierozliczoną można
+      wznowić i rozliczyć raz (A156-10).
+- [x] **Reset postępu** kasuje też zapis przerwanej bitwy (A156-18); profil z chmury Play
+      Games od razu stosuje wszystkie ustawienia (A156-19); zmiana rozmiaru wyświetlania
+      i Galaxy Fold przeliczają układ (A156-20).
+- [x] **Czytnik ekranu TalkBack** rozpoznaje przyciski menu, ustawień i pauzy (A156-21) —
+      wymaga jeszcze próby na telefonie, patrz niżej.
+- [x] **Muzyka** nie zawiesza się po błędzie dźwięku (A156-22); nagrane utwory gry (21 plików) są w pakiecie.
+- [x] **Polityka prywatności i Data safety** opisują to, co gra robi naprawdę (A156-16);
+      opis gry bez porównań do innych gier (A156-23).
+- [x] **Kontrole automatyczne wydania**: testy konfiguracji, osobne testy debug i release,
+      wydanie na tagu dopiero po zielonych testach tego samego commita, obrazy zrzutów
+      w artefakcie CI (A156-11, 12, 14, 15, 26, 27).
+- [x] Pełne testy (`:app:testDebugUnitTest :sim:test :server:test`) zielone na gałęzi
+      integracyjnej — ok. 11–12 min (szczegóły w [TEST_SPEED.md](TEST_SPEED.md)).
+
+### Zostało — decyzje i dane właściciela
+
+Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
+[docs/store/OWNER_INPUT.md](store/OWNER_INPUT.md).
+
+- [ ] **Pięć pól wydawcy** w `OWNER_INPUT.md` (dziś wszystkie mają `WYMAGA_DANYCH_WLASCICIELA`):
+  - [ ] pełna **nazwa prawna wydawcy** (taka jak na koncie Google Play),
+  - [ ] **e-mail** do spraw prywatności i usuwania danych,
+  - [ ] **adres korespondencyjny** wydawcy,
+  - [ ] **publiczny adres HTTPS polityki prywatności** (wersja PL i EN),
+  - [ ] **data premiery** (RRRR-MM-DD).
+- [ ] **Dzień premiery w grze** (`Daily.RELEASE_DAY`, dziś zastępczo 2027-12-01) — koordynator
+      wpisze go po decyzji o dacie; po premierze już się go nie zmienia.
+- [ ] **Serwer rankingu globalnego:** adres `https://` (`CW_SERVER_URL`), hosting i czas
+      przechowywania danych — albo decyzja „na start bez rankingu globalnego”.
+- [ ] **Sekrety tylko w CI** (nigdy w repozytorium): klucz upload do podpisu, `CW_HMAC_KEY`,
+      `CW_SERVER_URL`, `CW_PRIVACY_URL`.
+- [ ] **Google Play Games:** 71 identyfikatorów (1 projekt, 4 rankingi, 66 osiągnięć) z Play
+      Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
+- [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
+      IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.
+- [ ] **Balans wariantów epok** (A156-13: Para i Krzem w lustrzanym teście 41/59 i 44,5/55,5 %,
+      limit 10 punktów): poprawka czeka na gałęzi `gpt/163-variant-balance` — do przeglądu
+      i decyzji, czy wchodzi przed testami zamkniętymi.
+- [ ] **Numer wersji** pierwszego wydania (`releaseVersionCode`, `releaseVersionName` w
+      `gradle.properties`; dziś `1` i `0.1.0-dev`).
+
+### Zostało — próby na prawdziwych urządzeniach
+
+Automatyczne testy tego nie zastąpią. Wystarczy telefon i Galaxy Fold właściciela.
+
+- [ ] Zbudowany **podpisany pakiet AAB** (release, R8) instaluje się i uruchamia; pomiar rozmiaru
+      i czasu startu (sekcje „AAB, R8 i Baseline Profile” i „Pomiar wydania” niżej).
+- [ ] **Przerwanie bitwy**: w trakcie bitwy przełącz na inną aplikację, wymuś zamknięcie gry
+      w ustawieniach Androida, uruchom ponownie — bitwa do wznowienia, nagroda raz.
+      Powtórz zamknięcie **zaraz po** ekranie wyniku — po starcie nie ma oferty wznowienia,
+      medale bez zmian.
+- [ ] **TalkBack** wg sekcji „Testy ręczne czytnika ekranu (164)”.
+- [ ] **Aktualizacja ze starszej wersji** wg sekcji „Testy ręczne aktualizacji i odporności zapisu (154)”
+      (przerwana bitwa ze starej wersji nadal się wznawia).
+- [ ] Logowanie Play Games, rankingi, osiągnięcia i zapis w chmurze — po wpisaniu prawdziwych ID.
+- [ ] Muzyka: głośność względem efektów, pętle i przenikanie (uwagi z odsłuchu właściciela).
+
+### Kiedy wysyłamy testerom
+
+Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone, koordynator buduje podpisany AAB,
+uruchamia `./gradlew :app:releaseChecklist` (zatrzyma wydanie, jeśli czegoś brakuje)
+i postępuje według sekcji „Testy zamknięte w Play Console” poniżej
+(12 testerów przez 14 dni dla nowego konta osobistego).
+
 ## Testy ręczne czytnika ekranu (164)
 
 Zakres przed premierą: menu główne, Ustawienia, Dostępność, Podpowiedzi

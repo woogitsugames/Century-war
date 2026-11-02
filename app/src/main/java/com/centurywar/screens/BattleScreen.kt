@@ -64,6 +64,11 @@ class BattleScreen(
     override val blocksNotices: Boolean get() = true
 
     internal val battle = restored?.battle ?: Battle(cfg)
+    /**
+     * Trwały identyfikator rozliczenia (A156-10): zapisywany w zrzucie, a po rozliczeniu
+     * w profilu. Zrzut sprzed wersji 17 (bez identyfikatora) dostaje nowy przy wznowieniu.
+     */
+    internal val battleId: Long = restored?.battleId?.takeIf { it != 0L } ?: newBattleId()
     internal val achievementEvents = AchievementBattleTracker(battle)
     init {
         CrashReports.battleStarted(if (cfg.mode == Mode.CAMPAIGN) cfg.stageIndex + 1 else 0)
@@ -190,6 +195,14 @@ class BattleScreen(
         const val COMMANDER = 203
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
+
+        /** Losowy, niezerowy identyfikator bitwy; 0 oznacza „brak” w profilu i zrzucie. */
+        internal fun newBattleId(): Long {
+            val random = java.security.SecureRandom()
+            var id = 0L
+            while (id == 0L) id = random.nextLong()
+            return id
+        }
         /** Szerokość bloku liczebności armii (ikona, liczby, dwukropek) w dp. */
         const val ARMY_COUNTS_W = 90f
         /** Poniżej tej szerokości (dp) nazwa epoki wroga przechodzi do drugiego rzędu. */
@@ -333,6 +346,10 @@ class BattleScreen(
             buttons.add(0, unitUpgrade[i])
         }
         r.camX = restored?.camX ?: -120f
+        // Stary zrzut bez identyfikatora od razu zastępujemy zrzutem z nowym, inaczej po
+        // rozliczeniu nie dałoby się go rozpoznać i usunąć (A156-10).
+        if (restored != null && restored.battleId == 0L && !battle.over)
+            g.snapshots?.saveAsync(snapshotBytes(), battleId)
     }
 
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
@@ -587,7 +604,7 @@ class BattleScreen(
             else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
                 // Bajty powstają tu, na wątku gry (spójny stan); plik zapisuje wątek w tle.
                 lastAutosave = battle.time
-                g.snapshots?.saveAsync(snapshotBytes())
+                g.snapshots?.saveAsync(snapshotBytes(), battleId)
             }
         }
         maybeShowEraIntro()
@@ -1081,10 +1098,10 @@ class BattleScreen(
         clearHeldTooltip()
         if (finished || closed || battle.over) return
         paused = true
-        g.snapshots?.saveAsync(snapshotBytes())
+        g.snapshots?.saveAsync(snapshotBytes(), battleId)
     }
 
-    private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX)
+    private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX, battleId)
 
     // ---------------------------------------------------------------- koniec bitwy
 
@@ -1093,13 +1110,41 @@ class BattleScreen(
         finished = true
         battleSummary.finish(battle)
         resultChart.prepare(battleSummary, resultChartArea, dp)
-        // Kolejka I/O usuwa zrzut w tej samej kolejności co wcześniejsze zapisy.
-        g.snapshots?.deleteAsync()
         val pr = g.profile
+        val won = battle.winner == 0
+        val snapshots = g.snapshots
+        val id = battleId
+        var earnedStars = 0
+        // A156-10: najpierw trwały zapis profilu ze znacznikiem rozliczenia, dopiero potem
+        // usunięcie zrzutu. Ponowne rozliczenie tej samej bitwy nie dodaje niczego.
+        val settled = pr.settleBattle(id, onPersisted = { snapshots?.deleteSettledAsync(id) }) {
+            earnedStars = settleRewards(pr, won)
+        }
+        if (!settled) {
+            reward = 0
+            totalMedalsGained = 0
+            snapshots?.deleteSettledAsync(id)
+        }
+        if (won) g.host.onBattleWon()
+        haptics.onEnd(won)
+        g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
+        val victoryTone = won || cfg.mode == Mode.ENDLESS
+        // Nagrany przerywnik (jeśli jest plik) zastępuje krótki efekt wyniku.
+        if (g.music?.playResultStinger(victoryTone) != true)
+            g.sfx(if (victoryTone) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
+        resultsView.refreshResultTexts()
+        if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
+        if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
+    }
+
+    /**
+     * Naliczenie wszystkich skutków bitwy w profilu (w [Profile.settleBattle], bez zapisów
+     * pośrednich). Zwraca liczbę nowych gwiazdek.
+     */
+    private fun settleRewards(pr: Profile, won: Boolean): Int {
         val medalsBefore = pr.medals
         val missionBefore = (pr.missionState.daily + pr.missionState.weekly)
             .associate { it.id to it.progress }
-        val won = battle.winner == 0
         // Statystyki i osiągnięcia rozlicza Achievements po nagrodzie bazowej.
         val day = Daily.dayNumber()
         val score = battle.score()
@@ -1233,18 +1278,8 @@ class BattleScreen(
             g.scores?.submit(cfg, commands.log(), score, rankedDaily, pr.name, pr.playerId,
                 pr.researchLevels(), skirmishDiff)
         }
-        // onBattleEnd zapisuje profil tylko przy pierwszym rozliczeniu; gwiazdki i nagroda muszą trafić na dysk zawsze.
-        pr.save()
-        if (won) g.host.onBattleWon()
-        haptics.onEnd(won)
-        g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
-        val victoryTone = won || cfg.mode == Mode.ENDLESS
-        // Nagrany przerywnik (jeśli jest plik) zastępuje krótki efekt wyniku.
-        if (g.music?.playResultStinger(victoryTone) != true)
-            g.sfx(if (victoryTone) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
-        resultsView.refreshResultTexts()
-        if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
-        if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
+        // Jeden zapis profilu wykonuje Profile.settleBattle po zakończeniu naliczania.
+        return earnedStars
     }
 
     /** Dwie sprawdzalne przyczyny wybierane tylko z zakończonej bitwy. */

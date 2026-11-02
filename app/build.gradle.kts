@@ -207,8 +207,8 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     // Robolectric zatrzymuje pamięć natywną bitmap. Izoluj każdą klasę testową;
     // 384 MiB sterty na fork działało w pomiarach audytu przy limicie 8 GiB.
     // Na 8 GiB użyj -PtestForks=1, na 16 GiB można uruchomić dwa forki.
-    forkEvery = 1L
-    maxHeapSize = "384m"
+    forkEvery = (providers.gradleProperty("testForkEvery").orNull?.toLongOrNull() ?: 6L).coerceAtLeast(1L)
+    maxHeapSize = "640m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
 
     if (name == "testDebugUnitTest") {
