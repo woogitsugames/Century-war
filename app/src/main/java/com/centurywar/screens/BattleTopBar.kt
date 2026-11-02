@@ -48,6 +48,21 @@ import kotlin.math.min
 
 /** Mechaniczne wydzielenie BattleTopBar; ten sam stan i kolejność operacji co w BattleScreen. */
 internal class BattleTopBar(private val owner: BattleScreen) {
+    /** Tura 9: ostatnio narysowane napisy paska (współrzędne ekranu); do testów nachodzenia. */
+    val goldDrawn = RectF()
+    val eraNameDrawn = RectF()
+    val enemyEraDrawn = RectF()
+
+    /** Prostokąt napisu o linii bazowej [y] (wysokość wersalików ~0,75 rozmiaru). */
+    private fun record(out: RectF, s: String, x: Float, y: Float, sizeDp: Float, align: Paint.Align) {
+        with(owner) {
+            val tw = ui.measure(s, sizeDp, true)
+            val l = when (align) { Paint.Align.LEFT -> x; Paint.Align.RIGHT -> x - tw; else -> x - tw / 2 }
+            val hgt = sizeDp * dp * ui.textScale
+            out.set(l, y - hgt * 0.75f, l + tw, y + hgt * 0.22f)
+        }
+    }
+
 
     fun layout(l: Float, rr: Float) {
         with(owner) {
@@ -115,8 +130,15 @@ internal class BattleTopBar(private val owner: BattleScreen) {
         // złoto
         val gi = p.gold.toInt()
         if (gi != goldShown) { goldShown = gi; goldText = gi.toString() }
-        ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldText,
-            15f, Ui.GOLD, alignRight = leftHud, minTextW = ui.measure("0000", 15f, true))
+        val goldMinW = ui.measure("0000", 15f, true)
+        val goldEdge = ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldText,
+            15f, Ui.GOLD, alignRight = leftHud, minTextW = goldMinW)
+        run {
+            val bh = 15f * dp * 1.9f * ui.textScale.coerceAtMost(1.15f)
+            val bw0 = ui.badgeWidth(goldText, 15f, goldMinW)
+            val gl = if (leftHud) goldEdge - bw0 else l
+            goldDrawn.set(gl, t + 11 * dp - bh * 0.42f - 2 * dp, gl + bw0, t + 11 * dp + bh * 0.42f + 2 * dp)
+        }
         // armia
         val ck = p.aliveCount * 100 + p.cap
         if (ck != capKey) { capKey = ck; capText = "${p.aliveCount}/${p.cap}" }
@@ -130,7 +152,14 @@ internal class BattleTopBar(private val owner: BattleScreen) {
         ui.bar(c, bx, t + 28 * dp, bw, 11 * dp, p.xp / need, Ui.XP)
         Icons.draw(c, Icons.XP, if (leftHud) right - 10 * dp else l + 10 * dp,
             t + 33.5f * dp, 19 * dp, dp = dp)
-        ui.textO(c, L[Defs.eraKeys[p.era]], bx + bw / 2, t + 37 * dp, 10f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
+        // Tura 9: nazwa epoki przy końcu paska XP odległym od złota (na wąskim Foldzie
+        // środek paska leżał pod licznikiem złota i jego podświetleniem w samouczku).
+        val eraName = L[Defs.eraKeys[p.era]]
+        val eraAlign = if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT
+        val eraX = if (leftHud) bx + 8 * dp else bx + bw - 8 * dp
+        val eraSize = ui.fit(eraName, 10f, bw * 0.55f, 8f)
+        ui.textO(c, eraName, eraX, t + 37 * dp, eraSize, Ui.TEXT, eraAlign, 1.8f)
+        record(eraNameDrawn, eraName, eraX, t + 37 * dp, eraSize, eraAlign)
         // HP baz po bokach minimapy
         if (mini.width() > 0f) {
             // Pogoda przy minimapie (miejsce przed przyciskiem pauzy).
@@ -246,7 +275,7 @@ internal class BattleTopBar(private val owner: BattleScreen) {
             }
             ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp,
                 ui.fit(rightLabel, 11f, mini.width() * 0.28f, 8f),
-                if (battle.endless) Ui.GOLD else Ui.ENEMY, Paint.Align.RIGHT, 1.8f)
+                if (battle.endless) Ui.GOLD else Ui.ENEMY_TEXT, Paint.Align.RIGHT, 1.8f)
             val sp = battle.siegePressure()
             if (sp > 1f) {
                 val k = kotlin.math.round(sp * 10f).toInt()
@@ -277,7 +306,7 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                         bossTitleText += " + " + L[EndlessBosses.nameKeys[bossShownSecondary]]
                 }
                 ui.textO(c, bossTitleText, w * 0.5f, topBar.bottom + 16 * dp,
-                    ui.fit(bossTitleText, 12f, bw, 9f), Ui.ENEMY, Paint.Align.CENTER, 1.7f)
+                    ui.fit(bossTitleText, 12f, bw, 9f), Ui.ENEMY_TEXT, Paint.Align.CENTER, 1.7f)
                 ui.textO(c, bossDescText, w * 0.5f, topBar.bottom + 32 * dp,
                     ui.fit(bossDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
                 if (bossSecondDescText.isNotEmpty()) ui.textO(c, bossSecondDescText,
@@ -319,13 +348,18 @@ internal class BattleTopBar(private val owner: BattleScreen) {
             // epoki wroga trafia do wolnego pola pod pogodą, na wysokości liczb HP baz.
             val colL = if (leftHud) l else mini.right + 6 * dp
             val colR = if (leftHud) mini.left - 6 * dp else right
+            val es = ui.fit(enemyEraText, 11f, colR - colL, 7f)
             ui.textO(c, enemyEraText, (colL + colR) * 0.5f, mini.bottom + 13 * dp,
-                ui.fit(enemyEraText, 11f, colR - colL, 7f), Ui.ENEMY, Paint.Align.CENTER, 2f)
+                es, Ui.ENEMY_TEXT, Paint.Align.CENTER, 2f)
+            record(enemyEraDrawn, enemyEraText, (colL + colR) * 0.5f, mini.bottom + 13 * dp, es, Paint.Align.CENTER)
         } else if (!leftHud || enemyWidth >= 24 * dp) {
             // Gdy w lustrzanym pasku nie ma miejsca, nazwa epoki wroga zostaje w pauzie.
-            ui.textO(c, enemyEraText, ex, enemyY,
-                ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f),
-                Ui.ENEMY, if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT, 2f)
+            val es = ui.fit(enemyEraText, if (compactTop) 12f else 11f, enemyWidth, 7f)
+            val ea = if (leftHud) Paint.Align.LEFT else Paint.Align.RIGHT
+            ui.textO(c, enemyEraText, ex, enemyY, es, Ui.ENEMY_TEXT, ea, 2f)
+            record(enemyEraDrawn, enemyEraText, ex, enemyY, es, ea)
+        } else {
+            enemyEraDrawn.setEmpty()
         }
         if (p.doctrines.isNotEmpty()) {
             val isz = 15 * dp
@@ -367,7 +401,7 @@ internal class BattleTopBar(private val owner: BattleScreen) {
         Icons.draw(c, Icons.CROSSED_SWORDS, x + 10 * dp, cy, 20 * dp, dp = dp)
         ui.textO(c, armyPText, x + 46 * dp, cy + 5 * dp, 14f, Ui.PLAYER, Paint.Align.RIGHT, 1.8f)
         ui.textO(c, ":", x + 54 * dp, cy + 5 * dp, 14f, Ui.TEXT, Paint.Align.CENTER, 1.8f)
-        ui.textO(c, armyEText, x + 62 * dp, cy + 5 * dp, 14f, Ui.ENEMY, Paint.Align.LEFT, 1.8f)
+        ui.textO(c, armyEText, x + 62 * dp, cy + 5 * dp, 14f, Ui.ENEMY_TEXT, Paint.Align.LEFT, 1.8f)
         }
     }
 }

@@ -360,6 +360,12 @@ class HintOverlay(
      */
     private val avoidRects = ArrayList<RectF>(48)
 
+    /**
+     * Tura 9: wstęga tytułu ekranu (Chrome.titleBounds), której dymek poza bitwą nie zasłania;
+     * ekran ustawia ją przed [draw]. Pusta = brak tytułu.
+     */
+    val titleRect = RectF()
+
     private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
                            dp: Float): Boolean {
         val f = targets?.field
@@ -370,6 +376,18 @@ class HintOverlay(
             if (screen != null) for (i in screen.buttons.indices) {
                 val b = screen.buttons[i]
                 if (b.visible && b !== okBtn) avoidRects.add(b.r)
+            }
+            if (!titleRect.isEmpty) avoidRects.add(titleRect)
+            val placed = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
+                hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
+            if (!placed || titleRect.isEmpty || !RectF.intersects(panel, titleRect)) return placed
+            // Gęsty ekran (Badania na wąskim Foldzie): nie da się ominąć wszystkich przycisków.
+            // Tytuł i Wstecz mają pierwszeństwo, karty treści mogą zostać na chwilę przykryte.
+            avoidRects.clear()
+            avoidRects.add(titleRect)
+            if (screen != null) for (i in screen.buttons.indices) {
+                val b = screen.buttons[i]
+                if (b.visible && b.id == -1) avoidRects.add(b.r)
             }
             return HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
                 hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)

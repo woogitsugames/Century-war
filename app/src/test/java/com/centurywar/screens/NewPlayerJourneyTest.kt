@@ -104,6 +104,65 @@ class NewPlayerJourneyTest {
         } finally { bmp.recycle() }
         auditScreen(g, "$tag/$name")
         checkHint(g, "$tag/$name")
+        checkUx2(g, "$tag/$name")
+    }
+
+    /** Tura 9 (UX 2): pasek górny, baner powiadomień, dymki przy tytułach, nagłówki kampanii. */
+    private fun checkUx2(g: Game, where: String) {
+        val s = g.current ?: return
+        val dp = g.ui.dp
+        if (s is BattleScreen && !s.battle.over) {
+            val tb = s.topBarView
+            require9(!android.graphics.RectF.intersects(tb.goldDrawn, tb.eraNameDrawn),
+                "$where: nazwa epoki ${tb.eraNameDrawn} pod licznikiem złota ${tb.goldDrawn}")
+            val tut = s.tut
+            if (tut != null && tut.showing && !tut.panel.isEmpty && !tb.enemyEraDrawn.isEmpty)
+                require9(!android.graphics.RectF.intersects(tut.panel, tb.enemyEraDrawn),
+                    "$where: dymek samouczka zasłania „Wróg: …” (${tb.enemyEraDrawn})")
+        }
+        val banner = g.noticeBanner
+        if (!banner.isEmpty && s !is MenuScreen) {
+            val back = s.buttons.firstOrNull { it.id == -1 && it.visible }
+            if (back != null) require9(!android.graphics.RectF.intersects(banner, back.r),
+                "$where: powiadomienie zasłania Wstecz")
+            val title = titleOf(s)
+            if (title != null) {
+                val r = android.graphics.RectF().also { Chrome(s).titleBounds(title, it) }
+                require9(!android.graphics.RectF.intersects(banner, r), "$where: powiadomienie zasłania tytuł '$title'")
+            }
+            require9(g.noticeTextSize * g.ui.textScale >= 11f, "$where: tekst powiadomienia ma ${g.noticeTextSize} sp")
+        }
+        val title = titleOf(s)
+        val hints = runCatching { s.javaClass.getDeclaredField("hints") }.getOrNull()
+            ?.apply { isAccessible = true }?.get(s) as? HintOverlay
+        if (title != null && hints != null && hints.activeId >= 0 && !hints.panelRect.isEmpty) {
+            val r = android.graphics.RectF().also { Chrome(s).titleBounds(title, it) }
+            require9(!android.graphics.RectF.intersects(hints.panelRect, r), "$where: dymek podpowiedzi zasłania tytuł '$title'")
+        }
+        if (s is CampaignScreen) {
+            val head = android.graphics.RectF()
+            for (era in 0 until com.centurywar.game.Defs.ERA_COUNT) {
+                s.headingRect(era, head)
+                if (head.bottom < 0f || head.top > g.height || head.right < 0f || head.left > g.width) continue
+                for (b in s.buttons) if (b.visible && b.tag is com.centurywar.game.Stage &&
+                    android.graphics.RectF.intersects(b.r, head))
+                    require9(false, "$where: węzeł etapu ${(b.tag as com.centurywar.game.Stage).index + 1} nachodzi na nagłówek epoki ${era + 1}")
+            }
+        }
+        if (s is SettingsScreen) {
+            // Etykiety wierszy jednym rozmiarem; mniejszy tylko, gdy nawet dwa wiersze się nie mieszczą.
+            for (rl in s.rowLabelsDrawn()) require9(rl.size >= SettingsScreen.LABEL_DP - 1.01f ||
+                (!rl.text.trim().contains(' ') && rl.size >= 10f),
+                "$where: etykieta '${rl.text}' ma ${"%.1f".format(rl.size)} sp (reszta ${SettingsScreen.LABEL_DP})")
+        }
+    }
+
+    private fun titleOf(s: Screen): String? = when (s) {
+        is ResearchScreen -> L["research"]
+        is CampaignScreen -> L["campaign"]
+        is MissionsScreen -> L["ms_missions"]
+        is SettingsScreen -> L["settings"]
+        else -> null
     }
 
     /** Heurystyki nowego gracza; wyniki trafiają do raportu (twarde asercje są niżej). */
@@ -303,6 +362,15 @@ class NewPlayerJourneyTest {
         val where = "$tag/krok ${tut.step}"
         if (p.left < g.insetL - 0.5f || p.top < g.insetT - 0.5f || p.right > g.width - g.insetR + 0.5f || p.bottom > g.height - g.insetB + 0.5f)
             audit.append("$where: DYMEK SAMOUCZKA POZA BEZPIECZNYM OBSZAREM $p\n")
+        if (tut.step == TutorialOverlay.S_INCOME) {
+            val near = android.graphics.RectF(tut.hole).apply { inset(-5 * g.ui.dp, -5 * g.ui.dp) }
+            require9(!android.graphics.RectF.intersects(near, bs.topBarView.eraNameDrawn),
+                "$where: podświetlenie złota zasłania nazwę epoki ${bs.topBarView.eraNameDrawn}")
+        }
+        val ring = tut.ringBounds
+        if (!ring.isEmpty) require9(ring.left >= g.insetL - 0.5f && ring.top >= g.insetT - 0.5f &&
+            ring.right <= g.width - g.insetR + 0.5f && ring.bottom <= g.height - g.insetB + 0.5f,
+            "$where: złota obwódka celu wychodzi poza ekran ($ring)")
         if (!tut.hole.isEmpty && android.graphics.RectF.intersects(p, tut.hole))
             audit.append("$where: DYMEK ZASŁANIA PODŚWIETLONY CEL\n")
         if (tut.skipBtn.visible) for (h in listOf(bs.stanceBtn, bs.speedBtn, bs.evolveBtn, bs.pauseBtn) + bs.unitBtn) {
@@ -372,6 +440,8 @@ class NewPlayerJourneyTest {
             tapAt(g, card.r.centerX(), card.r.centerY())
             require9(rs.lastNotice.contains("3") && rs.lastNotice.isNotEmpty(),
                 "$tag: dotknięcie za drogiego badania nic nie mówi ('${rs.lastNotice}')")
+            tick(g, 0.1f, 2)
+            shot(g, tag, "14b_badania_powiadomienie")
             g.profile.medals = medals
         }
         backToMenu(g, tag)
@@ -425,6 +495,17 @@ class NewPlayerJourneyTest {
         tap(g, button(g.current!!, 7), "$tag/ustawienia")
         tick(g, 0.2f, 6)
         shot(g, tag, "23_ustawienia")
+        run {
+            val ss = g.current as SettingsScreen
+            val pgs = button(ss, 11)
+            if (!g.online.available && pgs.visible) {
+                require9(!pgs.enabled, "$tag: niedostępne Play Games wygląda na aktywne")
+                tapAt(g, pgs.r.centerX(), pgs.r.centerY())
+                require9(ss.lastNotice == L["pgs144_why"], "$tag: dotknięcie niedostępnego Play Games nic nie mówi")
+                tick(g, 0.1f, 2)
+                shot(g, tag, "24_ustawienia_play_games")
+            }
+        }
     }
 
     @Test

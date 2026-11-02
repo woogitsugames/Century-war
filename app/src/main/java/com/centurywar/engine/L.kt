@@ -159,6 +159,7 @@ object L {
         putAll(part143())
         putAll(part140())
         putAll(part125())
+        putAll(part144())
         }
     }
 
@@ -199,6 +200,11 @@ object L {
             "Одна особлива одиниця на сторону. Коштує як два важкі бійці. 180% здоров'я й 115% шкоди важкого бійця. Аура: +10% шкоди союзників у радіусі 230. Імпульс вражає область кожні 20 с. Після загибелі відновлення 90 с (45 с під час швидких здібностей). З 8-го етапу кампанії, у сутичці, Endless та нових денних викликах.",
             "Eén speciale eenheid per zijde. Kost twee zware eenheden. 180% HP en 115% schade van zware eenheden. Aura: +10% schade van bondgenoten binnen 230. Impuls raakt een gebied elke 20 s. Na overlijden 90 s herladen (45 s bij snelle vaardigheden). Vanaf campagneniveau 8, schermutseling, Endless en nieuwe daguitdagingen.",
             "Taraf başına bir özel birim. Bedel: iki ağır birlik. %180 ağır birlik canı ve %115 ağır birlik hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
+    )
+
+    /** Tura 9 (UX 2): wyjaśnienie wyszarzonego przycisku Play Games w Ustawieniach. */
+    private fun part144(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "pgs144_why" to t("Play Games nie działa w tej wersji gry. Postęp zapisuje się na tym urządzeniu.", "Play Games is not available in this version. Progress is saved on this device.", "Play Games ist in dieser Version nicht verfügbar. Der Fortschritt wird auf diesem Gerät gespeichert.", "Play Games no está disponible en esta versión. El progreso se guarda en este dispositivo.", "Play Games n’est pas disponible dans cette version. La progression est enregistrée sur cet appareil.", "Play Games non è disponibile in questa versione. I progressi sono salvati su questo dispositivo.", "O Play Games não está disponível nesta versão. O progresso é guardado neste dispositivo.", "Play Games недоступні в цій версії. Прогрес зберігається на цьому пристрої.", "Play Games is niet beschikbaar in deze versie. Voortgang wordt op dit apparaat opgeslagen.", "Play Games bu sürümde kullanılamıyor. İlerleme bu cihazda kaydedilir."),
     )
 
     /** Tura 9 (UX nowego gracza): zablokowane badania i etapy mówią, co zrobić dalej. */

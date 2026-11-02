@@ -295,7 +295,7 @@ class BattleScreen(
     internal var enemyEraLanguage = -1
     internal var enemyEraText = ""
     // Komponenty powstają raz; bez instancjonowania w render()/update().
-    private val topBarView = BattleTopBar(this)
+    internal val topBarView = BattleTopBar(this)
     private val bottomHudView = BattleBottomHud(this)
     private val resultsView = BattleResultsPanel(this)
     internal val upgradesView = BattleUpgradePanel(this)

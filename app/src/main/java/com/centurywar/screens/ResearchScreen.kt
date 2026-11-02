@@ -129,6 +129,7 @@ class ResearchScreen(g: Game) : Screen(g) {
         chrome.title(c, L["research"])
         // Tura 9: podświetlenie dymka obejmuje samą plakietkę medali, nie pusty pas obok.
         hintMedalsRect.left = chrome.badges(c, g.profile.medals) - 4 * dp
+        chrome.titleBounds(L["research"], hints.titleRect)
         hints.draw(c)
     }
 

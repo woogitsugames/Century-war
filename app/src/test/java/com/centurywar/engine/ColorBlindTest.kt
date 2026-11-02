@@ -140,6 +140,9 @@ class ColorBlindTest {
         check("tekst / negatywny przycisk", Ui.TEXT, p.buttonBad)
         check("stan pozytywny / panel", p.good, p.panel)
         check("stan negatywny / panel", p.bad, p.panel)
+        // Tura 9: „Wróg: …” i HP bazy wroga na pasku bitwy.
+        check("napis wroga / pasek bitwy", Ui.ENEMY_TEXT, Ui.TOP_BAR_BG)
+        check("napis wroga / panel", Ui.ENEMY_TEXT, p.panel)
     }
 
     @Test

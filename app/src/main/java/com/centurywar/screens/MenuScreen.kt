@@ -41,7 +41,13 @@ class MenuScreen(g: Game) : Screen(g) {
     private val resumePanel = RectF()
     /** Zlecenie 141: jednorazowy dymek prowadzący do Doktryny elit. */
     private val hints = HintOverlay(g)
-    init { buttons.add(0, hints.okBtn) }
+    init {
+        buttons.add(0, hints.okBtn)
+        // Okno „Wznowić bitwę?” leży nad kafelkami menu: jego przyciski muszą dostać dotyk pierwsze,
+        // inaczej tap w „Porzuć” trafiał w zasłonięty kafelek i był ignorowany.
+        buttons.remove(resumeNo); buttons.remove(resumeYes)
+        buttons.add(0, resumeNo); buttons.add(0, resumeYes)
+    }
     /** Stać gracza na Doktrynę elit, a jej nie ma: plakietka „!” na Badaniach. */
     internal var eliteReady = false
         private set

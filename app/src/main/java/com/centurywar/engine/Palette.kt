@@ -5,7 +5,20 @@ class PaletteColors(
     val player: Int, val enemy: Int, val good: Int, val bad: Int,
     val panel: Int, val outline: Int, val frame: Int,
     val buttonGood: Int, val buttonBad: Int,
-)
+) {
+    /**
+     * Tura 9: barwa wroga do napisów na ciemnym pasku bitwy („Wróg: …”, HP bazy). Czerwień
+     * drużyny ma na tle paska ok. 4,4:1; rozjaśniona o 25% w stronę bieli spełnia WCAG AA
+     * (pilnuje ColorBlindTest). Paski HP i minimapa zostają w barwie [enemy].
+     */
+    val enemyText: Int = lighten(enemy, 0.25f)
+
+    private fun lighten(c: Int, t: Float): Int {
+        fun ch(shift: Int) = (c ushr shift) and 255
+        fun mix(v: Int) = (v + (255 - v) * t).toInt().coerceIn(0, 255)
+        return (0xFF shl 24) or (mix(ch(16)) shl 16) or (mix(ch(8)) shl 8) or mix(ch(0))
+    }
+}
 
 object Palette {
     const val STANDARD = 0

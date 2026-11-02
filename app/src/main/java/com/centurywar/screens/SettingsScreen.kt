@@ -105,6 +105,56 @@ class SettingsScreen(g: Game) : Screen(g) {
     private var shownAutoLanguage = -1
     private var autoQualityLabel = ""
 
+    /**
+     * Tura 9: etykieta wiersza. Wszystkie mają 15 sp; zbyt długa („Godzina przypomnienia”,
+     * „Podpowiedzi i samouczek”) przechodzi do dwóch wierszy tym samym rozmiarem, a zmniejsza
+     * się tylko wtedy, gdy nawet dwa wiersze się nie mieszczą. Bufor: bez alokacji na klatkę.
+     */
+    internal class RowLabel {
+        var text = ""; var width = 0f; var scale = 0f
+        var first = ""; var second = ""; var size = LABEL_DP
+    }
+    private val rowLabels = HashMap<Button, RowLabel>()
+
+    internal fun rowLabel(b: Button, avail: Float): RowLabel {
+        val rl = rowLabels.getOrPut(b) { RowLabel() }
+        val text = L[labelKeyOf(b)]
+        if (rl.text == text && rl.width == avail && rl.scale == ui.textScale) return rl
+        rl.text = text; rl.width = avail; rl.scale = ui.textScale
+        rl.size = LABEL_DP; rl.first = text; rl.second = ""
+        if (ui.measure(text, LABEL_DP, true) <= avail) return rl
+        var best = -1
+        var bestW = Float.MAX_VALUE
+        var i = text.indexOf(' ')
+        while (i > 0) {
+            val w = max(ui.measure(text.substring(0, i), LABEL_DP, true),
+                ui.measure(text.substring(i + 1), LABEL_DP, true))
+            if (w < bestW) { bestW = w; best = i }
+            i = text.indexOf(' ', i + 1)
+        }
+        if (best < 0) { rl.size = ui.fit(text, LABEL_DP, avail); return rl }
+        rl.first = text.substring(0, best)
+        rl.second = text.substring(best + 1)
+        rl.size = min(ui.fit(rl.first, LABEL_DP, avail), ui.fit(rl.second, LABEL_DP, avail))
+        return rl
+    }
+
+    /** Bufory etykiet narysowanych wierszy (do testów spójności rozmiaru). */
+    internal fun rowLabelsDrawn(): Collection<RowLabel> = rowLabels.values
+
+    /** Ostatni komunikat po dotknięciu wyszarzonego Play Games (do testów). */
+    internal var lastNotice = ""
+
+    /** Wyszarzony Play Games nie milczy: dotyk trafia do [onTap] z wyjaśnieniem. */
+    override fun swallowsInactiveTap(b: Button): Boolean = b !== playGames
+
+    override fun onTap(x: Float, y: Float) {
+        if (playGames.visible && !playGames.enabled && playGames.contains(x, y)) {
+            lastNotice = L["pgs144_why"]
+            g.showNotice(lastNotice, Icons.TROPHY)
+        }
+    }
+
     override fun isDragScreen() = true
 
     override fun onDrag(dx: Float, dy: Float) {
@@ -198,6 +248,8 @@ class SettingsScreen(g: Game) : Screen(g) {
             else -> "pgs_disabled"
         }]
         playGames.color = if (g.online.state == OnlineState.CONNECTED) Ui.BTN_GREEN else Ui.BTN
+        // Tura 9: bez usługi przycisk jest wyszarzony (wygląda na nieaktywny); dotyk wyjaśnia.
+        playGames.enabled = g.online.available
         banners.label = L["banner_open"]
         access.label = L["access_open"]
         hintSettings.label = L["access_open"]
@@ -231,9 +283,14 @@ class SettingsScreen(g: Game) : Screen(g) {
                 val isz = min(24 * dp, b.r.height() * 0.7f)
                 Icons.draw(c, iconOf(b), left + 10 * dp + isz / 2, b.r.centerY(), isz, dp = dp)
                 val tx = left + 20 * dp + isz
-                val label = L[labelKeyOf(b)]
-                ui.textO(c, label, tx, b.r.centerY() + 5.5f * dp,
-                    ui.fit(label, 15f, b.r.left - tx - 6 * dp), Ui.TEXT)
+                val rl = rowLabel(b, b.r.left - tx - 6 * dp)
+                if (rl.second.isEmpty()) {
+                    ui.textO(c, rl.first, tx, b.r.centerY() + 5.5f * dp, rl.size, Ui.TEXT)
+                } else {
+                    val lh = rl.size * dp * ui.textScale * 1.1f
+                    ui.textO(c, rl.first, tx, b.r.centerY() - lh * 0.5f + 5f * dp, rl.size, Ui.TEXT)
+                    ui.textO(c, rl.second, tx, b.r.centerY() + lh * 0.5f + 5f * dp, rl.size, Ui.TEXT)
+                }
             }
             if (b === music || b === sfxLevel) {
                 if (b.r.bottom > contentTop && b.r.top < contentBottom)
@@ -358,5 +415,10 @@ class SettingsScreen(g: Game) : Screen(g) {
             }
         }
         p.save()
+    }
+
+    internal companion object {
+        /** Wspólny rozmiar etykiet wierszy Ustawień (sp). */
+        const val LABEL_DP = 15f
     }
 }
