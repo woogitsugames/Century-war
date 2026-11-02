@@ -51,15 +51,18 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
 
     fun layout(l: Float, rr: Float, avail: Float, pad: Float) {
         with(owner) {
-            val n = 10
+            val hasCommander = battle.commanderAvailable
+            val actions = if (hasCommander) 7 else 6
+            val n = 4 + actions
             // Na okładce Folda i telefonach do 360 dp strzałki ulepszeń potrzebują
             // osobnego rzędu. Inaczej ich cel 48 dp przechwytuje tapnięcia w jednostki.
-            threeRowHud = h >= w * 2.2f || avail < 360 * dp
+            threeRowHud = h >= w * 2.2f || avail < (if (hasCommander) 390 else 360) * dp
             val gap = if (threeRowHud && avail < 313 * dp) 3 * dp else 5 * dp
             // Pozostałe układy są bez zmian, w tym dwa rzędy leworęczne na Foldzie.
-            twoRowHud = threeRowHud || (g.profile.leftHandedHud && avail < 560 * dp)
+            twoRowHud = threeRowHud || (g.profile.leftHandedHud && avail < 560 * dp) ||
+                (hasCommander && avail < 610 * dp)
             val size = if (threeRowHud) min(48 * dp, (avail - gap * 5) / 6f)
-                else if (twoRowHud) min(70 * dp, (avail - gap * 5) / 6f)
+                else if (twoRowHud) min(70 * dp, (avail - gap * (actions - 1)) / actions)
                 else min(70 * dp, (avail - gap * (n - 1) - 10 * dp) / n)
             val rowGap = if (threeRowHud) 3 * dp else gap
             val bottomPad = if (threeRowHud) 4 * dp else pad
@@ -94,8 +97,16 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             queueInfoBtn.hitSlop = 13 * dp
             queueInfoBtn.hitOffsetX = queueInfoBtn.hitSlop
             queueInfoBtn.hitOffsetY = -queueInfoBtn.hitSlop
-            if (twoRowHud) x = rr - (6 * size + 5 * gap) else x += 10 * dp
-            for (b in actionBtns) { b.set(x, y, size, size); x += size + gap }
+            if (twoRowHud) x = rr - (if (threeRowHud) 6 else actions) * size -
+                (if (threeRowHud) 5 else actions - 1) * gap else x += 10 * dp
+            for (b in actionBtns) {
+                if (threeRowHud && b === commanderBtn) {
+                    b.set(unitUpgrade[3].r.right + gap, y - size - rowGap, size, size)
+                } else {
+                    b.set(x, y, size, size)
+                    x += size + gap
+                }
+            }
         }
     }
 
@@ -173,6 +184,18 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         rallyBtn.enabled = battle.abilityReady(p, 1)
         rallyBtn.progress = if (p.abilityCd[1] > 0f) 1f - p.abilityCd[1] / (Battle.RALLY_CD * p.abilityCdMul) else -1f
         rallyBtn.highlight = p.rallyT > 0f
+        commanderBtn.visible = !modal && battle.commanderAvailable
+        commanderBtn.iconId = Icons.CROWN
+        commanderBtn.iconTint = Ui.PLAYER
+        commanderBtn.label = L["comm125_short"]
+        commanderBtn.sub = costStr(6, battle.commanderCost(p))
+        commanderBtn.subIcon = Icons.COIN
+        commanderBtn.enabled = battle.canSummonCommander(p)
+        commanderBtn.highlight = p.commanderCd < 0f
+        commanderBtn.progress = if (p.commanderCd > 0f)
+            1f - p.commanderCd / (Battle.COMMANDER_COOLDOWN *
+                (if (cfg.dailyEvent == com.centurywar.game.DailyEvent.RAPID_ABILITIES) 0.5f else 1f))
+            else -1f
         stanceBtn.visible = !modal
         stanceBtn.label = if (p.hold) L["hold"] else L["advance"]
         stanceBtn.iconId = if (p.hold) Icons.SHIELD else Icons.ADVANCE
