@@ -130,8 +130,10 @@ class Achievement130Test {
         for ((i, event) in DailyEvent.values().withIndex()) {
             record(p, finished(BattleConfig(Mode.DAILY, 500L + i, 1f, dailyEvent = event), true))
         }
-        assertEquals(6L, Achievements.progress(p, Achievements.byId("daily_events_6")!!))
+        // Zlecenie 170: dziewięć wydarzeń odblokowuje oba osiągnięcia.
+        assertEquals(9L, Achievements.progress(p, Achievements.byId("daily_events_6")!!))
         assertTrue(Achievements.isUnlocked(p, "daily_events_6"))
+        assertTrue(Achievements.isUnlocked(p, "daily_events_9"))
 
         for ((i, modifier) in Modifier.values().take(10).withIndex()) {
             record(p, finished(BattleConfig(Mode.SKIRMISH, 600L + i, 1f,
@@ -185,5 +187,17 @@ class Achievement130Test {
         val old = Profile(file).apply { load() }
         assertEquals(0L, Achievements.progress(old, Achievements.byId("weekly_rules_6")!!))
         assertEquals(0L, Achievements.progress(old, Achievements.byId("daily_events_6")!!))
+    }
+
+    @Test fun newCardsUnlockBehindTheLinesAtWave30() {
+        val p = Profile(profileFile())
+        val early = finished(BattleConfig(Mode.ENDLESS, 610L, 1f), false, wave = 29)
+        early.player.cardStacks[EndlessCard.QUARTERMASTER.ordinal] = 1
+        assertFalse("card_tools_30" in record(p, early))
+        val plain = finished(BattleConfig(Mode.ENDLESS, 611L, 1f), false, wave = 31)
+        assertFalse("card_tools_30" in record(p, plain))
+        val masons = finished(BattleConfig(Mode.ENDLESS, 612L, 1f), false, wave = 30)
+        masons.player.cardStacks[EndlessCard.MASTER_MASONS.ordinal] = 1
+        assertTrue("card_tools_30" in record(p, masons))
     }
 }
