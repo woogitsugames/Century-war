@@ -825,9 +825,12 @@ szum (σ różnicy ≈ 7 p.p.) zostały: etap 17 (+16), 18 (−9), 12 (−8), 27
 
 **Błędy wykryte w testach po 127:**
 
-- `AiPersonalityProfileTest`: Ekonomista wygrywał 87,5% (próg 30–70%). Na 100 seedach
-  przeciw BALANCED: 67,5% przed 127, 69,5% po 127 — źródłem była podwójna
-  inwestycja w ulepszenia (`upgradeReserve` 0,75 i dodatkowo ×0,65 bez zagrożenia).
+- `AiPersonalityProfileTest`: Ekonomista wygrywał 87,5% (próg 30–70%, 20 seedów × 2 scenariusze).
+  Już przed 127 miał na 100 seedach 67,5% przeciw BALANCED (blisko progu), a 127 dodało
+  mu podwójną inwestycję w ulepszenia (`upgradeReserve` 0,75 i ×0,65 bez zagrożenia)
+  oraz większą falę. Próby na 100 seedach pokazały, że rozmiar fali działa najsilniej
+  (fala 8: 77%, 7: ok. 70%, 6 i 5: 64–74% zależnie od reszty parametrów); wpływ rezerwy
+  ulepszeń mieści się w szumie. Wybrano wariant z wynikiem poniżej stanu sprzed 127 (64%).
 - `DoctrineBalance82Test`: VETERAN 67,5% (próg 40–60%) przez silniejsze kontry BALANCED (+55/+45).
 - `GoldenReplayTest` i `ChallengeRules109Test` (archiwalna powtórka dnia): każda zmiana
   decyzji AI zmienia przebieg nagrań — to oczekiwane, nie błąd; wzorce zregenerowano.
