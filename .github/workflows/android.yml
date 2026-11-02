@@ -26,7 +26,6 @@ concurrency:
 jobs:
   build:
     name: Debug APK, narzędzia CI i licencje
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -144,7 +143,6 @@ jobs:
 
   fast-tests:
     name: Fast (app + sim + server)
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -210,7 +208,6 @@ jobs:
 
   screenshot-tests:
     name: Screenshots (Robolectric)
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -244,6 +241,18 @@ jobs:
           printf '%s\n' "$elapsed" > ci-test-screenshots.duration
           printf 'Screenshots Gradle: **%s s**\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
           exit "$result"
+      - name: Sprawdz PNG i odtworzenie z cache
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_ci_screenshots.py app/build/screenshots
+          rm -rf app/build/screenshots
+          ./gradlew screenshotTest --console=plain --no-configuration-cache -PtestForks=1 > ci-test-screenshots-cache.log 2>&1
+          cat ci-test-screenshots-cache.log
+          if ! grep -Eq '^> Task :app:testDebugUnitTest FROM-CACHE( |$)' ci-test-screenshots-cache.log; then
+            echo "::error::Zrzuty nie zostaly odtworzone z cache Gradle"
+            exit 1
+          fi
+          python3 scripts/verify_ci_screenshots.py app/build/screenshots
       - name: Zrzuty PNG i raporty
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -254,12 +263,12 @@ jobs:
             app/build/screenshots/
             ci-test-screenshots.duration
             ci-test-screenshots.log
+            ci-test-screenshots-cache.log
           if-no-files-found: warn
           retention-days: 14
 
   balance-tests:
     name: Balance (długie symulacje i raporty)
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -395,6 +404,7 @@ jobs:
 
   release:
     name: Podpisany release APK i AAB
+    needs: [build, fast-tests, screenshot-tests, balance-tests]
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -436,7 +446,17 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          CW_SERVER_URL: ${{ vars.CW_SERVER_URL }}
+          CW_HMAC_KEY: ${{ secrets.CW_HMAC_KEY }}
+          CW_PRIVACY_URL: ${{ vars.CW_PRIVACY_URL }}
         run: |
+          set -euo pipefail
+          for name in CW_SERVER_URL CW_HMAC_KEY CW_PRIVACY_URL; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Brak konfiguracji ${name} w GitHub Actions (vars/secrets)."
+              exit 1
+            fi
+          done
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
       - name: Zapisz release APK
