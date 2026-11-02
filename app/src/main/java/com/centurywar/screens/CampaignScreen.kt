@@ -651,6 +651,22 @@ class CampaignScreen(g: Game) : Screen(g) {
         }
     }
 
+    /** Tura 9: ostatni komunikat po dotknięciu zablokowanego etapu (do testów). */
+    internal var lastNotice = ""
+
+    // Zablokowany etap mówi, co go odblokuje, zamiast milczeć.
+    override fun swallowsInactiveTap(b: Button): Boolean = b.tag !is Stage
+
+    override fun onTap(x: Float, y: Float) {
+        if (eraIntro?.active == true || selected != null) return
+        val t = tiles.firstOrNull { it.contains(x, y) && !it.enabled } ?: return
+        val need = g.profile.unlockedStage().coerceAtMost(tiles.lastIndex)
+        hints.onAction()
+        lastNotice = L.f("cp143_locked", need + 1)
+        g.showNotice(lastNotice, Icons.LOCK)
+        g.sfx(Sound.ERROR, 0.34f, 150)
+    }
+
     override fun onBack(): Boolean {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (selected != null) { selected = null; return true }

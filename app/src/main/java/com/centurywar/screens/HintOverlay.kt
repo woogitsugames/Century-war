@@ -99,6 +99,11 @@ class HintOverlay(
         private const val CHECK_EVERY = 0.25f
         private const val GAP = 20f
         private const val DISPLAY_TIME = 8f
+        /** Przycisk OK (dp): z hitSlop 8 dp cel dotyku ma 48 dp wysokości. */
+        internal const val OK_W = 56f
+        internal const val OK_H = 32f
+        /** Odstęp tekstu od krawędzi panelu: lamówka 10,4 dp + oddech. */
+        internal const val TEXT_PAD = 20f
     }
 
     val okBtn = Button(OK_ID).apply {
@@ -254,8 +259,9 @@ class HintOverlay(
 
         // Nad wariantami zostaje wąski pas pionowy; korzystamy z całej szerokości.
         val maxW = if (activeId == VARIANT) safeW else min(600f * dp, safeW)
-        val buttonW = 51f * dp
-        val padding = 12f * dp
+        // Tura 9: tekst i „OK” z odstępem od złotej lamówki (Ui.PANEL_TRIM_INSET), cel OK ≥ 48 dp.
+        val buttonW = OK_W * dp + 8f * dp
+        val padding = TEXT_PAD * dp
         hintFont = 12.5f
         var measured = g.ui.measure(body, hintFont)
         // Rozszerzone opisy wariantów próbujemy najpierw zmieścić w jednym wierszu.
@@ -268,13 +274,13 @@ class HintOverlay(
             lines[0] = body
             lineCount = 1
             hintWidth = (measured + buttonW + 3f * padding).coerceIn(min(152f * dp, maxW), maxW)
-            hintHeight = max(36f, 21f + hintFont * scale) * dp
+            hintHeight = max(58f, 37f + hintFont * scale) * dp
         } else {
             lineCount = HintFrame.wrapHintInto(g.ui, body, maxW - 2f * padding, hintFont, lines)
             var longest = 0f
             for (i in 0 until lineCount) longest = max(longest, g.ui.measure(lines[i] ?: "", hintFont))
             hintWidth = (longest + 2f * padding).coerceIn(min(188f * dp, maxW), maxW)
-            hintHeight = (53f + hintFont * scale * 0.5f + 4f * scale + (lineCount - 1) * 17f * scale) * dp
+            hintHeight = (74f + hintFont * scale * 0.5f + 4f * scale + (lineCount - 1) * 17f * scale) * dp
         }
     }
 
@@ -424,16 +430,19 @@ class HintOverlay(
         g.ui.panel(c, panel)
         if (compact) {
             val baseline = panel.centerY() + hintFont * g.ui.textScale * dp * 0.35f
-            g.ui.text(c, lines[0] ?: "", panel.left + 12f * dp, baseline, hintFont, Ui.TEXT)
-            okBtn.set(panel.right - 59f * dp, panel.centerY() - 14f * dp, 49f * dp, 28f * dp)
+            g.ui.text(c, lines[0] ?: "", panel.left + TEXT_PAD * dp, baseline, hintFont, Ui.TEXT)
+            okBtn.set(panel.right - (Ui.PANEL_TRIM_INSET + 8f + OK_W) * dp, panel.centerY() - OK_H * 0.5f * dp,
+                OK_W * dp, OK_H * dp)
         } else {
-            var y = panel.top + (14f + hintFont * g.ui.textScale * 0.5f) * dp
+            var y = panel.top + (20f + hintFont * g.ui.textScale * 0.5f) * dp
             for (i in 0 until lineCount) {
-                g.ui.text(c, lines[i] ?: "", panel.left + 12f * dp, y, hintFont, Ui.TEXT)
+                g.ui.text(c, lines[i] ?: "", panel.left + TEXT_PAD * dp, y, hintFont, Ui.TEXT)
                 y += 17f * dp * g.ui.textScale
             }
-            okBtn.set(panel.right - 65f * dp, panel.bottom - 34f * dp, 53f * dp, 28f * dp)
+            okBtn.set(panel.right - (Ui.PANEL_TRIM_INSET + 10f + OK_W) * dp,
+                panel.bottom - (Ui.PANEL_TRIM_INSET + 6f + OK_H) * dp, OK_W * dp, OK_H * dp)
         }
+        okBtn.hitSlop = 8f * dp
         g.ui.button(c, okBtn, 12f)
     }
 }

@@ -156,8 +156,15 @@ object L {
         putAll(part139())
         putAll(part141())
         putAll(part135())
+        putAll(part143())
         }
     }
+
+    /** Tura 9 (UX nowego gracza): zablokowane badania i etapy mówią, co zrobić dalej. */
+    private fun part143(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "rs143_need" to t("Za mało medali: masz %d, potrzeba %d. Medale dostajesz za każdą bitwę.", "Not enough medals: you have %d, need %d. Every battle earns medals.", "Zu wenige Medaillen: %d von %d. Jede Schlacht bringt Medaillen.", "Faltan medallas: tienes %d, necesitas %d. Cada batalla da medallas.", "Pas assez de médailles : %d sur %d. Chaque bataille en rapporte.", "Medaglie insufficienti: hai %d, servono %d. Ogni battaglia ne dà.", "Medalhas insuficientes: tem %d, precisa de %d. Cada batalha dá medalhas.", "Замало медалей: маєш %d, треба %d. Медалі дає кожна битва.", "Te weinig medailles: je hebt %d, nodig %d. Elke strijd levert medailles op.", "Madalya yetersiz: %d var, %d gerekli. Her savaş madalya kazandırır."),
+        "cp143_locked" to t("Etap zablokowany. Najpierw wygraj etap %d.", "Stage locked. Win stage %d first.", "Etappe gesperrt. Gewinne zuerst Etappe %d.", "Etapa bloqueada. Gana primero la etapa %d.", "Étape verrouillée. Gagnez d’abord l’étape %d.", "Tappa bloccata. Vinci prima la tappa %d.", "Etapa bloqueada. Vença primeiro a etapa %d.", "Етап заблоковано. Спершу виграй етап %d.", "Etappe vergrendeld. Win eerst etappe %d.", "Aşama kilitli. Önce %d. aşamayı kazan."),
+    )
 
     /** Zlecenie 141: jak odblokować jednostkę elitarną (nazwa i koszt badania z Research). */
     private fun part141(): Array<Pair<String, Array<out String>>> = arrayOf(

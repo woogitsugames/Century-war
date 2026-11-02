@@ -331,6 +331,13 @@ class TutorialOverlay(
 
     private fun hideButtons() { skipBtn.visible = false; nextBtn.visible = false }
 
+    /**
+     * Pauza i wyniki zasłaniają samouczek: jego niewidoczne przyciski nie mogą przechwytywać
+     * dotknięć (np. zakładki „Wykres” po przegranej bitwie samouczka). Następna klatka
+     * samouczka sama przywraca je po wznowieniu.
+     */
+    fun hideUnderOverlay() = hideButtons()
+
     private fun markDone() {
         val pr = g.profile
         if (!pr.tutorialDone) { pr.tutorialDone = true; pr.save() }
@@ -585,21 +592,29 @@ class TutorialOverlay(
         val fieldBottom = min(sb - bh, t.area.bottom - bh - 8 * dp)
         var chosenX = right
         var chosenY = fieldTop
-        for (i in 0..7) {
+        // Tura 9: najpierw pole bitwy (góra, dół), dopiero potem krawędzie ekranu; w pierwszym
+        // przebiegu „Pomiń” nie może przykryć przycisku HUD (np. Naprzód, ×1 na wąskim Foldzie).
+        search@ for (pass in 0..1) for (i in 0..7) {
             val x = if (i % 2 == 0) right else left
             val y = when (i / 2) {
                 0 -> fieldTop
-                1 -> sb - bh
-                2 -> st + 8 * dp
-                else -> max(fieldTop, fieldBottom)
+                1 -> max(fieldTop, fieldBottom)
+                2 -> sb - bh
+                else -> st + 8 * dp
             }
             if (hasHole && overlaps(x, y, x + bw, y + bh, hole, 8 * dp)) continue
             if (overlaps(x, y, x + bw, y + bh, panel, 8 * dp)) continue
             if (nextBtn.visible && overlaps(x, y, x + bw, y + bh, nextBtn.r, 30 * dp)) continue
+            if (pass == 0 && coversHud(x, y, x + bw, y + bh)) continue
             chosenX = x; chosenY = y
-            break
+            break@search
         }
         skipBtn.set(chosenX, chosenY, bw, bh)
+    }
+
+    private fun coversHud(l: Float, top: Float, r: Float, b: Float): Boolean {
+        for (h in t.hud) if (h.visible && overlaps(l, top, r, b, h.r, 4 * dp)) return true
+        return false
     }
 
     /** Dialog blokuje HUD i symulację; dopiero drugi, wyraźny wybór zapisuje pominięcie. */
@@ -636,7 +651,7 @@ class TutorialOverlay(
     }
 
     fun draw(c: Canvas) {
-        if (finished || battle.over) return
+        if (finished || battle.over) { hideButtons(); return }
         val ui = g.ui
         val sl = g.insetL + 12 * dp
         val sr = g.width - g.insetR - 12 * dp
