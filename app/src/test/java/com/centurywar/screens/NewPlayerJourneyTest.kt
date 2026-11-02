@@ -492,6 +492,9 @@ class NewPlayerJourneyTest {
         shot(g, tag, "22_endless_pauza")
         g.setScreen(MenuScreen(g))
         tick(g, 0.2f, 4)
+        // W wąskim oknie Ustawienia są na końcu przewijanej listy.
+        (g.current as? MenuScreen)?.takeIf { it.portraitMenu }
+            ?.onDrag(0f, -100000f)
         tap(g, button(g.current!!, 7), "$tag/ustawienia")
         tick(g, 0.2f, 6)
         shot(g, tag, "23_ustawienia")
