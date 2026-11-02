@@ -1461,3 +1461,5 @@ zmienia go tylko ARSENAL −35%, Grabież w Endless bez zmian):**
 | 36 | weteran | 100 | 76% | 74% |
 
 Bez wyraźnych zmian w kampanii (różnice ±2 bitwy na 100; mediany czasu ±0,5 min).
+
+- 2026-11-02 — regeneracja złotych powtórek: Tura 10: warianty Pary i Krzemu (163).
