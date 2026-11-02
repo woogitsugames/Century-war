@@ -17,7 +17,7 @@ class Doctrine69BattleSimTest {
         val b = Battle(BattleConfig(Mode.SKIRMISH, seed, 1f,
             startEra = 2, maxEra = 2, aiPersonality = AiPersonality.BALANCED,
             modifiers = setOf(Modifier.FRAGILE_BASES, Modifier.RICH_START),
-            variantsEnabled = false))
+            variantsEnabled = false), commanderEnabled = false)
         b.playerAi = Ai(b, 0, AiPersonality.BALANCED)
         for (s in b.sides) {
             s.baseHp = s.baseMaxHp * 0.20f
