@@ -1,3 +1,13 @@
+# Century War: stan 2.11.2026 ok. 19:45 UTC (tura 10, późny wieczór)
+
+- `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` = 5081cd7b (+ ten wpis): tura 10 w całości — szlif przed premierą 1 i 2, doktryny (PROTOCOL 0.8.2), strojenie etapów 16–18/34–36, GPT 146–149, 152 (wydajność), 153 (grafiki sklepu), 154 (odporność zapisu). Pełne testy zielone. APK wysłane.
+- **Muzyka (w toku):**
+  - Oryginały od właściciela jako FLAC na osobnej gałęzi **`music-src`** (`originals/*.flac`, README z listą). Mamy 10/21: menu, victory, defeat, era0–2 calm+battle, era3_calm. Brakuje: era3_battle, era4–8 calm+battle. Właściciel przysyła po 5 plików — **każdą partię od razu konwertuj do FLAC i wypychaj na `music-src`** (`ffmpeg -i X.wav -c:a flac -compression_level 8 originals/X.flac`).
+  - Agent „Nagrana muzyka” buduje odtwarzacz (`RecordedMusic`, `RecordedMixer`, `MusicCatalog` w `engine/`, skrypt `scripts/convert_music.sh`, pliki `app/src/main/assets/music/*.ogg`, przenikanie calm↔battle wg intensywności, fallback do syntezy). Gałąź docelowa `claude/tura10-muzyka`; kopia niedokończonej pracy: `claude/wip-muzyka`. Jeśli przepadł — zlecić ponownie wg `docs/tasks/142-recorded-music.md` + ustaleń wyżej.
+  - Po odtwarzaczu: skonwertuj FLAC z `music-src` skryptem do `assets/music/`, commit na main, APK do odsłuchu.
+- **GPT w toku:** 155 (tłumaczenia part145/150/151), 156 (audyt przed premierą — sam raport `docs/reports/audit-156.md`; przełożyć właścicielowi na decyzje klikalne), 157 (grafiki sklepu: zwycięstwo na wykresie, realny czas bitwy). Sprawdzaj `origin/gpt/15[5-7]-*`, scalaj po 10 min bez zmian, usuwaj jednorazowe workflowy GPT (`.github/workflows/*-15x.yml`).
+- Testy: `forkEvery = 40` (OOM pamięci natywnej zrzutów). Pełne ok. 10–15 min.
+
 # Century War: stan po turze 10 (2.11.2026, popołudnie)
 
 - `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10`: tura 9 (125 dowódca, 136 tłumaczenia, przegląd UX dowódcy i wież), fala 5 GPT (146 poprawki UI, 147 menu w pionie, 148 kontrola R8, 149 serwer), pomiar balansu z dowódcą, strojenie etapów 16–18 i 34–36 (PROTOCOL 0.8.1). Pełne testy zielone (ok. 9–11 min). APK wysłane.
