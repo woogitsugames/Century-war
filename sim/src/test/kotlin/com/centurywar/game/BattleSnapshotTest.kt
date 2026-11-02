@@ -62,6 +62,7 @@ class BattleSnapshotTest {
         for (k in 0..1) {
             val x = a.sides[k]; val y = b.sides[k]
             assertEquals(x.baseHp, y.baseHp)
+            assertEquals(x.commanderCd, y.commanderCd)
             assertEquals(x.gold, y.gold)
             assertEquals(x.xp, y.xp)
             assertEquals(x.era, y.era)
@@ -95,6 +96,8 @@ class BattleSnapshotTest {
             assertEquals(u.x, v.x); assertEquals(u.hp, v.hp); assertEquals(u.serial, v.serial); assertEquals(u.def.id, v.def.id)
             assertEquals(u.tier, v.tier); assertEquals(u.maxHp, v.maxHp); assertEquals(u.dmg, v.dmg)
             assertEquals(u.waveSpeedMul, v.waveSpeedMul)
+            assertEquals(u.isCommander, v.isCommander)
+            assertEquals(u.commanderSkillCd, v.commanderSkillCd)
             assertEquals(u.bossKind, v.bossKind)
             assertEquals(u.bossSecondaryKind, v.bossSecondaryKind)
             assertEquals(u.bossCd, v.bossCd)
@@ -261,7 +264,7 @@ class BattleSnapshotTest {
         assertEquals(2, a.wave)
 
         val b = roundTrip(a)
-        assertEquals(15, BattleSnapshot.VERSION)
+        assertEquals(16, BattleSnapshot.VERSION)
         assertArrayEquals(a.player.cardStacks, b.player.cardStacks)
         assertArrayEquals(a.enemy.queueWaveTheme.copyOf(a.enemy.queueSize),
             b.enemy.queueWaveTheme.copyOf(b.enemy.queueSize))
