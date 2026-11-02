@@ -242,11 +242,14 @@ class ScreenshotTest {
             for (i in 0 until battle.player.slots) {
                 val tier = bs.slotTier[i]
                 assertTrue(tier.visible)
-                assertTrue(tier.r.width() >= 48 * g.ui.dp - 0.01f)
-                assertTrue(tier.r.height() >= 48 * g.ui.dp - 0.01f)
+                // 146: na ciasnym 720p sloty są w siatce 2x2; cel dotyku z marginesem hitSlop.
+                assertTrue(tier.r.width() + tier.hitSlop * 2f >= 48 * g.ui.dp - 0.01f)
+                assertTrue(tier.r.height() + tier.hitSlop * 2f >= 48 * g.ui.dp - 0.01f)
                 assertTrue(tier.r.right <= bs.slotSell[i].r.left)
                 assertTrue(bs.slotBuy[i].r.right <= tier.r.left)
-                if (i > 0) assertTrue(bs.slotTier[i - 1].r.bottom <= tier.r.top)
+                for (j in 0 until i) for (other in listOf(bs.slotBuy[j], bs.slotTier[j], bs.slotSell[j]))
+                    org.junit.Assert.assertFalse("$tag slot $i nachodzi na slot $j",
+                        RectF.intersects(tier.r, other.r))
             }
         }
     }

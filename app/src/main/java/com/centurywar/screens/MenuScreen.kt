@@ -133,7 +133,8 @@ class MenuScreen(g: Game) : Screen(g) {
         campaign.highlight = true
 
         // Android może przydzielić pionowe lub bardzo wąskie okno mimo sensorLandscape.
-        portraitMenu = h > w || w - g.insetL - g.insetR < 520 * dp
+        // Prawie kwadratowy rozłożony Fold (np. 1968x2184) zachowuje zatwierdzony układ kafelków.
+        portraitMenu = h > w * 1.3f || w - g.insetL - g.insetR < 520 * dp
         if (portraitMenu) {
             layoutPortrait()
             layoutResume(w / 2 + (g.insetL - g.insetR) / 2)

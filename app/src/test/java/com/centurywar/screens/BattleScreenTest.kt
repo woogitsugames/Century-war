@@ -553,7 +553,9 @@ class BattleScreenTest {
             val sells = field(bs, "slotSell").get(bs) as Array<*>
             for (group in listOf(buys, sells)) for (raw in group) {
                 val b = raw as Button
-                assertTrue(b.r.height() >= 48 * dp - 0.1f)
+                // 146: nieużywane sloty są puste; w siatce wież brakujące dp uzupełnia hitSlop.
+                if (b.r.isEmpty) continue
+                assertTrue(b.r.height() + b.hitSlop * 2f >= 48 * dp - 0.1f)
             }
             val p = field(bs, "pauseBtn").get(bs) as Button
             assertTrue(p.r.right <= width - g.insetR)
