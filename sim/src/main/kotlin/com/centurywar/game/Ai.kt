@@ -98,7 +98,12 @@ class Ai(
 
         managePosture()
         // AI gracza wydaje ten sam rejestrowany rozkaz co użytkownik.
-        if (b.canSummonCommander(me) && (danger > 0 || me.aliveCount >= 2 || b.time >= 35f)) {
+        // W kampanii AI reaguje na dowódcę przeciwnika: zachowuje dotychczasowy balans
+        // przy braku tego zakupu, ale odpowiada na nową jednostkę na takich samych zasadach.
+        val commanderCounterplay = b.cfg.mode != Mode.CAMPAIGN ||
+            b.sides[1 - me.index].commanderCd < 0f
+        if (commanderCounterplay && b.canSummonCommander(me) &&
+            (danger > 0 || me.aliveCount >= 2 || b.time >= 35f)) {
             summonCommander()
         }
         useAbilities()
