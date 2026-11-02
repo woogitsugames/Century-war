@@ -1,18 +1,31 @@
 package com.centurywar.engine
 
+import android.content.res.AssetManager
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Process
 import android.os.SystemClock
 
 /**
- * Strumieniowa muzyka proceduralna; cała synteza i AudioTrack działają na własnym wątku
+ * Muzyka gry: nagranie z `assets/music` ([MusicCatalog]), gdy jest dla bieżącego menu/epoki,
+ * w przeciwnym razie strumieniowa muzyka proceduralna; cała synteza i AudioTrack działają na własnym wątku
  * o niskim priorytecie. Wątek żyje tylko, gdy Activity jest na pierwszym planie
  * ([resume]/[pause]) i głośność > 0, więc wyłączona muzyka nie kosztuje CPU.
  * Sterowanie ([setEra], [setIntensity], [setVolume]) jest bezpieczne z dowolnego wątku.
  */
-class Music {
+class Music internal constructor(
+    private val catalog: MusicCatalog,
+    factory: TrackPlayerFactory?,
+    private val audio: AudioManager?,
+) {
+    /** Bez [assets] (testy) zachowanie jak dotąd: wyłącznie synteza. */
+    constructor(assets: AssetManager? = null, audio: AudioManager? = null) : this(
+        MusicCatalog.fromAssets(assets), assets?.let { MediaTrackFactory(it) }, audio
+    )
+
     companion object {
         const val MENU = MusicSynth.MENU
         private const val CHUNK_SAMPLES = 2048
@@ -31,10 +44,29 @@ class Music {
     /** Bieżący wątek; stary wątek kończy pracę, gdy przestaje być bieżącym. */
     @Volatile private var worker: Thread? = null
 
+    private val recorded: RecordedMusic? = if (factory == null || catalog.isEmpty) null else
+        RecordedMusic(catalog, factory, { refreshSource() }, { duckLevelNow() })
+    /** Czy bieżący utwór (menu/epoka) gra z nagrania. */
+    @Volatile var usesRecorded = recorded != null && catalog.covers(MENU)
+        private set
+
+    private var focusLost = false
+    private var focusHeld = false
+    private val focusRequest: AudioFocusRequest? = audio?.let {
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+            .setOnAudioFocusChangeListener { change -> onFocusChange(change) }
+            .build()
+    }
+
     /** Activity wróciła na pierwszy plan. */
     @Synchronized
     fun resume() {
         foreground = true
+        // Po trwałej utracie fokusu powrót do gry prosi o niego ponownie.
+        if (focusLost) { focusLost = false; focusHeld = false }
         sync()
     }
 
@@ -55,7 +87,11 @@ class Music {
 
     fun setEra(newEra: Int) {
         // Motyw odpowiada rzeczywistej epoce, również dla epoki żelaza.
-        era = if (newEra == MENU) MENU else newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1)
+        val e = if (newEra == MENU) MENU else newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1)
+        if (e == era) return
+        era = e
+        // Wołane co klatkę: źródło przeliczamy tylko przy zmianie i tylko, gdy są nagrania.
+        if (recorded != null) refreshSource()
     }
 
     /** Ziarno aranżacji pojedynczej bitwy, niezależne od symulacji. */
@@ -65,11 +101,13 @@ class Music {
 
     fun setIntensity(value: Float) {
         intensity = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
+        recorded?.intensity = intensity
     }
 
     @Synchronized
     fun setVolume(value: Float) {
         volume = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
+        recorded?.volume = volume
         sync()
     }
 
@@ -79,10 +117,74 @@ class Music {
         if (duckPriority.request(amount, seconds, SystemClock.uptimeMillis())) duckSerial++
     }
 
-    val isPlaying: Boolean get() = worker != null
+    val isPlaying: Boolean get() = worker != null || (usesRecorded && recorded?.isActive == true)
+
+    /**
+     * Przerywnik zwycięstwa/porażki z nagrania; pętla cichnie na jego czas.
+     * False, gdy brak pliku albo muzyka nie gra (wtedy ekran zostaje przy dotychczasowym efekcie).
+     */
+    @Synchronized
+    fun playResultStinger(victory: Boolean): Boolean {
+        val rec = recorded ?: return false
+        val name = if (victory) MusicCatalog.VICTORY_TRACK else MusicCatalog.DEFEAT_TRACK
+        if (!catalog.has(name) || !rec.isActive) return false
+        rec.requestStinger(victory)
+        // Synteza (gdy to ona gra pętlę) też schodzi w tło na czas przerywnika.
+        if (duckPriority.request(0.12f, 12f, SystemClock.uptimeMillis())) duckSerial++
+        return true
+    }
+
+    @Synchronized
+    private fun refreshSource() { sync() }
+
+    @Synchronized
+    private fun duckLevelNow(): Float =
+        if (duckPriority.remainingSeconds(SystemClock.uptimeMillis()) > 0f) duckPriority.amount else 1f
+
+    @Synchronized
+    private fun onFocusChange(change: Int) {
+        when (change) {
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> focusLost = true
+            AudioManager.AUDIOFOCUS_GAIN -> focusLost = false
+            else -> return // LOSS_TRANSIENT_CAN_DUCK: system sam ścisza strumień.
+        }
+        sync()
+    }
+
+    /** Fokus audio trzymany tylko, gdy muzyka ma grać; bez AudioManagera (testy) pomijany. */
+    private fun syncFocus(want: Boolean) {
+        val am = audio ?: return
+        val req = focusRequest ?: return
+        try {
+            if (want && !focusHeld && !focusLost) {
+                focusHeld = true
+                if (am.requestAudioFocus(req) == AudioManager.AUDIOFOCUS_REQUEST_FAILED) focusLost = true
+            } else if (!want && focusHeld) {
+                focusHeld = false
+                focusLost = false
+                am.abandonAudioFocusRequest(req)
+            }
+        } catch (_: RuntimeException) { }
+    }
 
     private fun sync() {
-        val want = foreground && !released && volume > 0f
+        val base = foreground && !released && volume > 0f
+        syncFocus(base)
+        val want = base && !focusLost
+        val rec = recorded
+        val fromFile = rec != null && catalog.covers(era)
+        usesRecorded = fromFile
+        if (rec != null) {
+            rec.volume = volume
+            rec.intensity = intensity
+            rec.target = if (fromFile) era else RecordedMixer.NONE
+            // Wątek nagrań działa przy każdym źródle: wygasza parę i odtwarza przerywniki.
+            rec.setActive(want)
+        }
+        syncSynth(want && !fromFile)
+    }
+
+    private fun syncSynth(want: Boolean) {
         val t = worker
         if (want && t == null) {
             worker = Thread({ stream() }, "music-stream").apply {

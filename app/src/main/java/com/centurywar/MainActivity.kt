@@ -181,7 +181,9 @@ class MainActivity : Activity(), Host {
         }
         startup.record(StartupTimings.Phase.PLAY_GAMES, start, SystemClock.elapsedRealtimeNanos())
         start = SystemClock.elapsedRealtimeNanos()
-        game.music = Music().also { it.setVolume(profile.musicVolume) }
+        // Nagrania z assets/music (lista czytana raz tutaj), brakujące utwory gra synteza.
+        game.music = Music(assets, getSystemService(android.media.AudioManager::class.java))
+            .also { it.setVolume(profile.musicVolume) }
         startup.record(StartupTimings.Phase.MUSIC, start, SystemClock.elapsedRealtimeNanos())
         // Przerwana bitwa (Android zabił aplikację w tle): menu zaproponuje jej wznowienie.
         game.snapshots = snapshots
