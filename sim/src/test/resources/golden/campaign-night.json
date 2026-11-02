@@ -1,6 +1,6 @@
 {
   "id": "campaign-night",
-  "config": {"mode":"CAMPAIGN","seed":91002,"aiPower":2.437797,"startEra":7,"maxEra":7,"modifiers":["FRAGILE_BASES"],"bonuses":{"startGold":350.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":28,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"NIGHT","weekly":-1,"weeklyCard":null,"dailyEvent":null},
+  "config": {"mode":"CAMPAIGN","seed":91002,"aiPower":2.2919645,"startEra":7,"maxEra":7,"modifiers":["FRAGILE_BASES"],"bonuses":{"startGold":350.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":28,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"NIGHT","weekly":-1,"weeklyCard":null,"dailyEvent":null},
   "replayVersion": 5,
   "replay": "Bf-4Fx8AEAEZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAAAjAwB9AABLBzIAASMAAA8PAJEBAAA3CCgAATwAAgUAAKABAABBAAFfAADDAQABvQMAAIcBAAEZAACgAQAAoAEAAKABAABfCw",
   "commands": [
@@ -36,5 +36,5 @@
     {"step":2905,"kind":"QUEUE","argument":0},
     {"step":3000,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":1289,"winner":1,"wave":0,"steps":3000,"kills":3,"enemyKills":11,"timeBits":1112014849,"snapshotSha256":"ebf90ab1b8317c5e807cc405f5b444674121172f5e12a721bcdc75e7f496dbd5"}
+  "expected": {"score":1289,"winner":1,"wave":0,"steps":3000,"kills":3,"enemyKills":11,"timeBits":1112014849,"snapshotSha256":"be48963c4686777bf89e9e049b9778d453ad83f99dc76cdca85917659700f8cf"}
 }

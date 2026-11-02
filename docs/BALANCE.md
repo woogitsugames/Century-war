@@ -820,3 +820,5 @@ Do czasu ukończenia pomiarów nie zakładamy, że limit ±5 p.p. jest spełnion
 - **Uruchomienie:** `BALANCE_RUN=true BALANCE_RUNS=20 ./gradlew :app:testDebugUnitTest --rerun-tasks --tests '*BalanceReport.campaignDifficultyReport*' --console=plain --no-configuration-cache`. Można dzielić na grupy przez `BALANCE_STAGES="1,2,3,4,5,6"`.
 
 **Wyniki:** pozostają do uzupełnienia na podstawie rzeczywiście wykonanego pomiaru; dane liczbowe nie są szacowane ani dopisywane bez uruchomienia 2160 symulacji.
+
+- 2026-11-02 — regeneracja złotych powtórek: Tura 8 balans: osobowości 127, uczciwe elity wroga, stageRamp etapów 1-6/12/18/25/29/30/32.

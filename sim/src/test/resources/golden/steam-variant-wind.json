@@ -2,7 +2,7 @@
   "id": "steam-variant-wind",
   "config": {"mode":"SKIRMISH","seed":91008,"aiPower":1.0,"startEra":4,"maxEra":5,"modifiers":[],"bonuses":{"startGold":7000.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":3.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":100.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"WIND","weekly":-1,"weeklyCard":null,"dailyEvent":null},
   "replayVersion": 5,
-  "replay": "Bf_gKSoAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAADgAwAAoAEAAIcBAAEZAACgAQAAaQABNwAANw8AZAQABQAASwABFAACQQAAoAEAAPsJB2QPAA",
+  "replay": "Bf_qKSoAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAADgAwAAoAEAAIcBAAEZAACgAQAAaQABNwAANw8AZAQABQAASwABFAACQQAAoAEAAPsJB2QPAA",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -47,5 +47,5 @@
     {"step":4500,"kind":"BARRAGE","argument":0},
     {"step":4600,"kind":"UNIT_UPGRADE","argument":0}
   ],
-  "expected": {"score":20864,"winner":0,"wave":0,"steps":5344,"kills":22,"enemyKills":14,"timeBits":1118970403,"snapshotSha256":"f0ed12bba5ae8ec3f9267a422e333020879da7d5da5f5d5ef2e3cb10910e30b7"}
+  "expected": {"score":20884,"winner":0,"wave":0,"steps":5354,"kills":24,"enemyKills":14,"timeBits":1118992248,"snapshotSha256":"69af444f0661f703393455364042136e6bfcc93466c97aab19aeb34dba567c65"}
 }
