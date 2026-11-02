@@ -70,23 +70,34 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
         val narrow = pw < 350 * dp
         val slots = battle.player.slots.coerceIn(0, Defs.MAX_TURRET_SLOTS)
         turretSlotsLaid = slots
-        // Zamykanie wystaje o 12 dp: górna granica panelu musi leżeć pod paskiem.
-        val safeTop = topH + g.insetT + 12 * dp
-        val safeBottom = h - hudH - 4 * dp
-        val freeH = (safeBottom - safeTop).coerceAtLeast(0f)
+        // Mały ekran z dowódcą nie pozostawia miejsca na rozłączne przyciski.
+        val fieldTop = topH + g.insetT + 12 * dp
+        val fieldBottom = h - hudH - 4 * dp
+        val fieldH = (fieldBottom - fieldTop).coerceAtLeast(0f)
         val idealRow = (if (narrow) 104 else 50) * dp
         val idealH = 72 * dp + slots * idealRow
-        // Na poziomym 720p cztery wiersze nie mieszczą się w polu bitwy.
-        // Dwie kolumny zachowują dostęp do wszystkich slotów i większe cele dotyku.
-        gridTurrets = slots > 2 && idealH > freeH && pw >= 316 * dp
-        turretHeaderH = (if (gridTurrets) 26 else 50) * dp
-        val footer = (if (gridTurrets) 2 else 22) * dp
+        // Zatwierdzona siatka 2x2 na 720p pozostaje bez zmian.
+        gridTurrets = slots > 2 && idealH > fieldH && pw >= 316 * dp
         val rows = if (gridTurrets) (slots + 1) / 2 else slots
-        val wantedRow = if (gridTurrets) 64 * dp else idealRow
+        val minFieldH = when {
+            gridTurrets -> (28 + rows * 61) * dp
+            narrow -> idealH
+            slots <= 2 -> 120 * dp
+            else -> idealH
+        }
+        turretOverlay = slots > 0 && fieldH < minFieldH
+        // Na niskim ekranie panel jest modalem ponad HUD, bez miniaturowych hitboxów.
+        val safeTop = if (turretOverlay) g.insetT + 16 * dp else fieldTop
+        val safeBottom = if (turretOverlay) h - g.insetB - 12 * dp else fieldBottom
+        val freeH = (safeBottom - safeTop).coerceAtLeast(0f)
+        turretHeaderH = (if (turretOverlay) 46 else if (gridTurrets) 26 else 50) * dp
+        val footer = (if (turretOverlay) 10 else if (gridTurrets) 2 else 22) * dp
+        val wantedRow = (if (gridTurrets) 64 else if (turretOverlay) 54 else if (narrow) 104 else 50) * dp
         turretRowH = min(wantedRow, ((freeH - turretHeaderH - footer) / max(1, rows).toFloat()).coerceAtLeast(0f))
         val ph = min(freeH, turretHeaderH + rows * turretRowH + footer)
         val cx = (g.insetL + w - g.insetR) / 2f
-        val centeredY = (h - hudH - ph) / 2f + topH / 2f
+        val centeredY = if (turretOverlay) (g.insetT + h - g.insetB - ph) / 2f
+            else (h - hudH - ph) / 2f + topH / 2f
         val py = centeredY.coerceIn(safeTop, safeBottom - ph)
         panel.set(cx - pw / 2f, py, cx + pw / 2f, py + ph)
         turretColW = if (gridTurrets) (pw - 12 * dp) / 2f else 0f
@@ -107,9 +118,17 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 val cellLeft = panel.left + 4 * dp + col * (turretColW + 4 * dp)
                 bw = (turretColW - 4 * dp) / 3f
                 tw = bw; sw = bw
-                bh = min(48 * dp, (turretRowH - 13 * dp).coerceAtLeast(0f))
+                bh = if (turretOverlay) 48 * dp
+                    else min(48 * dp, (turretRowH - 13 * dp).coerceAtLeast(0f))
                 bx = cellLeft
                 y = panel.top + turretHeaderH + row * turretRowH + turretRowH - bh - 1 * dp
+            } else if (turretOverlay) {
+                bw = if (narrow) (pw - 64 * dp) / 3f else 64 * dp
+                tw = bw; sw = bw
+                bh = 48 * dp
+                bx = if (narrow) panel.left + 52 * dp
+                    else panel.right - (20 + 54 + 4 + 64 + 4 + 64) * dp
+                y = panel.top + turretHeaderH + i * turretRowH + (turretRowH - bh) / 2f
             } else {
                 bw = 64 * dp; tw = 64 * dp; sw = 54 * dp
                 bh = min(48 * dp, (if (narrow) turretRowH - 50 * dp else turretRowH - 2 * dp).coerceAtLeast(0f))
@@ -117,10 +136,11 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 y = panel.top + turretHeaderH + i * turretRowH + turretRowH - bh - (if (narrow) 6 else 2) * dp
             }
             slotBuy[i].set(bx, y, bw, bh)
-            slotTier[i].set(bx + bw + (if (gridTurrets) 2 else 4) * dp, y, tw, bh)
-            slotSell[i].set(bx + bw + tw + (if (gridTurrets) 4 else 8) * dp, y, sw, bh)
-            // Jeśli brakuje 1–3 dp na fizyczne 48 dp, zachowujemy cel dotyku.
-            val slop = max(0f, (48 * dp - bh) / 2f)
+            val gap = if (gridTurrets) 2 * dp else if (turretOverlay && narrow) 2 * dp else 4 * dp
+            slotTier[i].set(bx + bw + gap, y, tw, bh)
+            slotSell[i].set(bx + bw + tw + gap * 2, y, sw, bh)
+            // Rozszerzenie celu stosujemy wyłącznie do starych układów o 1–3 dp za małych.
+            val slop = if (turretOverlay) 0f else max(0f, (48 * dp - bh) / 2f)
             slotBuy[i].hitSlop = slop
             slotTier[i].hitSlop = slop
             slotSell[i].hitSlop = slop
@@ -166,8 +186,10 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
     fun drawTurretPanel(c: Canvas) {
         with(owner) {
         val p = battle.player
+        if (turretOverlay) c.drawColor(Color.argb(165, 0, 0, 0))
         ui.panel(c, panel)
-        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp, turretHeading, 16f,
+        ui.ribbon(c, panel.centerX(), panel.top + 4 * dp,
+            if (turretOverlay) L["turrets"] else turretHeading, 16f,
             Ui.RIBBON, panel.width() * 0.5f, Ui.GOLD, panel.width() - 40 * dp)
         val narrow = panel.width() < 350 * dp
         for (i in 0 until p.slots) {
@@ -194,6 +216,25 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 ui.textO(c, name, nameX, cy + 2 * dp,
                     ui.fit(name, 10f, cellLeft + turretColW - nameX - 3 * dp),
                     if (te >= 0) Ui.TEXT else Ui.DIM)
+            } else if (turretOverlay) {
+                val rowTop = panel.top + turretHeaderH + i * turretRowH
+                tmpR.set(panel.left + 10 * dp, rowTop + 1 * dp,
+                    panel.right - 10 * dp, rowTop + turretRowH - 1 * dp)
+                c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+                val mr = 15 * dp
+                val mx = panel.left + 28 * dp
+                val cy = b.r.centerY()
+                ui.medallion(c, mx, cy, mr,
+                    if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78),
+                    if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
+                ui.textO(c, slotNumbers[i], mx, cy + 4 * dp, 11f, Ui.TEXT,
+                    Paint.Align.CENTER, 1.3f)
+                if (!narrow) {
+                    val tx = panel.left + 49 * dp
+                    ui.textO(c, name, tx, cy + 4 * dp,
+                        ui.fit(name, 11f, b.r.left - tx - 5 * dp),
+                        if (te >= 0) Ui.TEXT else Ui.DIM)
+                }
             } else {
                 val rowTop = panel.top + turretHeaderH + i * turretRowH
                 tmpR.set(panel.left + 14 * dp, b.r.top - (if (narrow) 50 else 2) * dp,
