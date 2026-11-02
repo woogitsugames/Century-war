@@ -17,6 +17,7 @@ import com.centurywar.game.art.Banners
 import com.centurywar.game.art.Machines
 import com.centurywar.game.art.Pen
 import com.centurywar.game.art.Soldiers
+import com.centurywar.game.art.CommanderArt
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -154,6 +155,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     private val pen = Pen()
     private val backdrops = Backdrops(g, b)
     private val men = Soldiers(pen)
+    private val commanders = CommanderArt(pen)
     private val mach = Machines(pen, men)
     private var poseOverride = false
     private val bases = Bases(pen)
@@ -562,7 +564,21 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         val def = u.def
         val dying = if (u.dying >= 0f) u.dying + lerp * Battle.STEP else -1f
         alpha = deathFade(dying)
-        val bossScale = if (u.isBoss) 1.25f else 1f
+        val bossScale = if (u.isBoss) 1.25f else if (u.isCommander) 1.18f else 1f
+        if (u.isCommander && u.alive) {
+            val pulse = 0.5f + 0.5f * sin(time * 2.8f)
+            val auraRadius = Battle.COMMANDER_AURA_RANGE * k
+            fill.color = Color.argb((27f + pulse * 22f).toInt(),
+                if (u.side == 0) 56 else 208, if (u.side == 0) 156 else 74,
+                if (u.side == 0) 244 else 72)
+            c.drawRect(sx(u.x - Battle.COMMANDER_AURA_RANGE), groundY - 6f * k,
+                sx(u.x + Battle.COMMANDER_AURA_RANGE), groundY + 4f * k, fill)
+            fill.color = if (u.side == 0) Ui.PLAYER else Ui.ENEMY
+            rect.set(x - 27f * k, groundY - 8f * k, x + 27f * k, groundY + 7f * k)
+            c.drawOval(rect, fill)
+            line.color = Ui.OUTLINE; line.strokeWidth = (2.5f + pulse) * k
+            c.drawOval(rect, line)
+        }
         if (u.isBoss) {
             val ring = bossColors[u.bossKind]
             // Zasięg aury pokazany cienkim pasem; pierścień pod stopami widoczny w marszu.
@@ -621,11 +637,16 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         val hitAge = if (u.hitStep >= 0) (b.stepCount - u.hitStep + lerp) * Battle.STEP else -1f
         drawAnimatedBody(c, def, team, walk, atk, u.tier, hitAge, u.hitPow, dying,
             u.flash > 0f && allowFlash(), u.burnLeft > 0f)
+        if (u.isCommander && dying < 0f) commanders.draw(c, def.art, team)
         c.restore()
         alpha = 1f
         if (u.dying < 0f && g.profile.teamMarkers) {
             val top = groundY - unitHeight(def) * k * def.size * bossScale - 27f * k
             drawTeamMarker(c, x, top, u.side, 12f * k)
+        }
+        if (u.isCommander && u.dying < 0f) {
+            val top = groundY - unitHeight(def) * k * def.size * bossScale - 35f * k
+            Icons.draw(c, Icons.CROWN, x, top, 23f * k, team, dp = g.ui.dp)
         }
         if (u.isBoss && u.dying < 0f) {
             val top = groundY - unitHeight(def) * k * def.size * bossScale - 35f * k
@@ -637,7 +658,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                 22f * k, bossColors[second], dp = g.ui.dp)
         }
         // Pasek HP tylko żywej jednostki; bossa pokazujemy zawsze.
-        if (u.dying < 0f && (u.hp < u.maxHp || u.isBoss)) {
+        if (u.dying < 0f && (u.hp < u.maxHp || u.isBoss || u.isCommander)) {
             val bw = 36f * k * def.size * bossScale
             val top = groundY - unitHeight(def) * k * def.size * bossScale - 12f * k
             val bh = 4.5f * k
