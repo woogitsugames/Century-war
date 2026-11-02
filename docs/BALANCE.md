@@ -21,7 +21,7 @@ BALANCE_RUN=true BALANCE_RUNS=8 BALANCE_PROFILE=target ./gradlew :app:testDebugU
 - Obie strony sterowane przez `Ai` (wynik to dolne oszacowanie gracza-człowieka). Limit 30 min, timeout = pat.
 - Profile badań: nowy 0%, początkujący 10% (z elitą i Zrywem), średni 40%, weteran 80% poziomów.
 - Profil docelowy etapu: 1–6 nowy, 7–18 początkujący, 19–27 średni, 28–36 weteran.
-- Zmienne: `BALANCE_STAGES="1,7,13"`, `BALANCE_PROFILE` (`target` albo nazwa), `BALANCE_POWER_SCALE`, `BALANCE_STRICT=true` (progi), `BALANCE_TAG`. Wyniki: `app/build/balance/`.
+- Zmienne: `BALANCE_STAGES="1,7,13"`, `BALANCE_PROFILE` (`target` albo nazwa), `BALANCE_POWER_SCALE`, `BALANCE_STRICT=true` (progi), `BALANCE_TAG`, `BALANCE_COMMANDER=on|off` i profile `medale`/`medale-elita` (tura 9). Wyniki: `app/build/balance/`.
 - `--rerun` jest potrzebne: Gradle nie traktuje zmiennych środowiskowych jako wejścia testu.
 
 ## Wyniki (profil docelowy, 8 seedów na etap, przed zmianą Skarbca)
@@ -1155,3 +1155,122 @@ seedy 82000–82099 z zamianą stron (200 bitew na doktrynę). Procent wygranych
 Wcześniejszy test na 20 seedach był zbyt szumny (ECONOMY 70% przy 20 seedach, 57% przy 100).
 Test używa teraz 100 seedów i pasma 40–65%. Bez zmian w regułach gry; PLUNDER (63,5%) i ARSENAL (42%)
 są na brzegach pasma — kandydaci do strojenia, jeśli pomiar kampanii to potwierdzi.
+
+## Tura 9 — kampania z dowódcą (2.11.2026)
+
+**Pytanie:** czy dowódca (125) trywializuje etapy 8–36, gdy gracz używa go rozsądnie,
+i co zmienia na etapach 28–36 dla gracza zbierającego medale tylko z kampanii.
+Uwaga do opisu 125 wyżej: dowódca bazuje na bieżącej jednostce **ciężkiej** (180% HP,
+115% obrażeń), zgodnie z projektem — nie na elicie.
+
+**Narzędzie (`BalanceReport`, bez zmiany domyślnego zachowania):**
+
+- `BALANCE_COMMANDER=on` — AI gracza przywołuje dowódcę samo, gdy jest dostępny i stać je
+  (ta sama reguła co w potyczce: zagrożenie, ≥2 żywe jednostki lub ≥35 s bitwy);
+  `off` — nigdy; brak zmiennej — zasady trybu (w kampanii tylko w odpowiedzi na dowódcę
+  wroga, czyli praktycznie nikt go nie przywołuje). AI wroga w kampanii pozostaje
+  reaktywne: odpowiada własnym dowódcą, gdy gracz ma aktywnego.
+  Przełącznik to pole `Ai.commanderOverride` (domyślnie `null`, nie trafia do snapshotów ani
+  powtórek; test w `Commander125Test`).
+- `BALANCE_PROFILE=medale` / `medale-elita` — realistyczny gracz z tury 8 (medale tylko
+  z kampanii, najtańszy następny poziom badań; `medale-elita` kupuje `r_elite` najpierw).
+  Uwaga: „medale” kupuje elitę samo ok. etapu 19, więc od 19 oba profile są identyczne.
+- Raport CSV ma kolumny `player_commander_battles` i `enemy_commander_battles`.
+- Endless: `BalanceReport.endlessCommanderReport` (weteran 80%, seedy 1001–1100, do fali 60),
+  warianty `bez` (reguły bez dowódcy), `wrog` (tylko wróg), `z` (obie strony).
+
+Polecenie: `BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target BALANCE_STAGE_FROM=8
+BALANCE_COMMANDER=on ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.campaignReport*'`.
+
+### Kampania, 100 seedów na etap (Normalny)
+
+„Bez” = obecne zachowanie (nikt nie przywołuje), „z dowódcą” = AI gracza przywołuje go
+rozsądnie. Etapy 1–7 są identyczne (dowódca od etapu 8). Gracz miał dowódcę w 97% bitew
+(2818/2900), wróg odpowiadał w 94% (2735/2900); 0 patów w obu wariantach.
+
+| Etap | Profil docelowy: bez | z dowódcą | Δ [pp] | Mediana bez/z [min] | Medale: bez | z dowódcą | Δ [pp] |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 67% | 68% | +1 | 13,3 / 13,6 | — | — | — |
+| 9 | 75% | 73% | −2 | 11,8 / 12,1 | — | — | — |
+| 10 | 67% | 68% | +1 | 12,9 / 13,1 | — | — | — |
+| 11 | 62% | 54% | −8 | 11,9 / 12,2 | — | — | — |
+| 12 | 69% | 72% | +3 | 11,6 / 11,8 | — | — | — |
+| 13 | 67% | 60% | −7 | 9,3 / 9,6 | — | — | — |
+| 14 | 57% | 56% | −1 | 12,2 / 13,0 | — | — | — |
+| 15 | 53% | 61% | +8 | 12,1 / 13,3 | — | — | — |
+| 16 | 67% | 51% | −16 | 13,6 / 13,8 | — | — | — |
+| 17 | 58% | 48% | −10 | 12,4 / 13,0 | — | — | — |
+| 18 | 58% | 50% | −8 | 11,6 / 12,1 | — | — | — |
+| 19 | 65% | 62% | −3 | 9,7 / 10,1 | 50% | 53% | +3 |
+| 20 | 68% | 81% | +13 | 13,2 / 13,2 | 64% | 70% | +6 |
+| 21 | 68% | 70% | +2 | 10,2 / 10,2 | 71% | 73% | +2 |
+| 22 | 59% | 64% | +5 | 9,0 / 8,7 | 71% | 57% | −14 |
+| 23 | 57% | 63% | +6 | 13,2 / 13,1 | 71% | 68% | −3 |
+| 24 | 56% | 60% | +4 | 13,3 / 13,4 | 63% | 61% | −2 |
+| 25 | 60% | 58% | −2 | 10,4 / 10,6 | 84% | 79% | −5 |
+| 26 | 64% | 68% | +4 | 9,3 / 8,8 | 68% | 65% | −3 |
+| 27 | 65% | 61% | −4 | 12,4 / 12,4 | 68% | 68% | +0 |
+| 28 | 71% | 66% | −5 | 13,2 / 13,3 | 38% | 35% | −3 |
+| 29 | 75% | 76% | +1 | 3,8 / 1,9 | 48% | 45% | −3 |
+| 30 | 65% | 62% | −3 | 9,7 / 7,7 | 42% | 46% | +4 |
+| 31 | 48% | 76% | +28 | 10,9 / 7,5 | 36% | 39% | +3 |
+| 32 | 63% | 68% | +5 | 11,7 / 11,3 | 47% | 36% | −11 |
+| 33 | 59% | 60% | +1 | 6,6 / 7,6 | 37% | 37% | +0 |
+| 34 | 55% | 53% | −2 | 8,6 / 8,4 | 31% | 23% | −8 |
+| 35 | 56% | 53% | −3 | 7,1 / 6,7 | 40% | 29% | −11 |
+| 36 | 38% | 47% | +9 | 12,9 / 12,7 | 29% | 24% | −5 |
+| **8–18** | 63,6% | 60,1% | −3,5 | | — | — | — |
+| **19–27** | 62,4% | 65,2% | +2,8 | | 67,8% | 66,0% | −1,8 |
+| **28–36** | 58,9% | 62,3% | +3,4 | | 38,7% | 34,9% | −3,8 |
+| **8–36** | 61,8% | 62,4% | +0,6 | | — | — | — |
+Kontrola na 20 seedach (36 etapów, ten sam układ): profil docelowy 8–36 59,7% → 64,7%,
+28–36 56,7% → 63,3%; medale 28–36 41,7% → 32,8%; medale-elita 8–18 72,3% → 76,4%.
+Przy 20 seedach jedna wygrana to 5 pp, więc kierunki są te same, ale skala różnic jest
+szumem — rozstrzyga tabela 100-seedowa.
+
+### Endless (weteran, 100 seedów, do fali 60)
+
+| Wariant | Śr. fala | Mediana porażki | Fala 40 | Fala 50 | Fala 60 |
+|---|---:|---:|---:|---:|---:|
+| bez dowódcy | 52,33 | 54 | 89 | 85 | 13 |
+| dowódca tylko u wroga | 50,64 | 53 | 84 | 76 | 8 |
+| dowódca obu stron (stan gry) | 50,50 | 53 | 82 | 79 | 7 |
+
+Wynik zgodny z pomiarem 125 (52,33 → 50,50). Dowódca wroga z budżetu fali kosztuje gracza
+ok. 1,7 fali; dowódca gracza tego nie odrabia (AI gracza miało go w 100/100 biegów).
+Cele Endless (fala 60: 5–15%, mediana 45–55) nadal spełnione, ale fala 60 jest blisko dolnej
+granicy (7/100).
+
+### Wnioski
+
+- **Dowódca nie trywializuje kampanii.** Profil docelowy 8–36: 61,8% → 62,4% (+0,6 pp);
+  wszystkie etapy 47–81% (cel ≥45% od etapu 19, ≥55% dla początkującego — etapy 16–18
+  spadają do 48–51%, czyli poniżej progu 55%). Ani jeden etap nie przekracza 81%.
+- Na początku (8–18, gracz z 10% badań) dowódca jest **raczej obciążeniem** (−3,5 pp):
+  2× cena ciężkiej jednostki to duży wydatek przy niskim dochodzie, a wróg z mnożnikiem
+  dochodu odpowiada własnym dowódcą. Później (19–36) daje +3 pp.
+- Odstające: etap 31 (+28 pp, 48% → 76%; gracz wygrywa przed awansem wroga do epoki 8,
+  średnia epoka 7,80 → 7,55) i 20 (+13 pp); etapy 16–17 (−10…−16 pp).
+- **Etapy 28–36 dla gracza „z medali” nie poprawiają się — lekko pogarszają:** 38,7% →
+  34,9% (−3,8 pp), najsłabsze 34–36: 23–29%. Dowódca nie rozwiązuje znanego problemu
+  końca kampanii; reaktywny dowódca wroga przy aiPower 2,2–3,7 jest silniejszy niż
+  dowódca gracza.
+- Etap 29 ma z dowódcą medianę 1,9 min (było 3,8; problem istniał przed 125 — próg 4 min).
+
+**Strojenie: nie wykonano.** Wyniki mieszczą się w celach albo są na granicy szumu, a żadna
+mała zmiana parametru dowódcy nie celuje w problem 28–36 (to nie dowódca go tworzy).
+Reguły symulacji bez zmian, `SimVersion.PROTOCOL` pozostaje 0.8.0, złote powtórki bez
+regeneracji.
+
+**Do decyzji właściciela:**
+
+1. Etapy 28–36 dla gracza „z medali” (35–39%, 34–36 poniżej 30%): obniżyć `stageRamp`
+   ostatnich etapów (np. 34–36 o ~10%) **albo** zostawić jako ścianę, którą przechodzi się
+   z medalami z misji/Endless lub na poziomie Łatwy. Dowódca tu nie pomaga.
+2. Etapy 16–18 z dowódcą 48–51% (bez 58–67%): ewentualnie dowódca tańszy na wczesnych
+   etapach (np. koszt 1,5× ciężkiej zamiast 2×) — zmiana reguł, wymaga nowej wersji
+   protokołu i regeneracji powtórek; przy 100 seedach efekt jest jednak umiarkowany.
+3. Etap 31 (+28 pp) i mediana etapu 29: obserwować; jeśli gracze faktycznie używają dowódcy,
+   rozważyć `stageRamp` etapu 31 lub `maxEra`.
+4. Endless: fala 60 spadła z 13 do 7/100 — w celu, ale po kolejnej zmianie utrudniającej
+   może wypaść poniżej 5.
