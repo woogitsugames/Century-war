@@ -188,8 +188,18 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         commanderBtn.iconId = Icons.CROWN
         commanderBtn.iconTint = Ui.PLAYER
         commanderBtn.label = if (threeRowHud) "" else L["comm125_short"]
-        commanderBtn.sub = costStr(6, battle.commanderCost(p))
-        commanderBtn.subIcon = Icons.COIN
+        // Tura 9 (UX): żywy dowódca nie pokazuje ceny, a odnowienie podaje pozostałe sekundy.
+        if (p.commanderCd < 0f) {
+            if (commanderActiveLanguage != L.lang) { commanderActiveLanguage = L.lang; commanderActiveText = L["comm145_active"] }
+            commanderBtn.sub = commanderActiveText
+            commanderBtn.subIcon = -1
+        } else if (p.commanderCd > 0f) {
+            commanderBtn.sub = costStr(7, kotlin.math.ceil(p.commanderCd.toDouble()).toInt())
+            commanderBtn.subIcon = Icons.HOURGLASS
+        } else {
+            commanderBtn.sub = costStr(6, battle.commanderCost(p))
+            commanderBtn.subIcon = Icons.COIN
+        }
         commanderBtn.enabled = battle.canSummonCommander(p)
         commanderBtn.highlight = p.commanderCd < 0f
         commanderBtn.progress = if (p.commanderCd > 0f)
@@ -289,9 +299,11 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             val tierKey = tierCost * 4 + p.turretTier[i]
             if (slotTierKey[i] != tierKey || slotLabelLanguage != L.lang) {
                 slotTierKey[i] = tierKey
-                slotTier[i].label = if (tierCost < 0) "MAX" else "${p.turretTier[i] + 1}: $tierCost"
+                // Tura 9 (UX): przetłumaczony stopień i „maks.”; szewrony jak przy stopniach jednostek.
+                slotTier[i].label = if (tierCost < 0) L["tier145_max"]
+                    else L.f("tier145_btn", p.turretTier[i] + 1, tierCost)
             }
-            slotTier[i].iconId = Icons.EVOLVE
+            slotTier[i].iconId = Icons.CHEVRONS
             slotTier[i].enabled = tierCost >= 0 && p.gold >= tierCost
             slotTier[i].highlight = slotTier[i].enabled
             val sell = if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0

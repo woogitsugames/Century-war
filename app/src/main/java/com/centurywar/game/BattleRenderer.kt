@@ -1206,8 +1206,13 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                         for (rank in rankLabels.indices) rankLabels[rank] = L.f("rank", rank)
                         rankLanguage = L.lang
                     }
-                    val label = if (fx.value[i] > 0f) rankLabels[sd.rank.coerceIn(0, 20)] else L["next_era"]
-                    addText(x - sd.dir * 150f, 360f, label, if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f)
+                    // Tura 9 (UX): napis rangi tylko przy awansie weterana (wartość 1); przywołanie
+                    // dowódcy, rekruci i bossowie używają tego efektu bez napisu „Ranga 0”.
+                    val v = fx.value[i]
+                    if (v == 0f || v == 1f) {
+                        val label = if (v > 0f) rankLabels[sd.rank.coerceIn(0, 20)] else L["next_era"]
+                        addText(x - sd.dir * 150f, 360f, label, if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f)
+                    }
                 }
                 FxBuffer.GOLD -> {
                     val v = fx.value[i].toInt()
