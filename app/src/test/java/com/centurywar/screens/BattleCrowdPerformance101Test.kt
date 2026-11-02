@@ -131,12 +131,22 @@ class BattleCrowdPerformance101Test {
                     updateTimes[i] = afterUpdate - start
                     drawTimes[i] = afterDraw - afterUpdate
                 }
+                val stepTimes = LongArray(240)
+                repeat(120) { f.battle.step() }
+                for (i in stepTimes.indices) {
+                    val start = System.nanoTime()
+                    f.battle.step()
+                    stepTimes[i] = System.nanoTime() - start
+                }
                 updateTimes.sort()
                 drawTimes.sort()
+                stepTimes.sort()
                 println(String.format(Locale.ROOT,
                     "PERF152 %s wave55 12v12 commander2 turret8-tier3: " +
+                    "step median=%.3f p95=%.3f ms; " +
                     "update median=%.3f p95=%.3f ms; draw median=%.3f p95=%.3f ms",
                     if (quality == Quality.LOW) "LOW" else "HIGH",
+                    stepTimes[120] / 1e6, stepTimes[227] / 1e6,
                     updateTimes[120] / 1e6, updateTimes[227] / 1e6,
                     drawTimes[120] / 1e6, drawTimes[227] / 1e6))
                 assertEquals(24, f.battle.units.count { it.alive })
