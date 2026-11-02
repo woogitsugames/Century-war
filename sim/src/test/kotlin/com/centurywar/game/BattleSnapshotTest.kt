@@ -629,10 +629,10 @@ class BattleSnapshotTest {
         store.delete()
         Thread.sleep(200)
         assertFalse(f.exists())
-        // uszkodzony plik jest odrzucany i usuwany
+        // Uszkodzony plik nie rozpoczyna bitwy i zostaje do diagnostyki.
         f.writeBytes(byteArrayOf(1, 2, 3))
         assertNull(store.loadBattle())
-        assertFalse(f.exists())
+        assertTrue(f.exists())
     }
     @Test
     fun interruptedRenameRecoversValidTemporarySnapshot() {
@@ -725,5 +725,75 @@ class BattleSnapshotTest {
         }
         assertArrayEquals(BattleSnapshot.encode(a), BattleSnapshot.encode(b))
         assertEquals(originalController.log(), b.commandController!!.log())
+    }
+
+    @Test
+    fun snapshot154EarlierCommanderAndTurretFormatsAreRejectedWithoutDataLoss() {
+        val battle = Battle(BattleConfig(Mode.SKIRMISH, 154L, 1f))
+        battle.playerAi = Ai(battle, 0)
+        steps(battle, 180)
+        val current = BattleSnapshot.encode(battle)
+        for (legacyVersion in intArrayOf(14, 15)) {
+            SaveGuard.resetWarningForTests()
+            val file = tmp.newFolder().resolve("battle.snap")
+            // Nagłówek historycznej wersji: bez migratora nie wolno dekodować jej jako v16.
+            val legacy = current.copyOf().also { it[7] = legacyVersion.toByte() }
+            file.writeBytes(legacy)
+            assertNull(SnapshotStore(file).loadBattle())
+            assertTrue("Stary plik pozostaje do diagnostyki", file.exists())
+            assertArrayEquals(legacy, file.readBytes())
+            assertTrue("Menu musi otrzymać ostrzeżenie", SaveGuard.takeWarning())
+            assertFalse(SaveGuard.takeWarning())
+        }
+        SaveGuard.resetWarningForTests()
+    }
+
+    @Test
+    fun snapshot154CorruptPrimaryRestoresBackupAndSimulationRemainsDeterministic() {
+        SaveGuard.resetWarningForTests()
+        val file = tmp.newFolder().resolve("battle.snap")
+        val store = SnapshotStore(file)
+        val original = Battle(BattleConfig(Mode.SKIRMISH, 15401L, 1f))
+        original.playerAi = Ai(original, 0)
+        steps(original, 60 * 3)
+        val bytes = BattleSnapshot.encode(original)
+        assertTrue(store.saveNow(bytes))
+        assertArrayEquals(bytes, file.resolveSibling("battle.snap.bak").readBytes())
+
+        file.writeBytes(byteArrayOf(0, 1, 2, 3))
+        val restored = store.loadBattle()
+        assertNotNull(restored)
+        assertTrue(SaveGuard.takeWarning())
+        assertArrayEquals(bytes, file.readBytes())
+        assertArrayEquals(bytes, BattleSnapshot.encode(restored!!.battle))
+        steps(original, 180)
+        steps(restored.battle, 180)
+        assertSame(original, restored.battle)
+        SaveGuard.resetWarningForTests()
+    }
+
+    @Test
+    fun snapshot154FutureVersionDoesNotGetOverwrittenByBackup() {
+        SaveGuard.resetWarningForTests()
+        val file = tmp.newFolder().resolve("battle.snap")
+        val bytes = BattleSnapshot.encode(Battle(BattleConfig(Mode.SKIRMISH, 511L, 1f)))
+        assertTrue(SnapshotStore(file).saveNow(bytes))
+        val future = bytes.copyOf().also { it[7] = (BattleSnapshot.VERSION + 1).toByte() }
+        file.writeBytes(future)
+        assertNull(SnapshotStore(file).loadBattle())
+        assertArrayEquals(future, file.readBytes())
+        assertTrue(SaveGuard.takeWarning())
+        SaveGuard.resetWarningForTests()
+    }
+
+    @Test
+    fun snapshot154FailedSaveNeverThrowsOrLeavesHalfWrittenMain() {
+        SaveGuard.resetWarningForTests()
+        val blocked = tmp.newFile("blocked-parent")
+        val store = SnapshotStore(java.io.File(blocked, "battle.snap"))
+        val bytes = BattleSnapshot.encode(Battle(BattleConfig(Mode.SKIRMISH, 512L, 1f)))
+        assertFalse(store.saveNow(bytes))
+        assertTrue(SaveGuard.takeWarning())
+        SaveGuard.resetWarningForTests()
     }
 }
