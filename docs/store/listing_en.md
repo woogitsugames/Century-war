@@ -4,7 +4,7 @@
 Century War: Era Strategy
 
 ## Short description
-9-era strategy: campaign difficulty, endless siege and offline battles.
+9-era strategy: commander, tower tiers and offline battles.
 
 ## Full description
 
@@ -21,6 +21,8 @@ CHOOSE YOUR STRATEGY
 - Daily Challenge and Weekly Siege — different setups, results and goals.
 - Custom Skirmish — set the era range, opponent strength and personality, and battle modifiers.
 - Tactical battles — turrets, special abilities, doctrines, targeted barrages and troop upgrades.
+- Commander — summon a leader whose aura strengthens nearby troops.
+- Tower tiers — upgrade purchased towers through three defensive tiers.
 - 13 research paths — use earned medals to improve your army between battles.
 - Replays — save completed battles and watch them with playback speed and timeline controls.
 - Campaign difficulty levels, unlockable banners and a post-battle chart.
