@@ -165,9 +165,31 @@ na tym samym CPU, RAM, JDK, cache i zestawie testów.
 ## Zlecenie 162: nowsza konfiguracja pamięci
 
 Historyczne `forkEvery=0` z zadania 131 zostało zastąpione przez
-`forkEvery=1` i `maxHeapSize=384m` na zadaniu testowym aplikacji.
+`forkEvery=1` i `maxHeapSize=384m` na zadaniu testowym aplikacji (później kompromis
+`forkEvery=12`, 768 MiB — sekcja „Kompromis forkEvery” niżej).
 `PrereleasePolishTest` należy teraz do kategorii `screenshots`.
 Dla 8 GiB stosuj `-PtestForks=1`, dla 16 GiB `-PtestForks=2`.
 Pełne wyniki należy zmierzyć na obecnym SHA; nie zastępują
 ich wcześniejsze przebiegi pojedynczych kategorii.
 Zasady wydania na tagu i cache PNG: [CI.md](CI.md).
+
+## Kompromis forkEvery (3.11.2026, decyzja właściciela)
+
+`forkEvery=1` (każda klasa testowa Androida w nowym procesie JVM) był bezpieczny pamięciowo,
+ale pełny zestaw trwał ok. **16 min**. Obecnie `app/build.gradle.kts` wymienia proces
+testowy **co 12 klas** przy stercie **768 MiB** i dwóch równoległych procesach.
+
+| Ustawienie | Pełne `:app:testDebugUnitTest :sim:test :server:test` | Szczyt zajętej pamięci kontenera | OOM (137) |
+|---|---:|---:|---|
+| `forkEvery=1`, 384 MiB | ok. 16 min (pomiar koordynatora) | — | nie |
+| `forkEvery=6`, 640 MiB | 13 min 14 s (testy `:sim`/`:server` z cache) | ok. 10,3 GB | nie |
+| `forkEvery=12`, 768 MiB | **13 min 0 s**, z kompilacją wszystkich modułów od zera | ok. 11,7 GB | nie |
+
+Pomiar: 4 CPU, 15 GB RAM, `free -m` co 10 s; zajętość obejmuje także demony Gradle/Kotlin.
+Bez kompilacji (kolejne uruchomienie po zmianie tylko testów) czas spada do ok. 11–12 min.
+Najdłuższe klasy (czas sumaryczny ok. 17 min dzielony na dwa procesy): `ScreenshotTest` ok. 5,6 min,
+`PrereleasePolishTest` i `DoctrineBalance82Test` po ok. 2 min, `BattleScreenTest` ok. 1,4 min —
+dalsze skracanie wymaga dzielenia tych klas, nie zmiany `forkEvery`.
+
+Nadpisanie bez edycji pliku: `-PtestForkEvery=N` (np. `-PtestForkEvery=1` do izolacji
+podejrzanego testu, `-PtestForks=1 -PtestForkEvery=4` na komputerze z 8 GiB).
