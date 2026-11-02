@@ -255,29 +255,81 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         }
     }
 
+    /** Ostatnio narysowany baner powiadomienia (pusty, gdy brak); do testów zasłaniania. */
+    internal val noticeBanner: RectF get() = achievementBanner
+
+    /** Górna krawędź banera: poniżej Wstecz (insetT + 58 dp) i wstęgi tytułu z jej końcówkami. */
+    internal fun noticeTopBelowTitle(): Float {
+        val d = ui.dp
+        val narrow = width - insetL - insetR < 560 * d
+        val ribbonBottom = insetT + (if (narrow) 82f else 32f) * d + 20f * d * ui.textScale * 1.05f * 0.95f
+        return maxOf(insetT + 72 * d, ribbonBottom + 8 * d)
+    }
+
     private fun drawAchievementNotice(c: Canvas, dt: Float) {
         achievementSeconds -= dt
         // Powiadomienie nie może zasłaniać nawigacji ani okien modalnych.
-        if (screen?.blocksNotices == true) return
+        if (screen?.blocksNotices == true) { achievementBanner.setEmpty(); return }
         if (achievementSeconds <= 0f && noticeQueue.isNotEmpty() && screen?.blocksNotices != true) {
             achievementMessage = noticeQueue.removeFirst()
             noticeIcon = noticeIcons.removeFirst()
             achievementSeconds = 2.9f
         }
-        if (achievementSeconds <= 0f) return
+        if (achievementSeconds <= 0f) { achievementBanner.setEmpty(); return }
         val pw = minOf(470 * ui.dp, width - insetL - insetR - 20 * ui.dp)
         val px = (width + insetL - insetR - pw) / 2f
         val menu = screen as? MenuScreen
         // W menu baner mieści się między logo a przyciskami, także na 720p.
-        val py = menu?.noticeTop ?: insetT + 72 * ui.dp
+        // Tura 9: poza menu baner leży pod wstęgą tytułu (Chrome.title) i przyciskiem Wstecz,
+        // także na wąskim ekranie, gdzie wstęga schodzi do drugiego rzędu (środek 82 dp).
+        val py = menu?.noticeTop ?: noticeTopBelowTitle()
         val ph = if (menu == null) 50 * ui.dp
             else minOf(50 * ui.dp, (menu.noticeBottom - py).coerceAtLeast(24 * ui.dp))
         achievementBanner.set(px, py, px + pw, py + ph)
         ui.card(c, achievementBanner, Color.rgb(42, 74, 64), 12f, Ui.GOLD)
         val iconSize = minOf(26 * ui.dp, ph - 10 * ui.dp)
         Icons.draw(c, noticeIcon, px + 23 * ui.dp, py + ph / 2f, iconSize, dp = ui.dp)
-        val size = ui.fit(achievementMessage, 14f, pw - 61 * ui.dp)
-        ui.textO(c, achievementMessage, px + 45 * ui.dp, py + ph / 2f + 5 * ui.dp, size, Ui.TEXT)
+        val avail = pw - 61 * ui.dp
+        val size = ui.fit(achievementMessage, 14f, avail)
+        if (size < 11.5f / ui.textScale && ph >= 44 * ui.dp && splitNotice(avail)) {
+            // Tura 9: długi komunikat (np. dlaczego Play Games jest niedostępne) w dwóch
+            // wierszach zamiast jednego drobnym pismem.
+            val s2 = minOf(ui.fit(noticeLine1, 13f, avail), ui.fit(noticeLine2, 13f, avail))
+            val lh = s2 * ui.dp * ui.textScale * 1.12f
+            noticeTextSize = s2
+            ui.textO(c, noticeLine1, px + 45 * ui.dp, py + ph / 2f - lh * 0.5f + 4.5f * ui.dp, s2, Ui.TEXT)
+            ui.textO(c, noticeLine2, px + 45 * ui.dp, py + ph / 2f + lh * 0.5f + 4.5f * ui.dp, s2, Ui.TEXT)
+        } else {
+            noticeTextSize = size
+            ui.textO(c, achievementMessage, px + 45 * ui.dp, py + ph / 2f + 5 * ui.dp, size, Ui.TEXT)
+        }
+    }
+
+    private var noticeSplitFor: String? = null
+    private var noticeSplitW = 0f
+    private var noticeLine1 = ""
+    private var noticeLine2 = ""
+    /** Rozmiar (sp) ostatnio narysowanego tekstu banera; do testów czytelności. */
+    internal var noticeTextSize = 0f
+        private set
+
+    /** Dzieli bieżący komunikat na dwa wiersze możliwie równej szerokości (raz na komunikat). */
+    private fun splitNotice(avail: Float): Boolean {
+        val m = achievementMessage
+        if (m !== noticeSplitFor || avail != noticeSplitW) {
+            noticeSplitFor = m; noticeSplitW = avail
+            var best = -1
+            var bestW = Float.MAX_VALUE
+            var i = m.indexOf(' ')
+            while (i > 0) {
+                val w = maxOf(ui.measure(m.substring(0, i), 13f, true), ui.measure(m.substring(i + 1), 13f, true))
+                if (w < bestW) { bestW = w; best = i }
+                i = m.indexOf(' ', i + 1)
+            }
+            if (best < 0) { noticeLine1 = ""; noticeLine2 = "" }
+            else { noticeLine1 = m.substring(0, best); noticeLine2 = m.substring(best + 1) }
+        }
+        return noticeLine1.isNotEmpty()
     }
 
     init {

@@ -207,6 +207,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         ui.button(c, back, 16f)
         chrome.title(c, L["ms_missions"])
         chrome.badges(c, g.profile.medals)
+        chrome.titleBounds(L["ms_missions"], hints.titleRect)
         hints.draw(c)
     }
 

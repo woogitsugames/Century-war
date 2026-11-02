@@ -119,6 +119,10 @@ class Ui {
         val BAD: Int get() = Palette.active.bad
         val PLAYER: Int get() = Palette.active.player
         val ENEMY: Int get() = Palette.active.enemy
+        /** Napisy w barwie wroga na ciemnym tle (WCAG AA); patrz [PaletteColors.enemyText]. */
+        val ENEMY_TEXT: Int get() = Palette.active.enemyText
+        /** Tło paska górnego bitwy (bez przezroczystości: najgorszy przypadek dla kontrastu). */
+        val TOP_BAR_BG = Color.rgb(16, 20, 32)
         val OUTLINE: Int get() = Palette.active.outline
         val FRAME: Int get() = Palette.active.frame
         val FRAME_L = Color.rgb(120, 132, 158)
