@@ -157,3 +157,8 @@ Wersja release (R8) sprawdzona na telefonie, Play Games z prawdziwymi ID, wdroż
 - Muzyka: opisy Suno dla wszystkich epok w `docs/music/SUNO_PROMPTS.md`; zlecenie 142 (wgranie) czeka na pliki w `music-src/`.
 - Stopnie wież: zlecenie 140 (fala 2 razem z 135), dowódca 125 w fali 3, tłumaczenia 136 w fali 4.
 - Zaplanowane zadanie „Century War: nocne wznawianie pracy” co godzinę wznawia tę sesję (wyłączyć rano, gdy niepotrzebne).
+
+## Stan na 2.11.2026 ok. 03:30 UTC — tura 8 NA MAIN
+- `main` = `claude/bold-sagan-vwz5gm` = `integ/tura8` (4f4d3314): fala 1 GPT (123, 124, 126–134) + poprawki UI A–G + balans (uczciwe elity, 126/127, stageRamp) + PROTOCOL 0.6.0. Pełne testy zielone (8,5 min). APK wysłane.
+- Zip fali 2 wysłany właścicielowi: 140 (stopnie wież) + 135 (sklep, „Co nowego”). Potem fala 3: 125 dowódca, fala 4: 136 tłumaczenia. 142 (muzyka) czeka na pliki Suno.
+- Otwarte do decyzji właściciela: Zryw (r_rally) ma tę samą asymetrię co elity; etapy 28–36 trudne dla gracza zbierającego medale tylko z kampanii; dymek Doktryny elit w menu częściowo zasłania Wyzwanie dnia i Potyczkę.
