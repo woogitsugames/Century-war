@@ -4,11 +4,13 @@
 Century War
 
 ## Short description
-Strategie door de eeuwen: campagne, belegering en offline gevechten.
+9 tijdperken: commandant, torenniveaus en offline gevechten.
 
 ## Full description
 
 Leid je leger door negen tijdperken. Rekruteer eenheden, bouw torens en kies wanneer je naar het volgende tijdperk gaat.
+
+Roep een commandant op: zijn aura versterkt nabijgelegen troepen. Verbeter de verdediging tijdens het gevecht met drie torenniveaus.
 
 Speel 36 campagneniveaus met instelbare moeilijkheid, weersta golven in de eindeloze belegering of stel een eigen gevecht samen. Weer, vaardigheden, doctrines en onderzoek bieden tactische keuzes.
 
