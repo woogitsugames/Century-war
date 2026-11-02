@@ -77,6 +77,11 @@ class WhatsNewCatalogTest {
         assertFalse(WhatsNewCatalog.shouldShow(true, "0.1.0-dev", "0.1.0"))
     }
 
+    @Test fun currentNotesDescribeRecentFeatures() {
+        assertEquals(listOf("wn_135_modes", "wn_135_profile", "wn_135_access"),
+            WhatsNewCatalog.forVersion(version)!!.textKeys)
+    }
+
     @Test fun releaseIdentifiersAreReleaseLines() {
         for (release in WhatsNewCatalog.releases) {
             assertEquals(release.version, WhatsNewCatalog.notesKey(release.version))

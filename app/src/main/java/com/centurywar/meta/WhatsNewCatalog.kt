@@ -1,7 +1,7 @@
 package com.centurywar.meta
 
 /**
- * Opisy wydanych aktualizacji. Nową wersję dopisujemy razem z tekstami w L.part106().
+ * Opisy wydanych aktualizacji. Nową wersję dopisujemy razem z tekstami w odpowiedniej części L.
  *
  * Katalog jest kluczowany linią wydania „major.minor” (np. "0.1"), a nie pełnym
  * versionName: w wydaniu versionName pochodzi z tagu (v0.1.3 -> "0.1.3"), więc
@@ -16,9 +16,9 @@ object WhatsNewCatalog {
     /** Najnowsze wydania na początku. Identyfikator to „major.minor” (notesKey(versionName)). */
     val releases: List<Release> = listOf(
         Release("0.1", listOf(
-            "wn_010_iron",
-            "wn_010_replays",
-            "wn_010_accessibility",
+            "wn_135_modes",
+            "wn_135_profile",
+            "wn_135_access",
         )),
     )
 

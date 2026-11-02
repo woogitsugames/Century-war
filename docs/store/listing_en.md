@@ -4,7 +4,7 @@
 Century War: Era Strategy
 
 ## Short description
-9-era strategy: campaign, bosses, dynamic weather and offline battles.
+9-era strategy: campaign difficulty, endless siege and offline battles.
 
 ## Full description
 
@@ -23,6 +23,8 @@ CHOOSE YOUR STRATEGY
 - Tactical battles — turrets, special abilities, doctrines, targeted barrages and troop upgrades.
 - 13 research paths — use earned medals to improve your army between battles.
 - Replays — save completed battles and watch them with playback speed and timeline controls.
+- Campaign difficulty levels, unlockable banners and a post-battle chart.
+- Export or import your profile; adjust colour options and use a left-handed layout.
 - Tutorial, codex, achievements, missions and local records.
 - 10 supported languages, including English and Polish.
 
