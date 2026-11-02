@@ -58,4 +58,16 @@ class EliteFairnessTest {
         val daily = Battle(Daily.config(Daily.RELEASE_DAY + 1L, research(false)))
         assertTrue(daily.enemy.eliteUnlocked)
     }
+
+    @Test fun rallyFollowsPlayerResearchInCampaign() {
+        val stage = Campaign.stages[14]
+        for (seed in 1L..3L) {
+            val cfg = Campaign.config(stage, research(false), seed)
+            assertFalse(Battle(cfg).enemy.rallyUnlocked)
+            assertEquals("seed $seed", 0, play(cfg).enemy.ralliesUsed)
+        }
+        val levels = IntArray(Research.defs.size).also { it[1] = 1 }
+        assertTrue(Battle(Campaign.config(stage, Research.bonuses(levels), 1L)).enemy.rallyUnlocked)
+        assertTrue(Battle(BattleConfig(Mode.ENDLESS, 7L, 1f, playerBonuses = research(false))).enemy.rallyUnlocked)
+    }
 }

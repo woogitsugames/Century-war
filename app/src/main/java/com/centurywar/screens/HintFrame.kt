@@ -74,6 +74,68 @@ internal object HintFrame {
         return n
     }
 
+    private val sideOrder = IntArray(4)
+
+    /**
+     * Jak [place], ale gdy panel zasłaniałby któryś z prostokątów [avoid] (inne przyciski ekranu),
+     * próbuje kolejno pozostałych stron celu. Gdy żadna strona nie jest wolna, zostaje wynik [place].
+     * Bez alokacji: [avoid] to istniejąca lista, kolejność stron w tablicy pola.
+     */
+    fun placeAvoiding(
+        target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
+        width: Float, height: Float, gap: Float, out: RectF, link: RectF, avoid: List<RectF>,
+    ): Boolean {
+        if (!place(target, safeL, safeT, safeR, safeB, width, height, gap, out, link)) return false
+        if (target == null || target.width() <= 0f || target.height() <= 0f || !blocked(out, target, avoid)) return true
+        sideOrder[0] = ABOVE; sideOrder[1] = BELOW; sideOrder[2] = LEFT; sideOrder[3] = RIGHT
+        val fx = out.left; val fy = out.top; val fl = link.left; val ft = link.top; val fr = link.right; val fb = link.bottom
+        for (side in sideOrder) {
+            if (!placeSide(side, target, safeL, safeT, safeR, safeB, width, height, gap, out, link)) continue
+            if (!blocked(out, target, avoid)) return true
+        }
+        out.set(fx, fy, fx + width, fy + height); link.set(fl, ft, fr, fb)
+        return true
+    }
+
+    private fun blocked(panel: RectF, target: RectF, avoid: List<RectF>): Boolean {
+        for (i in avoid.indices) {
+            val r = avoid[i]
+            if (r === target || r.width() <= 0f || r.height() <= 0f) continue
+            if (r.left == target.left && r.top == target.top && r.right == target.right && r.bottom == target.bottom) continue
+            if (RectF.intersects(panel, r)) return true
+        }
+        return false
+    }
+
+    private fun placeSide(
+        side: Int, target: RectF, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
+        width: Float, height: Float, gap: Float, out: RectF, link: RectF,
+    ): Boolean {
+        when (side) {
+            ABOVE, BELOW -> {
+                val y = if (side == ABOVE) target.top - gap - height else target.bottom + gap
+                if (y < safeT || y + height > safeB) return false
+                val x = (target.centerX() - width * 0.5f).coerceIn(safeL, safeR - width)
+                out.set(x, y, x + width, y + height)
+                val ax = target.centerX().coerceIn(x + min(9f, width * 0.2f),
+                    x + width - min(9f, width * 0.2f))
+                link.set(ax, if (side == ABOVE) out.bottom else out.top,
+                    target.centerX(), if (side == ABOVE) target.top else target.bottom)
+            }
+            else -> {
+                val x = if (side == LEFT) target.left - gap - width else target.right + gap
+                if (x < safeL || x + width > safeR) return false
+                val y = (target.centerY() - height * 0.5f).coerceIn(safeT, safeB - height)
+                out.set(x, y, x + width, y + height)
+                val ay = target.centerY().coerceIn(y + min(9f, height * 0.2f),
+                    y + height - min(9f, height * 0.2f))
+                link.set(if (side == LEFT) out.right else out.left, ay,
+                    if (side == LEFT) target.left else target.right, target.centerY())
+            }
+        }
+        return true
+    }
+
     /**
      * Umieszcza panel wyłącznie w wolnej przestrzeni obok celu.
      * Gdy nie ma miejsca, zwraca false zamiast zasłaniać wskazany element.

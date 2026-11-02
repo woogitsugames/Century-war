@@ -68,4 +68,17 @@ class HintFramePlacementTest {
             8f, 8f, 1592f, 712f, 400f, 42f, 6f, bubble, pointer))
         assertTrue(bubble.isEmpty)
     }
+
+    @Test
+    fun avoidsNeighbourButtonsWhenAnotherSideIsFree() {
+        // Cel po prawej, sąsiednie przyciski po jego lewej (jak Badania obok Potyczki w menu).
+        val target = RectF(1200f, 300f, 1500f, 380f)
+        val neighbour = RectF(800f, 300f, 1150f, 380f)
+        val bubble = RectF()
+        val pointer = RectF()
+        assertTrue(HintFrame.placeAvoiding(target, 8f, 8f, 1592f, 712f,
+            380f, 60f, 6f, bubble, pointer, listOf(target, neighbour)))
+        assertFalse(RectF.intersects(bubble, neighbour))
+        assertFalse(RectF.intersects(bubble, target))
+    }
 }

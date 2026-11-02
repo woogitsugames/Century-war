@@ -380,9 +380,12 @@ class Battle(val cfg: BattleConfig) {
         val e = sides[1]
         e.incomeMul *= cfg.aiPower
         e.xpMul *= cfg.aiPower
-        // Uczciwe AI: w kampanii i potyczce wróg ma elity tylko wtedy, gdy gracz je zbadał.
+        // Uczciwe AI: w kampanii i potyczce wróg ma elity i Zryw tylko wtedy, gdy gracz je zbadał.
         // Endless, wyzwania dnia/tygodnia (także MIRROR_ARMY) mają własne, stałe zasady.
-        if (cfg.mode == Mode.CAMPAIGN || cfg.mode == Mode.SKIRMISH) e.eliteUnlocked = p.eliteUnlocked
+        if (cfg.mode == Mode.CAMPAIGN || cfg.mode == Mode.SKIRMISH) {
+            e.eliteUnlocked = p.eliteUnlocked
+            e.rallyUnlocked = p.rallyUnlocked
+        }
         if (Modifier.ARMORED_FOE in mods) e.hpMul *= 1.3f
         if (cfg.dailyEvent == DailyEvent.MIRROR_ARMY) {
             e.cap = p.cap

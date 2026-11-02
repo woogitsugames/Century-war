@@ -337,12 +337,21 @@ class HintOverlay(
      * więc nigdy nie zasłania przycisków. Cel w dolnym HUD: dymek stoi tuż nad paskiem, na pasie
      * ziemi, ze strzałką w dół; cel w pasku górnym: dymek pod paskiem ze strzałką w górę.
      */
+    private val avoidRects = ArrayList<RectF>(48)
+
     private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
                            dp: Float): Boolean {
         val f = targets?.field
         if (battle == null || f == null || f.height() <= 0f || activeId == VARIANT) {
-            return HintFrame.place(target, safeL, safeT, safeR, safeB,
-                hintWidth, hintHeight, 4f * dp, panel, connector)
+            // Poza bitwą dymek omija inne widoczne przyciski ekranu, jeśli to możliwe.
+            avoidRects.clear()
+            val screen = g.current
+            if (screen != null) for (i in screen.buttons.indices) {
+                val b = screen.buttons[i]
+                if (b.visible && b !== okBtn) avoidRects.add(b.r)
+            }
+            return HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
+                hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
         }
         val gap = 6f * dp
         val top = max(safeT, f.top + gap)
