@@ -23,7 +23,7 @@ object SaveGuard {
     /** Powiadomienie odbiera wyłącznie menu; kolejne awarie nadal trafiają do logu. */
     fun takeWarning(): Boolean = warningPending.getAndSet(false)
 
-    internal fun resetWarningForTests() {
+    fun resetWarningForTests() {
         warningPending.set(false)
         warningSent.set(false)
     }
