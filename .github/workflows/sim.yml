@@ -63,5 +63,15 @@ jobs:
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
       - name: Zbuduj APK debug
         run: ./gradlew :app:assembleDebug --console=plain --no-configuration-cache
-      - name: Testy tekstów i ekranu bitwy
-        run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --tests '*BattleScreenTest*' --console=plain --no-configuration-cache
+      - name: Testy tekstów, ekranu bitwy i odporności zapisów
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*LTest*' \
+            --tests '*BattleScreenTest*' \
+            --tests '*ProfileRecovery154Test*' \
+            --tests '*HistoryRecovery154Test*' \
+            --tests '*ReplayRecovery154Test*' \
+            --tests '*ProfileRobustnessTest*' \
+            --tests '*BattleHistoryTest*' \
+            --tests '*ReplayStoreTest*' \
+            --console=plain --no-configuration-cache
