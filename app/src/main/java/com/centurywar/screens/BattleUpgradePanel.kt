@@ -83,7 +83,7 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
         val footer = (if (gridTurrets) 2 else 22) * dp
         val rows = if (gridTurrets) (slots + 1) / 2 else slots
         val wantedRow = if (gridTurrets) 64 * dp else idealRow
-        turretRowH = min(wantedRow, ((freeH - turretHeaderH - footer) / max(1, rows)).coerceAtLeast(0f))
+        turretRowH = min(wantedRow, ((freeH - turretHeaderH - footer) / max(1, rows).toFloat()).coerceAtLeast(0f))
         val ph = min(freeH, turretHeaderH + rows * turretRowH + footer)
         val cx = (g.insetL + w - g.insetR) / 2f
         val centeredY = (h - hudH - ph) / 2f + topH / 2f
@@ -181,18 +181,18 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 tmpR.set(cellLeft - 2 * dp, rowTop + 1 * dp,
                     cellLeft + turretColW + 2 * dp, rowTop + turretRowH - 1 * dp)
                 c.drawRoundRect(tmpR, 6 * dp, 6 * dp, ui.fill)
-                val cy = rowTop + 10 * dp
-                val mr = 8 * dp
+                val cy = rowTop + 7 * dp
+                val mr = 6 * dp
                 ui.medallion(c, cellLeft + mr, cy, mr,
                     if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78),
                     if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
-                if (te < 0) ui.textO(c, slotNumbers[i], cellLeft + mr, cy + 3 * dp,
-                    9f, Ui.DIM, Paint.Align.CENTER, 1.2f)
-                val tx = cellLeft + 21 * dp
-                ui.textO(c, slotNumbers[i], tx, cy + 3 * dp, 10f, Ui.DIM)
+                if (te < 0) ui.textO(c, slotNumbers[i], cellLeft + mr, cy + 2 * dp,
+                    8f, Ui.DIM, Paint.Align.CENTER, 1.2f)
+                val tx = cellLeft + 16 * dp
+                ui.textO(c, slotNumbers[i], tx, cy + 2 * dp, 9f, Ui.DIM)
                 val nameX = tx + 14 * dp
-                ui.textO(c, name, nameX, cy + 3 * dp,
-                    ui.fit(name, 11f, cellLeft + turretColW - nameX - 3 * dp),
+                ui.textO(c, name, nameX, cy + 2 * dp,
+                    ui.fit(name, 10f, cellLeft + turretColW - nameX - 3 * dp),
                     if (te >= 0) Ui.TEXT else Ui.DIM)
             } else {
                 val rowTop = panel.top + turretHeaderH + i * turretRowH
