@@ -43,6 +43,7 @@ class HintOverlay(
         val variants: Array<Button>,
         /** Przycisk jednostki elitarnej (podpowiedź o elicie wroga). */
         val eliteUnit: Button? = null,
+        val commander: Button? = null,
     )
 
     private class HintDef(val id: Int, val key: String, val priority: Int)
@@ -73,6 +74,7 @@ class HintOverlay(
         /** Zlecenie 141: pierwsza elita wroga, gdy gracz nie ma własnej. */
         const val ENEMY_ELITE = 22
         const val TURRET_TIER = 23
+        const val COMMANDER = 24
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -93,6 +95,7 @@ class HintOverlay(
             HintDef(VARIANT, "hint_variant54", 110),
             HintDef(WEATHER, "hint_weather54", 86),
             HintDef(ENEMY_ELITE, "elite141_enemy_hint", 92),
+            HintDef(COMMANDER, "comm125_hint", 94),
         )
         private val SCREEN_KEYS = arrayOf(
             "hint_research", "hint_missions", "hint_daily_menu", "hint_endless_menu",
@@ -229,6 +232,7 @@ class HintOverlay(
             VARIANT -> b.pendingVariant != null
             WEATHER -> b.weather != Weather.CLEAR
             ENEMY_ELITE -> !p.eliteUnlocked && enemyHasElite()
+            COMMANDER -> b.commanderAvailable && b.canSummonCommander(p)
             else -> false
         }
     }
@@ -341,6 +345,7 @@ class HintOverlay(
             VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
             WEATHER -> t.weather
             ENEMY_ELITE -> t.eliteUnit?.r
+            COMMANDER -> t.commander?.r
             else -> null
         }
     }
