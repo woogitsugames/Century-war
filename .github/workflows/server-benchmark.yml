@@ -1,12 +1,6 @@
 name: Benchmark weryfikacji powtórek 149
 
 on:
-  push:
-    branches:
-      - 'gpt/149-server-deploy'
-    paths:
-      - 'server/src/test/kotlin/com/centurywar/server/ServerReplayBenchmarkTest.kt'
-      - '.github/workflows/server-benchmark.yml'
   workflow_dispatch:
 
 permissions:
