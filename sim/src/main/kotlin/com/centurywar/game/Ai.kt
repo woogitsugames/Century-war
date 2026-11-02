@@ -79,6 +79,7 @@ class Ai(
     private fun armory() = commands?.armory() ?: b.buyArmory(me)
     private fun queue(role: Role) = commands?.queue(role) ?: b.queueUnit(me, role)
     private fun upgradeUnit(role: Role) = commands?.upgradeUnit(role) ?: b.upgradeUnit(me, role)
+    private fun summonCommander() = commands?.summonCommander() ?: b.summonCommander(me)
 
     fun update(dt: Float) {
         think -= dt
@@ -96,6 +97,10 @@ class Ai(
         } else evolveReadyAt = -1f
 
         managePosture()
+        // AI gracza wydaje ten sam rejestrowany rozkaz co użytkownik.
+        if (b.canSummonCommander(me) && (danger > 0 || me.aliveCount >= 2 || b.time >= 35f)) {
+            summonCommander()
+        }
         useAbilities()
         val saving = savingForNextEra()
         manageTurrets(saving)
