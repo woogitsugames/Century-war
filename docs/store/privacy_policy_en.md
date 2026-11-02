@@ -27,6 +27,7 @@ You may use this address for questions about data practices and requests concern
 The game stores the following in its private app storage:
 - your in-game commander nickname;
 - campaign stages, stars, medals, research, missions, achievements, and local leaderboard records;
+- your battle history (the `history.json` file);
 - statistics (such as battles, wins, defeated units, and play time);
 - settings (such as language, graphics quality, sound, vibration, reminders, and reminder hour);
 - a temporary interrupted-battle save for resuming play (the battle.snap file);
@@ -34,7 +35,7 @@ The game stores the following in its private app storage:
 - if you opt into the publisher's leaderboard: a random UUID and a separate 32-byte
   installation secret stored in `profile.json` to establish ownership of your scores.
 
-Core gameplay, local leaderboards, and local progress saving **work without an internet connection**. No publisher account is required. The app does not request access to location, contacts, microphone, or camera. There are no ads, in-app purchases, or chat features.
+Core gameplay, local leaderboards, and local progress saving **work without an internet connection**. No publisher account is required. The app does not request access to location, contacts, microphone, or camera. There are no ads, in-app purchases, chat features, or publisher-operated advertising or analytics SDKs. The Google Play Games SDK may independently collect analytics and diagnostics data as explained in section 3.
 
 The battle.snap file is used only to resume a battle locally; it is not uploaded in the Play Games cloud save and is excluded from Android system backup rules.
 
@@ -64,7 +65,7 @@ When the service is configured and you are authenticated, the app can send score
 
 **The cloud save contains the game profile in JSON format, excluding the local publisher-leaderboard UUID, installation secret, and consent flag**, not just campaign progress: your in-game nickname, local scores (including the names and dates stored in score entries), progress, medals, research, missions, local achievements, statistics, and settings. The saved profile may be read after restarting the game or on another device authenticated to the same PGS account. If saves conflict, the game chooses the profile with greater progress under its own rules.
 
-**Google Play Games achievements:** the current code provides local achievements, but transmitting unlocks to the Google achievements service is not yet connected. Local achievements are nevertheless part of the profile included in cloud saves.
+**Google Play Games achievements:** when the PGS identifiers are configured and the player is authenticated, the game sends information about unlocked achievements to Google. New unlocks are submitted through the PGS achievements service, and previously unlocked achievements are re-synchronized on later authentication. Achievements are also included in the Saved Games cloud profile. Without a valid PGS configuration, achievement progress stays local.
 
 The game also supports an **optional publisher-operated leaderboard server**, enabled only in releases with a configured HTTPS endpoint, HMAC key and privacy policy URL, and after separate in-game consent. The app sends a random player UUID, nickname, board, score, timestamp, battle settings, replay commands for score verification, and a **32-byte installation secret** for requests concerning your own account. The server verifies the secret against a SHA-256 digest bound to the UUID: the secret is transmitted over HTTPS but **not stored in clear text in SQLite**. SQLite records the UUID, nickname, results, verification metadata, a SHA-256 submission hash, and a **pseudonymous public ID** derived via HMAC from the UUID with a separate server-only key. Public leaderboards show nickname, result and public ID, **not the raw UUID**. SQLite does not retain the complete replay or IP addresses. IP addresses are temporarily used for rate limiting and may appear in infrastructure logs. Without configuration and consent, no scores are sent to the publisher server. The code alone does not imply a live deployment.
 
@@ -95,9 +96,14 @@ INTERNET permission does not mean that every game feature requires a continuous 
 
 ## 7. Android system backup
 
-Depending on your device and Google account settings, Android may back up app data. This game's rules restrict Android cloud backup and device-to-device transfer to **profile.json**; battle.snap is excluded. The publisher does not automatically gain access to Android's system backup.
+If Android system backup is enabled, it may include **two files**: `profile.json` (including your nickname, progress, settings, and the publisher leaderboard UUID and installation secret if you enabled that feature) and `history.json` (battle history). The app's `backup_rules.xml` and `data_extraction_rules.xml` specify these files. They exclude `battle.snap`, pending score and deletion requests, local replays, and crash reports. Android 12+ device-to-device transfer also includes these two files.
 
-Android backup is **separate** from Google Play Games Saved Games synchronization and may have different deletion and restoration rules. See https://developer.android.com/identity/data/autobackup and https://policies.google.com/privacy.
+**Encryption depends on the Android version and transfer mechanism:**
+- **Android 12 and later (API 31+):** the cloud backup rules require client-side encryption capabilities (`disableIfNoEncryptionCapabilities="true"`). Direct device-to-device transfer has separate rules and is not automatically equivalent to an E2E-encrypted cloud backup.
+- **Android 9–11 (API 28–30):** cloud backup includes require `clientSideEncryption`. According to Android documentation, end-to-end encryption is supported when backup is enabled and the device has a PIN, pattern, or password; without these conditions, the backup may not run.
+- **Android 8/8.1 (API 26–27):** the platform **does not guarantee end-to-end encryption**. Although the legacy XML specifies `clientSideEncryption`, these Android versions do not provide Android 9+'s backup encryption capability. The availability and behavior of backups on API 26–27 still need device testing; we cannot guarantee either that a backup is created or that it is E2E encrypted.
+
+Android system backup is **separate** from Google Play Games Saved Games. The `history.json` file is not part of the Saved Games cloud profile. The publisher does not automatically gain access to Android's system backups. References: https://developer.android.com/identity/data/autobackup and https://developer.android.com/privacy-and-security/risks/backup-best-practices.
 
 ## 8. Deletion and retention
 
@@ -117,3 +123,5 @@ Local records are stored in Android's private app storage. When leaderboards are
 Before activating the publisher-hosted leaderboard in a published release or adding new data practices (such as advertising or purchases), we will verify this policy and the Google Play disclosures.
 
 _Polish version: /store/privacy-policy-pl/._
+
+**Official references (verified 2 November 2026):** [Play Games SDK data collection](https://developer.android.com/games/pgs/data-collection), [Google Play User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311), [Data safety declarations](https://support.google.com/googleplay/android-developer/answer/10787469), [Android Auto Backup](https://developer.android.com/identity/data/autobackup).
