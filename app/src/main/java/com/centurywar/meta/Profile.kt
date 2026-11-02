@@ -8,6 +8,7 @@ import com.centurywar.game.Defs
 import com.centurywar.game.GameIoCounter
 import com.centurywar.game.Mode
 import com.centurywar.game.Research
+import com.centurywar.game.SaveGuard
 import com.centurywar.game.Weekly
 import org.json.JSONArray
 import org.json.JSONObject
@@ -651,37 +652,22 @@ class Profile(private val file: File) {
     @Volatile private var writtenSeq = 0L
 
     private fun writeJson(json: String, seq: Long) {
-        // Pomijamy przestarzałe migawki z kolejki, by pauza nie czekała na wiele fsync.
+        // Stare migawki z kolejki nie mogą nadpisać nowszej wersji profilu.
         if (newerProfileVersion || seq < saveSeq || seq <= writtenSeq) return
         try {
             GameIoCounter.diskAccess()
-            val tmp = File(file.parentFile, file.name + ".tmp")
-            FileOutputStream(tmp).use { out ->
-                out.write(json.toByteArray(Charsets.UTF_8))
-                out.flush()
-                // fsync przed rename: po utracie zasilania nie zostanie pusty plik profilu.
-                try { out.fd.sync() } catch (_: Exception) { }
+            val bytes = json.toByteArray(Charsets.UTF_8)
+            SaveGuard.atomicWrite(file, bytes)
+            writtenSeq = seq
+            try {
+                SaveGuard.writeBackup(file, bytes)
+            } catch (e: Exception) {
+                SaveGuard.report("profile-backup", e)
             }
-            // Nigdy nie kasujemy poprawnego profilu, gdy podmiana się nie uda.
-            var saved = tmp.renameTo(file)
-            if (!saved) {
-                try {
-                    java.nio.file.Files.move(
-                        tmp.toPath(), file.toPath(),
-                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-                    )
-                    saved = true
-                } catch (_: Exception) {
-                    // Poprzedni zapis zostaje na miejscu, nowy można odzyskać z .tmp.
-                }
-            }
-            if (saved) {
-                writtenSeq = seq
-                onSaved?.invoke(cloudJson(json))
-            }
-        } catch (_: Exception) {
-            // Brak miejsca itp. — gra działa dalej, zapis spróbuje ponownie przy kolejnej okazji.
+            onSaved?.invoke(cloudJson(json))
+        } catch (e: Exception) {
+            // Brak miejsca lub uprawnień nie blokuje gry; ostatni zapis pozostaje.
+            SaveGuard.report("profile", e)
         }
     }
 
@@ -1025,7 +1011,9 @@ class Profile(private val file: File) {
         awaitWrites(2_000L)
         GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
-        if (!file.exists() && !tmp.exists()) return
+        val backup = File(file.parentFile, file.name + ".bak")
+        val backupTmp = File(file.parentFile, file.name + ".bak.tmp")
+        if (!file.exists() && !tmp.exists() && !backup.exists() && !backupTmp.exists()) return
         // Nawet starsza data pliku z przyszłej wersji jest ważniejsza niż zapis .tmp.
         if (file.exists()) {
             try {
@@ -1038,7 +1026,10 @@ class Profile(private val file: File) {
             }
         }
         val tmpFirst = tmp.exists() && (!file.exists() || tmp.lastModified() >= file.lastModified())
-        val candidates = if (tmpFirst) arrayOf(tmp, file) else arrayOf(file, tmp)
+        val originals = if (tmpFirst) arrayOf(tmp, file) else arrayOf(file, tmp)
+        val backups = if (backupTmp.lastModified() >= backup.lastModified())
+            arrayOf(backupTmp, backup) else arrayOf(backup, backupTmp)
+        val candidates = originals + backups
         for (candidate in candidates) {
             if (!candidate.exists()) continue
             try {
@@ -1067,12 +1058,18 @@ class Profile(private val file: File) {
                             // Poprawny zapis wciąż jest dostępny jako .tmp.
                         }
                     }
+                } else if (candidate == backup || candidate == backupTmp) {
+                    // Przywrócony profil trafia na dysk w zwykłej kolejce zapisu.
+                    save()
                 } else if (tmp.exists() && tmp.lastModified() <= file.lastModified()) {
                     tmp.delete()
                 }
                 return
-            } catch (_: Exception) {
-                if (preserveCorrupt(candidate) && candidate == tmp) tmp.delete()
+            } catch (e: Exception) {
+                SaveGuard.report("profile-load", e)
+                if (candidate == file || candidate == tmp) {
+                    if (preserveCorrupt(candidate) && candidate == tmp) tmp.delete()
+                }
             }
         }
         clearInMemory()
