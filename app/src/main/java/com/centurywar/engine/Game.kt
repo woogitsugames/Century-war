@@ -77,6 +77,17 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var music: Music? = null
 
     fun applyMusicVolume() { music?.setVolume(profile.musicVolume) }
+
+    /** Jeden kontrakt odświeżenia ustawień po imporcie pliku i po synchronizacji PGS. */
+    fun applyLoadedProfile() {
+        onLanguageChanged()
+        applyAccessibility()
+        setQuality(effectiveQualityLevel())
+        applyFrameRate()
+        applySfxVolume()
+        applyMusicVolume()
+        host.onNotificationSettingsChanged()
+    }
     fun applySfxVolume() {
         sound?.volume = profile.sfxVolume
         sound?.enabled = profile.sound
@@ -98,6 +109,14 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var historyLoaded = false
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
+
+    /** Jedna operacja resetu na wątku gry: unieważnia też kolejkę snapshotów. */
+    fun resetProgress() {
+        snapshots?.deleteAsync()
+        resumeOffer = null
+        profile.reset()
+        history?.clear()
+    }
 
     fun sfx(
         id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f,
@@ -373,6 +392,15 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     fun applyFrameRate() = host.applyFrameRate(profile.fpsCap)
+
+    /** Density może się zmienić bez restartu Activity (Fold, ustawienia wyświetlacza). */
+    fun updateDensity(value: Float) {
+        if (!value.isFinite() || value <= 0f || density == value) return
+        density = value
+        if (width > 1 && height > 1 && viewW > 1 && viewH > 1) {
+            resize(width, height, viewW, viewH)
+        }
+    }
 
     /** Wywoływane z wątku gry, gdy zmienił się bufor powierzchni. */
     fun resize(bufW: Int, bufH: Int, vW: Int, vH: Int) {
