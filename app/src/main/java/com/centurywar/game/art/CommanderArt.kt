@@ -9,11 +9,11 @@ import com.centurywar.game.EraArt
  */
 class CommanderArt(private val pen: Pen) {
     private companion object {
-        const val GOLD = 0xFFE6BD54.toInt()
-        const val SILVER = 0xFFB6C8D1.toInt()
-        const val CYAN = 0xFF70ECF2.toInt()
-        const val BROWN = 0xFF825329.toInt()
-        const val PURPLE = 0xFFAF95E8.toInt()
+        val GOLD = 0xFFE6BD54.toInt()
+        val SILVER = 0xFFB6C8D1.toInt()
+        val CYAN = 0xFF70ECF2.toInt()
+        val BROWN = 0xFF825329.toInt()
+        val PURPLE = 0xFFAF95E8.toInt()
     }
 
     fun draw(c: Canvas, art: EraArt, team: Int) {
