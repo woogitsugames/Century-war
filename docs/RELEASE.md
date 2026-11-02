@@ -240,7 +240,7 @@ jest dodatkową barierą, a nie zamiennikiem testów `ProfileTest`,
 Nie zmieniaj kolejności enumów ani wersji formatów bez osobnej migracji.
 
 Po kompilacji release skrypt `scripts/verify_release_mapping.py`
-weryfikuje `mapping.txt` i `usage.txt`: wymagane klasy istnieją
+weryfikuje `mapping.txt`, `usage.txt` i aktywne `configuration.txt`: wymagane klasy istnieją
 pod niezmienionymi nazwami, krytyczne pola nie są usunięte ani
 przemianowane, a wybrane stałe enumów zachowują nazwy. Niezależny
 `verify_release_dex.py` potwierdza obecność klas w rzeczywistym DEX.
@@ -250,7 +250,8 @@ Nie wystarczy sam test debug.
 python3 -m unittest discover -s tests -p 'test_verify_release_mapping.py' -v
 python3 scripts/verify_release_mapping.py \
   --mapping app/build/outputs/mapping/release/mapping.txt \
-  --usage app/build/outputs/mapping/release/usage.txt
+  --usage app/build/outputs/mapping/release/usage.txt \
+  --configuration app/build/outputs/mapping/release/configuration.txt
 ```
 
 Wynik trafia do `build/release-metrics/mapping-audit.txt` w artefakcie
