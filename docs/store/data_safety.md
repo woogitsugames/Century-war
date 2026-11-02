@@ -66,7 +66,7 @@ Zaznacz „szyfrowanie danych w transmisji” dopiero po sprawdzeniu **wszystkic
 
 ## 6. Obowiązki wydawcy przed wysłaniem Data safety
 
-1. Uzupełnić pięć pól w [OWNER_INPUT.md](OWNER_INPUT.md): **nazwa prawna, adres pocztowy, e-mail kontaktowy, publiczny URL polityki, data wydania**. Wygenerować i opublikować obie wersje językowe polityki przez `:app:renderStorePolicies`; nie publikować szablonów z `{{OWNER.*}}`.
+1. Uzupełnić pięć pól w [OWNER_INPUT.md](OWNER_INPUT.md): **nazwa prawna, adres pocztowy, e-mail kontaktowy, publiczny URL polityki, data wydania**. Wygenerować i opublikować obie wersje językowe polityki przez `:app:renderStorePolicies`; nie publikować szablonów z nieuzupełnionymi polami wydawcy.
 2. Podać faktyczny **adres HTTPS własnego serwera rankingu** w `CW_SERVER_URL` (jeśli serwer ma działać), potwierdzić dostawcę hostingu i logi/retencję. Sekret `CW_HMAC_KEY` i klucze podpisu trzymać poza repo. Ustawić `CW_PRIVACY_URL` na publiczną politykę.
 3. Wypełnić w `play_games_ids.properties` **71 identyfikatorów: 1 projekt, 4 rankingi i 66 osiągnięć**, po czym sprawdzić na podpisanej aplikacji logowanie, wysyłanie wyników, odblokowywanie osiągnięć oraz zapis i odczyt Saved Games.
 4. Zweryfikować **scalony manifest i zależności release** (PGS 22.1.0; w szczególności `AD_ID`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`), działania uprawnień i transferów, łącznie z urządzeniami Android 8/8.1.
