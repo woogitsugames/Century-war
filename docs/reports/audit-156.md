@@ -24,7 +24,7 @@ Oznaczenia w tabeli:
 
 Numery linii odnoszą się do **badanego SHA**, nie do późniejszych commitów. Dla czytelności `A/` oznacza `app/src/main/java/com/centurywar/`, `S/` — `sim/src/main/kotlin/com/centurywar/game/`, `B/` — `server/src/main/kotlin/com/centurywar/server/`, a `T/` — `buildSrc/src/`. Są to dokładne prefiksy ścieżek, nie nazwy nowych katalogów.
 
-Podczas audytu baza przesunęła się do `a57056971b7a1778c35d556fa856422212fe3b5b`: doszły poprawki ekranów i tłumaczeń. Nie podmieniano źródeł w trakcie pomiarów. Wyniki poniżej dotyczą zamrożonego SHA; ocenę różnic i ograniczenia aktualności podano w końcowej części raportu.
+Podczas audytu baza przesunęła się najpierw do `a57056971b7a1778c35d556fa856422212fe3b5b`, a przy otwieraniu PR do `72ab9d9bbed1beec44e57288fe4f91b5a3e3a87e`. Nie podmieniano źródeł w trakcie pomiarów. Wyniki poniżej dotyczą zamrożonego SHA. **Selektywną kontrolę późniejszych zmian 152–154/157, w tym ulepszeń zapisu i wydajności, opisuje sekcja 10**; nie jest ona nowym pełnym przebiegiem testów.
 
 ## 3. Tabela znalezisk
 
@@ -307,6 +307,8 @@ Dodatkowe ryzyko utrzymania: checklista dopuszcza `RELEASE_DAY` tylko od 30 dni 
 
 ## 8. Wydajność, zrzuty, języki i utrzymanie
 
+Ta sekcja opisuje stan **85e90b6**. Później scalone zlecenie 152 usunęło wskazane poniżej alokacje tekstu złota i zegara oraz rozszerzyło sceny testów wydajności; szczegóły aktualności w sekcji 10.
+
 Podczas wykonanego przebiegu obejrzano poniższe **świeżo wygenerowane obrazy**, poza wcześniejszym przeglądem czterech wersjonowanych wzorców. Pochodziły z `app/build/screenshots`; nie dodawano ich do PR, zgodnie z zakresem „sam raport”. Wygląd pojedynczej sceny nie dowodzi poprawności hitboxów ani animacji.
 
 | Świeży plik | Rozmiar | Ocena konkretnego stanu |
@@ -338,7 +340,18 @@ Od strony usług wymagane są testy równoległego wyniku/usunięcia przez HTTP,
 
 ## 10. Aktualność i czego nie zrobiono
 
-Porównanie z późniejszą gałęzią bazową `a570569` potwierdziło, że opisane główne usterki pozostają aktualne; pełne wyniki testów i numery linii dotyczą badanego `85e90b6`. W późniejszym diffie nie zmieniono `sim/`, `server/`, obsługi zapisu, cyklu życia ani panelu wież i renderera błysków. Zmiana MenuScreen dotyczyła odstępu pod banerem, nie resetu i wznowienia. Nowe wzorce PNG dotyczą kodeksu, rankingu i panelu Endless; nie unieważniają ocenianych ekranów bitwy, dostępności i ustawień. Jest to kontrola różnic, nie ponowny pełny audyt późniejszego commita.
+Pierwsze porównanie z bazą `a570569` obejmowało poprawki ekranów i tłumaczeń. Podczas publikacji raportu do bazy scalono kolejne prace; PR został otwarty przy bazie **`72ab9d9bbed1beec44e57288fe4f91b5a3e3a87e`**. Wykonano dodatkową, selektywną kontrolę różnic kodu dla wymienionych niżej ustaleń. **Pełne wyniki uruchomionych testów i numery linii w tabeli nadal odnoszą się do 85e90b6. Nowszej bazy nie budowano ani nie testowano ponownie.**
+
+| Obszar późniejszych zmian | Co sprawdzono na 72ab9d9 | Wpływ na raport |
+|---|---|---|
+| Snapshoty i serwer | Walidator komend nadal pomija `TURRET_TIER` z argumentem slotu; walidacja mnożnika nadal dopuszcza tylko 1 i 0,85. Całe `server/`, `Replay.kt`, `ReplayPlayer.kt` i `BattleController.kt` nie zmieniły się. | Przyczyny A156-01/02/04/05 pozostają w kodzie. Zlecenie 154 nie naprawia tych walidatorów. |
+| Odporność zapisu — 154 | Nowy `SaveGuard`, zapis przez `.tmp`, fsync i podmianę, kopie `.bak`/`.bak.tmp`, odzyskiwanie profilu/historii/snapshotu i jednorazowe ostrzeżenie w menu. Nierozpoznany snapshot jest teraz zachowywany do diagnostyki. | **Opis usuwania odrzuconego snapshotu w sekcji 4.1 dotyczy wyłącznie 85e90b6.** Nowa baza zachowuje plik, ale nadal odrzuca stan z A156-01/02; zapis tych samych bajtów do kopii nie usuwa rozbieżności walidatorów. |
+| Kolejność operacji i cykl życia | `Profile.load` nadal ignoruje wynik `awaitWrites(2000)`; sekwencje zapisu pozostają związane z instancją. Reset nadal nie wywołuje usunięcia snapshotu. Rozliczenie bitwy nadal używa niezależnych executorów bez identyfikatora transakcji. `GameView`, `MainActivity` i adapter PGS bez zmian. | A156-06/07/17/18/19/20 pozostają; A156-10 nadal jest ryzykiem wymagającym kill-testu, a nie nowo odtworzonym błędem. |
+| HUD i dostępność | Zegar limitera błysków nadal jest mnożony przez prędkość gry, nocny efekt nadal go omija. Geometria i rozstrzyganie celów wież bez poprawki. Cena jednostki nadal nie przekazuje `maxW` do `subLine`; test dolnej dostępności nadal ustawia `scroll` bez layoutu. | Przyczyny A156-08/09/24/25 pozostają w kodzie. Numery linii nowszej rewizji mogą być inne. |
+| Wydajność — 152 | `HudDigits152` zastępuje Stringi złota i zegara buforem. Dodano `Wave6PerformanceFixture` z dowódcami, wieżami i pełnymi armiami, testy LOW/HIGH, pomiary alokacji oraz mediany/p95 CPU; cache błysków jest zwalniany po opuszczeniu bitwy. | Wskazana alokacja tekstu i wąski zakres dawnych testów z sekcji 8 zostały poprawione. Nie przenosimy tych uwag na aktualną bazę. Nowych wyników nie zweryfikowano wykonaniem; testy JVM nadal nie zastępują pomiarów telefonu. |
+| Pamięć testów i artefakty | Pozostają heap 1024 MiB, `forkEvery=40`, te same kategorie i brak deklaracji głównego katalogu PNG jako outputu. | A156-26 pozostaje pomiarem OOM na 85e90b6: zmiany 152 mogły zmienić zużycie pamięci. Dla A156-27 potwierdzono utrzymanie braku w konfiguracji, ale pobrany artefakt należał do starego SHA. |
+
+Zmiany grafik sklepu z 153/157 nie są nowym przedmiotem tego audytu; nie obejrzano ponownie wszystkich nowych materiałów. Powyższa kontrola różnic ogranicza ryzyko powtarzania nieaktualnych uwag, lecz nie stanowi poświadczenia jakości całego 72ab9d9 ani późniejszych commitów.
 
 Nie zmieniano kodu ani nie dodawano testów do repo. Diagnostyki i logi pomocnicze powstały poza nim; istotne kroki, liczby i wyniki są zapisane w tym raporcie. Nie konfigurowano kont właściciela, nie publikowano gry, nie zmieniano daty wydania i nie wysyłano żądań do produkcyjnego rankingu. Brak podpisanego artefaktu i prób urządzeń jest jawnym ograniczeniem audytu, nie pozytywnym wynikiem tych kontroli.
 
@@ -370,6 +383,6 @@ Stan sprawdzony 2 listopada 2026 r.; wymagania należy ponownie sprawdzić w dni
 | B4 — praca właściciela i redakcji | **Konfiguracja i dokumenty sklepu.** Dane prawne, publiczna polityka PL/EN, aktualny opis osiągnięć i backupu, ID PGS, konfiguracja serwera, data i numer wydania, usunięcie porównań do innych gier. | A156-03/16/23; decyzje przed budową produkcyjnego AAB. |
 | C1 — po A4 | **Jednolite przywracanie ustawień i odporne audio.** Wspólne zastosowanie profilu po imporcie/PGS; obsługa błędów AudioTrack. | A156-19/22; testy usług bez zmiany reguł rozgrywki. |
 | C2 — osobna ścieżka UI | **Semantyka dostępności.** Wirtualne węzły platformowe, focus i akcje dla menu/pauzy, następnie HUD; próby TalkBack/Switch Access. | A156-21; bez dodawania biblioteki wbrew ograniczeniom projektu. |
-| D — po scaleniu poprawek | **Kandydat do testów zamkniętych.** Zielony CI tego samego SHA, podpisany release, pomiar APK/AAB, próby urządzeń i usług, akceptacja Data safety. | Powtórzyć krytyczne reprodukcje, nie ograniczać się do kompilacji. Pomiary wydajności skoordynować z równoległym zleceniem 152. |
+| D — po scaleniu poprawek | **Kandydat do testów zamkniętych.** Zielony CI tego samego SHA, podpisany release, pomiar APK/AAB, próby urządzeń i usług, akceptacja Data safety. | Powtórzyć krytyczne reprodukcje, nie ograniczać się do kompilacji. Uwzględnić nowe sceny i pomiary ze scalonego zlecenia 152. |
 
 Przy poprawkach należy zachować dopisywanie enumów na końcu, deterministyczne RNG i przejście komend przez kontroler. Jeżeli zmieni się format snapshotu lub Replay, wykonawca musi odpowiednio zmienić wersję formatu; sama korekta walidatora nie oznacza automatycznie zmiany zapisywanych bajtów. Zmianę wersji zasad rankingu uzgadnia koordynator.
