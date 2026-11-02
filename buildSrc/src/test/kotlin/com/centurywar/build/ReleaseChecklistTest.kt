@@ -103,9 +103,9 @@ class ReleaseChecklistTest {
         | Pole | Wartość |
         | --- | --- |
         | publisher_name | Legal Publisher |
-        | contact_email | privacy@example.org |
+        | contact_email | privacy@studio-gier.pl |
         | postal_address | 123 Avenue, City, Country |
-        | privacy_policy_url | https://example.org/privacy |
+        | privacy_policy_url | https://studio-gier.pl/prywatnosc |
         | release_date | 2026-11-01 |
     """.trimIndent()
 
@@ -146,17 +146,17 @@ class ReleaseChecklistTest {
             validOwner().replace("Legal Publisher", "WYMAGA_DANYCH_WLASCICIELA"),
         ).any { it.contains("publisher_name") })
         assertTrue(ReleaseChecklist.ownerInputProblems(
-            validOwner().replace("privacy@example.org", "invalid"),
+            validOwner().replace("privacy@studio-gier.pl", "invalid"),
         ).any { it.contains("contact_email") })
         assertTrue(ReleaseChecklist.ownerInputProblems(
-            validOwner().replace("https://example.org/privacy", "http://example.org/privacy"),
+            validOwner().replace("https://studio-gier.pl/prywatnosc", "http://studio-gier.pl/prywatnosc"),
         ).any { it.contains("privacy_policy_url") })
         assertTrue(ReleaseChecklist.ownerInputProblems(
             validOwner().replace("2026-11-01", "yesterday"),
         ).any { it.contains("release_date") })
         assertTrue(ReleaseChecklist.ownerInputProblems(
-            validOwner().replace("123456789012", "REPLACE_ME"),
-        ).any { it.contains("play_games_project_id") })
+            validOwner() + "\n| contact_email | inny@studio-gier.pl |",
+        ).any { it.contains("contact_email") })
     }
 
     @Test fun checksStoreDocsAndBlocksEveryPlaceholder() {
@@ -181,8 +181,22 @@ class ReleaseChecklistTest {
         )).isEmpty())
     }
 
+    @Test fun rejectsExampleValuesInOwnerInput() {
+        val replacements = listOf(
+            "Legal Publisher" to "Example Publisher",
+            "privacy@studio-gier.pl" to "privacy@example.org",
+            "123 Avenue, City, Country" to "Example Street",
+            "https://studio-gier.pl/prywatnosc" to "https://example.org/privacy",
+        )
+        for ((valid, placeholder) in replacements) {
+            assertTrue(placeholder, ReleaseChecklist.ownerInputProblems(
+                validOwner().replace(valid, placeholder),
+            ).isNotEmpty())
+        }
+    }
+
     @Test fun rendersPrivatePublisherValuesOnlyForPublishableOutput() {
-        assertEquals("Contact: privacy@example.org",
+        assertEquals("Contact: privacy@studio-gier.pl",
             ReleaseChecklist.renderOwnerTemplate(
                 "Contact: {{OWNER.contact_email}}",
                 ReleaseChecklist.ownerFields(validOwner()),

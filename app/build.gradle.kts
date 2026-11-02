@@ -204,14 +204,16 @@ val balanceTestPatterns = categoryPatterns("balance")
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
     maxParallelForks = (configuredForks ?: 2).coerceIn(1, 2)
-    // Reużycie JVM ogranicza koszt wielokrotnego uruchamiania Robolectric, ale pamięć
-    // natywna grafiki w testach zrzutów rośnie (do ~10 GB w jednym procesie, OOM przy
-    // pełnym zestawie). Nowy proces co 40 klas testów. Przy małej pamięci -PtestForks=1.
-    forkEvery = 40L
-    maxHeapSize = "1024m"
+    // Robolectric zatrzymuje pamięć natywną bitmap. Izoluj każdą klasę testową;
+    // 384 MiB sterty na fork działało w pomiarach audytu przy limicie 8 GiB.
+    // Na 8 GiB użyj -PtestForks=1, na 16 GiB można uruchomić dwa forki.
+    forkEvery = 1L
+    maxHeapSize = "384m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
 
     if (name == "testDebugUnitTest") {
+        // Zrzuty są wynikiem testu także przy FROM-CACHE; inaczej artefakt CI jest pusty.
+        outputs.dir(layout.buildDirectory.dir("screenshots"))
         filter {
             when (requestedTestCategory) {
                 "fastTest" -> (screenshotTestPatterns + balanceTestPatterns)
@@ -247,10 +249,12 @@ tasks.register("quickCheck") {
     dependsOn("assembleDebug", "testDebugUnitTest", ":sim:test")
 }
 
-// Domyślne :app:test obejmuje wyłącznie wariant debug. Release sprawdza osobna
-// lista kontrolna; konfiguracja testReleaseUnitTest nie uruchamia jej przypadkiem.
-tasks.matching { it.name == "test" }.configureEach {
-    setDependsOn(listOf("testDebugUnitTest"))
+// AGP dopisuje zależności do agregatora po konfiguracji tego skryptu.
+// Przypnij debug dopiero po utworzeniu wszystkich wariantów (bez releaseChecklist).
+gradle.projectsEvaluated {
+    tasks.named("test") {
+        setDependsOn(listOf(tasks.named("testDebugUnitTest")))
+    }
 }
 
 tasks.register("fastTest") {
@@ -294,6 +298,7 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
         systemProperty("cw.screens.update", "true")
         systemProperty("cw.screens.reason", screenshotReason)
         outputs.upToDateWhen { false }
+        outputs.doNotCacheIf("Aktualizacja wzorców musi wykonać test") { true }
     }
 }
 
