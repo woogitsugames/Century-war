@@ -247,19 +247,11 @@ class BattleController(
             val code = ((packed ushr 32) and 255).toInt()
             val argument = packed.toInt()
             require(step >= previous && step <= currentStep && code in kinds.indices)
-            val valid = when (kinds[code]) {
-                Replay.Kind.QUEUE, Replay.Kind.UNIT_UPGRADE -> argument in 0 until Role.values().size
-                Replay.Kind.BUY_TURRET, Replay.Kind.UPGRADE_TURRET, Replay.Kind.SELL_TURRET ->
-                    argument in 0 until Defs.MAX_TURRET_SLOTS
-                Replay.Kind.STANCE -> argument == 0 || argument == 1
-                Replay.Kind.DOCTRINE -> argument in 0..2
-                Replay.Kind.TUTORIAL_GOLD -> argument in 1..1_000_000
-                Replay.Kind.BARRAGE_AT -> argument in 0..Defs.LANE.toInt()
-                Replay.Kind.CARD -> argument in 0..2
-                Replay.Kind.VARIANT -> argument in 0..1
-                else -> argument == 0
-            }
-            require(valid)
+            val kind = kinds[code]
+            require(Replay.argumentValid(kind, argument))
+            // Te same zasady dostępności co przy odtwarzaniu powtórki starszego formatu.
+            require(battle.turretTiersEnabled || kind != Replay.Kind.TURRET_TIER)
+            require(battle.commanderEnabled || kind != Replay.Kind.SUMMON_COMMANDER)
             events[count++] = packed
             previous = step
         }

@@ -66,19 +66,27 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
 }
 
 /** Temat wpływa na rozkład ról w danej fali. */
-enum class EndlessWaveTheme {
+enum class EndlessWaveTheme(
+    /** Mnożnik prędkości jednostek fali; jedyne źródło dla generatora i walidatora zrzutu. */
+    val unitSpeedMul: Float = 1f,
+) {
     MIXED,
     RANGED_SWARM,
     ARMORED_COLUMN,
     FAST_RUSH,
     ELITE_GUARD,
     ARTILLERY,
-    SIEGE_TRAIN,
+    SIEGE_TRAIN(0.85f),
     SKIRMISHERS,
     PIKE_SCREEN,
-    TWIN_RAID,
+    TWIN_RAID(1.15f),
     ;
     val textKey: String = "ew_${name.lowercase()}"
+
+    companion object {
+        /** Czy mnożnik prędkości jednostki może pochodzić z któregoś tematu fali. */
+        fun isLegalUnitSpeedMul(value: Float): Boolean = entries.any { it.unitSpeedMul == value }
+    }
 }
 
 /** Losowanie bez powtórzeń w obrębie oferty; brak alokacji podczas symulacji. */
