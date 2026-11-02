@@ -72,7 +72,7 @@ def r8_audit(mapping, usage):
     usage_text = usage.read_text(encoding="utf-8", errors="replace") if usage.is_file() else None
     removed = []
     if usage_text is not None:
-        removed = re.findall(r"^(com\.centurywar\.[\w.$]+):$", usage_text, re.MULTILINE)
+        # R8 zapisuje klase usunieta w calosci bez dwukropka; nazwa z ":"\n        # oznacza jedynie naglowek listy usunietych metod/pol tej klasy.\n        removed = re.findall(r"^(com\.centurywar\.[\w.$]+)$", usage_text, re.MULTILINE)
         bad = sorted(set(removed).intersection(CRITICAL_CLASSES))
         if bad:
             raise ValueError("R8 usunal krytyczne klasy: " + ", ".join(bad))
