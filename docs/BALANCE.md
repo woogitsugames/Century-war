@@ -1101,3 +1101,5 @@ Pełny zestaw testów serwera i symulacji zakończył się powodzeniem.
 Od etapu 8 kampanii, w potyczce, Endless i nowych wyzwaniach dnia obie strony mają dostęp do dowódcy za 2× koszt jednostki ciężkiej. Limit 1 aktywnego dowódcy na stronę, 180% HP i 115% obrażeń elity, aura +10% obrażeń pobliskich oddziałów w promieniu 230, Impuls co 20 s, odnowienie 90 s po śmierci (45 s w specjalnym dniu). Bez zmian istniejących jednostek i ich cen. AI kupuje dowódcę z własnego złota; w Endless z budżetu fali. Replay v5/v6 zachowują oryginalne reguły dzięki wyłączeniu dowódcy.
 
 **Weryfikacja przed/po:** `.github/workflows/campaign-balance.yml` wykonuje 36 etapów po 20 seedów (6 podgrup) z `BALANCE_PROFILE=target`, a `.github/workflows/endless-balance.yml` porównuje bazę PR i bieżący kod z raportu `EndlessBalanceReportTest` dla 20 i 100 seedów. Wyniki muszą pochodzić z faktycznych przebiegów CI; ten wpis **nie stanowi potwierdzenia testów ani liczb balansu**. Linki do przebiegów i rzeczywiste pomiary należy dopisać do opisu PR.
+
+- 2026-11-02 — regeneracja złotych powtórek: Dowodca w polu bitwy: nowy Replay v7, Snapshot v16 i uczciwe AI.

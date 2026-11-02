@@ -1,8 +1,8 @@
 {
   "id": "daily-historical",
   "config": {"mode":"DAILY","seed":21152,"aiPower":1.1167345,"startEra":3,"maxEra":6,"modifiers":["FRAGILE_BASES","FAST_UNITS","FOG_OF_WAR"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":14,"abilityCdMul":1.0,"turretSlots":3,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":false,"weather":"CLEAR","weekly":-1,"weeklyCard":null,"dailyEvent":null},
-  "replayVersion": 6,
-  "replay": "Bv-YEQ4AAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAA1wEIaQAAwAIAAKABAADAAgAAXws",
+  "replayVersion": 7,
+  "replay": "B_-YEQ4AAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAA1wEIaQAAwAIAAKABAADAAgAAXws",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -19,5 +19,5 @@
     {"step":2105,"kind":"QUEUE","argument":0},
     {"step":2200,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":40,"winner":1,"wave":0,"steps":2200,"kills":2,"enemyKills":7,"timeBits":1108519595,"snapshotSha256":"1f83b56dbfe0a608dcd0f3126bb217eb658bb7632b3bab845e5e63b85338ff42"}
+  "expected": {"score":40,"winner":1,"wave":0,"steps":2200,"kills":2,"enemyKills":7,"timeBits":1108519595,"snapshotSha256":"1b845aa18fd2dfbad4bd08aabf756be9209cb178fb4747ac8015b6c74bd2edc4"}
 }
