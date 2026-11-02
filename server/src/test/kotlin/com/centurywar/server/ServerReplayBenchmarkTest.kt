@@ -14,7 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Ręczny benchmark granicy protokołu, uruchamiany wyłącznie przez SERVER_BENCH=true.
+ * Benchmark limitu kroków z dowódcą i stopniami wieży, tylko SERVER_BENCH=true.
  * Niefizyczna baza z nieskończonym HP omija procentową presję Endless po fali 120.
  * Tylko ten przypadek techniczny może odtworzyć 432 000 kroków bez zmian :sim.
  * Konfiguracja NIE jest zgłoszeniem akceptowanym przez API rankingu.
@@ -32,6 +32,9 @@ class ServerReplayBenchmarkTest {
         val recording = Battle(config)
         recording.playerAi = null
         val controller = BattleController(recording)
+        var turretBought = false
+        var turretTierUpgrades = 0
+        var commanderSummoned = false
 
         while (!recording.over && recording.stepCount < Replay.MAX_STEPS) {
             // Decyzje są zapisywane jedyną legalną drogą, tak jak w grze.
@@ -40,6 +43,14 @@ class ServerReplayBenchmarkTest {
             if (recording.pendingCards != null) check(controller.card(0))
             if (recording.stepCount % 14 == 0) {
                 check(controller.stance(!recording.player.hold))
+            }
+            // Nowe komendy są wykonywane wyłącznie przez kontroler i wchodzą do powtórki.
+            if (recording.stepCount % 60 == 0) {
+                if (!turretBought && controller.buyTurret(0)) turretBought = true
+                if (turretBought && turretTierUpgrades < 2 && controller.upgradeTurretTier(0)) {
+                    turretTierUpgrades++
+                }
+                if (!commanderSummoned && controller.summonCommander()) commanderSummoned = true
             }
             val before = recording.stepCount
             recording.step()
@@ -50,7 +61,13 @@ class ServerReplayBenchmarkTest {
         }
 
         assertEquals(Replay.MAX_STEPS, recording.stepCount, "Próba nie osiągnęła limitu kroków")
+        assertTrue(turretBought, "Nie zakupiono wieży")
+        assertEquals(2, turretTierUpgrades, "Wieża nie osiągnęła trzeciego stopnia")
+        assertTrue(commanderSummoned, "Nie przywołano dowódcy")
         val log = controller.log()
+        assertEquals(1, log.commands.count { it.kind == Replay.Kind.BUY_TURRET })
+        assertEquals(2, log.commands.count { it.kind == Replay.Kind.TURRET_TIER })
+        assertEquals(1, log.commands.count { it.kind == Replay.Kind.SUMMON_COMMANDER })
         assertTrue(log.commands.size in 30_000..Replay.MAX_COMMANDS,
             "Benchmark wymaga wielu zaakceptowanych komend")
         val encoded = Replay.encode(log)
@@ -92,12 +109,13 @@ class ServerReplayBenchmarkTest {
             return "pomiary=${values.joinToString(",")} ms, mediana=${sorted[2]} ms, maksimum=${sorted[4]} ms"
         }
 
-        println("SERVER_BENCH_121 cpu=$cpu, processors=${Runtime.getRuntime().availableProcessors()}, " +
+        println("SERVER_BENCH_149 cpu=$cpu, processors=${Runtime.getRuntime().availableProcessors()}, " +
             "quota=$quota, heap_max=${heapMb}MiB, java=${System.getProperty("java.version")}")
-        println("SERVER_BENCH_121 steps=${log.steps}, commands=${log.commands.size}, " +
-            "encoded_bytes=${encoded.toByteArray(Charsets.UTF_8).size}, wave=${recording.wave}")
-        println("SERVER_BENCH_121 Replay.verify: ${summary(verifyMs)}")
-        println("SERVER_BENCH_121 Replay.decode+verify: ${summary(totalMs)}")
+        println("SERVER_BENCH_149 steps=${log.steps}, commands=${log.commands.size}, " +
+            "encoded_bytes=${encoded.toByteArray(Charsets.UTF_8).size}, wave=${recording.wave}, " +
+            "commander=1, tower_tiers=2, replay_version=${log.version}")
+        println("SERVER_BENCH_149 Replay.verify: ${summary(verifyMs)}")
+        println("SERVER_BENCH_149 Replay.decode+verify: ${summary(totalMs)}")
         assertTrue(verifyMs.all { it >= 0L })
     }
 }
