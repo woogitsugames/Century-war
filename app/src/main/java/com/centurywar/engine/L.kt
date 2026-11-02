@@ -158,8 +158,48 @@ object L {
         putAll(part135())
         putAll(part143())
         putAll(part140())
+        putAll(part125())
         }
     }
+
+    /** Zlecenie 125: dowódca, zdolność i podpowiedzi. */
+    private fun part125(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "comm125_name" to t("Dowódca", "Commander", "Kommandant", "Comandante", "Commandant", "Comandante", "Comandante", "Командир", "Commandant", "Komutan"),
+        "comm125_short" to t("Wódz", "Leader", "Chef", "Líder", "Chef", "Capo", "Líder", "Лідер", "Leider", "Lider"),
+        "comm125_tip" to t(
+            "Przywołaj jednego dowódcę za złoto. Wzmacnia obrażenia bliskich sojuszników o 10% i co 20 sekund wykonuje Impuls. Po śmierci wraca po odnowieniu.",
+            "Summon one commander for gold. Boosts nearby allies' damage by 10% and uses Pulse every 20 seconds. Resummon after the death cooldown.",
+            "Rufe einen Kommandanten für Gold. Er erhöht den Schaden naher Verbündeter um 10 % und wirkt alle 20 Sekunden einen Impuls. Nach dem Tod gilt eine Abklingzeit.",
+            "Invoca a un comandante con oro. Aumenta un 10 % el daño de aliados cercanos y usa Pulso cada 20 segundos. Tras morir debe recargarse.",
+            "Invoquez un commandant contre de l'or. Il augmente de 10 % les dégâts des alliés proches et déclenche une impulsion toutes les 20 secondes. Recharge après sa mort.",
+            "Evoca un comandante usando oro. Aumenta del 10% i danni degli alleati vicini e usa Impulso ogni 20 secondi. Dopo la morte va ricaricato.",
+            "Invoque um comandante por ouro. Aumenta em 10% o dano dos aliados próximos e usa Pulso a cada 20 segundos. Após morrer, aguarde a recarga.",
+            "Покличте командира за золото. Він збільшує шкоду союзників поруч на 10% і застосовує Імпульс кожні 20 секунд. Після загибелі потрібне відновлення.",
+            "Roep één commandant op voor goud. Hij verhoogt de schade van nabije bondgenoten met 10% en gebruikt elke 20 seconden een impuls. Na zijn dood moet hij herladen.",
+            "Altınla bir komutan çağır. Yakındaki müttefiklerin hasarını %10 artırır ve her 20 saniyede bir Darbe kullanır. Ölümden sonra yeniden dolmasını bekle."),
+        "comm125_hint" to t(
+            "Od 8. etapu możesz wezwać dowódcę. Jego aura wzmacnia pobliską armię, a przycisk pokazuje koszt i odnowienie.",
+            "From stage 8, summon a commander. The aura strengthens nearby troops; the button shows cost and cooldown.",
+            "Ab Etappe 8 kannst du einen Kommandanten rufen. Seine Aura stärkt nahe Truppen; die Taste zeigt Kosten und Abklingzeit.",
+            "Desde la etapa 8 puedes invocar un comandante. Su aura refuerza tropas cercanas; el botón muestra coste y recarga.",
+            "Dès l'étape 8, invoquez un commandant. Son aura renforce les troupes proches ; le bouton montre le coût et la recharge.",
+            "Dalla tappa 8 puoi evocare un comandante. La sua aura potenzia le truppe vicine; il tasto mostra costo e ricarica.",
+            "A partir da fase 8, invoque um comandante. A aura fortalece tropas próximas; o botão mostra custo e recarga.",
+            "З 8-го етапу можна покликати командира. Його аура посилює сусідніх бійців; кнопка показує вартість і відновлення.",
+            "Vanaf fase 8 kun je een commandant oproepen. Zijn aura versterkt nabije troepen; de knop toont kosten en herlaadtijd.",
+            "8. aşamadan itibaren komutan çağırabilirsin. Aurası yakındaki birlikleri güçlendirir; düğme maliyeti ve bekleme süresini gösterir."),
+        "comm125_codex" to t(
+            "Jedna jednostka specjalna na stronę. Koszt: dwukrotność jednostki ciężkiej. 180% HP i 115% obrażeń elity. Aura +10% obrażeń sojuszników w zasięgu 230. Impuls co 20 s razi obszar wokół wroga. Odnowienie po śmierci: 90 s (45 s w dniu szybkich zdolności). Dostępny od etapu kampanii 8, w potyczce, Endless i nowych wyzwaniach dnia.",
+            "One special unit per side. Costs twice the heavy unit. 180% elite HP, 115% elite damage. Aura: +10% allied damage within 230 range. Pulse hits enemies in an area every 20 s. Resummon 90 s after death (45 s during rapid-abilities days). Available from campaign stage 8, skirmish, Endless and new daily challenges.",
+            "Eine Spezialeinheit pro Seite. Kostet das Doppelte einer schweren Einheit. 180 % Elite-HP und 115 % Elite-Schaden. Aura: +10 % Schaden im Radius 230. Impuls trifft Gegner im Bereich alle 20 s. Nach Tod 90 s Abklingzeit (45 s am Schnelligkeitstag). Ab Kampagnenetappe 8, in Gefechten, Endless und neuen Tagesherausforderungen.",
+            "Una unidad especial por bando. Cuesta el doble de una unidad pesada. 180% de vida y 115% de daño élite. Aura: +10% de daño aliado a distancia 230. Pulso golpea un área cada 20 s. Recarga de 90 s tras morir (45 s en día de habilidades rápidas). Disponible desde etapa 8, escaramuza, Endless y nuevos desafíos diarios.",
+            "Une unité spéciale par camp. Coût : deux unités lourdes. 180 % des PV et 115 % des dégâts d'élite. Aura : +10 % de dégâts alliés dans un rayon de 230. Impulsion de zone toutes les 20 s. Recharge de 90 s après la mort (45 s lors des capacités rapides). Dès l'étape 8, en escarmouche, Endless et nouveaux défis du jour.",
+            "Una unità speciale per parte. Costo: due unità pesanti. 180% di salute e 115% di danni élite. Aura: +10% ai danni degli alleati nel raggio di 230. Impulso ad area ogni 20 s. Dopo la morte 90 s di ricarica (45 s nei giorni rapidi). Dalla tappa 8, schermaglia, Endless e nuove sfide giornaliere.",
+            "Uma unidade especial por lado. Custa duas unidades pesadas. 180% de vida e 115% de dano de elite. Aura: +10% de dano aliado no raio de 230. Pulso em área a cada 20 s. Recarga de 90 s após a morte (45 s em dias de habilidades rápidas). Da fase 8, escaramuça, Endless e novos desafios diários.",
+            "Одна особлива одиниця на сторону. Коштує як два важкі бійці. 180% здоров'я й 115% шкоди еліти. Аура: +10% шкоди союзників у радіусі 230. Імпульс вражає область кожні 20 с. Після загибелі відновлення 90 с (45 с під час швидких здібностей). З 8-го етапу кампанії, у сутичці, Endless та нових денних викликах.",
+            "Eén speciale eenheid per zijde. Kost twee zware eenheden. 180% elite-HP en 115% eliteschade. Aura: +10% schade van bondgenoten binnen 230. Impuls raakt een gebied elke 20 s. Na overlijden 90 s herladen (45 s bij snelle vaardigheden). Vanaf campagneniveau 8, schermutseling, Endless en nieuwe daguitdagingen.",
+            "Taraf başına bir özel birim. Bedel: iki ağır birlik. %180 elit canı ve %115 elit hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
+    )
 
     /** Tura 9 (UX nowego gracza): zablokowane badania i etapy mówią, co zrobić dalej. */
     private fun part143(): Array<Pair<String, Array<out String>>> = arrayOf(
