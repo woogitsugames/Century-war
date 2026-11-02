@@ -12,6 +12,7 @@ import com.centurywar.engine.Screen
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import com.centurywar.meta.Profile
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -186,9 +187,12 @@ class LowEndScreensPerformanceTest {
         g.finishScreenTransition()
         s.battle.player.baseFlash = 1f
         s.render(canvas) // lazy Picture i bitmapa błysku
+        assertTrue("Bitwa powinna utworzyć ograniczony cache błysku",
+            s.r.cachedFlashBytes in 1..(2L * 1024L * 1024L))
         refs.add(java.lang.ref.WeakReference(s))
         g.setScreen(MenuScreen(g))
         g.finishScreenTransition()
+        assertEquals("Opuszczenie bitwy musi zwolnić natywne bitmapy", 0L, s.r.cachedFlashBytes)
     }
 
     /** 20 powrotów do menu nie może trzymać starych bitmap ani ekranów. */
