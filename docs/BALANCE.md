@@ -1103,3 +1103,5 @@ Od etapu 8 kampanii, w potyczce, Endless i nowych wyzwaniach dnia obie strony ma
 **Weryfikacja przed/po:** `.github/workflows/campaign-balance.yml` wykonuje 36 etapów po 20 seedów (6 podgrup) z `BALANCE_PROFILE=target`, a `.github/workflows/endless-balance.yml` porównuje bazę PR i bieżący kod z raportu `EndlessBalanceReportTest` dla 20 i 100 seedów. Wyniki muszą pochodzić z faktycznych przebiegów CI; ten wpis **nie stanowi potwierdzenia testów ani liczb balansu**. Linki do przebiegów i rzeczywiste pomiary należy dopisać do opisu PR.
 
 - 2026-11-02 — regeneracja złotych powtórek: Dowodca w polu bitwy: nowy Replay v7, Snapshot v16 i uczciwe AI.
+
+- 2026-11-02 — regeneracja złotych powtórek: Reaktywne AI kampanii dowodcy bez zmiany starych wynikow.
