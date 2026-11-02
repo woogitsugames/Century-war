@@ -1,0 +1,22 @@
+file	width	height	alt	play_upload
+phone16x9/01-commander-aura.png	1920	1080	Bitwa z Wodzem niebieskiej armii, aurą wspierającą oddziały i czerwonym przeciwnikiem.	true
+phone16x9/02-turret-tiers.png	1920	1080	Panel budowy wież pokazujący ulepszenia obrony do kolejnych stopni.	true
+phone16x9/03-campaign-map.png	1920	1080	Mapa kampanii Century War z etapami i zdobytymi gwiazdkami.	true
+phone16x9/04-endless-cards.png	1920	1080	Wybór trzech kart w Oblężeniu bez końca na tle trwającej bitwy.	true
+phone16x9/05-battle-chart.png	1920	1080	Ekran podsumowania bitwy z wykresem armii, zdrowia baz i złota.	true
+phone20x9_qa/01-commander-aura.png	2400	1080	Bitwa z Wodzem niebieskiej armii, aurą wspierającą oddziały i czerwonym przeciwnikiem.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Panel budowy wież pokazujący ulepszenia obrony do kolejnych stopni.	false
+phone20x9_qa/03-campaign-map.png	2400	1080	Mapa kampanii Century War z etapami i zdobytymi gwiazdkami.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Wybór trzech kart w Oblężeniu bez końca na tle trwającej bitwy.	false
+phone20x9_qa/05-battle-chart.png	2400	1080	Ekran podsumowania bitwy z wykresem armii, zdrowia baz i złota.	false
+tablet10/01-commander-aura.png	2560	1440	Bitwa z Wodzem niebieskiej armii, aurą wspierającą oddziały i czerwonym przeciwnikiem.	true
+tablet10/02-turret-tiers.png	2560	1440	Panel budowy wież pokazujący ulepszenia obrony do kolejnych stopni.	true
+tablet10/03-campaign-map.png	2560	1440	Mapa kampanii Century War z etapami i zdobytymi gwiazdkami.	true
+tablet10/04-endless-cards.png	2560	1440	Wybór trzech kart w Oblężeniu bez końca na tle trwającej bitwy.	true
+tablet10/05-battle-chart.png	2560	1440	Ekran podsumowania bitwy z wykresem armii, zdrowia baz i złota.	true
+fold/01-commander-aura.png	2184	1968	Bitwa z Wodzem niebieskiej armii, aurą wspierającą oddziały i czerwonym przeciwnikiem.	true
+fold/02-turret-tiers.png	2184	1968	Panel budowy wież pokazujący ulepszenia obrony do kolejnych stopni.	true
+fold/03-campaign-map.png	2184	1968	Mapa kampanii Century War z etapami i zdobytymi gwiazdkami.	true
+fold/04-endless-cards.png	2184	1968	Wybór trzech kart w Oblężeniu bez końca na tle trwającej bitwy.	true
+fold/05-battle-chart.png	2184	1968	Ekran podsumowania bitwy z wykresem armii, zdrowia baz i złota.	true
+feature_1024x500.png	1024	500	Wódz na polu bitwy i logo Century War na grafice promocyjnej.	true
