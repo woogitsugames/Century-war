@@ -162,6 +162,7 @@ object L {
         putAll(part144())
         putAll(part145())
         putAll(part150())
+        putAll(part151())
         }
     }
 
@@ -205,6 +206,15 @@ object L {
     )
 
     /** Tura 10 (szlif przed premierą): odnowienie misji, puste powtórki, potwierdzenie usuwania. */
+    /** Tura 10, szlif 2: krótka zakładka Oblężenia w Rekordach, wczytywanie listy powtórek. */
+    private fun part151(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "endless151_tab" to t("Oblężenie", "Endless", "Endlos", "Asedio", "Siège", "Assedio",
+            "Cerco", "Облога", "Beleg", "Kuşatma"),
+        "replay151_list_loading" to t("Wczytywanie powtórek…", "Loading replays…", "Wiederholungen werden geladen…",
+            "Cargando repeticiones…", "Chargement des replays…", "Caricamento dei replay…", "A carregar repetições…",
+            "Завантаження повторів…", "Herhalingen laden…", "Tekrarlar yükleniyor…"),
+    )
+
     private fun part150(): Array<Pair<String, Array<out String>>> = arrayOf(
         "ms150_reset" to t("Nowe za %s", "New in %s", "Neu in %s", "Nuevas en %s", "Nouvelles dans %s",
             "Nuove tra %s", "Novas em %s", "Нові через %s", "Nieuw over %s", "Yenileri %s sonra"),
