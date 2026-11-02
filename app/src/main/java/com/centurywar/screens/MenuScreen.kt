@@ -12,6 +12,7 @@ import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Screen
+import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
@@ -35,6 +36,23 @@ class MenuScreen(g: Game) : Screen(g) {
     private val missions = btn(9)
     private val settings = btn(7)
     private val codex = btn(8)
+    private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, research,
+        rankings, missions, settings, codex)
+    private val scrollCue = ScrollCue()
+    internal var portraitMenu = false
+        private set
+    internal var portraitScroll = 0f
+        private set
+    internal var portraitMaxScroll = 0f
+        private set
+    internal var portraitTop = 0f
+        private set
+    internal var portraitBottom = 0f
+        private set
+    private var portraitLeft = 0f
+    private var portraitWidth = 0f
+    private var portraitTileHeight = 0f
+    private var portraitGap = 0f
     // pytanie o wznowienie przerwanej bitwy (g.resumeOffer)
     private val resumeYes = btn(RESUME_YES)
     private val resumeNo = btn(RESUME_NO)
@@ -95,7 +113,7 @@ class MenuScreen(g: Game) : Screen(g) {
     private var subY = 0f
     /** Pionowy pas między podtytułem i pierwszym rzędem menu, dla powiadomień. */
     internal val noticeTop: Float get() = subY + max(10 * dp, logoSize * 0.26f)
-    internal val noticeBottom: Float get() = campaign.r.top - 6 * dp
+    internal val noticeBottom: Float get() = (if (portraitMenu) portraitTop else campaign.r.top) - 6 * dp
     private val plate = RectF()
     private var plateRight = 0f
 
@@ -113,6 +131,16 @@ class MenuScreen(g: Game) : Screen(g) {
         campaign.subIcon = if (firstTutorialReady()) -1 else Icons.STAR
         research.subIcon = Icons.MEDAL
         campaign.highlight = true
+
+        // Android może przydzielić pionowe lub bardzo wąskie okno mimo sensorLandscape.
+        portraitMenu = h > w || w - g.insetL - g.insetR < 520 * dp
+        if (portraitMenu) {
+            layoutPortrait()
+            layoutResume(w / 2 + (g.insetL - g.insetR) / 2)
+            refreshMissionBadge()
+            return
+        }
+        for (b in portraitTiles) b.visible = true
 
         val availW = w - g.insetL - g.insetR - 32 * dp
         // Wąski ekran zewnętrzny Folda: pełna, pojedyncza kolumna zamiast miniaturowej siatki.
@@ -179,6 +207,73 @@ class MenuScreen(g: Game) : Screen(g) {
         codex.set(settings.r.left - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         layoutResume(cx)
         refreshMissionBadge()
+    }
+
+    /** Osobny układ pionowy; istniejąca geometria pozioma pozostaje nietknięta. */
+    private fun layoutPortrait() {
+        val safeW = w - g.insetL - g.insetR
+        val cx = (w + g.insetL - g.insetR) / 2f
+        portraitWidth = min(420 * dp, (safeW - 32 * dp).coerceAtLeast(1f))
+        portraitLeft = cx - portraitWidth / 2f
+        portraitGap = 10 * dp
+        portraitTileHeight = max(56f, 56f * ui.textScale) * dp
+
+        logoFill.typeface = ui.heavy
+        logoLine.typeface = ui.heavy
+        logoFill.textSize = 100f
+        val ratio = (logoFill.measureText(L["title"]) / 100f).coerceAtLeast(1f)
+        logoSize = min(34 * dp, max(24 * dp, (safeW - 32 * dp) / ratio))
+        logoY = g.insetT + 122 * dp
+        subY = logoY + logoSize * 0.62f
+        logoFill.textSize = logoSize
+        logoLine.textSize = logoSize
+        logoFill.shader = LinearGradient(0f, logoY - logoSize * 0.75f, 0f, logoY,
+            intArrayOf(Color.rgb(255, 248, 196), Color.rgb(255, 206, 60),
+                Color.rgb(232, 132, 28)), floatArrayOf(0f, 0.5f, 1f),
+            Shader.TileMode.CLAMP)
+
+        // Baner powiadomienia ma własne 50 dp między logotypem i przewijaną listą.
+        portraitBottom = h - g.insetB - 12 * dp
+        portraitTop = min(subY + 69 * dp, portraitBottom - 48 * dp)
+        val contentHeight = portraitTiles.size * portraitTileHeight +
+            (portraitTiles.size - 1) * portraitGap + 12 * dp
+        portraitMaxScroll = max(0f, contentHeight - (portraitBottom - portraitTop))
+        portraitScroll = portraitScroll.coerceIn(0f, portraitMaxScroll)
+
+        settings.label = L["settings"]
+        codex.label = L["codex"]
+        positionPortraitTiles()
+    }
+
+    /** Pozycje są przeliczane przy przeciąganiu, bez tworzenia obiektów w klatce. */
+    private fun positionPortraitTiles() {
+        val step = portraitTileHeight + portraitGap
+        val firstY = portraitTop + 6 * dp - portraitScroll
+        for (i in portraitTiles.indices) {
+            val b = portraitTiles[i]
+            b.set(portraitLeft, firstY + i * step, portraitWidth, portraitTileHeight)
+            b.visible = b.r.bottom > portraitTop && b.r.top < portraitBottom
+        }
+    }
+
+    override fun isDragScreen() = portraitMenu
+
+    override fun onDrag(dx: Float, dy: Float) {
+        if (!portraitMenu || g.resumeOffer != null) return
+        val next = (portraitScroll - dy).coerceIn(0f, portraitMaxScroll)
+        if (next == portraitScroll) return
+        portraitScroll = next
+        positionPortraitTiles()
+        hints.onAction()
+    }
+
+    override fun onTouch(e: TouchEvent): Boolean {
+        if (!portraitMenu || g.resumeOffer != null || hints.okBtn.visible) return false
+        if (e.action == TouchEvent.DOWN && (e.y < portraitTop || e.y >= portraitBottom))
+            return true
+        if (e.action == TouchEvent.UP && (e.y < portraitTop || e.y >= portraitBottom))
+            for (b in portraitTiles) b.pressed = false
+        return false
     }
 
     private fun layoutResume(cx: Float) {
@@ -265,13 +360,36 @@ class MenuScreen(g: Game) : Screen(g) {
         val time = bg.draw(c, w, h, dt, animated, detail)
         battleScene.draw(c, w, h, time, animated, detail)
         drawLogo(c)
-        // Pętla po indeksie: iterator ArrayList byłby alokacją na każdą klatkę.
-        for (i in buttons.indices) {
-            val b = buttons[i]
-            if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn) ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
+        if (portraitMenu) {
+            val saved = c.save()
+            c.clipRect(g.insetL, portraitTop, w - g.insetR, portraitBottom)
+            for (b in portraitTiles) if (b.visible) ui.button(c, b, 17f)
+            drawTileBadges(c)
+            c.restoreToCount(saved)
+            scrollCue.vertical(c, w - g.insetR - 12 * dp, portraitTop, portraitBottom,
+                portraitScroll, portraitMaxScroll, dp)
+            drawPlayer(c)
+        } else {
+            // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).
+            for (i in buttons.indices) {
+                val b = buttons[i]
+                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn)
+                    ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
+            }
+            drawPlayer(c)
+            drawTileBadges(c)
+            ui.textO(c, L["codex"], codex.r.centerX(), codex.r.bottom + 13 * dp,
+                ui.fit(L["codex"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
+            ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
+                ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
         }
-        drawPlayer(c)
-        if (eliteReady) {
+        if (g.resumeOffer == null) hints.draw(c)
+        drawHeldTooltip(c)
+        if (g.resumeOffer != null) drawResume(c)
+    }
+
+    private fun drawTileBadges(c: Canvas) {
+        if (eliteReady && research.visible) {
             val bx = research.r.right - 15 * dp
             val by = research.r.top + 6 * dp
             ui.fill.color = Ui.OUTLINE
@@ -280,7 +398,7 @@ class MenuScreen(g: Game) : Screen(g) {
             c.drawCircle(bx, by, 12.5f * dp, ui.fill)
             ui.textO(c, "!", bx, by + 5 * dp, 15f, Ui.TEXT, Paint.Align.CENTER)
         }
-        if (claimableMissions > 0) {
+        if (claimableMissions > 0 && missions.visible) {
             val bx = missions.r.right - 15 * dp
             val by = missions.r.top + 6 * dp
             ui.fill.color = Ui.OUTLINE
@@ -290,13 +408,6 @@ class MenuScreen(g: Game) : Screen(g) {
             ui.textO(c, missionBadgeText, bx, by + 5 * dp, 15f,
                 Ui.TEXT, Paint.Align.CENTER)
         }
-        ui.textO(c, L["codex"], codex.r.centerX(), codex.r.bottom + 13 * dp,
-            ui.fit(L["codex"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
-        ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
-            ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
-        if (g.resumeOffer == null) hints.draw(c)
-        drawHeldTooltip(c)
-        if (g.resumeOffer != null) drawResume(c)
     }
 
     private fun drawResume(c: Canvas) {
@@ -348,7 +459,14 @@ class MenuScreen(g: Game) : Screen(g) {
         c.drawText(title, cx, logoY - s * 0.02f, logoLine)
         c.restore()
         // podtytuł na wstędze
-        ui.ribbon(c, cx, subY, L["subtitle"], min(16f, s / dp * 0.3f), Ui.RIBBON, s * 4.2f, Ui.TEXT)
+        if (portraitMenu) {
+            val safeW = w - g.insetL - g.insetR - 24 * dp
+            ui.ribbon(c, cx, subY, L["subtitle"], min(16f, s / dp * 0.3f),
+                Ui.RIBBON, min(s * 4.2f, safeW - 28 * dp), Ui.TEXT, safeW)
+        } else {
+            ui.ribbon(c, cx, subY, L["subtitle"], min(16f, s / dp * 0.3f),
+                Ui.RIBBON, s * 4.2f, Ui.TEXT)
+        }
     }
 
     private fun drawPlayer(c: Canvas) {
