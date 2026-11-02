@@ -156,8 +156,15 @@ object L {
         putAll(part139())
         putAll(part141())
         putAll(part135())
+        putAll(part143())
         }
     }
+
+    /** Tura 9 (UX nowego gracza): zablokowane badania i etapy mówią, co zrobić dalej. */
+    private fun part143(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "rs143_need" to t("Medale: %d z %d. Zdobywasz je w każdej bitwie.", "Medals: %d of %d. Every battle earns more.", "Medaillen: %d von %d. Jede Schlacht bringt mehr.", "Medallas: %d de %d. Cada batalla da más.", "Médailles : %d sur %d. Chaque bataille en rapporte.", "Medaglie: %d su %d. Ogni battaglia ne dà altre.", "Medalhas: %d de %d. Cada batalha dá mais.", "Медалі: %d з %d. Кожна битва дає ще.", "Medailles: %d van %d. Elke strijd levert meer op.", "Madalya: %d / %d. Her savaş madalya kazandırır."),
+        "cp143_locked" to t("Etap zablokowany. Najpierw wygraj etap %d.", "Stage locked. Win stage %d first.", "Etappe gesperrt. Gewinne zuerst Etappe %d.", "Etapa bloqueada. Gana primero la etapa %d.", "Étape verrouillée. Gagnez d’abord l’étape %d.", "Tappa bloccata. Vinci prima la tappa %d.", "Etapa bloqueada. Vença primeiro a etapa %d.", "Етап заблоковано. Спершу виграй етап %d.", "Etappe vergrendeld. Win eerst etappe %d.", "Aşama kilitli. Önce %d. aşamayı kazan."),
+    )
 
     /** Zlecenie 141: jak odblokować jednostkę elitarną (nazwa i koszt badania z Research). */
     private fun part141(): Array<Pair<String, Array<out String>>> = arrayOf(

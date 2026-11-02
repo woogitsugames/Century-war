@@ -127,7 +127,8 @@ class ResearchScreen(g: Game) : Screen(g) {
         c.restore()
         ui.button(c, back, 16f)
         chrome.title(c, L["research"])
-        chrome.badges(c, g.profile.medals)
+        // Tura 9: podświetlenie dymka obejmuje samą plakietkę medali, nie pusty pas obok.
+        hintMedalsRect.left = chrome.badges(c, g.profile.medals) - 4 * dp
         hints.draw(c)
     }
 
@@ -182,6 +183,24 @@ class ResearchScreen(g: Game) : Screen(g) {
             Icons.draw(c, Icons.MEDAL, pl + 15 * dp, cy, 18 * dp, dp = dp)
         }
         ui.textO(c, cost, pl + 27 * dp, cy + 5 * dp, 14f, if (maxed || can) Ui.TEXT else Ui.DIM)
+    }
+
+    /** Tura 9: ostatni komunikat po dotknięciu badania, na które gracza nie stać (do testów). */
+    internal var lastNotice = ""
+
+    // Karta, na którą nie stać gracza, nie może milczeć: tap trafia do [onTap].
+    override fun swallowsInactiveTap(b: Button): Boolean = b.tag !is ResearchDef
+
+    override fun onTap(x: Float, y: Float) {
+        val b = cards.firstOrNull { it.contains(x, y) } ?: return
+        val d = b.tag as ResearchDef
+        val pr = g.profile
+        val lv = pr.level(d.key)
+        if (lv >= d.max) return
+        hints.onAction()
+        lastNotice = L.f("rs143_need", pr.medals, d.cost(lv))
+        g.showNotice(lastNotice, Icons.MEDAL)
+        g.sfx(Sound.ERROR, 0.34f, 150)
     }
 
     override fun onClick(b: Button) {

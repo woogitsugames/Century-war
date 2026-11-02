@@ -153,6 +153,8 @@ class BattleScreen(
     internal var resultTipCount = 0
 
     internal companion object {
+        /** Odstęp tekstu kart doktryn/kart Endless od krawędzi (lamówka + 6 dp), w dp. */
+        const val CHOICE_TEXT_PAD = Ui.PANEL_TRIM_INSET + 6f
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
         val CARD_RARITY = intArrayOf(
             android.graphics.Color.rgb(150, 104, 60), android.graphics.Color.rgb(84, 112, 150),
@@ -656,6 +658,7 @@ class BattleScreen(
                 }
             }
         }
+        if (paused || finished) tut?.hideUnderOverlay()
         evolveBanner.update(dt, battle.player.era, cfg.maxEra, evolveBtn.enabled && evolveBtn.visible,
             finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
                 battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null ||
@@ -1429,6 +1432,8 @@ class BattleScreen(
         if (!finished && !paused) evolveBanner.draw(c, ui)
         if (!finished) {
             tut?.draw(c)
+            // Pod pauzą samouczek widać, ale jego przyciski nie mogą łapać dotyku (leżą na liście pierwsze).
+            if (paused) tut?.hideUnderOverlay()
             hints.draw(c)
         }
         if (paused && !finished) drawPausePanel(c)
@@ -1595,13 +1600,14 @@ class BattleScreen(
             val key = if (cards == null) doctrines!![i].key else cards[i].textKey
             val name = L[key]
             ui.textO(c, name, tmpR.centerX(), my + mr + 23 * dp,
-                ui.fit(name, 17f, tmpR.width() - 18 * dp), Ui.GOLD, Paint.Align.CENTER)
+                ui.fit(name, 17f, tmpR.width() - 2 * CHOICE_TEXT_PAD * dp), Ui.GOLD, Paint.Align.CENTER)
             if (rarity != null) {
                 ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
                     10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
             }
             val descKey = choiceDescriptionKey(cards?.get(i), doctrines?.get(i))
-            val wrapWidth = tmpR.width() - 22 * dp
+            // Tura 9: tekst karty nie dotyka złotej lamówki (Ui.PANEL_TRIM_INSET), także na Foldzie.
+            val wrapWidth = tmpR.width() - 2 * CHOICE_TEXT_PAD * dp
             val choiceKey = if (cards == null) doctrines!![i].ordinal else 100 + cards[i].ordinal
             if (choiceDescKey[i] != choiceKey || choiceDescLanguage != L.lang ||
                 choiceDescWidth != wrapWidth || choiceDescScale != ui.textScale) {
@@ -1615,7 +1621,7 @@ class BattleScreen(
                 12f, Ui.TEXT, Paint.Align.CENTER)
         }
         choiceDescLanguage = L.lang
-        choiceDescWidth = doctrineBtn[0].r.width() - 22 * dp
+        choiceDescWidth = doctrineBtn[0].r.width() - 2 * CHOICE_TEXT_PAD * dp
         choiceDescScale = ui.textScale
     }
 

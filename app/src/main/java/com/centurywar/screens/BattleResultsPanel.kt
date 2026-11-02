@@ -48,6 +48,23 @@ import kotlin.math.min
 
 /** Mechaniczne wydzielenie BattleResultsPanel; ten sam stan i kolejność operacji co w BattleScreen. */
 internal class BattleResultsPanel(private val owner: BattleScreen) {
+    internal companion object {
+        const val REPLAY_LABEL_DP = 15f
+    }
+
+    /**
+     * Tura 9: na wąskim panelu (zewnętrzny Fold) „Obejrzyj powtórkę” obok ikony kurczyło się
+     * do nieczytelnych ~8 sp; wtedy przycisk mówi krótko „Powtórka”.
+     */
+    internal fun replayLabel(current: String): String {
+        with(owner) {
+            val full = L["battle84_watch_replay"]
+            if (current != full && current != L["replay"]) return current
+            val r = replayEnd.r
+            val avail = r.width() - r.height() * 0.88f - 16 * dp
+            return if (ui.fit(full, REPLAY_LABEL_DP, avail) >= REPLAY_LABEL_DP * 0.75f) full else L["replay"]
+        }
+    }
 
     fun layoutResults() {
         with(owner) {
@@ -72,6 +89,9 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         val tw = (rw - 40 * dp - gap) / 2f
         resultStatsTab.set(resultPanel.left + 20 * dp, resultPanel.top + 39 * dp, tw, 30 * dp)
         resultChartTab.set(resultStatsTab.r.right + gap, resultStatsTab.r.top, tw, 30 * dp)
+        // Tura 9: zakładki mają 30 dp wysokości; cel dotyku 48 dp bez zmiany wyglądu.
+        resultStatsTab.hitSlop = 9 * dp
+        resultChartTab.hitSlop = 9 * dp
         resultChartArea.set(resultPanel.left + 15 * dp, resultPanel.top + 73 * dp,
             resultPanel.right - 15 * dp, restartEnd.r.top - 7 * dp)
         resultChart.prepare(battleSummary, resultChartArea, dp)
@@ -246,7 +266,10 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         if (resultChartTab.visible) ui.button(c, resultChartTab, 12f)
         ui.button(c, continueBtn, 17f)
         ui.button(c, restartEnd, 17f)
-        if (replayEnd.visible) ui.button(c, replayEnd, 15f)
+        if (replayEnd.visible) {
+            replayEnd.label = replayLabel(replayEnd.label)
+            ui.button(c, replayEnd, REPLAY_LABEL_DP)
+        }
         }
     }
 }

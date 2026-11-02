@@ -611,7 +611,7 @@ class Ui {
             } else {
                 val sz = fit(b.label, labelDp, avail)
                 textO(c, b.label, tx, cy - 1 * dp, sz, tc)
-                subLine(c, b, tx, cy + labelDp * dp * 0.86f, labelDp * 0.74f, subC, left = true)
+                subLine(c, b, tx, cy + labelDp * dp * 0.86f, labelDp * 0.74f, subC, left = true, maxW = avail)
             }
         } else if (id >= 0) {
             // ikona wyśrodkowana; podpis pod spodem
@@ -659,11 +659,23 @@ class Ui {
         c.drawRoundRect(tmp, rad, rad, pf)
     }
 
+    /**
+     * Tura 9: rozmiar podpisu od lewej, tak aby nie wychodził poza przycisk
+     * (np. „Zniszcz bazę wroga” na wąskim ekranie); [maxW] = 0 — bez ograniczenia.
+     */
+    internal fun subTextSize(b: Button, sizeDp: Float, maxW: Float): Float {
+        val iconW = if (b.subIcon >= 0) sizeDp * dp * 1.25f + 3 * dp else 0f
+        val room = maxW - iconW
+        return if (maxW > 0f && room > 0f && b.sub.isNotEmpty()) fit(b.sub, sizeDp, room) else sizeDp
+    }
+
     /** Podpis z opcjonalną ikoną (wyśrodkowany albo od lewej). */
-    private fun subLine(c: Canvas, b: Button, x: Float, baseY: Float, sizeDp: Float, color: Int, left: Boolean = false) {
+    private fun subLine(c: Canvas, b: Button, x: Float, baseY: Float, sizeDp: Float, color: Int,
+                        left: Boolean = false, maxW: Float = 0f) {
         val hasIcon = b.subIcon >= 0
         val isz = sizeDp * dp * 1.25f
-        val tw = if (b.sub.isEmpty()) 0f else measure(b.sub, sizeDp, true)
+        val sz = subTextSize(b, sizeDp, maxW)
+        val tw = if (b.sub.isEmpty()) 0f else measure(b.sub, sz, true)
         val gap = if (hasIcon && tw > 0f) 3 * dp else 0f
         val total = (if (hasIcon) isz else 0f) + gap + tw
         var xx = if (left) x else x - total / 2
@@ -671,7 +683,7 @@ class Ui {
             Icons.draw(c, b.subIcon, xx + isz / 2, baseY - sizeDp * dp * 0.36f, isz, dp = dp)
             xx += isz + gap
         }
-        if (tw > 0f) textO(c, b.sub, xx, baseY, sizeDp, color)
+        if (tw > 0f) textO(c, b.sub, xx, baseY, sz, color)
     }
 
     /** Mała plakietka w rogu przycisku (np. poziom Zbrojowni). */
