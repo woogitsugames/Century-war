@@ -289,7 +289,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
                 val key = -uc - 2
                 if (slotBuyKey[i] != key || slotLabelLanguage != L.lang) {
                     slotBuyKey[i] = key
-                    slotBuy[i].label = if (uc < 0) "" else "${L["upgrade"]} $uc"
+                    slotBuy[i].label = if (uc < 0) L["tier145_max"] else "${L["upgrade"]} $uc"
                 }
                 slotBuy[i].iconId = if (uc < 0) Icons.CHECK else Icons.EVOLVE
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
@@ -313,6 +313,12 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             }
             slotSell[i].iconId = Icons.COIN
             slotSell[i].color = Ui.BTN_RED
+            // W wyjątkowo niskim wierszu podpis zastępuje ikonę nad tekstem.
+            if (slotBuy[i].r.height() < 42 * dp) {
+                slotBuy[i].iconId = -1
+                slotTier[i].iconId = -1
+                slotSell[i].iconId = -1
+            }
         }
         closeBtn.visible = tp
         if (tp) slotLabelLanguage = L.lang
