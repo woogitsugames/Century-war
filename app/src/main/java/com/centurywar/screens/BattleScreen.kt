@@ -187,6 +187,7 @@ class BattleScreen(
         const val UNIT_UPGRADE_CLOSE = 75
         const val RESULT_STATS_TAB = 201
         const val RESULT_CHART_TAB = 202
+        const val COMMANDER = 203
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
         /** Szerokość bloku liczebności armii (ikona, liczby, dwukropek) w dp. */
@@ -224,6 +225,7 @@ class BattleScreen(
     internal val rallyBtn = btn(RALLY)
     internal val stanceBtn = btn(STANCE)
     internal val speedBtn = btn(SPEED)
+    internal val commanderBtn = btn(COMMANDER)
     internal val evolveBtn = btn(EVOLVE)
     internal val pauseBtn = btn(PAUSE)
     internal val pauseMenu = listOf(btn(RESUME), btn(RESTART), btn(QUIT))
@@ -345,7 +347,7 @@ class BattleScreen(
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(
         unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
-        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn, unitBtn[3],
+        goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn, unitBtn[3], commanderBtn,
     ), rankedDaily)
 
     /** Plansza nie zapisuje komend i nie wykonuje kroków symulacji. */
@@ -678,8 +680,8 @@ class BattleScreen(
 
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
-    private val costCache = IntArray(6) { -1 }
-    private val costText = Array(6) { "" }
+    private val costCache = IntArray(7) { -1 }
+    private val costText = Array(7) { "" }
     internal var armoryLv = -1
     internal var turretHeadingEra = -1
     internal var turretHeadingVariant = -1
@@ -741,6 +743,10 @@ class BattleScreen(
             BARRAGE -> {
                 title = L["tip53_barrage_title"]
                 body = L.f("tip53_barrage", kotlin.math.ceil(p.abilityCd[0].toDouble()).toInt())
+            }
+            COMMANDER -> {
+                title = L["comm125_name"]
+                body = L["comm125_tip"]
             }
             RALLY -> {
                 title = L["rally"]
@@ -840,6 +846,7 @@ class BattleScreen(
             ARMORY -> commands.armory()
             BARRAGE -> barrageView.onButton()
             RALLY -> commands.rally()
+            COMMANDER -> commands.summonCommander()
             STANCE -> commands.stance(!p.hold)
             SPEED, PAUSE_SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
             PAUSE_VIBRATION -> {
@@ -1371,7 +1378,7 @@ class BattleScreen(
     internal val resultPanel = RectF()
     internal val tmpR = RectF()
     internal val actionBtns get() = actionArr
-    private val actionArr = arrayOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn)
+    private val actionArr = arrayOf(turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, commanderBtn)
     internal var goldShown = -1
     internal var goldText = ""
     internal var capKey = -1
