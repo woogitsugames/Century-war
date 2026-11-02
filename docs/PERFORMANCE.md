@@ -204,3 +204,72 @@ nadmiernego wzrostu kosztu wraz z liczbą jednostek, **nie** gwarancja
 
 Wyniki liczbowe startupu i GPU trzeba zebrać na fizycznym telefonie; w
 repozytorium nie zakładamy, że pomiar hosta jest pomiarem telefonu.
+
+
+## Fala 6 — zlecenie 152: dowódcy, wieże, Endless 55
+
+### Warunki pomiarów
+
+Ten sam scenariusz w `Wave6PerformanceFixture`: po jednym dowódcy na stronę
+(aura i Impuls), 12 vs 12 żywych jednostek, cztery wieże poziomu III na każdej
+stronie, naprzemienne epoki wież dające rozprysk i podpalenie, Endless fala 55,
+720p (1600×720), LOW / HIGH. Test CPU rozgrzewa 120 klatek, mierzy 240
+kolejnych; mediana to element nr 120, p95 nr 227.
+Pomiary JVM pochodzą z Ubuntu GitHub Actions, Robolectric NATIVE, Android SDK 35
+(emulowany) przy kompilacji dla SDK 36, Java 17. **Nie są pomiarem GPU telefonu.**
+
+Kod bazowy: `85e90b6`, kod po zmianach `126211c5`. Obie wersje uruchomiono
+na tym samym runnerze w jednym przebiegu [Performance 152, #41501887238](https://github.com/woogitsugames/Century-war/actions/runs/41501887238)
+(artefakt `performance-152-logs`).
+
+| Jakość | Przed: update mediana/p95 (ms) | Po: update mediana/p95 (ms) | Przed: draw mediana/p95 (ms) | Po: draw mediana/p95 (ms) |
+|---|---:|---:|---:|---:|
+| LOW | 0,072 / 0,154 | 0,039 / 0,075 | 14,855 / 16,189 | 14,410 / 15,712 |
+| HIGH | 0,033 / 0,065 | 0,036 / 0,065 | 16,650 / 17,620 | 16,871 / 17,894 |
+
+Są to pomiary czasów `BattleScreen.update()` (krok symulacji wraz z obsługą
+ekranu) i `BattleScreen.render()` osobno. Różnice, zwłaszcza w HIGH, mieszczą
+się w szumie pomiarowym runnera. Nowszy test mierzy dodatkowo sam
+`Battle.step()`; jego wyniki są odrębne od pomiarów update.
+
+### Alokacje i cykl życia pamięci
+
+W pierwszym pomiarze 600 przeplatanych `update + draw` przy LOW alokowało
+łącznie **688 B**, samo powtórzone `draw` **48 B**. Pierwszy wariant testu,
+wykonujący 600 samych `update()` bez `draw()`, przydzielił 28 672 B i nie
+spełnił progu 16 KiB — taki przebieg nie odwzorowuje rzeczywistej pętli gry.
+Test końcowy mierzy więc przeplatane klatki i niezależnie draw, z limitem
+4096 B na 600 iteracji, i uruchamia zarówno LOW, jak i HIGH.
+Nie utożsamiać tego progu tolerancji JVM z matematycznym zerem alokacji.
+
+Przy 20 przejściach menu ↔ bitwa w dwóch grupach po 10, z GC między pomiarami,
+test na commicie `126211c5` uzyskał:
+
+| Jakość | Sterta po 10 (B) | Sterta po 20 (B) | Przyrost (B) | Zachowane stare ekrany |
+|---|---:|---:|---:|---:|
+| LOW | 76 946 496 | 76 960 424 | 13 928 | 0 |
+| HIGH | 77 000 072 | 77 001 512 | 1 440 | 0 |
+
+`BaseFlashCache.release()` recykluje bitmapy błysku bazy przy `onPause()`
+ekranu bitwy, niezależnie od momentu GC. Test dodatkowo sprawdza, że cache
+realnie został utworzony (do 2 MiB przy memoryClass 64 MiB) i po opuszczeniu
+bitwy zgłasza 0 B. Nie zmieniono danych, reguł, balansu, formatu powtórki,
+`SimVersion.PROTOCOL` ani wyglądu.
+
+### Weryfikacja
+
+```bash
+./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+PERF_REPORT=true ./gradlew :app:testDebugUnitTest \
+  --tests '*BattleCrowdPerformance101Test*' \
+  --tests '*BattleScreenAllocationTest*' \
+  --tests '*LowEndScreensPerformanceTest*' \
+  --tests '*HudDigits152Test*' \
+  --tests '*HudDigits152RenderTest*' \
+  --tests '*ReplayTest*' \
+  --tests '*ScreenshotTest*' --console=plain --no-configuration-cache
+```
+
+**Ograniczenie:** JVM/Robolectric nie mierzy GPU, temperatury ani PSS na
+fizycznym urządzeniu 2–3 GB RAM. Osobna walidacja na sprzęcie docelowym
+(720p oraz Fold) jest nadal potrzebna.
