@@ -281,7 +281,8 @@ class BattleHistory(private val file: File) {
                     SaveGuard.report("history-version")
                     continue
                 }
-                val array = root.optJSONArray("entries") ?: run {
+                val array = root.optJSONArray("entries")
+                if (array == null) {
                     SaveGuard.report("history-entries")
                     continue
                 }
