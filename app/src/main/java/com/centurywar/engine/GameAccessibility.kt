@@ -58,8 +58,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
 
     private val manager = view.context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
     @Volatile private var tree: Tree? = null
-    private var focused = NONE
-    private var hovered = NONE
+    @Volatile private var focused = NONE
+    @Volatile private var hovered = NONE
     internal var revision = 0
         private set
 
@@ -208,8 +208,13 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         val next = Tree(screen, kind, title, L.lang, vw, vh, game.width, game.height, nodes)
         tree = next
         revision++
-        if (focused != NONE && nodes.none { it.id == focused }) focused = NONE
-        if (hovered != NONE && nodes.none { it.id == hovered }) hovered = NONE
+        if (before == null || before.screen !== screen || before.kind != kind) {
+            focused = NONE
+            hovered = NONE
+        } else {
+            if (focused != NONE && nodes.none { it.id == focused }) focused = NONE
+            if (hovered != NONE && nodes.none { it.id == hovered }) hovered = NONE
+        }
         // Powiadomienie wysyłamy z UI; wiele szybkich zmian scala kontrola tożsamości.
         view.post {
             if (tree === next && view.isAttachedToWindow)
