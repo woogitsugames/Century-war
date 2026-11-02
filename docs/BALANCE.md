@@ -809,6 +809,100 @@ przeanalizować, ponieważ 1 wygrana z 20 odpowiada 5 p.p.
 Wyniki liczbowe należy przenieść z ukończonego przebiegu CI do opisu PR.
 Do czasu ukończenia pomiarów nie zakładamy, że limit ±5 p.p. jest spełniony.
 
+### Pomiar tury 8 (2.11.2026)
+
+Metoda: `BalanceReport.campaignReport` (profil docelowy, seedy
+`246813579 + etap × 10007 + próba × 997`), liczony szybką równoległą kopią
+(niecommitowaną, wyniki identyczne bitwa w bitwę; przy 100 seedach pierwsze 20 to
+oficjalna próba). Baza „przed 127” = obecny kod z `Ai.kt` i `AiPersonality.kt`
+sprzed scalenia `e04c1517` (inne paczki nie ruszały tych plików; Normalny 126 daje
+identyczne `aiPower`). Na 20 seedach baza odtwarza tabelę z tury 6 co do etapu.
+
+**Wynik scalonej paczki 127 (bez poprawek):** średnia 65,7% → 66,5% (100 seedów),
+na 20 seedach 67,8% → 67,8%. Pojedyncze etapy na 20 seedach skakały o 20–30 p.p.
+(1: 100 → 75%, 18: 65 → 40%, 24: 65 → 35%), na 100 seedach poza ±5 p.p. o więcej niż
+szum (σ różnicy ≈ 7 p.p.) zostały: etap 17 (+16), 18 (−9), 12 (−8), 27 i 33 (+11).
+
+**Błędy wykryte w testach po 127:**
+
+- `AiPersonalityProfileTest`: Ekonomista wygrywał 87,5% (próg 30–70%). Na 100 seedach
+  przeciw BALANCED: 67,5% przed 127, 69,5% po 127 — źródłem była podwójna
+  inwestycja w ulepszenia (`upgradeReserve` 0,75 i dodatkowo ×0,65 bez zagrożenia).
+- `DoctrineBalance82Test`: VETERAN 67,5% (próg 40–60%) przez silniejsze kontry BALANCED (+55/+45).
+- `GoldenReplayTest` i `ChallengeRules109Test` (archiwalna powtórka dnia): każda zmiana
+  decyzji AI zmienia przebieg nagrań — to oczekiwane, nie błąd; wzorce zregenerowano.
+  Uwaga dla rankingu: stare powtórki dnia nie przejdą weryfikacji nowym AI (wersję
+  rankingu/`SimVersion` podnosi koordynator).
+
+**Korekty tury 8 (tylko decyzje AI, bez statystyk):**
+
+| Parametr | 127 | Tura 8 |
+|---|---:|---:|
+| ECONOMIST `pushArmySize` | 7 | **5** |
+| ECONOMIST `upgradeReserve` | 0,75 | **0,90** |
+| ECONOMIST mnożnik rezerwy bez zagrożenia | 0,65 | **0,80** |
+| BALANCED waga kontry dystans/ciężcy | +55 | **+45** |
+| BALANCED waga ciężkich na wręcz | +45 | **+35** |
+| BALANCED `evolveDelay` | 3 s | **6 s** |
+
+Zachowane cechy 127: Ekonomista wstrzymuje natarcie od 105 s już w przedostatniej
+epoce, Oblężnik buduje wieże od 18 s i celuje ostrzałem w najdalszą jednostkę,
+BALANCED mocniej (niż przed 127) reaguje kontrami. Sonda 100 seedów (osobowość przeciw
+BALANCED): ASSAULT 61%, ENGINEER 45%, ECONOMIST 64%, SIEGER 56%, BALANCED 49%.
+Opóźnienie awansu BALANCED przywraca kolejność „Ekonomista awansuje najwcześniej”
+(114,2 s wobec 115,3 s), którą osłabienie kontr odwróciło.
+
+**Kampania po turze 8 (Normalny, profil docelowy):** zawiera też uczciwe elity wroga
+(sekcja niżej) i korekty `stageRamp`; etapy 1–6 zmieniły się głównie przez elity.
+
+| Etap | Przed 127 (100) | Po 127, scalone (100) | Tura 8 (100) | Tura 8 (20) | Δ |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 89% | 86% | 90% | 85% | +1 |
+| 2 | 92% | 88% | 81% | 90% | -11 |
+| 3 | 91% | 94% | 90% | 100% | -1 |
+| 4 | 85% | 80% | 91% | 95% | +6 |
+| 5 | 91% | 96% | 92% | 100% | +1 |
+| 6 | 93% | 91% | 89% | 90% | -4 |
+| 7 | 72% | 67% | 72% | 80% | +0 |
+| 8 | 67% | 66% | 67% | 65% | +0 |
+| 9 | 64% | 69% | 75% | 80% | +11 |
+| 10 | 71% | 70% | 71% | 75% | +0 |
+| 11 | 60% | 64% | 64% | 60% | +4 |
+| 12 | 73% | 65% | 70% | 70% | -3 |
+| 13 | 66% | 64% | 67% | 65% | +1 |
+| 14 | 57% | 63% | 61% | 60% | +4 |
+| 15 | 59% | 56% | 55% | 60% | -4 |
+| 16 | 61% | 59% | 62% | 65% | +1 |
+| 17 | 54% | 70% | 59% | 60% | +5 |
+| 18 | 56% | 47% | 53% | 60% | -3 |
+| 19 | 64% | 59% | 61% | 60% | -3 |
+| 20 | 74% | 70% | 71% | 80% | -3 |
+| 21 | 70% | 74% | 71% | 65% | +1 |
+| 22 | 55% | 55% | 58% | 60% | +3 |
+| 23 | 65% | 67% | 64% | 65% | -1 |
+| 24 | 52% | 47% | 51% | 45% | -1 |
+| 25 | 47% | 54% | 59% | 70% | +12 |
+| 26 | 68% | 66% | 65% | 65% | -3 |
+| 27 | 58% | 69% | 64% | 70% | +6 |
+| 28 | 57% | 61% | 60% | 70% | +3 |
+| 29 | 71% | 76% | 73% | 70% | +2 |
+| 30 | 58% | 63% | 66% | 70% | +8 |
+| 31 | 52% | 50% | 47% | 50% | -5 |
+| 32 | 68% | 61% | 65% | 65% | -3 |
+| 33 | 60% | 71% | 68% | 60% | +8 |
+| 34 | 52% | 56% | 57% | 55% | +5 |
+| 35 | 60% | 62% | 62% | 55% | +2 |
+| 36 | 34% | 39% | 38% | 35% | +4 |
+| śr. | **65,7%** | **66,5%** | **66,9%** | **68,6%** | |
+
+Na 20 seedach **36/36** etapów mieści się w pasmach `tools/check_campaign_balance.py`
+(1–6: 85–100%, 7–27: 45–85%, 28–33: 40–75%, 34–36: 25–55%), 0 timeoutów.
+Względem bazy przed 127 na 100 seedach poza ±5 p.p. zostają etapy 2 (−11; 81%, nadal
+w paśmie na 20 seedach), 9 (+11) i 25 (+12, celowo: etap był najtrudniejszy w bloku, 47%).
+Korekty `stageRamp` (mnożnik korekty przed → po): 1: 1 → 0,799; 2: 0,837 → 0,708;
+3: 0,90 → 0,81; 4: 1 → 0,80; 5: 1 → 0,80; 6: 1 → 0,8245; 12: 0,90 → 0,828;
+18: 1 → 0,92; 25: 1 → 0,97; 29: 1,12 → 1,053; 30: 1,02 → 0,989; 32: 1 → 0,97; 35: 0,88 → 0,9152 (20 seedów: 60% → 55%, w paśmie).
+
 ## Poziomy trudności kampanii — zlecenie 126 (1.11.2026)
 
 - **Łatwy:** siła AI ×0,80, medale ×0,75 (wynik zaokrąglany w dół).
@@ -819,6 +913,145 @@ Do czasu ukończenia pomiarów nie zakładamy, że limit ±5 p.p. jest spełnion
 - **Balans:** `BalanceReport.campaignDifficultyReport` mierzy 36 etapów × 20 identycznych seedów × trzy poziomy = **2160 bitew AI kontra AI**; profil badań dobierany zależnie od etapu. Maksimum 30 min symulacji, źródło `app/build/balance/campaign-difficulty-126.csv` oraz `.md`.
 - **Uruchomienie:** `BALANCE_RUN=true BALANCE_RUNS=20 ./gradlew :app:testDebugUnitTest --rerun-tasks --tests '*BalanceReport.campaignDifficultyReport*' --console=plain --no-configuration-cache`. Można dzielić na grupy przez `BALANCE_STAGES="1,2,3,4,5,6"`.
 
-**Wyniki:** pozostają do uzupełnienia na podstawie rzeczywiście wykonanego pomiaru; dane liczbowe nie są szacowane ani dopisywane bez uruchomienia 2160 symulacji.
+**Wyniki (tura 8, 2.11.2026):** zmierzone po wszystkich zmianach tury 8 (osobowości,
+uczciwe elity, `stageRamp`), metoda jak w sekcji 127; 20 seedów = oficjalna próba
+raportu, 100 seedów = kontrola szumu. Mnożniki **bez zmian** (×0,80 / ×1,00 / ×1,20).
+
+| Etap | Łatwy (100) | Normalny (100) | Trudny (100) | Łatwy (20) | Normalny (20) | Trudny (20) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 93% | 90% | 76% | 95% | 85% | 90% |
+| 2 | 96% | 81% | 76% | 95% | 90% | 75% |
+| 3 | 96% | 90% | 77% | 100% | 100% | 65% |
+| 4 | 97% | 91% | 71% | 95% | 95% | 65% |
+| 5 | 99% | 92% | 83% | 100% | 100% | 95% |
+| 6 | 97% | 89% | 69% | 90% | 90% | 65% |
+| 7 | 85% | 72% | 45% | 80% | 80% | 30% |
+| 8 | 90% | 67% | 46% | 90% | 65% | 50% |
+| 9 | 86% | 75% | 44% | 80% | 80% | 55% |
+| 10 | 87% | 71% | 53% | 90% | 75% | 55% |
+| 11 | 78% | 64% | 40% | 90% | 60% | 35% |
+| 12 | 80% | 70% | 55% | 85% | 70% | 55% |
+| 13 | 79% | 67% | 43% | 85% | 65% | 45% |
+| 14 | 77% | 61% | 32% | 80% | 60% | 55% |
+| 15 | 74% | 55% | 41% | 55% | 60% | 45% |
+| 16 | 80% | 62% | 38% | 85% | 65% | 45% |
+| 17 | 81% | 59% | 29% | 80% | 60% | 35% |
+| 18 | 77% | 53% | 29% | 85% | 60% | 25% |
+| 19 | 86% | 61% | 35% | 85% | 60% | 45% |
+| 20 | 90% | 71% | 49% | 95% | 80% | 55% |
+| 21 | 85% | 71% | 47% | 80% | 65% | 50% |
+| 22 | 72% | 58% | 43% | 70% | 60% | 40% |
+| 23 | 79% | 64% | 33% | 85% | 65% | 35% |
+| 24 | 79% | 51% | 31% | 80% | 45% | 20% |
+| 25 | 78% | 59% | 35% | 70% | 70% | 30% |
+| 26 | 92% | 65% | 51% | 90% | 65% | 35% |
+| 27 | 73% | 64% | 44% | 75% | 70% | 60% |
+| 28 | 87% | 60% | 51% | 90% | 70% | 55% |
+| 29 | 89% | 73% | 62% | 95% | 70% | 70% |
+| 30 | 85% | 66% | 47% | 90% | 70% | 50% |
+| 31 | 83% | 47% | 41% | 80% | 50% | 35% |
+| 32 | 86% | 65% | 42% | 85% | 65% | 50% |
+| 33 | 79% | 68% | 55% | 80% | 60% | 35% |
+| 34 | 68% | 57% | 37% | 60% | 55% | 30% |
+| 35 | 76% | 62% | 48% | 65% | 55% | 50% |
+| 36 | 56% | 38% | 17% | 55% | 35% | 5% |
+| śr. | **83,2%** | **66,9%** | **47,6%** | **83,1%** | **68,6%** | **48,2%** |
+
+- **Łatwy:** średnio +16,3 p.p. względem Normalnego (100 seedów; 20 seedów: +14,5 p.p.),
+  najsłabszy etap 36: 56%. Mieści się w zamierzonym +15–25 p.p.; na etapach 1–6
+  różnica jest mała, bo Normalny daje tam już ~90%.
+- **Trudny:** średnio −19,3 p.p. (47,6%), każdy etap wygrywalny: minimum 17% (etap 36)
+  na 100 seedach; na 20 seedach etap 36 = 1/20 (5%), co przy 17% na 100 seedach jest szumem.
+  Etapy 17–18: 29%. Nie zmieniano ×1,20 — mniejszy mnożnik zbliżyłby Trudny do Normalnego
+  w środku kampanii, a koniec kampanii i tak pozostaje najtrudniejszy na każdym poziomie.
+
+**Przegląd kodu 126 (tura 8):** rankingi lokalne, Play Games i serwer przyjmują tylko
+Normalny (`ScoreClient`, `BattleScreen`, `ReplayVerifier` liczy własny config Normalnego).
+Poprawki: (1) `BattleScreen` traktował nierozpoznaną siłę AI kampanii (`Campaign.difficulty`
+= null) jako Normalny, więc trafiała do gwiazdek rankingowych i tablic — teraz tylko
+jawny `NORMAL`, medale ×1; (2) samouczek (etap 1 przed `tutorialDone`) uruchamiany jest
+zawsze na Normalnym, niezależnie od wybranego poziomu (Trudny dawał samouczkowi ×0,96 siły).
+Migracja profilu (`normalStars` z `stars`, brak pola → Normalny) bez zastrzeżeń.
+
+## Tura 8 — uczciwe elity wroga (2.11.2026)
+
+**Problem (zgłoszenie właściciela):** elity gracza wymagają badania „Doktryna elit”
+(`r_elite`, 120 medali), a `Side.eliteUnlocked` wroga było zawsze `true`. Gracz bez
+badania trafiał na słonie i inne elity, których sam nie mógł wystawić. `BalanceReport`
+tego nie widział: profil docelowy od etapu 7 (10% badań) zawsze ma `r_elite`.
+
+**Zmiana (`Battle.kt`):** w kampanii i potyczce `e.eliteUnlocked = p.eliteUnlocked`.
+Endless, wyzwanie dnia/tygodnia (w tym MIRROR_ARMY) bez zmian: dzień i tydzień normalizują
+badania gracza (elity zawsze dostępne), Endless ma własne karty elit. AI bez elit już
+wcześniej pomijało je w ulepszeniach i przy losowaniu roli (waga 0), więc złoto idzie na
+pozostałe role i wieże; kolejka nie może się zablokować. `EliteFairnessTest`: kampania bez
+badania → wróg nigdy nie kolejkuje ani nie szkoli ELITE; z badaniem → szkoli; potyczka
+podąża za badaniem, Endless i dzień zachowują elity.
+`r_rally` (Zryw) ma tę samą asymetrię — poza zakresem tej zmiany, do decyzji.
+
+**Pomiar (Normalny, 100 seedów, seedy jak w raporcie):**
+
+- „Bez elit” = profil docelowy bez `r_elite` (etapy 1–6 i tak go nie mają).
+- „Medale” = realistyczny nowy gracz: medale wyłącznie z kampanii, pierwsza wygrana
+  każdego etapu na 2 gwiazdki (`20 + 6i + 2·5 + 2·12`, i = indeks etapu od 0), od etapu 7 jedna porażka
+  przed wygraną (`5 + 2i + 10`), wydawane zawsze na najtańszy następny poziom badań;
+  wariant „z elitą” kupuje `r_elite` jako pierwsze. Daje to ok. 414 medali przed etapem 7
+  (9 poziomów), 1236 przed 13. (22), 2346 przed 19. (33), 4551 przed 28. (48) i
+  6381 przed 34. (56 poziomów) — mniej niż profile docelowe 0,4/0,8 (44/88 poziomów),
+  bo pomija misje, logowanie i Endless.
+
+| Etap | Bez elit, przed (100) | Bez elit, po (100) | Medale bez elit, przed (100) | Medale bez elit, po (100) | Medale z elitą, po (100) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 82% | 90% | 82% | 90% | 90% |
+| 2 | 90% | 81% | 83% | 93% | 93% |
+| 3 | 90% | 90% | 95% | 86% | 86% |
+| 4 | 77% | 91% | 86% | 83% | 83% |
+| 5 | 95% | 92% | 91% | 92% | 97% |
+| 6 | 90% | 89% | 99% | 95% | 79% |
+| 7 | 34% | 85% | 21% | 67% | 57% |
+| 8 | 35% | 67% | 38% | 63% | 55% |
+| 9 | 25% | 74% | 24% | 77% | 70% |
+| 10 | 14% | 69% | 24% | 68% | 71% |
+| 11 | 28% | 64% | 30% | 71% | 58% |
+| 12 | 13% | 85% | 25% | 83% | 78% |
+| 13 | 13% | 66% | 11% | 80% | 73% |
+| 14 | 9% | 60% | 24% | 75% | 76% |
+| 15 | 12% | 49% | 26% | 73% | 69% |
+| 16 | 31% | 53% | 31% | 74% | 74% |
+| 17 | 11% | 57% | 22% | 76% | 78% |
+| 18 | 13% | 56% | 17% | 78% | 79% |
+| 19 | 22% | 60% | 18% | 44% | 52% |
+| 20 | 66% | 89% | 58% | 78% | 67% |
+| 21 | 31% | 66% | 31% | 67% | 75% |
+| 22 | 22% | 44% | 16% | 39% | 71% |
+| 23 | 25% | 59% | 34% | 63% | 73% |
+| 24 | 26% | 63% | 44% | 69% | 63% |
+| 25 | 11% | 55% | 18% | 65% | 77% |
+| 26 | 15% | 60% | 19% | 68% | 70% |
+| 27 | 19% | 55% | 35% | 57% | 67% |
+| 28 | 42% | 69% | 20% | 36% | 40% |
+| 29 | 19% | 55% | 0% | 20% | 54% |
+| 30 | 15% | 50% | 0% | 26% | 38% |
+| 31 | 24% | 53% | 4% | 19% | 30% |
+| 32 | 14% | 66% | 2% | 21% | 41% |
+| 33 | 16% | 65% | 1% | 21% | 42% |
+| 34 | 4% | 37% | 1% | 10% | 26% |
+| 35 | 5% | 31% | 0% | 11% | 40% |
+| 36 | 6% | 45% | 8% | 20% | 21% |
+| śr. | **31,8%** | **65,0%** | **31,6%** | **59,9%** | **64,2%** |
+
+**Wnioski:**
+
+- Przed poprawką gracz bez elit miał od etapu 7 ścianę: 9–35% na etapach 7–19,
+  średnio 31,8%. Po poprawce ten sam profil ma średnio 65,0%, minimum 31% (etap 35) i 37% (etap 34);
+  etapy 7–27 ≥ 40%.
+- Elity wroga we wczesnych epokach osłabiały AI (oszczędzało na drogą jednostkę), więc
+  po ich wyłączeniu etapy 1–6 profilu „nowy” spadły do 55–82%. Stąd obniżone korekty
+  `stageRamp` etapów 1–6 (sekcja 127, tabela tury 8): z powrotem 81–92% na 100 seedach.
+- Realistyczny profil medalowy: etapy 1–27 ≥ 39% (najsłabsze 19: 44%, 22: 39%), więc bez
+  ścian we wczesnej i środkowej kampanii. Etapy 28–36 (strojone pod weterana z 80% badań)
+  dają mu 10–36% bez elit i 21–54% z elitą — tam postęp wymaga dodatkowych medali
+  (misje, Endless, powtórki) lub poziomu Łatwy. Kosztu `r_elite` nie zmieniano:
+  bariera nie wynikała z ceny, tylko z asymetrii.
 
 - 2026-11-02 — regeneracja złotych powtórek: Tura 8 balans: osobowości 127, uczciwe elity wroga, stageRamp etapów 1-6/12/18/25/29/30/32.

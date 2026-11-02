@@ -91,7 +91,9 @@ class ReplayVerifierTest {
 
     @Test
     fun rejectsEasyCampaignReplaySubmittedToNormalLeaderboard() {
-        val stage = Campaign.stages[4]
+        // Etap, na którym przebieg Łatwego różni się od Normalnego (na etapie 5 po korektach
+        // tury 8 prosty bot przegrywa identycznie na obu poziomach i wynik 30 jest poprawny).
+        val stage = Campaign.stages[7]
         val cfg = Campaign.config(stage, Research.bonuses(IntArray(Research.defs.size)), 123455L,
             difficulty = com.centurywar.game.CampaignDifficulty.EASY)
         val submission = weatherSubmission(cfg, "campaign", stage = stage.index)
