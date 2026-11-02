@@ -22,6 +22,13 @@ def mapping_fixture():
     return "\n".join(lines) + "\n"
 
 
+def configuration_fixture():
+    return "\n".join(
+        [f"-keep class {name} {{ <fields>; }}" for name in release.REQUIRED_FIELDS] +
+        [f"-keep enum {name} {{ *; }}" for name in release.REQUIRED_ENUM_FIELDS]
+    )
+
+
 class ReleaseMappingTest(unittest.TestCase):
     def test_complete_mapping_passes(self):
         classes, fields = release.verify(mapping_fixture(), "com.centurywar.unused.Removed:\n")
@@ -49,10 +56,14 @@ class ReleaseMappingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Przemianowane pole"):
             release.verify(text)
 
-    def test_missing_field_fails(self):
+    def test_unchanged_field_missing_from_mapping_is_normal(self):
         text = mapping_fixture().replace("    int stars -> stars\n", "")
-        with self.assertRaisesRegex(ValueError, "Brak pola"):
-            release.verify(text)
+        release.verify(text, "", configuration_fixture())
+
+    def test_kept_fields_can_be_absent_from_mapping(self):
+        text = "\n".join(line for line in mapping_fixture().splitlines()
+                         if not line.startswith("    int ")) + "\n"
+        release.verify(text, "", configuration_fixture())
 
     def test_enum_constant_rename_fails(self):
         text = mapping_fixture().replace("int SUMMON_COMMANDER -> SUMMON_COMMANDER", "int SUMMON_COMMANDER -> a")
@@ -69,11 +80,24 @@ class ReleaseMappingTest(unittest.TestCase):
 
     def test_mapping_method_lines_not_recognized_as_fields(self):
         text = mapping_fixture().replace("int medals -> medals", "1:4:void medals() -> medals")
-        with self.assertRaisesRegex(ValueError, "Brak pola"):
-            release.verify(text)
+        release.verify(text, "", configuration_fixture())
 
     def test_usage_removed_unrelated_method_does_not_fail(self):
         release.verify(mapping_fixture(), "com.centurywar.meta.Profile:\n    void internalDebugMethod()\n")
+
+    def test_configuration_missing_keep_class_fails(self):
+        cfg = configuration_fixture().replace(
+            "-keep class com.centurywar.meta.Profile { <fields>; }", ""
+        )
+        with self.assertRaisesRegex(ValueError, "Brak zastosowanej reguly keep dla pol"):
+            release.verify(mapping_fixture(), "", cfg)
+
+    def test_configuration_missing_keep_enum_fails(self):
+        cfg = configuration_fixture().replace(
+            "-keep enum com.centurywar.game.Mode { *; }", ""
+        )
+        with self.assertRaisesRegex(ValueError, "Brak zastosowanej reguly keep dla enum"):
+            release.verify(mapping_fixture(), "", cfg)
 
     def test_metadata_between_class_and_field_keeps_context(self):
         text = mapping_fixture().replace(
@@ -92,7 +116,9 @@ class ReleaseMappingTest(unittest.TestCase):
         import sys
         with tempfile.TemporaryDirectory() as d:
             result = subprocess.run(
-                [sys.executable, str(SOURCE), "--mapping", str(Path(d) / "missing")],
+                [sys.executable, str(SOURCE), "--mapping", str(Path(d) / "missing"),
+                 "--usage", str(Path(d) / "usage.txt"),
+                 "--configuration", str(Path(d) / "configuration.txt")],
                 capture_output=True, text=True, check=False,
             )
             self.assertNotEqual(0, result.returncode)
