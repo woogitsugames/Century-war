@@ -3,6 +3,7 @@ package com.centurywar.engine
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -43,6 +44,7 @@ class MusicLifecycle160Test {
 
     @Test fun oldWorkerCannotClearNewWorkerAfterPauseAndResume() {
         val attempts = AtomicInteger()
+        val firstWorker = AtomicReference<Thread>()
         val enteredFirst = CountDownLatch(1)
         val enteredSecond = CountDownLatch(1)
         val releaseFirst = CountDownLatch(1)
@@ -50,6 +52,7 @@ class MusicLifecycle160Test {
         val music = Music(MusicCatalog.fromAssets(null), null, null) { _, _, _ ->
             when (attempts.incrementAndGet()) {
                 1 -> {
+                    firstWorker.set(Thread.currentThread())
                     enteredFirst.countDown()
                     var done = false
                     while (!done) {
@@ -71,6 +74,8 @@ class MusicLifecycle160Test {
             music.resume()
             assertTrue(enteredSecond.await(3, TimeUnit.SECONDS))
             releaseFirst.countDown()
+            firstWorker.get().join(3_000)
+            assertFalse(firstWorker.get().isAlive)
             // Kończy się stary worker; nowy wciąż czeka w getMinBufferSize.
             assertTrue(music.isPlaying)
             releaseSecond.countDown()
