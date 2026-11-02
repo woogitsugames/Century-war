@@ -1178,11 +1178,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         f.hitStep = -1; f.hitPow = 0f
         f.maxHp = def.hp * s.hpMul * extraHpMul * Defs.tierStatMul(f.tier) *
             (if (waveTheme == EndlessWaveTheme.SKIRMISHERS) 0.8f else 1f)
-        f.waveSpeedMul = when (waveTheme) {
-            EndlessWaveTheme.SIEGE_TRAIN -> 0.85f
-            EndlessWaveTheme.TWIN_RAID -> 1.15f
-            else -> 1f
-        }
+        f.waveSpeedMul = waveTheme.unitSpeedMul
         f.hp = f.maxHp
         f.dmg = def.dmg * s.dmgMul * Defs.tierStatMul(f.tier) * when (def.role) {
             Role.RANGED -> s.rangedDmgMul

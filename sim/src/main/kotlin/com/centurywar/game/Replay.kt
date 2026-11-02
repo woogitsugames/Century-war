@@ -189,6 +189,24 @@ object Replay {
         else -> false
     }
 
+    /**
+     * Jedyna reguła zakresu argumentu komendy: używają jej odczyt powtórki i odczyt
+     * dziennika komend z zrzutu bitwy ([BattleController.readSnapshot]).
+     */
+    internal fun argumentValid(kind: Kind, argument: Int): Boolean = when (kind) {
+        Kind.QUEUE, Kind.UNIT_UPGRADE -> argument in 0 until Role.values().size
+        Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET, Kind.TURRET_TIER ->
+            argument in 0 until Defs.MAX_TURRET_SLOTS
+        Kind.STANCE -> argument == 0 || argument == 1
+        Kind.DOCTRINE -> argument in 0..2
+        Kind.TUTORIAL_GOLD -> argument in 1..1_000_000
+        Kind.BARRAGE_AT -> argument in 0..Defs.LANE.toInt()
+        Kind.CARD -> argument in 0..2
+        Kind.VARIANT -> argument in 0..1
+        Kind.CANCEL, Kind.EVOLVE, Kind.ARMORY, Kind.BARRAGE, Kind.RALLY, Kind.SURRENDER,
+        Kind.SUMMON_COMMANDER -> argument == 0
+    }
+
     private fun validate(log: Log) {
         require(log.version in 5..VERSION) { "Nieobsługiwana wersja powtórki" }
         require(log.steps in 0..MAX_STEPS) { "Nieprawidłowa liczba kroków" }
@@ -198,20 +216,7 @@ object Replay {
             require(command.step >= previousStep && command.step <= log.steps) { "Komenda spoza zakresu kroków" }
             require(log.version >= 6 || command.kind != Kind.TURRET_TIER) { "Komenda niedostępna w tej wersji" }
             require(log.version >= 7 || command.kind != Kind.SUMMON_COMMANDER) { "Dowódca wymaga powtórki v7" }
-            val arg = command.argument
-            val correct = when (command.kind) {
-                Kind.QUEUE, Kind.UNIT_UPGRADE -> arg in 0 until Role.values().size
-                Kind.BUY_TURRET, Kind.UPGRADE_TURRET, Kind.SELL_TURRET, Kind.TURRET_TIER ->
-                    arg in 0 until Defs.MAX_TURRET_SLOTS
-                Kind.STANCE -> arg == 0 || arg == 1
-                Kind.DOCTRINE -> arg in 0..2
-                Kind.TUTORIAL_GOLD -> arg in 1..1_000_000
-                Kind.BARRAGE_AT -> arg in 0..Defs.LANE.toInt()
-                Kind.CARD -> arg in 0..2
-                Kind.VARIANT -> arg in 0..1
-                else -> arg == 0
-            }
-            require(correct) { "Niedozwolony argument komendy" }
+            require(argumentValid(command.kind, command.argument)) { "Niedozwolony argument komendy" }
             previousStep = command.step
         }
     }

@@ -282,7 +282,7 @@ object BattleSnapshot {
             u.def = Defs.allUnits[i.readShort().toInt()]
             u.tier = i.readUnsignedByte().also { require(it in 1..Defs.MAX_UNIT_TIER) }
             u.x = i.readFloat(); u.hp = i.readFloat(); u.maxHp = i.readFloat(); u.dmg = i.readFloat(); u.waveSpeedMul = i.readFloat(); u.cd = i.readFloat()
-            require(u.waveSpeedMul == 1f || u.waveSpeedMul == 0.85f)
+            require(EndlessWaveTheme.isLegalUnitSpeedMul(u.waveSpeedMul))
             u.anim = i.readFloat(); u.attackAnim = i.readFloat(); u.flash = i.readFloat()
             u.moving = i.readBoolean(); u.dying = i.readFloat(); u.serial = i.readInt()
             u.bossKind = i.readByte().toInt().also { require(it in 0..EndlessBosses.MAX_KIND) }
