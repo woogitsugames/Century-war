@@ -275,7 +275,7 @@ class StoreGraphicsTest {
     private fun commander153Battle(): Battle {
         val battle = sceneBattle(4)
         battle.player.gold = 30000f
-        check(BattleController(battle).summonCommander())
+        check((battle.commandController ?: BattleController(battle)).summonCommander())
         val unit = battle.units.first { it.active && it.isCommander && it.side == 0 }
         unit.x = 1350f
         unit.prevX = unit.x
@@ -293,7 +293,7 @@ class StoreGraphicsTest {
         val side = battle.player
         side.gold = 30000f
         side.slots = 3
-        val orders = BattleController(battle)
+        val orders = battle.commandController ?: BattleController(battle)
         check(orders.buyTurret(1))
         check(orders.upgradeTurretTier(0))
         check(orders.upgradeTurretTier(1))
