@@ -252,6 +252,49 @@ class Ui {
         return size
     }
 
+    /** Tekst liczbowy w tablicy: ten sam obrys i geometria co String, bez alokacji. */
+    fun textO(c: Canvas, chars: CharArray, count: Int, x: Float, y: Float, sizeDp: Float, color: Int = TEXT,
+              align: Paint.Align = Paint.Align.LEFT, outlineDp: Float = 0f, face: Typeface? = null) {
+        val sz = sizeDp * dp * textScale
+        val ow = if (outlineDp > 0f) outlineDp * dp else max(2f * dp, sz * 0.16f)
+        val tf = face ?: bold
+        // Ciemne litery (np. na złotym przycisku BTN_HI) z ciemnym obrysem i cieniem zlewają się
+        // w rozmytą plamę wyglądającą na nieaktywną: rysujemy je bez obrysu i cienia.
+        val dark = Color.red(color) * 299 + Color.green(color) * 587 + Color.blue(color) * 114 < 90_000
+        if (!dark) {
+            textLine.textSize = sz; textLine.textAlign = align; textLine.typeface = tf
+            textLine.strokeWidth = ow
+            textLine.color = Color.argb(120, 0, 0, 0)
+            c.drawText(chars, 0, count, x, y + ow * 0.6f, textLine)
+            textLine.color = OUTLINE
+            c.drawText(chars, 0, count, x, y, textLine)
+        }
+        text.textSize = sz; text.textAlign = align; text.typeface = tf; text.shader = null
+        text.color = color
+        c.drawText(chars, 0, count, x, y, text)
+    }
+
+    fun measure(chars: CharArray, count: Int, sizeDp: Float, isBold: Boolean = false): Float {
+        text.textSize = sizeDp * dp * textScale
+        text.typeface = if (isBold) bold else Typeface.DEFAULT
+        return text.measureText(chars, 0, count)
+    }
+
+    fun fit(chars: CharArray, count: Int, sizeDp: Float, width: Float, minDp: Float = 8f): Float {
+        if (width <= 0f) return sizeDp
+        val m = measure(chars, count, sizeDp, true)
+        if (m <= width) return sizeDp
+        val floor = minDp / textScale
+        var size = max(floor, sizeDp * width / m)
+        // Szerokość nie skaluje się idealnie liniowo (hinting, czcionki zastępcze dla cyrylicy):
+        // dociskamy kilkoma krokami, bez alokacji.
+        var guard = 0
+        while (size > floor && measure(chars, count, size, true) > width && guard++ < 6) {
+            size = max(floor, size * 0.96f)
+        }
+        return size
+    }
+
     /** Tekst zawijany do szerokości; zwraca wysokość. */
     fun wrap(c: Canvas?, s: String, x: Float, y: Float, width: Float, sizeDp: Float, color: Int = TEXT,
              align: Paint.Align = Paint.Align.LEFT): Float {
@@ -455,6 +498,31 @@ class Ui {
     fun badgeWidth(s: String, sizeDp: Float, minTextW: Float = 0f): Float {
         val h = sizeDp * dp * 1.9f * textScale.coerceAtMost(1.15f)
         return h * 1.1f + max(measure(s, sizeDp, true), minTextW) + 6 * dp
+    }
+
+    fun badge(c: Canvas, l: Float, cy: Float, iconId: Int, chars: CharArray, count: Int, sizeDp: Float, color: Int = TEXT,
+              alignRight: Boolean = false, minTextW: Float = 0f): Float {
+        val h = sizeDp * dp * 1.9f * textScale.coerceAtMost(1.15f)
+        val tw = max(measure(chars, count, sizeDp, true), minTextW)
+        val w = h * 0.55f + tw + h * 0.55f + 6 * dp
+        val left = if (alignRight) l - w else l
+        tmp.set(left + h * 0.3f, cy - h * 0.42f, left + w, cy + h * 0.42f)
+        pf.color = OUTLINE
+        tmp2.set(tmp.left - 2 * dp, tmp.top - 2 * dp, tmp.right + 2 * dp, tmp.bottom + 2 * dp)
+        c.drawRoundRect(tmp2, h, h, pf)
+        pf.color = Color.argb(235, 20, 24, 36)
+        c.drawRoundRect(tmp, h, h, pf)
+        pf.color = Color.argb(40, 255, 255, 255)
+        tmp2.set(tmp.left + 2 * dp, tmp.top + 1.5f * dp, tmp.right - 2 * dp, tmp.centerY())
+        c.drawRoundRect(tmp2, h, h, pf)
+        Icons.draw(c, iconId, left + h * 0.45f, cy, h * 0.95f, dp = dp)
+        textO(c, chars, count, left + h * 0.95f + 2 * dp, cy + sizeDp * dp * 0.36f, sizeDp, color)
+        return left + w
+    }
+
+    fun badgeWidth(chars: CharArray, count: Int, sizeDp: Float, minTextW: Float = 0f): Float {
+        val h = sizeDp * dp * 1.9f * textScale.coerceAtMost(1.15f)
+        return h * 1.1f + max(measure(chars, count, sizeDp, true), minTextW) + 6 * dp
     }
 
     /** Okrągły medalion z ikoną (karty badań, doktryny, nagłówki). */
