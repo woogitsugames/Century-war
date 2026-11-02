@@ -173,6 +173,10 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         g.bitmapCacheMemoryClassMb, g.effectiveQualityLevel()
     )
 
+    /** Zwolnienie bitmap błysku nie zmienia zapamiętanych rysunków Picture. */
+    fun releaseFlashCache() = baseFlashCache.release()
+    internal val cachedFlashBytes: Long get() = baseFlashCache.cachedBytes
+
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {
         viewW = w
         fieldTop = topReserve

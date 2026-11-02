@@ -58,6 +58,16 @@ internal class BaseFlashCache(
         }
     }
 
+    /** Przy wyjściu z bitwy zwalniamy pamięć natywną natychmiast, nie dopiero po GC. */
+    fun release() {
+        for (i in images.indices) {
+            images[i]?.recycle()
+            images[i] = null
+            painters[i] = null
+            sources[i] = null
+        }
+    }
+
     internal val budgetBytes: Long get() = budget.limitBytes(quality)
     internal val cachedBytes: Long get() =
         images.count { it != null }.toLong() * width.toLong() * height.toLong() * 4L

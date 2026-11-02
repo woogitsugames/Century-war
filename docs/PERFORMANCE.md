@@ -204,3 +204,83 @@ nadmiernego wzrostu kosztu wraz z liczbą jednostek, **nie** gwarancja
 
 Wyniki liczbowe startupu i GPU trzeba zebrać na fizycznym telefonie; w
 repozytorium nie zakładamy, że pomiar hosta jest pomiarem telefonu.
+
+
+## Fala 6 — zlecenie 152: dowódcy, wieże, Endless 55
+
+### Warunki pomiarów
+
+Ten sam scenariusz w `Wave6PerformanceFixture`: po jednym dowódcy na stronę
+(aura i Impuls), 12 vs 12 żywych jednostek, cztery wieże poziomu III na każdej
+stronie, naprzemienne epoki wież dające rozprysk i podpalenie, Endless fala 55,
+720p (1600×720), LOW / HIGH. Test CPU rozgrzewa 120 klatek, mierzy 240
+kolejnych; mediana to element nr 120, p95 nr 227.
+Pomiary JVM pochodzą z Ubuntu GitHub Actions, Robolectric NATIVE, Android SDK 35
+(emulowany) przy kompilacji dla SDK 36, Java 17. **Nie są pomiarem GPU telefonu.**
+
+Kod bazowy: `85e90b6`, kod po zmianach `29ae3666`. Obie wersje uruchomiono
+na tym samym runnerze w jednym **zakończonym pomyślnie** przebiegu [Performance 152, #41503404584](https://github.com/woogitsugames/Century-war/actions/runs/41503404584)
+(artefakt `performance-152-logs`).
+
+| Jakość | Metryka | Przed: mediana/p95 (ms) | Po: mediana/p95 (ms) |
+|---|---|---:|---:|
+| LOW | `Battle.step()` — sama symulacja | 0,003 / 0,009 | 0,002 / 0,008 |
+| LOW | `BattleScreen.update()` | 0,037 / 0,092 | 0,018 / 0,039 |
+| LOW | `BattleScreen.render()` | 14,486 / 16,341 | 13,762 / 14,491 |
+| HIGH | `Battle.step()` — sama symulacja | 0,002 / 0,004 | 0,002 / 0,004 |
+| HIGH | `BattleScreen.update()` | 0,015 / 0,040 | 0,015 / 0,035 |
+| HIGH | `BattleScreen.render()` | 16,085 / 17,012 | 16,177 / 17,157 |
+
+Pomiary wykonano kolejno na jednym runnerze, ale zmienność JVM/JIT i obciążenie
+CI wykluczają interpretowanie różnic rzędu setnych milisekundy jako pewnego
+przyspieszenia lub spowolnienia. Dodatkowy scenariusz 72 jednostek uzyskał
+`ratio 72/36 = 0,89×` (mediany: 17,408 i 19,526 ms); test kontroluje
+złożoność, nie czas GPU.
+
+### Alokacje i cykl życia pamięci
+
+W końcowym, zielonym pomiarze 600 przeplatanych `update + draw` alokowało
+łącznie **688 B** zarówno w LOW, jak i HIGH, a samo powtórzone `draw` **48 B**
+w obu profilach. Pierwszy wariant testu,
+wykonujący 600 samych `update()` bez `draw()`, przydzielił 28 672 B i nie
+spełnił progu 16 KiB — taki przebieg nie odwzorowuje rzeczywistej pętli gry.
+Test końcowy mierzy więc przeplatane klatki i niezależnie draw, z limitem
+4096 B na 600 iteracji, i uruchamia zarówno LOW, jak i HIGH.
+Nie utożsamiać tego progu tolerancji JVM z matematycznym zerem alokacji.
+
+Przy 20 przejściach menu ↔ bitwa w dwóch grupach po 10, z GC między pomiarami,
+test na commicie `29ae3666` uzyskał:
+
+| Jakość | Sterta po 10 (B) | Sterta po 20 (B) | Przyrost (B) | Zachowane stare ekrany |
+|---|---:|---:|---:|---:|
+| LOW | 77 029 496 | 77 041 848 | 12 352 | 0 |
+| HIGH | 77 081 968 | 77 083 024 | 1 056 | 0 |
+
+`BaseFlashCache.release()` recykluje bitmapy błysku bazy przy `onPause()`
+ekranu bitwy, niezależnie od momentu GC. Test dodatkowo sprawdza, że cache
+realnie został utworzony (do 2 MiB przy memoryClass 64 MiB) i po opuszczeniu
+bitwy zgłasza 0 B. Nie zmieniono danych, reguł, balansu, formatu powtórki,
+`SimVersion.PROTOCOL` ani wyglądu.
+
+### Weryfikacja
+
+```bash
+./gradlew :app:assembleDebug --console=plain --no-configuration-cache
+PERF_REPORT=true ./gradlew :app:testDebugUnitTest \
+  --tests '*BattleCrowdPerformance101Test*' \
+  --tests '*BattleScreenAllocationTest*' \
+  --tests '*LowEndScreensPerformanceTest*' \
+  --tests '*HudDigits152Test*' \
+  --tests '*HudDigits152RenderTest*' \
+  --tests '*ReplayTest*' \
+  --tests '*ScreenshotTest*' --console=plain --no-configuration-cache
+```
+
+**Zweryfikowane:** `:app:assembleDebug`, testy wydajności, `ReplayTest`,
+`HudDigits152Test`, `HudDigits152RenderTest` oraz testy HUD dowódcy —
+wszystkie zakończone `BUILD SUCCESSFUL` w przebiegu #41503404584.
+Log końcowy testów: `BUILD SUCCESSFUL in 52s`, APK: `BUILD SUCCESSFUL in 42s`.
+
+**Ograniczenie:** JVM/Robolectric nie mierzy GPU, temperatury ani PSS na
+fizycznym urządzeniu 2–3 GB RAM. Osobna walidacja na sprzęcie docelowym
+(720p oraz Fold) jest nadal potrzebna.

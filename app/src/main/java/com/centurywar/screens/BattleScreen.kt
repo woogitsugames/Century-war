@@ -1063,6 +1063,7 @@ class BattleScreen(
 
     /** Przy pauzie serializujemy stan na wątku gry, a fsync wykonuje wątek I/O. */
     override fun onPause() {
+        r.releaseFlashCache()
         aimingBarrage = false
         clearHeldTooltip()
         if (finished || closed || battle.over) return

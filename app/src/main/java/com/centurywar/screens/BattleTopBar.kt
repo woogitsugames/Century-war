@@ -49,6 +49,8 @@ import kotlin.math.min
 /** Mechaniczne wydzielenie BattleTopBar; ten sam stan i kolejność operacji co w BattleScreen. */
 internal class BattleTopBar(private val owner: BattleScreen) {
     /** Tura 9: ostatnio narysowane napisy paska (współrzędne ekranu); do testów nachodzenia. */
+    private val goldDigits = HudDigits152()
+    private val clockDigits = HudDigits152()
     val goldDrawn = RectF()
     val eraNameDrawn = RectF()
     val enemyEraDrawn = RectF()
@@ -129,13 +131,13 @@ internal class BattleTopBar(private val owner: BattleScreen) {
         val t = g.insetT + 6 * dp
         // złoto
         val gi = p.gold.toInt()
-        if (gi != goldShown) { goldShown = gi; goldText = gi.toString() }
+        if (gi != goldShown) { goldShown = gi; goldDigits.setNumber(gi) }
         val goldMinW = ui.measure("0000", 15f, true)
-        val goldEdge = ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldText,
+        val goldEdge = ui.badge(c, if (leftHud) right else l, t + 11 * dp, Icons.COIN, goldDigits.chars, goldDigits.length,
             15f, Ui.GOLD, alignRight = leftHud, minTextW = goldMinW)
         run {
             val bh = 15f * dp * 1.9f * ui.textScale.coerceAtMost(1.15f)
-            val bw0 = ui.badgeWidth(goldText, 15f, goldMinW)
+            val bw0 = ui.badgeWidth(goldDigits.chars, goldDigits.length, 15f, goldMinW)
             val gl = if (leftHud) goldEdge - bw0 else l
             goldDrawn.set(gl, t + 11 * dp - bh * 0.42f - 2 * dp, gl + bw0, t + 11 * dp + bh * 0.42f + 2 * dp)
         }
@@ -284,9 +286,10 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                     ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f),
                     Ui.BAD, Paint.Align.CENTER, 1.8f)
             } else {
-                val clock = timeStr(battle.time)
-                ui.textO(c, clock, mini.centerX(), mini.bottom + 14 * dp,
-                    ui.fit(clock, 11f, mini.width() * 0.40f, 8f),
+                val sec = battle.time.toInt()
+                if (sec != timeSec) { timeSec = sec; clockDigits.setClock(sec) }
+                ui.textO(c, clockDigits.chars, clockDigits.length, mini.centerX(), mini.bottom + 14 * dp,
+                    ui.fit(clockDigits.chars, clockDigits.length, 11f, mini.width() * 0.40f, 8f),
                     Ui.TEXT, Paint.Align.CENTER, 1.8f)
             }
         }
@@ -380,15 +383,6 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                 i--
             }
         }
-        }
-    }
-
-    /** Formatowanie raz na sekundę zamiast w każdej klatce (String.format alokuje). */
-    fun timeStr(t: Float): String {
-        with(owner) {
-        val s = t.toInt()
-        if (s != timeSec) { timeSec = s; timeText = "%d:%02d".format(s / 60, s % 60) }
-        return timeText
         }
     }
 
