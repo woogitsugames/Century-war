@@ -259,6 +259,8 @@ idempotentnie, **tylko gdy podano sekret instalacji przypisany do UUID**.
 Nowa tożsamość nadaje nowy UUID i sekret, a w kolejce usunięć zachowuje
 poprzedni sekret. Stare rekordy bez sekretu wymagają pierwszego zweryfikowanego
 wyniku przed usunięciem. Po stronie serwera nie ma odrębnego konta ani adresu e-mail.
+Wynik weryfikowany w chwili usunięcia nie odtwarza danych: serwer odrzuca go
+kodem 409 `player_deleted` (aplikacja nie ponawia odrzuconych zgłoszeń 4xx).
 Dane Google Play Games, lokalny profil i systemowe kopie Androida **nie są
 usuwane przez tę operację**. Wnioski i prośby o potwierdzenie usunięcia można
 kierować na adres kontaktowy wydawcy z opublikowanej polityki prywatności.

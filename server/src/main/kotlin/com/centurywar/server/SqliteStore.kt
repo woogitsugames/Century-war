@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import java.util.TreeMap
 
 data class SavedScore(val inserted: Boolean, val bestScore: Long)
 
@@ -22,6 +23,24 @@ data class AdminScore(
 
 internal class BlockedPlayerException : IllegalStateException("blocked_player")
 internal class PlayerOwnershipException : IllegalStateException("invalid_player_credential")
+/** Gracza usunięto po rozpoczęciu zgłoszenia ([SqliteStore.beginClaim]); wynik nie może go odtworzyć. */
+internal class PlayerDeletedException : IllegalStateException("player_deleted")
+
+/**
+ * Bilet zgłoszenia wyniku: zapamiętuje epokę usunięć z chwili sprawdzenia własności.
+ * [SqliteStore.save] odrzuca zapis, jeśli gracza usunięto po wydaniu biletu.
+ * Bilet zamyka [SqliteStore.endClaim] (także przez [close]) po zakończeniu żądania.
+ */
+class ScoreClaim internal constructor(
+    val player: String,
+    internal val ownerHash: String,
+    internal val epoch: Long,
+    internal val ownerExisted: Boolean,
+    private val store: SqliteStore,
+) : AutoCloseable {
+    internal var closed = false
+    override fun close() = store.endClaim(this)
+}
 
 data class NickReportRow(
     val id: Long, val player: String, val publicId: String, val nick: String,
@@ -35,6 +54,13 @@ class SqliteStore(
 ) : AutoCloseable {
     private val lock = Any()
     private val connection: Connection = DriverManager.getConnection(jdbcUrl)
+
+    // Epoki usunięć (A156-05). Usuwanie gracza jest dostępne tylko przez API tej instancji
+    // (blokada procesu w DatabaseMaintenance.acquireLock), więc stan w pamięci wystarcza:
+    // po restarcie nie ma zgłoszeń w toku. Wszystko chroni [lock], ten sam co transakcje.
+    private var deletionEpoch = 0L
+    private val deletedAtEpoch = HashMap<String, Long>()
+    private val activeClaims = TreeMap<Long, Int>()
 
     init {
         synchronized(lock) {
@@ -185,6 +211,37 @@ class SqliteStore(
         }
     }
 
+    /**
+     * Sprawdza własność jak [mayClaim] i wydaje bilet zgłoszenia albo null.
+     * Kolejność „własność → weryfikacja → zapis” jest chroniona epoką usunięć:
+     * usunięcie gracza między [beginClaim] a [save] unieważnia bilet.
+     */
+    fun beginClaim(player: String, hash: String): ScoreClaim? = synchronized(lock) {
+        if (!hasCredentialUnsafe(player, hash, allowMissing = true, allowLegacy = true)) return@synchronized null
+        val claim = ScoreClaim(player, hash, deletionEpoch, playerExistsUnsafe(player), this)
+        activeClaims.merge(claim.epoch, 1, Int::plus)
+        claim
+    }
+
+    /** Zwalnia bilet; idempotentne. Epoki usunięć starsze niż każdy aktywny bilet są zapominane. */
+    fun endClaim(claim: ScoreClaim) = synchronized(lock) {
+        if (claim.closed) return@synchronized
+        claim.closed = true
+        val left = (activeClaims[claim.epoch] ?: 1) - 1
+        if (left <= 0) activeClaims.remove(claim.epoch) else activeClaims[claim.epoch] = left
+        val oldest = activeClaims.keys.firstOrNull()
+        if (oldest == null) deletedAtEpoch.clear() else deletedAtEpoch.values.removeIf { it <= oldest }
+    }
+
+    /** Liczba śledzonych usunięć (diagnostyka testów: stan nie rośnie bez końca). */
+    internal fun trackedDeletions(): Int = synchronized(lock) { deletedAtEpoch.size }
+
+    private fun playerExistsUnsafe(player: String): Boolean =
+        connection.prepareStatement("SELECT 1 FROM players WHERE player_id = ?").use { st ->
+            st.setString(1, player)
+            st.executeQuery().use { it.next() }
+        }
+
     fun publicIdFor(player: String): String? = synchronized(lock) {
         connection.prepareStatement("SELECT public_id FROM players WHERE player_id = ?").use {
             it.setString(1, player)
@@ -218,6 +275,9 @@ class SqliteStore(
             // Blokady nie kasujemy: klucz HMAC jest w APK, więc usunięcie konta nie może
             // posłużyć zablokowanemu graczowi do zdjęcia blokady. Zdejmuje ją tylko moderator.
             connection.commit()
+            // Nowa epoka unieważnia bilety wydane przed usunięciem (zgłoszenia w toku).
+            deletionEpoch++
+            if (activeClaims.isNotEmpty()) deletedAtEpoch[player] = deletionEpoch
         } catch (e: Exception) {
             connection.rollback()
             throw e
@@ -346,6 +406,7 @@ class SqliteStore(
         nowMillis: Long,
         replayHash: String,
         installationSecretHash: String? = null,
+        claim: ScoreClaim? = null,
     ): SavedScore = synchronized(lock) {
         // Daily zachowuje datę wyzwania, także przy wysyłce po północy UTC.
         val day = if (replay.board == "daily") requireNotNull(input.day) else todayUtc(nowMillis)
@@ -354,6 +415,14 @@ class SqliteStore(
         try {
             // Sprawdzamy ponownie po weryfikacji, aby uniknąć wyścigu z CLI.
             if (isBlockedUnsafe(input.player)) throw BlockedPlayerException()
+            if (claim != null) {
+                // Ta sama blokada i transakcja co deletePlayer: sprawdzenie i zapis są atomowe.
+                check(!claim.closed && claim.player == input.player &&
+                    claim.ownerHash == installationSecretHash) { "invalid_claim" }
+                if ((deletedAtEpoch[input.player] ?: Long.MIN_VALUE) > claim.epoch) throw PlayerDeletedException()
+                // Właściciel istniał przy sprawdzeniu własności, a teraz go nie ma: usunięty.
+                if (claim.ownerExisted && !playerExistsUnsafe(input.player)) throw PlayerDeletedException()
+            }
             if (!hasCredentialUnsafe(input.player, installationSecretHash ?: "",
                     allowMissing = true, allowLegacy = true)) throw PlayerOwnershipException()
             val playerUpdated = connection.prepareStatement("""

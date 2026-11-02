@@ -6,8 +6,12 @@ import com.centurywar.game.Daily
 import com.centurywar.game.Mode
 import com.centurywar.game.Replay
 import com.centurywar.game.Research
+import com.centurywar.game.SimVersion
 import com.centurywar.game.Skirmish
 import com.centurywar.game.Weekly
+
+/** Kod odrzucenia powtórki w formacie innym niż zasady bieżącego rankingu. */
+const val UNSUPPORTED_REPLAY_FORMAT = "unsupported_replay_format"
 
 data class VerifiedReplay(val board: String, val score: Long, val steps: Int, val researchSum: Int = 0)
 
@@ -26,6 +30,7 @@ object ReplayVerifier {
     fun verify(
         input: ScoreSubmission, nowMillis: Long, supportedVersion: String,
         budget: VerificationBudget? = null,
+        rankedFormats: Set<Int> = SimVersion.RANKED_REPLAY_FORMATS,
     ): VerifiedReplay {
         budget?.check()
         require(input.gameVersion == supportedVersion) { "unsupported_version" }
@@ -38,6 +43,9 @@ object ReplayVerifier {
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("invalid_replay", e)
         }
+        // Format wyznacza zasady symulacji (stopnie wież, dowódca): ranking bieżącej wersji gry
+        // przyjmuje tylko formaty o jego zasadach, starsze zostają do lokalnego odtwarzania.
+        require(log.version in rankedFormats) { UNSUPPORTED_REPLAY_FORMAT }
         budget?.check()
         require(log.steps in 60..Replay.MAX_STEPS) { "invalid_ticks" }
         require(budget == null || log.steps <= budget.maxReplaySteps) { "verification_step_limit" }

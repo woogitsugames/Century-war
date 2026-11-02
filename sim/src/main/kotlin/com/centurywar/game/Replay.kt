@@ -9,6 +9,8 @@ import java.util.Base64
  */
 object Replay {
     const val VERSION = 7
+    /** Najstarszy format, który nadal odtwarzamy lokalnie (ranking: SimVersion.RANKED_REPLAY_FORMATS). */
+    const val MIN_VERSION = 5
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -62,7 +64,7 @@ object Replay {
         }
         val input = Reader(raw)
         val version = input.byte()
-        require(version in 5..VERSION) { "Nieobsługiwana wersja powtórki: $version" }
+        require(version in MIN_VERSION..VERSION) { "Nieobsługiwana wersja powtórki: $version" }
         val eventCode = input.byte()
         require(eventCode == 255 || eventCode in DailyEvent.entries.indices) { "Nieznane zdarzenie dnia" }
         val dailyEvent = if (eventCode == 255) null else DailyEvent.entries[eventCode]
@@ -190,7 +192,7 @@ object Replay {
     }
 
     private fun validate(log: Log) {
-        require(log.version in 5..VERSION) { "Nieobsługiwana wersja powtórki" }
+        require(log.version in MIN_VERSION..VERSION) { "Nieobsługiwana wersja powtórki" }
         require(log.steps in 0..MAX_STEPS) { "Nieprawidłowa liczba kroków" }
         require(log.commands.size <= MAX_COMMANDS) { "Przekroczony limit komend" }
         var previousStep = 0
