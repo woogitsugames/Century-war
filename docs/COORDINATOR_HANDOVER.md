@@ -1,3 +1,7 @@
+# NAJNOWSZE (2.11.2026 ok. 20:30 UTC)
+- `integ/tura10` = main + odtwarzacz nagranej muzyki (agent, pełne testy app zielone na jego gałęzi) + 21 utworów OGG w `app/src/main/assets/music/` (21 MB, APK 25 MB). Szybkie testy (Music*, BattleScreenTest, Startup) zielone; **pełnych testów po scaleniu muzyki nie uruchomiono — uruchom je i wypchnij integ/tura10 na main + bold-sagan**. APK z muzyką wysłane właścicielowi do odsłuchu (czekamy na uwagi: głośność, pętle, przenikanie).
+- Uwaga z raportu agenta: gra przejmuje fokus audio (zatrzymuje Spotify itp.); pętle MediaPlayer mają krótki „oddech” na złączeniu.
+
 # Century War: stan 2.11.2026 ok. 19:45 UTC (tura 10, późny wieczór)
 
 - `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` = 5081cd7b (+ ten wpis): tura 10 w całości — szlif przed premierą 1 i 2, doktryny (PROTOCOL 0.8.2), strojenie etapów 16–18/34–36, GPT 146–149, 152 (wydajność), 153 (grafiki sklepu), 154 (odporność zapisu). Pełne testy zielone. APK wysłane.
