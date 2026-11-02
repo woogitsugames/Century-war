@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: store-153-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   verify-and-render:
@@ -75,6 +75,8 @@ jobs:
           git add docs/store/assets/153
           if ! git diff --cached --quiet; then
             git commit -m 'Dołącz PNG grafik sklepowych Century War (153)'
+            git fetch origin gpt/153-store-assets
+            git rebase origin/gpt/153-store-assets
             git push origin HEAD:gpt/153-store-assets
           fi
       - name: Store test reports
