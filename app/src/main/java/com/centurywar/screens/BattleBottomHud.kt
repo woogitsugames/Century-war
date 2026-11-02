@@ -122,7 +122,9 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             // Nie zmieniamy dotychczasowego układu podpisów slotów.
         }
         refreshPauseTexts()
-        val modal = paused || finished || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
+        val systemModal = paused || finished || battle.pendingVariant != null ||
+            battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0
+        val modal = systemModal || (showTurrets && turretOverlay)
         for (i in 0..3) {
             val role = roles[i]
             val def = p.unit(role)
@@ -225,7 +227,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         }
         evolveBtn.label = if (p.era >= cfg.maxEra) shownRankText else L["evolve"]
         if (p.era >= cfg.maxEra) evolveBtn.enabled = false
-        pauseBtn.visible = !finished
+        pauseBtn.visible = !finished && !(showTurrets && turretOverlay)
         pauseBtn.iconId = Icons.PAUSE
         pauseBtn.label = ""
 
@@ -266,7 +268,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             variantBtn[i].visible = battle.pendingVariant != null && !paused && !finished
             variantBtn[i].label = ""
         }
-        val tp = showTurrets && !modal
+        val tp = showTurrets && !systemModal
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
             val active = tp && i < p.slots
             slotBuy[i].visible = active
