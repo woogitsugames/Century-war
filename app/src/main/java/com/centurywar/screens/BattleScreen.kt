@@ -677,6 +677,7 @@ class BattleScreen(
     }
 
     internal var turretSlotsLaid = -1
+    internal var turretOverlay = false
 
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
@@ -975,7 +976,7 @@ class BattleScreen(
 
 
     override fun onDrag(dx: Float, dy: Float) {
-        if (finished || paused) return
+        if (finished || paused || (showTurrets && turretOverlay)) return
         // Podczas celowania palec przesuwa celownik, a nie kamerę.
         if (aimingBarrage && aimStartedInField) return
         // Drobny ruch palca przy tapnięciu w odstęp między przyciskami HUD nie przesuwa widoku.
@@ -1020,6 +1021,11 @@ class BattleScreen(
         }
         if (showUpgrade >= 0) {
             if (!upgradePanel.contains(x, y)) showUpgrade = -1
+            return
+        }
+        // Pełny panel wież przejmuje tapy poza nim, zamiast sterować kamerą/minimapą.
+        if (showTurrets && turretOverlay) {
+            if (!panel.contains(x, y)) showTurrets = false
             return
         }
         if (mini.width() > 0f && x in mini.left..mini.right && y in (mini.top - 10 * dp)..(mini.bottom + 10 * dp)) {
@@ -1440,7 +1446,8 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h)
+        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h,
+            realDt = frameDt)
         if (aimingBarrage) barrageView.drawAim(c)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
         val regularTextScale = ui.textScale

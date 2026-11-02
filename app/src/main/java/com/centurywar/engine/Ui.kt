@@ -659,7 +659,8 @@ class Ui {
         if (ic != null) {
             if (b.progress in 0f..0.999f) cooldown(c, r, b.progress, rad)
             ic(c, r)
-            subLine(c, b, r.centerX(), r.bottom - 8 * dp + dy * 0.5f, labelDp * 0.86f, subC)
+            subLine(c, b, r.centerX(), r.bottom - 8 * dp + dy * 0.5f, labelDp * 0.86f, subC,
+                maxW = r.width() - 8 * dp)
             if (!b.enabled) dim(c, r, rad)
             return
         }
@@ -693,7 +694,8 @@ class Ui {
             val iy = if (hasBottom) r.top + r.height() * 0.42f + dy else cy
             Icons.draw(c, id, r.centerX(), iy, sz * (if (hasBottom) 0.5f else 0.58f), b.iconTint, dp = dp)
             if (b.sub.isNotEmpty() || b.subIcon >= 0) {
-                subLine(c, b, r.centerX(), r.bottom - 8 * dp + dy * 0.5f, labelDp * 0.86f, subC)
+                subLine(c, b, r.centerX(), r.bottom - 8 * dp + dy * 0.5f, labelDp * 0.86f, subC,
+                maxW = r.width() - 8 * dp)
                 if (b.label.isNotEmpty()) cornerTag(c, b.label, r.right - 4 * dp, r.top + 4 * dp)
             } else if (b.label.isNotEmpty()) {
                 val s = fit(b.label, labelDp * 0.86f, r.width() - 8 * dp)
@@ -708,7 +710,8 @@ class Ui {
             } else {
                 val s = fit(b.label, labelDp, avail)
                 textO(c, b.label, r.centerX(), cy - 1 * dp, s, tc, Paint.Align.CENTER)
-                subLine(c, b, r.centerX(), cy + labelDp * dp * 0.88f, labelDp * 0.76f, subC)
+                subLine(c, b, r.centerX(), cy + labelDp * dp * 0.88f, labelDp * 0.76f, subC,
+                    maxW = r.width() - 12 * dp)
             }
         }
         if (!b.enabled) dim(c, r, rad)
@@ -736,23 +739,34 @@ class Ui {
      * (np. „Zniszcz bazę wroga” na wąskim ekranie); [maxW] = 0 — bez ograniczenia.
      */
     internal fun subTextSize(b: Button, sizeDp: Float, maxW: Float): Float {
-        val iconW = if (b.subIcon >= 0) sizeDp * dp * 1.25f + 3 * dp else 0f
-        val room = maxW - iconW
-        return if (maxW > 0f && room > 0f && b.sub.isNotEmpty()) fit(b.sub, sizeDp, room) else sizeDp
+        if (maxW <= 0f || b.sub.isEmpty()) return sizeDp
+        val icon = b.subIcon >= 0
+        val gap = if (icon) 3 * dp else 0f
+        val room = (maxW - gap).coerceAtLeast(1f)
+        val full = measure(b.sub, sizeDp, true) + (if (icon) sizeDp * dp * 1.25f else 0f)
+        if (full <= room) return sizeDp
+        var fitted = sizeDp * room / full
+        // Dopasowujemy wspólnie cyfrę i monetę, bez minimalnego progu psującego wąski HUD.
+        var tries = 0
+        while (tries++ < 6 &&
+            measure(b.sub, fitted, true) + (if (icon) fitted * dp * 1.25f else 0f) > room) {
+            fitted *= 0.97f
+        }
+        return fitted
     }
 
     /** Podpis z opcjonalną ikoną (wyśrodkowany albo od lewej). */
     private fun subLine(c: Canvas, b: Button, x: Float, baseY: Float, sizeDp: Float, color: Int,
                         left: Boolean = false, maxW: Float = 0f) {
         val hasIcon = b.subIcon >= 0
-        val isz = sizeDp * dp * 1.25f
         val sz = subTextSize(b, sizeDp, maxW)
+        val isz = sz * dp * 1.25f
         val tw = if (b.sub.isEmpty()) 0f else measure(b.sub, sz, true)
         val gap = if (hasIcon && tw > 0f) 3 * dp else 0f
         val total = (if (hasIcon) isz else 0f) + gap + tw
         var xx = if (left) x else x - total / 2
         if (hasIcon) {
-            Icons.draw(c, b.subIcon, xx + isz / 2, baseY - sizeDp * dp * 0.36f, isz, dp = dp)
+            Icons.draw(c, b.subIcon, xx + isz / 2, baseY - sz * dp * 0.36f, isz, dp = dp)
             xx += isz + gap
         }
         if (tw > 0f) textO(c, b.sub, xx, baseY, sz, color)

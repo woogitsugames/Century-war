@@ -339,8 +339,15 @@ class PrereleasePolishTest {
         shot(g, prefix, "ustawienia_dol")
         val acc = AccessibilityScreen(g)
         open(g, acc, prefix, "dostepnosc")
-        field(acc, "scroll").setFloat(acc, field(acc, "maxScroll").getFloat(acc)); tick(g, 2)
+        // Przewijanie wywołuje layout i aktualizuje widoczność dolnych kontrolek.
+        acc.onDrag(0f, -100000f); tick(g, 2)
         shot(g, prefix, "dostepnosc_dol")
+        require10(acc.buttons.first { it.id == 42 }.visible &&
+            acc.buttons.first { it.id == 43 }.visible,
+            "$prefix: przewinięcie nie odsłoniło dolnych przełączników")
+        require10(lastTexts.any { it.s == L["access_reduce_flash"] } &&
+            lastTexts.any { it.s == L["access_left_handed_hud"] },
+            "$prefix: kadr dostępności nie pokazuje dolnych etykiet")
         g.pop()
         open(g, HintSettingsScreen(g), prefix, "podpowiedzi"); g.pop()
         open(g, BannerScreen(g), prefix, "sztandar"); g.pop()
