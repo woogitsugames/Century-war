@@ -354,6 +354,29 @@ class SettingsScreen(g: Game) : Screen(g) {
         return false
     }
 
+    override fun accessibilityLabel(b: Button): String {
+        val key = when (b) {
+            back -> "back"
+            reset -> "reset"
+            advanced -> "settings_advanced"
+            else -> labelKeyOf(b)
+        }
+        val row = L[key]
+        return if (b.label.isNotBlank() && b.label != row) row + ": " + b.label else row
+    }
+
+    override fun accessibilityCheckable(b: Button): Boolean =
+        b === snd || b === showFps || b === notifications || b === globalRank || b === advanced
+
+    override fun accessibilityChecked(b: Button): Boolean = when (b) {
+        snd -> g.profile.sound
+        showFps -> g.profile.showFps
+        notifications -> g.profile.notifications
+        globalRank -> g.profile.globalRanking
+        advanced -> advancedExpanded
+        else -> super.accessibilityChecked(b)
+    }
+
     override fun onClick(b: Button) {
         val p = g.profile
         when (b.id) {
