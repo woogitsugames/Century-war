@@ -155,6 +155,7 @@ object L {
         putAll(part124())
         putAll(part139())
         putAll(part141())
+        putAll(part135())
         }
     }
 
@@ -1617,6 +1618,13 @@ object L {
         "bh105_13days" to t("13 dni temu", "13 days ago", "Vor 13 Tagen", "Hace 13 días", "Il y a 13 jours", "13 giorni fa", "Há 13 dias", "13 днів тому", "13 dagen geleden", "13 gün önce"),
     )
 
+
+    /** Zlecenie 135: nowości z kolejnych tur. */
+    private fun part135(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "wn_135_modes" to t("Nowe karty oblężenia i wyzwania oraz poziomy trudności kampanii.", "New siege cards and challenges, plus campaign difficulty levels.", "Neue Belagerungskarten und Herausforderungen sowie Kampagnenschwierigkeit.", "Nuevas cartas y desafíos de asedio y niveles de dificultad de campaña.", "Nouvelles cartes et nouveaux défis de siège, et difficulté de campagne.", "Nuove carte e sfide d’assedio e livelli di difficoltà della campagna.", "Novas cartas e desafios de cerco e níveis de dificuldade da campanha.", "Нові карти й випробування облоги та рівні складності кампанії.", "Nieuwe belegeringskaarten en uitdagingen en campagnemoeilijkheid.", "Yeni kuşatma kartları ve mücadeleleri, sefer zorluk seviyeleri."),
+        "wn_135_profile" to t("Wykres po bitwie, kopia profilu i sztandary do odblokowania.", "Post-battle chart, profile backup and unlockable banners.", "Diagramm nach dem Kampf, Profilsicherung und freischaltbare Banner.", "Gráfico tras la batalla, copia del perfil y estandartes desbloqueables.", "Graphique après bataille, sauvegarde du profil et bannières à débloquer.", "Grafico dopo la battaglia, backup del profilo e stendardi sbloccabili.", "Gráfico após a batalha, cópia do perfil e estandartes desbloqueáveis.", "Графік після бою, копія профілю та прапори для відкриття.", "Grafiek na de strijd, profielback-up en vrij te spelen vaandels.", "Savaş sonrası grafik, profil yedeği ve açılabilir sancaklar."),
+        "wn_135_access" to t("Tryb leworęczny, ustawienia kolorów i ulepszony układ sterowania.", "Left-handed mode, colour options and improved controls.", "Linkshändermodus, Farboptionen und verbesserte Steuerung.", "Modo zurdo, opciones de color y controles mejorados.", "Mode gaucher, options de couleur et commandes améliorées.", "Modalità per mancini, opzioni colore e comandi migliorati.", "Modo para canhotos, opções de cor e controlos melhorados.", "Режим для шульг, налаштування кольорів та покращене керування.", "Linkshandige modus, kleuropties en verbeterde bediening.", "Solak modu, renk seçenekleri ve geliştirilmiş kontroller."),
+    )
 
     /** Zlecenie 106: historia zmian i ekran aktualizacji. */
     private fun part106(): Array<Pair<String, Array<out String>>> = arrayOf(

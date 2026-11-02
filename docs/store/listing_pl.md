@@ -4,7 +4,7 @@
 Century War: Wojna epok
 
 ## Krótki opis
-Strategia przez 9 epok: bossowie, pogoda, kampania i bitwy offline.
+Strategia przez 9 epok: kampania, oblężenie i bitwy offline.
 
 ## Pełny opis
 
@@ -23,6 +23,8 @@ ODKRYJ SWOJĄ STRATEGIĘ
 - Taktyczna walka — wieże, umiejętności specjalne, doktryny, ostrzał celowany i ulepszenia oddziałów.
 - 13 ścieżek badań — rozwijaj armię między bitwami za zdobyte medale.
 - Powtórki — zapisuj zakończone starcia i odtwarzaj je z kontrolą tempa oraz osi czasu.
+- Poziomy trudności kampanii, sztandary do odblokowania i wykres po bitwie.
+- Eksport i import profilu, ustawienia kolorów oraz układ leworęczny.
 - Samouczek, kodeks, osiągnięcia, misje i lokalne rekordy.
 - 10 języków, w tym polski i angielski.
 
