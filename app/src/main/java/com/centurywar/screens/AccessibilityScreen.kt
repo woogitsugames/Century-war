@@ -178,6 +178,34 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             ui.fit(s, 15f, b.r.left - x - 10f * dp), Ui.TEXT)
     }
 
+    override fun accessibilityLabel(b: Button): String {
+        val row = when (b.id) {
+            in 10 until 10 + Palette.COUNT -> return super.accessibilityLabel(b)
+            in 30..32 -> L["access_text"]
+            40 -> L["access_team_markers"]
+            41 -> L["access_reduce_shake"]
+            42 -> L["access_reduce_flash"]
+            43 -> L["access_left_handed_hud"]
+            else -> return super.accessibilityLabel(b)
+        }
+        return row + ": " + b.label
+    }
+
+    override fun accessibilityCheckable(b: Button): Boolean =
+        b.id in 10 until 10 + Palette.COUNT || b.id in 30..32 || b.id in 40..43
+
+    override fun accessibilityChecked(b: Button): Boolean = when (b.id) {
+        in 10 until 10 + Palette.COUNT -> g.profile.palette == b.id - 10
+        30 -> g.profile.textScale == 100
+        31 -> g.profile.textScale == 115
+        32 -> g.profile.textScale == 130
+        40 -> g.profile.teamMarkers
+        41 -> g.profile.reduceShake
+        42 -> g.profile.reduceFlash
+        43 -> g.profile.leftHandedHud
+        else -> super.accessibilityChecked(b)
+    }
+
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> { g.profile.save(); g.pop(); return }
