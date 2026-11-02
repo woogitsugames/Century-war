@@ -218,24 +218,30 @@ kolejnych; mediana to element nr 120, p95 nr 227.
 Pomiary JVM pochodzą z Ubuntu GitHub Actions, Robolectric NATIVE, Android SDK 35
 (emulowany) przy kompilacji dla SDK 36, Java 17. **Nie są pomiarem GPU telefonu.**
 
-Kod bazowy: `85e90b6`, kod po zmianach `126211c5`. Obie wersje uruchomiono
-na tym samym runnerze w jednym przebiegu [Performance 152, #41501887238](https://github.com/woogitsugames/Century-war/actions/runs/41501887238)
+Kod bazowy: `85e90b6`, kod po zmianach `29ae3666`. Obie wersje uruchomiono
+na tym samym runnerze w jednym **zakończonym pomyślnie** przebiegu [Performance 152, #41503404584](https://github.com/woogitsugames/Century-war/actions/runs/41503404584)
 (artefakt `performance-152-logs`).
 
-| Jakość | Przed: update mediana/p95 (ms) | Po: update mediana/p95 (ms) | Przed: draw mediana/p95 (ms) | Po: draw mediana/p95 (ms) |
-|---|---:|---:|---:|---:|
-| LOW | 0,072 / 0,154 | 0,039 / 0,075 | 14,855 / 16,189 | 14,410 / 15,712 |
-| HIGH | 0,033 / 0,065 | 0,036 / 0,065 | 16,650 / 17,620 | 16,871 / 17,894 |
+| Jakość | Metryka | Przed: mediana/p95 (ms) | Po: mediana/p95 (ms) |
+|---|---|---:|---:|
+| LOW | `Battle.step()` — sama symulacja | 0,003 / 0,009 | 0,002 / 0,008 |
+| LOW | `BattleScreen.update()` | 0,037 / 0,092 | 0,018 / 0,039 |
+| LOW | `BattleScreen.render()` | 14,486 / 16,341 | 13,762 / 14,491 |
+| HIGH | `Battle.step()` — sama symulacja | 0,002 / 0,004 | 0,002 / 0,004 |
+| HIGH | `BattleScreen.update()` | 0,015 / 0,040 | 0,015 / 0,035 |
+| HIGH | `BattleScreen.render()` | 16,085 / 17,012 | 16,177 / 17,157 |
 
-Są to pomiary czasów `BattleScreen.update()` (krok symulacji wraz z obsługą
-ekranu) i `BattleScreen.render()` osobno. Różnice, zwłaszcza w HIGH, mieszczą
-się w szumie pomiarowym runnera. Nowszy test mierzy dodatkowo sam
-`Battle.step()`; jego wyniki są odrębne od pomiarów update.
+Pomiary wykonano kolejno na jednym runnerze, ale zmienność JVM/JIT i obciążenie
+CI wykluczają interpretowanie różnic rzędu setnych milisekundy jako pewnego
+przyspieszenia lub spowolnienia. Dodatkowy scenariusz 72 jednostek uzyskał
+`ratio 72/36 = 0,89×` (mediany: 17,408 i 19,526 ms); test kontroluje
+złożoność, nie czas GPU.
 
 ### Alokacje i cykl życia pamięci
 
-W pierwszym pomiarze 600 przeplatanych `update + draw` przy LOW alokowało
-łącznie **688 B**, samo powtórzone `draw` **48 B**. Pierwszy wariant testu,
+W końcowym, zielonym pomiarze 600 przeplatanych `update + draw` alokowało
+łącznie **688 B** zarówno w LOW, jak i HIGH, a samo powtórzone `draw` **48 B**
+w obu profilach. Pierwszy wariant testu,
 wykonujący 600 samych `update()` bez `draw()`, przydzielił 28 672 B i nie
 spełnił progu 16 KiB — taki przebieg nie odwzorowuje rzeczywistej pętli gry.
 Test końcowy mierzy więc przeplatane klatki i niezależnie draw, z limitem
@@ -243,12 +249,12 @@ Test końcowy mierzy więc przeplatane klatki i niezależnie draw, z limitem
 Nie utożsamiać tego progu tolerancji JVM z matematycznym zerem alokacji.
 
 Przy 20 przejściach menu ↔ bitwa w dwóch grupach po 10, z GC między pomiarami,
-test na commicie `126211c5` uzyskał:
+test na commicie `29ae3666` uzyskał:
 
 | Jakość | Sterta po 10 (B) | Sterta po 20 (B) | Przyrost (B) | Zachowane stare ekrany |
 |---|---:|---:|---:|---:|
-| LOW | 76 946 496 | 76 960 424 | 13 928 | 0 |
-| HIGH | 77 000 072 | 77 001 512 | 1 440 | 0 |
+| LOW | 77 029 496 | 77 041 848 | 12 352 | 0 |
+| HIGH | 77 081 968 | 77 083 024 | 1 056 | 0 |
 
 `BaseFlashCache.release()` recykluje bitmapy błysku bazy przy `onPause()`
 ekranu bitwy, niezależnie od momentu GC. Test dodatkowo sprawdza, że cache
@@ -269,6 +275,11 @@ PERF_REPORT=true ./gradlew :app:testDebugUnitTest \
   --tests '*ReplayTest*' \
   --tests '*ScreenshotTest*' --console=plain --no-configuration-cache
 ```
+
+**Zweryfikowane:** `:app:assembleDebug`, testy wydajności, `ReplayTest`,
+`HudDigits152Test`, `HudDigits152RenderTest` oraz testy HUD dowódcy —
+wszystkie zakończone `BUILD SUCCESSFUL` w przebiegu #41503404584.
+Log końcowy testów: `BUILD SUCCESSFUL in 52s`, APK: `BUILD SUCCESSFUL in 42s`.
 
 **Ograniczenie:** JVM/Robolectric nie mierzy GPU, temperatury ani PSS na
 fizycznym urządzeniu 2–3 GB RAM. Osobna walidacja na sprzęcie docelowym
