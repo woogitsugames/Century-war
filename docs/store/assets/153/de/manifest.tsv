@@ -1,0 +1,22 @@
+file	width	height	alt	play_upload
+phone16x9/01-commander-aura.png	1920	1080	Kommandant der blauen Armee mit sichtbarer Aura vor dem gegnerischen Heer.	true
+phone16x9/02-turret-tiers.png	1920	1080	Turmfenster mit mehreren Ausbaustufen der Verteidigung.	true
+phone16x9/03-campaign-map.png	1920	1080	Kampagnenkarte von Century War mit Etappen und erhaltenen Sternen.	true
+phone16x9/04-endless-cards.png	1920	1080	Auswahl von drei Karten bei einer endlosen Belagerung.	true
+phone16x9/05-battle-chart.png	1920	1080	Diagramm nach dem Kampf mit Truppen, Basisgesundheit und Gold.	true
+phone20x9_qa/01-commander-aura.png	2400	1080	Kommandant der blauen Armee mit sichtbarer Aura vor dem gegnerischen Heer.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Turmfenster mit mehreren Ausbaustufen der Verteidigung.	false
+phone20x9_qa/03-campaign-map.png	2400	1080	Kampagnenkarte von Century War mit Etappen und erhaltenen Sternen.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Auswahl von drei Karten bei einer endlosen Belagerung.	false
+phone20x9_qa/05-battle-chart.png	2400	1080	Diagramm nach dem Kampf mit Truppen, Basisgesundheit und Gold.	false
+tablet10/01-commander-aura.png	2560	1440	Kommandant der blauen Armee mit sichtbarer Aura vor dem gegnerischen Heer.	true
+tablet10/02-turret-tiers.png	2560	1440	Turmfenster mit mehreren Ausbaustufen der Verteidigung.	true
+tablet10/03-campaign-map.png	2560	1440	Kampagnenkarte von Century War mit Etappen und erhaltenen Sternen.	true
+tablet10/04-endless-cards.png	2560	1440	Auswahl von drei Karten bei einer endlosen Belagerung.	true
+tablet10/05-battle-chart.png	2560	1440	Diagramm nach dem Kampf mit Truppen, Basisgesundheit und Gold.	true
+fold/01-commander-aura.png	2184	1968	Kommandant der blauen Armee mit sichtbarer Aura vor dem gegnerischen Heer.	true
+fold/02-turret-tiers.png	2184	1968	Turmfenster mit mehreren Ausbaustufen der Verteidigung.	true
+fold/03-campaign-map.png	2184	1968	Kampagnenkarte von Century War mit Etappen und erhaltenen Sternen.	true
+fold/04-endless-cards.png	2184	1968	Auswahl von drei Karten bei einer endlosen Belagerung.	true
+fold/05-battle-chart.png	2184	1968	Diagramm nach dem Kampf mit Truppen, Basisgesundheit und Gold.	true
+feature_1024x500.png	1024	500	Century-War-Logo mit einem Kommandanten auf dem Schlachtfeld.	true

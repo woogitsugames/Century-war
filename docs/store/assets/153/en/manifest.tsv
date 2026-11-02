@@ -1,0 +1,22 @@
+file	width	height	alt	play_upload
+phone16x9/01-commander-aura.png	1920	1080	Blue army commander with a visible support aura facing enemy units on the battlefield.	true
+phone16x9/02-turret-tiers.png	1920	1080	Tower panel showing defense upgrades through multiple tiers.	true
+phone16x9/03-campaign-map.png	1920	1080	Century War campaign map with stages and earned stars.	true
+phone16x9/04-endless-cards.png	1920	1080	Three Endless Siege card choices presented over a battle.	true
+phone16x9/05-battle-chart.png	1920	1080	Post-battle chart comparing armies, base health and gold.	true
+phone20x9_qa/01-commander-aura.png	2400	1080	Blue army commander with a visible support aura facing enemy units on the battlefield.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Tower panel showing defense upgrades through multiple tiers.	false
+phone20x9_qa/03-campaign-map.png	2400	1080	Century War campaign map with stages and earned stars.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Three Endless Siege card choices presented over a battle.	false
+phone20x9_qa/05-battle-chart.png	2400	1080	Post-battle chart comparing armies, base health and gold.	false
+tablet10/01-commander-aura.png	2560	1440	Blue army commander with a visible support aura facing enemy units on the battlefield.	true
+tablet10/02-turret-tiers.png	2560	1440	Tower panel showing defense upgrades through multiple tiers.	true
+tablet10/03-campaign-map.png	2560	1440	Century War campaign map with stages and earned stars.	true
+tablet10/04-endless-cards.png	2560	1440	Three Endless Siege card choices presented over a battle.	true
+tablet10/05-battle-chart.png	2560	1440	Post-battle chart comparing armies, base health and gold.	true
+fold/01-commander-aura.png	2184	1968	Blue army commander with a visible support aura facing enemy units on the battlefield.	true
+fold/02-turret-tiers.png	2184	1968	Tower panel showing defense upgrades through multiple tiers.	true
+fold/03-campaign-map.png	2184	1968	Century War campaign map with stages and earned stars.	true
+fold/04-endless-cards.png	2184	1968	Three Endless Siege card choices presented over a battle.	true
+fold/05-battle-chart.png	2184	1968	Post-battle chart comparing armies, base health and gold.	true
+feature_1024x500.png	1024	500	Century War logo and commander leading blue troops into battle.	true

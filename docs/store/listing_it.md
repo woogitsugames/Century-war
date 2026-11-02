@@ -4,11 +4,13 @@
 Century War
 
 ## Short description
-Strategia tra le epoche: campagna, assedio e battaglie offline.
+9 epoche: comandante, livelli delle torrette e battaglie offline.
 
 ## Full description
 
 Guida il tuo esercito attraverso nove epoche. Recluta unità, costruisci torrette e scegli quando avanzare all’epoca successiva.
+
+Evoca un comandante: la sua aura sostiene le truppe vicine. Potenzia la difesa durante lo scontro attraverso tre livelli delle torrette.
 
 Affronta 36 livelli di campagna con difficoltà regolabile, resisti alle ondate dell’assedio infinito o configura una schermaglia. Meteo, abilità, dottrine e ricerca offrono scelte tattiche.
 

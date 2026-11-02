@@ -4,11 +4,13 @@
 Century War
 
 ## Short description
-Strategie durch die Epochen: Kampagne, Belagerung und Gefechte offline.
+9 Epochen: Kommandant, Turmstufen und Offline-Gefechte.
 
 ## Full description
 
 Führe deine Armee durch neun Epochen. Rekrutiere Einheiten, baue Türme und entscheide, wann du in die nächste Epoche aufsteigst.
+
+Ein Kommandant stärkt mit seiner Aura die Truppen in seiner Nähe. Verbessere deine Türme während der Schlacht über drei Turmstufen.
 
 Spiele 36 Kampagnenstufen mit wählbarem Schwierigkeitsgrad, überlebe Wellen in der endlosen Belagerung oder stelle ein eigenes Gefecht zusammen. Wetter, Spezialfähigkeiten, Doktrinen und Forschung eröffnen taktische Möglichkeiten.
 

@@ -4,11 +4,13 @@
 Century War
 
 ## Short description
-Çağlar boyunca strateji: sefer, kuşatma ve çevrimdışı savaşlar.
+9 çağ: komutan, kule seviyeleri ve çevrimdışı savaşlar.
 
 ## Full description
 
 Ordunu dokuz çağ boyunca yönet. Birlikler yetiştir, kuleler inşa et ve bir sonraki çağa ne zaman geçeceğine karar ver.
+
+Bir komutan çağır: aurası yakındaki birliklerini güçlendirir. Savaş sırasında kule seviyeleri arasında yükseltmeler yaparak savunmanı güçlendir.
 
 Zorluk seçeneğiyle 36 sefer aşamasını oyna, sonsuz kuşatmada dalgalara diren veya kendi çatışmanı ayarla. Hava durumu, yetenekler, doktrinler ve araştırmalar taktik seçenekler sunar.
 

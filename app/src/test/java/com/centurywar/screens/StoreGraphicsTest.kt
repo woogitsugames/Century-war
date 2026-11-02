@@ -20,6 +20,7 @@ import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
 import com.centurywar.game.BattleRenderer
 import com.centurywar.game.Defs
+import com.centurywar.game.EndlessCard
 import com.centurywar.game.FxBuffer
 import com.centurywar.game.Mode
 import com.centurywar.game.Role
@@ -155,7 +156,7 @@ class StoreGraphicsTest {
     /** Sekcje publikowane musza miescic sie w limitach Play Console. */
     @Test
     fun listingLimits() {
-        for (lang in listOf("pl", "en")) {
+        for (lang in L.CODES) {
             val content = File("../docs/store/listing_" + lang + ".md").readText(Charsets.UTF_8)
             fun section(name: String): String {
                 val heading = "## " + name + "\n"
@@ -166,13 +167,241 @@ class StoreGraphicsTest {
             val title = section(if (pl) "Tytuł" else "Title")
             val short = section(if (pl) "Krótki opis" else "Short description")
             val full = section(if (pl) "Pełny opis" else "Full description")
-            val keywords = section(if (pl) "ASO — pięć propozycji fraz" else
-                "ASO — five suggested search phrases").lines().filter { it.startsWith("- ") }
+            val keywords = if (lang == "pl" || lang == "en")
+                section(if (pl) "ASO — pięć propozycji fraz" else
+                    "ASO — five suggested search phrases").lines().filter { it.startsWith("- ") }
+                else emptyList()
             assertTrue("Tytuł " + lang + ": " + title.length, title.length <= 30)
             assertTrue("Krótki opis " + lang + ": " + short.length, short.length <= 80)
             assertTrue("Pełny opis " + lang + ": " + full.length, full.length <= 4000)
-            assertEquals("Pięć fraz ASO " + lang, 5, keywords.size)
+            if (lang == "pl" || lang == "en")
+                assertEquals("Pięć fraz ASO " + lang, 5, keywords.size)
+            val features = mapOf(
+                "pl" to ("wódz" to "stopnie wież"),
+                "en" to ("commander" to "tower tiers"),
+                "de" to ("kommandant" to "turmstufen"),
+                "es" to ("comandante" to "niveles de torretas"),
+                "fr" to ("commandant" to "niveaux des tourelles"),
+                "it" to ("comandante" to "livelli delle torrette"),
+                "pt" to ("comandante" to "níveis das torres"),
+                "uk" to ("командир" to "рівні веж"),
+                "nl" to ("commandant" to "torenniveaus"),
+                "tr" to ("komutan" to "kule seviyeleri"),
+            ).getValue(lang)
+            assertTrue("Krótki opis bez dowódcy/stopni wież: " + lang,
+                short.lowercase().contains(features.first) &&
+                    short.lowercase().contains(features.second))
+            assertTrue("Pełny opis bez dowódcy/stopni wież: " + lang,
+                full.lowercase().contains(features.first) &&
+                    full.lowercase().contains(features.second))
         }
+    }
+
+
+    // Zlecenie 153: pięć autentycznych ekranów nowej zawartości, bez nakładek marketingowych.
+    // 20:9 pozostaje podglądem QA, ponieważ Play akceptuje najwyżej proporcje 2:1.
+    private val spotlight153Names = arrayOf(
+        "commander-aura", "turret-tiers", "campaign-map", "endless-cards", "battle-chart",
+    )
+    private val spotlight153Devices = listOf(
+        Device("phone16x9", 1920, 1080, 2f),
+        Device("phone20x9_qa", 2400, 1080, 2f),
+        Device("tablet10", 2560, 1440, 2f),
+        Device("fold", 2184, 1968, 2.7f),
+    )
+
+    @Test
+    fun generate153() {
+        assumeTrue("Eksport tylko przy STORE_GRAPHICS_153=true",
+            System.getenv("STORE_GRAPHICS_153") == "true")
+        val previousLanguage = L.lang
+        try {
+            val root = File("build/store153").apply { mkdirs() }
+            for (language in listOf("pl", "en", "de")) {
+                val strings = captions(language)
+                val languageDir = File(root, language).apply { mkdirs() }
+                val manifest = StringBuilder("file\twidth\theight\talt\tplay_upload\n")
+                for (device in spotlight153Devices) {
+                    val g = game(device, language)
+                    val directory = File(languageDir, device.name).apply { mkdirs() }
+                    for (scene in 1..5) {
+                        val filename = scene.toString().padStart(2, '0') +
+                            "-" + spotlight153Names[scene - 1] + ".png"
+                        val png = File(directory, filename)
+                        writePng(png, device.width, device.height, false) { canvas ->
+                            when (scene) {
+                                1 -> draw153Commander(canvas, g)
+                                2 -> draw153TurretTiers(canvas, g)
+                                3 -> renderScreen(canvas, g, CampaignScreen(g))
+                                4 -> draw153EndlessCards(canvas, g)
+                                else -> draw153BattleChart(canvas, g)
+                            }
+                        }
+                        checkPng(png, device.width, device.height, false)
+                        val isPlay = device.name != "phone20x9_qa"
+                        manifest.append(device.name).append('/').append(filename)
+                            .append('\t').append(device.width).append('\t')
+                            .append(device.height).append('\t')
+                            .append(strings.getProperty("alt153." + scene))
+                            .append('\t').append(isPlay).append('\n')
+                    }
+                }
+                // Jedna grafika promocyjna wspólna dla języków: oryginalny Wódz i emblemat.
+                val feature = File(languageDir, "feature_1024x500.png")
+                val featureGame = game(Device("feature153", 1024, 500, 1f), language)
+                writePng(feature, 1024, 500, false) { c ->
+                    val battle = commander153Battle()
+                    battle.fx.count = 0
+                    val renderer = BattleRenderer(featureGame, battle)
+                    renderer.layout(1024f, 500f, 12f, 10f)
+                    renderer.camX = Defs.LANE * 0.5f - renderer.worldVisible * 0.5f
+                    renderer.clampCam()
+                    renderer.lerp = 1f
+                    repeat(3) { renderer.render(c, 1f / 60f, 1024f, 500f) }
+                    drawFeatureTitle(c)
+                }
+                checkPng(feature, 1024, 500, false)
+                manifest.append("feature_1024x500.png\t1024\t500\t")
+                    .append(strings.getProperty("alt153.feature")).append("\ttrue\n")
+                File(languageDir, "manifest.tsv").writeText(manifest.toString(), Charsets.UTF_8)
+                contactSheet153(languageDir, strings)
+            }
+        } finally {
+            L.lang = previousLanguage
+        }
+    }
+
+    /** Ustalony seed, wyraźnie widoczny Wódz i aura przy wojskach gracza. */
+    private fun commander153Battle(): Battle {
+        val battle = sceneBattle(2)
+        battle.player.gold = 30000f
+        check((battle.commandController ?: BattleController(battle)).summonCommander())
+        val unit = battle.units.first { it.active && it.isCommander && it.side == 0 }
+        unit.x = 1350f
+        unit.prevX = unit.x
+        unit.anim = 0.5f
+        unit.prevAnim = unit.anim
+        // Wybuch przy przywołaniu zasłaniał Wodza; pokazujemy trwałą aurę, nie jednorazowy efekt.
+        battle.fx.count = 0
+        return battle
+    }
+
+    private fun draw153Commander(c: Canvas, g: Game) =
+        render153Battle(c, g, commander153Battle())
+
+    /** Stopnie 1/2/3 po kupnie i awansie wież przez kontroler, nie fałszywe etykiety. */
+    private fun draw153TurretTiers(c: Canvas, g: Game) {
+        val battle = sceneBattle(2)
+        val side = battle.player
+        side.gold = 30000f
+        side.slots = 3
+        val orders = battle.commandController ?: BattleController(battle)
+        check(orders.buyTurret(1))
+        check(orders.upgradeTurretTier(0))
+        check(orders.upgradeTurretTier(1))
+        check(orders.upgradeTurretTier(1))
+        check(side.turretTier[0] == 2 && side.turretTier[1] == 3)
+        render153Battle(c, g, battle, true)
+    }
+
+    /** Prawdziwe karty Endless, trzy rzadkości i właściwy panel wyboru. */
+    private fun draw153EndlessCards(c: Canvas, g: Game) {
+        val battle = sceneBattle(3)
+        battle.pendingCards = arrayOf(
+            EndlessCard.ECONOMY, EndlessCard.TOWER_NETWORK, EndlessCard.FREE_ELITE,
+        )
+        render153Battle(c, g, battle)
+    }
+
+    private fun render153Battle(c: Canvas, g: Game, battle: Battle, turrets: Boolean = false) {
+        val screen = BattleScreen(g, battle.cfg,
+            restored = RestoredBattle(battle, false, 800f))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        check(screen.paused)
+        screen.onBack()
+        check(!screen.paused)
+        if (turrets) screen.showTurrets = true
+        g.frame(c, 0f)
+        if (turrets) {
+            check(screen.slotTier[0].visible && screen.slotTier[1].visible)
+            for (button in screen.slotTier) if (button.visible) {
+                check(button.r.left >= 0f && button.r.right <= g.width.toFloat() &&
+                    button.r.top >= 0f && button.r.bottom <= g.height.toFloat()) {
+                    "Przycięty przycisk stopnia: " + button.r
+                }
+            }
+        }
+    }
+
+    /** Wykres z rzeczywistych próbek symulacji; ekran końca uruchamia gra. */
+    private fun draw153BattleChart(c: Canvas, g: Game) {
+        val config = BattleConfig(Mode.SKIRMISH, 153005L, 0.95f,
+            startEra = 3, maxEra = Defs.ERA_COUNT - 1, variantsEnabled = false)
+        val screen = BattleScreen(g, config)
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        val battle = screen.battle
+        battle.player.gold = 1500f
+        for (step in 0 until 900) {
+            if (battle.over) break
+            if (step % 180 == 0) {
+                screen.commands.queue(Role.MELEE)
+                screen.commands.queue(Role.RANGED)
+            }
+            battle.step()
+            screen.battleSummary.capture(battle)
+        }
+        check(screen.battleSummary.count >= 3) { "Brak próbek wykresu" }
+        if (!battle.over) check(screen.commands.surrender())
+        val tinyBitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+        try {
+            g.frame(Canvas(tinyBitmap), 1f / 60f)
+        } finally {
+            tinyBitmap.recycle()
+        }
+        check(screen.finished) { "Nie pokazano rzeczywistego wyniku bitwy" }
+        screen.resultTime = 1.5f
+        screen.showResultChart = true
+        g.frame(c, 0f)
+        check(screen.resultChartArea.left >= 0f &&
+            screen.resultChartArea.right <= g.width.toFloat() &&
+            screen.resultChartArea.top >= 0f &&
+            screen.resultChartArea.bottom <= g.height.toFloat()) {
+            "Wykres wykracza poza ekran"
+        }
+    }
+
+    private fun contactSheet153(directory: File, strings: Properties) {
+        val source = File(directory, "phone16x9")
+        val preview = File(directory, "preview_contact.png")
+        writePng(preview, 1600, 420, false) { canvas ->
+            canvas.drawColor(Color.rgb(18, 27, 43))
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(245, 225, 183)
+                typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                textSize = 22f
+            }
+            val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            for (i in spotlight153Names.indices) {
+                val name = (i + 1).toString().padStart(2, '0') +
+                    "-" + spotlight153Names[i] + ".png"
+                val image = BitmapFactory.decodeFile(File(source, name).absolutePath)
+                    ?: error("Brak podglądu: " + name)
+                val x = 10f + 320f * i
+                try {
+                    canvas.drawBitmap(image, null, RectF(x, 24f, x + 300f, 193f), imagePaint)
+                } finally {
+                    image.recycle()
+                }
+                val caption = strings.getProperty("caption153." + (i + 1))
+                paint.textSize = 22f
+                if (paint.measureText(caption) > 300f)
+                    paint.textSize *= 300f / paint.measureText(caption)
+                canvas.drawText(caption, x, 225f, paint)
+            }
+        }
+        checkPng(preview, 1600, 420, false)
     }
 
     /** Wykluczamy kadr przejscia, korzystamy z prawdziwego ekranu. */
