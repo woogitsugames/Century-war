@@ -28,6 +28,8 @@ class EndlessBossTest {
             for (u in b.units) u.active = false
             b.player.aliveCount = 0
             b.enemy.aliveCount = 0
+            b.player.commanderCd = 0f
+            b.enemy.commanderCd = 0f
             b.enemy.queueSize = 0
             b.waveTimer = 0f
             b.step()
