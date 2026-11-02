@@ -19,7 +19,7 @@ class ReleaseSizeReportTest(unittest.TestCase):
             mapping = root / "mapping.txt"
             usage = root / "usage.txt"
             mapping.write_text("\n".join(c + " -> x.y:" for c in report.CRITICAL_CLASSES) + "\n", encoding="utf-8")
-            usage.write_text("com.centurywar.unused.OldClass:\n", encoding="utf-8")
+            usage.write_text("com.centurywar.unused.OldClass\n", encoding="utf-8")
             before_apk, after_apk, before_aab, after_aab = [root / p for p in ("before.apk", "after.apk", "before.aab", "after.aab")]
             for p, length in ((before_apk, 200), (after_apk, 100), (before_aab, 100), (after_aab, 200)):
                 with zipfile.ZipFile(p, "w", compression=zipfile.ZIP_STORED) as archive:
