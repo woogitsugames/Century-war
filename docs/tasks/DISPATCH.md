@@ -135,3 +135,14 @@ Tura 9 (125, 136, 140, przegląd UX dowódcy) scalona. Repozytorium: `woogitsuga
 | Fala | Paczki |
 |---|---|
 | 5 (4 naraz) | 146 drobne poprawki czytelności bitwy, 147 menu w pionie (podzielony ekran), 148 wydanie testowe R8 i testy zamknięte, 149 serwer rankingu: pomiar i wdrożenie |
+
+---
+
+# Wysyłka zleceń 152–154 i 156 (tura 10, fala 6)
+
+Baza `claude/bold-sagan-vwz5gm` (szlif przed premierą + doktryny, PROTOCOL 0.8.2). Wszystkie naraz.
+
+| Fala | Paczki |
+|---|---|
+| 6 | 152 wydajność na tanich telefonach, 153 grafiki i opis sklepu, 154 odporność zapisu, 156 audyt przed premierą (sam raport; najlepiej najmocniejszy model) |
+| później | 155 przegląd tłumaczeń part145/150/151 (po scaleniu szlifu 2) |
