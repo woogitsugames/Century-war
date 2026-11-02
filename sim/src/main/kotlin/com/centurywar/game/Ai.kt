@@ -465,13 +465,14 @@ class Ai(
                 EndlessCard.BURNING_TOWERS, EndlessCard.RAPID_TOWERS,
                 EndlessCard.TOWER_NETWORK, EndlessCard.IRON_CURTAIN,
                 EndlessCard.EMBER_FORGE, EndlessCard.REPAIR_CREW,
-                EndlessCard.FIRST_GUARD -> 24f
+                EndlessCard.FIRST_GUARD, EndlessCard.MASTER_MASONS -> 24f
                 else -> 0f
             }
             AiPersonality.ECONOMIST -> when (card) {
                 EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD,
                 EndlessCard.SCAVENGER, EndlessCard.SUPPLY_LINE,
-                EndlessCard.MOBILIZATION, EndlessCard.FIELD_MEDICS -> 24f
+                EndlessCard.MOBILIZATION, EndlessCard.FIELD_MEDICS,
+                EndlessCard.QUARTERMASTER -> 24f
                 else -> 0f
             }
             AiPersonality.SIEGER -> when (card) {

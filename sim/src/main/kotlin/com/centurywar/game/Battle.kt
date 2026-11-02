@@ -369,6 +369,16 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                 s.turretDmgMul *= 1.4f
             }
             if (cfg.dailyEvent == DailyEvent.FORTIFIED_BASES) s.baseHpMul *= 2f
+            // Zlecenie 170: nowe dni działają symetrycznie na obie strony.
+            if (cfg.dailyEvent == DailyEvent.SIEGE_WORKS) {
+                s.turretCostMul *= 0.6f
+                s.turretRateMul *= 1.25f
+            }
+            if (cfg.dailyEvent == DailyEvent.FORCED_MARCH) {
+                s.speedMul *= 1.25f
+                s.trainMul *= 1.2f
+            }
+            if (cfg.dailyEvent == DailyEvent.SPOILS_OF_WAR) s.killGoldMul *= 1.75f
             if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES)
                 s.abilityCdMul = max(MIN_ABILITY_CD_MUL, s.abilityCdMul * 0.5f)
             if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
@@ -659,6 +669,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                     side.trainMul *= 1f + 0.08f * power
             }
             EndlessCard.EMBER_FORGE -> side.turretDmgMul *= 1f + 0.1f * power
+            EndlessCard.QUARTERMASTER -> side.xpMul *= 1f + 0.2f * power
+            EndlessCard.MASTER_MASONS -> side.turretCostMul *= 1f - 0.12f * power
             EndlessCard.CITADEL_HEART -> {
                 val defenses = side.cardStacks[EndlessCard.BULWARK.ordinal] +
                     side.cardStacks[EndlessCard.FORTRESS.ordinal] +

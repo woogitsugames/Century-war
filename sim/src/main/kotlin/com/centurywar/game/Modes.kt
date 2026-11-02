@@ -75,6 +75,10 @@ enum class DailyEvent(val key: String, val descriptionKey: String) {
     FORTIFIED_BASES("day_fortress", "day_fortress_d"),
     GOLD_RUSH("day_gold", "day_gold_d"),
     MIRROR_ARMY("day_mirror", "day_mirror_d"),
+    // Zlecenie 170: nowe dni dopisane na końcu (ordinal w powtórkach i zapisach).
+    SIEGE_WORKS("day_siege_works", "day_siege_works_d"),
+    FORCED_MARCH("day_forced_march", "day_forced_march_d"),
+    SPOILS_OF_WAR("day_spoils", "day_spoils_d"),
 }
 
 /** Mnożniki z badań gracza (metaprogresja). Liczy je [com.centurywar.meta.Profile]. */
@@ -409,6 +413,15 @@ object Daily {
     /** Zestawy v2 od następnego cyklu; dni 0–3 po premierze mają przypięte powtórki. */
     const val RULES_V2_DAY = RELEASE_DAY + 4L
 
+    /** Od tego dnia (dwa cykle po premierze) losujemy także dni dodane w zleceniu 170. */
+    const val EVENTS_V2_DAY = RELEASE_DAY + 8L
+
+    // Zamrożona pierwsza szóstka: dopisanie zdarzeń nie przelosuje wcześniejszych dni.
+    private val EVENTS_V1 = arrayOf(
+        DailyEvent.MARKSMEN, DailyEvent.RAPID_ABILITIES, DailyEvent.FREE_BARRAGE,
+        DailyEvent.FORTIFIED_BASES, DailyEvent.GOLD_RUSH, DailyEvent.MIRROR_ARMY,
+    )
+
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
     fun config(day: Long, bonuses: Bonuses): BattleConfig =
@@ -439,9 +452,11 @@ object Daily {
 
         // Osobny strumień nie wpływa na losowania epok, AI, modyfikatorów i pogody.
         // Czwarty dzień cyklu to RELEASE_DAY + 3; przeszłe dni pozostają bez zmian.
-        val event = if (!historical && (day - RELEASE_DAY) % 4L == 3L)
-            DailyEvent.entries[Rng(day * 131_071L + 907L).nextInt(DailyEvent.entries.size)]
-        else null
+        val event = if (!historical && (day - RELEASE_DAY) % 4L == 3L) {
+            // Dni sprzed EVENTS_V2_DAY losują z zamrożonej szóstki (przypięte powtórki).
+            val pool = if (day < EVENTS_V2_DAY) EVENTS_V1 else DailyEvent.entries.toTypedArray()
+            pool[Rng(day * 131_071L + 907L).nextInt(pool.size)]
+        } else null
         val eventStart = if (event == DailyEvent.GOLD_RUSH) 2 else start
         val eventMax = maxOf(maxEra, eventStart)
         val eventPower = if (event == DailyEvent.MIRROR_ARMY) 1f else power
