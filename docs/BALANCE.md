@@ -1105,3 +1105,28 @@ Od etapu 8 kampanii, w potyczce, Endless i nowych wyzwaniach dnia obie strony ma
 - 2026-11-02 — regeneracja złotych powtórek: Dowodca w polu bitwy: nowy Replay v7, Snapshot v16 i uczciwe AI.
 
 - 2026-11-02 — regeneracja złotych powtórek: Reaktywne AI kampanii dowodcy bez zmiany starych wynikow.
+
+
+### Zlecenie 125 — pomiary A/B wykonane 2.11.2026
+
+**Kampania, dokładna para bazowa/nowa:** baza `claude/bold-sagan-vwz5gm`
+(SHA `0da3a5c026ef70c3d2107872f9becd677d669159`) vs `gpt/125-commander`
+(po zmianie AI na reaktywne), ten sam `BalanceReport.campaignReport`,
+profil docelowy, **36 etapów × 20 seedów = 720 bitew na wersję**.
+
+- **Baza: 471/720 (65,42%)**, dowódca: **471/720 (65,42%)**, różnica **0,00 p.p.**
+- **36/36 etapów bez różnicy** w liczbie zwycięstw, medianie minut i odsetku patów; łącznie 0 patów. Cel braku regresji osiągnięty.
+- **Walidator progów nadal sygnalizuje 3 naruszenia istniejące także w bazie**: etap 1 = 75% wobec limitu 85–100%; etap 8 = 50%, odchylenie 27,5 p.p. od sąsiednich etapów (limit 25); etap 29 = mediana 2,75 min (minimum 4 min). **Nie zmieniano balansu istniejących jednostek ani etapów w ramach 125.**
+- Pomiar bazy: [Actions 41426714372](https://github.com/woogitsugames/Century-war/actions/runs/41426714372).
+- Pomiar zmiany: [Actions 41426131917](https://github.com/woogitsugames/Century-war/actions/runs/41426131917).
+
+**Endless**, porównanie tego samego `EndlessBalanceReportTest` ze stanem bazowym:
+- 20 seedów: **51,80 → 50,70**, zmiana **−2,12%**.
+- 100 seedów: **52,33 → 50,50**, zmiana **−3,50%**.
+- [Actions 41426312995](https://github.com/woogitsugames/Century-war/actions/runs/41426312995), wykonanie zakończone powodzeniem.
+
+Wobec bazy nie zaszła zmiana przebiegu testowych walk kampanii, ponieważ
+AI kampanijne reaguje na przywołanie dowódcy przez przeciwnika, lecz go samo
+nie inicjuje. Regeneracja 10 złotych powtórek v7/Snapshot v16 wykonana przez
+`./gradlew :sim:regenerateGolden` na GitHub Actions
+([przebieg](https://github.com/woogitsugames/Century-war/actions/runs/41426305006)).
