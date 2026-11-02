@@ -16,6 +16,7 @@ import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
+import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
 import kotlin.math.max
 import kotlin.math.min
@@ -320,6 +321,7 @@ class MenuScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        if (SaveGuard.takeWarning()) g.showNotice(L["save154_problem"], Icons.CLOSE)
         missionBadgePoll -= dt
         if (missionBadgePoll <= 0f) {
             missionBadgePoll = 10f
