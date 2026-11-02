@@ -105,7 +105,7 @@ class ReplayListScreen(g: Game) : Screen(g) {
         recordsTabs.draw(c)
         chrome.title(c, L["records"])
         if (loading || entries.isEmpty()) {
-            ui.textO(c, L[if (loading) "replay_loading" else "replay_empty"],
+            ui.textO(c, L[if (loading) "replay151_list_loading" else "replay_empty"],
                 panel.centerX(), panel.centerY(), 17f, Ui.DIM, Paint.Align.CENTER)
             if (!loading) {
                 // Tura 10: nowy gracz nie wiedział, skąd biorą się powtórki.

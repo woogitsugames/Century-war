@@ -117,6 +117,8 @@ class PrereleasePolishTest {
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
     private var counter = 0
+    /** Napisy ostatniego kadru (dla asercji szlifu 2). */
+    private var lastTexts: List<TextCanvas.Drawn> = emptyList()
 
     /** Kadr + audyt napisów i przycisków. */
     private fun shot(g: Game, prefix: String, name: String, saveFile: Boolean = true) {
@@ -130,7 +132,9 @@ class PrereleasePolishTest {
                 check(bmp.compress(Bitmap.CompressFormat.PNG, 100, it))
             }
             counter++
+            lastTexts = ArrayList(c.texts)
             auditTexts(g, where, c.texts)
+            polish2(g, where, c.texts)
             val cur = g.current
             if (cur is ModeScreen || (cur is CampaignScreen && field(cur, "selected").get(cur) != null))
                 require10(g.noticeBanner.isEmpty, "$where: baner powiadomienia na oknie z tytułem na panelu")
@@ -176,6 +180,49 @@ class PrereleasePolishTest {
         if (s is ModeScreen) for (t in visible) {
             require10(t.sizePx / dp >= 8.5f, "$where: drobny tekst ${"%.1f".format(t.sizePx / dp)} dp '${t.s}'")
             require10(t.r.right <= g.width + 1f && t.r.left >= -1f, "$where: tekst '${t.s}' poza ekranem")
+        }
+    }
+
+    /**
+     * Tura 10, szlif 2 (zatwierdzone poprawki 17–23): kodeks, rekordy, Endless na Foldzie, baner w menu.
+     */
+    private fun polish2(g: Game, where: String, texts: List<TextCanvas.Drawn>) {
+        val dp = g.ui.dp
+        val s = g.current ?: return
+        fun sp(t: TextCanvas.Drawn) = t.sizePx / dp / g.ui.textScale
+        when (s) {
+            is CodexScreen -> {
+                // Zakładki kategorii i epok nie maleją do drobnego pisma (także częściowo schowane).
+                @Suppress("UNCHECKED_CAST")
+                val labels = ((field(s, "categories").get(s) as Array<com.centurywar.engine.Button>).map { it.label } +
+                    (field(s, "tabs").get(s) as Array<com.centurywar.engine.Button>).map { it.label }).toSet()
+                val ct = field(s, "categoryRailTop").getFloat(s); val et = field(s, "eraRailTop").getFloat(s)
+                fun onRail(t: TextCanvas.Drawn) = t.r.centerY() in ct..(ct + 52 * dp) || t.r.centerY() in et..(et + 48 * dp)
+                for (t in texts) if (t.s in labels && onRail(t) && RectF.intersects(t.r, t.clip))
+                    require10(sp(t) >= 11.5f, "$where: zakładka kodeksu '${t.s}' ma ${"%.1f".format(sp(t))} sp")
+                val none = texts.count { it.s == L["cx62_no_variants"] }
+                require10(none <= 1, "$where: „${L["cx62_no_variants"]}” narysowane $none razy")
+            }
+            is RankingsScreen -> {
+                @Suppress("UNCHECKED_CAST")
+                val tabs = field(s, "tabs").get(s) as Array<com.centurywar.engine.Button>
+                // Zakładka Oblężenia (szlif 2: „Oblężenie” zamiast „Oblężenie bez końca”); zewnętrzny
+                // ekran Folda (pięć zakładek po ~55 dp) zostaje tylko w dzienniku audytu.
+                val tab0 = tabs[0]
+                if (g.width / dp >= 500f) for (t in texts) if (t.s == tab0.label && RectF.intersects(t.r, tab0.r))
+                    require10(sp(t) >= 11f, "$where: zakładka rekordów '${t.s}' ma ${"%.1f".format(sp(t))} sp")
+            }
+            is ModeScreen -> if (field(s, "mode").get(s) == Mode.ENDLESS && g.height / dp >= 500f) {
+                // Wysoki ekran: między ostatnim wierszem treści a przyciskiem Graj nie ma pustki.
+                val start = field(s, "start").get(s) as com.centurywar.engine.Button
+                val lowest = texts.filter { it.r.bottom < start.r.top }.maxOfOrNull { it.r.bottom } ?: 0f
+                require10(start.r.top - lowest <= 72 * dp,
+                    "$where: pusty panel Endless (${"%.0f".format((start.r.top - lowest) / dp)} dp nad Graj)")
+            }
+            is MenuScreen -> if (!g.noticeBanner.isEmpty)
+                require10(g.noticeBanner.bottom <= s.noticeBottom + 0.5f,
+                    "$where: baner powiadomienia bliżej niż 6 dp od kafelków menu")
+            else -> Unit
         }
     }
 
@@ -255,6 +302,11 @@ class PrereleasePolishTest {
         g.pop()
         val ms = MissionsScreen(g)
         open(g, ms, prefix, "misje")
+        // Szlif 2: nagłówek „Misje tygodniowe” stoi na własnym podkładzie.
+        val strip = field(ms, "headerStrip").get(ms) as RectF
+        val weeklyTitle = lastTexts.firstOrNull { it.s == L["ms_weekly"] }
+        require10(weeklyTitle != null && strip.contains(weeklyTitle.r.centerX(), weeklyTitle.r.centerY()),
+            "$prefix: nagłówek misji bez podkładu")
         require10(ms.dailyResetText.isNotEmpty() && ms.weeklyResetText.isNotEmpty() &&
             ms.dailyResetText != ms.weeklyResetText, "$prefix: misje bez czasu odnowienia")
         g.pop()
@@ -265,6 +317,14 @@ class PrereleasePolishTest {
         g.replace(ReplayListScreen(g))
         waitReplays(g)
         shot(g, prefix, "powtorki_pusto")
+        // Szlif 2: lista w trakcie wczytywania mówi o powtórkach w liczbie mnogiej.
+        (g.current as ReplayListScreen).let { rl ->
+            field(rl, "loading").setBoolean(rl, true)
+            shot(g, prefix, "powtorki_wczytywanie", saveFile = prefix.startsWith("phone720"))
+            require10(lastTexts.any { it.s == L["replay151_list_loading"] } && L["replay151_list_loading"] != L["replay_loading"],
+                "$prefix: lista powtórek bez tekstu „${L["replay151_list_loading"]}”")
+            field(rl, "loading").setBoolean(rl, false)
+        }
         g.replace(AchievementsScreen(g)); tick(g, 6, 0.1f); shot(g, prefix, "osiagniecia")
         g.pop()
         open(g, GlobalRankingsScreen(g), prefix, "ranking_globalny")
@@ -373,6 +433,41 @@ class PrereleasePolishTest {
             assertTrue("drugie dotknięcie nie usunęło (${entries.size})", entries.isEmpty())
             g.history?.close()
         } finally { L.lang = old }
+    }
+
+    /** Szlif 2: Endless na drugim wewnętrznym Foldzie (d=3,6) i baner serii dni w menu 720p. */
+    @Test
+    fun polish2EndlessFoldAndMenuBanner() {
+        val old = L.lang
+        try {
+            for (lang in arrayOf("pl", "en", "de")) {
+                val g = game(Device(1802, 2000, 3.6f, intArrayOf(0, 80, 0, 0)), lang)
+                counter = 0
+                tick(g, 5, 0.1f)
+                g.push(ModeScreen(g, Mode.ENDLESS)); tick(g, 6, 0.1f)
+                shot(g, "foldInner36_$lang", "endless")
+                g.history?.close()
+            }
+            for (lang in arrayOf("pl", "en", "de", "tr", "uk")) {
+                val g = game(devices.getValue("phone720"), lang)
+                counter = 0
+                tick(g, 5, 0.1f)
+                if (g.current !is MenuScreen) g.setScreen(MenuScreen(g))
+                g.showNotice(L["ms_streak"] + " 1/7")
+                tick(g, 4, 0.1f)
+                val menu = g.current as MenuScreen
+                shot(g, "banner720_$lang", "menu", saveFile = lang == "pl")
+                val campaign = field(menu, "campaign").get(menu) as com.centurywar.engine.Button
+                require10(!g.noticeBanner.isEmpty && campaign.r.top - g.noticeBanner.bottom >= 5.9f * g.ui.dp,
+                    "banner720_$lang: baner ${"%.1f".format((campaign.r.top - g.noticeBanner.bottom) / g.ui.dp)} dp nad Kampanią")
+                // Kontrolnie najdłuższe tłumaczenia nowych etykiet (tr/uk) w zakładce Rekordów.
+                g.push(RankingsScreen(g)); tick(g, 6, 0.1f)
+                shot(g, "banner720_$lang", "rankingi", saveFile = lang == "tr" || lang == "uk")
+                g.pop()
+                g.history?.close()
+            }
+        } finally { L.lang = old }
+        assertTrue("Regresje szlifu 2:\n$regressions", regressions.isEmpty())
     }
 
     @Test

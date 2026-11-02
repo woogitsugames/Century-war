@@ -174,6 +174,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     private val card = RectF()
     private val box = RectF()
+    private val railHit = RectF()
     private val pf = Paint(Paint.ANTI_ALIAS_FLAG)
 
     override fun isDragScreen() = true
@@ -353,8 +354,9 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val variantIndex = if (page == PAGE_VARIANTS) selectedVariant else -1
         val variant = Defs.spec(era).variants.getOrNull(variantIndex)
         variantTitle = if (variant == null) L["cx62_no_variants"] else L[variant.nameKey]
-        variantLineCount = if (variant == null) 0 else wrapWords(
-            L[variant.descKey], contentW - 20 * dp, 12.5f, variantLines)
+        // Tura 10 (szlif 2): epoka bez wariantów ma „Brak wariantów” tylko w nagłówku (z opisem).
+        variantLineCount = wrapWords(if (variant == null) L["cx62_no_variants_d"] else L[variant.descKey],
+            contentW - 20 * dp, 12.5f, variantLines)
         eraName = L[e.nameKey]
         eraNum = L.f("cx_era_n", era + 1, Defs.ERA_COUNT)
         evolveText = if (e.evolveXp == Int.MAX_VALUE) L["cx_final"] else L.f("cx_evolve", num(e.evolveXp.toFloat()))
@@ -458,9 +460,6 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         guideTitle = L[CATEGORY_KEYS[page]]
         when (page) {
             PAGE_VARIANTS -> {
-                if (Defs.spec(era).variants.isEmpty()) {
-                    addGuide(Icons.CODEX, L["cx62_no_variants"], L["cx62_no_variants_d"])
-                }
                 // Zbiorczy spis wszystkich ścieżek, także gdy bieżąca epoka ich nie ma.
                 for (e in Defs.specs.indices) for (variant in Defs.spec(e).variants) {
                     addGuide(Icons.CODEX, L[variant.nameKey], L[variant.descKey],
@@ -675,7 +674,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         c.save()
         c.clipRect(left + 22 * dp, categoryRailTop, left + contentW - 22 * dp,
             categoryRailTop + categoryRailHeight)
-        for (b in categories) if (b.visible) ui.button(c, b, 12.5f)
+        for (i in categories.indices) drawRailButton(c, categories[i],
+            left + 22 * dp + categoryOffsets[i] - categoryScroll, categoryWidths[i], 12.5f)
         c.restore()
         scrollCue.horizontal(c, left, left + contentW,
             categoryRailTop + categoryRailHeight / 2f, categoryScroll, maxCategoryScroll, dp)
@@ -683,7 +683,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             c.save()
             c.clipRect(left + 22 * dp, eraRailTop, left + contentW - 22 * dp,
                 eraRailTop + eraRailHeight)
-            for (b in tabs) if (b.visible) ui.button(c, b, 13.5f)
+            for (i in tabs.indices) drawRailButton(c, tabs[i],
+                left + 22 * dp + eraOffsets[i] - eraScroll, eraWidths[i], 13.5f)
             c.restore()
             scrollCue.horizontal(c, left, left + contentW,
                 eraRailTop + eraRailHeight / 2f, eraScroll, maxEraScroll, dp)
@@ -723,6 +724,24 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         ui.button(c, back, 16f)
         if (toggle.visible) ui.button(c, toggle, 15f)
         chrome.title(c, L["codex"])
+    }
+
+    /**
+     * Tura 10 (szlif 2): zakładka częściowo schowana za krawędzią listwy jest rysowana w pełnej
+     * szerokości i przycinana przez listwę. Wcześniej napis dopasowywał się do widocznego
+     * kawałka, więc „Epoka stali” czy „Fähigk./Waffenk.” malały do nieczytelnych rozmiarów.
+     * Prostokąt dotyku zostaje przycięty do listwy.
+     */
+    private fun drawRailButton(c: Canvas, b: Button, rawLeft: Float, width: Float, labelDp: Float) {
+        // Wąski skrawek (< 48 dp) nie łapie dotyku, ale nadal widać, że listwa się przewija.
+        if (rawLeft + width <= left + 22 * dp || rawLeft >= left + contentW - 22 * dp) return
+        val wasVisible = b.visible
+        railHit.set(b.r)
+        b.r.set(rawLeft, b.r.top, rawLeft + width, b.r.bottom)
+        b.visible = true
+        ui.button(c, b, labelDp)
+        b.visible = wasVisible
+        b.r.set(railHit)
     }
 
     /** Stała wysokość wierszy: na telefonie i Foldzie sekcje są przewijane razem z epoką. */

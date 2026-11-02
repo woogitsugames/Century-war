@@ -36,13 +36,13 @@ sam wykrywa napisy ucięte, nachodzące na siebie i drobniejsze niż 8,5 dp. Twa
 | 14 | Niski | „Co nowego”: przycisk Wstecz/Dalej 44 dp | `pre10_*_co_nowego` | Naprawione: 48 dp |
 | 15 | Niski | Menu na 720p: kafelki 46,8 dp | `pre10_phone720_*_00_menu` | Naprawione: minimum 48 dp |
 | 16 | Niski | Wyniki po porażce: „Zapisano: 0 zabitych, postęp 1 misji” — niezgrabne | `pre10_phone720_pl_42_wyniki` | Naprawione (pl): „Zachowano: zabici 0, misje z postępem 1” |
-| 17 | Niski | Kodeks › Warianty dla epoki bez wariantów: „Brak wariantów” dwa razy (pod nazwą epoki i w liście) | `pre10_phone720_pl_18_kodeks_2` | Do decyzji |
-| 18 | Niski | Kodeks: zakładka „Epoka stali” i niemieckie „Fähigk./Waffenk.” bardzo pomniejszone/ucięte na wąskich ekranach | `pre10_*_kodeks*` | Do decyzji (zmiana układu zakładek) |
-| 19 | Niski | Rekordy › Rankingi na 720p: zakładka „Oblężenie bez końca” zmniejszona do drobnego pisma | `pre10_phone720_pl_10_rankingi` | Do decyzji (krótsza nazwa „Oblężenie”?) |
-| 20 | Niski | Endless na Foldzie wewnętrznym: ogromny pusty panel (2 wiersze tekstu i Graj) | `pre10_foldInner_*_03_endless` | Do decyzji (układ) |
-| 21 | Niski | Misje: nagłówki „Misje dzienne/tygodniowe” stoją na tle krajobrazu bez podkładu | misje | Do decyzji (czytelne dzięki obrysowi) |
-| 22 | Niski | Menu 720p: baner serii dni dotyka górnej krawędzi kafelka Kampania | `pre10_phone720_pl_00_menu` | Do decyzji (pas na baner jest stały) |
-| 23 | Niski | Lista powtórek w trakcie ładowania: „Wczytywanie powtórki…” (l. poj.; ten sam tekst co w odtwarzaczu) | lista powtórek | Do decyzji (osobny tekst) |
+| 17 | Niski | Kodeks › Warianty dla epoki bez wariantów: „Brak wariantów” dwa razy (pod nazwą epoki i w liście) | `pre10_phone720_pl_18_kodeks_2` | Naprawione (szlif 2): napis tylko w nagłówku, z opisem pod spodem |
+| 18 | Niski | Kodeks: zakładka „Epoka stali” i niemieckie „Fähigk./Waffenk.” bardzo pomniejszone/ucięte na wąskich ekranach | `pre10_*_kodeks*` | Naprawione (szlif 2): zakładka częściowo schowana za krawędzią listwy rysuje się w pełnym rozmiarze (12,5–13,5 sp) i jest tylko przycinana |
+| 19 | Niski | Rekordy › Rankingi na 720p: zakładka „Oblężenie bez końca” zmniejszona do drobnego pisma | `pre10_phone720_pl_10_rankingi` | Naprawione (szlif 2): krótka etykieta „Oblężenie” (10 języków, de „Endlos”) |
+| 20 | Niski | Endless na Foldzie wewnętrznym: ogromny pusty panel (2 wiersze tekstu i Graj) | `pre10_foldInner_*_03_endless` | Naprawione (szlif 2): na ekranach od 480 dp wysokości panel ma wysokość treści |
+| 21 | Niski | Misje: nagłówki „Misje dzienne/tygodniowe” stoją na tle krajobrazu bez podkładu | misje | Naprawione (szlif 2): nagłówki mają własny podkład |
+| 22 | Niski | Menu 720p: baner serii dni dotyka górnej krawędzi kafelka Kampania | `pre10_phone720_pl_00_menu` | Naprawione (szlif 2): siatka kafelków zsuwa się o brakujące miejsce, odstęp 6 dp |
+| 23 | Niski | Lista powtórek w trakcie ładowania: „Wczytywanie powtórki…” (l. poj.; ten sam tekst co w odtwarzaczu) | lista powtórek | Naprawione (szlif 2): „Wczytywanie powtórek…” na liście, odtwarzacz bez zmian |
 | 24 | Info | „O grze” pokazuje wersję `0.1.0-dev (1)` | `pre10_*_o_grze` | Sprawdzić w buildzie wydania |
 
 Bez uwag: HUD bitwy i oba paski (zatwierdzony układ), panel wież, ulepszenie jednostki,
@@ -63,3 +63,29 @@ podmieniają ekran bez dokładania do stosu), więc wraca tam, skąd gracz przys
   `hint_reset_label` (10 języków), `ms_weekly_bronze` (pl/en/de). Klucze doktryn nietknięte.
 
 Wzorce PNG (`reg100`) bez zmian — poprawione ekrany nie są w zestawie wzorców.
+
+## Szlif 2 (zatwierdzone poprawki 17–23)
+
+- **Kodeks** (`CodexScreen.kt`): w Wariantach dla epoki bez wariantów „Brak wariantów” pojawia się raz
+  (w nagłówku, z opisem pod spodem; zniknął zdublowany wiersz listy). Zakładki kategorii i epok były
+  zmniejszane, bo napis dopasowywał się do widocznego kawałka przyciętego przycisku. Teraz przycisk
+  rysuje się w pełnej szerokości i listwa go tylko przycina, a obszar dotyku nadal kończy się na
+  krawędzi listwy. Na 720p i na zewnętrznym ekranie Folda zakładki mają 12,5/13,5 sp
+  (`pre10_phone720_pl_19_kodeks_2`, `pre10_foldOuter_de_23_kodeks_5`).
+- **Rekordy** (`RankingsScreen.kt`): krótka etykieta `endless151_tab` („Oblężenie”, en „Endless”, de „Endlos”,
+  uk „Облога”, tr „Kuşatma”), gdy pełna nazwa się nie mieści (`pre10_phone720_pl_10_rankingi`,
+  `pre10_banner720_uk_01_rankingi`, `pre10_banner720_tr_01_rankingi`). Na zewnętrznym ekranie Folda
+  (pięć zakładek po ~55 dp) etykiety mają ~10,5 sp; ten przypadek zostaje tylko w dzienniku audytu.
+- **Endless** (`ModeScreen.kt`): na ekranach o wysokości od 480 dp (oba Foldy) panel ma wysokość
+  treści (opis, rekord fali, wynik, Graj). Telefony mają poziomo najwyżej ~400 dp, więc ich układ
+  się nie zmienia (`pre10_foldInner_*_03_endless`, `pre10_foldInner36_*_00_endless`, `pre10_foldOuter_*_04_endless`).
+- **Menu** (`MenuScreen.kt`): na 720p pas na baner miał ~11 dp przy banerze o wysokości 24 dp. Siatka kafelków
+  zsuwa się o brakujące miejsce, więc między banerem a Kampanią jest 6 dp (`pre10_banner720_pl_00_menu`).
+- **Misje** (`MissionsScreen.kt`): podkład pod nagłówkami „Misje dzienne/tygodniowe” (`pre10_*_misje`).
+- **Powtórki** (`ReplayListScreen.kt`): lista w trakcie wczytywania pokazuje `replay151_list_loading`
+  („Wczytywanie powtórek…”); odtwarzacz zostaje przy `replay_loading` (`pre10_phone720_*_14_powtorki_wczytywanie`).
+- `L.kt`: `part151()` (2 klucze, 10 języków).
+- `PrereleasePolishTest`: nowe asercje `polish2` (zakładki kodeksu ≥ 11,5 sp, jedno „Brak wariantów”,
+  zakładka Oblężenia ≥ 11 sp, Endless na wysokim ekranie bez pustki nad Graj, baner ≥ 6 dp od kafelków,
+  podkład nagłówka misji, tekst wczytywania listy) oraz test `polish2EndlessFoldAndMenuBanner`
+  (Fold 1802×2000 d=3,6 i baner 720p w pl/en/de/tr/uk).
