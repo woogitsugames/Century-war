@@ -259,9 +259,26 @@ class BattleHistory(private val file: File) {
     private fun readEntries(): List<Record> {
         GameIoCounter.diskAccess()
         newerHistoryVersion = false
-        val candidates = listOf(file, File(file.parentFile, file.name + ".tmp"),
-            File(file.parentFile, file.name + ".bak"), File(file.parentFile, file.name + ".bak.tmp"))
-        for (candidate in candidates) {
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        val backup = File(file.parentFile, file.name + ".bak")
+        val backupTmp = File(file.parentFile, file.name + ".bak.tmp")
+        // Aktualizacji z nowszego formatu nigdy nie przykrywamy starszym .tmp.
+        if (file.isFile && file.length() in 1L..1_000_000L) {
+            try {
+                if (JSONObject(file.readText(Charsets.UTF_8)).optInt("v") > VERSION) {
+                    newerHistoryVersion = true
+                    SaveGuard.report("history-version")
+                    return emptyList()
+                }
+            } catch (_: Exception) {
+                // Uszkodzony główny plik spróbujemy odzyskać poniżej.
+            }
+        }
+        val originals = if (tmp.isFile && (!file.isFile || tmp.lastModified() >= file.lastModified()))
+            listOf(tmp, file) else listOf(file, tmp)
+        val backups = if (backupTmp.isFile && (!backup.isFile || backupTmp.lastModified() >= backup.lastModified()))
+            listOf(backupTmp, backup) else listOf(backup, backupTmp)
+        for (candidate in originals + backups) {
             if (!candidate.exists()) continue
             if (candidate.length() !in 1L..1_000_000L) {
                 SaveGuard.report("history-size")
