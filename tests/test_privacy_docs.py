@@ -150,7 +150,7 @@ class PrivacyDocumentationTest(unittest.TestCase):
 
     def test_gdd_does_not_compare_to_other_games(self):
         gdd = read(DOCS / "GDD.md")
-        self.assertNotRegex(gdd, re.compile(r"Age of War|\\bAoW\\b|Clash of Clans|Clash Royale", re.I))
+        self.assertNotRegex(gdd, re.compile(r"Age of War|\bAoW\b|Clash of Clans|Clash Royale", re.I))
         self.assertIn("metaprogresją na tygodnie", gdd)
         self.assertIn("jednym pasie", gdd)
         self.assertIn("kampania", gdd.lower())
