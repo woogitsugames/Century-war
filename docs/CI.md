@@ -1,5 +1,81 @@
 # CI Android: Century War
 
+## Zlecenie 162: bramki wydania i pamięć CI
+
+Na tagu `v*` job `release` czeka na zielone `build`, `fast-tests`,
+`screenshot-tests` i `balance-tests`. Każdy wykonuje checkout
+tego samego SHA wskazanego przez tag (zdarzenie GitHub Actions).
+Błąd lub pominięcie jednej bramki blokuje podpisany APK/AAB.
+Bieżący problem balansu A156-13 może nadal blokować wydanie:
+nie wolno usuwać testów lub asercji, aby to obejść.
+
+### Zmienne GitHub Actions
+
+| Typ | Nazwa | Przeznaczenie |
+|---|---|---|
+| Secret | `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` | Podpis upload |
+| Secret | `CW_HMAC_KEY` | Konfiguracja podpisu żądań rankingu |
+| Variable | `CW_SERVER_URL` | HTTPS adres serwera |
+| Variable | `CW_PRIVACY_URL` | HTTPS adres opublikowanej polityki |
+
+Zmienne `CW_*` trafiają jawnie do kroku kompilacji release.
+Weryfikator zgłasza wyłącznie nazwy brakujących ustawień, bez wartości.
+Nadal wymagane są wypełnione dokumenty wydawcy, polityka prywatności,
+ID Play Games, prawidłowa data wydania i numer wersji.
+Zastępcze `example` i `REPLACE_ME` pozostają odrzucane.
+**Uwaga:** obecny `CW_HMAC_KEY` jest osadzany w aplikacji (`BuildConfig`);
+sekret Actions nie chroni go przed odczytem z APK. Bezpieczeństwo
+rankingu wymaga osobnego przeglądu modelu uwierzytelniania.
+
+### Graf, pamięć i kompletność testów
+
+`:app:test` jest przepinane na `testDebugUnitTest` po utworzeniu
+wariantów AGP. `fast-tests` sprawdza `:app:test --dry-run` i odrzuca
+`testReleaseUnitTest` oraz `releaseChecklist`. Testy buildSrc
+uwzględniają 71 wymaganych kluczy Play Games.
+
+Robolectric: `maxHeapSize=384m`, `forkEvery=1`, maksymalnie 2 forki.
+Test `PrereleasePolishTest` należy do `screenshots`, nie do `fast`.
+Audyt 156 potwierdził zaliczone **osobne** kategorie przy 8 GiB,
+jednym forku i takiej izolacji (fast: 8 min 22 s;
+screenshots: 9 min 48 s). **To nie jest aktualny pomiar
+pełnego `:app:testDebugUnitTest`.**
+
+```bash
+# Pełny pomiar pod limitem 8 GiB:
+./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache --max-workers=1 -PtestForks=1
+
+# Pełny pomiar na hoście 16 GiB:
+./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache -PtestForks=2
+```
+
+### Zrzuty PNG (A156-27)
+
+`app/build/screenshots/` jest outputem zadania testowego Gradle.
+Przy `FROM-CACHE` PNG muszą być odtworzone razem z raportami.
+Job `screenshot-tests` weryfikuje 30 plików (15 scen × telefon i Fold),
+usuwa wygenerowany katalog, wymaga ponownego przebiegu
+`:app:testDebugUnitTest FROM-CACHE`, a następnie sprawdza te same PNG.
+Brak obrazu, niepoprawny nagłówek albo brak cache kończy job błędem.
+Log powtórzenia znajduje się w artefakcie `cw-tests-screenshots-results`.
+
+```bash
+python3 scripts/verify_ci_screenshots.py app/build/screenshots
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+./gradlew -p buildSrc test --console=plain --no-configuration-cache
+```
+
+Regresję bramek zabezpieczają `tests/test_ci_release_gates.py`
+i `tests/test_verify_ci_screenshots.py`. `updateScreenshots`
+pomija cache, żeby faktycznie aktualizować wzorce.
+
+**Weryfikacja:** przed publikacją odczytaj wyniki pełnego
+Gradle i jobów GitHub Actions dla wskazanego SHA; analiza
+samego YAML nie jest potwierdzeniem przejścia testów.
+
+---
+
+
 Workflow: [`.github/workflows/android.yml`](../.github/workflows/android.yml).
 
 ## Szybka kontrola lokalna
@@ -23,8 +99,8 @@ Pełny lokalny zestaw nie jest zastępowany tym zadaniem:
 ```
 
 Własność `-PtestForks=1` ogranicza testy do jednego procesu JVM.
-Domyślnie są maksymalnie dwa procesy testowe po 1 GiB sterty,
-`forkEvery=15` klas. Dzięki temu testy nie zajmują niekontrolowanie
+Domyślnie są maksymalnie dwa procesy testowe po 384 MiB sterty,
+`forkEvery=1` klas. Dzięki temu testy nie zajmują niekontrolowanie
 pamięci na maszynach z 8–16 GB RAM. `quickCheck` filtruje
 `testDebugUnitTest` **tylko wtedy, gdy uruchomiono zadanie quickCheck**;
 nie należy łączyć obu nazw zadań w jednej komendzie, jeżeli potrzebny
@@ -32,50 +108,12 @@ jest pełny przebieg.
 
 ## Równoległe CI
 
-Workflow: [`.github/workflows/android.yml`](../.github/workflows/android.yml).
-Każdy push/PR uruchamia niezależne joby, bez uzależniania testów od audytu licencji:
-
-| Job | Zakres |
-|---|---|
-| `build` | Debug APK, `buildSrc:test`, zależności i kontrola licencji |
-| `tests (jvm)` | Wszystkie testy JVM (w tym deterministyczna symulacja) |
-| `tests (robolectric)` | Logika z Robolectric, bez ciężkiego renderowania |
-| `tests (screen-phone720)` | `ScreenshotTest.screens` i `tutorial`, format 1600×720 |
-| `tests (screen-phone20x9)` | Te same metody, format 2400×1080 |
-| `tests (screen-foldOpen)` | Te same metody, rozłożony Fold 2184×1968 |
-| `tests (screens-other)` | Pozostałe metody `ScreenshotTest`, galeria, ikony, renderer |
-| `server-tests` | Pełne `:server:test` wraz z weryfikacją powtórek |
-| `lint` | Android Lint, informacyjnie (nieblokujący) |
-| `test-timings` | Łączy XML z jobów i publikuje top 20 klas/metod |
-
-Joby testów mają limit 20 min, a celem jest **cały przebieg CI poniżej
-20 min czasu ściennego**. Nie jest to gwarantowany wynik dla zimnego cache:
-pobranie Gradle, Robolectric i SDK może podnieść czas. Rzeczywiste czasy
-jobów należy sprawdzać w zakładce Actions; raport JUnit liczy *czas metod*,
-który sumuje się między równoległymi shardami.
-
-`scripts/ci_test_shards.py` odczytuje bieżące pliki `app/src/test`
-i generuje rozłączne selektory Gradle. Polecenie:
-
-```bash
-python3 scripts/ci_test_shards.py verify
-python3 scripts/ci_test_shards.py args jvm
-```
-
-sprawdza pokrycie wszystkich wykrytych metod `@Test` i odrzuca nieznane
-selektory lub duplikaty. `ScreenshotTest.screens` i `tutorial` działają
-na wszystkich trzech formatach przy zwykłym lokalnym uruchomieniu.
-W CI filtr `CW_SCREENSHOT_DEVICE=phone720|phone20x9|foldOpen` wybiera
-jeden format na job. **Nie pomijamy żadnego formatu ani metody**.
-Raporty balansu (`BALANCE_RUN=true`) i generator sklepu
-(`STORE_GRAPHICS=true`) pozostają na żądanie, jak poprzednio.
-
-Każdy job zachowuje osobny artefakt `cw-tests-*-results`, shardy obrazów
-również PNG, a `build` — `century-war-debug-apk`.
-Gradle wykorzystuje `gradle/actions/setup-gradle@v4`, Robolectric ma
-dodatkowy cache `~/.m2/repository/org/robolectric` (w tym
-`android-all-instrumented`). `server.yml` nadal sprawdza także
-budowanie obrazu Docker po zmianach w `server/` albo `sim/`.
+Aktualny workflow uruchamia `build` (APK, buildSrc i skrypty Python),
+`fast-tests` (app/sim/server), `screenshot-tests` (Robolectric,
+30 PNG i cache), `balance-tests` (raporty balansu), `test-timings`
+(zbiorcze czasy) oraz `lint` (nieblokujący). Pierwsze cztery joby
+są także bramkami wydania na tagu. Kategorie są rozłączne,
+a wzorce sprawdza `scripts/ci_test_categories.py`.
 
 ## Pomiar czasów i punkt odniesienia
 
@@ -177,7 +215,8 @@ Nie umieszczaj keystore, zakodowanego Base64 ani hasel w commitach, artefaktach 
 
 ## Release po tagu
 
-Push taga `v*` (np. `v0.1.0`) uruchamia wylacznie job `release`:
+Push taga `v*` (np. `v0.1.0`) uruchamia joby `build`, `fast-tests`,
+`screenshot-tests`, `balance-tests`, a po ich sukcesie `release`:
 
 ```bash
 git tag v0.1.0

@@ -160,3 +160,14 @@ do artefaktu `cw-full-suite-speed-results`. Czas z XML to suma metod,
 a nie czas ścienny Gradle (część testów biegnie równolegle). **Nie wolno
 wpisywać wyniku „po” na podstawie założeń**: wymaga prawdziwego pomiaru
 na tym samym CPU, RAM, JDK, cache i zestawie testów.
+
+
+## Zlecenie 162: nowsza konfiguracja pamięci
+
+Historyczne `forkEvery=0` z zadania 131 zostało zastąpione przez
+`forkEvery=1` i `maxHeapSize=384m` na zadaniu testowym aplikacji.
+`PrereleasePolishTest` należy teraz do kategorii `screenshots`.
+Dla 8 GiB stosuj `-PtestForks=1`, dla 16 GiB `-PtestForks=2`.
+Pełne wyniki należy zmierzyć na obecnym SHA; nie zastępują
+ich wcześniejsze przebiegi pojedynczych kategorii.
+Zasady wydania na tagu i cache PNG: [CI.md](CI.md).
