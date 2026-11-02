@@ -273,7 +273,7 @@ class StoreGraphicsTest {
 
     /** Ustalony seed, wyraźnie widoczny Wódz i aura przy wojskach gracza. */
     private fun commander153Battle(): Battle {
-        val battle = sceneBattle(4)
+        val battle = sceneBattle(2)
         battle.player.gold = 30000f
         check((battle.commandController ?: BattleController(battle)).summonCommander())
         val unit = battle.units.first { it.active && it.isCommander && it.side == 0 }
@@ -281,6 +281,8 @@ class StoreGraphicsTest {
         unit.prevX = unit.x
         unit.anim = 0.5f
         unit.prevAnim = unit.anim
+        // Wybuch przy przywołaniu zasłaniał Wodza; pokazujemy trwałą aurę, nie jednorazowy efekt.
+        battle.fx.count = 0
         return battle
     }
 
@@ -289,7 +291,7 @@ class StoreGraphicsTest {
 
     /** Stopnie 1/2/3 po kupnie i awansie wież przez kontroler, nie fałszywe etykiety. */
     private fun draw153TurretTiers(c: Canvas, g: Game) {
-        val battle = sceneBattle(4)
+        val battle = sceneBattle(2)
         val side = battle.player
         side.gold = 30000f
         side.slots = 3
