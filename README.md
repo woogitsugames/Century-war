@@ -22,3 +22,8 @@ Do gry trafiają skonwertowane OGG w `app/src/main/assets/music/` na `main`
 | era5_battle.flac | 110 s | 2.11.2026 |
 | era6_calm.flac | 90 s | 2.11.2026 |
 | era5_calm.flac | 177 s | 2.11.2026 |
+| era6_battle.flac | 61 s | 2.11.2026 |
+| era7_calm.flac | 83 s | 2.11.2026 |
+| era7_battle.flac | 93 s | 2.11.2026 |
+| era8_battle.flac | 120 s | 2.11.2026 |
+| era8_calm.flac | 169 s | 2.11.2026 |
