@@ -1,4 +1,4 @@
-name: Benchmark weryfikacji powtórek 121
+name: Benchmark weryfikacji powtórek 149
 
 on:
   workflow_dispatch:
@@ -35,7 +35,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: replay-benchmark-121
+          name: replay-benchmark-149
           path: |
             server/build/test-results/test/
             server/build/reports/tests/test/

@@ -6,6 +6,21 @@ Potrzebujesz domeny, serwera VPS, konta z możliwością SSH oraz kodu repozytor
 
 ## 1. Zakup serwera i domena
 
+### Ile to kosztuje? (orientacyjnie, 02.11.2026)
+
+| Oferta | Rozmiar VPS | Cena orientacyjna | Na co uważać |
+|---|---|---|---|
+| [OVHcloud VPS-1](https://www.ovhcloud.com/fr/vps/) | 2 vCore, 4 GB RAM, 40 GB NVMe | od **3,81 EUR netto/mies.** | Cena „od”, zależna od konfiguracji i okresu. |
+| [netcup VPS Lite 1 G12.5s](https://www.netcup.com/en/server/vps/vps-lite-1-g12.5s-iv-6m) | 2 vCore, 4 GB RAM, 80 GB SSD | około **5,86 EUR brutto/mies.** | Pokazana oferta z zobowiązaniem na 6 miesięcy. |
+| [Hetzner Cloud CX23](https://www.hetzner.com/cloud/cost-optimized/) | 2 vCPU, 4 GB RAM, 40 GB NVMe | około **5,49 EUR netto + 0,50 EUR za IPv4/mies.** | Limitowana dostępność; sprawdź panel przed zakupem. |
+
+**Wybór na start:** OVHcloud VPS-1 albo netcup z 4 GB RAM i architekturą x86_64.
+Wybierz serwer w UE i Ubuntu 24.04 LTS. Nie wybieraj 1 GB RAM — budowanie
+obrazu na VPS może zabraknąć pamięci. Do ceny dolicz domenę, VAT (zależnie
+od kraju i fakturowania) i osobną kopię danych poza VPS. To orientacyjne
+stawki, a współdzielony vCPU nie gwarantuje stałej wydajności.
+
+
 1. Wybierz VPS z **Ubuntu 24.04 LTS**, publicznym adresem IPv4, około 2 vCPU,
    **4 GB RAM do kompilacji obrazu Docker** i przynajmniej 20 GB SSD.
    Po zbudowaniu obrazu sam serwer potrzebuje znacznie mniej zasobów.
@@ -36,8 +51,10 @@ git clone https://github.com/woogitsugames/Century-war.git /opt/century-war
 cd /opt/century-war
 ~~~
 
-Użyj gałęzi lub wydania, do którego scalono zlecenie 43.
-**Przed pierwszym uruchomieniem upewnij się, że ten kod jest wdrożony**.
+Użyj **stabilnej, przetestowanej** gałęzi lub tagu zawierającego aktualny serwer.
+Przed startem sprawdź numer commita poleceniem `git rev-parse --short HEAD`
+i upewnij się, że `git status --short` nie pokazuje lokalnych zmian.
+Nie wdrażaj w ciemno równolegle rozwijanej gałęzi.
 Prawa do Dockera dają w praktyce uprawnienia administratora — nie udostępniaj
 ich przypadkowym użytkownikom.
 
@@ -52,12 +69,20 @@ nano .env
 chmod 600 .env
 ~~~
 
-Wygeneruj dwa niezależne 64-znakowe klucze (`openssl rand -hex 32` dwa razy).
-Jeden wklej do `CW_HMAC_KEY`, drugi do `CW_PUBLIC_ID_KEY`.
-**Drugi klucz pozostaje wyłącznie na serwerze**; nie umieszczaj go w APK
-ani nie zmieniaj bez migracji danych. Ustaw
-CW_GAME_VERSION zgodnie z **ScoreClient.GAME_VERSION w Androidzie**
-(obecnie 0.8.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
+Wygeneruj dwa **niezależne** klucze (`openssl rand -hex 32` dwa razy).
+Pierwszy 64-znakowy ciąg wklej w `CW_HMAC_KEY`; drugi w `CW_PUBLIC_ID_KEY`.
+**CW_PUBLIC_ID_KEY jest wyłącznie serwerowy** — nie trafia do APK.
+Zachowaj zaszyfrowaną kopię obu kluczy poza VPS. Rotacja `CW_PUBLIC_ID_KEY`
+bez migracji zmieni publiczne identyfikatory graczy. Opcjonalny
+`CW_METRICS_TOKEN` wygeneruj trzecim `openssl rand -hex 32`; puste pole
+wyłącza `/metrics`. W `.env.example` są tylko przykłady, nie sekrety.
+
+**Nie ustawiaj `CW_GAME_VERSION`.** Serwer automatycznie używa
+`SimVersion.PROTOCOL` z modułu `:sim`, identycznego jak
+`ScoreClient.GAME_VERSION` w aplikacji. Nie zapisuj `.env` do Git ani
+nie publikuj kluczy. Dla najmniejszego VPS zacznij z
+`CW_JAVA_TOOL_OPTIONS=-Xmx512m -XX:ActiveProcessorCount=1`:
+jedna weryfikacja jednocześnie, ograniczona sterta JVM.
 Klucz ten jest również w APK, a więc **nie zapewnia mocnego uwierzytelnienia**.
 Żądanie usunięcia obcego UUID jest odrzucane bez powiązanego z nim
 sekretu instalacji. Istniejące konta wiążą sekret przy pierwszym nowym wyniku.
@@ -65,10 +90,13 @@ sekretu instalacji. Istniejące konta wiążą sekret przy pierwszym nowym wynik
 ~~~bash
 docker compose up -d --build
 docker compose ps
-curl -f http://127.0.0.1:8080/healthz
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8080/healthz
 ~~~
 
-Odpowiedź healthz powinna brzmieć **ok**. Kontener ma restart: unless-stopped,
+Oba adresy powinny odpowiedzieć HTTP **200**, tekstem **ok**.
+HTTP 503 sygnalizuje problem z SQLite; sprawdź też status
+`healthy` w `docker compose ps`. Kontener ma restart: unless-stopped,
 bazę w trwałym wolumenie cw-data oraz port 8080 dostępny **tylko lokalnie**.
 Błąd konfiguracji? Zobacz logi: docker compose logs --tail=100 leaderboard.
 Nie przesyłaj do osób trzecich pełnego pliku .env ani danych graczy z backupów.
@@ -85,7 +113,8 @@ sudo nano /etc/caddy/Caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl enable --now caddy
 sudo systemctl reload caddy
-curl -f https://scores.twojadomena.pl/healthz
+curl -fsS https://scores.twojadomena.pl/health
+curl -fsS https://scores.twojadomena.pl/healthz
 ~~~
 
 Caddy automatycznie wystawia i odnawia certyfikat TLS przy poprawnym DNS
@@ -109,24 +138,38 @@ ma tu osobnego rate limitera; dla ochrony DDoS dodaj ograniczenie na brzegu.
 
 ## 5. Podłączenie Androida
 
-W prywatnym local.properties albo w zmiennych CI dla budowy aplikacji ustaw:
-CW_SERVER_URL=https://scores.twojadomena.pl,
-CW_PRIVACY_URL=https://twojadomena.pl/store/privacy-policy-pl/
-(oraz faktyczny publiczny adres polityki prywatności) i CW_HMAC_KEY,
-**taki sam jak na serwerze**. W Google Play i samej aplikacji podaj działający
+Na komputerze budującym Androida wpisz do **nieśledzonego** pliku
+`local.properties` (w katalogu głównym projektu), albo jako zmienne
+środowiskowe/secrets w CI podczas budowania APK/AAB:
+
+~~~properties
+CW_SERVER_URL=https://scores.example.com
+CW_PRIVACY_URL=https://example.com/privacy
+CW_HMAC_KEY=TU_WKLEJ_DOKLADNIE_WARTOSC_Z_SERWERA
+~~~
+
+Adresy `example.com` są **tylko przykładami**: użyj własnych publicznych
+adresów HTTPS. `CW_HMAC_KEY` musi być identyczny z kluczem w serwerowym
+`.env`. **Nie wpisuj `CW_PUBLIC_ID_KEY` ani `CW_METRICS_TOKEN` w aplikacji.**
+W GitHub Actions użyj **Secrets**, nie jawnych wartości w YAML, commitach lub
+logach. Wartości są kompilowane do `BuildConfig`: zmiana domeny lub HMAC
+wymaga wydania nowej aplikacji. Klucz HMAC obecny w APK można wyodrębnić,
+więc nie służy jako samodzielne poświadczenie tożsamości gracza. W Google Play i samej aplikacji podaj działający
 link do polityki prywatności. Użytkownik musi sam wyrazić zgodę na ranking.
 Bez kompletu konfiguracji własny ranking jest wyłączony.
 
 Po wdrożeniu sprawdź podpisane żądania GET /v1/top oraz POST /v1/score,
-a także usuwanie tożsamości. GET /healthz nie wymaga podpisu; pozostałe
-wymagają nagłówków opisanych w server/README.md.
+a także usuwanie tożsamości. GET `/health` i `/healthz` nie wymagają podpisu,
+tak samo jak POST `/v1/report`; żądania wyników i odczytu rankingu są
+podpisywane zgodnie z `server/README.md`.
 Wersje klienta, serwera i symulacji muszą się zgadzać.
 
 ## 6. Kopie zapasowe i cron
 
 Baza SQLite pracuje w trybie WAL. **Nie kopiuj otwartego pliku .db zwykłym cp**,
 bo pomija to zapisane jeszcze rekordy w pliku -wal. Skrypt wykonuje
-spójną kopię poleceniem sqlite3 .backup i przenosi ją **poza wolumen Dockera**:
+spójną kopię komendą serwerową `admin backup` (`VACUUM INTO` SQLite)
+i przenosi ją **poza wolumen Dockera**:
 
 ~~~bash
 sudo mkdir -p /var/backups/century-war
@@ -141,9 +184,13 @@ Dodaj w crontab jedną linię (codziennie 03:00 czasu serwera):
 0 3 * * * /usr/bin/bash /opt/century-war/server/backup-sqlite.sh >> /var/log/cw-backup.log 2>&1
 ~~~
 
-Skrypt zatrzymuje się przy błędzie, robi jedną spójną kopię i usuwa
-**lokalne** pliki starsze niż 14 dni. Przechowuj także szyfrowaną kopię
-**poza VPS** (inna maszyna / zewnętrzny storage), z ograniczonym dostępem,
+Skrypt używa serwerowej komendy `admin backup` (`VACUUM INTO`) do
+spójnego zrzutu SQLite w trybie WAL, następnie `docker cp` do katalogu
+poza wolumenem. Zatrzymuje się przy błędzie i usuwa **lokalne**
+kopie starsze niż 14 dni. Co jakiś czas sprawdź kopię poleceniem
+`sqlite3 /sciezka/do/kopii.sqlite 'PRAGMA integrity_check;'` (wynik `ok`)
+i przetestuj przywrócenie na **osobnym testowym serwerze**.
+Przechowuj także szyfrowaną kopię **poza VPS** (inna maszyna / zewnętrzny storage), z ograniczonym dostępem,
 retencją i procedurą usuwania danych. W przeciwnym razie awaria dysku VPS
 zniszczy bazę i kopie razem. Monitoruj nieudane zadania cron i miejsce na dysku.
 Odtworzenie starej kopii może przywrócić rekordy graczy, którzy później
@@ -151,7 +198,14 @@ Odtworzenie starej kopii może przywrócić rekordy graczy, którzy później
 
 ## 7. Aktualizacja i bezpieczne przywracanie
 
-Przed aktualizacją wykonaj kopię według kroku 6. Następnie:
+Przed aktualizacją wykonaj kopię według kroku 6 i zapisz działający
+commit obrazu. W pliku `sim/src/main/kotlin/com/centurywar/game/SimVersion.kt`
+sprawdź stałą `SimVersion.PROTOCOL` — korzystają z niej i serwer,
+i `ScoreClient.GAME_VERSION`. Zmiany zasad bitwy wymagają skoordynowania
+wdrożenia serwera i nowego APK/AAB. Starsze aplikacje mogą dostać
+`unsupported_version` (HTTP 400); najpierw testuj na kanale wewnętrznym.
+**Nie podnoś tej stałej samodzielnie w ramach prac wdrożeniowych.**
+Następnie:
 
 ~~~bash
 cd /opt/century-war
@@ -309,6 +363,19 @@ ryzyko utraty sekretu instalacji wraz z profilem, możliwość przejęcia znaneg
 historycznego UUID przed przypisaniem sekretu i retencja backupów.
 Przed startem wykonaj testy /score, /around, /report i /player/delete.
 
+
+### Awaria — diagnostyka w kolejności
+
+1. Sprawdź **DNS i TLS**: czy rekord A wskazuje VPS, a `curl -fsS https://scores.twojadomena.pl/health` zwraca `ok`.
+2. Sprawdź **kontener i bazę**: `docker compose ps`, `docker compose logs --tail=200 leaderboard`, `curl -i http://127.0.0.1:8080/health`.
+3. Sprawdź **brak pamięci/dysku**: `free -m`, `df -h`, `docker stats --no-stream` oraz status Caddy: `sudo systemctl status caddy`.
+4. Gdy kontener jest zatrzymany i logi nie pokazują błędu migracji, użyj `docker compose up -d`. Gdy TLS nie działa, sprawdź `sudo journalctl -u caddy -n 100 --no-pager`.
+5. Jeśli nowe wydanie psuje bazę lub odtwarzanie, **nie usuwaj wolumenu**. Zachowaj logi i aktualną bazę, wycofaj obraz do znanego commita, a kopię odtwarzaj wyłącznie zgodnie z krokiem 7 (z rejestracją ponownych żądań usunięcia danych).
+
+**Nie wykonuj `docker compose down -v`**: usuwa trwały wolumen SQLite.
+Jeżeli widzisz HTTP 503 `verification_busy`, ogranicz tempo zgłoszeń/obciążenie
+i sprawdź CPU, czasy z `/metrics` (tylko z poprawnym prywatnym tokenem).
+Nie zwiększaj limitu 15 s bez nowego pomiaru.
 ## 11. Wydajność weryfikacji powtórek (zlecenie 121)
 
 **Pomiar 01.11.2026, [GitHub Actions — benchmark 121](https://github.com/woogitsugames/Century-war/actions/runs/41341222738):**
@@ -363,3 +430,48 @@ SERVER_BENCH=true taskset -c "$CPU" ./gradlew :server:test -PserverOnly=true \
 ~~~
 
 Zwykłe `./gradlew :server:test -PserverOnly=true` pomija benchmark.
+
+## 12. Ponowny benchmark z dowódcą i stopniami wież (zlecenie 149)
+
+Test `ServerReplayBenchmarkTest` jest wyłączony w zwykłym CI i uruchamia się
+wyłącznie przy `SERVER_BENCH=true`. W scenariuszu ma 432 000 kroków,
+przywołanie dowódcy (`SUMMON_COMMANDER`) i dwa ulepszenia stopni jednej wieży
+(`TURRET_TIER`, stopień 3); rejestruje je wyłącznie `BattleController`.
+Sprawdza zgodność wyniku nagrania z siedmioma weryfikacjami, z czego
+dwie rozgrzewają JIT, a pięć jest mierzonych. CI izoluje **jeden vCPU**
+przez `taskset` oraz `-XX:ActiveProcessorCount=1`, z `-Xmx512m`.
+
+**Pomiar 02.11.2026 — [GitHub Actions, benchmark 149](https://github.com/woogitsugames/Century-war/actions/runs/41447513413):**
+Ubuntu Linux, AMD EPYC 7763 (procesor współdzielonego runnera), Java 21.0.13,
+`taskset` ograniczony do jednego procesora logicznego, `-XX:ActiveProcessorCount=1`,
+`-Xmx512m` (raportowana maksymalna sterta 494 MiB).
+Syntetyczne Endless: **432 000 kroków**, **30 952 komendy**, 123 818 bajtów
+Base64 URL, fala 432, `Replay.VERSION=7`; w logu dokładnie jedno
+`SUMMON_COMMANDER`, jedno `BUY_TURRET` i dwa `TURRET_TIER`.
+Wszystkie siedem weryfikacji odtworzyło tę samą liczbę kroków i wynik co nagranie.
+
+| Operacja | Pięć pomiarów (ms) | Mediana | Maksimum |
+|---|---|---:|---:|
+| `Replay.verify` | 925, 929, 906, 917, 904 | **917 ms** | **929 ms** |
+| `Replay.decode + verify` | 932, 933, 907, 918, 905 | **918 ms** | **933 ms** |
+
+**Wniosek:** w tej próbce pojedyncze `Replay.verify` trwało maksymalnie
+**0,929 s**, znacznie poniżej budżetu **15 s**. Nie ma podstaw do zmiany
+limitu kroków, timeoutu ani protokołu. To pomiar pojedynczego syntetycznego
+przebiegu, **nie** pomiar najgorszego legalnego zgłoszenia na 1-vCPU VPS.
+Po doliczeniu czasu oczekiwania w kolejce, ewentualnego drugiego przebiegu
+normalizacji badań i zmiennej wydajności współdzielonego CPU margines może
+się zmniejszyć. Przed udostępnieniem serwera zmierz maksymalny czas na
+wybranym VPS przy równoległych żądaniach i obserwuj HTTP 503 oraz `/metrics`.
+
+```bash
+cpu=$(awk '/^Cpus_allowed_list:/ {split($2, a, /[,-]/); print a[1]}' /proc/self/status)
+SERVER_BENCH=true taskset -c "$cpu" ./gradlew :server:test -PserverOnly=true \
+  --tests '*ServerReplayBenchmarkTest*' --console=plain --no-daemon --no-configuration-cache
+```
+
+Wynik jest testem **syntetycznym**: `baseHpMul = Float.POSITIVE_INFINITY`
+zapobiega zakończeniu Endless przez presję po fali 120. Taka konfiguracja
+nie przechodzi walidacji API. Pojedyncza weryfikacja nie obejmuje
+drugiego przebiegu normalizacji badań, oczekiwania w kolejce ani działania
+innych klientów. Limit **15 s** dotyczy całego budżetu od wejścia do kolejki.

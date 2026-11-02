@@ -10,6 +10,8 @@ on:
       - 'gpt/**'
     paths:
       - "server/**"
+      - "docker-compose.yml"
+      - ".env.example"
       - "sim/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
@@ -17,6 +19,8 @@ on:
   pull_request:
     paths:
       - "server/**"
+      - "docker-compose.yml"
+      - ".env.example"
       - "sim/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
@@ -45,6 +49,11 @@ jobs:
         run: bash -n server/backup-sqlite.sh
       - name: Testy symulacji, endpointów i weryfikatora
         run: ./gradlew :sim:test :server:test -PserverOnly=true --console=plain --no-configuration-cache --stacktrace
+      - name: Sprawdź Compose bez sekretów produkcyjnych
+        env:
+          CW_HMAC_KEY: "CI_TYLKO_TEST"
+          CW_PUBLIC_ID_KEY: "CI_TYLKO_TEST"
+        run: docker compose config --quiet
       - name: Buduj obraz Docker
         run: docker build -f server/Dockerfile -t century-war-score:ci .
       - name: Zapisz raporty testów
