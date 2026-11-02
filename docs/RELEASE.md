@@ -1,5 +1,43 @@
 # Wydanie Android / Google Play
 
+## Testy ręczne czytnika ekranu (164)
+
+Zakres przed premierą: menu główne, Ustawienia, Dostępność, Podpowiedzi
+oraz przyciski panelu pauzy. W trakcie bitwy TalkBack udostępnia jeden
+element z opisem bitwy i działaniem **Pauza**; HUD i pozostałe ekrany
+nie mają jeszcze osobnych wirtualnych kontrolek. Suwaki głośności
+rysowane poza `Screen.buttons` nadal wymagają dotyku — nie traktować
+tego zakresu jako pełnej dostępności gry.
+
+- [ ] Android 8/9 i Android 15+: włączyć **TalkBack**, uruchomić aplikację.
+  Eksploracja palcem i przesuwanie fokusu pokazują przyciski menu,
+  bez pustych kafelków i niewidocznych elementów.
+- [ ] W trybie poziomym sprawdzić ikonę Ustawienia i Kodeks:
+  odczytywane są nazwy, nie puste przyciski. Przejść do Ustawień
+  dwukrotnym dotknięciem, wrócić i ponownie otworzyć.
+- [ ] W Ustawieniach przejść po wszystkich widocznych wierszach;
+  TalkBack czyta nazwę opcji razem z bieżącą wartością. Zmienić język,
+  dźwięk i powiadomienia, sprawdzić stan zaznaczenia. Wyłączony
+  przycisk Play Games nie może się aktywować.
+- [ ] Otworzyć Dostępność: sprawdzić wybór palety, rozmiar tekstu,
+  stan znaczników i redukcji błysków. Przewinąć stronę; poza kadrem
+  nie mogą pozostawać węzły, a nowe przyciski powinny dostać fokus.
+- [ ] Otworzyć Podpowiedzi: włączyć/wyłączyć podpowiedzi, skontrolować
+  ostrzegające potwierdzenia i wrócić do Ustawień.
+- [ ] Uruchomić bitwę: poza pauzą istnieje **jeden** opisany element
+  z akcją Pauza, bez setek pustych węzłów HUD. Po aktywacji widać
+  tylko przyciski pauzy (Wznów, Restart, Wyjdź, wibracje, tempo).
+  Wznowić i sprawdzić ponowne zredukowanie drzewa.
+- [ ] Wywołać okno wznowienia zapisanej bitwy z menu: fokus ma
+  obejmować Wznów/Porzuć, a nie zasłonięte kafelki menu.
+- [ ] Powtórzyć na telefonie 720p oraz Foldzie po zmianie rozmiaru
+  i orientacji, sprawdzając pozycje prostokątów eksploracji dotykiem.
+- [ ] Sprawdzić **Switch Access**: skanowanie kontrolek i aktywację
+  kliknięć menu, ustawień oraz pauzy bez zwykłych gestów.
+- [ ] Wyłączyć wszystkie usługi dostępności i porównać wydajność
+  oraz liczbę alokacji pętli gry z bazą; nie może powstawać drzewo
+  wirtualnych kontrolek w kolejnych klatkach.
+
 ## Testy ręczne aktualizacji i odporności zapisu (154)
 
 Przeprowadzić na urządzeniu z Androidem 8+ i na aktualnym emulatorze. Do aktualizacji
