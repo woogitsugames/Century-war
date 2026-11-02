@@ -20,6 +20,7 @@ class Music internal constructor(
     private val catalog: MusicCatalog,
     factory: TrackPlayerFactory?,
     private val audio: AudioManager?,
+    private val minBufferSize: (Int, Int, Int) -> Int = AudioTrack::getMinBufferSize,
 ) {
     /** Bez [assets] (testy) zachowanie jak dotąd: wyłącznie synteza. */
     constructor(assets: AssetManager? = null, audio: AudioManager? = null) : this(
@@ -187,10 +188,16 @@ class Music internal constructor(
     private fun syncSynth(want: Boolean) {
         val t = worker
         if (want && t == null) {
-            worker = Thread({ stream() }, "music-stream").apply {
+            val next = Thread({ stream() }, "music-stream").apply {
                 priority = Thread.MIN_PRIORITY
                 isDaemon = true
-                start()
+            }
+            worker = next
+            try {
+                next.start()
+            } catch (e: RuntimeException) {
+                if (worker === next) worker = null
+                throw e
             }
         } else if (!want && t != null) {
             worker = null
@@ -200,20 +207,20 @@ class Music internal constructor(
 
     private fun stream() {
         val me = Thread.currentThread()
-        try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) } catch (_: RuntimeException) { }
-        val synth = MusicSynth()
-        synth.setSeed(themeSeed)
-        synth.setEra(era)
-        synth.skipFade()
-        val pcm = ShortArray(CHUNK_SAMPLES)
-        val minBytes = AudioTrack.getMinBufferSize(
-            MusicSynth.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-        )
-        if (minBytes <= 0) return
-        // Co najmniej 500 ms bufora sprzętowego (PCM16 mono = 2 bajty na próbkę).
-        val bufferBytes = (maxOf(minBytes, MusicSynth.SAMPLE_RATE * 2 / 2) + 1) and -2
         var track: AudioTrack? = null
         try {
+            try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) } catch (_: RuntimeException) { }
+            val synth = MusicSynth()
+            synth.setSeed(themeSeed)
+            synth.setEra(era)
+            synth.skipFade()
+            val pcm = ShortArray(CHUNK_SAMPLES)
+            val minBytes = minBufferSize(
+                MusicSynth.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            if (minBytes <= 0) return
+            // Co najmniej 500 ms bufora sprzętowego (PCM16 mono = 2 bajty na próbkę).
+            val bufferBytes = (maxOf(minBytes, MusicSynth.SAMPLE_RATE * 2 / 2) + 1) and -2
             track = AudioTrack.Builder()
                 .setAudioAttributes(AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_GAME)
@@ -242,7 +249,7 @@ class Music internal constructor(
                 synth.setIntensity(intensity)
                 synth.renderPcm(pcm, pcm.size, volume)
                 var written = 0
-                // Zapis nieblokujący: pauza/zatrzymanie nie może utknąć w write() na pełnym buforze.
+                // Zapis nieblokujący: pauza nie czeka na zwolnienie bufora sprzętowego.
                 while (written < pcm.size && worker === me) {
                     val n = track.write(pcm, written, pcm.size - written, AudioTrack.WRITE_NON_BLOCKING)
                     if (n < 0) return
@@ -252,11 +259,15 @@ class Music internal constructor(
         } catch (_: InterruptedException) {
             // pause()/release(): normalne zakończenie.
         } catch (_: RuntimeException) {
-            // Brak wyjścia audio albo nieobsługiwany format nie zatrzymuje gry.
+            // Błąd AudioTrack: następne resume()/setVolume() może ponowić próbę.
         } finally {
             track?.let {
                 try { it.pause(); it.flush() } catch (_: RuntimeException) { }
-                it.release()
+                try { it.release() } catch (_: RuntimeException) { }
+            }
+            synchronized(this) {
+                // Spóźniony worker nie może wyczyścić referencji do nowego utworu.
+                if (worker === me) worker = null
             }
         }
     }
