@@ -27,7 +27,7 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 15
+    const val VERSION = 16
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -79,6 +79,7 @@ object BattleSnapshot {
         o.writeFloat(camX)
         writeConfig(o, b.cfg)
         o.writeBoolean(b.turretTiersEnabled)
+        o.writeBoolean(b.commanderEnabled)
         o.writeLong(b.rng.state)
         o.writeLong(b.rng.aiState(0)); o.writeLong(b.rng.aiState(1))
         o.writeFloat(b.time)
@@ -119,6 +120,7 @@ object BattleSnapshot {
             o.writeByte(u.bossKind); o.writeByte(u.bossSecondaryKind)
             o.writeFloat(u.bossCd); o.writeFloat(u.bossSummonCd); o.writeBoolean(u.bossRageActive)
             o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft); o.writeFloat(u.slowLeft)
+            o.writeBoolean(u.isCommander); o.writeFloat(u.commanderSkillCd)
         }
         o.writeShort(b.projs.count { it.active })
         for ((i, p) in b.projs.withIndex()) {
@@ -194,6 +196,7 @@ object BattleSnapshot {
         o.writeInt(s.elitesLost); o.writeInt(s.erasAdvanced); o.writeFloat(s.baseDamageTaken)
         o.writeFloat(s.rallyArmorMul); o.writeFloat(s.supplyUntil)
         o.writeFloat(s.heavyBaseDmgMul); o.writeFloat(s.turretRangeMul); o.writeBoolean(s.fogSight)
+        o.writeFloat(s.commanderCd)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -232,7 +235,7 @@ object BattleSnapshot {
         val ranked = i.readBoolean()
         val camX = i.readFloat()
         val cfg = readConfig(i) ?: return null
-        val b = Battle(cfg, turretTiersEnabled = i.readBoolean())
+        val b = Battle(cfg, turretTiersEnabled = i.readBoolean(), commanderEnabled = i.readBoolean())
         b.rng.state = i.readLong()
         b.rng.setAiState(0, i.readLong()); b.rng.setAiState(1, i.readLong())
         b.time = i.readFloat()
@@ -289,6 +292,15 @@ object BattleSnapshot {
             u.bossRageActive = i.readBoolean()
             u.burnDps = i.readFloat(); u.burnLeft = i.readFloat()
             u.slowLeft = i.readFloat().also { require(it.isFinite() && it in 0f..2f) }
+            u.isCommander = i.readBoolean()
+            u.commanderSkillCd = i.readFloat().also {
+                require(it.isFinite() && it in 0f..Battle.COMMANDER_SKILL_COOLDOWN)
+            }
+        }
+        for (side in b.sides) {
+            val activeCommanders = b.units.count { it.alive && it.side == side.index && it.isCommander }
+            require(activeCommanders <= 1 && (side.commanderCd < 0f) == (activeCommanders == 1))
+            require(b.commanderAvailable || activeCommanders == 0)
         }
         val pn = i.readShort().toInt()
         require(pn in 0..Battle.MAX_PROJ)
@@ -382,6 +394,9 @@ object BattleSnapshot {
         s.elitesLost = i.readInt(); s.erasAdvanced = i.readInt(); s.baseDamageTaken = i.readFloat()
         s.rallyArmorMul = i.readFloat(); s.supplyUntil = i.readFloat()
         s.heavyBaseDmgMul = i.readFloat(); s.turretRangeMul = i.readFloat(); s.fogSight = i.readBoolean()
+        s.commanderCd = i.readFloat().also {
+            require(it.isFinite() && it >= -1f && it <= Battle.COMMANDER_COOLDOWN)
+        }
         require(s.rallyArmorMul in 0.01f..1f && s.supplyUntil >= 0f && s.supplyUntil.isFinite())
         require(s.heavyBaseDmgMul in 1f..10f && s.turretRangeMul in 1f..10f)
         require(s.turretsBuilt >= 0 && s.barragesUsed >= 0 && s.ralliesUsed >= 0)
