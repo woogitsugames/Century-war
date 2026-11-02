@@ -31,7 +31,8 @@ import kotlin.math.sin
 class CampaignScreen(g: Game) : Screen(g) {
     override val crashName get() = "CampaignScreen"
     /** Tura 9: baner powiadomień nie przykrywa tytułu planszy nowej epoki (okno modalne). */
-    override val blocksNotices: Boolean get() = eraIntro?.active == true
+    // Tura 10: także okno etapu jest modalne — baner zasłaniał tytuł i wiersz „Epoki”.
+    override val blocksNotices: Boolean get() = eraIntro?.active == true || selected != null
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
@@ -621,10 +622,11 @@ class CampaignScreen(g: Game) : Screen(g) {
         y += row
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
-        y += 10 * dp
         if (s.modifiers.isEmpty()) {
-            ui.text(c, L["none"], x + isz + 8 * dp, y + 16 * dp, 13f, Ui.DIM)
+            // Tura 10: „brak” w tym samym wierszu; niżej wchodził pod napis „Trudność” (720p).
+            ui.text(c, L["none"], x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true), y, 13f, Ui.DIM)
         } else {
+            y += 10 * dp
             chips(c, s, x, y, tw)
         }
         ui.textO(c, L["campaign126_difficulty"], x, difficultyButtons[0].r.top - 6 * dp,

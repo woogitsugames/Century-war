@@ -161,6 +161,7 @@ object L {
         putAll(part125())
         putAll(part144())
         putAll(part145())
+        putAll(part150())
         }
     }
 
@@ -201,6 +202,27 @@ object L {
             "По одному особливому бійцю на кожну сторону. Коштує як два важкі бійці. 180% здоров'я й 115% шкоди важкого бійця. Аура: +10% шкоди союзників у радіусі 230. Імпульс вражає область кожні 20 с. Після загибелі відновлення 90 с (45 с під час швидких здібностей). З 8-го етапу кампанії, у сутичці, Endless та нових денних викликах.",
             "Eén speciale eenheid per zijde. Kost twee zware eenheden. 180% van de HP en 115% van de schade van een zware eenheid. Aura: +10% schade van bondgenoten binnen 230. Impuls raakt een gebied elke 20 s. Na uitschakeling 90 s wachttijd (45 s bij snelle vaardigheden). Vanaf campagneniveau 8, schermutseling, Endless en nieuwe daguitdagingen.",
             "Taraf başına bir özel birim. Bedeli bir ağır birliğin iki katı. %180 ağır birlik canı ve %115 ağır birlik hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
+    )
+
+    /** Tura 10 (szlif przed premierą): odnowienie misji, puste powtórki, potwierdzenie usuwania. */
+    private fun part150(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "ms150_reset" to t("Nowe za %s", "New in %s", "Neu in %s", "Nuevas en %s", "Nouvelles dans %s",
+            "Nuove tra %s", "Novas em %s", "Нові через %s", "Nieuw over %s", "Yenileri %s sonra"),
+        "replay150_empty_hint" to t(
+            "Każda bitwa zapisuje się tu sama (20 ostatnich). Flaga przypina powtórkę na stałe.",
+            "Every battle is saved here automatically (last 20). The flag pins a replay for good.",
+            "Jede Schlacht wird hier automatisch gespeichert (die letzten 20). Die Flagge heftet eine Wiederholung dauerhaft an.",
+            "Cada batalla se guarda aquí sola (las 20 últimas). La bandera fija una repetición.",
+            "Chaque bataille est enregistrée ici automatiquement (les 20 dernières). Le drapeau épingle un replay.",
+            "Ogni battaglia si salva qui da sola (le ultime 20). La bandiera fissa un replay.",
+            "Cada batalha é guardada aqui automaticamente (as últimas 20). A bandeira fixa uma repetição.",
+            "Кожна битва зберігається тут сама (останні 20). Прапорець закріплює повтор назавжди.",
+            "Elk gevecht wordt hier automatisch bewaard (de laatste 20). De vlag zet een herhaling vast.",
+            "Her savaş buraya otomatik kaydedilir (son 20). Bayrak bir tekrarı kalıcı sabitler."),
+        "replay150_delete_confirm" to t("Dotknij jeszcze raz, by usunąć powtórkę", "Tap again to delete the replay",
+            "Zum Löschen erneut tippen", "Toca otra vez para borrar la repetición", "Touchez encore pour supprimer le replay",
+            "Tocca di nuovo per eliminare il replay", "Toque de novo para apagar a repetição",
+            "Торкніться ще раз, щоб видалити повтор", "Tik nogmaals om de herhaling te wissen", "Silmek için tekrar dokun"),
     )
 
     /** Tura 9 (UX dowódcy i stopni wież): stany przycisku Wodza, przycisk stopnia, dymki, „Co nowego”. */
@@ -1370,7 +1392,7 @@ object L {
         "hint_settings" to t("Podpowiedzi i samouczek", "Hints and tutorial", "Hinweise und Tutorial", "Consejos y tutorial", "Astuces et tutoriel", "Suggerimenti e tutorial", "Dicas e tutorial", "Підказки й навчання", "Tips en tutorial", "İpuçları ve eğitim"),
         "hint_enabled" to t("Podpowiedzi", "Hints", "Hinweise", "Consejos", "Astuces", "Suggerimenti", "Dicas", "Підказки", "Tips", "İpuçları"),
         "hint_replay_label" to t("Samouczek etapu 1", "Stage 1 tutorial", "Tutorial von Stufe 1", "Tutorial de etapa 1", "Tutoriel étape 1", "Tutorial fase 1", "Tutorial etapa 1", "Навчання етапу 1", "Tutorial fase 1", "1. bölüm eğitimi"),
-        "hint_reset_label" to t("Pokaż ponownie", "Show again", "Erneut anzeigen", "Mostrar de nuevo", "Afficher à nouveau", "Mostra di nuovo", "Mostrar de novo", "Показати знову", "Opnieuw tonen", "Tekrar göster"),
+        "hint_reset_label" to t("Podpowiedzi od nowa", "All hints again", "Alle Tipps erneut", "Todas las pistas otra vez", "Toutes les astuces à nouveau", "Tutti i suggerimenti di nuovo", "Todas as dicas de novo", "Усі підказки знову", "Alle tips opnieuw", "Tüm ipuçları yeniden"),
         "hint_replay" to t("Powtórz samouczek", "Replay tutorial", "Tutorial erneut", "Repetir tutorial", "Revoir le tutoriel", "Ripeti tutorial", "Repetir tutorial", "Повторити навчання", "Tutorial herhalen", "Eğitimi yinele"),
         "hint_reset" to t("Reset podpowiedzi", "Reset hints", "Tipps zurücksetzen", "Reiniciar consejos", "RAZ des astuces", "Azzera i consigli", "Repor dicas", "Скинути підказки", "Tips resetten", "İpuçlarını sıfırla"),
         "hint_confirm" to t("Potwierdź", "Confirm", "Bestätigen", "Confirmar", "Confirmer", "Conferma", "Confirmar", "Підтвердити", "Bevestigen", "Onayla"),
@@ -1681,7 +1703,7 @@ object L {
         "battle84_armory_short" to t("Zbroj.", "Armory", "Rüst.", "Armería", "Arsenal", "Armeria", "Arsenal", "Арсен.", "Arsenaal", "Cephane"),
         "battle84_watch_replay" to t("Obejrzyj powtórkę", "Watch replay", "Replay ansehen", "Ver repetición", "Voir le replay", "Guarda replay", "Ver repetição", "Переглянути повтор", "Herhaling bekijken", "Tekrarı izle"),
         "battle84_missing_xp" to t("Brakuje %d XP", "Need %d XP", "Noch %d XP", "Faltan %d XP", "Il manque %d XP", "Mancano %d XP", "Faltam %d XP", "Бракує %d ОД", "Nog %d XP nodig", "%d XP eksik"),
-        "battle84_kept" to t("Zapisano: %d zabitych, postęp %d misji", "Saved: %d kills, %d missions advanced", "Gespeichert: %d Kills, %d Missionen", "Guardado: %d bajas, %d misiones", "Conservé : %d éliminations, %d missions", "Salvati: %d abbattimenti, %d missioni", "Guardado: %d baixas, %d missões", "Збережено: %d убивств, %d місій", "Bewaard: %d verslagen, %d missies", "Kaydedildi: %d skor, %d görev"),
+        "battle84_kept" to t("Zachowano: zabici %d, misje z postępem %d", "Saved: %d kills, %d missions advanced", "Gespeichert: %d Kills, %d Missionen", "Guardado: %d bajas, %d misiones", "Conservé : %d éliminations, %d missions", "Salvati: %d abbattimenti, %d missioni", "Guardado: %d baixas, %d missões", "Збережено: %d убивств, %d місій", "Bewaard: %d verslagen, %d missies", "Kaydedildi: %d skor, %d görev"),
         "battle84_cause_surrender" to t("Bitwę zakończono kapitulacją", "Battle ended by surrender", "Die Schlacht endete durch Aufgabe", "La batalla terminó por rendición", "La bataille s'est terminée par un abandon", "Battaglia terminata con la resa", "A batalha terminou com rendição", "Битву завершено капітуляцією", "Gevecht geëindigd door overgave", "Savaş teslimiyetle bitti"),
         "battle84_cause_era" to t("Wróg osiągnął wyższą epokę", "Enemy reached a higher era", "Der Feind erreichte eine höhere Epoche", "El enemigo alcanzó una era superior", "L'ennemi a atteint une ère supérieure", "Il nemico ha raggiunto un'epoca superiore", "O inimigo chegou a uma era superior", "Ворог досяг вищої епохи", "Vijand bereikte een hoger tijdperk", "Düşman daha ileri bir çağa ulaştı"),
         "battle84_cause_gold" to t("Pozostało %d niewydanego złota", "%d gold left unspent", "%d Gold nicht ausgegeben", "Quedaron %d de oro sin gastar", "%d pièces d'or non dépensées", "%d oro rimasto inutilizzato", "%d de ouro por gastar", "Залишилося %d невитраченого золота", "%d goud niet uitgegeven", "%d altın harcanmadı"),
@@ -1908,7 +1930,7 @@ object L {
         "ms_untouched_base_wins" to t("Wygrane bez obrażeń bazy: %d", "Wins without base damage: %d", "Siege ohne Basisschaden: %d", "Victorias sin daños en la base: %d", "Victoires sans dégâts à la base : %d", "Vittorie senza danni alla base: %d", "Vitórias sem danos na base: %d", "Перемоги без пошкоджень бази: %d", "Zeges zonder basisschade: %d", "Üs hasarsız zaferler: %d"),
         "ms_doctrine_wins" to t("Wygrane z doktryną: %d", "Wins using a doctrine: %d", "Siege mit Doktrin: %d", "Victorias con doctrina: %d", "Victoires avec doctrine : %d", "Vittorie con dottrina: %d", "Vitórias com doutrina: %d", "Перемоги з доктриною: %d", "Zeges met een doctrine: %d", "Doktrinli zaferler: %d"),
         "ms_card_variety" to t("Różne karty Endless: %d", "Different Endless cards: %d", "Verschiedene Endless-Karten: %d", "Cartas Endless distintas: %d", "Cartes Endless différentes : %d", "Carte Endless diverse: %d", "Cartas Endless diferentes: %d", "Різні карти Endless: %d", "Verschillende Endless-kaarten: %d", "Farklı Endless kartları: %d"),
-        "ms_weekly_bronze" to t("Brązowe progi tygodnia: %d", "Weekly bronze tiers: %d", "Wöchentliche Bronzeränge: %d", "Niveles bronce semanales: %d", "Paliers bronze hebdomadaires : %d", "Livelli bronzo settimanali: %d", "Patamares de bronze semanais: %d", "Бронзові рівні тижня: %d", "Wekelijkse bronzen niveaus: %d", "Haftalık bronz kademeleri: %d"),
+        "ms_weekly_bronze" to t("Brąz w Oblężeniu tygodnia: %d", "Weekly Siege bronze: %d", "Bronze in der Wochenbelagerung: %d", "Niveles bronce semanales: %d", "Paliers bronze hebdomadaires : %d", "Livelli bronzo settimanali: %d", "Patamares de bronze semanais: %d", "Бронзові рівні тижня: %d", "Wekelijkse bronzen niveaus: %d", "Haftalık bronz kademeleri: %d"),
         "ms_advanced_battles" to t("Bitwy z awansem epoki: %d", "Battles with era advances: %d", "Kämpfe mit Epochenaufstieg: %d", "Batallas con avance de era: %d", "Batailles avec changement d'ère : %d", "Battaglie con avanzamento d'epoca: %d", "Batalhas com avanço de era: %d", "Бої з переходом до нової епохи: %d", "Gevechten met tijdperkovergang: %d", "Çağ atlamalı savaşlar: %d"),
     )
 

@@ -50,8 +50,9 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
             cx + width * 0.5f, max(chrome.top + 90 * dp, h - g.insetB - 12 * dp))
 
         val buttonWidth = min(220 * dp, (width - 36 * dp).coerceAtLeast(1f))
-        close.set(cx - buttonWidth * 0.5f, panel.bottom - 57 * dp,
-            buttonWidth, 44 * dp)
+        // Tura 10: 48 dp jak pozostałe przyciski (wcześniej 44 dp).
+        close.set(cx - buttonWidth * 0.5f, panel.bottom - 61 * dp,
+            buttonWidth, 48 * dp)
         contentTop = panel.top + 18 * dp
         contentBottom = close.r.top - 14 * dp
         rebuildLines()
@@ -62,8 +63,8 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
             if (naturalHeight < panel.height()) {
                 val newTop = panel.top + (panel.height() - naturalHeight) * 0.5f
                 panel.set(panel.left, newTop, panel.right, newTop + naturalHeight)
-                close.set(cx - buttonWidth * 0.5f, panel.bottom - 57 * dp,
-                    buttonWidth, 44 * dp)
+                close.set(cx - buttonWidth * 0.5f, panel.bottom - 61 * dp,
+                    buttonWidth, 48 * dp)
                 contentTop = panel.top + 18 * dp
                 contentBottom = close.r.top - 14 * dp
                 rebuildLines()

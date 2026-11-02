@@ -34,6 +34,7 @@ class HintSettingsScreen(g: Game) : Screen(g) {
     private var resetArmed = 0f
     private var eraArmed = 0f
     private var dt = 0f
+    private var rowPad = 0f
 
     override fun layout() {
         chrome.layoutBack(back)
@@ -41,10 +42,17 @@ class HintSettingsScreen(g: Game) : Screen(g) {
         val ph = min(424 * dp, h - chrome.top - g.insetB - 26 * dp)
         val top = chrome.top + 10 * dp + max(0f, (h - chrome.top - g.insetB - ph - 16 * dp) * 0.3f)
         panel.set(w / 2f - pw / 2, top, w / 2f + pw / 2, top + ph)
-        val step = (ph - 44 * dp) / rows.size
+        var step = (ph - 44 * dp) / rows.size
+        var first = panel.top + 29 * dp
+        // Tura 10: na 720p przyciski miały 41 dp; ciaśniejsze marginesy dają pełne 48 dp.
+        if (step - 4 * dp < 48 * dp) {
+            step = (ph - 24 * dp) / rows.size
+            first = panel.top + 12 * dp
+        }
         val bw = min(220 * dp, pw * 0.46f)
         for (i in rows.indices) rows[i].set(panel.right - bw - 13 * dp,
-            panel.top + 24 * dp + i * step + 5 * dp, bw, min(48 * dp, step - 4 * dp))
+            first + i * step, bw, min(48 * dp, step - 0.5f * dp))
+        rowPad = min(3 * dp, max(0f, (step - rows[0].r.height()) / 2f))
         tutorial.iconId = Icons.RESTART
         reset.iconId = Icons.CHEVRONS
         eraToggle.iconId = Icons.EVOLVE
@@ -76,7 +84,8 @@ class HintSettingsScreen(g: Game) : Screen(g) {
         chrome.title(c, L["hint_settings"])
         for (i in rows.indices) {
             val b = rows[i]
-            row.set(panel.left + 10 * dp, b.r.top - 3 * dp, panel.right - 10 * dp, b.r.bottom + 3 * dp)
+            val pad = rowPad
+            row.set(panel.left + 10 * dp, b.r.top - pad, panel.right - 10 * dp, b.r.bottom + pad)
             ui.fill.color = if (i % 2 == 0) Color.argb(30, 255, 255, 255) else Color.argb(12, 255, 255, 255)
             c.drawRoundRect(row, 10 * dp, 10 * dp, ui.fill)
             Icons.draw(c, icons[i], row.left + 19 * dp, row.centerY(), 23 * dp, dp = dp)
