@@ -33,6 +33,33 @@ class ReleaseSizeReportTest(unittest.TestCase):
             self.assertIn("OldClass", text)
             self.assertIn("krytyczne klasy sa obecne", text)
 
+    def test_removed_methods_are_not_deleted_classes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mapping = root / "mapping.txt"
+            usage = root / "usage.txt"
+            mapping.write_text("\n".join(c + " -> " + c + ":" for c in report.CRITICAL_CLASSES) + "\n",
+                               encoding="utf-8")
+            usage.write_text(
+                "com.centurywar.meta.Profile:\n    public void unusedMethod()\n"
+                "com.centurywar.game.Battle:\n    int unusedCounter\n"
+                "com.centurywar.old.RemovedClass\n", encoding="utf-8"
+            )
+            mapped, removed, has_usage = report.r8_audit(mapping, usage)
+            self.assertEqual(len(report.CRITICAL_CLASSES), mapped)
+            self.assertEqual(["com.centurywar.old.RemovedClass"], removed)
+            self.assertTrue(has_usage)
+
+    def test_whole_removed_critical_class_still_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mapping = root / "mapping.txt"
+            usage = root / "usage.txt"
+            mapping.write_text("\n".join(c + " -> " + c + ":" for c in report.CRITICAL_CLASSES) + "\n")
+            usage.write_text("com.centurywar.meta.Profile\n")
+            with self.assertRaisesRegex(ValueError, "R8 usunal krytyczne klasy"):
+                report.r8_audit(mapping, usage)
+
     def test_mapping_missing_core_class_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
