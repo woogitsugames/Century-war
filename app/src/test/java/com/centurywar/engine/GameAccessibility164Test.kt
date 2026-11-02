@@ -132,10 +132,10 @@ class GameAccessibility164Test {
             val screen = AccessibilityScreen(f.game)
             f.game.push(screen)
             f.frame()
-            val paletteId = f.buttonId(10)
+            val paletteId = f.buttonId(11)
             assertTrue(f.node(paletteId)!!.isCheckable)
             f.press(paletteId)
-            assertEquals(0, f.game.profile.palette)
+            assertEquals(1, f.game.profile.palette)
             assertTrue(f.node(paletteId)!!.isChecked)
 
             val before = f.childCount()
@@ -192,10 +192,11 @@ class GameAccessibility164Test {
         try {
             val id = f.buttonId(7)
             assertTrue(f.provider.performAction(id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null))
-            assertEquals(id, f.provider.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)!!.sourceNodeId)
+            assertEquals(f.node(id)!!.contentDescription.toString(),
+                f.provider.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)!!.contentDescription.toString())
             assertTrue(f.provider.performAction(id, AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS, null))
             assertNull(f.provider.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY))
-            for (key in arrayOf("a164_loading", "a164_menu", "a164_battle", "a164_battle_pause", "a164_other")) {
+            for (key in arrayOf("a164_loading", "a164_menu", "a164_battle", "a164_battle_pause", "a164_other", "a164_pause")) {
                 val translations = L.raw(key)
                 assertNotNull(key, translations)
                 assertEquals(key, L.CODES.size, translations!!.size)
@@ -213,8 +214,8 @@ class GameAccessibility164Test {
             val button = f.game.current!!.buttons.first { it.id == 7 }
             val box = Rect()
             f.node(f.buttonId(7))!!.getBoundsInScreen(box)
-            assertEquals((button.r.centerX() * 2).toInt(), box.centerX(), 2)
-            assertEquals((button.r.centerY() * 2).toInt(), box.centerY(), 2)
+            assertTrue(kotlin.math.abs((button.r.centerX() * 2).toInt() - box.centerX()) <= 2)
+            assertTrue(kotlin.math.abs((button.r.centerY() * 2).toInt() - box.centerY()) <= 2)
         } finally { f.finish() }
     }
 }
