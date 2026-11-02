@@ -87,7 +87,7 @@ class PrivacyDocumentationTest(unittest.TestCase):
         for document in (self.pl, self.en, self.safety):
             self.assertIn("Saved Games", document)
             self.assertIn("history.json", document)
-        self.assertIn("bez** lokalnego UUID", self.safety)
+        self.assertIn("**bez** lokalnego UUID", self.safety)
 
     def test_publishers_server_and_notifications_have_consistent_disclosures(self):
         client = read(APP / "java/com/centurywar/meta/ScoreClient.kt")
@@ -151,7 +151,6 @@ class PrivacyDocumentationTest(unittest.TestCase):
     def test_gdd_does_not_compare_to_other_games(self):
         gdd = read(DOCS / "GDD.md")
         self.assertNotRegex(gdd, re.compile(r"Age of War|\\bAoW\\b|Clash of Clans|Clash Royale", re.I))
-        self.assertIn("Krótkie", gdd) if False else None
         self.assertIn("metaprogresją na tygodnie", gdd)
         self.assertIn("jednym pasie", gdd)
         self.assertIn("kampania", gdd.lower())
