@@ -93,10 +93,10 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties   # jeśli trzeba
 
 # Prompt zlecenia
 ## Cel
-Przegląd językowy tekstów dodanych w paczkach 123–135.
+Przegląd językowy tekstów dodanych w paczkach 123–144 (w tym dowódca 125, stopnie wież 140, baner awansu 139, odblokowanie elit 141, przeglądy UX 143–144).
 
 ## Zakres
-1. Klucze z funkcji `part123()`…`part135()` w `engine/L.kt`: poprawność, naturalność, spójność terminów (Ostrzał, Zryw, wieżyczki, Endless, epoka, badania, dowódca, sztandar), liczba mnoga, placeholdery — wszystkie 10 języków.
+1. Klucze z funkcji `part124()`, `part125()`, `part126()`, `part127()`, `part130()`, `part133()`, `part134()`, `part135()`, `part139()`, `part140()`, `part141()`, `part143()`, `part144()` w `engine/L.kt`: poprawność, naturalność, spójność terminów (Ostrzał, Zryw, wieżyczki, stopień wieży, Endless, epoka, badania, dowódca, sztandar, Doktryna elit), liczba mnoga, placeholdery — wszystkie 10 języków.
 2. Popraw w miejscu; nie zmieniaj kluczy ani placeholderów.
 3. Zrzuty najdłuższych języków (de, uk, pt, fr, tr) na 720×1280 i 904×2316 dla nowych ekranów; nic nie może być ucięte.
 4. `LTest` i testy długości etykiet z paczki 120 przechodzą.
