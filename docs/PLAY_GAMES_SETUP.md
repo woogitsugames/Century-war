@@ -6,7 +6,7 @@ Zależność: **com.google.android.gms:play-services-games-v2:22.1.0** (stabilna
 
 1. Otwórz Google Play Console, aplikację **Century War**, pakiet **com.centurywar.game** (sprawdź identyfikator w app/build.gradle.kts).
 2. Przejdź do Grow users → Play Games Services → Setup and management → Configuration i utwórz/połącz projekt Play Games Services v2 z grą.
-3. Skopiuj **Game services project ID** (same cyfry, a nie OAuth Client ID) do docs/store/play_games_ids.properties jako game_services_project_id.
+3. Skopiuj **Game services project ID** (same cyfry, a nie OAuth Client ID) do docs/store/play_games_ids.properties jako app_id.
 4. Utwórz poświadczenia Android OAuth przypisane do pakietu com.centurywar.game i poprawnych odcisków SHA-1.
 5. Dodaj konta testerów do testowej konfiguracji PGS, opublikuj ją do testów i zaloguj się na urządzeniach wskazanymi kontami.
 
@@ -34,14 +34,14 @@ Play Games Services → Setup and management → Leaderboards: utwórz cztery ta
 | --- | --- | --- | --- |
 | endless | leaderboard_endless | punkty oblężenia | all-time |
 | daily | leaderboard_daily | punkty wyzwania dnia | daily |
-| campaign | leaderboard_campaign | suma gwiazdek 0–96 | all-time |
+| campaign | leaderboard_campaign | suma gwiazdek 0–108 | all-time |
 | skirmish | leaderboard_skirmish | punkty potyczki | all-time |
 
 Wstaw ID przydzielone przez Play Console do zasobów docs/store/play_games_ids.properties, zastępując wszystkie napisy REPLACE_ME. PGS włącza się dopiero po ustawieniu ID projektu i wszystkich czterech tablic. Tablica dzienna korzysta z wbudowanego wariantu czasowego TIME_SPAN_DAILY; nie jest to oddzielny reset fizycznych rekordów. Wyniki trzeba wysyłać w dniu rozgrywki, a nie po kolejnej północy UTC.
 
 ## 3. Osiągnięcia
 
-Lokalny katalog `meta/Achievements.kt` zawiera **66 osiągnięć** (40 pierwotnych + 14 z poprzedniej aktualizacji + 11 nowych).
+Lokalny katalog `meta/Achievements.kt` zawiera **66 osiągnięć** (liczba zgodna z kluczami w `docs/store/play_games_ids.properties`).
 Nazwy i opisy znajdują się w `engine/L.kt` w 10 językach. Nagrody medalowe
 są zapisywane w profilu lokalnie, działają offline i nie zależą od usług Google.
 `AchievementBattleTracker` obserwuje wyniki kroków symulacji, nie wpływając
