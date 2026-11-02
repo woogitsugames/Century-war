@@ -159,15 +159,17 @@ link do polityki prywatności. Użytkownik musi sam wyrazić zgodę na ranking.
 Bez kompletu konfiguracji własny ranking jest wyłączony.
 
 Po wdrożeniu sprawdź podpisane żądania GET /v1/top oraz POST /v1/score,
-a także usuwanie tożsamości. GET /healthz nie wymaga podpisu; pozostałe
-wymagają nagłówków opisanych w server/README.md.
+a także usuwanie tożsamości. GET `/health` i `/healthz` nie wymagają podpisu,
+tak samo jak POST `/v1/report`; żądania wyników i odczytu rankingu są
+podpisywane zgodnie z `server/README.md`.
 Wersje klienta, serwera i symulacji muszą się zgadzać.
 
 ## 6. Kopie zapasowe i cron
 
 Baza SQLite pracuje w trybie WAL. **Nie kopiuj otwartego pliku .db zwykłym cp**,
 bo pomija to zapisane jeszcze rekordy w pliku -wal. Skrypt wykonuje
-spójną kopię poleceniem sqlite3 .backup i przenosi ją **poza wolumen Dockera**:
+spójną kopię komendą serwerową `admin backup` (`VACUUM INTO` SQLite)
+i przenosi ją **poza wolumen Dockera**:
 
 ~~~bash
 sudo mkdir -p /var/backups/century-war
