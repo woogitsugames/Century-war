@@ -1007,8 +1007,18 @@ class Profile(private val file: File) {
     @Synchronized
     fun load() {
         hasExistingSave = false
-        // Odczyt nigdy nie wyprzedza zapisu tego profilu czekającego w kolejce I/O.
-        awaitWrites(2_000L)
+        // Po timeout nie wolno udostępnić starego stanu: startup-io czeka na
+        // zaległe operacje writera, a dopiero potem ponawia odczyt z dysku.
+        if (!awaitWrites(2_000L)) {
+            try {
+                hintWriter.submit { }.get()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw IllegalStateException("Przerwano oczekiwanie na zapis profilu", e)
+            } catch (e: Exception) {
+                throw IllegalStateException("Nie można zsynchronizować odczytu profilu", e)
+            }
+        }
         GameIoCounter.diskAccess()
         val tmp = File(file.parentFile, file.name + ".tmp")
         val backup = File(file.parentFile, file.name + ".bak")

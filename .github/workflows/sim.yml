@@ -76,6 +76,10 @@ jobs:
             --tests '*HistoryRecovery154Test*' \
             --tests '*ReplayRecovery154Test*' \
             --tests '*ProfileRobustnessTest*' \
+            --tests '*ProfileLoad160Test*' \
+            --tests '*LifecycleProfile160Test*' \
+            --tests '*DensityConfiguration160Test*' \
+            --tests '*MusicLifecycle160Test*' \
             --tests '*BattleHistoryTest*' \
             --tests '*ReplayStoreTest*' \
             --console=plain --no-configuration-cache

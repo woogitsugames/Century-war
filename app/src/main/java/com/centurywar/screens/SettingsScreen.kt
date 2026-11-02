@@ -366,7 +366,7 @@ class SettingsScreen(g: Game) : Screen(g) {
             8 -> { p.sound = !p.sound; g.applySfxVolume() }
             5 -> p.showFps = !p.showFps
             6 -> g.host.requestText(L["name"], p.name) { n -> p.name = n; p.save() }
-            7 -> if (resetArmed > 0f) { p.reset(); g.history?.clear(); resetArmed = 0f } else resetArmed = 3f
+            7 -> if (resetArmed > 0f) { g.resetProgress(); resetArmed = 0f } else resetArmed = 3f
             9 -> {
                 p.notifications = !p.notifications
                 p.save()

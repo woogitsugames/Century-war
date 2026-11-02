@@ -26,6 +26,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
 
     @Volatile private var running = false
     @Volatile private var hasSurface = false
+    @Volatile private var activityResumed = false
     @Volatile private var bufW = 0
     @Volatile private var bufH = 0
     @Volatile private var sizeChanged = false
@@ -34,6 +35,8 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     @Volatile var loopActive = false
         private set
     @Volatile private var thread: Thread? = null
+    /** Tożsamość ostatnio uruchomionego workera, również po stopThread(). */
+    @Volatile private var lastStartedThread: Thread? = null
     private var scale = 1f
     /**
      * Jednorazowy sygnał po opublikowaniu pierwszej wyrenderowanej klatki dowolnego ekranu
@@ -74,6 +77,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         hasSurface = true
+        bufW = 0; bufH = 0
         setFrameRate(frameCapFps)
     }
 
@@ -85,26 +89,49 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         hasSurface = false
         stopThread()
+        bufW = 0; bufH = 0
     }
 
-    fun onResume() { if (hasSurface) startThread() }
-    fun onPause() = stopThread()
+    fun onResume() {
+        activityResumed = true
+        startThread()
+    }
 
+    fun onPause() {
+        activityResumed = false
+        stopThread()
+    }
+
+    @Synchronized
     private fun startThread() {
-        if (running) return
+        if (running || !activityResumed || !hasSurface || bufW <= 0 || bufH <= 0) return
+        val t = Thread(this, "game-loop").apply { priority = Thread.MAX_PRIORITY }
+        // Publikacja tożsamości i stanu poprzedza start nowego wątku.
+        thread = t
+        lastStartedThread = t
         running = true
         loopActive = true
-        // Najpierw przypisanie, potem start: pętla porównuje się z polem [thread].
-        val t = Thread(this, "game-loop").apply { priority = Thread.MAX_PRIORITY }
-        thread = t
-        t.start()
+        try {
+            t.start()
+        } catch (e: RuntimeException) {
+            if (thread === t) {
+                thread = null
+                running = false
+                if (lastStartedThread === t) loopActive = false
+            }
+            throw e
+        }
     }
 
     private fun stopThread() {
-        running = false
-        val t = thread ?: return
-        thread = null
-        try { t.join(1500) } catch (_: InterruptedException) { }
+        val t = synchronized(this) {
+            running = false
+            thread.also { thread = null }
+        } ?: return
+        t.interrupt()
+        try { t.join(1500) } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     override fun run() {
@@ -113,8 +140,20 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
                 .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         }
-        loopActive = true
-        try { loop() } finally { loopActive = false }
+        val me = Thread.currentThread()
+        if (thread !== me) return
+        try {
+            loop()
+        } finally {
+            synchronized(this) {
+                // Spóźniony wątek nie może zmienić flag nowej pętli po join(timeout).
+                if (thread === me) {
+                    thread = null
+                    running = false
+                }
+                if (lastStartedThread === me) loopActive = false
+            }
+        }
     }
 
     private fun loop() {
@@ -122,8 +161,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
         val me = Thread.currentThread()
         // Sprawdzamy też tożsamość wątku: jeśli join() w stopThread przekroczył limit, a zaraz
         // potem startThread ustawił running = true, stary wątek nie może dalej rysować równolegle.
-        while (running && thread === me) {
-            if (!hasSurface) break
+        while (running && activityResumed && hasSurface && thread === me) {
             if (sizeChanged) {
                 sizeChanged = false
                 game.resize(bufW, bufH, width.coerceAtLeast(1), height.coerceAtLeast(1))

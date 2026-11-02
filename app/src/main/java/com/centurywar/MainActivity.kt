@@ -434,7 +434,7 @@ class MainActivity : Activity(), Host {
     @Deprecated("Starsze Androidy (< 13)")
     @android.annotation.SuppressLint("GestureBackNavigation")
     override fun onBackPressed() {
-        game.requestBack()
+        if (::game.isInitialized) game.requestBack() else finish()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -705,13 +705,7 @@ class MainActivity : Activity(), Host {
                                     // Przerwana bitwa należała do poprzedniego profilu.
                                     game.snapshots?.deleteAsync()
                                     game.resumeOffer = null
-                                    game.onLanguageChanged()
-                                    game.applyAccessibility()
-                                    game.setQuality(game.effectiveQualityLevel())
-                                    game.applyFrameRate()
-                                    game.applySfxVolume()
-                                    game.applyMusicVolume()
-                                    game.host.onNotificationSettingsChanged()
+                                    game.applyLoadedProfile()
                                     game.showNotice(L["profile_import_ok"], Icons.CHECK)
                                 } else {
                                     // Stan lokalny wraca do poprzedniego, jeśli zapis nowego zawiódł.
@@ -908,7 +902,10 @@ class MainActivity : Activity(), Host {
         applyOrientation(newConfig)
         // supportsRtl=false: nie przestawiamy układu; tylko teksty dla języka Auto.
         // Bitwa i jej stan pozostają na tym samym wątku gry.
+        val nextDensity = if (newConfig.densityDpi > 0) newConfig.densityDpi / 160f
+            else resources.displayMetrics.density
         if (::game.isInitialized) game.post {
+            game.updateDensity(nextDensity)
             if (game.profile.lang.isEmpty()) game.onLanguageChanged()
         }
     }
