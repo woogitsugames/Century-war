@@ -93,6 +93,18 @@ internal object HintFrame {
             if (!placeSide(side, target, safeL, safeT, safeR, safeB, width, height, gap, out, link)) continue
             if (!blocked(out, target, avoid)) return true
         }
+        // Gęsty ekran (np. menu): górny albo dolny pas ekranu bez wskaźnika; cel ma własną obwódkę.
+        val cx = (target.centerX() - width * 0.5f).coerceIn(safeL, safeR - width)
+        val mid = (safeL + safeR - width) * 0.5f
+        for (k in 0 until 4) {
+            val x = if (k % 2 == 0) mid else cx
+            val y = if (k < 2) safeT else safeB - height
+            out.set(x, y, x + width, y + height)
+            if (!blocked(out, target, avoid) && !RectF.intersects(out, target)) {
+                link.setEmpty()
+                return true
+            }
+        }
         out.set(fx, fy, fx + width, fy + height); link.set(fl, ft, fr, fb)
         return true
     }
