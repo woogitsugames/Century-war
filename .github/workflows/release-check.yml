@@ -119,7 +119,7 @@ jobs:
           CW_RELEASE_SMOKE: "true"
         run: |
           set -o pipefail
-          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain \
+          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain --no-configuration-cache \
             -PciTestDebugSigning=true \
             -PskipCheck=releaseDay,playGames,serverUrl,privacyUrl,hmacKey,versionCode,ownerInput \
             2>&1 | tee build/release-metrics/release.log
