@@ -82,6 +82,8 @@ class Commander125Test {
         leader.hp = 1f
         leader.cd = 100f
         foe.dmg = 10000f
+        foe.hp = 100000f
+        foe.maxHp = 100000f
         foe.cd = 0f
         b.step()
         assertFalse(leader.alive)
