@@ -182,6 +182,7 @@ object Campaign {
         // Korekty trudności pojedynczych etapów, bez wpływu na jednostki ani AI.
         // Tura 8: etapy 1-6 obniżone po wyłączeniu elit wroga bez badania gracza
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
+        // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -191,8 +192,9 @@ object Campaign {
             6 -> 0.8245f
             11 -> 0.97f
             12 -> 0.828f
-            16 -> 0.93f
-            18 -> 0.92f
+            16 -> 0.86f
+            17 -> 0.92f
+            18 -> 0.85f
             19 -> 1.265f
             21 -> 1.08f
             22 -> 1.13f
@@ -204,9 +206,9 @@ object Campaign {
             30 -> 0.989f
             31 -> 0.97f
             32 -> 0.97f
-            34 -> 0.95f
-            35 -> 0.9152f
-            36 -> 0.81f
+            34 -> 0.727f
+            35 -> 0.778f
+            36 -> 0.6075f
             else -> 1f
         }
         return ramp * correction

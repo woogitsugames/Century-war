@@ -99,8 +99,9 @@ class BattleSimTest {
         // Dwa odstające etapy mają po trzy dostępne epoki zamiast czterech.
         assertTrue(stages[11].startEra == 1 && stages[11].maxEra == 3)
         assertTrue(stages[15].startEra == 2 && stages[15].maxEra == 4)
-        // Końcowy skok siły AI pozostaje łagodny, bez ruszania profili i gwiazdek.
-        assertTrue((33..35).all { stages[it].aiPower in 2.8f..3.2f })
+        // Końcowy skok siły AI pozostaje łagodny, bez ruszania profili i gwiazdek
+        // (tura 10: etapy 34-36 lżejsze dla gracza z medalami tylko z kampanii).
+        assertTrue((33..35).all { stages[it].aiPower in 2.1f..2.8f })
     }
 
     @Test
