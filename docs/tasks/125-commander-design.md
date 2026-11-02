@@ -7,7 +7,7 @@
 - Dowódca ma 180% HP i 115% obrażeń ciężkiej jednostki. **Aura**: +10% obrażeń zwykłych sojuszników w odległości do 230 jednostek pasa (bez kumulowania, bez wzmacniania wież i samego dowódcy).
 - **Umiejętność — Impuls**: automatycznie, gdy wróg znajduje się do 180 jednostek pasa, raz na 20 sekund zadaje obrażenia obszarowe w promieniu 75 (1,2 × obrażenia dowódcy), z efektem wizualnym. Nie wymaga drugiego przycisku; umiejętność używa istniejącej mechaniki trafień i kontr.
 - **Dostępność**: kampania od etapu 8 (indeks 7), potyczka, Endless i cotygodniowe oblężenie. W wyzwaniu dnia dopiero od `Daily.RELEASE_DAY`; historyczne dni pozostają bez tej mechaniki. Dzienna reguła `RAPID_ABILITIES` skraca odnowienie do 45 sekund.
-- Przeciwnik w bitwach ekonomicznych płaci tyle samo za dowódcę, bez ukrytej premii. W Endless koszt dowódcy odliczany jest od jawnego budżetu fali; nie jest darmową jednostką.
+- Przeciwnik w bitwach ekonomicznych płaci tyle samo za dowódcę, bez ukrytej premii. W kampanii AI przywołuje dowódcę **reaktywnie**, dopiero gdy zrobi to jego przeciwnik: nie zmienia to historycznego balansu pozostałych walk kampanii, ale pozwala uczciwie odpowiedzieć na zakup gracza. W potyczce, wyzwaniu dnia i trybie tygodniowym AI używa go również samodzielnie. W Endless koszt dowódcy odliczany jest od jawnego budżetu fali; nie jest darmową jednostką.
 - AI gracza wydaje rozkaz przez `BattleController`, AI wroga przez reguły symulacji.
 
 ## Zapis i kompatybilność
