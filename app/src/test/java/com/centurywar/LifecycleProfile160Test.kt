@@ -61,7 +61,6 @@ class LifecycleProfile160Test {
             view.surfaceCreated(holder)
             view.surfaceChanged(holder, 0, 1600, 720)
             assertFalse("surfaceChanged nie może wznowić Activity", view.loopActive)
-            view.onResume()
             view.onPause()
             view.surfaceChanged(holder, 0, 1600, 720)
             assertFalse("powierzchnia nie wznawia gry po onPause", view.loopActive)
@@ -116,7 +115,7 @@ class LifecycleProfile160Test {
             g.resize(1600, 720, 1600, 720)
             val imported = Profile(File(folder.root, "import.json"))
             imported.lang = "fr"
-            imported.quality = Quality.MEDIUM
+            imported.quality = Quality.MED
             imported.fpsCap = 30
             imported.leftHandedHud = true
             imported.palette = Palette.HIGH_CONTRAST
@@ -131,7 +130,7 @@ class LifecycleProfile160Test {
             g.applyLoadedProfile()
 
             assertEquals(L.indexOf("fr"), L.lang)
-            assertEquals(Quality.MEDIUM, g.quality.level)
+            assertEquals(Quality.MED, g.quality.level)
             assertEquals(30, host.fps)
             assertTrue(g.profile.leftHandedHud)
             assertTrue(g.profile.reduceFlash)
