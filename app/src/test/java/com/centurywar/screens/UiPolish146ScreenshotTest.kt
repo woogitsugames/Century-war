@@ -34,6 +34,7 @@ class UiPolish146ScreenshotTest {
         Device("phone720", 1600, 720, 2f),
         Device("phone720small", 1280, 720, 1.5f),
         Device("phone720dense", 1280, 720, 2f),
+        Device("phonePortrait", 720, 1280, 2f),
         Device("foldCover", 904, 2316, 2.7f, 88),
         Device("foldOpen", 2184, 1968, 2.7f, 70),
     )
