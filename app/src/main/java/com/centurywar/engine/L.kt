@@ -170,6 +170,7 @@ object L {
 
     /** Zlecenie 164: opisy wirtualnych ekranów dla TalkBack i Switch Access. */
     private fun part164(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a164_pause" to t("Pauza", "Pause", "Pause", "Pausa", "Pause", "Pausa", "Pausa", "Пауза", "Pauze", "Duraklat"),
         "a164_loading" to t("Ładowanie ekranu", "Loading screen", "Bildschirm wird geladen", "Cargando pantalla", "Chargement de l'écran", "Caricamento schermata", "A carregar ecrã", "Завантаження екрана", "Scherm laden", "Ekran yükleniyor"),
         "a164_menu" to t("Menu główne", "Main menu", "Hauptmenü", "Menú principal", "Menu principal", "Menu principale", "Menu principal", "Головне меню", "Hoofdmenu", "Ana menü"),
         "a164_battle" to t("Bitwa. Sterowanie jednostkami wymaga dotyku.", "Battle. Unit controls require touch.", "Schlacht. Die Einheitensteuerung erfordert Berührung.", "Batalla. Las unidades se controlan mediante la pantalla táctil.", "Bataille. Le contrôle des unités nécessite le toucher.", "Battaglia. Il controllo delle unità richiede il tocco.", "Batalha. O controlo das unidades requer toque.", "Битва. Керування загонами потребує дотику.", "Gevecht. Eenheden bedienen vereist aanraking.", "Savaş. Birimleri kontrol etmek için dokunmak gerekir."),
