@@ -77,7 +77,9 @@ class ResearchScreen(g: Game) : Screen(g) {
             else max(2, (avail / (250f * dp)).toInt())
         cw = (avail - (cols - 1) * 12 * dp) / cols
         ch = (if (ui.textScale > 1.15f) 128f else 108f) * dp
-        top = chrome.top + 6 * dp
+        // W pionie baner powiadomienia ma osobny pas; pierwsza karta nie może pod niego wchodzić.
+        top = if (h > w) max(chrome.top + 6 * dp, g.noticeTopBelowTitle() + 56 * dp)
+            else chrome.top + 6 * dp
         val rows = (cards.size + cols - 1) / cols
         maxScroll = max(0f, top + rows * (ch + 12 * dp) + 12 * dp - h + g.insetB)
         place()

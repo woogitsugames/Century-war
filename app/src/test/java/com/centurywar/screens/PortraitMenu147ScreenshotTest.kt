@@ -186,6 +186,15 @@ class PortraitMenu147ScreenshotTest {
                 )
                 for ((name, screen) in screens) {
                     g.setScreen(screen)
+                    if (screen is ResearchScreen) {
+                        val first = screen.buttons.first { it.tag != null }
+                        assertTrue("Pierwsza karta Badań pod pasem powiadomień",
+                            first.r.top >= g.noticeTopBelowTitle() + 50 * g.ui.dp)
+                    }
+                    if (screen is ModeScreen) {
+                        assertTrue("Baner nie może zasłaniać pionowej karty trybu",
+                            screen.blocksNotices)
+                    }
                     shot(g, "menu147_${tag}_${name}")
                     assertTrue("Ekran $tag/$name bez kafelków", screen.buttons.isNotEmpty())
                 }

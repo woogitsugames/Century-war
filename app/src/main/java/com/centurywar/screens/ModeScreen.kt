@@ -111,6 +111,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private val modeIcon = when (mode) { Mode.ENDLESS -> Icons.TOWER; Mode.DAILY -> Icons.CALENDAR; else -> Icons.CROSSED_SWORDS }
     private val diffIcons = intArrayOf(Icons.SHIELD, Icons.CROSSED_SWORDS, Icons.FLAME, Icons.SKULL)
 
+    // Pionowe karty trybów wypełniają wysokość okna; baner zasłaniał ich tytuł i zakładki.
+    override val blocksNotices: Boolean get() = h > w
+
     override fun layout() {
         chrome.layoutBack(back)
         val pw = min(600 * dp, w - g.insetL - g.insetR - 40 * dp)
