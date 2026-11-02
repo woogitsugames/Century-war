@@ -83,7 +83,9 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         val availW = w - g.insetL - g.insetR - pad * 2
         val width = min(820 * dp, availW)
         val left = (w + g.insetL - g.insetR - width) / 2
-        contentTop = chrome.top + 2 * dp
+        // Wąskie okno: nagłówki i wybór epok zaczynają się pod banerem.
+        contentTop = if (h > w) max(chrome.top + 2 * dp, g.noticeTopBelowTitle() + 56 * dp)
+            else chrome.top + 2 * dp
         contentBottom = max(contentTop + 48 * dp, h - g.insetB - 128 * dp)
         panel.set(left, contentTop, left + width, contentBottom)
         footer.set(left, contentBottom + 5 * dp, left + width, h - g.insetB - 7 * dp)
