@@ -473,6 +473,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 addGuide(Icons.FLAG, L["rally"], L.f("cx62_rally_d",
                     percentUp(Battle.RALLY_SPEED_BONUS), Battle.RALLY_TIME.roundToInt(),
                     Battle.RALLY_CD.roundToInt()))
+                addGuide(Icons.CROWN, L["comm125_name"], L["comm125_codex"])
             }
             PAGE_DOCTRINES -> {
                 for (d in com.centurywar.game.Doctrine.entries) {
