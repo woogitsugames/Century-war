@@ -386,3 +386,22 @@ Stan sprawdzony 2 listopada 2026 r.; wymagania należy ponownie sprawdzić w dni
 | D — po scaleniu poprawek | **Kandydat do testów zamkniętych.** Zielony CI tego samego SHA, podpisany release, pomiar APK/AAB, próby urządzeń i usług, akceptacja Data safety. | Powtórzyć krytyczne reprodukcje, nie ograniczać się do kompilacji. Uwzględnić nowe sceny i pomiary ze scalonego zlecenia 152. |
 
 Przy poprawkach należy zachować dopisywanie enumów na końcu, deterministyczne RNG i przejście komend przez kontroler. Jeżeli zmieni się format snapshotu lub Replay, wykonawca musi odpowiednio zmienić wersję formatu; sama korekta walidatora nie oznacza automatycznie zmiany zapisywanych bajtów. Zmianę wersji zasad rankingu uzgadnia koordynator.
+
+## Ponowna weryfikacja na `integ/tura10` (3.11.2026, nocny agent)
+
+Reprodukcje z sekcji 4 powtórzone na bieżącym kodzie (po poprawkach A1–A3 koordynatora oraz zleceń 160 i 161)
+jako testy oczekiwanego zachowania; wszystkie przechodzą w pełnym przebiegu `:app:testDebugUnitTest :sim:test :server:test`.
+
+| Ustalenie | Wynik | Test |
+|---|---|---|
+| A156-01 | nie odtwarza się — ulepszenie wieży w slotach 0–3 przechodzi encode/decode i cofanie powtórki 2100→1900 | `Snapshot156Test` (sim) |
+| A156-02 | nie odtwarza się — Endless seed 2, aktywny `TWIN_RAID` 1,15 wczytuje się; każdy temat fali po pojawieniu się jednostek | `Snapshot156Test` |
+| A156-04 | nie odtwarza się — format 5 z bieżącą wersją gry odrzucony z kodem błędu | `RankedReplayFormatTest` (server) |
+| A156-05 | nie odtwarza się — zgłoszenie zweryfikowane przed usunięciem nie odtwarza gracza; równoległe endpointy | `InFlightDeletionTest` |
+| A156-06 | nie odtwarza się — nowy odczyt profilu czeka na zaległy zapis | `ProfileLoad160Test` |
+| A156-07 | nie odtwarza się — `surfaceCreated → onPause → surfaceChanged` nie startuje pętli; stary wątek nie zeruje flag nowego | `LifecycleProfile160Test` |
+| A156-08 | nie odtwarza się — limit błysków liczony w czasie rzeczywistym przy ×1/×3/×5, nocna aureola bazy przez wspólną bramkę | `BattleFlash161Test` |
+| A156-09 | nie odtwarza się — 1200×720 px, density 2: dotyk każdego przycisku kupna trafia we właściwy slot | `FlashTurretTouch161Test` |
+| A156-10 | naprawione w tej turze — trwały identyfikator rozliczenia (zrzut v17 + `lastSettledBattle` w profilu), zapis profilu przed usunięciem zrzutu, testy przerwania po każdym kroku | `BattleSettlement156Test`, `SnapshotSettlementTest` |
+
+Pozostałe ryzyko A156-07: jeśli klatka trwa dłużej niż `join(1500)`, stary wątek może jeszcze dokończyć jedną klatkę równolegle z nowym (pętla kończy się przy następnym sprawdzeniu tożsamości). Wymaga próby na urządzeniu, nie zmieniano kodu.
