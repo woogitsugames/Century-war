@@ -2,9 +2,9 @@
 
 ## Mechanika
 
-- **Jedna jednostka dowódcy na każdą stronę jednocześnie**, niezależnie od epoki. Zajmuje jedno miejsce limitu armii. Używa bieżącej definicji jednostki elitarnej jako bazy statystyk, ale nie wymaga badania „Doktryna elit”; nie zmienia istniejących definicji ani cen jednostek.
+- **Jedna jednostka dowódcy na każdą stronę jednocześnie**, niezależnie od epoki. Zajmuje jedno miejsce limitu armii. Używa bieżącej definicji jednostki ciężkiej jako bazy statystyk i nie wymaga badania „Doktryna elit”; nie zmienia istniejących definicji ani cen jednostek.
 - Przywołanie kosztuje **2 × cenę bieżącej jednostki ciężkiej**; pierwsze dostępne od początku dopuszczonej bitwy. Po śmierci odnowienie **90 sekund czasu symulacji**. Nie można przywołać drugiego żywego dowódcy ani omijać limitu populacji.
-- Dowódca ma 180% HP i 115% obrażeń elity. **Aura**: +10% obrażeń zwykłych sojuszników w odległości do 230 jednostek pasa (bez kumulowania, bez wzmacniania wież i samego dowódcy).
+- Dowódca ma 180% HP i 115% obrażeń ciężkiej jednostki. **Aura**: +10% obrażeń zwykłych sojuszników w odległości do 230 jednostek pasa (bez kumulowania, bez wzmacniania wież i samego dowódcy).
 - **Umiejętność — Impuls**: automatycznie, gdy wróg znajduje się do 180 jednostek pasa, raz na 20 sekund zadaje obrażenia obszarowe w promieniu 75 (1,2 × obrażenia dowódcy), z efektem wizualnym. Nie wymaga drugiego przycisku; umiejętność używa istniejącej mechaniki trafień i kontr.
 - **Dostępność**: kampania od etapu 8 (indeks 7), potyczka, Endless i cotygodniowe oblężenie. W wyzwaniu dnia dopiero od `Daily.RELEASE_DAY`; historyczne dni pozostają bez tej mechaniki. Dzienna reguła `RAPID_ABILITIES` skraca odnowienie do 45 sekund.
 - Przeciwnik w bitwach ekonomicznych płaci tyle samo za dowódcę, bez ukrytej premii. W Endless koszt dowódcy odliczany jest od jawnego budżetu fali; nie jest darmową jednostką.
