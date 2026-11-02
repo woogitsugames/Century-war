@@ -82,7 +82,7 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
         val minFieldH = when {
             gridTurrets -> (28 + rows * 61) * dp
             narrow -> idealH
-            slots <= 2 -> 120 * dp
+            slots <= 2 -> (72 + slots * 48) * dp
             else -> idealH
         }
         turretOverlay = slots > 0 && fieldH < minFieldH
