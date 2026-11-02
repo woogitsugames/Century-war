@@ -164,4 +164,53 @@ class LowEndScreensPerformanceTest {
         assertTrue("Dymek musi być widoczny", hint.activeId >= 0)
         check("Dymek LOW") { hint.update(0.005f); hint.draw(c) }
     }
+    private fun usedHeapBytes(): Long {
+        val runtime = Runtime.getRuntime()
+        return runtime.totalMemory() - runtime.freeMemory()
+    }
+
+    private fun collectOldScreens() {
+        repeat(3) {
+            System.gc()
+            System.runFinalization()
+        }
+    }
+
+    private fun visitBattleAndReturn(
+        g: Game, canvas: Canvas, refs: MutableList<java.lang.ref.WeakReference<BattleScreen>>,
+        index: Int,
+    ) {
+        val s = BattleScreen(g,
+            BattleConfig(Mode.ENDLESS, 15200L + index, 1f, startEra = 8, maxEra = 8))
+        g.setScreen(s)
+        g.finishScreenTransition()
+        s.battle.player.baseFlash = 1f
+        s.render(canvas) // lazy Picture i bitmapa błysku
+        refs.add(java.lang.ref.WeakReference(s))
+        g.setScreen(MenuScreen(g))
+        g.finishScreenTransition()
+    }
+
+    /** 20 powrotów do menu nie może trzymać starych bitmap ani ekranów. */
+    @Test fun wave6TwentyMenuBattleTransitionsDoNotGrowMemory() {
+        for (quality in intArrayOf(Quality.LOW, Quality.HIGH)) {
+            val g = game(quality)
+            g.bitmapCacheMemoryClassMb = 64
+            val c = canvas()
+            val refs = ArrayList<java.lang.ref.WeakReference<BattleScreen>>(20)
+            repeat(10) { visitBattleAndReturn(g, c, refs, it) }
+            collectOldScreens()
+            val first = usedHeapBytes()
+            repeat(10) { visitBattleAndReturn(g, c, refs, it + 10) }
+            collectOldScreens()
+            val last = usedHeapBytes()
+            val retained = refs.count { it.get() != null }
+            println("PERF152 ${if (quality == Quality.LOW) "LOW" else "HIGH"} " +
+                "menu-battle x20: heap10=$first B heap20=$last B, retained=$retained")
+            assertTrue("Utrzymano $retained dawnych ekranów po 20 przełączeniach", retained == 0)
+            assertTrue("Sterta rośnie o ${last - first} B po 20 przełączeniach",
+                last - first < 2L * 1024L * 1024L)
+        }
+    }
+
 }

@@ -116,4 +116,32 @@ class BattleScreenAllocationTest {
             (field(f.screen, "tipKey") as String).isNotEmpty())
         check("Ekran wyników", f)
     }
+    /** Nie mierzymy refleksji ani tworzenia Canvas; osobne liczniki update/draw. */
+    @Test fun wave6CommanderTurretsFullArmyLowAndHighAllocations() {
+        val m = meter()
+        for (quality in intArrayOf(Quality.LOW, Quality.HIGH)) {
+            val f = Wave6PerformanceFixture(quality)
+            try {
+                repeat(300) { f.frame() }
+                val beforeUpdate = m.bytes()
+                repeat(600) { f.update() }
+                val updateBytes = m.bytes() - beforeUpdate
+                val beforeDraw = m.bytes()
+                repeat(600) { f.draw() }
+                val drawBytes = m.bytes() - beforeDraw
+                val beforePaired = m.bytes()
+                repeat(600) { f.frame() }
+                val pairedBytes = m.bytes() - beforePaired
+                println("PERF152 ${if (quality == Quality.LOW) "LOW" else "HIGH"} " +
+                    "alloc update=$updateBytes B, draw=$drawBytes B, " +
+                    "update+draw=$pairedBytes B / 600")
+                assertTrue("Fala 55: update alokuje $updateBytes B / 600", updateBytes in 0L..16383L)
+                assertTrue("Fala 55: draw alokuje $drawBytes B / 600", drawBytes in 0L..16383L)
+                assertTrue("Fala 55: klatki alokują $pairedBytes B / 600", pairedBytes in 0L..16383L)
+            } finally {
+                f.close()
+            }
+        }
+    }
+
 }

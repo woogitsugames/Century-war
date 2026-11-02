@@ -114,4 +114,37 @@ class BattleCrowdPerformance101Test {
         normal.bitmap.recycle()
         crowded.bitmap.recycle()
     }
+    /** Fala 55: osobno CPU kroku ekranu i renderu, LOW/HIGH na 720p. */
+    @Test fun wave6CommandersTurretsAndFullArmiesCpu() {
+        for (quality in intArrayOf(Quality.LOW, Quality.HIGH)) {
+            val f = Wave6PerformanceFixture(quality, fullResolution = true)
+            try {
+                repeat(120) { f.frame() }
+                val updateTimes = LongArray(240)
+                val drawTimes = LongArray(240)
+                for (i in updateTimes.indices) {
+                    val start = System.nanoTime()
+                    f.update()
+                    val afterUpdate = System.nanoTime()
+                    f.draw()
+                    val afterDraw = System.nanoTime()
+                    updateTimes[i] = afterUpdate - start
+                    drawTimes[i] = afterDraw - afterUpdate
+                }
+                updateTimes.sort()
+                drawTimes.sort()
+                println(String.format(Locale.ROOT,
+                    "PERF152 $s wave55 12v12 commander2 turret8-tier3: " +
+                    "update median=%.3f p95=%.3f ms; draw median=%.3f p95=%.3f ms",
+                    if (quality == Quality.LOW) "LOW" else "HIGH",
+                    updateTimes[120] / 1e6, updateTimes[227] / 1e6,
+                    drawTimes[120] / 1e6, drawTimes[227] / 1e6))
+                assertEquals(24, f.battle.units.count { it.alive })
+                assertTrue("Bitwa nie może się zakończyć w trakcie pomiaru", !f.battle.over)
+            } finally {
+                f.close()
+            }
+        }
+    }
+
 }
