@@ -1,5 +1,6 @@
 package com.centurywar.server
 
+import com.centurywar.meta.ScoreQueue
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -168,6 +169,16 @@ class InFlightDeletionTest {
             // Kolejne zgłoszenie po usunięciu jest przyjmowane jako nowy wpis.
             assertEquals(HttpStatusCode.OK, post("/v1/score", Json.encodeToString(input)).status)
             assertEquals(1L, store.countScores())
+        }
+    }
+
+    /** Kontrakt klienta: nowe odrzucenia 409/422 usuwają zgłoszenie z kolejki, bez ponowień. */
+    @Test fun clientQueueDropsNewRejectionCodes() {
+        for (code in listOf(HttpStatusCode.Conflict.value, HttpStatusCode.UnprocessableEntity.value)) {
+            val queue = ScoreQueue()
+            queue.add(ScoreQueue.Entry(now, "{}"), now)
+            assertNull(queue.recordResponse(code))
+            assertTrue(queue.entries.isEmpty())
         }
     }
 }
