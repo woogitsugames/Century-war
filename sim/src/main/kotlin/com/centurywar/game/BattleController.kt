@@ -122,6 +122,12 @@ class BattleController(
         return true
     }
 
+    fun summonCommander(): Boolean {
+        if (!canAct() || !battle.summonCommander(battle.player)) return false
+        append(Replay.Kind.SUMMON_COMMANDER)
+        return true
+    }
+
     fun rally(): Boolean {
         if (!canAct() || !battle.castRally(battle.player)) return false
         append(Replay.Kind.RALLY)
