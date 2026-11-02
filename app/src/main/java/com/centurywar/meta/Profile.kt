@@ -39,7 +39,7 @@ class Profile(private val file: File) {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         private val RELEASE_VERSION = Regex("[A-Za-z0-9._+-]{1,48}")
-        const val HINT_COUNT = 23
+        const val HINT_COUNT = 24
         const val HINT_LONG_PRESS = 17
         // 23 bity: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie,
         // 21 Doktryna elit w menu, 22 pierwsza elita wroga (zlecenie 141).

@@ -103,6 +103,7 @@ class CounterBattleSimTest {
         val b = battle(era)
         val td = Defs.eras[era].turret
         b.player.turretEra[0] = era
+        b.player.turretTier[0] = 1
         b.player.turretCd[0] = 0f
         val target = place(b, 1, Defs.unit(era, targetRole), b.player.baseFront + 360f)
         val hp = target.hp

@@ -221,6 +221,36 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun turretTiers140() {
+        val devices = mapOf("phone720" to intArrayOf(1600, 720, 2),
+            "foldOpen" to intArrayOf(2184, 1968, 3), "foldInner" to intArrayOf(1802, 2000, 4),
+            "foldOuter" to intArrayOf(904, 2316, 3))
+        for ((tag, d) in screenshotDevices(devices)) for (leftHanded in listOf(false, true)) {
+            val g = game(d[0], d[1], d[2].toFloat(), Quality.LOW)
+            g.profile.leftHandedHud = leftHanded
+            val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 14L, 1f))
+            g.setScreen(bs)
+            val battle = field(bs, "battle").get(bs) as Battle
+            battle.player.gold = 10000f
+            battle.player.slots = 4
+            for (i in 0 until battle.player.slots) {
+                assertTrue(battle.buyTurret(battle.player, i))
+                if (i > 0) assertTrue(battle.upgradeTurretTier(battle.player, i))
+            }
+            field(bs, "showTurrets").set(bs, true)
+            shot(g, "${tag}_turret_tiers_140_${if (leftHanded) "left" else "right"}")
+            for (i in 0 until battle.player.slots) {
+                val tier = bs.slotTier[i]
+                assertTrue(tier.visible)
+                assertTrue(tier.r.width() >= 48 * g.ui.dp - 0.01f)
+                assertTrue(tier.r.height() >= 48 * g.ui.dp - 0.01f)
+                assertTrue(tier.r.right <= bs.slotSell[i].r.left)
+                assertTrue(bs.slotBuy[i].r.right <= tier.r.left)
+                if (i > 0) assertTrue(bs.slotTier[i - 1].r.bottom <= tier.r.top)
+            }
+        }
+    }
+
     /** Czytelność salwy i znaczników na małym telefonie oraz rozłożonym Foldzie. */
     @Test
     fun barrageDuringBattle() {
@@ -1119,6 +1149,8 @@ class ScreenshotTest {
                 battle.spawn(battle.enemy, Defs.unit(era, Role.HEAVY))
                 battle.player.turretEra[0] = era
                 battle.enemy.turretEra[0] = era
+                battle.player.turretTier[0] = 1
+                battle.enemy.turretTier[0] = 1
                 if (weather == Weather.NIGHT) battle.player.baseFlash = 0.13f
                 shot(g, "${tag}_weather_${weather.name.lowercase()}")
             }

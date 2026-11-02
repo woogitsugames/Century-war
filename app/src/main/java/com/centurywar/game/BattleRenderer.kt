@@ -441,7 +441,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                 val hh = b.turretHeight(i)
                 bases.platform(art, -hh + 8f)
                 val te = s.turretEra[i]
-                if (te >= 0) bases.turret(Defs.sideArt(te, s.turretVariant[i]), -40f, -hh + 8f, s.turretFire[i] > 0f, team)
+                if (te >= 0) bases.turret(Defs.sideArt(te, s.turretVariant[i]), -40f, -hh + 8f, s.turretFire[i] > 0f, team, s.turretTier[i])
             }
         }
         c.restore()

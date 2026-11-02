@@ -238,6 +238,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
             val active = tp && i < p.slots
             slotBuy[i].visible = active
             slotSell[i].visible = active && p.turretEra[i] >= 0
+            slotTier[i].visible = active && p.turretEra[i] >= 0
             if (!active) continue
             val te = p.turretEra[i]
             if (te < 0) {
@@ -261,6 +262,15 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
                 slotBuy[i].enabled = uc >= 0 && p.gold >= uc
                 slotBuy[i].highlight = slotBuy[i].enabled
             }
+            val tierCost = battle.turretTierCost(p, i)
+            val tierKey = tierCost * 4 + p.turretTier[i]
+            if (slotTierKey[i] != tierKey || slotLabelLanguage != L.lang) {
+                slotTierKey[i] = tierKey
+                slotTier[i].label = if (tierCost < 0) "MAX" else "${p.turretTier[i] + 1}: $tierCost"
+            }
+            slotTier[i].iconId = Icons.EVOLVE
+            slotTier[i].enabled = tierCost >= 0 && p.gold >= tierCost
+            slotTier[i].highlight = slotTier[i].enabled
             val sell = if (te >= 0) p.turretCost(te, p.turretVariant[i]) / 2 else 0
             if (slotSellKey[i] != sell || slotLabelLanguage != L.lang) {
                 slotSellKey[i] = sell

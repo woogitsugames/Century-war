@@ -72,6 +72,7 @@ class HintOverlay(
         const val ELITE_RESEARCH = 21
         /** Zlecenie 141: pierwsza elita wroga, gdy gracz nie ma własnej. */
         const val ENEMY_ELITE = 22
+        const val TURRET_TIER = 23
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -87,6 +88,7 @@ class HintOverlay(
             HintDef(THEME, "hint_theme", 60),
             HintDef(BOSS, "hint_boss_push", 98),
             HintDef(OLD_TURRET, "hint_old_turret", 82),
+            HintDef(TURRET_TIER, "turret140_hint", 81),
             HintDef(DAILY, "hint_daily_battle", 96),
             HintDef(VARIANT, "hint_variant54", 110),
             HintDef(WEATHER, "hint_weather54", 86),
@@ -215,6 +217,14 @@ class HintOverlay(
                 b.nextWaveTheme != EndlessWaveTheme.MIXED
             BOSS -> b.endless && b.currentBoss() != null
             OLD_TURRET -> p.era > b.cfg.startEra && p.turretEra.any { it >= 0 && it < p.era }
+            TURRET_TIER -> {
+                var affordable = false
+                for (i in 0 until p.slots) {
+                    val cost = b.turretTierCost(p, i)
+                    if (cost >= 0 && p.gold >= cost) { affordable = true; break }
+                }
+                affordable
+            }
             DAILY -> b.cfg.mode == Mode.DAILY && rankedDaily && b.time < 18f
             VARIANT -> b.pendingVariant != null
             WEATHER -> b.weather != Weather.CLEAR
@@ -327,7 +337,7 @@ class HintOverlay(
             MODIFIERS, DAILY -> t.gold
             FOG -> t.field
             CARD, THEME, BOSS -> if (t.minimap.width() > 0f) t.minimap else t.field
-            OLD_TURRET -> t.turrets.r
+            OLD_TURRET, TURRET_TIER -> t.turrets.r
             VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
             WEATHER -> t.weather
             ENEMY_ELITE -> t.eliteUnit?.r

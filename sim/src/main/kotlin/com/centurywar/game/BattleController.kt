@@ -82,6 +82,12 @@ class BattleController(
         return true
     }
 
+    fun upgradeTurretTier(slot: Int): Boolean {
+        if (!canAct() || !slotValid(slot) || !battle.upgradeTurretTier(battle.player, slot)) return false
+        append(Replay.Kind.TURRET_TIER, slot)
+        return true
+    }
+
     fun sellTurret(slot: Int): Boolean {
         if (!canAct() || !slotValid(slot) || !battle.sellTurret(battle.player, slot)) return false
         append(Replay.Kind.SELL_TURRET, slot)

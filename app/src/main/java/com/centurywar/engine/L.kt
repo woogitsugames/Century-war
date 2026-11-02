@@ -157,6 +157,7 @@ object L {
         putAll(part141())
         putAll(part135())
         putAll(part143())
+        putAll(part140())
         }
     }
 
@@ -167,6 +168,16 @@ object L {
     )
 
     /** Zlecenie 141: jak odblokować jednostkę elitarną (nazwa i koszt badania z Research). */
+    private fun part140(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "turret140_dmg" to t("Obrażenia 2 / 3", "Damage 2 / 3", "Schaden 2 / 3", "Daño 2 / 3", "Dégâts 2 / 3", "Danni 2 / 3", "Dano 2 / 3", "Шкода 2 / 3", "Schade 2 / 3", "Hasar 2 / 3"),
+        "turret140_reload" to t("Odstęp 2 / 3", "Reload 2 / 3", "Nachladen 2 / 3", "Recarga 2 / 3", "Recharge 2 / 3", "Ricarica 2 / 3", "Recarga 2 / 3", "Перезарядка 2 / 3", "Herladen 2 / 3", "Yenileme 2 / 3"),
+        "turret140_cost" to t("Koszt 2 / 3", "Cost 2 / 3", "Kosten 2 / 3", "Coste 2 / 3", "Coût 2 / 3", "Costo 2 / 3", "Custo 2 / 3", "Вартість 2 / 3", "Kosten 2 / 3", "Bedel 2 / 3"),
+        "turret140_title" to t("Rozbudowa wieży", "Turret upgrade", "Turmausbau", "Mejora de torre", "Amélioration de tour", "Potenziamento torre", "Melhoria da torre", "Покращення вежі", "Torenupgrade", "Kule geliştirme"),
+        "turret140_stats" to t("Obrażenia: %d → %d; szybkostrzelność: %d%% → %d%%", "Damage: %d → %d; firing rate: %d%% → %d%%", "Schaden: %d → %d; Feuerrate: %d %% → %d %%", "Daño: %d → %d; cadencia: %d%% → %d%%", "Dégâts : %d → %d ; cadence : %d %% → %d %%", "Danni: %d → %d; cadenza: %d%% → %d%%", "Dano: %d → %d; cadência: %d%% → %d%%", "Шкода: %d → %d; швидкість стрільби: %d%% → %d%%", "Schade: %d → %d; vuursnelheid: %d%% → %d%%", "Hasar: %d → %d; atış hızı: %%%d → %%%d"),
+        "turret140_hint" to t("Stać cię na rozbudowę wieży.", "You can afford a turret upgrade.", "Du kannst einen Turmausbau bezahlen.", "Puedes mejorar una torre.", "Vous pouvez améliorer une tour.", "Puoi potenziare una torre.", "Podes melhorar uma torre.", "Ви можете покращити вежу.", "Je kunt een toren upgraden.", "Bir kule geliştirmesini karşılayabilirsin."),
+        "turret140_tip" to t("Koszt: %d. Każdy stopień zwiększa obrażenia i szybkostrzelność o 35%%. Trzeci dodaje rozprysk albo podpalenie. Stopień pozostaje po awansie epoki.", "Cost: %d. Each tier adds 35%% damage and firing rate. Tier three adds splash or burning. The tier stays after an era upgrade.", "Kosten: %d. Jede Stufe erhöht Schaden und Feuerrate um 35 %%. Stufe drei verleiht Flächenschaden oder Brand. Beim Epochenaufstieg bleibt die Stufe erhalten.", "Coste: %d. Cada nivel aumenta daño y cadencia un 35%%. El tercero añade daño de área o quemadura. El nivel se conserva al cambiar de era.", "Coût : %d. Chaque niveau augmente les dégâts et la cadence de 35 %%. Le troisième ajoute des dégâts de zone ou une brûlure. Le niveau reste lors du changement d’ère.", "Costo: %d. Ogni grado aumenta danni e cadenza del 35%%. Il terzo aggiunge danni ad area o bruciatura. Il grado resta al cambio d’epoca.", "Custo: %d. Cada nível aumenta dano e cadência em 35%%. O terceiro adiciona dano em área ou queimadura. O nível mantém-se ao mudar de era.", "Вартість: %d. Кожен рівень додає 35%% шкоди та швидкості стрільби. Третій додає шкоду по площі або підпал. Рівень зберігається при зміні епохи.", "Kosten: %d. Elk niveau verhoogt schade en vuursnelheid met 35%%. Het derde voegt gebiedsschade of verbranding toe. Het niveau blijft behouden bij een tijdperkupgrade.", "Bedel: %d. Her seviye hasarı ve atış hızını %%35 artırır. Üçüncü seviye alan hasarı veya yanma ekler. Çağ atlayınca seviye korunur."),
+    )
+
     private fun part141(): Array<Pair<String, Array<out String>>> = arrayOf(
         "elite141_locked" to t("Zablokowane. Odblokuj w Badaniach: %s (%d medali)", "Locked. Unlock in Research: %s (%d medals)", "Gesperrt. In der Forschung freischalten: %s (%d Medaillen)", "Bloqueado. Desbloquéalo en Investigación: %s (%d medallas)", "Verrouillé. Débloquez dans Recherche : %s (%d médailles)", "Bloccato. Sblocca in Ricerca: %s (%d medaglie)", "Bloqueado. Desbloqueie em Pesquisa: %s (%d medalhas)", "Заблоковано. Відкрий у Дослідженнях: %s (%d медалей)", "Vergrendeld. Ontgrendel in Onderzoek: %s (%d medailles)", "Kilitli. Araştırma'da aç: %s (%d madalya)"),
         "elite141_afford" to t("Stać cię! Odblokuj w Badaniach: %s (%d medali)", "You can afford it! Unlock in Research: %s (%d medals)", "Du kannst es dir leisten! In der Forschung freischalten: %s (%d Medaillen)", "¡Te lo puedes permitir! Desbloquéalo en Investigación: %s (%d medallas)", "Vous en avez les moyens ! Débloquez dans Recherche : %s (%d médailles)", "Te lo puoi permettere! Sblocca in Ricerca: %s (%d medaglie)", "Você pode pagar! Desbloqueie em Pesquisa: %s (%d medalhas)", "Тобі вистачає! Відкрий у Дослідженнях: %s (%d медалей)", "Je kunt het betalen! Ontgrendel in Onderzoek: %s (%d medailles)", "Paran yetiyor! Araştırma'da aç: %s (%d madalya)"),

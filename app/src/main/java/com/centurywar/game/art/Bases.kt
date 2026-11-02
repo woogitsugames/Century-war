@@ -535,9 +535,12 @@ class Bases(private val p: Pen) {
     fun turret(era: Int, x: Float, y: Float, firing: Boolean, team: Int) =
         turret(Defs.spec(era).art, x, y, firing, team)
 
-    fun turret(art: EraArt, x: Float, y: Float, firing: Boolean, team: Int) {
+    fun turret(art: EraArt, x: Float, y: Float, firing: Boolean, team: Int, tier: Int = 1) {
         cv.save(); cv.translate(x, y); cv.scale(1.3f, 1.3f); cv.translate(-x, -y)
         turretModel(art, x, y, firing, team)
+        for (i in 1 until tier) {
+            p.rect(x - 22f + (i - 1) * 12f, y - 8f, x - 13f + (i - 1) * 12f, y - 3f, team)
+        }
         cv.restore()
     }
 

@@ -381,6 +381,7 @@ class StoreGraphicsTest {
         ))
         for (side in battle.sides) {
             side.turretEra[0] = era
+            side.turretTier[0] = 1
             for (i in 0 until 7) {
                 val role = roles[i % roles.size]
                 check(battle.spawn(side, side.unit(role)))
