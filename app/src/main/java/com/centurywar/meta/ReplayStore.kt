@@ -2,6 +2,7 @@ package com.centurywar.meta
 
 import com.centurywar.game.Replay
 import com.centurywar.game.ReplayRecord
+import com.centurywar.game.SaveGuard
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
@@ -39,9 +40,10 @@ class ReplayStore(private val directory: File) {
                 // Nie zapisuj niepełnych ani zbyt dużych powtórek.
                 require(bytes.size in 24..MAX_RECORD_BYTES)
                 ReplayRecord.decode(bytes)
-                writeAtomic(File(directory, "$id.cwr"), bytes)
-                prune()
-            } catch (_: Exception) { }
+                if (writeAtomic(File(directory, "$id.cwr"), bytes)) prune()
+            } catch (e: Exception) {
+                SaveGuard.report("replay-save", e)
+            }
         }
     }
 
@@ -105,8 +107,16 @@ class ReplayStore(private val directory: File) {
     fun loadAsync(id: String, callback: (ByteArray?) -> Unit) {
         io.execute {
             val data = if (pattern.matches(id)) try {
-                File(directory, "$id.cwr").takeIf { it.isFile && it.length() in 24L..MAX_RECORD_BYTES.toLong() }?.readBytes()
-            } catch (_: Exception) { null } else null
+                val replay = File(directory, "$id.cwr")
+                if (!replay.exists()) null
+                else {
+                    require(replay.isFile && replay.length() in 24L..MAX_RECORD_BYTES.toLong())
+                    replay.readBytes().also { ReplayRecord.decode(it) }
+                }
+            } catch (e: Exception) {
+                SaveGuard.report("replay-load", e)
+                null
+            } else null
             callback(data)
         }
     }
@@ -128,7 +138,10 @@ class ReplayStore(private val directory: File) {
             if (!file.name.endsWith(".cwr") || !file.isFile || file.length() !in 24L..MAX_RECORD_BYTES.toLong()) continue
             val id = file.name.removeSuffix(".cwr")
             if (!pattern.matches(id)) continue
-            val record = try { ReplayRecord.decode(file.readBytes()) } catch (_: Exception) { continue }
+            val record = try { ReplayRecord.decode(file.readBytes()) } catch (e: Exception) {
+                SaveGuard.report("replay-index", e)
+                continue
+            }
             val imported = isImportedId(id)
             result.add(Entry(id, record.meta, record.playable, id in set,
                 imported, if (imported) file.lastModified() else record.meta.dateMillis))
@@ -156,13 +169,10 @@ class ReplayStore(private val directory: File) {
     }
 
     private fun writeAtomic(file: File, bytes: ByteArray): Boolean = try {
-        directory.mkdirs()
-        val tmp = File(directory, file.name + ".tmp")
-        FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-        // Gdy rename się nie powiedzie, zachowaj poprzedni plik zamiast usuwać go.
-        tmp.renameTo(file).also { if (!it) tmp.delete() }
-    } catch (_: Exception) {
-        File(directory, file.name + ".tmp").delete()
+        SaveGuard.atomicWrite(file, bytes)
+        true
+    } catch (e: Exception) {
+        SaveGuard.report("replay-write", e)
         false
     }
 
