@@ -48,6 +48,9 @@ class Fighter {
     var burnLeft = 0f
     /** Spowolnienie od wieży w Endless, w sekundach symulacji. */
     var slowLeft = 0f
+    /** Dowódca jest specjalną jednostką tej samej epoki, bez zmiany UnitDef. */
+    var isCommander = false
+    var commanderSkillCd = 0f
     val isBoss get() = bossKind != EndlessBosses.NONE
     val radius get() = 16f * def.size
     val alive get() = active && dying < 0f
@@ -106,6 +109,8 @@ class Side(val index: Int) {
     var rallyT = 0f
     var hold = false
     var aliveCount = 0
+    /** -1: dowódca żyje, 0: dostępny, wartość dodatnia: odnowienie. */
+    var commanderCd = 0f
     var front = 0f
     var baseFlash = 0f
 
@@ -213,7 +218,8 @@ class FxBuffer {
  * dla danego seeda. Dzięki temu da się ją testować i balansować w testach JVM
  * (AI kontra AI), a w przyszłości weryfikować wyniki rankingu na serwerze.
  */
-class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
+class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
+             val commanderEnabled: Boolean = true) {
     companion object {
         const val STEP = 1f / 60f
         /** Tempo narastania/wygaszania kroku marszu (czysto wizualne). */
@@ -237,6 +243,10 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
         const val BARRAGE_CD = 55f
         const val RALLY_CD = 42f
         const val RALLY_TIME = 8f
+        const val COMMANDER_COOLDOWN = 90f
+        const val COMMANDER_AURA_RANGE = 230f
+        const val COMMANDER_SKILL_RANGE = 180f
+        const val COMMANDER_SKILL_COOLDOWN = 20f
         const val RALLY_SPEED_BONUS = 1.4f
         const val ARMORY_BASE_COST = 140f
         const val ARMORY_COST_GROWTH = 1.45f
@@ -272,6 +282,13 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
     /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
     var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
+    /** Poprzednie powtórki odtwarzają stare reguły bitwy bez dowódcy. */
+    val commanderAvailable = commanderEnabled && when (cfg.mode) {
+        Mode.CAMPAIGN -> cfg.stageIndex >= 7
+        Mode.DAILY -> cfg.seed >= Daily.RELEASE_DAY
+        else -> true
+    }
+    private val commanderPositions = FloatArray(2) { Float.NaN }
     /** W Endless pogoda jest pochodną seeda i epoki przeciwnika (co sześć fal). */
     val weather: Weather get() = if (!endless) cfg.weather else when (
         (((cfg.seed xor (cfg.seed ushr 32)).toInt() and 3) + enemy.era) and 3
@@ -414,6 +431,28 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
 
     val player get() = sides[0]
     val enemy get() = sides[1]
+
+    fun commanderCost(side: Side): Int = side.unit(Role.HEAVY).cost * 2
+
+    fun canSummonCommander(side: Side): Boolean = commanderAvailable && !over &&
+        side.commanderCd == 0f && side.aliveCount < side.cap && side.gold >= commanderCost(side)
+
+    private fun spawnCommander(side: Side): Boolean {
+        if (!commanderAvailable || over || side.commanderCd != 0f || side.aliveCount >= side.cap) return false
+        val f = spawnFighter(side, side.unit(Role.ELITE), 1.8f) ?: return false
+        f.isCommander = true
+        f.dmg *= 1.15f
+        f.commanderSkillCd = 0f
+        side.commanderCd = -1f
+        fx.add(FxBuffer.EVOLVE, f.x, 24f * f.def.size, side.index, 1.2f)
+        return true
+    }
+
+    fun summonCommander(side: Side): Boolean {
+        if (!canSummonCommander(side) || !spawnCommander(side)) return false
+        side.gold -= commanderCost(side)
+        return true
+    }
 
     // ---------------------------------------------------------------- komendy gracza / AI
 
@@ -920,6 +959,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
             }
             train(s, dt)
             turrets(s, dt)
+            if (s.commanderCd > 0f) s.commanderCd = max(0f, s.commanderCd - dt)
             for (i in 0..1) if (s.abilityCd[i] > 0f) s.abilityCd[i] -= dt
             if (s.rallyT > 0f) s.rallyT -= dt
             if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
@@ -939,6 +979,11 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
         bossAuraCount = 0
         if (endless) for (u in units) if (u.alive && u.hasBossAbility(EndlessBosses.AURA)) {
             bossAuraXs[bossAuraCount++] = u.x
+        }
+        commanderPositions[0] = Float.NaN
+        commanderPositions[1] = Float.NaN
+        if (commanderAvailable) for (u in units) if (u.alive && u.isCommander) {
+            commanderPositions[u.side] = u.x
         }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
@@ -1150,6 +1195,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
         f.burnDps = 0f
         f.burnLeft = 0f
         f.slowLeft = 0f
+        f.isCommander = false
+        f.commanderSkillCd = 0f
         f.cd = 0.3f
         f.anim = rng.nextFloat() * 6f
         f.attackAnim = 0f
@@ -1244,7 +1291,17 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
         val attackRate = rally * (if (u.bossRageActive) 1.3f else 1f)
         if (u.cd > 0f) u.cd -= dt * attackRate
 
-        val target = frontUnit(eIdx)
+        var target = frontUnit(eIdx)
+        if (u.isCommander) {
+            u.commanderSkillCd = max(0f, u.commanderSkillCd - dt)
+            if (u.commanderSkillCd <= 0f && target != null &&
+                abs(target.x - u.x) <= COMMANDER_SKILL_RANGE) {
+                splashDamage(u.side, target.x, 75f, u.dmg * 1.2f, 1f, Role.ELITE, -1)
+                u.commanderSkillCd = COMMANDER_SKILL_COOLDOWN
+                u.attackAnim = 0.25f
+                target = frontUnit(eIdx)
+            }
+        }
         val gap = if (target != null) (target.x - u.x) * s.dir - u.radius - target.radius
         else (e.baseFront - u.x) * s.dir - u.radius
         val def = u.def
@@ -1252,7 +1309,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
             1f + 0.3f * EndlessCards.totalStackPower(s.cardStacks[EndlessCard.LAST_BASTION.ordinal]) else 1f
         val attackDmg = (if (endless && u.side == 0 && s.baseHp < s.baseMaxHp * 0.35f)
             u.dmg * s.lastStandMul else u.dmg) * bastionMul *
-            (if (u.bossRageActive) 1.5f else 1f)
+            (if (u.bossRageActive) 1.5f else 1f) *
+            (if (!u.isCommander && commanderPositions[u.side].isFinite() &&
+                abs(u.x - commanderPositions[u.side]) <= COMMANDER_AURA_RANGE) 1.1f else 1f)
 
         val attackRange = Defs.unitRange(def, u.tier)
         val effectiveRange = if (def.projectile == Proj.NONE) attackRange
@@ -1484,6 +1543,11 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
                 }
             }
             v.aliveCount--
+            if (u.isCommander) {
+                v.commanderCd = COMMANDER_COOLDOWN *
+                    (if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES) 0.5f else 1f)
+                commanderPositions[u.side] = Float.NaN
+            }
             liveDirty = true
             if (endless && u.side == 0 && attacker == 1) {
                 val echo = EndlessCards.totalStackPower(
@@ -1572,6 +1636,10 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true) {
                 EndlessWaveTheme.SKIRMISHERS -> 1.3f
                 else -> 1f
             }
+        // Dowódca obrony jest opłacany z tego samego budżetu fali co zwykli wojownicy.
+        if (wave >= 5 && budget >= commanderCost(e) && spawnCommander(e)) {
+            budget -= commanderCost(e)
+        }
         var n = 0
         while (budget > 0f && n < 16 && e.queueSize < e.queueMax) {
             val def = e.unit(waveRole(rng.nextInt(100), n))
