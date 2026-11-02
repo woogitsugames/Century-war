@@ -35,6 +35,8 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     @Volatile var loopActive = false
         private set
     @Volatile private var thread: Thread? = null
+    /** Tożsamość ostatnio uruchomionego workera, również po stopThread(). */
+    @Volatile private var lastStartedThread: Thread? = null
     private var scale = 1f
     /**
      * Jednorazowy sygnał po opublikowaniu pierwszej wyrenderowanej klatki dowolnego ekranu
@@ -106,6 +108,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
         val t = Thread(this, "game-loop").apply { priority = Thread.MAX_PRIORITY }
         // Publikacja tożsamości i stanu poprzedza start nowego wątku.
         thread = t
+        lastStartedThread = t
         running = true
         loopActive = true
         try {
@@ -114,7 +117,7 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
             if (thread === t) {
                 thread = null
                 running = false
-                loopActive = false
+                if (lastStartedThread === t) loopActive = false
             }
             throw e
         }
@@ -147,10 +150,8 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                 if (thread === me) {
                     thread = null
                     running = false
-                    loopActive = false
-                } else if (thread == null && !running) {
-                    loopActive = false
                 }
+                if (lastStartedThread === me) loopActive = false
             }
         }
     }
