@@ -101,6 +101,9 @@ android {
 
     buildFeatures { buildConfig = true }
 
+    // Nagrana muzyka (assets/music/*.ogg) otwierana przez openFd: bez kompresji w APK.
+    androidResources { noCompress += "ogg" }
+
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {

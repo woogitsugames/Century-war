@@ -1225,7 +1225,10 @@ class BattleScreen(
         if (won) g.host.onBattleWon()
         haptics.onEnd(won)
         g.music?.duck(if (won) 0.24f else 0.40f, 1.8f)
-        g.sfx(if (won || cfg.mode == Mode.ENDLESS) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
+        val victoryTone = won || cfg.mode == Mode.ENDLESS
+        // Nagrany przerywnik (jeśli jest plik) zastępuje krótki efekt wyniku.
+        if (g.music?.playResultStinger(victoryTone) != true)
+            g.sfx(if (victoryTone) Sound.VICTORY else Sound.DEFEAT, 0.85f, 0, priority = 3)
         resultsView.refreshResultTexts()
         if (reward > 0) g.sfx(Sound.REWARD, 0.4f, 0)
         if (earnedStars > 0) g.sfx(Sound.STAR, 0.46f, 0, pitch = 1f + earnedStars * 0.06f)
