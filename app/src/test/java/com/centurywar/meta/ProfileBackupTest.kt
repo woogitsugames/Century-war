@@ -180,8 +180,10 @@ class ProfileBackupTest {
     }
 
     @Test fun trackedSaveNotPersistedWhenWriteFails() {
-        // Katalog nadrzędny nie istnieje: zapis nie może się udać.
-        val missing = File(Files.createTempDirectory("cw-backup").toFile(), "brak/profile.json")
+        // W miejscu katalogu leży zwykły plik: zapis nie może się udać
+        // (154: brakujący katalog jest tworzony, więc to nie byłaby awaria).
+        val blocker = File(Files.createTempDirectory("cw-backup").toFile(), "brak").apply { writeText("x") }
+        val missing = File(blocker, "profile.json")
         val target = Profile(missing)
         val seq = target.saveTracked()
         assertTrue(target.awaitWrites(5_000L))
