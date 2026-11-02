@@ -17,7 +17,11 @@ import kotlin.math.roundToInt
  * Długi (dziesiątki minut), więc działa tylko na żądanie:
  * BALANCE_RUN=true ./gradlew :app:testDebugUnitTest --tests '*BalanceReport*'
  * Opcjonalne zmienne: BALANCE_STAGE_FROM, BALANCE_STAGE_TO, BALANCE_PROFILE,
- * BALANCE_RUNS (domyślnie 20), BALANCE_STRICT=true (asercje progów).
+ * BALANCE_RUNS (domyślnie 20), BALANCE_STRICT=true (asercje progów),
+ * BALANCE_COMMANDER=on|off (AI gracza przywołuje dowódcę z własnej inicjatywy / nigdy;
+ * domyślnie zwykłe zasady trybu — w kampanii tylko w odpowiedzi na dowódcę wroga).
+ * BALANCE_PROFILE=medale|medale-elita: realistyczny nowy gracz z medalami tylko z kampanii
+ * (tura 8, docs/BALANCE.md).
  */
 class BalanceReport {
     @Before fun onlyOnRequest() = assumeTrue(System.getenv("BALANCE_RUN") == "true")
@@ -29,6 +33,8 @@ class BalanceReport {
         val timeout: Boolean,
         val playerEra: Int,
         val enemyEra: Int,
+        val playerCommander: Boolean = false,
+        val enemyCommander: Boolean = false,
     )
     private data class Summary(
         val stage: Stage,
@@ -39,6 +45,8 @@ class BalanceReport {
         val medianMinutes: Double,
         val avgPlayerEra: Double,
         val avgEnemyEra: Double,
+        val playerCommanders: Int = 0,
+        val enemyCommanders: Int = 0,
     ) {
         val winPct get() = wins * 100.0 / count
         val timeoutPct get() = timeouts * 100.0 / count
@@ -87,6 +95,48 @@ class BalanceReport {
         return profile.bonuses()
     }
 
+    /**
+     * Realistyczny nowy gracz (tura 8): medale wyłącznie z kampanii, pierwsza wygrana każdego
+     * etapu na 2 gwiazdki, od etapu 7 jedna porażka przed wygraną; medale wydawane na najtańszy
+     * następny poziom. [eliteFirst]: pierwszym zakupem jest `r_elite`.
+     */
+    private fun medalLevels(stageIndex: Int, eliteFirst: Boolean): IntArray {
+        val defs = Research.defs
+        var medals = 0
+        for (i in 0 until stageIndex) {
+            medals += 20 + 6 * i + 2 * 5 + 2 * 12
+            if (i >= 6) medals += 5 + 2 * i + 10
+        }
+        val levels = IntArray(defs.size)
+        if (eliteFirst) {
+            if (medals < defs[0].cost(0)) return levels
+            medals -= defs[0].cost(0)
+            levels[0] = 1
+        }
+        while (true) {
+            val idx = defs.indices.filter { levels[it] < defs[it].max }
+                .minWithOrNull(compareBy<Int> { defs[it].cost(levels[it]) }.thenBy { it }) ?: break
+            val cost = defs[idx].cost(levels[idx])
+            if (cost > medals) break
+            medals -= cost
+            levels[idx]++
+        }
+        return levels
+    }
+
+    private fun bonusFor(profile: ResearchProfile, stageIndex: Int): Bonuses = when (profile.name) {
+        "medale" -> Research.bonuses(medalLevels(stageIndex, false))
+        "medale-elita" -> Research.bonuses(medalLevels(stageIndex, true))
+        else -> bonuses(profile.progress)
+    }
+
+    /** BALANCE_COMMANDER: on = AI gracza przywołuje dowódcę samo, off = nigdy, brak = zasady trybu. */
+    private val commanderOverride: Boolean? = when (System.getenv("BALANCE_COMMANDER")) {
+        "on" -> true
+        "off" -> false
+        else -> null
+    }
+
     /** BALANCE_POWER_SCALE: mnożnik siły AI etapu (przegląd wartości przy strojeniu). */
     private val powerScale = System.getenv("BALANCE_POWER_SCALE")?.toFloatOrNull() ?: 1f
 
@@ -97,12 +147,16 @@ class BalanceReport {
         val base = Campaign.config(stage, bonus, seed, difficulty = difficulty)
         val battle = Battle(if (powerScale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * powerScale,
             base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.variantsEnabled, base.weather))
-        battle.playerAi = Ai(battle, 0)
+        battle.playerAi = Ai(battle, 0).also { it.commanderOverride = commanderOverride }
         val maxSteps = (30f * 60f / Battle.STEP).toInt()
         var steps = 0
+        var playerCommander = false
+        var enemyCommander = false
         while (!battle.over && steps < maxSteps) {
             battle.step()
             battle.fx.count = 0
+            if (battle.player.commanderCd != 0f) playerCommander = true
+            if (battle.enemy.commanderCd != 0f) enemyCommander = true
             steps++
         }
         return Result(
@@ -111,6 +165,8 @@ class BalanceReport {
             timeout = !battle.over,
             playerEra = battle.player.era,
             enemyEra = battle.enemy.era,
+            playerCommander = playerCommander,
+            enemyCommander = enemyCommander,
         )
     }
 
@@ -135,6 +191,8 @@ class BalanceReport {
             medianMinutes = median,
             avgPlayerEra = results.sumOf { it.playerEra.toDouble() } / runs,
             avgEnemyEra = results.sumOf { it.enemyEra.toDouble() } / runs,
+            playerCommanders = results.count { it.playerCommander },
+            enemyCommanders = results.count { it.enemyCommander },
         )
     }
 
@@ -236,7 +294,9 @@ class BalanceReport {
         val runs = (System.getenv("BALANCE_RUNS")?.toIntOrNull() ?: 20).coerceAtLeast(1)
         val filter = System.getenv("BALANCE_PROFILE")
         // BALANCE_PROFILE=target: tylko profil docelowy każdego etapu.
-        val selected = profiles.filter { filter == null || filter == "target" || it.name == filter }
+        val medal = filter == "medale" || filter == "medale-elita"
+        val selected = if (medal) listOf(ResearchProfile(filter!!, -1f))
+            else profiles.filter { filter == null || filter == "target" || it.name == filter }
         require(selected.isNotEmpty()) { "Nieznany profil: $filter" }
 
         val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
@@ -249,16 +309,19 @@ class BalanceReport {
             val stage = Campaign.stages[index]
             for (profile in selected) {
                 if (filter == "target" && profile.name != targetProfile(index)) continue
-                val result = measure(stage, profile.name, bonuses(profile.progress), runs)
+                val result = measure(stage, profile.name, bonusFor(profile, index), runs)
                 stats.add(result)
-                println("BALANCE stage=${stage.index + 1} profile=${profile.name}" +
+                val levels = if (medal) " levels=${medalLevels(index, filter == "medale-elita").sum()}" else ""
+                println("BALANCE stage=${stage.index + 1} profile=${profile.name}$levels" +
+                    " commander=${System.getenv("BALANCE_COMMANDER") ?: "auto"}" +
                     " win=${fmt(result.winPct)}% median=${fmt(result.medianMinutes)}m" +
-                    " timeout=${fmt(result.timeoutPct)}% era=${fmt(result.avgEra)}")
+                    " timeout=${fmt(result.timeoutPct)}% era=${fmt(result.avgEra)}" +
+                    " cmd=${result.playerCommanders}/${result.enemyCommanders}")
             }
         }
 
         val name = "${from}-$to" + (System.getenv("BALANCE_TAG")?.let { "-$it" } ?: "")
-        val csv = StringBuilder("stage,profile,ai_power,start_era,max_era,modifiers,n,wins,win_rate_pct,median_minutes,timeouts,timeout_pct,avg_era,avg_player_era,avg_enemy_era\n")
+        val csv = StringBuilder("stage,profile,ai_power,start_era,max_era,modifiers,n,wins,win_rate_pct,median_minutes,timeouts,timeout_pct,avg_era,avg_player_era,avg_enemy_era,player_commander_battles,enemy_commander_battles\n")
         val md = StringBuilder("# Raport balansu: $name\n\n")
             .append("${to - from + 1} etapów, 3 profile badań (0%, 40%, 80%), domyślnie N=20 seedów na kombinację. ")
             .append("Czas do 30 min; timeout to niedokończona bitwa; epoka = średnia dwóch stron, indeksowana od 0.\n\n")
@@ -267,7 +330,7 @@ class BalanceReport {
         for (r in stats) {
             val s = r.stage
             val mods = s.modifiers.joinToString("+") { it.name }
-            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower.toDouble())},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)}\n")
+            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower.toDouble())},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)},${r.playerCommanders},${r.enemyCommanders}\n")
             md.append("| ${s.index + 1} | ${r.profile} | ${fmt(s.aiPower.toDouble())} | ${s.startEra}–${s.maxEra} | ${fmt(r.winPct)}% | ${fmt(r.medianMinutes)} | ${fmt(r.timeoutPct)}% | ${fmt(r.avgEra)} |\n")
         }
         File(dir, "report-$name.csv").writeText(csv.toString())
@@ -291,6 +354,63 @@ class BalanceReport {
             assertTrue("Timeouty w raporcie przekraczają limit 5%",
                 stats.sumOf { it.timeouts } * 20 < stats.sumOf { it.count })
         }
+    }
+
+    /**
+     * Endless weterana (seedy 1001–…, jak EndlessBalanceReportTest) w trzech wariantach dowódcy:
+     * `bez` — reguły bez dowódcy, `wrog` — dowódca tylko u wroga (AI gracza go nie przywołuje),
+     * `z` — zwykłe zasady (obie strony). BALANCE_ENDLESS_SEEDS (domyślnie 100),
+     * BALANCE_ENDLESS_VARIANTS="bez,z" (domyślnie wszystkie). Plik endless-commander.md.
+     */
+    @Test
+    fun endlessCommanderReport() {
+        val seeds = (System.getenv("BALANCE_ENDLESS_SEEDS")?.toIntOrNull() ?: 100).coerceAtLeast(1)
+        val variants = System.getenv("BALANCE_ENDLESS_VARIANTS")?.split(',')?.map { it.trim() }
+            ?: listOf("bez", "wrog", "z")
+        val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
+        dir.mkdirs()
+        val bonus = bonuses(0.8f)
+        val md = StringBuilder("# Endless z dowódcą (weteran, $seeds seedów, do fali 60)\n\n")
+            .append("| Wariant | Śr. fala | Mediana porażki | Fala 40 | Fala 50 | Fala 60 | Dowódca gracza [bitwy] |\n")
+            .append("|---|---:|---:|---:|---:|---:|---:|\n")
+        for (variant in variants) {
+            val waves = ArrayList<Int>()
+            val defeats = ArrayList<Int>()
+            val survive = IntArray(3)
+            var summoned = 0
+            for (seed in 1001L until 1001L + seeds) {
+                val b = Battle(BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonus),
+                    commanderEnabled = variant != "bez")
+                b.playerAi = Ai(b, 0).also { if (variant == "wrog") it.commanderOverride = false }
+                var steps = 0
+                var used = false
+                while (!b.over && b.wave < 60 && steps < 90_000) {
+                    b.step()
+                    b.fx.count = 0
+                    if (b.player.commanderCd != 0f) used = true
+                    steps++
+                }
+                if (used) summoned++
+                waves.add(b.wave)
+                if (b.over) defeats.add(b.wave)
+                for ((i, t) in intArrayOf(40, 50, 60).withIndex()) {
+                    if (b.wave > t || (b.wave == t && !b.over)) survive[i]++
+                }
+            }
+            val d = defeats.sorted()
+            val median = when {
+                d.isEmpty() -> Double.NaN
+                d.size % 2 == 1 -> d[d.size / 2].toDouble()
+                else -> (d[d.size / 2 - 1] + d[d.size / 2]) / 2.0
+            }
+            val mean = waves.sum().toDouble() / seeds
+            println("ENDLESS_COMMANDER variant=$variant mean=${fmt(mean)} median=${fmt(median)}" +
+                " w40=${survive[0]} w50=${survive[1]} w60=${survive[2]} summoned=$summoned/$seeds")
+            md.append("| $variant | ${fmt(mean)} | ${fmt(median)} | ${survive[0]}/$seeds | ${survive[1]}/$seeds | " +
+                "${survive[2]}/$seeds | $summoned/$seeds |\n")
+        }
+        val tag = System.getenv("BALANCE_TAG")?.let { "-$it" } ?: ""
+        File(dir, "endless-commander$tag.md").writeText(md.toString())
     }
 
     /** Jeden pojedynek wariantów: bez globalnej losowości przy wskazaniu strony. */

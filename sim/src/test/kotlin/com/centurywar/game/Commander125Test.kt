@@ -162,6 +162,23 @@ class Commander125Test {
         assertFalse(b.summonCommander(b.enemy))
     }
 
+    /** Przełącznik pomiarowy BalanceReport: w kampanii AI może przywołać dowódcę samo albo nigdy. */
+    @Test fun aiCommanderOverrideForBalanceMeasurement() {
+        fun summonedBy(override: Boolean?, mode: Mode, stage: Int): Boolean {
+            val b = Battle(config(mode, stage))
+            b.enemy.gold = 10_000f
+            assertTrue(b.spawn(b.enemy, b.enemy.unit(Role.MELEE)))
+            assertTrue(b.spawn(b.enemy, b.enemy.unit(Role.MELEE)))
+            b.ai!!.commanderOverride = override
+            b.ai!!.update(1f)
+            return b.units.any { it.alive && it.isCommander && it.side == 1 }
+        }
+        assertFalse(summonedBy(null, Mode.CAMPAIGN, 10))
+        assertTrue(summonedBy(true, Mode.CAMPAIGN, 10))
+        assertTrue(summonedBy(null, Mode.SKIRMISH, -1))
+        assertFalse(summonedBy(false, Mode.SKIRMISH, -1))
+    }
+
     @Test fun snapshotResumesCommanderPulseAndDeathCooldown() {
         val a = Battle(config())
         val commands = BattleController(a)

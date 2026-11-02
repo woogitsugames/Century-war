@@ -50,6 +50,13 @@ class Ai(
         get() = nextHoldAt
         set(v) { nextHoldAt = v }
 
+    /**
+     * Tylko do pomiarów balansu (BalanceReport): null = zwykłe zasady trybu,
+     * true = przywołuje dowódcę także z własnej inicjatywy w kampanii, false = nigdy.
+     * Nie jest zapisywane w snapshotach ani powtórkach; gra zawsze używa null.
+     */
+    var commanderOverride: Boolean? = null
+
     private var danger = 0
     private var barrageTargets = 0
     private var closeContact = 0
@@ -100,8 +107,8 @@ class Ai(
         // AI gracza wydaje ten sam rejestrowany rozkaz co użytkownik.
         // W kampanii AI reaguje na dowódcę przeciwnika: zachowuje dotychczasowy balans
         // przy braku tego zakupu, ale odpowiada na nową jednostkę na takich samych zasadach.
-        val commanderCounterplay = b.cfg.mode != Mode.CAMPAIGN ||
-            b.sides[1 - me.index].commanderCd < 0f
+        val commanderCounterplay = commanderOverride ?: (b.cfg.mode != Mode.CAMPAIGN ||
+            b.sides[1 - me.index].commanderCd < 0f)
         if (commanderCounterplay && b.canSummonCommander(me) &&
             (danger > 0 || me.aliveCount >= 2 || b.time >= 35f)) {
             summonCommander()
