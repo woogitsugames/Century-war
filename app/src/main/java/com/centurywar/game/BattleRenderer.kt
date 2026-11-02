@@ -53,14 +53,19 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     var fxIntensity = 1f
         private set
     private var nextVisualFlashAt = 0f
+    private var realTime = 0f
+    /** Dopuszczone impulsy w trybie ograniczonym; licznik diagnostyczny bez alokacji. */
+    internal var limitedFlashEvents = 0
+        private set
     private val lastBaseFlash = FloatArray(2)
     private val baseFlashUntil = FloatArray(2)
 
     /** Wspólny limit rozbłysków (< 3 Hz) także dla nowych efektów. */
     private fun allowFlash(): Boolean {
         if (!g.profile.reduceFlash) return true
-        if (time < nextVisualFlashAt) return false
-        nextVisualFlashAt = time + 0.34f
+        if (realTime < nextVisualFlashAt) return false
+        nextVisualFlashAt = realTime + 0.34f
+        limitedFlashEvents++
         return true
     }
     private var time = 0f
@@ -298,8 +303,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
 
     // ---------------------------------------------------------------- główny rysunek
 
-    fun render(c: Canvas, dt: Float, w: Float, h: Float) {
+    fun render(c: Canvas, dt: Float, w: Float, h: Float, realDt: Float = dt) {
         time += dt.coerceAtLeast(0f)
+        realTime += realDt.coerceAtLeast(0f)
         renderDt = dt.coerceIn(0f, 0.05f)
         val q = g.quality
         baseFlashCache.setQuality(q.level)
@@ -319,6 +325,16 @@ class BattleRenderer(private val g: Game, private val b: Battle,
 
         detectDeaths()
         consumeFx()
+        // Obie nocne aureole i blaski baz korzystają z tej samej bramki co cząstki.
+        // Decyzja zapada przed drawNight(), które jest rysowane przed korpusem baz.
+        for (side in b.sides) {
+            val i = side.index
+            if (g.profile.reduceFlash &&
+                side.baseFlash > lastBaseFlash[i] + 0.005f && allowFlash()) {
+                baseFlashUntil[i] = realTime + 0.15f
+            }
+            lastBaseFlash[i] = side.baseFlash
+        }
         trauma = max(0f, trauma - dt.coerceAtLeast(0f) * 1.5f)
         val strength = if (g.profile.screenShake == 0) 0f
             else trauma * trauma * shakeScale * if (g.profile.screenShake == 1) 0.42f else 1f
@@ -409,12 +425,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
         c.save(); c.translate(-PIC_OX, -PIC_OY)
         val flashAlpha = if (g.profile.reduceFlash) {
-            // Pierwsza klatka kolejnego uderzenia; maks. 1 rozbłysk na 0,34 s.
-            if (s.baseFlash > lastBaseFlash[s.index] + 0.005f && allowFlash()) {
-                baseFlashUntil[s.index] = time + 0.15f
-            }
-            lastBaseFlash[s.index] = s.baseFlash
-            if (time <= baseFlashUntil[s.index]) (s.baseFlash / 0.15f * 22f).toInt().coerceIn(0, 22) else 0
+            if (baseAuraFlashAllowed(s.index)) (s.baseFlash / 0.15f * 22f).toInt().coerceIn(0, 22) else 0
         } else (s.baseFlash / 0.15f * 110f).toInt().coerceIn(0, 255)
         if (flashAlpha > 0) baseFlashCache.draw(c, pic, s.index, flashAlpha)
         else c.drawPicture(pic)
@@ -1349,6 +1360,11 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
     }
 
+    /** Jedna decyzja dla zwykłego błysku bazy i nocnej aureoli. */
+    internal fun baseAuraFlashAllowed(side: Int): Boolean =
+        b.sides[side].baseFlash > 0f &&
+            (!g.profile.reduceFlash || realTime < baseFlashUntil[side])
+
     /** Przyciemnienie tylko tła; kontury postaci i paski HP pozostają czytelne. */
     private fun drawNight(c: Canvas, w: Float) {
         fill.color = Color.argb(155, 8, 13, 31)
@@ -1359,7 +1375,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
             val cy = groundY - 110f * k
             fill.color = Color.argb(20, 246, 196, 105)
             c.drawCircle(x, cy, 170f * k, fill)
-            fill.color = Color.argb(if (s.baseFlash > 0f) 85 else 35, 255, 224, 142)
+            val flashing = baseAuraFlashAllowed(s.index)
+            fill.color = Color.argb(if (flashing) (if (g.profile.reduceFlash) 43 else 85) else 35,
+                255, 224, 142)
             c.drawCircle(x, cy, 92f * k, fill)
         }
     }
