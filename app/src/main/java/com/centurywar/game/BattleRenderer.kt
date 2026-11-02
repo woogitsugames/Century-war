@@ -332,6 +332,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
             if (g.profile.reduceFlash &&
                 side.baseFlash > lastBaseFlash[i] + 0.005f && allowFlash()) {
                 baseFlashUntil[i] = realTime + 0.15f
+            } else if (side.baseFlash <= 0f) {
+                // Błysk wygasł: kolejne trafienie musi ponownie przejść przez bramkę.
+                baseFlashUntil[i] = 0f
             }
             lastBaseFlash[i] = side.baseFlash
         }
