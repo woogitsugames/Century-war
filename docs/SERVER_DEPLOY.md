@@ -439,8 +439,28 @@ Sprawdza zgodność wyniku nagrania z siedmioma weryfikacjami, z czego
 dwie rozgrzewają JIT, a pięć jest mierzonych. CI izoluje **jeden vCPU**
 przez `taskset` oraz `-XX:ActiveProcessorCount=1`, z `-Xmx512m`.
 
-**Wynik 149:** do wpisania po rzeczywistym uruchomieniu benchmarku dla
-bieżącej wersji symulacji. Wynik z nr 121 nie dowodzi czasu dla dowódcy.
+**Pomiar 02.11.2026 — [GitHub Actions, benchmark 149](https://github.com/woogitsugames/Century-war/actions/runs/41447513413):**
+Ubuntu Linux, AMD EPYC 7763 (procesor współdzielonego runnera), Java 21.0.13,
+`taskset` ograniczony do jednego procesora logicznego, `-XX:ActiveProcessorCount=1`,
+`-Xmx512m` (raportowana maksymalna sterta 494 MiB).
+Syntetyczne Endless: **432 000 kroków**, **30 952 komendy**, 123 818 bajtów
+Base64 URL, fala 432, `Replay.VERSION=7`; w logu dokładnie jedno
+`SUMMON_COMMANDER`, jedno `BUY_TURRET` i dwa `TURRET_TIER`.
+Wszystkie siedem weryfikacji odtworzyło tę samą liczbę kroków i wynik co nagranie.
+
+| Operacja | Pięć pomiarów (ms) | Mediana | Maksimum |
+|---|---|---:|---:|
+| `Replay.verify` | 925, 929, 906, 917, 904 | **917 ms** | **929 ms** |
+| `Replay.decode + verify` | 932, 933, 907, 918, 905 | **918 ms** | **933 ms** |
+
+**Wniosek:** w tej próbce pojedyncze `Replay.verify` trwało maksymalnie
+**0,929 s**, znacznie poniżej budżetu **15 s**. Nie ma podstaw do zmiany
+limitu kroków, timeoutu ani protokołu. To pomiar pojedynczego syntetycznego
+przebiegu, **nie** pomiar najgorszego legalnego zgłoszenia na 1-vCPU VPS.
+Po doliczeniu czasu oczekiwania w kolejce, ewentualnego drugiego przebiegu
+normalizacji badań i zmiennej wydajności współdzielonego CPU margines może
+się zmniejszyć. Przed udostępnieniem serwera zmierz maksymalny czas na
+wybranym VPS przy równoległych żądaniach i obserwuj HTTP 503 oraz `/metrics`.
 
 ```bash
 cpu=$(awk '/^Cpus_allowed_list:/ {split($2, a, /[,-]/); print a[1]}' /proc/self/status)
