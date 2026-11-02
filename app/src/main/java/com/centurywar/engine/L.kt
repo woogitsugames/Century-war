@@ -164,8 +164,18 @@ object L {
         putAll(part150())
         putAll(part151())
         putAll(part154())
+        putAll(part164())
         }
     }
+
+    /** Zlecenie 164: opisy wirtualnych ekranów dla TalkBack i Switch Access. */
+    private fun part164(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a164_loading" to t("Ładowanie ekranu", "Loading screen", "Bildschirm wird geladen", "Cargando pantalla", "Chargement de l'écran", "Caricamento schermata", "A carregar ecrã", "Завантаження екрана", "Scherm laden", "Ekran yükleniyor"),
+        "a164_menu" to t("Menu główne", "Main menu", "Hauptmenü", "Menú principal", "Menu principal", "Menu principale", "Menu principal", "Головне меню", "Hoofdmenu", "Ana menü"),
+        "a164_battle" to t("Bitwa. Sterowanie jednostkami wymaga dotyku.", "Battle. Unit controls require touch.", "Schlacht. Die Einheitensteuerung erfordert Berührung.", "Batalla. Las unidades se controlan mediante la pantalla táctil.", "Bataille. Le contrôle des unités nécessite le toucher.", "Battaglia. Il controllo delle unità richiede il tocco.", "Batalha. O controlo das unidades requer toque.", "Битва. Керування загонами потребує дотику.", "Gevecht. Eenheden bedienen vereist aanraking.", "Savaş. Birimleri kontrol etmek için dokunmak gerekir."),
+        "a164_battle_pause" to t("Bitwa. Wybierz, aby włączyć pauzę.", "Battle. Activate to pause.", "Schlacht. Aktivieren, um zu pausieren.", "Batalla. Activa para pausar.", "Bataille. Activez pour mettre en pause.", "Battaglia. Attiva per mettere in pausa.", "Batalha. Ative para colocar em pausa.", "Битва. Активуйте, щоб призупинити.", "Gevecht. Activeer om te pauzeren.", "Savaş. Duraklatmak için etkinleştirin."),
+        "a164_other" to t("Ekran gry. Ten ekran wymaga sterowania dotykowego.", "Game screen. This screen requires touch controls.", "Spielbildschirm. Dieser Bildschirm erfordert Touch-Steuerung.", "Pantalla de juego. Esta pantalla requiere control táctil.", "Écran de jeu. Cet écran nécessite des commandes tactiles.", "Schermata di gioco. Questa schermata richiede comandi tattili.", "Ecrã do jogo. Este ecrã requer controlos táteis.", "Екран гри. Цей екран потребує сенсорного керування.", "Spelscherm. Dit scherm vereist aanraakbediening.", "Oyun ekranı. Bu ekran dokunmatik kontrol gerektirir."),
+    )
 
     /** Ostrzeżenie o nieudanym zapisie lub odzyskaniu danych. */
     private fun part154(): Array<Pair<String, Array<out String>>> = arrayOf(
