@@ -162,8 +162,24 @@ object L {
         putAll(part144())
         putAll(part145())
         putAll(part150())
+        putAll(part154())
         }
     }
+
+    /** Ostrzeżenie o nieudanym zapisie lub odzyskaniu danych. */
+    private fun part154(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "save154_problem" to t(
+            "Problem z zapisem. Sprawdź wolne miejsce. Postęp odzyskano, jeśli było to możliwe.",
+            "Save problem. Check available storage. Progress was recovered where possible.",
+            "Speicherproblem. Prüfe den freien Speicher. Fortschritt wurde nach Möglichkeit gerettet.",
+            "Error al guardar. Comprueba el espacio libre. Se recuperó el progreso si fue posible.",
+            "Problème de sauvegarde. Vérifiez l'espace libre. Progression récupérée si possible.",
+            "Problema di salvataggio. Controlla lo spazio libero. Progressi recuperati se possibile.",
+            "Problema ao guardar. Verifique o espaço livre. Progresso recuperado se possível.",
+            "Помилка збереження. Перевірте вільне місце. Прогрес відновлено, якщо можливо.",
+            "Opslagprobleem. Controleer de vrije ruimte. Voortgang is zo mogelijk hersteld.",
+            "Kaydetme hatası. Boş alanı kontrol et. İlerleme mümkünse kurtarıldı."),
+    )
 
     /** Zlecenie 125: dowódca, zdolność i podpowiedzi. */
     private fun part125(): Array<Pair<String, Array<out String>>> = arrayOf(
