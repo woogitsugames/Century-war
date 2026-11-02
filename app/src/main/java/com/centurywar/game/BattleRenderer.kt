@@ -710,7 +710,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         val recoil = phase * phase * hitPow.coerceIn(0f, 1f)
         val motor = motorBody(def.body)
         pen.alpha = if (dead) deathFade(dying) else 1f
-        pen.flash = if (dead) motor && dying < 0.085f else directFlash && phase > 0f
+        pen.flash = if (dead) motor && dying < 0.085f && allowFlash() else directFlash && phase > 0f
         pen.char = if (dead && motor) (dying / 0.36f).coerceIn(0f, 1f) else 0f
         pen.tintAmt = if (burning && !dead && !pen.flash)
             0.13f + (0.5f + 0.5f * sin(time * 13f)) * 0.12f else 0f
