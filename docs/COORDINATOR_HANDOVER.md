@@ -3,7 +3,7 @@ Jeden agent opus naraz, ciągły rozwój; koordynator budzony co 30 min (zadania
 1. **Reszta audytu 156:** A156-10 idempotentne rozliczenie nagród po bitwie (trwały identyfikator rozliczenia, kolejność zapis profilu → usunięcie snapshotu, testy przerwania), ponowne krytyczne reprodukcje audytu (A156-01/02/04/05/06/07/08/09), lista „kandydat do testów zamkniętych” w docs/RELEASE.md. Gałąź `claude/noc-1-audyt`.
 2. **Szlif muzyki:** pętle (oddech na złączeniu — rozważyć dłuższy crossfade w samym pliku lub podwójny odtwarzacz z nakładką), przenikanie spokojna/bojowa, głośność muzyki względem efektów (Sound), przerywniki. Gałąź `claude/noc-2-muzyka`.
 3. **Przegląd UX na urządzeniach:** zrzuty telefon 1600x720/2400x1080, Fold 904x2316/2184x1968, pl/en/de; drobne poprawki po falach 7 (TalkBack 164, panel wież 161). Gałąź `claude/noc-3-ux`.
-4. **Nowa zawartość (bez zmian balansu kampanii):** propozycje + drobne nowości, np. nowe reguły wyzwania dnia, karty Endless, osiągnięcia; teksty w nowej part16x. Gałąź `claude/noc-4-tresc`.
+4. **Nowa zawartość — PRZEKAZANA drugiej sesji Claude (inne konto), gałąź `claude/ext-tresc`; nie uruchamiać własnego agenta na ten punkt, tylko przejrzeć i scalić jej gałąź (teksty part170, ew. podbicie PROTOCOL + złote powtórki po stronie koordynatora).** Pierwotnie: propozycje + drobne nowości, np. nowe reguły wyzwania dnia, karty Endless, osiągnięcia; teksty w nowej part16x. Gałąź `claude/noc-4-tresc`.
 Testy: kompromis forkEvery (decyzja właściciela) — ustawić, by pełne testy trwały ok. 11–12 min.
 Gałęzie: 115 starych usunięto 2.11 wieczorem (raport docs/reports/branches-cleanup.md).
 
