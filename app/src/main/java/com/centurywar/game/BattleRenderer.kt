@@ -43,6 +43,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     var k = 1f
     var groundY = 0f
     var viewW = 0f
+    private var fieldTop = 0f
     private var trauma = 0f
     private var shakeX = 0f
     private var shakeY = 0f
@@ -137,6 +138,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     private val ttext = arrayOfNulls<String>(TMAX)
     private val tcol = IntArray(TMAX)
     private val tsize = FloatArray(TMAX)
+    private val tVeteran = BooleanArray(TMAX)
 
     /** Kolory i symbole zdolności: tablice współdzielone, nie tworzone w klatce. */
     private val bossColors = intArrayOf(0, 0xFFE4A85B.toInt(), 0xFF60C7E6.toInt(),
@@ -173,6 +175,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
 
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {
         viewW = w
+        fieldTop = topReserve
         groundY = h - bottomReserve
         val visibleH = groundY - topReserve
         // Na prawie kwadratowych ekranach (rozłożony Fold, tablet) widok jest węższy niż
@@ -1211,7 +1214,8 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                     val v = fx.value[i]
                     if (v == 0f || v == 1f) {
                         val label = if (v > 0f) rankLabels[sd.rank.coerceIn(0, 20)] else L["next_era"]
-                        addText(x - sd.dir * 150f, 360f, label, if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f)
+                        addText(x - sd.dir * 150f, 360f, label,
+                            if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f, v > 0f)
                     }
                 }
                 FxBuffer.GOLD -> {
@@ -1312,12 +1316,18 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
     }
 
-    private fun addText(x: Float, h: Float, s: String, color: Int, size: Float) {
+    private fun addText(x: Float, h: Float, s: String, color: Int, size: Float,
+                        veteran: Boolean = false) {
         var slot = 0
         var minLife = Float.MAX_VALUE
         for (i in 0 until TMAX) { if (tlife[i] < minLife) { minLife = tlife[i]; slot = i } }
         tx[slot] = x; th[slot] = h; ttext[slot] = s; tcol[slot] = color; tlife[slot] = 1.2f; tsize[slot] = size
+        tVeteran[slot] = veteran
     }
+
+    /** Weteran nie może wejść nad pole bitwy, także przy wstrząsie kamery. */
+    internal fun veteranLabelY(worldH: Float, fontPx: Float): Float =
+        max(sy(worldH), fieldTop + fontPx + 7f * g.ui.dp)
 
     private fun drawTexts(c: Canvas, dt: Float) {
         for (i in 0 until TMAX) {
@@ -1327,10 +1337,11 @@ class BattleRenderer(private val g: Game, private val b: Battle,
             val s = ttext[i] ?: continue
             val a = min(1f, tlife[i] * 2f)
             textP.textSize = tsize[i] * g.ui.dp
+            val y = if (tVeteran[i]) veteranLabelY(th[i], textP.textSize) else sy(th[i])
             textP.color = Color.argb((180 * a).toInt(), 0, 0, 0)
-            c.drawText(s, sx(tx[i]) + 1.5f * g.ui.dp, sy(th[i]) + 1.5f * g.ui.dp, textP)
+            c.drawText(s, sx(tx[i]) + 1.5f * g.ui.dp, y + 1.5f * g.ui.dp, textP)
             textP.color = Color.argb((255 * a).toInt(), Color.red(tcol[i]), Color.green(tcol[i]), Color.blue(tcol[i]))
-            c.drawText(s, sx(tx[i]), sy(th[i]), textP)
+            c.drawText(s, sx(tx[i]), y, textP)
         }
     }
 
