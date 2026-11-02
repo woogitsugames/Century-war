@@ -70,6 +70,36 @@ class Commander125Test {
         assertTrue(commander.commanderSkillCd < firstCd)
     }
 
+    @Test fun auraIncreasesOnlyNearbyAlliedDamage() {
+        val boosted = Battle(config())
+        val controller = BattleController(boosted)
+        assertTrue(controller.summonCommander())
+        assertTrue(boosted.spawn(boosted.player, boosted.player.unit(Role.MELEE)))
+        assertTrue(boosted.spawn(boosted.enemy, boosted.enemy.unit(Role.MELEE)))
+        val leader = boosted.units.first { it.alive && it.isCommander }
+        val ally = boosted.units.first { it.alive && it.side == 0 && !it.isCommander }
+        val foe = boosted.units.first { it.alive && it.side == 1 }
+        leader.x = 420f
+        leader.cd = 100f
+        leader.commanderSkillCd = Battle.COMMANDER_SKILL_COOLDOWN
+        ally.x = 450f
+        ally.cd = 0f
+        ally.dmg = 100f
+        foe.x = 465f
+        foe.hp = 10000f
+        foe.maxHp = 10000f
+        foe.cd = 100f
+        val plain = BattleSnapshot.decode(BattleSnapshot.encode(boosted))!!.battle
+        plain.units.first { it.isCommander }.isCommander = false
+        plain.player.commanderCd = 0f
+        boosted.step()
+        plain.step()
+        val dmgAura = 10000f - boosted.units.first { it.side == 1 && it.alive }.hp
+        val dmgPlain = 10000f - plain.units.first { it.side == 1 && it.alive }.hp
+        assertEquals(100f, dmgPlain, 0.02f)
+        assertEquals(110f, dmgAura, 0.02f)
+    }
+
     @Test fun deathStartsCooldownAndAllowsOneNewPurchase() {
         val b = Battle(config())
         val ctl = BattleController(b)
