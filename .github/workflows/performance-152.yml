@@ -49,7 +49,7 @@ jobs:
             --tests '*BattleScreenAllocationTest*' \
             --tests '*LowEndScreensPerformanceTest*' \
             --tests '*ReplayTest*' \
-            --tests '*ScreenshotTest*' \
+            --tests '*CommanderHudScreenshotTest*' \
             --tests '*HudDigits152Test*' \
             --tests '*HudDigits152RenderTest*' \
             --console=plain --no-configuration-cache 2>&1 | tee perf-152-tests.log
