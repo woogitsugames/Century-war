@@ -680,8 +680,10 @@ class BattleScreen(
 
 
     /** Teksty kosztów są cache'owane, żeby nie tworzyć nowych Stringów w każdej klatce. */
-    private val costCache = IntArray(7) { -1 }
-    private val costText = Array(7) { "" }
+    private val costCache = IntArray(8) { -1 }
+    private val costText = Array(8) { "" }
+    internal var commanderActiveLanguage = -1
+    internal var commanderActiveText = ""
     internal var armoryLv = -1
     internal var turretHeadingEra = -1
     internal var turretHeadingVariant = -1

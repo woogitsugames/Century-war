@@ -160,6 +160,7 @@ object L {
         putAll(part140())
         putAll(part125())
         putAll(part144())
+        putAll(part145())
         }
     }
 
@@ -200,6 +201,46 @@ object L {
             "Одна особлива одиниця на сторону. Коштує як два важкі бійці. 180% здоров'я й 115% шкоди важкого бійця. Аура: +10% шкоди союзників у радіусі 230. Імпульс вражає область кожні 20 с. Після загибелі відновлення 90 с (45 с під час швидких здібностей). З 8-го етапу кампанії, у сутичці, Endless та нових денних викликах.",
             "Eén speciale eenheid per zijde. Kost twee zware eenheden. 180% HP en 115% schade van zware eenheden. Aura: +10% schade van bondgenoten binnen 230. Impuls raakt een gebied elke 20 s. Na overlijden 90 s herladen (45 s bij snelle vaardigheden). Vanaf campagneniveau 8, schermutseling, Endless en nieuwe daguitdagingen.",
             "Taraf başına bir özel birim. Bedel: iki ağır birlik. %180 ağır birlik canı ve %115 ağır birlik hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
+    )
+
+    /** Tura 9 (UX dowódcy i stopni wież): stany przycisku Wodza, przycisk stopnia, dymki, „Co nowego”. */
+    private fun part145(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "comm145_active" to t("W boju", "In battle", "Im Kampf", "En combate", "Au combat", "In campo", "Em combate", "У бою", "In strijd", "Sahada"),
+        "comm145_hint" to t(
+            "Możesz wezwać dowódcę. Jego aura wzmacnia pobliską armię, a przycisk pokazuje koszt i odnowienie.",
+            "You can summon a commander. The aura strengthens nearby troops; the button shows cost and cooldown.",
+            "Du kannst einen Kommandanten rufen. Seine Aura stärkt nahe Truppen; die Taste zeigt Kosten und Abklingzeit.",
+            "Puedes invocar un comandante. Su aura refuerza tropas cercanas; el botón muestra coste y recarga.",
+            "Vous pouvez invoquer un commandant. Son aura renforce les troupes proches ; le bouton montre le coût et la recharge.",
+            "Puoi evocare un comandante. La sua aura potenzia le truppe vicine; il tasto mostra costo e ricarica.",
+            "Pode invocar um comandante. A aura fortalece tropas próximas; o botão mostra custo e recarga.",
+            "Можна покликати командира. Його аура посилює сусідніх бійців; кнопка показує вартість і відновлення.",
+            "Je kunt een commandant oproepen. Zijn aura versterkt nabije troepen; de knop toont kosten en herlaadtijd.",
+            "Komutan çağırabilirsin. Aurası yakındaki birlikleri güçlendirir; düğme maliyeti ve bekleme süresini gösterir."),
+        "tier145_btn" to t("St. %d: %d", "Tier %d: %d", "St. %d: %d", "Niv. %d: %d", "Niv. %d : %d", "Liv. %d: %d", "Nív. %d: %d", "Рів. %d: %d", "Niv. %d: %d", "Sv. %d: %d"),
+        "tier145_max" to t("Maks.", "Max", "Max.", "Máx.", "Max", "Max", "Máx.", "Макс.", "Max", "Maks."),
+        "tier145_hint" to t(
+            "Stać cię na wyższy stopień wieży: otwórz Wieże i dotknij przycisku z szewronami.",
+            "You can afford a higher turret tier: open Turrets and tap the chevron button.",
+            "Du kannst eine höhere Turmstufe bezahlen: Öffne Türme und tippe auf die Winkel-Taste.",
+            "Puedes pagar un nivel de torre superior: abre Torretas y toca el botón con galones.",
+            "Vous pouvez payer un niveau de tour supérieur : ouvrez Tourelles et touchez le bouton à chevrons.",
+            "Puoi pagare un grado superiore della torre: apri Torrette e tocca il tasto con i gradi.",
+            "Pode pagar um nível de torre superior: abra Torres e toque no botão com divisas.",
+            "Вам по кишені вищий рівень вежі: відкрийте Вежі й торкніться кнопки з шевронами.",
+            "Je kunt een hoger torenniveau betalen: open Torens en tik op de knop met strepen.",
+            "Daha yüksek bir kule seviyesine paran yetiyor: Kuleler'i aç ve şeritli düğmeye dokun."),
+        "wn_145_battle" to t(
+            "Dowódca od 8. etapu kampanii i trzy stopnie rozbudowy wież.",
+            "A commander from campaign stage 8 and three turret upgrade tiers.",
+            "Ein Kommandant ab Kampagnenetappe 8 und drei Ausbaustufen für Türme.",
+            "Un comandante desde la etapa 8 de la campaña y tres niveles de mejora de torres.",
+            "Un commandant dès l’étape 8 de la campagne et trois niveaux d’amélioration des tours.",
+            "Un comandante dalla tappa 8 della campagna e tre gradi di potenziamento delle torri.",
+            "Um comandante a partir da fase 8 da campanha e três níveis de melhoria das torres.",
+            "Командир з 8-го етапу кампанії та три рівні покращення веж.",
+            "Een commandant vanaf campagne-etappe 8 en drie upgradeniveaus voor torens.",
+            "Sefer 8. aşamadan itibaren komutan ve üç kule geliştirme seviyesi."),
     )
 
     /** Tura 9 (UX 2): wyjaśnienie wyszarzonego przycisku Play Games w Ustawieniach. */

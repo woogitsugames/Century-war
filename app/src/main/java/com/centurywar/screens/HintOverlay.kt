@@ -90,7 +90,7 @@ class HintOverlay(
             HintDef(THEME, "hint_theme", 60),
             HintDef(BOSS, "hint_boss_push", 98),
             HintDef(OLD_TURRET, "hint_old_turret", 82),
-            HintDef(TURRET_TIER, "turret140_hint", 81),
+            HintDef(TURRET_TIER, "tier145_hint", 81),
             HintDef(DAILY, "hint_daily_battle", 96),
             HintDef(VARIANT, "hint_variant54", 110),
             HintDef(WEATHER, "hint_weather54", 86),
@@ -250,6 +250,8 @@ class HintOverlay(
             BOSS -> L[if (battle?.currentBoss()?.bossKind == 2) "hint_boss_aura" else key]
             MODIFIERS -> modifierDescription()
             ELITE_RESEARCH, ENEMY_ELITE -> EliteUnlock.text(key, g.profile)
+            // „Od 8. etapu” ma sens tylko w kampanii; w potyczce i Endless opis bez etapu.
+            COMMANDER -> L[if (battle?.cfg?.mode == Mode.CAMPAIGN) key else "comm145_hint"]
             else -> L[key]
         }
         prepareLayout()
