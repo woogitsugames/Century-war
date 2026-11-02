@@ -162,3 +162,8 @@ Wersja release (R8) sprawdzona na telefonie, Play Games z prawdziwymi ID, wdroż
 - `main` = `claude/bold-sagan-vwz5gm` = `integ/tura8` (4f4d3314): fala 1 GPT (123, 124, 126–134) + poprawki UI A–G + balans (uczciwe elity, 126/127, stageRamp) + PROTOCOL 0.6.0. Pełne testy zielone (8,5 min). APK wysłane.
 - Zip fali 2 wysłany właścicielowi: 140 (stopnie wież) + 135 (sklep, „Co nowego”). Potem fala 3: 125 dowódca, fala 4: 136 tłumaczenia. 142 (muzyka) czeka na pliki Suno.
 - Otwarte do decyzji właściciela: Zryw (r_rally) ma tę samą asymetrię co elity; etapy 28–36 trudne dla gracza zbierającego medale tylko z kampanii; dymek Doktryny elit w menu częściowo zasłania Wyzwanie dnia i Potyczkę.
+
+## Stan na 2.11.2026 ok. 09:10 UTC
+- `main` = `claude/bold-sagan-vwz5gm` = `integ/tura9` (6da61261): Zryw wroga tylko gdy gracz go zbadał (kampania/potyczka), dymek podpowiedzi poza bitwą omija przyciski (górny/dolny pas na gęstym menu), paczka GPT 135. Pełne testy zielone.
+- Właściciel: wolno używać 1 dodatkowego agenta i scalać wszystko do main. Pracuje agent „Przegląd UX nowego gracza” (worktree z integ/tura9; nie rusza sim, BattleBottomHud, BattleUpgradePanel; teksty part143).
+- Czekamy na GPT 140 (stopnie wież). Po scaleniu: zip fali 3 (125 dowódca).
