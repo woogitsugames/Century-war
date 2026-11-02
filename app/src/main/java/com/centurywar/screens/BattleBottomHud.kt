@@ -187,7 +187,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         commanderBtn.visible = !modal && battle.commanderAvailable
         commanderBtn.iconId = Icons.CROWN
         commanderBtn.iconTint = Ui.PLAYER
-        commanderBtn.label = L["comm125_short"]
+        commanderBtn.label = if (threeRowHud) "" else L["comm125_short"]
         commanderBtn.sub = costStr(6, battle.commanderCost(p))
         commanderBtn.subIcon = Icons.COIN
         commanderBtn.enabled = battle.canSummonCommander(p)
