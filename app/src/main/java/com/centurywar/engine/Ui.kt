@@ -743,13 +743,13 @@ class Ui {
         val icon = b.subIcon >= 0
         val gap = if (icon) 3 * dp else 0f
         val room = (maxW - gap).coerceAtLeast(1f)
-        val full = measure(b.sub, sizeDp, true) + if (icon) sizeDp * dp * 1.25f else 0f
+        val full = measure(b.sub, sizeDp, true) + (if (icon) sizeDp * dp * 1.25f else 0f)
         if (full <= room) return sizeDp
         var fitted = sizeDp * room / full
         // Dopasowujemy wspólnie cyfrę i monetę, bez minimalnego progu psującego wąski HUD.
         var tries = 0
         while (tries++ < 6 &&
-            measure(b.sub, fitted, true) + if (icon) fitted * dp * 1.25f else 0f > room) {
+            measure(b.sub, fitted, true) + (if (icon) fitted * dp * 1.25f else 0f) > room) {
             fitted *= 0.97f
         }
         return fitted
