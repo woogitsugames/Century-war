@@ -57,7 +57,7 @@ Jeden wklej do `CW_HMAC_KEY`, drugi do `CW_PUBLIC_ID_KEY`.
 **Drugi klucz pozostaje wyłącznie na serwerze**; nie umieszczaj go w APK
 ani nie zmieniaj bez migracji danych. Ustaw
 CW_GAME_VERSION zgodnie z **ScoreClient.GAME_VERSION w Androidzie**
-(obecnie 0.5.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
+(obecnie 0.6.0). Nie zapisuj .env do repozytorium, nie wysyłaj go w zgłoszeniach.
 Klucz ten jest również w APK, a więc **nie zapewnia mocnego uwierzytelnienia**.
 Żądanie usunięcia obcego UUID jest odrzucane bez powiązanego z nim
 sekretu instalacji. Istniejące konta wiążą sekret przy pierwszym nowym wyniku.
