@@ -135,6 +135,8 @@ class HintOverlayTest {
         val g = game()
         val b = Battle(BattleConfig(Mode.SKIRMISH, 24L, 1f))
         b.player.gold = 99999f
+        // Dowódca (125) ma wyższy priorytet niż ulepszenie; tu sprawdzamy samo wyciszanie.
+        g.profile.hintsSeen = 1L shl HintOverlay.COMMANDER
         val h = HintOverlay(g, b, targets())
         h.update(0.3f, blocked = true)
         assertEquals(-1, h.activeId)
@@ -153,6 +155,35 @@ class HintOverlayTest {
         h.update(0.3f)
         assertEquals(HintOverlay.UPGRADE, h.activeId)
         h.update(0.1f, blocked = true)
+        assertEquals(-1, h.activeId)
+    }
+
+    /** Zlecenie 125: bit dowódcy mieści się w masce profilu, więc dymek pokazuje się raz. */
+    @Test
+    fun commanderHintShowsOnceAndOnlyWhenAvailable() {
+        val g = game()
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK and (1L shl HintOverlay.COMMANDER).inv()
+        val early = Battle(Campaign.config(Campaign.stages[2], g.profile.bonuses(), 125L, false))
+        early.time = 35f
+        early.player.gold = 99999f
+        val locked = HintOverlay(g, early, targets())
+        locked.update(0.3f)
+        assertEquals("Etap < 8 nie ma dowódcy", -1, locked.activeId)
+
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 125L, 1f))
+        b.time = 35f
+        b.player.gold = 99999f
+        val commander = Button(203).apply { set(900f, 610f, 76f, 55f) }
+        val t = targets()
+        val h = HintOverlay(g, b, HintOverlay.Targets(t.upgrades, t.armory, t.rally, t.stance,
+            t.evolve, t.turrets, t.gold, t.xp, t.minimap, t.field, t.weather, t.variants,
+            commander = commander), false)
+        h.update(0.3f)
+        assertEquals(HintOverlay.COMMANDER, h.activeId)
+        assertTrue(g.profile.hintsSeen and (1L shl HintOverlay.COMMANDER) != 0L)
+        h.onAction()
+        b.time += 25f
+        h.update(0.3f)
         assertEquals(-1, h.activeId)
     }
 

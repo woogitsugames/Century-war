@@ -198,13 +198,19 @@ class LeftHandedHudTest {
             val g = game(width, height, density)
             val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 1191L, 1f))
             g.setScreen(s)
-            assertEquals("$width x $height: praworęczny HUD nadal jednorzędowy",
-                button(s, 0).r.top, button(s, 10).r.top, 0.01f)
-            g.profile.leftHandedHud = true
-            s.layout()
             val dp = g.ui.dp
             val availableDp = (g.width - g.insetL - g.insetR) / dp - 12f
-            val hasTwoRows = availableDp < 560f
+            // Potyczka ma dowódcę (125): siódma akcja wymaga drugiego rzędu poniżej 610 dp.
+            val commanderTwoRows = availableDp < 610f
+            if (commanderTwoRows)
+                assertTrue("$width x $height: dowódca przenosi akcje do drugiego rzędu",
+                    button(s, 0).r.bottom < button(s, 10).r.top)
+            else
+                assertEquals("$width x $height: praworęczny HUD nadal jednorzędowy",
+                    button(s, 0).r.top, button(s, 10).r.top, 0.01f)
+            g.profile.leftHandedHud = true
+            s.layout()
+            val hasTwoRows = availableDp < 560f || commanderTwoRows
             if (hasTwoRows)
                 assertTrue("Wewnętrzny Fold zachowuje dwa rzędy leworęczne",
                     button(s, 0).r.bottom < button(s, 10).r.top)
@@ -220,8 +226,12 @@ class LeftHandedHudTest {
         g.profile.leftHandedHud = true
         val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 113L, 1f))
         g.setScreen(s)
-        assertEquals(g.insetL + 6f * g.ui.dp, button(s, 15).r.left, 0.01f)
-        assertTrue(button(s, 0).r.left > button(s, 10).r.left)
+        // Ostatnia akcja (dowódca w potyczce, 125) ląduje przy lewej krawędzi.
+        assertEquals(g.insetL + 6f * g.ui.dp, button(s, 203).r.left, 0.01f)
+        assertTrue("Przyspieszenie na prawo od dowódcy", button(s, 15).r.left > button(s, 203).r.left)
+        // Siedem akcji wypełnia cały rząd, więc jednostki sprawdzamy przy prawej krawędzi.
+        assertEquals(g.width - g.insetR - 6f * g.ui.dp, button(s, 0).r.right, 0.01f)
+        assertTrue("Jednostki nad akcjami", button(s, 0).r.bottom < button(s, 10).r.top)
         assertControlsDoNotOverlap(s, g)
     }
 

@@ -39,10 +39,12 @@ class Profile(private val file: File) {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         private val RELEASE_VERSION = Regex("[A-Za-z0-9._+-]{1,48}")
-        const val HINT_COUNT = 24
+        const val HINT_COUNT = 25
         const val HINT_LONG_PRESS = 17
-        // 23 bity: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie,
-        // 21 Doktryna elit w menu, 22 pierwsza elita wroga (zlecenie 141).
+        // 25 bitów: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie,
+        // 21 Doktryna elit w menu, 22 pierwsza elita wroga (zlecenie 141),
+        // 23 stopnie wież, 24 dowódca (125). Nowy bit wymaga podniesienia HINT_COUNT,
+        // inaczej wskazówka nie może zostać oznaczona i blokuje niższe priorytety.
         const val HINT_VALID_MASK = (1L shl HINT_COUNT) - 1L
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
             Thread(task, "cw-profile-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }

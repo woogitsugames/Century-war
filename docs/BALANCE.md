@@ -1130,3 +1130,28 @@ AI kampanijne reaguje na przywołanie dowódcy przez przeciwnika, lecz go samo
 nie inicjuje. Regeneracja 10 złotych powtórek v7/Snapshot v16 wykonana przez
 `./gradlew :sim:regenerateGolden` na GitHub Actions
 ([przebieg](https://github.com/woogitsugames/Century-war/actions/runs/41426305006)).
+
+### Tura 9 — doktryny z dowódcą (DoctrineBalance82, 2.11.2026)
+
+Lustrzany pojedynek doktryn (epoka 3, kruche bazy, bogaty start, AI BALANCED po obu stronach),
+seedy 82000–82099 z zamianą stron (200 bitew na doktrynę). Procent wygranych strony z doktryną:
+
+| Doktryna | bez dowódcy | z dowódcą |
+|---|---|---|
+| ECONOMY | 54% | 57% |
+| SIEGE | 50% | 50% |
+| BULWARK | 59% | 58% |
+| SWIFT | 49% | 47% |
+| VETERAN | 66% | 57% |
+| FURY | 55% | 59% |
+| ARSENAL | 47% | 42% |
+| TACTICS | 56% | 53% |
+| PLUNDER | 58% | 63,5% |
+| BANNER | 51% | 46% |
+| SUPPLY | 49% | 57% |
+| SIEGE_MASTERS | 50% | 50% |
+| VIGILANCE | 50% | 52% |
+
+Wcześniejszy test na 20 seedach był zbyt szumny (ECONOMY 70% przy 20 seedach, 57% przy 100).
+Test używa teraz 100 seedów i pasma 40–65%. Bez zmian w regułach gry; PLUNDER (63,5%) i ARSENAL (42%)
+są na brzegach pasma — kandydaci do strojenia, jeśli pomiar kampanii to potwierdzi.

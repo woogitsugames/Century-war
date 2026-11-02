@@ -570,7 +570,8 @@ class ScreenshotTestTranslation78Test {
             shot(g, code, "pause")
             if (onlyBattle) return
 
-            g.profile.hintsSeen = 0L
+            // Dymek dowódcy (125) ma wyższy priorytet; tu sprawdzamy dymek pogody.
+            g.profile.hintsSeen = 1L shl com.centurywar.screens.HintOverlay.COMMANDER
             val weather = com.centurywar.screens.BattleScreen(
                 g, com.centurywar.game.BattleConfig(
                     com.centurywar.game.Mode.SKIRMISH, 7802L, 1f,

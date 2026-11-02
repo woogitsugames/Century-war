@@ -3,3 +3,4 @@
 - 2026-11-01 UTC: Tura 7: teksty 120
 - 2026-11-01 UTC: Tura 8: menu po 124 i 133, ostry tekst na zlotych przyciskach, odstepy przyciskow od ramki paneli, plakietka Badan
 - 2026-11-02 UTC: Tura 9 UX 2
+- 2026-11-02 UTC: Tura 9: przycisk dowodcy (Wodz) w potyczce, 125
