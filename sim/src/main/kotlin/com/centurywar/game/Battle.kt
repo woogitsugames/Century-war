@@ -439,7 +439,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
 
     private fun spawnCommander(side: Side): Boolean {
         if (!commanderAvailable || over || side.commanderCd != 0f || side.aliveCount >= side.cap) return false
-        val f = spawnFighter(side, side.unit(Role.ELITE), 1.8f) ?: return false
+        val f = spawnFighter(side, side.unit(Role.HEAVY), 1.8f) ?: return false
         f.isCommander = true
         f.dmg *= 1.15f
         f.commanderSkillCd = 0f
