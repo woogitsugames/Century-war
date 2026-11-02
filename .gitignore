@@ -13,3 +13,4 @@ build/
 *.aab
 .claude/
 .kotlin/
+__pycache__/
