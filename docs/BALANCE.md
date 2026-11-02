@@ -117,6 +117,50 @@ zero timeoutów): etap 21 — 9,5% / 11,5%, etap 22 — 6,0% / 5,0%,
 etap 29 — 2,0% / 1,0%, etap 30 — 0,5% / 1,0% (wariant A / B). Niskie odsetki
 wynikają z braku badań, różnice między wariantami mieszczą się w szumie.
 
+## A156-13 — wyrównanie wariantów STEAM i SILICON (02.11.2026)
+
+Pomiary raportu audytu 156 dotyczą aktualnej mechaniki po wcześniejszych zmianach;
+historyczne 201:199 i 208:192 z 31.10 nie są miarodajne dla obecnego kodu.
+Każda próba: 200 deterministycznych seedów × zamiana stron = 400 pojedynków
+AI `BALANCED`, po 30 minut maksymalnie, bez badań poza odblokowaniem elity i Zrywu.
+
+| Epoka | Przed (A : B, paty, różnica) | Po (A : B, paty, różnica) |
+|---|---|---|
+| STEAM | 165 : 235, 0, 17,50 pp — **FAIL** | Oczekuje na rzeczywisty pomiar `variantReport` |
+| SILICON | 178 : 222, 0, 11,00 pp — **FAIL** | Oczekuje na rzeczywisty pomiar `variantReport` |
+
+**Diagnoza i zakres zmiany:**
+- **STEAM (spalinowy A kontra galwaniczny B):** galwaniczne ciężkie i
+  elitarne jednostki miały jednocześnie niższy koszt oraz znacznie większą
+  prędkość marszu: odpowiednio `1.08 / 0.78` i `1.12 / 0.74`
+  (mnożniki B/A). To skraca dojście do frontu i pozwala AI szybciej
+  wykorzystać kolejną jednostkę. Podniesiono wyłącznie prędkość ciężkiej
+  A z `0.78` do `0.88` i elity A z `0.74` do `0.82`.
+  Galwaniczny nadal pozostaje mobilniejszy, spalinowy zachowuje przewagę HP.
+- **SILICON (rój A kontra biotech B):** ciężka roju miała tylko `0.78`
+  bazowych HP wobec `1.22` u biotech; przy podobnym składzie AI była
+  szczególnie krucha. Podniesiono wyłącznie HP ciężkiej roju
+  `0.78 → 0.83`; pozostała tańsza, szybsza i mniej odporna od biotech.
+- Modyfikacje ograniczono do definicji wariantów w `Defs.kt`.
+  Nie zmieniano bazowych epok, AI, zasad kampanii, Endless ani doktryn.
+  `VariantTuning163Test` sprawdza oba konkretne warunki strojonego balansu
+  i zachowanie różnic ról; oryginalny `BalanceReport.variantReport`
+  nadal sprawdza statystyczny próg 10 pp bez luzowania asercji.
+
+**Odtwarzanie pomiaru:**
+
+```bash
+BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest \
+  --rerun --tests '*BalanceReport.variantReport*' --console=plain --no-configuration-cache
+./gradlew :sim:test --tests '*VariantTuning163Test*' --tests '*GoldenReplayTest*' \
+  --console=plain --no-configuration-cache
+```
+
+Zmiana statystyk wpływa na wynik symulacji i może unieważnić złote powtórki
+z epoką pary/krzemu. W tym zleceniu **nie** aktualizuje się
+`SimVersion.PROTOCOL`, `Replay.VERSION` ani wzorców `golden/`:
+wersjonowanie i regeneracja należą do koordynatora.
+
 ## Pogoda — zlecenie 33 (31.10.2026)
 
 Od etapu 5 co trzy etapy włącza się pogoda, w cyklu **deszcz → wiatr → noc**:
