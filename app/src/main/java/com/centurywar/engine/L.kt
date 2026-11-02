@@ -162,6 +162,7 @@ object L {
         putAll(part144())
         putAll(part145())
         putAll(part150())
+        putAll(part151())
         putAll(part154())
         }
     }
@@ -218,6 +219,15 @@ object L {
             "По одному особливому бійцю на кожну сторону. Коштує як два важкі бійці. 180% здоров'я й 115% шкоди важкого бійця. Аура: +10% шкоди союзників у радіусі 230. Імпульс вражає область кожні 20 с. Після загибелі відновлення 90 с (45 с під час швидких здібностей). З 8-го етапу кампанії, у сутичці, Endless та нових денних викликах.",
             "Eén speciale eenheid per zijde. Kost twee zware eenheden. 180% van de HP en 115% van de schade van een zware eenheid. Aura: +10% schade van bondgenoten binnen 230. Impuls raakt een gebied elke 20 s. Na uitschakeling 90 s wachttijd (45 s bij snelle vaardigheden). Vanaf campagneniveau 8, schermutseling, Endless en nieuwe daguitdagingen.",
             "Taraf başına bir özel birim. Bedeli bir ağır birliğin iki katı. %180 ağır birlik canı ve %115 ağır birlik hasarı. Aura: 230 menzilde müttefiklere %10 hasar. Darbe her 20 sn alan etkisi yapar. Ölümden sonra 90 sn bekleme (hızlı yetenek günlerinde 45 sn). Sefer 8. aşamadan, çatışma, Endless ve yeni günlük görevlerde kullanılabilir.")
+    )
+
+    /** Tura 10, szlif 2: zakładka Oblężenia w Rekordach i ładowanie powtórek. */
+    private fun part151(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "endless151_tab" to t("Oblężenie", "Endless", "Endlos", "Asedio", "Siège", "Assedio",
+            "Cerco", "Облога", "Beleg", "Kuşatma"),
+        "replay151_list_loading" to t("Wczytywanie powtórek…", "Loading replays…", "Wiederholungen werden geladen…",
+            "Cargando repeticiones…", "Chargement des replays…", "Caricamento dei replay…", "A carregar repetições…",
+            "Завантаження повторів…", "Herhalingen laden…", "Tekrarlar yükleniyor…"),
     )
 
     /** Tura 10 (szlif przed premierą): odnowienie misji, puste powtórki, potwierdzenie usuwania. */

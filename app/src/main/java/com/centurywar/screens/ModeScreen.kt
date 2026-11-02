@@ -119,7 +119,17 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         chrome.layoutBack(back)
         val pw = min(600 * dp, w - g.insetL - g.insetR - 40 * dp)
         val avail = h - chrome.top - g.insetB - 26 * dp
-        val ph = min(avail, 440 * dp)
+        var ph = min(avail, 440 * dp)
+        if (mode == Mode.ENDLESS) {
+            // Tura 10 (szlif 2): na wysokich ekranach (Fold) panel nie zostaje w 2/3 pusty —
+            // wysokość wynika z treści (opis, rekord fali, wynik, Graj). Telefony poziomo mają
+            // najwyżej ~400 dp wysokości: tam panel zostaje jak był.
+            endlessInfoLines = cachedWrap(L["endless_info"], pw - (26f + 42f + 42f + 18f + 24f) * dp, 15f)
+            val textH = 58 * dp + endlessInfoLines.size * 15f * dp * ui.textScale * 1.3f + 12 * dp +
+                (if (g.profile.top(Profile.BOARD_ENDLESS).isEmpty()) 1 else 2) * 30 * dp
+            val content = max(textH, (52f + 84f) * dp) + 24 * dp + 76 * dp
+            if (h - g.insetT - g.insetB >= 480 * dp) ph = min(ph, content)
+        }
         val top = chrome.top + 14 * dp + max(0f, (avail - ph) * 0.4f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
         start.set(w / 2 - 110 * dp, panel.bottom - 76 * dp, 220 * dp, 52 * dp)
@@ -143,10 +153,6 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             diff[i].label = L["diff_$i"]
             diff[i].iconId = diffIcons[i]
             diff[i].visible = mode == Mode.SKIRMISH
-        }
-        if (mode == Mode.ENDLESS) {
-            val x = panel.left + (26f + 42f + 42f + 18f) * dp
-            endlessInfoLines = cachedWrap(L["endless_info"], panel.right - 24 * dp - x, 15f)
         }
         if (mode == Mode.DAILY) hints.showScreen(HintOverlay.DAILY_MENU, start.r)
         if (mode == Mode.ENDLESS) hints.showScreen(HintOverlay.ENDLESS_MENU, start.r)

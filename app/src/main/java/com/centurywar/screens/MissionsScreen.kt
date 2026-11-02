@@ -21,6 +21,7 @@ import kotlin.math.min
 class MissionsScreen(g: Game) : Screen(g) {
     override val crashName get() = "MissionsScreen"
     override val blocksNotices: Boolean get() = true
+    private companion object { val HEADER_BODY = Color.rgb(52, 46, 38) }
     private val bg = MenuBg()
     private val chrome = Chrome(this)
     private val back = btn(-1)
@@ -32,6 +33,7 @@ class MissionsScreen(g: Game) : Screen(g) {
     private val rewards = Array(6) { "" }
     private val rects = Array(6) { RectF() }
     private val loginRect = RectF()
+    private val headerStrip = RectF()
     private val streakCells = Array(7) { RectF() }
     private val streakDayTexts = Array(7) { "" }
     private val streakRewardTexts = Array(7) { "" }
@@ -205,6 +207,12 @@ class MissionsScreen(g: Game) : Screen(g) {
                 ui.fit(streakRewardTexts[i], 12f, cell.width() - 7 * dp),
                 if (previous || current) Ui.GOLD else Ui.DIM, Paint.Align.CENTER)
         }
+        // Tura 10 (szlif 2): nagłówki sekcji mają własny podkład, nie stoją na krajobrazie.
+        val titleH = (if (ui.textScale > 1.15f) 37f else 29f) * dp
+        headerStrip.set(left, dailyY - 1 * dp, left + cardWidth, dailyY + titleH - 2 * dp)
+        ui.card(c, headerStrip, HEADER_BODY, 9f)
+        headerStrip.offset(0f, weeklyY - dailyY)
+        ui.card(c, headerStrip, HEADER_BODY, 9f)
         ui.textO(c, L["ms_daily"], left + 10 * dp, dailyY + 22 * dp, 19f, Ui.GOLD)
         val resetW = cardWidth - ui.measure(L["ms_daily"], 19f, true) - 40 * dp
         ui.textO(c, dailyResetText, left + cardWidth - 12 * dp, dailyY + 22 * dp,

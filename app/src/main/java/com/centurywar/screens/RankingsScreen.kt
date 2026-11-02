@@ -93,7 +93,8 @@ class RankingsScreen(g: Game) : Screen(g) {
             rename.set(w - g.insetR - 56 * dp, g.insetT + 10 * dp, 48 * dp, 48 * dp)
         }
         val keys = arrayOf("endless", "board_daily", "board_campaign", "board_skirmish", "board_weekly")
-        val shortKeys = arrayOf("endless", "daily", "campaign", "skirmish", "board_weekly")
+        // Tura 10 (szlif 2): „Oblężenie bez końca” na 720p malało do drobnego pisma.
+        val shortKeys = arrayOf("endless151_tab", "daily","campaign", "skirmish", "board_weekly")
         val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)
         val gap = 6 * dp
         val tw = (pw - gap * 4) / 5
