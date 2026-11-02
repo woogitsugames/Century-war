@@ -1,0 +1,37 @@
+name: Zrzuty HUD dowodcy 125
+on:
+  push:
+    branches: ['gpt/125-commander']
+    paths: ['.github/workflows/commander125-screens.yml']
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - name: Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Zrzuty telefonu i Folda oraz test dotyku
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest \
+            --tests '*CommanderHudScreenshotTest*' \
+            --console=plain --no-configuration-cache
+      - name: Publikuj sześć screenshotów HUD i logi
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: commander125-screenshots
+          path: |
+            app/build/screenshots/commander125_*.png
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 30
