@@ -72,21 +72,22 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
         turretSlotsLaid = slots
         // Zamykanie wystaje o 12 dp: górna granica panelu musi leżeć pod paskiem.
         val safeTop = topH + g.insetT + 12 * dp
-        val safeBottom = h - hudH - 6 * dp
+        val safeBottom = h - hudH - 4 * dp
         val freeH = (safeBottom - safeTop).coerceAtLeast(0f)
         val idealRow = (if (narrow) 104 else 50) * dp
-        val idealH = 62 * dp + slots * idealRow + 10 * dp
+        val idealH = 72 * dp + slots * idealRow
         // Na poziomym 720p cztery wiersze nie mieszczą się w polu bitwy.
         // Dwie kolumny zachowują dostęp do wszystkich slotów i większe cele dotyku.
         gridTurrets = !narrow && slots > 2 && idealH > freeH
-        turretHeaderH = (if (gridTurrets) 26 else if (narrow) 62 else 52) * dp
-        val footer = (if (gridTurrets) 2 else 8) * dp
+        turretHeaderH = (if (gridTurrets) 26 else 50) * dp
+        val footer = (if (gridTurrets) 2 else 22) * dp
         val rows = if (gridTurrets) (slots + 1) / 2 else slots
         val wantedRow = if (gridTurrets) 64 * dp else idealRow
         turretRowH = min(wantedRow, ((freeH - turretHeaderH - footer) / max(1, rows)).coerceAtLeast(0f))
         val ph = min(freeH, turretHeaderH + rows * turretRowH + footer)
         val cx = (g.insetL + w - g.insetR) / 2f
-        val py = safeTop + (freeH - ph) / 2f
+        val centeredY = (h - hudH - ph) / 2f + topH / 2f
+        val py = centeredY.coerceIn(safeTop, safeBottom - ph)
         panel.set(cx - pw / 2f, py, cx + pw / 2f, py + ph)
         turretColW = if (gridTurrets) (pw - 24 * dp) / 2f else 0f
         for (i in 0 until Defs.MAX_TURRET_SLOTS) {
@@ -113,7 +114,7 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 bw = 64 * dp; tw = 64 * dp; sw = 54 * dp
                 bh = min(48 * dp, (if (narrow) turretRowH - 50 * dp else turretRowH - 2 * dp).coerceAtLeast(0f))
                 bx = panel.right - (20 + 54 + 4 + 64 + 4 + 64) * dp
-                y = panel.top + turretHeaderH + i * turretRowH + turretRowH - bh - 2 * dp
+                y = panel.top + turretHeaderH + i * turretRowH + turretRowH - bh - (if (narrow) 6 else 2) * dp
             }
             slotBuy[i].set(bx, y, bw, bh)
             slotTier[i].set(bx + bw + 4 * dp, y, tw, bh)
@@ -195,8 +196,8 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                     if (te >= 0) Ui.TEXT else Ui.DIM)
             } else {
                 val rowTop = panel.top + turretHeaderH + i * turretRowH
-                tmpR.set(panel.left + 14 * dp, rowTop + 2 * dp,
-                    panel.right - 14 * dp, rowTop + turretRowH - 2 * dp)
+                tmpR.set(panel.left + 14 * dp, b.r.top - (if (narrow) 50 else 2) * dp,
+                    panel.right - 14 * dp, b.r.bottom + 2 * dp)
                 c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
                 val offset = if (narrow) min(50 * dp, (turretRowH - b.r.height()).coerceAtLeast(0f)) else 0f
                 val cy = b.r.centerY() - offset
