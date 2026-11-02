@@ -193,64 +193,76 @@ fun Application.leaderboardModule(
                 return@post
             }
             val ownerHash = installSecretHash(installationSecret!!)
-            if (!store.mayClaim(input.player, ownerHash)) {
+            // Bilet wiąże sprawdzenie własności z końcowym zapisem; usunięcie gracza go unieważnia.
+            val claim = store.beginClaim(input.player, ownerHash)
+            if (claim == null) {
                 call.fail(HttpStatusCode.Forbidden, "not_player_owner")
                 return@post
             }
-            if (!limiter.allow("post-player:" + input.player, limits.postPlayer)) {
-                call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
-                return@post
-            }
-
-            val receivedAt = nowMillis()
-            if (!store.consumeScoreSubmissionQuota(ownerHash, remote, receivedAt,
-                    limits.postInstallDaily, limits.postIpDaily)) {
-                val untilMidnight = (todayUtc(receivedAt) + 1L) * 86_400_000L - receivedAt
-                call.response.header("Retry-After", ((untilMidnight + 999L) / 1000L).toString())
-                call.fail(HttpStatusCode.TooManyRequests, "daily_quota_exceeded")
-                return@post
-            }
-            val verification = verificationGate.run { budget ->
-                val started = System.nanoTime()
-                try {
-                    verifyReplay(input, receivedAt, supportedVersion, budget)
-                } finally {
-                    metrics.verificationDuration(System.nanoTime() - started)
+            claim.use {
+                if (!limiter.allow("post-player:" + input.player, limits.postPlayer)) {
+                    call.fail(HttpStatusCode.TooManyRequests, "rate_limited")
+                    return@post
                 }
+
+                val receivedAt = nowMillis()
+                if (!store.consumeScoreSubmissionQuota(ownerHash, remote, receivedAt,
+                        limits.postInstallDaily, limits.postIpDaily)) {
+                    val untilMidnight = (todayUtc(receivedAt) + 1L) * 86_400_000L - receivedAt
+                    call.response.header("Retry-After", ((untilMidnight + 999L) / 1000L).toString())
+                    call.fail(HttpStatusCode.TooManyRequests, "daily_quota_exceeded")
+                    return@post
+                }
+                val verification = verificationGate.run { budget ->
+                    val started = System.nanoTime()
+                    try {
+                        verifyReplay(input, receivedAt, supportedVersion, budget)
+                    } finally {
+                        metrics.verificationDuration(System.nanoTime() - started)
+                    }
+                }
+                if (verification == null || verification.exceptionOrNull() is VerificationBudgetExceeded) {
+                    // Przeciążenie to błąd serwera, nie gracza: oddajemy jednostkę dziennego limitu.
+                    store.refundScoreSubmissionQuota(ownerHash, remote, receivedAt)
+                    metrics.unavailable()
+                    call.response.header("Retry-After", "30")
+                    call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")
+                    return@post
+                }
+                if (verification.isFailure) {
+                    metrics.invalidReplay()
+                    // Stary format powtórki przy bieżącej wersji gry ma własny kod (A156-04).
+                    val code = if (verification.exceptionOrNull()?.message == UNSUPPORTED_REPLAY_FORMAT) {
+                        UNSUPPORTED_REPLAY_FORMAT
+                    } else "invalid_replay"
+                    call.fail(HttpStatusCode.UnprocessableEntity, code)
+                    return@post
+                }
+                metrics.verified()
+                val replay = verification.getOrThrow()
+                val result = try {
+                    store.save(input, replay, receivedAt, sha256(body), ownerHash, claim)
+                } catch (_: BlockedPlayerException) {
+                    call.fail(HttpStatusCode.Forbidden, "blocked_player")
+                    return@post
+                } catch (_: PlayerDeletedException) {
+                    // Usunięcie danych w trakcie weryfikacji wygrywa ze zgłoszeniem w toku (A156-05).
+                    call.fail(HttpStatusCode.Conflict, "player_deleted")
+                    return@post
+                } catch (_: PlayerOwnershipException) {
+                    call.fail(HttpStatusCode.Forbidden, "not_player_owner")
+                    return@post
+                }
+                if (!result.inserted && replay.board == "daily") {
+                    call.fail(HttpStatusCode.Conflict, "daily_already_submitted")
+                    return@post
+                }
+                call.respondText(
+                    json.encodeToString(ScoreReceipt(replay.board, replay.score, result.bestScore, result.inserted)),
+                    ContentType.Application.Json,
+                    HttpStatusCode.OK,
+                )
             }
-            if (verification == null || verification.exceptionOrNull() is VerificationBudgetExceeded) {
-                // Przeciążenie to błąd serwera, nie gracza: oddajemy jednostkę dziennego limitu.
-                store.refundScoreSubmissionQuota(ownerHash, remote, receivedAt)
-                metrics.unavailable()
-                call.response.header("Retry-After", "30")
-                call.fail(HttpStatusCode.ServiceUnavailable, "verification_busy")
-                return@post
-            }
-            if (verification.isFailure) {
-                metrics.invalidReplay()
-                call.fail(HttpStatusCode.UnprocessableEntity, "invalid_replay")
-                return@post
-            }
-            metrics.verified()
-            val replay = verification.getOrThrow()
-            val result = try {
-                store.save(input, replay, receivedAt, sha256(body), ownerHash)
-            } catch (_: BlockedPlayerException) {
-                call.fail(HttpStatusCode.Forbidden, "blocked_player")
-                return@post
-            } catch (_: PlayerOwnershipException) {
-                call.fail(HttpStatusCode.Forbidden, "not_player_owner")
-                return@post
-            }
-            if (!result.inserted && replay.board == "daily") {
-                call.fail(HttpStatusCode.Conflict, "daily_already_submitted")
-                return@post
-            }
-            call.respondText(
-                json.encodeToString(ScoreReceipt(replay.board, replay.score, result.bestScore, result.inserted)),
-                ContentType.Application.Json,
-                HttpStatusCode.OK,
-            )
         }
 
         get("/v1/top") {

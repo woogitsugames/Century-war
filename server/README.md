@@ -114,6 +114,14 @@ Jedna transakcja usuwa wszystkie wyniki (wszystkie plansze i dni) i rekord
 gracza z pseudonimem, a limiter w pamięci zapomina licznik tego UUID.
 Błędny podpis / ponowny nonce: 401; nieprawidłowy UUID v4: 400.
 Nonce i limit IP nie są przypisane do UUID; nonce wygasa po 10 minutach.
+Usunięcie wygrywa ze zgłoszeniami wyniku w toku (A156-05): `/v1/score` pobiera
+bilet z epoką usunięć przy sprawdzeniu własności, a końcowy zapis sprawdza go
+w tej samej blokadzie i transakcji SQLite co usuwanie. Wynik zweryfikowany przed
+usunięciem i zapisywany po nim jest odrzucany kodem 409 `player_deleted` i nie
+odtwarza pseudonimu. Nowe zgłoszenie rozpoczęte po usunięciu tworzy nowy wpis.
+Epoki są wyłącznie w pamięci procesu i znikają po zakończeniu zgłoszeń w toku
+(serwer nadal nie prowadzi dziennika usuniętych UUID); usuwanie graczy jest
+dostępne tylko przez API tej jednej instancji (blokada procesu bazy).
 
 Klient może zachować żądanie w lokalnej kolejce podczas braku internetu.
 Callback klienta potwierdza **trwałe zapisanie żądania**, nie usunięcie na serwerze.
@@ -201,8 +209,10 @@ Ograniczenia: 1 MiB żądania, 32 768 komend, wspólny
 Bitwa automatycznie kończy się na granicy, a Endless zachowuje osiągniętą falę.
 Klient pokazuje komunikat, gdy starsza powtórka przekracza limit.
 Wynik musi być dodatni. Błędy: `400` (format), `401` (podpis / nonce),
-`409` (drugie zgłoszenie daily), `413` (rozmiar),
-`422` (niezgodna powtórka), `429` (limit),
+`409` (drugie zgłoszenie daily `daily_already_submitted`; gracz usunięty
+w trakcie weryfikacji `player_deleted`), `413` (rozmiar),
+`422` (niezgodna powtórka `invalid_replay`; format powtórki inny niż zasady
+bieżącego rankingu `unsupported_replay_format`), `429` (limit),
 `403` (UUID zablokowane przez moderatora).
 
 Odpowiedź `200`:
@@ -256,6 +266,12 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
 - Nieobsługiwana \`gameVersion\`/błędne poziomy i konfiguracja to HTTP 400
   (\`unsupported_version\`, \`invalid_research\`, \`invalid_difficulty\`...),
   niezgodna powtórka to HTTP 422. Wersja \`0.1.0\` nie jest akceptowana.
+- Wersja zasad wiąże dozwolone formaty powtórki (A156-04):
+  `SimVersion.RANKED_REPLAY_FORMATS` dla `gameVersion = SimVersion.PROTOCOL`
+  zawiera tylko bieżący `Replay.VERSION` (7). Format 5 (bez stopni wież
+  i dowódcy) i 6 (bez dowódcy) daje inną symulację, więc przy bieżącej wersji
+  gry jest odrzucany jako HTTP 422 `unsupported_replay_format`. Stare nagrania
+  nadal odtwarza lokalnie aplikacja (`Replay.MIN_VERSION..Replay.VERSION`).
 - Baza przechowuje pomocniczo sumę deklarowanych poziomów `research_sum`.
   Nie zmienia to globalnego wyniku: zapisuje się wynik z symulacji bez badań.
 - Po stronie Androida wymagane są \`CW_SERVER_URL\` (HTTPS),
