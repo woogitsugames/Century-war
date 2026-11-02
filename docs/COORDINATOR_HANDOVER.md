@@ -1,3 +1,11 @@
+# Century War: stan po turze 10 (2.11.2026, popołudnie)
+
+- `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10`: tura 9 (125 dowódca, 136 tłumaczenia, przegląd UX dowódcy i wież), fala 5 GPT (146 poprawki UI, 147 menu w pionie, 148 kontrola R8, 149 serwer), pomiar balansu z dowódcą, strojenie etapów 16–18 i 34–36 (PROTOCOL 0.8.1). Pełne testy zielone (ok. 9–11 min). APK wysłane.
+- Testy: `forkEvery = 40` w `app/build.gradle.kts` — wcześniej jeden proces testów rósł do ~10 GB pamięci natywnej (OOM 137).
+- Decyzje właściciela (tura 10): etapy 16–18 i 34–36 lżejsze (zrobione); etap 36 zostaje (76% dla gracza z pełnymi badaniami bez dowódcy); DoctrineBalance82 na 100 seedach, pasmo 40–65%; menu-lista tylko gdy wysokość > 1,3× szerokości lub < 520 dp.
+- Otwarte: PLUNDER 63,5% / ARSENAL 42% w lustrzanym teście doktryn (brzegi pasma); Endless fala 60 = 7/100 (blisko dolnego celu 5%); 142 muzyka czeka na pliki Suno.
+- Kolejne pomysły: wydanie testowe (release na telefonie, testy zamknięte wg `docs/RELEASE.md`), wdrożenie serwera wg `docs/SERVER_DEPLOY.md`.
+
 # Century War: przekazanie koordynacji (2.11.2026, ok. 11:00 UTC, tura 9)
 
 Plik dla nowej sesji Claude Code. Przeczytaj w całości przed działaniem. Starsza historia (tury 6–8) jest niżej w sekcji „Archiwum”.
