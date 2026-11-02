@@ -195,6 +195,14 @@ class PortraitMenu147ScreenshotTest {
                         assertTrue("Baner nie może zasłaniać pionowej karty trybu",
                             screen.blocksNotices)
                     }
+                    if (screen is SkirmishSetupScreen || screen is SettingsScreen) {
+                        val bannerTop = g.noticeTopBelowTitle()
+                        val bannerBottom = bannerTop + 50 * g.ui.dp
+                        for (b in screen.buttons) if (b.visible && b.id != -1) {
+                            assertTrue("$tag/$name: przycisk ${b.id} pod banerem",
+                                b.r.bottom <= bannerTop || b.r.top >= bannerBottom)
+                        }
+                    }
                     shot(g, "menu147_${tag}_${name}")
                     assertTrue("Ekran $tag/$name bez kafelków", screen.buttons.isNotEmpty())
                 }

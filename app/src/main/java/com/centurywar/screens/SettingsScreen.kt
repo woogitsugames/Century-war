@@ -182,7 +182,9 @@ class SettingsScreen(g: Game) : Screen(g) {
         columnWidth = (pw - 24 * dp) / columns
         val step = (if (ui.textScale > 1.15f) 58f else 54f) * dp
         val ph = step * rowsPerColumn + 44 * dp
-        contentTop = chrome.top + 10 * dp
+        // W pionie pierwszy wiersz nie może znaleźć się pod banerem powiadomienia.
+        contentTop = if (h > w) max(chrome.top + 10 * dp, g.noticeTopBelowTitle() + 56 * dp)
+            else chrome.top + 10 * dp
         contentBottom = h - g.insetB - 10 * dp
         maxScroll = max(0f, ph - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
