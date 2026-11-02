@@ -146,3 +146,14 @@ Baza `claude/bold-sagan-vwz5gm` (szlif przed premierą + doktryny, PROTOCOL 0.8.
 |---|---|
 | 6 | 152 wydajność na tanich telefonach, 153 grafiki i opis sklepu, 154 odporność zapisu, 156 audyt przed premierą (sam raport; najlepiej najmocniejszy model) |
 | później | 155 przegląd tłumaczeń part145/150/151 (po scaleniu szlifu 2) |
+
+---
+
+# Wysyłka zleceń 160–165 (fala 7, po audycie 156)
+
+Baza `claude/bold-sagan-vwz5gm` (muzyka, audyt). Blokery A156-01/02/04/05 naprawia koordynator równolegle. Wszystkie naraz.
+
+| Fala | Paczki |
+|---|---|
+| 7 | 160 cykl życia i profil, 161 błyski i panel wież, 162 bramki CI/wydania, 163 balans wariantów, 164 TalkBack (menu/ustawienia/pauza), 165 polityka prywatności i dokumenty |
+| później | rozliczenie bitwy idempotentne (A156-10, po 160), kandydat do testów zamkniętych |
