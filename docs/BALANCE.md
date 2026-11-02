@@ -1274,3 +1274,69 @@ regeneracji.
    rozważyć `stageRamp` etapu 31 lub `maxEra`.
 4. Endless: fala 60 spadła z 13 do 7/100 — w celu, ale po kolejnej zmianie utrudniającej
    może wypaść poniżej 5.
+
+## Tura 10 — lżejsze etapy 16–18 i 34–36 (2.11.2026)
+
+Decyzja właściciela po pomiarze tury 9: etapy 34–36 lżejsze dla gracza z medalami tylko
+z kampanii (cel 40–50% z dowódcą, profil docelowy ≤ ok. 75%), etapy 16–18 lżejsze dla
+profilu docelowego z dowódcą (cel 55–70%). Zasady dowódcy, AI, Endless, potyczka,
+wyzwania i pozostałe etapy bez zmian.
+
+**Zmiana:** tylko korekty `Campaign.stageRamp` (`sim/.../Modes.kt`). Ten mnożnik trafia
+wyłącznie do `Campaign.stages[i].aiPower`, czyli do kampanii (Endless, potyczka, wyzwania
+dnia i oblężenie tygodnia mają własne `aiPower`). Siła AI na poziomie Normalnym:
+
+| Etap | Korekta przed → po | Zmiana | aiPower przed → po |
+|---:|---:|---:|---:|
+| 16 | 0,93 → 0,86 | −7,5% | 1,10 → 1,02 |
+| 17 | 1 → 0,92 | −8% | 1,12 → 1,03 |
+| 18 | 0,92 → 0,85 | −7,6% | 1,08 → 1,00 |
+| 34 | 0,95 → 0,727 | −23,5% | 3,00 → 2,29 |
+| 35 | 0,9152 → 0,778 | −15% | 3,13 → 2,66 |
+| 36 | 0,81 → 0,6075 | −25% | 2,99 → 2,24 |
+
+Obniżka o 10% na 34–36 nie wystarczyła: medale z dowódcą 36% / 38% / 38% (cel 40–50%).
+Odpowiedź gracza „z medali” na aiPower jest płaska do ok. −15%, potem rośnie skokowo
+(etap 34: −15% → 37%, −22% → 40%, −23,5% → 45%, −25% → 53%), więc korekty 34–36 są
+większe niż wstępne 10% i dobrane osobno dla każdego etapu.
+
+`SimVersion.PROTOCOL` 0.8.0 → 0.8.1 (zmiana przebiegu bitew kampanii). Złote powtórki
+(kampania: etapy 1 i 29) nie zmieniają wyników; regeneracja zapisana niżej.
+
+### Pomiar, 100 seedów na etap, Normalny
+
+„Z dowódcą” = `BALANCE_COMMANDER=on` (AI gracza przywołuje go rozsądnie — ta sama kolumna
+co w tabeli tury 9, do niej odnoszą się cele); „zasady trybu” = zmienna nieustawiona
+(gracz przywołuje dowódcę tylko w odpowiedzi na dowódcę wroga, czyli praktycznie nigdy).
+Etapy 15, 19 i 33 nie zmieniły się (kontrola determinizmu: wyniki identyczne jak w turze 9).
+
+| Etap | Docelowy z dowódcą: przed → po | Docelowy, zasady trybu: przed → po | Medale z dowódcą: przed → po | Medale, zasady trybu: przed → po |
+|---:|---:|---:|---:|---:|
+| 15 | 61% → 61% | 53% → 53% | — | — |
+| 16 | 51% → **63%** | 67% → 65% | — | — |
+| 17 | 48% → **64%** | 58% → 65% | — | — |
+| 18 | 50% → **65%** | 58% → 63% | — | — |
+| 19 | 62% → 62% | 65% → 65% | 53% | 50% |
+| 32 | 68% | 63% | 36% → 36% | 47% |
+| 33 | 60% → 60% | 59% → 59% | 37% → 37% | 37% → 37% |
+| 34 | 53% → 62% | 55% → 70% | 23% → **45%** | 31% → 55% |
+| 35 | 53% → 66% | 56% → 67% | 29% → **46%** | 40% → 50% |
+| 36 | 47% → 62% | 38% → 76% | 24% → **46%** | 29% → 49% |
+
+Mediany czasu bitwy po zmianie (z dowódcą, docelowy): 16–18 12,4–13,8 min, 34–36
+5,0–12,9 min (etap 35 krótki jak wcześniej, 6,7 → 5,0 min).
+
+### Wnioski
+
+- Cele spełnione z dowódcą: 16–18 63–65% (≥55%, ≤70%), 34–36 docelowy 62–66% (≤75%),
+  medale 45–46% (40–50%).
+- Krzywa 15–19 (z dowódcą): 61 → 63 → 64 → 65 → 62% — łagodne wypłaszczenie zamiast dołka
+  48–51%; między kolejnymi etapami najwyżej +2 pp łatwiej (w kampanii zdarzały się
+  skoki do +19 pp, np. 19 → 20).
+- Krzywa 32–36 dla „medali”: 36 → 37 → 45 → 46 → 46%. Skok 33 → 34 (+8 pp) jest mniejszy niż
+  dotychczasowe skoki łatwości (np. 19 → 20 +19 pp, 30 → 31 +14 pp profilu docelowego).
+- Uwaga: bez dowódcy po stronie gracza (zasady trybu) profil docelowy na etapie 36 ma 76%
+  (wcześniej 38%), czyli ostatni etap przestaje być wyraźnie najtrudniejszy dla gracza
+  z pełnymi badaniami. Gracz „z medali” nadal ma tam ok. 50%.
+
+- 2026-11-02 — regeneracja złotych powtórek: Tura 10: lzejsze etapy 16-18 i 34-36.
