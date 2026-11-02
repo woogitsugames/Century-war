@@ -292,11 +292,17 @@ class HintOverlay(
             hintWidth = (measured + buttonW + 3f * padding).coerceIn(min(152f * dp, maxW), maxW)
             hintHeight = max(58f, 37f + hintFont * scale) * dp
         } else {
-            lineCount = HintFrame.wrapHintInto(g.ui, body, maxW - 2f * padding, hintFont, lines)
+            // Dwa i więcej wierszy dzielą miejsce z przyciskiem OK w poziomie.
+            // Nie rezerwujemy osobnego, pustego pasa pod treścią.
+            val textWidth = maxW - buttonW - 3f * padding
+            lineCount = HintFrame.wrapHintInto(g.ui, body, textWidth, hintFont, lines)
             var longest = 0f
             for (i in 0 until lineCount) longest = max(longest, g.ui.measure(lines[i] ?: "", hintFont))
-            hintWidth = (longest + 2f * padding).coerceIn(min(188f * dp, maxW), maxW)
-            hintHeight = (74f + hintFont * scale * 0.5f + 4f * scale + (lineCount - 1) * 17f * scale) * dp
+            hintWidth = (longest + buttonW + 3f * padding).coerceIn(min(188f * dp, maxW), maxW)
+            val lastBaseline = 20f + hintFont * scale * 0.5f +
+                (lineCount - 1) * 17f * scale
+            hintHeight = max(58f, lastBaseline + hintFont * scale * 0.35f +
+                Ui.PANEL_TRIM_INSET + 3f) * dp
         }
     }
 
@@ -474,8 +480,8 @@ class HintOverlay(
                 g.ui.text(c, lines[i] ?: "", panel.left + TEXT_PAD * dp, y, hintFont, Ui.TEXT)
                 y += 17f * dp * g.ui.textScale
             }
-            okBtn.set(panel.right - (Ui.PANEL_TRIM_INSET + 10f + OK_W) * dp,
-                panel.bottom - (Ui.PANEL_TRIM_INSET + 6f + OK_H) * dp, OK_W * dp, OK_H * dp)
+            okBtn.set(panel.right - (Ui.PANEL_TRIM_INSET + 8f + OK_W) * dp,
+                panel.centerY() - OK_H * 0.5f * dp, OK_W * dp, OK_H * dp)
         }
         okBtn.hitSlop = 8f * dp
         g.ui.button(c, okBtn, 12f)
