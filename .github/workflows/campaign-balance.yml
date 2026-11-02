@@ -1,9 +1,11 @@
 name: Balans kampanii (20 seedow)
 on:
   push:
-    branches: ['gpt/42-campaign-endgame-balance']
+    branches: ['gpt/42-campaign-endgame-balance', 'gpt/125-commander']
     paths:
       - 'sim/src/main/kotlin/com/centurywar/game/Modes.kt'
+      - 'sim/src/main/kotlin/com/centurywar/game/Battle.kt'
+      - 'sim/src/main/kotlin/com/centurywar/game/Ai.kt'
       - 'app/src/test/java/com/centurywar/game/BalanceReport.kt'
       - '.github/workflows/campaign-balance.yml'
   workflow_dispatch:
