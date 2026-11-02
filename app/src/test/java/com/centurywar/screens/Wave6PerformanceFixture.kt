@@ -15,7 +15,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import java.io.File
 
-/** Fala 55: po dwóch dowódców? Nie, dokładnie jeden na stronę, 12 na 12 i osiem wież. */
+/** Fala 55: jeden dowódca na stronę, 12 na 12 i osiem wież. */
 internal class Wave6PerformanceFixture(
     quality: Int = Quality.LOW,
     fullResolution: Boolean = false,

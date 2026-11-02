@@ -23,6 +23,20 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Android SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Porównanie z kodem bazowym
+        env:
+          PERF_REPORT: 'true'
+        run: |
+          set -o pipefail
+          git fetch --depth=1 origin claude/bold-sagan-vwz5gm
+          git worktree add --detach "$RUNNER_TEMP/cw-base-152" 85e90b636a6c16b89f0be6fa89b03fd8fb079699
+          cp app/src/test/java/com/centurywar/screens/Wave6PerformanceFixture.kt "$RUNNER_TEMP/cw-base-152/app/src/test/java/com/centurywar/screens/"
+          cp app/src/test/java/com/centurywar/screens/BattleCrowdPerformance101Test.kt "$RUNNER_TEMP/cw-base-152/app/src/test/java/com/centurywar/screens/"
+          (
+            cd "$RUNNER_TEMP/cw-base-152"
+            chmod +x ./gradlew
+            ./gradlew :app:testDebugUnitTest               --tests '*BattleCrowdPerformance101Test.wave6CommandersTurretsAndFullArmiesCpu'               --console=plain --no-configuration-cache 2>&1 | tee "$GITHUB_WORKSPACE/perf-152-before.log"
+          )
       - name: APK i regresje wydajności
         env:
           PERF_REPORT: 'true'
@@ -36,6 +50,7 @@ jobs:
             --tests '*LowEndScreensPerformanceTest*' \
             --tests '*ReplayTest*' \
             --tests '*ScreenshotGoldenTest*' \
+            --tests '*HudDigits152Test*' \
             --console=plain --no-configuration-cache 2>&1 | tee perf-152-tests.log
       - name: Logi pomiarów
         if: always()

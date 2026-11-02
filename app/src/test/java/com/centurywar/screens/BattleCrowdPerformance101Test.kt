@@ -134,7 +134,7 @@ class BattleCrowdPerformance101Test {
                 updateTimes.sort()
                 drawTimes.sort()
                 println(String.format(Locale.ROOT,
-                    "PERF152 $s wave55 12v12 commander2 turret8-tier3: " +
+                    "PERF152 %s wave55 12v12 commander2 turret8-tier3: " +
                     "update median=%.3f p95=%.3f ms; draw median=%.3f p95=%.3f ms",
                     if (quality == Quality.LOW) "LOW" else "HIGH",
                     updateTimes[120] / 1e6, updateTimes[227] / 1e6,
