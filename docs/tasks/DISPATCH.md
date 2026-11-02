@@ -125,3 +125,13 @@ Tura 7 (118–122) scalona. Repozytorium: `woogitsugames/century-war`, baza `cla
 | 2 | 140 stopnie rozbudowy wież, 135 karta sklepu i „Co nowego” |
 | 3 | 125 dowódca na polu bitwy (po 140 — oba zmieniają `Replay`/`BattleSnapshot`/HUD) |
 | 4 (na końcu) | 136 przegląd tłumaczeń |
+
+---
+
+# Wysyłka zleceń 146–149 (tura 10, fala 5)
+
+Tura 9 (125, 136, 140, przegląd UX dowódcy) scalona. Repozytorium: `woogitsugames/century-war`, baza `claude/bold-sagan-vwz5gm`. Wszystkie cztery naraz (różne obszary).
+
+| Fala | Paczki |
+|---|---|
+| 5 (4 naraz) | 146 drobne poprawki czytelności bitwy, 147 menu w pionie (podzielony ekran), 148 wydanie testowe R8 i testy zamknięte, 149 serwer rankingu: pomiar i wdrożenie |
