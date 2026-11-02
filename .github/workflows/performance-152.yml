@@ -28,7 +28,7 @@ jobs:
           PERF_REPORT: 'true'
         run: |
           set -o pipefail
-          git fetch --depth=1 origin claude/bold-sagan-vwz5gm
+          git fetch --depth=16 origin claude/bold-sagan-vwz5gm
           git worktree add --detach "$RUNNER_TEMP/cw-base-152" 85e90b636a6c16b89f0be6fa89b03fd8fb079699
           cp app/src/test/java/com/centurywar/screens/Wave6PerformanceFixture.kt "$RUNNER_TEMP/cw-base-152/app/src/test/java/com/centurywar/screens/"
           cp app/src/test/java/com/centurywar/screens/BattleCrowdPerformance101Test.kt "$RUNNER_TEMP/cw-base-152/app/src/test/java/com/centurywar/screens/"
