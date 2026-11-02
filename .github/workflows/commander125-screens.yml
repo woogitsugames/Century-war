@@ -2,7 +2,7 @@ name: Zrzuty HUD dowodcy 125
 on:
   push:
     branches: ['gpt/125-commander']
-    paths: ['.github/workflows/commander125-screens.yml']
+    paths: ['.github/workflows/commander125-screens.yml', 'app/src/main/java/com/centurywar/screens/BattleBottomHud.kt']
 permissions:
   contents: read
 jobs:
