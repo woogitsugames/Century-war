@@ -117,6 +117,58 @@ zero timeoutów): etap 21 — 9,5% / 11,5%, etap 22 — 6,0% / 5,0%,
 etap 29 — 2,0% / 1,0%, etap 30 — 0,5% / 1,0% (wariant A / B). Niskie odsetki
 wynikają z braku badań, różnice między wariantami mieszczą się w szumie.
 
+## A156-13 — wyrównanie wariantów STEAM i SILICON (02.11.2026)
+
+Wyniki z audytu 156 odtworzono na aktualnym kodzie. Każda próba obejmuje
+200 deterministycznych seedów × zamiana stron, czyli **400 pojedynków**
+bez badań (poza elitą i Zrywem), z AI obu stron `BALANCED` i limitem 30 min.
+Mierzono dokładnie konfigurację i logikę `BalanceReport.variantDuel` (tryb
+`SKIRMISH`), bez luzowania pierwotnej asercji progu 10 pp.
+
+| Epoka | Przed: A / B / paty / różnica | Po: A / B / paty / różnica |
+|---|---|---|
+| STEAM | 165 / 235 / 0 / **17,50 pp** | **194 / 206 / 0 / 3,00 pp** |
+| SILICON | 178 / 222 / 0 / **11,00 pp** | **204 / 196 / 0 / 2,00 pp** |
+
+**Przyczyna i dobór parametrów:**
+- **STEAM: spalinowy (A) przeciw galwanicznemu (B).** Spalinowy ma
+  więcej HP, lecz droższe ciężkie jednostki. Przy obu stronach sterowanych
+  AI prędkość ciężkiej/elity istotnie zmienia kolejność docierania na front.
+  Próba ich przyspieszenia z `0.78/0.74` do `0.88/0.82` spowodowała
+  pogorszenie wyniku **132:268 (34 pp)**. Drobne spowolnienie do
+  **`0.75/0.72`** umożliwia lepsze współdziałanie z resztą armii
+  (hipoteza dotycząca formacji; wynik 194:206 jest zmierzony).
+  Galwaniczny zachowuje przewagę mobilności, spalinowy przewagę HP.
+- **SILICON: rój (A) przeciw biotech (B).** Wariant roju ma być tani i
+  szybki, a biotech cięższy i wytrzymalszy. Zwiększenie HP ciężkiej roju
+  z `0.78` do `0.83` nie pomogło (**176:224, 12 pp**). Przy niezmienionych
+  HP i obrażeniach obniżono jedynie **mnożnik kosztu ciężkiej roju
+  `0.86 → 0.83`**, uzyskując 204:196.
+- Żadna inna epoka ani podstawowa jednostka nie ma zmienionych statystyk;
+  AI, kampania, Endless, doktryny, wersje zapisu i protokołu bez zmian.
+  `VariantTuning163Test` zabezpiecza obie zmienione relacje ekonomii
+  i szybkości; pierwotny test `BalanceReport.variantReport` pozostaje
+  niezmodyfikowany.
+
+**Weryfikacja:** lokalnie wykonano po 400 pojedynków przed i po korekcie,
+przez kod `Battle` i `Ai` zgodny z raportem, kompilowany jako czysty JVM.
+Wynik wcześniejszego wariantu STEAM (132:268) był identyczny z GitHub
+Actions, co sprawdza zgodność reprodukcji. Raport CI `BALANCE_RUN=true`
+musi dodatkowo potwierdzić obie epoki oraz próby na etapach kampanii.
+
+```bash
+BALANCE_RUN=true BALANCE_VARIANT_RUNS=200 ./gradlew :app:testDebugUnitTest \
+  --rerun --tests '*BalanceReport.variantReport*' --console=plain --no-configuration-cache
+./gradlew :sim:test --tests '*VariantTuning163Test*' --tests '*GoldenReplayTest*' \
+  --console=plain --no-configuration-cache
+```
+
+`GoldenReplayTest` w przebiegu przed ostatecznym strojeniem zgłaszał
+rozbieżność już na `campaign-opening` (epoka 0), której statystyki nie
+były zmieniane. Zgodnie ze zleceniem koordynator osobno podbije
+`SimVersion.PROTOCOL` i rozstrzygnie aktualizację złotych wzorców;
+to zadanie ich nie regeneruje.
+
 ## Pogoda — zlecenie 33 (31.10.2026)
 
 Od etapu 5 co trzy etapy włącza się pogoda, w cyklu **deszcz → wiatr → noc**:
