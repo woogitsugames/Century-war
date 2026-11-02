@@ -4,11 +4,13 @@
 Century War
 
 ## Short description
-Estrategia por eras: campaña, asedio y batallas sin conexión.
+9 eras: comandante, niveles de torretas y batallas sin conexión.
 
 ## Full description
 
 Dirige tu ejército a través de nueve eras. Recluta unidades, construye torretas y decide cuándo avanzar a la siguiente era.
+
+Invoca a un comandante cuya aura fortalece a las tropas cercanas. Mejora tu defensa durante el combate a través de tres niveles de torretas.
 
 Supera 36 etapas de campaña con dificultad ajustable, resiste oleadas en el asedio sin fin o configura tu propia escaramuza. El clima, las habilidades, las doctrinas y la investigación ofrecen opciones tácticas.
 
