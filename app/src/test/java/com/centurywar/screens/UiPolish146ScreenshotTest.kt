@@ -94,6 +94,8 @@ class UiPolish146ScreenshotTest {
                 val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 146L, 1f))
                 g.setScreen(screen)
                 val p = screen.battle.player
+                // Test geometrii nie może zostać zasłonięty planszą nowej epoki.
+                for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
                 p.slots = Defs.MAX_TURRET_SLOTS
                 p.gold = 100000f
                 p.era = screen.cfg.maxEra
