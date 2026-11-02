@@ -8,7 +8,7 @@ import java.util.Base64
  * Komendy oznaczone numerem N wykonuje się PRZED wywołaniem step() dla kroku N.
  */
 object Replay {
-    const val VERSION = 6
+    const val VERSION = 7
     const val MAX_STEPS = 432_000 // Maksymalnie 120 minut symulacji.
     const val MAX_COMMANDS = 32_768
     private const val MAX_ENCODED_LENGTH = 600_000
@@ -17,7 +17,7 @@ object Replay {
     enum class Kind {
         QUEUE, CANCEL, EVOLVE, BUY_TURRET, UPGRADE_TURRET, SELL_TURRET,
         ARMORY, BARRAGE, RALLY, STANCE, DOCTRINE, SURRENDER, TUTORIAL_GOLD,
-        BARRAGE_AT, CARD, UNIT_UPGRADE, VARIANT, TURRET_TIER,
+        BARRAGE_AT, CARD, UNIT_UPGRADE, VARIANT, TURRET_TIER, SUMMON_COMMANDER,
     }
 
     data class Command(val step: Int, val kind: Kind, val argument: Int = 0)
@@ -108,7 +108,8 @@ object Replay {
     ): Result {
         validate(log)
         require(cfg.dailyEvent == log.dailyEvent) { "Nieprawidłowe zdarzenie dnia" }
-        val battle = Battle(cfg, turretTiersEnabled = log.version >= 6)
+        val battle = Battle(cfg, turretTiersEnabled = log.version >= 6,
+            commanderEnabled = log.version >= 7)
         battle.playerAi = null
         val controller = BattleController(battle, record = false)
         var index = 0
@@ -179,6 +180,7 @@ object Replay {
         Kind.UNIT_UPGRADE -> controller.upgradeUnit(Role.values()[command.argument])
         Kind.VARIANT -> controller.variant(command.argument)
         Kind.TURRET_TIER -> controller.upgradeTurretTier(command.argument)
+        Kind.SUMMON_COMMANDER -> controller.summonCommander()
     }
 
     private fun hasArgument(kind: Kind): Boolean = when (kind) {
@@ -195,6 +197,7 @@ object Replay {
         for (command in log.commands) {
             require(command.step >= previousStep && command.step <= log.steps) { "Komenda spoza zakresu kroków" }
             require(log.version >= 6 || command.kind != Kind.TURRET_TIER) { "Komenda niedostępna w tej wersji" }
+            require(log.version >= 7 || command.kind != Kind.SUMMON_COMMANDER) { "Dowódca wymaga powtórki v7" }
             val arg = command.argument
             val correct = when (command.kind) {
                 Kind.QUEUE, Kind.UNIT_UPGRADE -> arg in 0 until Role.values().size
