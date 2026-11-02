@@ -10,29 +10,40 @@ Ten plik jest **jedynym źródłem danych właściciela** dla dokumentów sklepu
 | `privacy_policy_url` | WYMAGA_DANYCH_WLASCICIELA |
 | `release_date` | WYMAGA_DANYCH_WLASCICIELA |
 
-## Znaczenie pól
+## Jak wypełnić pięć pól
 
-- `publisher_name` — pełna nazwa prawna podmiotu publikującego grę (nie sama marka WooGitsu Games).
-- `contact_email` — działający adres kontaktowy w sprawach prywatności i usuwania danych.
-- `postal_address` — adres korespondencyjny wydawcy wymagany w opublikowanej polityce (sprawdź wymogi Google Play dla konta dewelopera).
-- `privacy_policy_url` — publiczny adres HTTPS opublikowanej polityki, np. polskiej lub głównej wersji wielojęzycznej. Ten sam adres ustaw jako `CW_PRIVACY_URL` w konfiguracji release.
-- `release_date` — planowana i zatwierdzona data publikacji, dokładnie `RRRR-MM-DD` w UTC; służy też do datowania polityk. Ustal osobno niezmienną wartość `Daily.RELEASE_DAY`, zgodnie z `docs/RELEASE.md`.
-- ID projektu Play Games, rankingów i osiągnięć pochodzą **wyłącznie** z
-  [`play_games_ids.properties`](play_games_ids.properties), nie z danych wydawcy.
+- `publisher_name` — **pełna nazwa prawna wydawcy** widniejąca w dokumentach rejestracyjnych i danych konta Google Play. Marka „WooGitsu Games” sama nie zastępuje nazwy prawnej.
+- `contact_email` — **działający e-mail do spraw prywatności i usuwania danych**; powinien być regularnie obsługiwany. To nie hasło ani login.
+- `postal_address` — **adres do korespondencji wydawcy**, który może zostać opublikowany w polityce prywatności. Musi być rzeczywisty i zgodny z danymi właściwego podmiotu.
+- `privacy_policy_url` — **publiczny adres HTTPS** strony polityki (bez logowania, nie plik PDF i nie dokument, który każdy może edytować). Udostępnij również czytelną wersję polską i angielską, połączoną odsyłaczami. Ten sam główny adres ustaw w `CW_PRIVACY_URL` podczas budowania wydania.
+- `release_date` — **ustalona data publikacji** w formacie `RRRR-MM-DD`. Nie wpisuj tymczasowej daty tylko dla przejścia kontroli. Osobno koordynator musi ustalić stałą `Daily.RELEASE_DAY` (obecna wartość 2027-12-01 jest zastępcza).
+
+**Nie dodawaj nowych wierszy z kluczami do tabeli.** Narzędzie publikacji odczytuje dokładnie pięć istniejących pól. `WYMAGA_DANYCH_WLASCICIELA` znaczy, że przed wydaniem właściciel musi podać prawdziwą wartość.
+
+## Pozostałe rzeczy, które musi dostarczyć lub zatwierdzić właściciel
+
+Te pozycje **nie są dodatkowymi polami tabeli**. Przekaż je koordynatorowi wydania albo skonfiguruj we wskazanym miejscu:
+
+- [ ] **Adres własnego serwera rankingowego:** produkcyjny adres `https://` wpisywany jako `CW_SERVER_URL`. Jeżeli serwer nie będzie uruchomiony przy premierze, potwierdź tę decyzję i sposób wyłączenia funkcji/zwolnienia odpowiedniej bramki wydania. Nie twierdź w polityce, że serwer już działa bez testu.
+- [ ] **Bezpieczna konfiguracja serwera:** `CW_HMAC_KEY` i klucze do podpisywania aplikacji przekazywane wyłącznie kanałem sekretów CI; **nigdy** do tego pliku ani do repozytorium. Zatwierdź hosting, logowanie IP, czas przechowywania i procedurę usuwania danych.
+- [ ] **Google Play Games:** skonfiguruj w Play Console i wpisz w [`play_games_ids.properties`](play_games_ids.properties) **71 identyfikatorów: 1 projekt, 4 rankingi i 66 osiągnięć**. Nie wpisuj ich do tabeli OWNER_INPUT. Uruchom i sprawdź logowanie, wyniki, osiągnięcia i Saved Games na urządzeniu z podpisaną aplikacją.
+- [ ] **Konto deweloperskie:** sprawdź zgodność nazwy prawnej, adresu, e-maili i danych weryfikacyjnych z Google Play Console (w tym D-U-N-S, jeśli wymaga go dane konto organizacji).
+- [ ] **Publikacja i zgody:** wybierz kraje oraz grupę wiekową, wypełnij ankietę IARC i zatwierdź [`data_safety.md`](data_safety.md) dla rzeczywistego pakietu AAB. Sprawdź, że w grze działa link do polityki i że można zgłaszać żądania usunięcia.
+- [ ] **Dwa języki polityki:** sprawdź poprawność swoich danych, obu wersji PL/EN, publiczną dostępność URL oraz rzeczywistą obsługę żądań prywatności; potwierdź przed publikacją.
+- [ ] **Data premiery:** poinformuj koordynatora o ustalonej dacie, aby aktualizował datę publikacji i `Daily.RELEASE_DAY` — to dwie różne wartości o innym zastosowaniu.
 
 ## Walidacja i publikowanie
 
-1. Uzupełnij wszystkie pięć pól rzeczywistymi danymi.
-2. Uruchom `./gradlew :app:renderStorePolicies --console=plain`. Zadanie sprawdzi dane i wytworzy `build/store-policies/privacy_policy_pl.md` oraz `privacy_policy_en.md`, z podstawioną nazwą, adresem i e-mailem wydawcy.
-3. Opublikuj **wygenerowane** polityki (nie szablony z `docs/store/`) pod docelowym URL, sprawdź ich publiczną dostępność oraz zgodność wersji PL/EN.
-4. Uruchom `./gradlew :app:releaseChecklist` i kompletne testy przed tworzeniem AAB.
+1. Uzupełnij **wszystkie pięć pól** tabeli prawdziwymi wartościami. Nie przechowuj haseł, kluczy JKS, sekretów HMAC ani skanów dokumentów w repo.
+2. Uruchom `./gradlew :app:renderStorePolicies --console=plain`. Zadanie sprawdzi dane i wygeneruje `build/store-policies/privacy_policy_pl.md` oraz `privacy_policy_en.md` z podstawionymi danymi wydawcy.
+3. Opublikuj **wygenerowane** polityki (nie szablony z `docs/store/`) pod publicznymi adresami HTTPS. Sprawdź obie wersje, działający kontakt i możliwość dotarcia z aplikacji do polityki.
+4. Zweryfikuj zgodność dokumentów z rzeczywistym AAB i uruchom `./gradlew :app:releaseChecklist` oraz testy przed publikacją.
 
-`releaseChecklist` blokuje wydanie, jeśli plik nie istnieje, którekolwiek pole jest niewypełnione albo ma niepoprawny podstawowy format. Pominięcie danych właściciela jest możliwe **wyłącznie** w podpisywanym debugowo smoke-teście CI i nigdy podczas publikacji.
+`releaseChecklist` blokuje wydanie przy brakujących lub niepoprawnych danych. Wyjątek dla wpisów właściciela jest przewidziany wyłącznie dla jasno oznaczonego smoke-testu z podpisem debug w CI; nie można go użyć do normalnego wydania.
 
-## Decyzje właściciela (1.11.2026)
+## Aktualny status decyzji (2.11.2026)
 
-- Data premiery: jeszcze nieustalona (`Daily.RELEASE_DAY` pozostaje 2027-12-01 do czasu decyzji).
-- Wydawca: firma / JDG (konto organizacji w Play Console, wymagany D-U-N-S); nazwa prawna i adres do uzupełnienia.
-- Polityka prywatności: miejsce publikacji do ustalenia później.
-- Google Play Games: włączone. ID projektu, czterech rankingów i 54 osiągnięć
-  należy uzupełnić w `docs/store/play_games_ids.properties`.
+- **Nieustalone:** nazwa prawna wydawcy, e-mail, adres, URL polityki i ostateczna data premiery — wszystkie pięć pól pozostaje do wypełnienia.
+- **Niepotwierdzone w produkcji:** adres własnego serwera rankingu, jego hosting i retencja; właściciel musi zdecydować, czy włącza go przy premierze.
+- **Google Play Games:** integracja kodowa obejmuje 4 rankingi, synchronizację osiągnięć i Saved Games, ale identyfikatory w pliku konfiguracyjnym nadal są zastępcze. Ich uruchomienie w sklepie wymaga konfiguracji i testu.
+- **Data premiery w kodzie:** `Daily.RELEASE_DAY` = 2027-12-01 jest wartością do podjęcia decyzji, nie potwierdzoną datą wydania.

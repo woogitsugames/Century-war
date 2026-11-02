@@ -2,9 +2,9 @@
 
 ## 1. Kierunek gry
 
-**Gatunek:** strategia „wojna na jednym pasie przez epoki” (lane battler / evolution war), jak w Age of War. Projekt jest jednak **własny**: nazwy, jednostki, grafika, mechaniki i balans są oryginalne.
+**Gatunek i koncepcja:** oryginalna strategia na Androida — bitwy armii na jednym pasie przez dziewięć epok. Gracz szkoli jednostki, zarządza złotem i doświadczeniem, wybiera moment awansu epoki oraz niszczy bazę przeciwnika. Jednostki, nazwy, oprawa i zasady rozgrywki są autorskie.
 
-**Główna różnica wobec Age of War:** AoW to jeden mecz na 15–30 minut bez żadnego postępu. Century War to **krótkie bitwy (5–15 min) plus metaprogresja na tygodnie**: kampania, badania, rekordy, wyzwanie dnia i rankingi.
+**Rytm i długoterminowy cel:** **krótkie bitwy (5–15 min) połączone z metaprogresją na tygodnie**. Kampania, badania za medale, rekordy, wyzwanie dnia i rankingi zachęcają do ponownego rozgrywania etapów. Taktyczne decyzje w bitwie są powiązane z trwałym rozwojem profilu.
 
 **Pętla rozgrywki:**
 1. Bitwa: szkolisz jednostki za złoto, zabijasz wrogów (złoto i XP), awansujesz epokę, burzysz bazę wroga.
