@@ -139,6 +139,15 @@ class BattleScreen(
     internal var newRecord = false
     internal var tipKey = ""
     internal var tipText = ""
+    /** R2-01: cel z wiersza wskazówki (dotknięcie prowadzi do ekranu celu); NONE = brak. */
+    internal var resultGoalKind = com.centurywar.meta.NextGoalKind.NONE
+    /** R2-01: wiersz wskazówki narysowany w ostatniej klatce (cel dotyku nad nim). */
+    internal var resultGoalDrawn = false
+    /** R2-01/R2-02: opis TalkBack celu dotyku (tekst celu albo propozycji pomocy). */
+    internal var resultGoalText = ""
+    /** R2-02: propozycja po 2. porażce z rzędu: [HELP_NONE], [HELP_RESEARCH] albo [HELP_EASY]. */
+    internal var helpOffer = HELP_NONE
+    internal var helpText = ""
     internal var resultReasonText1 = ""
     internal var resultReasonText2 = ""
     internal var tipIcon = Icons.BOLT
@@ -208,6 +217,11 @@ class BattleScreen(
         const val RESULT_STATS_TAB = 201
         const val RESULT_CHART_TAB = 202
         const val COMMANDER = 203
+        /** R2-01: niewidoczny przycisk nad wierszem „następnego celu” na wynikach. */
+        const val RESULT_GOAL = 204
+        const val HELP_NONE = 0
+        const val HELP_RESEARCH = 1
+        const val HELP_EASY = 2
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
         /** Noc 5: sekundy symulacji bez dymków po zakończeniu nakładki samouczka. */
@@ -274,6 +288,7 @@ class BattleScreen(
     internal val replayEnd = btn(WATCH_REPLAY)
     internal val resultStatsTab = btn(RESULT_STATS_TAB)
     internal val resultChartTab = btn(RESULT_CHART_TAB)
+    internal val resultGoalBtn = btn(RESULT_GOAL).also { it.visible = false }
     internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
     internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -955,13 +970,15 @@ class BattleScreen(
                 g.setScreen(BattleScreen(g, cfg.copyWithSeed(), false))
             }
             QUIT -> { paused = false; surrendered = commands.surrender() }
-            CONTINUE -> g.setScreen(nextScreen())
+            CONTINUE -> continueFromResults()
             WATCH_REPLAY -> replayBytes?.let {
                 g.push(if (summaryComplete) ReplayScreen(g, replayId, it, battleSummary)
                     else ReplayScreen(g, replayId, it))
             }
             RESULT_STATS_TAB -> showResultChart = false
             RESULT_CHART_TAB -> showResultChart = true
+            RESULT_GOAL -> if (helpOffer != HELP_NONE) continueFromResults()
+                else goalScreen()?.let { g.setScreen(it) }
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 val cards = battle.pendingCards
                 if (cards != null) {
@@ -997,6 +1014,27 @@ class BattleScreen(
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
         dailyEvent,
     )
+
+    /** R2-01: ekran celu z wiersza wskazówki; Wstecz z niego wraca do menu. */
+    private fun goalScreen(): Screen? = when (resultGoalKind) {
+        com.centurywar.meta.NextGoalKind.MISSIONS -> MissionsScreen(g)
+        com.centurywar.meta.NextGoalKind.RESEARCH -> ResearchScreen(g)
+        com.centurywar.meta.NextGoalKind.STAGE -> CampaignScreen(g)
+        com.centurywar.meta.NextGoalKind.WEEKLY_TIER -> ModeScreen(g, Mode.DAILY, true)
+        com.centurywar.meta.NextGoalKind.NONE -> null
+    }
+
+    /**
+     * R2-02: przy propozycji pomocy Dalej prowadzi do Badań (nad mapą kampanii, Wstecz wraca
+     * na mapę) albo do okna tego etapu z wyróżnionym Łatwym; poziomu nie zmieniamy za gracza.
+     */
+    private fun continueFromResults() {
+        when (helpOffer) {
+            HELP_RESEARCH -> { g.setScreen(CampaignScreen(g)); g.push(ResearchScreen(g)) }
+            HELP_EASY -> g.setScreen(CampaignScreen(g, cfg.stageIndex, suggestEasy = true))
+            else -> g.setScreen(nextScreen())
+        }
+    }
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -1139,6 +1177,7 @@ class BattleScreen(
         pauseBtn -> L["a164_pause"]
         pauseVibrationBtn -> L["vibration"] + ": " + b.label
         pauseSpeedBtn -> L["cx_speed"] + ": " + b.label
+        resultGoalBtn -> resultGoalText
         else -> super.accessibilityLabel(b)
     }
 
@@ -1199,7 +1238,7 @@ class BattleScreen(
     override fun onBack(): Boolean {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (aimingBarrage) { aimingBarrage = false; return true }
-        if (finished) { g.setScreen(nextScreen()); return true }
+        if (finished) { continueFromResults(); return true }
         if (showUpgrade >= 0) { showUpgrade = -1; return true }
         if (showTurrets) { showTurrets = false; return true }
         if (pauseSliderPointer >= 0) {
@@ -1315,6 +1354,8 @@ class BattleScreen(
                 }
                 if (won && !cfg.tutorial && difficulty == CampaignDifficulty.HARD) pr.recordHardVictory(stage)
                 if (won) pr.tutorialDone = true
+                // R2-02: seria porażek etapu; szybka kapitulacja (< 60 s) się nie liczy.
+                if (!cfg.tutorial) pr.recordCampaignOutcome(stage, won, !surrendered || battle.time >= 60f)
             }
             Mode.SKIRMISH -> {
                 pr.recordSkirmish(cfg, score, day, won)

@@ -253,6 +253,8 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         replayEnd.iconId = Icons.WATCH_EYE
         resultStatsTab.visible = finished && resultTime > 0.8f
         resultChartTab.visible = resultStatsTab.visible
+        resultGoalBtn.visible = resultStatsTab.visible && !showResultChart && resultGoalDrawn &&
+            resultGoalKind != com.centurywar.meta.NextGoalKind.NONE
         resultStatsTab.label = L["bs104_stats"]
         resultChartTab.label = L["bs104_chart"]
         resultStatsTab.selected = !showResultChart

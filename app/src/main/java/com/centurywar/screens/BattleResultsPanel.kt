@@ -33,6 +33,9 @@ import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessBosses
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
+import com.centurywar.game.Campaign
+import com.centurywar.game.CampaignDifficulty
+import com.centurywar.game.Research
 import com.centurywar.game.Weekly
 import com.centurywar.game.Role
 import com.centurywar.game.Skirmish
@@ -43,6 +46,8 @@ import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Profile
 import com.centurywar.meta.SkirmishSetup
 import com.centurywar.meta.Missions
+import com.centurywar.meta.NextGoalKind
+import com.centurywar.meta.NextGoals
 import kotlin.math.max
 import kotlin.math.min
 
@@ -53,6 +58,8 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         const val RESTART_LABEL_DP = 17f
         /** Noc 8: najmniejszy podpis przycisku wyników. */
         const val MIN_LABEL_SP = 10f
+        /** R2-01: ikony celu według [NextGoalKind.ordinal]. */
+        val GOAL_ICONS = intArrayOf(Icons.MISSIONS, Icons.FLASK, Icons.MAP, Icons.TOWER, Icons.BOLT)
     }
 
     /**
@@ -165,9 +172,41 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             resultReasonText2 = ""
             tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         }
+        resultGoalKind = NextGoalKind.NONE
+        resultGoalText = ""
+        // R2-02: od 2. porażki z rzędu na etapie propozycja pomocy przed powodem porażki:
+        // najpierw badanie, na które stać (decyzja 3.11), dopiero potem poziom Łatwy.
+        helpOffer = BattleScreen.HELP_NONE
+        helpText = ""
+        if (cfg.mode == Mode.CAMPAIGN && !won && !cfg.tutorial && cfg.stageIndex >= 1 &&
+            g.profile.lossStreakOn(cfg.stageIndex) >= 2 &&
+            Campaign.difficulty(cfg) != CampaignDifficulty.EASY) {
+            val research = NextGoals.affordableResearch(g.profile)
+            if (research >= 0) {
+                helpOffer = BattleScreen.HELP_RESEARCH
+                helpText = L.f("help180_research", L[Research.defs[research].key])
+                resultGoalKind = NextGoalKind.RESEARCH
+            } else {
+                helpOffer = BattleScreen.HELP_EASY
+                helpText = L["help180_easy"]
+                resultGoalKind = NextGoalKind.STAGE
+            }
+            resultGoalText = helpText
+            tipText = if (tipText.isEmpty()) helpText else "$helpText $tipText"
+        }
         // Zlecenie 141: po bitwie wyraźnie wskazujemy Doktrynę elit, gdy gracza na nią stać.
         if (tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
             tipText = EliteUnlock.text("elite141_afford", g.profile)
+            resultGoalKind = NextGoalKind.RESEARCH
+            resultGoalText = tipText
+        }
+        // R2-01: bez wskazówki (zwykle wygrana) wiersz pokazuje najbliższy cel gracza.
+        if (tipText.isEmpty()) {
+            val goal = NextGoals.pick(g.profile, System.currentTimeMillis(),
+                if (cfg.mode == Mode.ENDLESS && cfg.weekly < 0L) null else cfg.mode)
+            tipText = goal.text
+            resultGoalKind = goal.kind
+            resultGoalText = goal.text
         }
         prepareResultTipLines()
         }
@@ -176,15 +215,52 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
     /** Zawijanie tylko przy rozliczeniu, zmianie języka lub wymiarów ekranu. */
     fun prepareResultTipLines() {
         with(owner) {
-        if (tipText.isEmpty()) { resultTipCount = 0; return }
+        // R2-02: przy propozycji pomocy zawijamy samą propozycję; powody idą osobnymi wierszami.
+        val text = if (helpOffer != BattleScreen.HELP_NONE) helpText else tipText
+        if (text.isEmpty()) { resultTipCount = 0; return }
         val scale = ui.textScale
         ui.textScale = min(scale, 1.15f)
         try {
-            resultTipCount = HintFrame.wrapInto(ui, tipText,
+            resultTipCount = HintFrame.wrapInto(ui, text,
                 resultPanel.width() - 79 * dp, 13f, resultTipLines)
         } finally {
             ui.textScale = scale
         }
+        }
+    }
+
+    /**
+     * R2-01: niewidoczny cel dotyku nad wierszem celu (≥ 48 dp przez hitSlop), zawsze nad
+     * rzędem przycisków wyników. [top] we współrzędnych ekranu (z wjazdem panelu).
+     */
+    private fun placeGoalButton(top: Float, lines: Int, lineH: Float) {
+        with(owner) {
+            val b = resultGoalBtn
+            val limit = restartEnd.r.top - 2 * dp
+            val bottom = min(top + 18 * dp + (lines - 1) * lineH + 6 * dp, limit)
+            val t = top + 1 * dp
+            b.label = ""
+            b.set(resultPanel.left + 20 * dp, t, resultPanel.width() - 35 * dp, (bottom - t).coerceAtLeast(1f))
+            // Pionowy zapas do 48 dp; od dołu nie wchodzi na Od nowa / Powtórka / Dalej.
+            val need = ((48 * dp - b.r.height()) / 2f).coerceAtLeast(0f)
+            b.hitSlop = need
+            b.hitOffsetY = -min(need, (b.r.bottom + need - limit).coerceAtLeast(0f))
+        }
+    }
+
+    /** Dwa konkretne powody zawsze w osobnych wierszach; bez obcięcia drugiego przez zawijanie. */
+    private fun drawReasons(c: Canvas, y: Float) {
+        with(owner) {
+            if (resultReasonText1.isEmpty() || y + 20 * dp >= restartEnd.r.top) return
+            val rp = resultPanel
+            val lx = rp.left + 53 * dp
+            val reasonWidth = rp.right - 15 * dp - lx
+            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
+            ui.textO(c, resultReasonText1, lx, y + 16 * dp,
+                ui.fit(resultReasonText1, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
+            if (resultReasonText2.isNotEmpty() && y + 39 * dp < restartEnd.r.top)
+                ui.textO(c, resultReasonText2, lx, y + 34 * dp,
+                    ui.fit(resultReasonText2, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
         }
     }
 
@@ -243,6 +319,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             resultChart.draw(c, ui, battleSummary, resultChartArea)
         } else {
         var y = rp.top + 73 * dp
+        resultGoalDrawn = false
         if (cfg.mode == Mode.CAMPAIGN && won) {
             ui.stars(c, rp.centerX(), y + 16 * dp, 32 * dp, resultStars, 3, 1.05f)
             y += 36 * dp
@@ -265,7 +342,14 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         if (totalMedalsGained > 0) rows++
         val subRow = achievementRewardText.isNotEmpty()
         // Niższy wiersz osiągnięć ma stałą wysokość; bez niego wiersze jak dotąd.
-        resultRowH = ((restartEnd.r.top - 8 * dp - y - (if (subRow) subRowHeight() else 0f)) / rows)
+        // R2-01/R2-02: wiersz celu (albo propozycji pomocy) ma zarezerwowane miejsce: na 720p
+        // wiersze statystyk maleją do 20 dp, a „Nowy rekord” do 22 dp, zamiast chować cel.
+        val tipLineH = 13f * dp * ui.textScale * 1.3f
+        val goalReserve = if (resultGoalKind != NextGoalKind.NONE && resultTipCount > 0)
+            14 * dp + tipLineH * (if (helpOffer != BattleScreen.HELP_NONE) resultTipCount else 1) +
+                (if (newRecord) 22 * dp else 0f) + (if (!won) 23 * dp else 0f) - 8 * dp
+            else 0f
+        resultRowH = ((restartEnd.r.top - 8 * dp - y - (if (subRow) subRowHeight() else 0f) - goalReserve) / rows)
             .coerceIn(20 * dp, 26 * dp)
         resultRowsClipped = 0
         y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
@@ -288,26 +372,46 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
                 Ui.GOOD, Paint.Align.CENTER, 1.3f)
             y += 23 * dp
         }
-        if (newRecord && y + 26 * dp < restartEnd.r.top) {
+        if (newRecord && goalReserve > 0f && y + 42 * dp + tipLineH > restartEnd.r.top &&
+            y + 22 * dp < restartEnd.r.top) {
+            // Ciasno (720p z celem): niższy wiersz rekordu, żeby zmieścić cel.
+            ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 16 * dp, 16f, Ui.GOOD, Paint.Align.CENTER)
+            y += 22 * dp
+        } else if (newRecord && y + 26 * dp < restartEnd.r.top) {
             ui.textO(c, resultNewRecordLabel, rp.centerX(), y + 20 * dp, 18f, Ui.GOOD, Paint.Align.CENTER)
             y += 28 * dp
         }
-        if (resultReasonText1.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            // Dwa konkretne powody zawsze w osobnych wierszach; bez obcięcia drugiego przez zawijanie.
-            val lx = rp.left + 53 * dp
-            val reasonWidth = rp.right - 15 * dp - lx
-            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            ui.textO(c, resultReasonText1, lx, y + 16 * dp,
-                ui.fit(resultReasonText1, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
-            if (resultReasonText2.isNotEmpty() && y + 39 * dp < restartEnd.r.top)
-                ui.textO(c, resultReasonText2, lx, y + 34 * dp,
-                    ui.fit(resultReasonText2, 12f, reasonWidth, 8f), Ui.TEXT, Paint.Align.LEFT)
+        if (helpOffer != BattleScreen.HELP_NONE && resultTipCount > 0 && y + 20 * dp < restartEnd.r.top) {
+            // R2-02: propozycja (złota, dotykalna) przed powodem porażki; przy braku miejsca
+            // zostaje sama propozycja, bez drugiego powodu.
+            Icons.draw(c, GOAL_ICONS[resultGoalKind.ordinal], rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
+            val lineH = 13f * dp * ui.textScale * 1.3f
+            val available = ((restartEnd.r.top - y - 14 * dp) / lineH).toInt().coerceAtLeast(0)
+            val lines = min(resultTipCount, available)
+            drawWrappedLines(c, resultTipLines, lines, rp.left + 53 * dp, y + 18 * dp, 13f, Ui.GOLD, Paint.Align.LEFT)
+            placeGoalButton(y + slide, lines, lineH)
+            resultGoalDrawn = lines > 0
+            y += 6 * dp + lines * lineH
+            drawReasons(c, y)
+        } else if (resultReasonText1.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
+            drawReasons(c, y)
         } else if (tipText.isNotEmpty() && y + 20 * dp < restartEnd.r.top) {
-            Icons.draw(c, tipIcon, rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
-            val available = ((restartEnd.r.top - y - 14 * dp) /
-                (13f * dp * ui.textScale * 1.3f)).toInt().coerceAtLeast(0)
-            drawWrappedLines(c, resultTipLines, min(resultTipCount, available),
-                rp.left + 53 * dp, y + 18 * dp, 13f, Ui.TEXT, Paint.Align.LEFT)
+            val goal = resultGoalKind != NextGoalKind.NONE
+            Icons.draw(c, if (goal) GOAL_ICONS[resultGoalKind.ordinal] else tipIcon,
+                rp.left + 34 * dp, y + 13 * dp, 20 * dp, dp = dp)
+            val lineH = 13f * dp * ui.textScale * 1.3f
+            val available = ((restartEnd.r.top - y - 14 * dp) / lineH).toInt().coerceAtLeast(0)
+            var lines = min(resultTipCount, available)
+            if (goal && lines in 1 until resultTipCount) {
+                // Cel nie mieści się w wierszach: jeden wiersz, mniejsze pismo (≥ 9 sp) zamiast ucięcia.
+                val lx = rp.left + 53 * dp
+                ui.textO(c, tipText, lx, y + 18 * dp, ui.fit(tipText, 13f, rp.right - 15 * dp - lx, 9f),
+                    Ui.GOLD, Paint.Align.LEFT)
+                lines = 1
+            } else drawWrappedLines(c, resultTipLines, lines,
+                rp.left + 53 * dp, y + 18 * dp, 13f, if (goal) Ui.GOLD else Ui.TEXT, Paint.Align.LEFT)
+            if (goal) placeGoalButton(y + slide, lines, lineH)
+            resultGoalDrawn = goal && lines > 0
         }
         }
         c.restore()

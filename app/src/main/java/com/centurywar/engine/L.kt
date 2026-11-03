@@ -173,8 +173,27 @@ object L {
         putAll(part178())
         putAll(part181())
         putAll(part182())
+        putAll(part179())
+        putAll(part180())
         }
     }
+
+    /** R2-02: pomoc po porażkach w kampanii (propozycja na wynikach i dymek w oknie etapu). */
+    private fun part180(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "help180_research" to t("Stać cię na badanie: %s", "You can afford research: %s", "Forschung bezahlbar: %s", "Puedes pagar una investigación: %s", "Recherche à votre portée : %s", "Puoi permetterti una ricerca: %s", "Podes pagar uma pesquisa: %s", "Вистачає на дослідження: %s", "Onderzoek betaalbaar: %s", "Araştırmaya paran yetiyor: %s"),
+        "help180_easy" to t("Ten etap sprawia kłopot. Spróbuj na poziomie Łatwy (bez rankingu)", "This stage is tough. Try Easy difficulty (no ranking)", "Diese Etappe ist knifflig. Versuch es auf Leicht (ohne Rangliste)", "Esta etapa es complicada. Prueba en Fácil (sin clasificación)", "Cette étape est coriace. Essayez en Facile (sans classement)", "Questa tappa è ostica. Prova il livello Facile (senza classifica)", "Esta etapa está difícil. Experimenta o nível Fácil (sem classificação)", "Цей етап складний. Спробуй рівень Легкий (без рейтингу)", "Deze etappe is lastig. Probeer Makkelijk (zonder ranglijst)", "Bu bölüm zorlu. Kolay seviyeyi dene (sıralama yok)"),
+        "help180_close" to t("Zamknij okno etapu", "Close stage window", "Etappenfenster schließen", "Cerrar ventana de etapa", "Fermer la fenêtre d'étape", "Chiudi finestra tappa", "Fechar janela da etapa", "Закрити вікно етапу", "Etappevenster sluiten", "Bölüm penceresini kapat"),
+        "help180_hint_title" to t("Poziom trudności", "Difficulty", "Schwierigkeit", "Dificultad", "Difficulté", "Difficoltà", "Dificuldade", "Складність", "Moeilijkheid", "Zorluk"),
+        "help180_hint" to t("możesz go zmienić w każdej chwili. Łatwy nie liczy się do rankingu.", "you can change it any time. Easy doesn't count for the ranking.", "jederzeit änderbar. Leicht zählt nicht für die Rangliste.", "puedes cambiarla cuando quieras. Fácil no cuenta para la clasificación.", "modifiable à tout moment. Facile ne compte pas pour le classement.", "puoi cambiarla quando vuoi. Facile non conta per la classifica.", "podes mudá-la a qualquer momento. Fácil não conta para a classificação.", "її можна змінити будь-коли. Легкий не враховується в рейтингу.", "je kunt die altijd wijzigen. Makkelijk telt niet mee voor de ranglijst.", "istediğin zaman değiştirebilirsin. Kolay sıralamaya sayılmaz."),
+    )
+
+    /** R2-01: „Następny cel” na wynikach bitwy i w menu. */
+    private fun part179(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "goal179_missions" to t("Odbierz nagrody misji: %d", "Claim mission rewards: %d", "Missionsbelohnungen abholen: %d", "Recoge recompensas de misiones: %d", "Récupérez les récompenses de missions : %d", "Riscuoti le ricompense delle missioni: %d", "Recolhe as recompensas das missões: %d", "Забери нагороди місій: %d", "Haal missiebeloningen op: %d", "Görev ödüllerini al: %d"),
+        "goal179_research" to t("Stać cię na badanie: %s (%s)", "You can afford research: %s (%s)", "Forschung bezahlbar: %s (%s)", "Puedes pagar una investigación: %s (%s)", "Recherche à votre portée : %s (%s)", "Puoi permetterti una ricerca: %s (%s)", "Podes pagar uma pesquisa: %s (%s)", "Вистачає на дослідження: %s (%s)", "Onderzoek betaalbaar: %s (%s)", "Araştırmaya paran yetiyor: %s (%s)"),
+        "goal179_stage" to t("Następny etap %d: %s", "Next stage %d: %s", "Nächste Etappe %d: %s", "Siguiente etapa %d: %s", "Étape suivante %d : %s", "Prossima tappa %d: %s", "Próxima etapa %d: %s", "Наступний етап %d: %s", "Volgende etappe %d: %s", "Sonraki bölüm %d: %s"),
+        "goal179_weekly" to t("Oblężenie tygodnia: %d fal do progu %s", "Weekly Siege: %d waves for %s", "Wochenbelagerung: %d Wellen für %s", "Asedio semanal: %d oleadas para %s", "Siège hebdomadaire : %d vagues pour %s", "Assedio sett.: %d ondate per %s", "Cerco semanal: %d ondas para %s", "Тижнева облога: %d хвиль до рівня %s", "Wekelijks beleg: %d golven voor %s", "Haftalık Kuşatma: %d dalgada %s"),
+    )
 
     /** R2-04: „Raport dla testera”; tempo ×½ startuje bitwę także bez TalkBack (decyzja 3.11). */
     private fun part182(): Array<Pair<String, Array<out String>>> = arrayOf(

@@ -545,6 +545,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
                 emitButton(s, s.replayEnd)
                 emitButton(s, s.resultStatsTab)
                 emitButton(s, s.resultChartTab)
+                emitButton(s, s.resultGoalBtn)
             }
             ERA_INTRO -> emitInfo(s, INFO_ERA, null)
             CHOICE -> {

@@ -18,6 +18,8 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
+import com.centurywar.meta.NextGoalKind
+import com.centurywar.meta.NextGoals
 import kotlin.math.max
 import kotlin.math.min
 
@@ -40,6 +42,13 @@ class MenuScreen(g: Game) : Screen(g) {
     /** Dzień 2: „Co nowego” po aktualizacji, dopóki gracz nie otworzy historii zmian. */
     internal val whatsNew = btn(WHATS_NEW).also { it.visible = false }
     private var whatsNewSeenRef: String? = null
+    /** R2-01: jedna linia „następnego celu” pod kaflami (po samouczku, gdy jest miejsce). */
+    internal val goalBtn = btn(GOAL).also { it.visible = false }
+    internal var goalKind = NextGoalKind.NONE
+        private set
+    internal var goalText = ""
+        private set
+    private var goalSize = 13f
     private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, research,
         rankings, missions, settings, codex)
     private val scrollCue = ScrollCue()
@@ -106,6 +115,9 @@ class MenuScreen(g: Game) : Screen(g) {
         const val RESUME_YES = 20
         const val RESUME_NO = 21
         const val WHATS_NEW = 10
+        const val GOAL = 11
+        /** Najmniejszy napis celu (sp); przy braku miejsca linia znika zamiast maleć. */
+        const val GOAL_MIN_SP = 11f
         const val WHATS_NEW_H = 40f
     }
 
@@ -145,6 +157,7 @@ class MenuScreen(g: Game) : Screen(g) {
             layoutPortrait()
             layoutResume(w / 2 + (g.insetL - g.insetR) / 2)
             refreshMissionBadge()
+            refreshGoal()
             return
         }
         for (b in portraitTiles) b.visible = true
@@ -221,6 +234,36 @@ class MenuScreen(g: Game) : Screen(g) {
         layoutWhatsNew(codex.r.left - 12 * dp, landscape = true)
         layoutResume(cx)
         refreshMissionBadge()
+        refreshGoal()
+    }
+
+    /**
+     * R2-01: cel pod kaflami. Misje mają już czerwoną plakietkę, więc tu następny cel w kolejności.
+     * Wołane przy layout(), zmianie języka i co 10 s; nigdy w każdej klatce.
+     */
+    private fun refreshGoal() {
+        val b = goalBtn
+        b.visible = false
+        goalKind = NextGoalKind.NONE
+        if (portraitMenu || !g.profile.tutorialDone || missions.r.isEmpty) return
+        val goal = NextGoals.pick(g.profile, System.currentTimeMillis(), null, skipMissions = true)
+        if (goal.kind == NextGoalKind.NONE) return
+        val top = missions.r.bottom + 6 * dp
+        val bottom = h - g.insetB - 4 * dp
+        val bh = min(30 * dp, bottom - top)
+        if (bh < 20 * dp) return
+        val bw = missions.r.width()
+        val textW = bw - 44 * dp
+        val size = ui.fit(goal.text, 13f, textW, 1f)
+        if (size * ui.textScale < GOAL_MIN_SP) return
+        goalText = goal.text
+        goalKind = goal.kind
+        goalSize = size
+        b.label = ""
+        b.set(missions.r.left, top, bw, bh)
+        // Cel dotyku 48 dp; w górę nie sięga na kafel Misji (jest wcześniej na liście przycisków).
+        b.hitSlop = ((48 * dp - bh) / 2f).coerceAtLeast(0f)
+        b.visible = true
     }
 
     /** Szerokość przycisku „Co nowego”: medalion z ikoną + napis 14 sp. */
@@ -390,6 +433,7 @@ class MenuScreen(g: Game) : Screen(g) {
         if (missionBadgePoll <= 0f) {
             missionBadgePoll = 10f
             refreshMissionBadge()
+            refreshGoal()
         }
         updateResumeVisibility()
         refreshWhatsNew()
@@ -443,9 +487,10 @@ class MenuScreen(g: Game) : Screen(g) {
             // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).
             for (i in buttons.indices) {
                 val b = buttons[i]
-                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew)
+                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew && b !== goalBtn)
                     ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
             }
+            drawGoal(c)
             drawWhatsNew(c)
             drawPlayer(c)
             drawTileBadges(c)
@@ -457,6 +502,20 @@ class MenuScreen(g: Game) : Screen(g) {
         if (g.resumeOffer == null) hints.draw(c)
         drawHeldTooltip(c)
         if (g.resumeOffer != null) drawResume(c)
+    }
+
+    /** R2-01: przyciemniony pasek z ikoną celu, złotym napisem i strzałką „dalej”. */
+    private fun drawGoal(c: Canvas) {
+        val b = goalBtn
+        if (!b.visible) return
+        val r = b.r
+        ui.fill.color = if (b.pressed) Color.argb(200, 70, 58, 30) else Color.argb(170, 16, 20, 32)
+        c.drawRoundRect(r, r.height() / 2f, r.height() / 2f, ui.fill)
+        Icons.draw(c, BattleResultsPanel.GOAL_ICONS[goalKind.ordinal], r.left + 18 * dp, r.centerY(),
+            17 * dp, dp = dp)
+        ui.textO(c, goalText, r.left + 32 * dp, r.centerY() + goalSize * 0.36f * dp * ui.textScale,
+            goalSize, Ui.GOLD, Paint.Align.LEFT, 1.6f)
+        ui.textO(c, "›", r.right - 12 * dp, r.centerY() + 6 * dp, 18f, Ui.TEXT, Paint.Align.CENTER)
     }
 
     private fun drawWhatsNew(c: Canvas) {
@@ -581,6 +640,7 @@ class MenuScreen(g: Game) : Screen(g) {
         settings -> L["settings"]
         codex -> L["codex"]
         whatsNew -> L["menu175_whats_new_desc"]
+        goalBtn -> goalText
         else -> super.accessibilityLabel(b)
     }
 
@@ -617,6 +677,13 @@ class MenuScreen(g: Game) : Screen(g) {
             8 -> g.push(CodexScreen(g))
             9 -> g.push(MissionsScreen(g))
             WHATS_NEW -> g.push(WhatsNewScreen(g, fromMenu = true))
+            GOAL -> when (goalKind) {
+                NextGoalKind.MISSIONS -> g.push(MissionsScreen(g))
+                NextGoalKind.RESEARCH -> g.push(ResearchScreen(g))
+                NextGoalKind.STAGE -> g.push(CampaignScreen(g))
+                NextGoalKind.WEEKLY_TIER -> g.push(ModeScreen(g, Mode.DAILY, true))
+                NextGoalKind.NONE -> Unit
+            }
         }
     }
 }

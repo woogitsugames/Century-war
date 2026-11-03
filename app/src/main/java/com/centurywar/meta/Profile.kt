@@ -40,11 +40,11 @@ class Profile(private val file: File) {
         const val CURRENT_VERSION = 3
         private val REPLAY_ID = Regex("[a-z0-9_-]{1,64}")
         private val RELEASE_VERSION = Regex("[A-Za-z0-9._+-]{1,48}")
-        const val HINT_COUNT = 25
+        const val HINT_COUNT = 26
         const val HINT_LONG_PRESS = 17
-        // 25 bitów: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie,
+        // 26 bitów: 0–19 dotychczasowe wskazówki, 20 kroki po pierwszej bitwie,
         // 21 Doktryna elit w menu, 22 pierwsza elita wroga (zlecenie 141),
-        // 23 stopnie wież, 24 dowódca (125). Nowy bit wymaga podniesienia HINT_COUNT,
+        // 23 stopnie wież, 24 dowódca (125), 25 poziom trudności po porażkach (R2-02). Nowy bit wymaga podniesienia HINT_COUNT,
         // inaczej wskazówka nie może zostać oznaczona i blokuje niższe priorytety.
         const val HINT_VALID_MASK = (1L shl HINT_COUNT) - 1L
         private val hintWriter = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
@@ -131,6 +131,31 @@ class Profile(private val file: File) {
     val normalStars = IntArray(Campaign.stages.size)
     var campaignDifficulty = CampaignDifficulty.NORMAL
     private var hardStageWins = 0L
+
+    /** R2-02: etap ostatniej serii porażek kampanii (−1 = brak); stan lokalny, nie do chmury. */
+    var campaignLossStreakStage = -1
+        private set
+    /** R2-02: porażki z rzędu na [campaignLossStreakStage]. */
+    var campaignLossStreak = 0
+        private set
+
+    /**
+     * R2-02: wynik bitwy kampanii (poza samouczkiem). Wołane wewnątrz [settleBattle], więc
+     * ta sama bitwa liczy się raz. [counts] = false dla kapitulacji przed 60 s: nic nie zmienia.
+     */
+    fun recordCampaignOutcome(stage: Int, won: Boolean, counts: Boolean = true) {
+        if (stage !in stars.indices) return
+        if (won) {
+            if (campaignLossStreakStage == stage) { campaignLossStreakStage = -1; campaignLossStreak = 0 }
+            return
+        }
+        if (!counts) return
+        if (campaignLossStreakStage == stage) campaignLossStreak = (campaignLossStreak + 1).coerceAtMost(1000)
+        else { campaignLossStreakStage = stage; campaignLossStreak = 1 }
+    }
+
+    /** R2-02: porażki z rzędu na etapie [stage] (0, gdy seria dotyczy innego etapu). */
+    fun lossStreakOn(stage: Int): Int = if (stage == campaignLossStreakStage) campaignLossStreak else 0
 
     fun normalStarTotal(): Int = normalStars.sum()
     fun hardStagesCleared(): Int = java.lang.Long.bitCount(hardStageWins)
@@ -508,6 +533,8 @@ class Profile(private val file: File) {
         o.put("bestDailyChallengeStreak", bestDailyChallengeStreak)
         o.put("lastDailyChallengeStreakDay", lastDailyChallengeStreakDay)
         o.put("lastSettledBattle", lastSettledBattle)
+        o.put("campaignLossStreakStage", campaignLossStreakStage)
+        o.put("campaignLossStreak", campaignLossStreak)
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("weeklyWeek", weeklyWeek)
@@ -599,6 +626,8 @@ class Profile(private val file: File) {
         val localConsent = globalRanking
         val localWhatsNewVersion = whatsNewSeenVersion
         val localSettled = lastSettledBattle
+        val localLossStage = campaignLossStreakStage
+        val localLossStreak = campaignLossStreak
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
@@ -609,6 +638,8 @@ class Profile(private val file: File) {
         whatsNewSeenVersion = localWhatsNewVersion
         // Zrzut bitwy jest lokalny, więc i znacznik jej rozliczenia pozostaje lokalny.
         lastSettledBattle = localSettled
+        campaignLossStreakStage = localLossStage
+        campaignLossStreak = localLossStreak
     }
 
     /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
@@ -621,6 +652,8 @@ class Profile(private val file: File) {
         remove("globalRanking")
         remove("whatsNewSeenVersion")
         remove("lastSettledBattle")
+        remove("campaignLossStreakStage")
+        remove("campaignLossStreak")
     }.toString()
 
     /** Migawka jest spójna; wątek wywołujący nie dotyka dysku. */
@@ -1060,6 +1093,9 @@ class Profile(private val file: File) {
         lastDailyChallengeStreakDay = json.optLong("lastDailyChallengeStreakDay", -1L)
             .coerceIn(-1L, 100_000L)
         lastSettledBattle = json.optLong("lastSettledBattle", 0L)
+        campaignLossStreakStage = json.optInt("campaignLossStreakStage", -1).coerceIn(-1, stars.size - 1)
+        campaignLossStreak = if (campaignLossStreakStage < 0) 0
+            else json.optInt("campaignLossStreak", 0).coerceIn(0, 1000)
         if (lastDailyChallengeStreakDay < 0L) dailyChallengeStreak = 0
         unlockedBanners = (json.optInt("unlockedBanners", 1) and BannerCatalog.VALID_MASK) or 1
         refreshBanners()
@@ -1077,6 +1113,7 @@ class Profile(private val file: File) {
         dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L
         whatsNewSeenVersion = ""; hasExistingSave = false
         lastSettledBattle = 0L
+        campaignLossStreakStage = -1; campaignLossStreak = 0
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
@@ -1203,6 +1240,7 @@ class Profile(private val file: File) {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); normalStars.fill(0)
         campaignDifficulty = CampaignDifficulty.NORMAL; hardStageWins = 0L
+        campaignLossStreakStage = -1; campaignLossStreak = 0
         bestWave = 0; lastRankedDaily = -1L
         selectedBanner = 0; unlockedBanners = 1
         dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L

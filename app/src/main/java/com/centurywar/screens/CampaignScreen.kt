@@ -28,7 +28,13 @@ import kotlin.math.sin
  * Podróż przez dziewięć epok. W poziomie regiony biegną od lewej do prawej,
  * na pionowym ekranie od góry do dołu. Tła są nagrane w Picture przy layout().
  */
-class CampaignScreen(g: Game) : Screen(g) {
+class CampaignScreen(
+    g: Game,
+    /** R2-02: etap, którego okno otwiera się od razu (−1 = sama mapa). */
+    private val focusStage: Int = -1,
+    /** R2-02: wyróżnij Łatwy w oknie [focusStage] (propozycja po porażkach; wybór należy do gracza). */
+    internal val suggestEasy: Boolean = false,
+) : Screen(g) {
     override val crashName get() = "CampaignScreen"
     /** Tura 9: baner powiadomień nie przykrywa tytułu planszy nowej epoki (okno modalne). */
     // Tura 10: także okno etapu jest modalne — baner zasłaniał tytuł i wiersz „Epoki”.
@@ -62,7 +68,7 @@ class CampaignScreen(g: Game) : Screen(g) {
     private var nodeR = 0f
     private var dt = 0f
     private var time = 0f
-    private var selected: Stage? = null
+    private var selected: Stage? = Campaign.stages.getOrNull(focusStage)
     private var eraIntro: EraIntroOverlay? = null
     private var lastUnlockedEra = -1
 
@@ -310,6 +316,9 @@ class CampaignScreen(g: Game) : Screen(g) {
         }
         place()
         hints.update(dt)
+        // R2-02: przy 3. porażce z rzędu dymek przypomina o zmianie poziomu (raz).
+        if (easySuggested && g.profile.lossStreakOn(focusStage) >= 3)
+            hints.showScreen(HintOverlay.DIFFICULTY, difficultyButtons[0].r)
         if (g.profile.battles == 1 && selected == null && !autoScroll) {
             val next = tiles[g.profile.unlockedStage().coerceIn(0, tiles.lastIndex)]
             hints.showScreen(HintOverlay.FIRST_BATTLE, if (next.visible) next.r else back.r)
@@ -643,8 +652,24 @@ class CampaignScreen(g: Game) : Screen(g) {
         ui.textO(c, L["campaign126_difficulty"], x, difficultyButtons[0].r.top - 6 * dp,
             12f, Ui.GOLD)
         for (b in difficultyButtons) ui.button(c, b, 13f)
+        drawEasySuggestion(c)
         ui.button(c, start, 18f)
         ui.closeButton(c, close)
+    }
+
+    /** R2-02: złota obwódka wokół Łatwego, gdy to propozycja po porażkach na tym etapie. */
+    internal val easySuggested: Boolean
+        get() = suggestEasy && selected?.index == focusStage &&
+            g.profile.campaignDifficulty != CampaignDifficulty.EASY
+
+    private fun drawEasySuggestion(c: Canvas) {
+        if (!easySuggested) return
+        val r = difficultyButtons[0].r
+        val pulse = 0.5f + 0.5f * sin(time * 4f)
+        pathPaint.strokeWidth = 3 * dp
+        pathPaint.color = Color.argb((150 + 105 * pulse).toInt(), 255, 214, 90)
+        tmp.set(r.left - 3 * dp, r.top - 3 * dp, r.right + 3 * dp, r.bottom + 3 * dp)
+        c.drawRoundRect(tmp, 12 * dp, 12 * dp, pathPaint)
     }
 
     private fun chips(c: Canvas, s: Stage, x0: Float, y0: Float, width: Float) {
@@ -694,6 +719,10 @@ class CampaignScreen(g: Game) : Screen(g) {
             }
         }
     }
+
+    /** R2-02: ✕ okna etapu nie ma podpisu; TalkBack czyta „Zamknij okno etapu”. */
+    override fun accessibilityLabel(b: Button): String =
+        if (b === close) L["help180_close"] else super.accessibilityLabel(b)
 
     /** Tura 9: ostatni komunikat po dotknięciu zablokowanego etapu (do testów). */
     internal var lastNotice = ""
