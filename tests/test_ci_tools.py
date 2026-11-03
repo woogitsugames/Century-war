@@ -26,9 +26,9 @@ class CiToolsTest(unittest.TestCase):
                 "class RoboTest {\n  @Test fun ui() {}\n}\n",
                 encoding="utf-8",
             )
-            (folder / "ScreenshotTest.kt").write_text(
+            (folder / "ScreenshotTestBattle.kt").write_text(
                 "package com.centurywar.screens\n@RunWith(RobolectricTestRunner::class)\n"
-                "class ScreenshotTest {\n"
+                "class ScreenshotTestBattle : ScreenshotTestBase() {\n"
                 "  @Test fun screens() {}\n"
                 "  @Test fun tutorial() {}\n"
                 "  @Test\n  @Config(sdk = [35])\n  fun menus() {}\n"

@@ -496,7 +496,7 @@ class LTest {
 
 /**
  * Kadry lokalizacji 720p dla zlecenia 78. Osobna klasa w LTest.kt,
- * bez edytowania współdzielonego ScreenshotTest.kt.
+ * bez edytowania współdzielonych klas ScreenshotTest*.
  */
 @org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)

@@ -34,7 +34,7 @@ jobs:
         run: |
           ./gradlew :app:testDebugUnitTest \
             --tests '*SimBalanceCaps82Test*' \
-            --tests '*DoctrineBalance82Test*' \
+            --tests '*DoctrineBalance82*' \
             --tests '*Doctrine69*' \
             --tests '*Endless*' \
             --tests '*BattleSimTest*' \

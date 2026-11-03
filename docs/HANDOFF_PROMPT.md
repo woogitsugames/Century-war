@@ -29,10 +29,10 @@ Najpierw przeczytaj: `README.md`, `docs/GDD.md`, `docs/HANDOFF.md` (stan, ryzyka
 echo "sdk.dir=$ANDROID_HOME" > local.properties   # SDK: platforms;android-36, build-tools;36.0.0
 ./gradlew :app:assembleDebug --console=plain
 ./gradlew :app:testDebugUnitTest --tests '*BattleSimTest*' --tests '*BattleRulesTest*' --tests '*Snapshot*' --tests '*LTest*' --tests '*Replay*' --tests '*Counter*' --tests '*Endless*' --tests '*AiPersonality*' --console=plain
-./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.menus*' --console=plain --no-configuration-cache   # zrzuty -> app/build/screenshots
+./gradlew :app:testDebugUnitTest --tests '*ScreenshotTestMenus.menus*' --console=plain --no-configuration-cache   # zrzuty -> app/build/screenshots
 ```
 
 ## Uwagi
-- Emulatora nie ma, wygląd sprawdzaj zrzutami z `ScreenshotTest`.
+- Emulatora nie ma, wygląd sprawdzaj zrzutami z `ScreenshotTest*` (`ScreenshotTestMenus`, `ScreenshotTestBattle`, `ScreenshotTestFold`, `ScreenshotTestLayout`; wzorce `regression100` w `ScreenshotTestMenus`).
 - Przy błędzie 429 z Maven Central pobieraj artefakty z `https://maven-central.storage-download.googleapis.com/maven2` do `~/.m2/repository`.
 - Commity po polsku, z liniami atrybucji sesji. Nie twórz PR bez prośby użytkownika.
