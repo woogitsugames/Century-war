@@ -7,3 +7,4 @@
 - 2026-11-02 UTC: Tura 10 szlif 2
 - 2026-11-03 UTC: Noc_4_usterki
 - 2026-11-03 UTC: Noc 7: krótszy podpis wstrząsów ekranu (pl)
+- 2026-11-03 UTC: Noc 8: drobne napisy (wiersz wstrząsów: odstęp etykieta–podpis wliczony w centrowanie, 0,5 dp)
