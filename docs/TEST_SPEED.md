@@ -202,8 +202,9 @@ podejrzanego testu, `-PtestForks=1 -PtestForkEvery=4` na komputerze z 8 GiB).
 ## Noc 9: równy podział na procesy i okresowy GC (3.11.2026)
 
 **Wynik:** pełne `:app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun --continue`
-na 4 CPU / 15 GB: **11 min 38 s → ok. 5 min 35 s**, szczyt zajętej pamięci kontenera
-**10,5 GB → ok. 8 GB**, największy proces testowy **7,7 GB → ok. 1,4 GB RSS**.
+na 4 CPU / 15 GB: **11 min 38 s → 5 min 54 s** (końcowy przebieg na commicie z tą sekcją,
+626 + 277 + 76 testów, 0 błędów), szczyt zajętej pamięci kontenera **10,5 GB → 8,3 GB**
+(w tym ok. 4 GB demonów Gradle/Kotlin), największy proces testowy **7,7 GB → 1,3 GB RSS**.
 Żaden test nie został usunięty ani osłabiony; liczba metod rośnie (617 → 626), bo podzielone
 pętle są osobnymi metodami.
 
@@ -257,6 +258,7 @@ pętle są osobnymi metodami.
 | pary klas | 4 | bez wymiany | okresowy | 363 s | 8,1 GB | 2,0 GB |
 | czwórki klas | 3 | bez wymiany | okresowy | 373 s | 7,4 GB | 1,8 GB |
 | czwórki klas | 4 | bez wymiany | okresowy | 335 s¹ | 8,0 GB | 1,4 GB |
+| **końcowa konfiguracja** | 4 | 50 | okresowy | **354 s** | 8,3 GB | 1,3 GB |
 
 ¹ z kompilacją zmienionych testów (ok. 40–60 s). „Bez wymiany”: `-PtestForkEvery=1000`.
 Zajętość obejmuje demony Gradle i Kotlin (ok. 2–3,4 GB przed startem testów).
