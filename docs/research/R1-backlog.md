@@ -22,6 +22,26 @@ sprawdzono 3.11.2026. Polityki Google zmieniają się często, więc przed wysy�
 
 ---
 
+## Kolejność zlecania (R2, 3.11.2026)
+
+Gotowe zlecenia są w `docs/tasks/R2-*.md`. Każde ma własną część tekstów w `L.kt`: 179–183.
+Przy 1 agencie programiście na raz kolejność jest taka:
+
+| Krok | Zlecenie | Zależności i powód kolejności |
+|---|---|---|
+| 1 | Dzień 5: TalkBack HUD (TOP 1, już w kolejce koordynatora) | Wskazówki w sekcji 3.2. R2-03 korzysta z `touchExplorationActive`, więc lepiej po nim albo razem |
+| 2 | [R2-03 dostępność z systemu](../tasks/R2-03-system-a11y-settings.md) (`part181`) | Niezależne, małe. Daje tempo ×½ dla graczy z TalkBack z kroku 1 |
+| 3 | [R2-05 stabilność](../tasks/R2-05-low-end-stability.md) (`part183`, raczej bez tekstów) | Niezależne. Dotyka `QualityGovernor`, `crash/`, `MainActivity`. **Przed R2-04**, bo oba zmieniają `crash/` i `MainActivity` |
+| 4 | [R2-04 raport testera](../tasks/R2-04-tester-report.md) (`part182`) | Po R2-05 (wspólne `crash/`, `onPause`). Musi wejść **przed pierwszym AAB dla testerów zamkniętych** |
+| 5 | [R2-01 następny cel](../tasks/R2-01-next-goal.md) (`part179`) | Niezależne od 2–4. Wprowadza ścieżkę „cel w wierszu wskazówki” na wynikach |
+| 6 | [R2-02 pomoc po porażkach](../tasks/R2-02-help-after-losses.md) (`part180`) | **Po R2-01**: oba piszą do `tipText` w `BattleResultsPanel` i `BattleScreen.settleRewards` |
+| 7 | Dzień 6: nowa zawartość (TOP 10, sekcja 5) | Zmienia `:sim` (PROTOCOL + złote powtórki). Po R2-02, żeby nie scalać zmian `settleRewards` jednocześnie z regeneracją złotych powtórek |
+| — | TOP 7 szybka bitwa, TOP 9 Play Games / Level Up | Czekają na decyzje właściciela (balans; udział w Level Up, Game Stats w Data safety) |
+
+Konflikty scalania: `L.kt` (różne części, dopisywane w różnych miejscach `putAll`), `MainActivity.kt`
+(R2-03, R2-04, R2-05), `Profile.kt` (R2-02, R2-03; pola w różnych blokach). Po każdym scaleniu
+liczba `putAll(part` musi być równa liczbie `private fun part`.
+
 ## TOP 10 zadań do zlecenia
 
 Kolejność odpowiada stosunkowi efektu do pracy przy obecnej kolejce koordynatora (dzień 4–7).
@@ -69,12 +89,13 @@ Rozmiar: S ≤ pół dnia agenta, M ≈ 1 dzień, L > 1 dzień.
 - **Rozmiar:** S–M. **Ryzyko:** niskie. Tempo dotyczy tylko odtwarzania, krok symulacji zostaje
   1/60 s, więc powtórki i ranking się nie zmieniają. Trzeba sprawdzić zrzuty przy 130%.
 
-### 4. Formalności Play na 2026–2027: dopisać brakujące punkty do RELEASE/PLAY_CONSOLE
+### 4. Formalności Play na 2026–2027: dopisać brakujące punkty do RELEASE/PLAY_CONSOLE — **zrobione w R2**
+(`docs/RELEASE.md` → „Formalności Play 2026–2027”, `docs/store/PLAY_CONSOLE.md` → sekcja 8)
 - **Cel:** do list w repo dopisać rzeczy, których jeszcze nie ma:
   **deklarację statusu handlowca (trader / non-trader) do 1.02.2027** (handlowiec ma publicznie
   widoczne imię i nazwisko, adres, telefon i e-mail; osoba nie-handlowiec tylko e-mail i kraj),
   **weryfikację tożsamości dewelopera** (instalacja APK spoza Play na certyfikowanych telefonach:
-  egzekwowanie od 09.2026 w BR/ID/SG/TH, globalnie w 2027; dotyczy też wysyłania APK testerom
+  egzekwowanie od 30.09.2026 w ID/SG/TH, globalnie w 2027; dotyczy też wysyłania APK testerom
   poza Play), **krok kontroli 16 KB** (`zipinfo` AAB: brak `lib/*.so`), **Android vitals** (progi
   1,09% awarii i 0,47% ANR, 8% na model telefonu), **progi pamięci od 02.2027** oraz **targetSdk 37
   do 31.08.2027**.
@@ -189,11 +210,12 @@ Rozmiar: S ≤ pół dnia agenta, M ≈ 1 dzień, L > 1 dzień.
    i może zażądać dalszych testów przy słabym zaangażowaniu. Konto organizacji nie ma progu 12/14,
    ale wymaga D-U-N-S, a jego dane są publiczne. → zadanie TOP 2 daje odpowiedzi na te pytania.
    [Google: wymagania testów](https://support.google.com/googleplay/android-developer/answer/14151465);
-   relacje o odrzuceniach za zaangażowanie: [DEV Community](https://dev.to/tizoc_araujo_3cd9fb67191f/google-play-closed-testing-rejected-for-insufficient-engagement-what-that-actually-means-in-2026-ion)
-   (źródło nieoficjalne).
+   Oficjalna pomoc Play Console potwierdza (R2): powodem dalszego testowania może być
+   „insufficient tester engagement during the testing period”.
 3. **Weryfikacja tożsamości dewelopera** (Android Developer Verification). Rejestracja otwarta od
-   03.2026, egzekwowanie od 09.2026 w Brazylii, Indonezji, Singapurze i Tajlandii, globalnie
-   w 2027. Dziś właściciel dostaje APK debug spoza Play. Po wejściu przepisów w Polsce instalacja
+   03.2026 (nieoficjalne), egzekwowanie od **30.09.2026** w Indonezji, Singapurze i Tajlandii,
+   globalnie w 2027 (oficjalne; Brazylii oficjalna strona nie wymienia). Instalacja przez `adb`
+   zostaje dozwolona; konto „limited distribution” do 20 urządzeń bez dowodu tożsamości. Dziś właściciel dostaje APK debug spoza Play. Po wejściu przepisów w Polsce instalacja
    APK od niezweryfikowanego dewelopera na certyfikowanym telefonie będzie utrudniona. Trzeba
    zweryfikować konto zawczasu i przejść na tor testów wewnętrznych Play (do 100 testerów).
    [Google: developer verification](https://support.google.com/android-developer-console/answer/16561738),
@@ -402,8 +424,8 @@ efekty przez `SoundPool` ładowane po pierwszej klatce, `setFrameRate`, StrictMo
    Tu pomagają węzły dostępności (TOP 1).
    [Pre-launch report](https://support.google.com/googleplay/android-developer/answer/9842757)
 2. **Firebase Test Lab** przez `gcloud firebase test android run --type robo --app app.apk --device model=...`.
-   `gcloud` jest w kontenerze. Wymaga projektu Firebase i rozliczeń, czyli decyzji właściciela.
-   Darmowy limit jest mały.
+   `gcloud` jest w kontenerze. Wymaga projektu Firebase, czyli decyzji właściciela. Plan Spark
+   bez opłat: 5 testów dziennie na fizycznych i 10 na wirtualnych urządzeniach (oficjalne, R2).
    [Test Lab: gcloud](https://firebase.google.com/docs/test-lab/android/command-line)
 3. **Raport testera** (TOP 2) z p95 klatki, stopniami jakości i termiką z telefonów testerów.
 4. **Android vitals** po starcie testów zamkniętych: awarie, ANR, wolne sesje, pamięć według modeli.
@@ -480,5 +502,5 @@ Games (dziś 79 `REPLACE_ME`), więc lepiej dodać je **przed** konfiguracją Pl
 5. **Game Stats w PGS** to nowy typ danych wysyłanych do Google, czyli aktualizacja Data safety.
 6. **Muzyka gry przy muzyce użytkownika** (fokus audio): czy gra ma milknąć, gdy gra Spotify.
 7. **Krótsza pierwsza bitwa i szybka bitwa:** zmiana balansu, PROTOCOL i złote powtórki.
-8. **Firebase Test Lab:** projekt Google Cloud z rozliczeniami (opcjonalnie; raport przedpremierowy jest darmowy).
+8. **Firebase Test Lab:** projekt Firebase (opcjonalnie; plan Spark bez opłat daje 5 testów dziennie na fizycznych i 10 na wirtualnych urządzeniach; raport przedpremierowy Play jest darmowy).
 9. **Usuwanie danych rankingu** jako „usunięcie konta” w rozumieniu polityki Google: adres WWW lub e-mail w polityce.
