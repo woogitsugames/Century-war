@@ -1480,3 +1480,5 @@ Nowości bez zmian kampanii: wydarzenia dnia `SIEGE_WORKS` (wieżyczki −40% ko
 `EndlessBalanceReportTest` (serwer): `TARGET_MEDIAN=OK`, `TARGET_SURVIVE_60=OK` (5/100, dolna granica celu 5–15). Nowe karty zmieniają losowanie ofert (inne karty w kolejnych falach), dlatego bot częściej dochodzi do fal 40–50, a rzadziej do 60 — wynik w celu, ale na granicy; przy kolejnej zmianie utrudniającej Endless trzeba to zmierzyć ponownie.
 
 Złote powtórki: nowe pozycje enumu `EndlessCard` wydłużają zapis `cardStacks` w migawce, więc `GoldenReplayTest` wymaga regeneracji (zrobi to koordynator razem z podbiciem `SimVersion.PROTOCOL`).
+
+- 2026-11-03 — regeneracja złotych powtórek: Tura 10: nowa zawartosc 170.

@@ -21,5 +21,5 @@
     {"step":2265,"kind":"QUEUE","argument":0},
     {"step":2400,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":10,"winner":1,"wave":0,"steps":2400,"kills":2,"enemyKills":7,"timeBits":1109393409,"snapshotSha256":"f6454d11bf26125ec072fa6862df5d0b8907cc6b0161a1f35b53f86ac16ff213"}
+  "expected": {"score":10,"winner":1,"wave":0,"steps":2400,"kills":2,"enemyKills":7,"timeBits":1109393409,"snapshotSha256":"8cb13fd61f0dca2defa6849af58e846f822ee5b4af4e55782852f2a62f4bb4cf"}
 }
