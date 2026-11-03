@@ -23,6 +23,8 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
     private val chrome = Chrome(this)
     private val close = btn(1)
     private val panel = RectF()
+    /** Dzień 4: strzałka „więcej niżej” — na telefonie poziomo najnowszy wpis bywa pod krawędzią. */
+    private val scrollCue = ScrollCue()
     private val versions = if (automatic)
         listOfNotNull(WhatsNewCatalog.forVersion(BuildConfig.VERSION_NAME))
     else WhatsNewCatalog.releases
@@ -154,6 +156,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
             }
         }
         c.restoreToCount(saved)
+        scrollCue.vertical(c, panel.right - 22 * dp, contentTop, contentBottom, scroll, maxScroll, dp)
         ui.button(c, close, 16f)
     }
 
