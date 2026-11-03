@@ -41,6 +41,17 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
       w artefakcie CI (A156-11, 12, 14, 15, 26, 27).
 - [x] Pełne testy (`:app:testDebugUnitTest :sim:test :server:test`) zielone na gałęzi
       integracyjnej — ok. 13 min (szczegóły w [TEST_SPEED.md](TEST_SPEED.md)).
+- [x] **Próba wersji release (3 listopada 2026 r.)** — APK i AAB z R8 i shrinkResources
+      zbudowane lokalnie dokładnie jak smoke CI (syntetyczne ID Play Games, podpis debug
+      tylko do próby): build OK, bez ostrzeżeń R8; kontrola nazw i pól zapisów po R8, kontrola
+      rzeczywistego DEX, manifest (`com.centurywar.game`, `MainActivity`) i profil ART w obu
+      paczkach — wszystko zaliczone; bez klucza upload build release jest nadal
+      blokowany (`Brak prawidłowego podpisu release`). Rozmiar: **APK 20,0 MiB, AAB 20,6 MiB**, z czego 19,0 MiB
+      to muzyka (tabela w „Rozmiar APK/AAB i czas uruchomienia”). Symulacja po R8 (bez telefonu):
+      10 złotych powtórek, zrzuty przerwanej bitwy v16–v18 i rekord powtórki zgodne bajt w bajt
+      z wersją bez minifikacji. Poprawka: typ misji (`MissionType`, zapisywany w profilu po
+      nazwie) chroniony regułą R8 jak metryki osiągnięć; kontrola obejmuje teraz pola
+      rozliczenia bitwy (A156-10).
 
 ### Zostało — decyzje i dane właściciela
 
@@ -73,8 +84,11 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
 
 Automatyczne testy tego nie zastąpią. Wystarczy telefon i Galaxy Fold właściciela.
 
-- [ ] Zbudowany **podpisany pakiet AAB** (release, R8) instaluje się i uruchamia; pomiar rozmiaru
-      i czasu startu (sekcje „AAB, R8 i Baseline Profile” i „Pomiar wydania” niżej).
+- [ ] Zbudowany **podpisany pakiet AAB** (release, R8) instaluje się i uruchamia; pomiar
+      **czasu startu** (sekcje „AAB, R8 i Baseline Profile” i „Pomiar wydania” niżej). Rozmiar
+      i poprawność R8 sprawdzone w próbie 3 listopada; brakuje: podpisu kluczem upload
+      (sekret CI), prawdziwych ID Play Games zamiast syntetycznych, pięciu pól wydawcy
+      (`ownerInput`) i `Daily.RELEASE_DAY` — bez nich `releaseChecklist` słusznie blokuje build.
 - [ ] **Przerwanie bitwy**: w trakcie bitwy przełącz na inną aplikację, wymuś zamknięcie gry
       w ustawieniach Androida, uruchom ponownie — bitwa do wznowienia, nagroda raz.
       Powtórz zamknięcie **zaraz po** ekranie wyniku — po starcie nie ma oferty wznowienia,
@@ -397,7 +411,10 @@ JSON profilu (`Profile`, `ScoreEntry`), zrzut bitwy (`BattleSnapshot`,
 `RestoredBattle`, `SnapshotStore`, `BattleConfig`, `Bonuses`) oraz
 powtórki (`Replay`, `Replay.Command`, `Replay.Log`, `ReplayRecord`
 i jego modele). Dodano też `CampaignDifficulty` do listy enumów o
-trwałych ordinalach. Osobne reguły Play Games dostarcza SDK.
+trwałych ordinalach, a `MissionType` (zapisywany po **nazwie** w `missionState`
+profilu, odczyt przez `valueOf`) do listy enumów chronionych w całości. Kontrola
+obejmuje także pola rozliczenia bitwy (A156-10): `Profile.lastSettledBattle`,
+`RestoredBattle.battleId`, `SnapshotStore.owner`. Osobne reguły Play Games dostarcza SDK.
 
 **Uwaga o kompatybilności:** zapis JSON używa jawnych kluczy tekstowych,
 a snapshoty i powtórki zapisują jawne bajty, nie serializują pól przez
@@ -425,20 +442,55 @@ Wynik trafia do `build/release-metrics/mapping-audit.txt` w artefakcie
 `release-walidacja`. Błąd mapowania przerywa workflow przed testem
 na emulatorze.
 
+### Zachowanie po R8 bez urządzenia (`tools/r8-sim-smoke`)
+
+Testy JUnit działają na klasach debug. Żeby sprawdzić **kod po minifikacji**,
+`tools/r8-sim-smoke/run.sh` uruchamia R8 (z Android SDK, tryb `--classfile`) na module
+`sim` z tymi samymi regułami (`proguard-android-optimize` + `app/proguard-rules.pro`)
+i jedynym punktem wejścia `R8Smoke`. Najpierw wersja niezminifikowana zapisuje bajty
+zrzutów bitwy w formatach **v16, v17 i v18** oraz rekordu powtórki, potem wersja po R8:
+
+- odtwarza wszystkie 10 złotych powtórek (`GoldenFixtures.render`: kodek komend,
+  weryfikator serwera, odtwarzacz, SHA-256 zrzutu końcowego) zgodnie z wzorcami,
+- wczytuje zrzuty v16–v18 z bajtów wersji niezminifikowanej (`battleId` 0 dla v16,
+  zachowany dla v17/v18), zapisuje v18 identycznie i dalej symuluje tak samo jak oryginał,
+- odczytuje `ReplayRecord` (konfiguracja, komendy, metadane) i zapisuje go identycznie.
+
+```bash
+./gradlew :sim:testClasses   # oraz build release jak w smoke CI (sekcja wyżej)
+tools/r8-sim-smoke/run.sh    # wynik: „WYNIK: OK” dwa razy
+```
+
+Wynik 3 listopada 2026 r.: **60/60 kontroli OK**, R8 przemianował 61 klas `com.centurywar`.
+Profilu (`Profile`, Android `org.json`) nie da się tak uruchomić bez urządzenia — sprawdzono
+kod: zapis i odczyt profilu, misji, historii bitew i kopii zapasowej używa wyłącznie jawnych
+kluczy JSON (`put`/`opt*`), zrzuty i powtórki — jawnych bajtów `DataOutputStream`/varint;
+w `app` i `sim` nie ma `Class.forName`, `getDeclared*`, `Serializable` ani serializacji
+refleksyjnej. Enumy zapisywane po nazwie (`AchievementMetric`, `MissionType`, `Modifier`
+w misjach) mają `-keep enum`. Muzyka jest wczytywana po nazwie **pliku** z `assets/music`
+(nie dotyczy R8; `noCompress += "ogg"` dla `openFd`), a dostawca węzłów TalkBack (164) to
+anonimowa podklasa `AccessibilityNodeProvider` — R8 zachowuje nadpisane metody frameworka.
+
 ### Rozmiar APK/AAB i czas uruchomienia
 
 **Nie wpisuj rozmiarów szacunkowych.** Wartości dla bieżącego commita
 należy odczytać po udanym przebiegu `release-check.yml` z
 `build/release-metrics/rozmiary.md` (APK i AAB oddzielnie).
-Poniżej miejsce na wynik zweryfikowanego buildu R8:
+Ostatni zweryfikowany build R8 (próba wersji release, **3 listopada 2026 r.**,
+gałąź `integ/tura10` + poprawki nocy 6, lokalnie jak smoke CI, podpis debug CI,
+21 nagranych utworów w `assets/music`):
 
 | Pomiar | Wynik | Źródło |
 | --- | --- | --- |
-| APK release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
-| AAB release / R8 / podpis CI | n/d do zakończenia CI | `release-walidacja/rozmiary.md` |
+| APK release / R8 / podpis CI | **20 998 247 B** (20 506,1 KiB, ok. 20,0 MiB) | `scripts/release_size_report.py` |
+| AAB release / R8 / podpis CI | **21 614 758 B** (21 108,2 KiB, ok. 20,6 MiB) | `scripts/release_size_report.py` |
+| — w tym muzyka (21 × `.ogg`, bez kompresji w APK) | 19 927 585 B (ok. 19,0 MiB, 95 % APK) | `unzip -v` |
+| — w tym kod DEX (1 plik, 695 klas) | 1 702 560 B surowo, 827,8 KiB w ZIP | `unzip -v`, `verify_release_dex.py` |
 | Start debug / release (median z 5 prób) | n/d do pomiaru na telefonie | `adb shell am start -W` |
 
-`n/d` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms.
+`n/d` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms. Rozmiar pobrania z Google Play
+(podział AAB na APK dla urządzenia) nie był mierzony; przy tej paczce prawie całość to muzyka
+OGG, której Play nie skompresuje już bardziej.
 Raport `rozmiary.md` zawiera też zmianę względem commita bazowego PR,
 największe składniki ZIP i liczbę zmapowanych klas.
 Rozmiar paczki nie odpowiada rozmiarowi instalacji z Google Play.

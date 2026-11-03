@@ -13,11 +13,13 @@ REQUIRED_FIELDS = {
         "name", "medals", "levels", "stars", "normalStars", "campaignDifficulty",
         "bestWave", "lastRankedDaily", "tutorialDone", "lang", "playerId",
         "playerSecret", "globalRanking", "achievementCounters", "missionState",
+        # A156-10: numer ostatnio rozliczonej bitwy (nagroda dokladnie raz).
+        "lastSettledBattle",
     ),
     "com.centurywar.meta.ScoreEntry": ("name", "score", "day", "replay", "bannerId"),
     "com.centurywar.game.BattleSnapshot": ("INSTANCE", "VERSION"),
-    "com.centurywar.game.RestoredBattle": ("battle", "rankedDaily", "camX"),
-    "com.centurywar.game.SnapshotStore": ("file", "seq", "written"),
+    "com.centurywar.game.RestoredBattle": ("battle", "rankedDaily", "camX", "battleId"),
+    "com.centurywar.game.SnapshotStore": ("file", "seq", "written", "owner"),
     "com.centurywar.game.BattleConfig": (
         "mode", "seed", "aiPower", "startEra", "maxEra", "modifiers",
         "playerBonuses", "stageIndex", "tutorial", "aiPersonality", "variantsEnabled",
@@ -44,6 +46,8 @@ REQUIRED_FIELDS = {
 # calej klasy pilnujemy reprezentatywnych stalych przechowywanych w plikach.
 REQUIRED_ENUM_FIELDS = {
     "com.centurywar.meta.AchievementMetric": (),
+    # Zapisywany po nazwie w missionState profilu.
+    "com.centurywar.meta.MissionType": ("BATTLES", "KILLS", "MODIFIER_WINS", "REPLAYS_WATCHED"),
     "com.centurywar.game.AiPersonality": (),
     "com.centurywar.game.CampaignDifficulty": ("EASY", "NORMAL", "HARD"),
     "com.centurywar.game.DailyEvent": (),
