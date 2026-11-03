@@ -124,7 +124,8 @@ class ChallengeRules109Test {
             val expectedWeather = Weather.entries[
                 Rng(day * 65537L + 109L).nextInt(Weather.entries.size)]
             val event = if ((day - Daily.RELEASE_DAY) % 4L == 3L)
-                DailyEvent.entries[Rng(day * 131_071L + 907L).nextInt(DailyEvent.entries.size)]
+                (if (day < Daily.EVENTS_V2_DAY) DailyEvent.entries.take(6) else DailyEvent.entries)
+                    .let { pool -> pool[Rng(day * 131_071L + 907L).nextInt(pool.size)] }
             else null
             val actual = Daily.config(day, Bonuses())
             assertNull(Daily.ruleSet(day))

@@ -25,6 +25,8 @@ enum class AchievementMetric {
     CARD_NEW_50, WEEKLY_RULESETS, HARD_PERFECT, DAILY_EVENTS,
     MODIFIER_VICTORIES, DOCTRINE_VICTORIES,
     HARD_CAMPAIGN,
+    // Zlecenie 170: nowe metryki na końcu.
+    CARD_TOOLS_30,
 }
 
 data class AchievementDef(
@@ -42,6 +44,9 @@ data class AchievementDef(
  * Kolejność definicji jest stała, a ponowne rozliczenie tej samej bitwy jest ignorowane.
  */
 object Achievements {
+    /** Maska wszystkich wydarzeń dnia (9 po zleceniu 170). */
+    val DAILY_EVENT_MASK: Long = (1L shl com.centurywar.game.DailyEvent.entries.size) - 1L
+
     private fun def(
         id: String, metric: AchievementMetric, threshold: Long, reward: Int,
         category: AchievementCategory, hidden: Boolean = false,
@@ -112,6 +117,9 @@ object Achievements {
         def("weekly_rules_6", AchievementMetric.WEEKLY_RULESETS, 6, 480, AchievementCategory.ENDLESS),
         def("hard_perfect", AchievementMetric.HARD_PERFECT, 1, 175, AchievementCategory.CAMPAIGN),
         def("daily_events_6", AchievementMetric.DAILY_EVENTS, 6, 300, AchievementCategory.DAILY),
+        // Zlecenie 170: wszystkie dziewięć wydarzeń dnia i nowe karty Endless.
+        def("daily_events_9", AchievementMetric.DAILY_EVENTS, 9, 450, AchievementCategory.DAILY),
+        def("card_tools_30", AchievementMetric.CARD_TOOLS_30, 1, 160, AchievementCategory.ENDLESS),
         def("modifier_victories_10", AchievementMetric.MODIFIER_VICTORIES, 10, 230, AchievementCategory.TACTICS),
         def("doctrine_victories_13", AchievementMetric.DOCTRINE_VICTORIES,
             com.centurywar.game.Doctrine.values().size.toLong(), 400, AchievementCategory.TACTICS),
@@ -138,8 +146,11 @@ object Achievements {
         AchievementMetric.DOCTRINES -> Integer.bitCount(profile.achievementDoctrineMask).toLong()
         AchievementMetric.STEAM_VARIANTS, AchievementMetric.SILICON_VARIANTS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 3L).toLong()
-        AchievementMetric.WEEKLY_RULESETS, AchievementMetric.DAILY_EVENTS ->
+        AchievementMetric.WEEKLY_RULESETS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 63L).toLong()
+        AchievementMetric.DAILY_EVENTS ->
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
+                DAILY_EVENT_MASK).toLong()
         AchievementMetric.MODIFIER_VICTORIES ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
                 ((1L shl Modifier.values().size) - 1L)).toLong()
@@ -280,6 +291,10 @@ object Achievements {
                 if ((newCardMask and 4) != 0) markOnce(profile, AchievementMetric.CARD_GUARD_30)
                 if ((newCardMask and 8) != 0) markOnce(profile, AchievementMetric.CARD_RECALL_30)
             }
+            if (battle.wave >= 30 &&
+                (battle.player.cardStacks[com.centurywar.game.EndlessCard.QUARTERMASTER.ordinal] > 0 ||
+                    battle.player.cardStacks[com.centurywar.game.EndlessCard.MASTER_MASONS.ordinal] > 0))
+                markOnce(profile, AchievementMetric.CARD_TOOLS_30)
             if (battle.wave >= 50 && newCardMask != 0)
                 markOnce(profile, AchievementMetric.CARD_NEW_50)
             val rule = if (cfg.weekly >= 0L) Weekly.ruleSet(cfg.weekly) else null

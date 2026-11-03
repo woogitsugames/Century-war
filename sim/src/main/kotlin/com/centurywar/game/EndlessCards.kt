@@ -61,6 +61,10 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     FINAL_SPARK(EndlessRarity.RARE),
     FIRST_GUARD(EndlessRarity.RARE),
     BOSS_RECALL(EndlessRarity.LEGENDARY),
+
+    // Zlecenie 170: dopisane na końcu.
+    QUARTERMASTER(EndlessRarity.COMMON),
+    MASTER_MASONS(EndlessRarity.UNCOMMON),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
@@ -145,7 +149,7 @@ object EndlessCards {
             (side.slots == 0 || side.slots >= Defs.MAX_TURRET_SLOTS)) return false
         if ((card == EndlessCard.BURNING_TOWERS || card == EndlessCard.RAPID_TOWERS ||
                 card == EndlessCard.IRON_CURTAIN || card == EndlessCard.TOWER_NETWORK ||
-                card == EndlessCard.EMBER_FORGE) && side.slots == 0) return false
+                card == EndlessCard.EMBER_FORGE || card == EndlessCard.MASTER_MASONS) && side.slots == 0) return false
         if (card == EndlessCard.BANNER && !side.rallyUnlocked) return false
         if (card == EndlessCard.VIGILANCE && side.slots == 0 && (!fog || side.fogSight)) return false
         if (card == EndlessCard.CLONING && side.cloneChance >= 0.6f) return false

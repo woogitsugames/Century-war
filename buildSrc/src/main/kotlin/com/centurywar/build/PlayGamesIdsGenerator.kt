@@ -77,6 +77,8 @@ object PlayGamesIdsGenerator {
         "modifier_victories_10",
         "doctrine_victories_13",
         "campaign_hard",
+        "daily_events_9",
+        "card_tools_30",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +

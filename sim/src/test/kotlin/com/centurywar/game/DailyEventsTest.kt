@@ -15,7 +15,8 @@ class DailyEventsTest {
             val day = Daily.RELEASE_DAY + offset
             val cfg = Daily.config(day, Bonuses())
             val expected = if (offset >= 0L && offset % 4L == 3L)
-                DailyEvent.entries[Rng(day * 131_071L + 907L).nextInt(DailyEvent.entries.size)]
+                (if (day < Daily.EVENTS_V2_DAY) DailyEvent.entries.take(6) else DailyEvent.entries)
+                    .let { pool -> pool[Rng(day * 131_071L + 907L).nextInt(pool.size)] }
             else null
             assertEquals("Zdarzenie dnia $day", expected, cfg.dailyEvent)
             assertEquals(expected, Daily.config(day, Bonuses()).dailyEvent)

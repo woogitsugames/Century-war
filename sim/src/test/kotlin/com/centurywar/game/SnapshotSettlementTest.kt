@@ -23,16 +23,22 @@ class SnapshotSettlementTest {
             repeat(60 * 45) { b.step() }
         }
 
-    /** Zrzut w dawnym formacie 16: ta sama treść bez identyfikatora na końcu. */
-    private fun legacyV16(b: Battle): ByteArray {
-        val v17 = BattleSnapshot.encode(b, rankedDaily = false, camX = 12f, battleId = 99L)
-        val payload = v17.copyOfRange(16, v17.size - 8)
-        val crc = CRC32().apply { update(payload) }.value.toInt()
-        val out = ByteArrayOutputStream()
-        DataOutputStream(out).apply {
-            writeInt(0x43575342); writeInt(16); writeInt(payload.size); writeInt(crc); write(payload); flush()
-        }
-        return out.toByteArray()
+    /** Zrzut w dawnym formacie 16 (bez identyfikatora i bez kart Endless zlecenia 170). */
+    private fun legacyV16(b: Battle): ByteArray =
+        BattleSnapshot.encode(b, rankedDaily = false, camX = 12f, battleId = 99L, formatVersion = 16)
+
+    /** Zrzut zapisany grą sprzed zlecenia 170 (v17: identyfikator, krótsza lista kart). */
+    @Test
+    fun legacyV17SnapshotWithoutNewCardsResumes() {
+        val a = battle()
+        val legacy = BattleSnapshot.encode(a, rankedDaily = false, camX = 12f, battleId = 55L, formatVersion = 17)
+        val restored = BattleSnapshot.decode(legacy)
+        assertNotNull("zrzut v17 musi się wczytać po aktualizacji", restored)
+        assertEquals(55L, restored!!.battleId)
+        val b = restored.battle
+        repeat(600) { a.step(); b.step() }
+        assertEquals(a.player.baseHp, b.player.baseHp, 0f)
+        assertEquals(a.enemy.baseHp, b.enemy.baseHp, 0f)
     }
 
     @Test
