@@ -235,6 +235,26 @@ object Campaign {
         weather = stage.weather,
     )
 
+    /**
+     * Dzień 1: etapy 2–7 (indeksy 1–6) kończą się wcześniej, bo presja oblężnicza startuje
+     * po 4 minutach zamiast 8 i rośnie o 80% na minutę zamiast 20%. Mediana bitwy spada
+     * z ok. 13,5 do ok. 7,7 min, a nowy gracz dochodzi do dowódcy (etap 8) w ok. godzinę.
+     * HP baz nic tu nie daje: bitwy tych etapów rozstrzyga blokada (docs/BALANCE.md).
+     * Etap 1 (samouczek), etapy ≥ 8 i pozostałe tryby bez zmian; nie zależy od poziomu.
+     */
+    const val EARLY_SIEGE_START = 240f
+    const val EARLY_SIEGE_RAMP = 0.8f
+    val EARLY_SIEGE_STAGES = 1..6
+
+    private fun earlySiege(cfg: BattleConfig) =
+        cfg.mode == Mode.CAMPAIGN && !cfg.tutorial && cfg.stageIndex in EARLY_SIEGE_STAGES
+
+    fun siegeStart(cfg: BattleConfig): Float =
+        if (earlySiege(cfg)) EARLY_SIEGE_START else Battle.SIEGE_START
+
+    fun siegeRamp(cfg: BattleConfig): Float =
+        if (earlySiege(cfg)) EARLY_SIEGE_RAMP else Battle.SIEGE_RAMP
+
     /** Odczyt poziomu z konfiguracji przechowanej również w snapshotach i powtórkach. */
     fun difficulty(cfg: BattleConfig): CampaignDifficulty? {
         if (cfg.mode != Mode.CAMPAIGN || cfg.stageIndex !in stages.indices) return null

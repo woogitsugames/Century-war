@@ -47,7 +47,19 @@ class BalanceReport {
         val avgEnemyEra: Double,
         val playerCommanders: Int = 0,
         val enemyCommanders: Int = 0,
+        val meanWinMinutes: Double = Double.NaN,
+        val meanLossMinutes: Double = Double.NaN,
     ) {
+        /**
+         * Oczekiwany czas przejścia etapu przy powtórkach do skutku (rozkład geometryczny):
+         * średnia wygrana + (1 − p)/p średnich porażek (Dzień 1, czas do dowódcy).
+         */
+        val expectedMinutes: Double get() {
+            val p = wins.toDouble() / count
+            if (p <= 0.0) return Double.POSITIVE_INFINITY
+            val loss = if (meanLossMinutes.isNaN()) 0.0 else meanLossMinutes
+            return meanWinMinutes + (1.0 - p) / p * loss
+        }
         val winPct get() = wins * 100.0 / count
         val timeoutPct get() = timeouts * 100.0 / count
         val avgEra get() = (avgPlayerEra + avgEnemyEra) / 2.0
@@ -193,6 +205,8 @@ class BalanceReport {
             avgEnemyEra = results.sumOf { it.enemyEra.toDouble() } / runs,
             playerCommanders = results.count { it.playerCommander },
             enemyCommanders = results.count { it.enemyCommander },
+            meanWinMinutes = results.filter { it.winner == 0 }.map { it.minutes }.average(),
+            meanLossMinutes = results.filter { it.winner != 0 }.map { it.minutes }.average(),
         )
     }
 
@@ -316,6 +330,8 @@ class BalanceReport {
                     " commander=${System.getenv("BALANCE_COMMANDER") ?: "auto"}" +
                     " win=${fmt(result.winPct)}% median=${fmt(result.medianMinutes)}m" +
                     " timeout=${fmt(result.timeoutPct)}% era=${fmt(result.avgEra)}" +
+                    " winMean=${fmt(result.meanWinMinutes)}m lossMean=${fmt(result.meanLossMinutes)}m" +
+                    " expected=${fmt(result.expectedMinutes)}m" +
                     " cmd=${result.playerCommanders}/${result.enemyCommanders}")
             }
         }

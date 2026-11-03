@@ -1512,3 +1512,5 @@ Zmienione dni w pierwszych 3 latach od `EVENTS_V2_DAY` (21 z 273 dni z wydarzeni
 | 22228 | +1075 | NO_TURRETS, ARMORED_FOE | SIEGE_WORKS | MIRROR_ARMY |
 
 Wszystkie zmienione dni są po premierze (`RELEASE_DAY` to jeszcze data zastępcza), więc nikt ich nie grał. Konfiguracja dnia to dane wejściowe powtórki (serwer odtwarza ją z numeru dnia i porównuje wydarzenie), więc klient i serwer muszą mieć ten sam algorytm — podbicie `SimVersion.PROTOCOL` zostawiam koordynatorowi (zob. raport nocy 4).
+
+- 2026-11-03 — regeneracja złotych powtórek: Dzien 1: krotsze etapy 2-7.
