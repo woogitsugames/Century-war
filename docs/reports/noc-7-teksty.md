@@ -84,3 +84,7 @@ Te teksty sprawdziłem i zostawiłem bez zmian:
 
 `battle84_kept` w en/uk („%d kills”, „%d убивств”) nie odmienia się przez liczbę. Klucz nie ma form `|`,
 a zmiana formatu wychodzi poza zakres tego przeglądu.
+
+Wzorce `regression100` ustawień (`phone720_reg100_settings`, `foldOpen_reg100_settings`) zaktualizowałem po zmianie podpisu pl (`UPDATES.md`).
+
+Testy: `LTest`, `NightUxTest` i `Content170ScreenshotTest` (10 języków), `FirstHourJourneyTest` (de, uk, pt, fr, tr) i pełne `:app:testDebugUnitTest :sim:test :server:test` przechodzą (966 testów, 0 błędów).
