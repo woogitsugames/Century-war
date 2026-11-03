@@ -1,8 +1,12 @@
 package com.centurywar.engine
 
 import android.media.AudioManager
+import android.os.Looper
+import java.time.Duration
 import org.robolectric.RuntimeEnvironment
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
@@ -100,6 +104,80 @@ class MusicAudioFocusTest {
             shadowOf(am).setIsMusicActive(false)
             m.resume()
             assertNotNull(shadowOf(am).lastAudioFocusRequest)
+        } finally { m.release() }
+    }
+
+    // ---- R6-02 M6: muzyka gry wraca, gdy cudza muzyka ucichnie
+
+    private fun idle(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
+
+    @Test fun gameMusicReturnsWithinSixSecondsAfterOtherMusicStops() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            shadowOf(am).setIsMusicActive(true)
+            m.resume()
+            assertNull("cudza muzyka przy wejściu: cisza bez fokusu", shadowOf(am).lastAudioFocusRequest)
+            assertTrue(m.isRecheckScheduled)
+            // Cudza muzyka gra dalej: gra jej nie przerywa.
+            idle(20_000)
+            assertNull(shadowOf(am).lastAudioFocusRequest)
+            // Gracz zatrzymał Spotify w trakcie gry.
+            shadowOf(am).setIsMusicActive(false)
+            idle(6_000)
+            assertNotNull("muzyka gry wraca w ≤ 6 s", shadowOf(am).lastAudioFocusRequest)
+            assertFalse("po powrocie bez timera", m.isRecheckScheduled)
+        } finally { m.release() }
+    }
+
+    @Test fun fadingOtherAppDoesNotSilenceGameForWholeSession() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            shadowOf(am).setIsMusicActive(true)
+            m.resume()
+            // Wygaszanie odtwarzacza na pauzie kończy się zaraz po wejściu.
+            idle(200)
+            shadowOf(am).setIsMusicActive(false)
+            idle(Music.RECHECK_FIRST_MS + Music.RECHECK_MS + 100)
+            assertNotNull(shadowOf(am).lastAudioFocusRequest)
+        } finally { m.release() }
+    }
+
+    @Test fun pauseAndReleaseLeaveNoRunningTimer() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            shadowOf(am).setIsMusicActive(true)
+            m.resume()
+            assertTrue(m.isRecheckScheduled)
+            m.pause()
+            assertFalse(m.isRecheckScheduled)
+            shadowOf(am).setIsMusicActive(false)
+            idle(20_000)
+            assertNull("w tle timer nie wznawia muzyki", shadowOf(am).lastAudioFocusRequest)
+            assertTrue(shadowOf(Looper.getMainLooper()).isIdle)
+            shadowOf(am).setIsMusicActive(true)
+            m.resume()
+            assertTrue(m.isRecheckScheduled)
+        } finally { m.release() }
+        assertFalse(m.isRecheckScheduled)
+        idle(20_000)
+        assertNull(shadowOf(am).lastAudioFocusRequest)
+    }
+
+    @Test fun ownMusicIsNotSilencedByCheck() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            m.resume()
+            val req = shadowOf(am).lastAudioFocusRequest
+            assertNotNull(req)
+            assertFalse("gra trzyma fokus: bez odczytów", m.isRecheckScheduled)
+            // isMusicActive liczy też muzykę tej gry.
+            shadowOf(am).setIsMusicActive(true)
+            idle(10_000)
+            assertNull(shadowOf(am).lastAbandonedAudioFocusRequest)
         } finally { m.release() }
     }
 }
