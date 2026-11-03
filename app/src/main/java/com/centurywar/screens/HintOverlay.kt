@@ -320,6 +320,15 @@ class HintOverlay(
         return sb.toString()
     }
 
+    /**
+     * Noc 5: dopóki trwa nakładka samouczka, pierwszy dymek czeka jeszcze [seconds] s symulacji
+     * po jej zakończeniu (wcześniej dymek stopnia wieży wyskakiwał sekundę po „Do boju!”).
+     */
+    fun holdOff(seconds: Float) {
+        val b = battle ?: return
+        lastShownAt = max(lastShownAt, b.time - GAP + seconds)
+    }
+
     /** Dotknięcie wskazanej akcji lub innego aktywnego przycisku usuwa dymek. */
     fun onAction() { if (activeId >= 0) dismiss() }
 

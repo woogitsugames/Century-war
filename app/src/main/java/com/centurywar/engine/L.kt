@@ -167,8 +167,15 @@ object L {
         putAll(part164())
         putAll(part170())
         putAll(part172())
+        putAll(part173())
         }
     }
+
+    /** Noc 5 („Pierwsza godzina”): opisy TalkBack strzałek epok w potyczce. */
+    private fun part173(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "fh173_era_earlier" to t("wcześniejsza epoka", "earlier era", "frühere Epoche", "era anterior", "ère précédente", "era precedente", "era anterior", "попередня епоха", "eerder tijdperk", "önceki çağ"),
+        "fh173_era_later" to t("późniejsza epoka", "later era", "spätere Epoche", "era posterior", "ère suivante", "era successiva", "era seguinte", "наступна епоха", "later tijdperk", "sonraki çağ"),
+    )
 
     /** Noc 4: podpisy dwóch opcji wstrząsów (Dostępność ma pierwszeństwo przed Ustawieniami). */
     private fun part172(): Array<Pair<String, Array<out String>>> = arrayOf(

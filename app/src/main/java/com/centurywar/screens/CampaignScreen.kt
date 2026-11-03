@@ -198,7 +198,9 @@ class CampaignScreen(g: Game) : Screen(g) {
             } else {
                 previousScroll.coerceIn(0f, maxScroll)
             }
-            autoScroll = false
+            // Noc 5: drugi layout() po zmianie ekranu (Game.frame) przy tych samych wymiarach
+            // przerywał wjazd do następnego etapu i węzeł etapu 8 zostawał za krawędzią.
+            if (previousMax != maxScroll) autoScroll = false
         }
         velocity = 0f
         moving = false
