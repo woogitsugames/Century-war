@@ -1,3 +1,8 @@
+# STAN 3.11.2026 ok. 02:40 UTC (noc)
+- main = c91947ba: noc 1 (A156-10 rozliczenie), noc 2 (muzyka), noc 3 (UX Fold), noc 4 (wydarzenia dnia vs modyfikatory), noc 5 (pierwsza godzina), fala 7 GPT 160–165, 163, nowa zawartość 170 (druga sesja), PROTOCOL 0.8.4, snapshot v18.
+- W toku: noc 6 „Próba wersji release” (`claude/noc-6-release`). GPT 155 (tłumaczenia) nie przyszło.
+- **Decyzje rano dla właściciela (klikalne):** (1) długość wczesnych etapów 12–14 min (dowódca po ~1,5 h); (2) 5 dymków w pierwszej bitwie po samouczku; (3) 5 pełnoekranowych zapowiedzi epok w pierwszej potyczce; (4) medale z osiągnięć niewidoczne na wynikach; (5) „Co nowego” głęboko w menu; (6) wyzwanie dnia trudne bez badań; (7) PROTOCOL 0.8.5 przed pierwszymi testerami z serwerem; (8) odsłuch muzyki (pętle era5/era0 calm, głośność menu); (9) „Presja oblężnicza” na wynikach Folda nachodzi na HP (compactTop — zgoda na zmianę?).
+
 # PLAN NOCNY (2/3.11.2026, decyzja właściciela)
 Jeden agent opus naraz, ciągły rozwój; koordynator budzony co 30 min (zadania „nocna praca koordynatora” :07 i :37). Kolejność:
 1. **Reszta audytu 156:** A156-10 idempotentne rozliczenie nagród po bitwie (trwały identyfikator rozliczenia, kolejność zapis profilu → usunięcie snapshotu, testy przerwania), ponowne krytyczne reprodukcje audytu (A156-01/02/04/05/06/07/08/09), lista „kandydat do testów zamkniętych” w docs/RELEASE.md. Gałąź `claude/noc-1-audyt`.
