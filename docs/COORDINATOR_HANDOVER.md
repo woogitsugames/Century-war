@@ -1,3 +1,8 @@
+# SESJA 3.11.2026 po południu (nowy koordynator)
+- **Tryb (decyzja właściciela 3.11 ok. 15:00 UTC): do 2 agentów opus naraz, ciągle coś zlecać; jeden może być od ciągłego researchu.** Budzenie koordynatora: zaplanowane zadania :07 i :37 (trig_019iEZV9uBTiJzAhkVqdaR1m, trig_012Lu7xBxbPkWWLNivKj4zSE).
+- W toku: `claude/dzien-4-przeglad` (zegar pod minimapą na zewnętrznym Foldzie przy presji + przegląd po dniach 1–3, raport `docs/reports/day4-review.md`), `claude/research-1` (ciągły research: `docs/research/R1-backlog.md` — TOP 10 do zlecenia; wymagania Play 2026, retencja, dostępność, wydajność, zawartość).
+- Następne części tekstów: part177 zajęte przez dzień 4; kolejna wolna 178.
+
 # PRZEKAZANIE 3.11.2026 ok. 13:50 UTC (koniec limitu tygodniowego starej sesji)
 
 **Stan:** `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` (wszystko scalone, pełne testy zielone, ok. 5,5 min od zera). PROTOCOL **0.8.5**, `BattleSnapshot.VERSION` **19**, `Replay.VERSION` 7, 74 osiągnięcia / 79 ID Play Games (REPLACE_ME), muzyka nagrana 21 utworów w `app/src/main/assets/music/` (oryginały FLAC na gałęzi `music-src` — nie usuwać).
