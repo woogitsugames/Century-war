@@ -240,4 +240,49 @@ class EndlessBalanceReportTest {
                 "MEAN=${waves.average()} WAVE20=${waves.count { it >= 20 }}/8 WAVES=${waves.joinToString(",")}")
         }
     }
+
+    /**
+     * Zlecenie 184: ten sam seed z Zakładem branym przy pierwszej ofercie (fala 5) i bez niego.
+     * Mierzy, o ile Zakład zmienia średni wynik i falę (próg strojenia: +10% wyniku).
+     */
+    @Test fun wagerScoreEffect184() {
+        val bonus = veteranBonuses()
+        var scoreWith = 0L
+        var scoreWithout = 0L
+        var waveWith = 0
+        var waveWithout = 0
+        var survivedWith = 0
+        var survivedWithout = 0
+        val seeds = 1001L..1100L
+        for (seed in seeds) {
+            for (wager in listOf(false, true)) {
+                val b = Battle(BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonus))
+                b.playerAi = Ai(b, 0)
+                var steps = 0
+                var placed = false
+                while (!b.over && b.wave < 60 && steps < 90_000) {
+                    b.step()
+                    b.fx.count = 0
+                    steps++
+                    if (wager && !placed && b.wave >= 5) {
+                        b.applyEndlessCard(b.player, com.centurywar.game.EndlessCard.WAGER)
+                        placed = true
+                    }
+                }
+                assertTrue(steps < 90_000, "Timeout pomiaru Zakładu: seed=$seed")
+                if (wager) {
+                    scoreWith += b.score(); waveWith += b.wave
+                    if (!b.over) survivedWith++
+                } else {
+                    scoreWithout += b.score(); waveWithout += b.wave
+                    if (!b.over) survivedWithout++
+                }
+            }
+        }
+        val n = (seeds.last - seeds.first + 1).toDouble()
+        println("WAGER184 N=${n.toInt()} SCORE_WITH=${scoreWith / n} SCORE_WITHOUT=${scoreWithout / n} " +
+            "GAIN=${"%.1f".format(java.util.Locale.US, (scoreWith.toDouble() / scoreWithout - 1.0) * 100.0)}% " +
+            "WAVE_WITH=${waveWith / n} WAVE_WITHOUT=${waveWithout / n} " +
+            "SURVIVE60_WITH=$survivedWith SURVIVE60_WITHOUT=$survivedWithout")
+    }
 }

@@ -306,8 +306,9 @@ object ChallengeRuleSets {
         // Zlecenie 184: dopisane na końcu.
         RuleSet("week184_night", "week184_night_d", Modifier.FOG_OF_WAR, Modifier.ARMORED_FOE,
             EndlessCard.VIGILANCE),
+        // Strojenie D6: z Grabieżą mediana fali 41,5 (inne zestawy 8,5–12,5), z Marszem 12,5.
         RuleSet("week184_mercs", "week184_mercs_d", Modifier.MERCENARIES, Modifier.DOUBLE_INCOME,
-            EndlessCard.PLUNDER),
+            EndlessCard.MARCH),
         RuleSet("week184_bastion", "week184_bastion_d", Modifier.EXPENSIVE_TOWERS,
             Modifier.FRAGILE_BASES, EndlessCard.FRONTLINE_PLATE),
     )

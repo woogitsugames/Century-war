@@ -67,9 +67,9 @@ class LTest {
             assertEquals(k, L.CODES.size, entry!!.size)
             for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
         }
-        // Opis Zakładu mówi wprost o ryzyku we wszystkich językach (liczby 10% i 25%).
+        // Opis Zakładu mówi wprost o ryzyku we wszystkich językach (liczby 10% i 15%).
         for (text in L.raw("ec_wager_d")!!) {
-            assertTrue(text, text.contains("10") && text.contains("25"))
+            assertTrue(text, text.contains("10") && text.contains("15"))
         }
     }
 

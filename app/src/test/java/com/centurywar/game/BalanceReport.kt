@@ -532,29 +532,51 @@ class BalanceReport {
     @Test
     fun mirrorReport() {
         val runs = (System.getenv("BALANCE_MIRROR_RUNS")?.toIntOrNull() ?: 20).coerceAtLeast(1)
+        // Zlecenie 184: wymuszone wydarzenie dnia (symetryczne) i zamiana osobowości stron.
+        val event = System.getenv("BALANCE_DAILY_EVENT")?.takeIf { it.isNotBlank() }
+            ?.let { name -> DailyEvent.valueOf(name.trim()) }
         val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
         dir.mkdirs()
-        val out = StringBuilder("# Lustrzane bitwy AI vs AI\n\n")
-            .append("| Epoka startowa | N | Timeouty | Mediana [min] |\n|---:|---:|---:|---:|\n")
+        val out = StringBuilder("# Lustrzane bitwy AI vs AI${event?.let { " ($it)" } ?: ""}\n\n")
+            .append("| Epoka startowa | N | Timeouty | Mediana [min] | Wygrane strony 0 |\n|---:|---:|---:|---:|---:|\n")
+        var allWins = 0
+        var allBattles = 0
+        val allTimes = ArrayList<Double>()
         for (era in listOf(0, Defs.ERA_COUNT / 2, Defs.ERA_COUNT - 1)) {
-            val results = (0 until runs).map { trial ->
+            val results = (0 until runs).flatMap { trial ->
                 val config = BattleConfig(Mode.SKIRMISH, 1_000_003L + era * 10_007L + trial * 997L,
-                    1f, era, era, playerBonuses = Bonuses())
-                val b = Battle(config)
-                b.playerAi = Ai(b, 0)
-                val maxSteps = (30f * 60f / Battle.STEP).toInt()
-                var step = 0
-                while (!b.over && step < maxSteps) { b.step(); b.fx.count = 0; step++ }
-                Pair(!b.over, b.time.toDouble() / 60.0)
+                    1f, era, era, playerBonuses = Bonuses(), dailyEvent = event)
+                fun play(cfg: BattleConfig, playerPersonality: AiPersonality?): Triple<Boolean, Double, Battle> {
+                    val b = Battle(cfg)
+                    b.playerAi = if (playerPersonality == null) Ai(b, 0) else Ai(b, 0, playerPersonality)
+                    val maxSteps = (30f * 60f / Battle.STEP).toInt()
+                    var step = 0
+                    while (!b.over && step < maxSteps) { b.step(); b.fx.count = 0; step++ }
+                    return Triple(!b.over, b.time.toDouble() / 60.0, b)
+                }
+                val first = play(config, null)
+                val p0 = first.third.playerAi!!.personality
+                val p1 = first.third.ai!!.personality
+                // Ta sama bitwa z zamienionymi osobowościami stron.
+                val swapped = play(BattleConfig(config.mode, config.seed, config.aiPower, era, era,
+                    playerBonuses = Bonuses(), aiPersonality = p0, dailyEvent = event), p1)
+                listOf(first, swapped).map { Triple(it.first, it.second, it.third.winner == 0) }
             }
+            val n = results.size
             val t = results.map { it.second }.sorted()
-            val median = if (runs % 2 == 1) t[runs / 2]
-                else (t[runs / 2 - 1] + t[runs / 2]) / 2.0
-            out.append("| $era | $runs | ${results.count { it.first }} | ${fmt(median)} |\n")
-            println("MIRROR era=$era timeouts=${results.count { it.first }}/$runs median=${fmt(median)}m")
+            val median = if (n % 2 == 1) t[n / 2] else (t[n / 2 - 1] + t[n / 2]) / 2.0
+            val wins = results.count { it.third }
+            allWins += wins
+            allBattles += n
+            allTimes += results.map { it.second }
+            out.append("| $era | $n | ${results.count { it.first }} | ${fmt(median)} | $wins/$n |\n")
+            println("MIRROR era=$era event=${event ?: "-"} timeouts=${results.count { it.first }}/$n " +
+                "median=${fmt(median)}m side0wins=$wins/$n")
             // Każda lustrzana bitwa musi skończyć się przed limitem 30 minut.
             assertEquals("Pat w epoce $era", 0, results.count { it.first })
         }
+        println("MIRROR_TOTAL event=${event ?: "-"} side0wins=$allWins/$allBattles " +
+            "meanMinutes=${fmt(allTimes.average())}")
         File(dir, "mirror.md").writeText(out.toString())
     }
 }

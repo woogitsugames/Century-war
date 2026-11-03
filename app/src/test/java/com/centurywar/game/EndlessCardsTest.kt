@@ -58,7 +58,7 @@ class EndlessCardsTest {
         }
         assertEquals("Skarbiec nie zmienia dochodu bez Linii zaopatrzenia", income, p.incomeMul, 0f)
         assertTrue(!EndlessCards.canOffer(EndlessCard.WAGER, p))
-        assertEquals(b.wave * 312L, b.score() - (p.kills * 12L + (b.time / 2f).toLong() +
+        assertEquals(b.wave * com.centurywar.game.EndlessCards.WAGER_WAVE_SCORE, b.score() - (p.kills * 12L + (b.time / 2f).toLong() +
             b.bossesDefeated * 1500L))
     }
 

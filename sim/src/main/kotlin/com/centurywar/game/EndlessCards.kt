@@ -113,9 +113,12 @@ object EndlessCards {
     /** Skarbiec wojenny: odsetek złota na początku fali i limit (× skala kosztów epoki). */
     const val WAR_CHEST_INTEREST = 0.04f
     const val WAR_CHEST_CAP = 40f
-    /** Zakład: HP jednostek kolejnych fal wroga i punkty za falę (zamiast 250). */
+    /**
+     * Zakład: HP jednostek kolejnych fal wroga i punkty za falę (zamiast 250).
+     * Strojenie D6: ×1,25 (312) dawało +11,0% średniego wyniku, więc ×1,15 (docs/BALANCE.md).
+     */
     const val WAGER_ENEMY_HP_MUL = 1.10f
-    const val WAGER_WAVE_SCORE = 312L
+    const val WAGER_WAVE_SCORE = 287L
 
     // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
     private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)

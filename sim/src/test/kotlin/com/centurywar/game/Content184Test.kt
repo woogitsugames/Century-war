@@ -140,11 +140,11 @@ class Content184Test {
         assertEquals(plain.enemy.hpMul * 1.1f, bet.enemy.hpMul, 1e-4f)
         assertEquals(plain.wave, bet.wave)
         val kills = bet.player.kills * 12L + (bet.time / 2f).toLong() + bet.bossesDefeated * 1500L
-        assertEquals(bet.wave * 312L + kills, bet.score())
+        assertEquals(bet.wave * 287L + kills, bet.score())
         assertEquals(bet.wave * 250L, plain.score() - (plain.player.kills * 12L +
             (plain.time / 2f).toLong() + plain.bossesDefeated * 1500L))
-        // Premia ×1,25 (312/250 = 1,248).
-        assertEquals(1.25, EndlessCards.WAGER_WAVE_SCORE / 250.0, 0.003)
+        // Premia ×1,15 po strojeniu D6 (287/250 = 1,148).
+        assertEquals(1.15, EndlessCards.WAGER_WAVE_SCORE / 250.0, 0.003)
     }
 
     @Test fun thousandOffersInVariousStatesNeverEmpty() {
