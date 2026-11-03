@@ -81,6 +81,17 @@ internal class BattleTopBar(private val owner: BattleScreen) {
         }
     }
 
+    /** Zegar bitwy (mm:ss) wyśrodkowany pod minimapą. */
+    private fun drawClockUnderMini(c: Canvas) {
+        with(owner) {
+            val sec = battle.time.toInt()
+            if (sec != timeSec) { timeSec = sec; clockDigits.setClock(sec) }
+            ui.textO(c, clockDigits.chars, clockDigits.length, mini.centerX(), mini.bottom + 14 * dp,
+                ui.fit(clockDigits.chars, clockDigits.length, 11f, mini.width() * 0.40f, 8f),
+                Ui.TEXT, Paint.Align.CENTER, 1.8f)
+        }
+    }
+
     /** Czy napis pod minimapą zmalałby poniżej [MIN_MINI_LABEL_SP] (tylko dwurzędowy pasek). */
     private fun tooSmallUnderMini(size: Float): Boolean =
         owner.compactTop && size * owner.ui.textScale < MIN_MINI_LABEL_SP - 0.01f
@@ -315,16 +326,13 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                 val k = kotlin.math.round(sp * 10f).toInt()
                 if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
                 val siegeSize = ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f)
-                if (tooSmallUnderMini(siegeSize)) drawSideLabel(c, siegeText, Ui.BAD)
-                else ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize,
+                if (tooSmallUnderMini(siegeSize)) {
+                    // Dzień 4 (zgoda właściciela): presja w bocznym polu, pod minimapą wraca zegar.
+                    drawSideLabel(c, siegeText, Ui.BAD)
+                    drawClockUnderMini(c)
+                } else ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize,
                     Ui.BAD, Paint.Align.CENTER, 1.8f)
-            } else {
-                val sec = battle.time.toInt()
-                if (sec != timeSec) { timeSec = sec; clockDigits.setClock(sec) }
-                ui.textO(c, clockDigits.chars, clockDigits.length, mini.centerX(), mini.bottom + 14 * dp,
-                    ui.fit(clockDigits.chars, clockDigits.length, 11f, mini.width() * 0.40f, 8f),
-                    Ui.TEXT, Paint.Align.CENTER, 1.8f)
-            }
+            } else drawClockUnderMini(c)
         }
         if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
             val boss = battle.currentBoss()

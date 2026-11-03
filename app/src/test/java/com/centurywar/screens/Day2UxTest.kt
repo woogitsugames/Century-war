@@ -392,4 +392,56 @@ class Day2UxTest {
             L.lang = oldLang
         }
     }
+
+    /**
+     * Dzień 4 (zgoda właściciela): na zewnętrznym Foldzie, gdy presja trafia do bocznego pola,
+     * pod minimapą wraca zegar bitwy — co najmniej 10 sp, bez kolizji, też przy większym tekście.
+     * Zrzut podglądu: build/screenshots/day2_day4_foldOuter_siege_clock_*.png.
+     */
+    @Test
+    fun foldOuterSiegeKeepsClockUnderMini() {
+        val oldLang = L.lang
+        val fold = resultDevices.getValue("foldOuter")
+        try {
+            for (lang in L.CODES) for (left in listOf(false, true)) for (time in floatArrayOf(300f, 754f)) {
+                val tag = "$lang${if (left) "_left" else ""}_${time.toInt()}"
+                val save = !left && time == 300f && lang in setOf("pl", "en", "de")
+                val (g, bs, c) = topBarTexts(fold, lang, endless = false, wave = 0, leftHanded = left,
+                    name = if (save) "day4_foldOuter_siege_clock_$lang" else null)
+                val dp = g.ui.dp
+                assertTrue("$tag: presja", bs.battle.siegePressure() > 1f)
+                assertFalse("$tag: presja w bocznym polu", bs.topBarView.sideLabelDrawn.isEmpty)
+                val sec = time.toInt()
+                val clockText = "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}"
+                val clock = c.texts.single { it.s == clockText }
+                assertTrue("$tag: zegar ${clock.sizePx / dp} sp", clock.sizePx / dp >= 10f - 0.05f)
+                assertTrue("$tag: zegar pod minimapą", clock.r.top >= bs.mini.bottom - 1 * dp &&
+                    clock.r.bottom <= bs.topBar.bottom)
+                assertEquals("$tag: zegar na środku minimapy", bs.mini.centerX(), clock.r.centerX(), 2 * dp)
+                for (t in c.texts.filter { it.r.top < bs.topBar.bottom && it !== clock })
+                    assertFalse("$tag: zegar nachodzi na '${t.s}'", overlap(clock.r, t.r, dp))
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
+
+    /** Pozostałe ekrany: przy presji pod minimapą nadal napis presji (bez zegara). */
+    @Test
+    fun otherDevicesShowSiegeInsteadOfClock() {
+        val oldLang = L.lang
+        try {
+            for ((tag, d) in resultDevices) {
+                if (tag == "foldOuter") continue
+                for (lang in listOf("pl", "en", "de")) {
+                    val (_, bs, c) = topBarTexts(d, lang, endless = false, wave = 0, leftHanded = false, name = null)
+                    assertTrue(bs.topBarView.sideLabelDrawn.isEmpty)
+                    assertTrue("$tag/$lang: zegar", c.texts.none { it.s == "5:00" })
+                    assertTrue("$tag/$lang: presja", c.texts.any { it.s == L.f("siege_pressure", bs.battle.siegePressure()) })
+                }
+            }
+        } finally {
+            L.lang = oldLang
+        }
+    }
 }
