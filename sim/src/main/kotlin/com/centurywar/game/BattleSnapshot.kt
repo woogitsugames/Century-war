@@ -30,7 +30,9 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 18
+    const val VERSION = 19
+    /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
+    private const val FIRST_WITH_SIEGE_DAMAGE = 19
     /** Wersje 16–17 zapisywały karty Endless sprzed zlecenia 170 (bez dwóch ostatnich kart). */
     private const val CARDS_BEFORE_170 = 2
     /**
@@ -215,6 +217,7 @@ object BattleSnapshot {
         o.writeFloat(s.rallyArmorMul); o.writeFloat(s.supplyUntil)
         o.writeFloat(s.heavyBaseDmgMul); o.writeFloat(s.turretRangeMul); o.writeBoolean(s.fogSight)
         o.writeFloat(s.commanderCd)
+        if (formatVersion >= FIRST_WITH_SIEGE_DAMAGE) o.writeFloat(s.siegeDamageTaken)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -239,7 +242,7 @@ object BattleSnapshot {
             val h = DataInputStream(ByteArrayInputStream(bytes))
             if (h.readInt() != MAGIC) return null
             val version = h.readInt()
-            if (version != VERSION && version != 17 && version != LEGACY_VERSION_WITHOUT_ID) return null
+            if (version != VERSION && version != 18 && version != 17 && version != LEGACY_VERSION_WITHOUT_ID) return null
             val len = h.readInt()
             val crc = h.readInt()
             if (len != bytes.size - 16) return null
@@ -424,6 +427,9 @@ object BattleSnapshot {
         require(s.heavyBaseDmgMul in 1f..10f && s.turretRangeMul in 1f..10f)
         require(s.turretsBuilt >= 0 && s.barragesUsed >= 0 && s.ralliesUsed >= 0)
         require(s.elitesLost >= 0 && s.erasAdvanced >= 0 && s.baseDamageTaken >= 0f)
+        s.siegeDamageTaken = if (version >= FIRST_WITH_SIEGE_DAMAGE) i.readFloat().also {
+            require(it.isFinite() && it >= 0f)
+        } else 0f
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */

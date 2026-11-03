@@ -27,7 +27,7 @@ class Doctrine69SnapshotTest {
         val restored = BattleSnapshot.decode(bytes)
         assertNotNull(restored)
         val copy = restored!!.battle
-        assertEquals(18, BattleSnapshot.VERSION)
+        assertEquals(19, BattleSnapshot.VERSION)
         assertEquals(original.player.rallyArmorMul, copy.player.rallyArmorMul)
         assertEquals(original.player.supplyUntil, copy.player.supplyUntil)
         assertEquals(original.player.heavyBaseDmgMul, copy.player.heavyBaseDmgMul)

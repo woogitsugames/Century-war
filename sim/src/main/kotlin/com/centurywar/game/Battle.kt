@@ -171,6 +171,12 @@ class Side(val index: Int) {
     var ralliesUsed = 0
     var erasAdvanced = 0
     var baseDamageTaken = 0f
+    /**
+     * Dzień 2: HP bazy utracone przez presję oblężniczą szybszą niż standardowa (etapy 2–7:
+     * +80%/min zamiast +20%/min), z blokady ([Battle.SIEGE_ATTRITION]) i obrażeń baz.
+     * Wyłącznie do gwiazdek ([Battle.stars]); nie wpływa na przebieg bitwy.
+     */
+    var siegeDamageTaken = 0f
 
     fun unit(role: Role): UnitDef = Defs.unit(era, role, eraVariant)
     fun turretCost(era: Int = this.era, variant: Int = if (era == this.era) eraVariant else -1): Int =
@@ -231,6 +237,12 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         const val SIEGE_START = 480f
         /** Przyrost presji oblężniczej na minutę po starcie (0,2 = +20%/min). */
         const val SIEGE_RAMP = 0.2f
+        /**
+         * Dzień 2: jaka część obrażeń z przyspieszonej presji ([Side.siegeDamageTaken]) nie
+         * odbiera gwiazdek. 0,6 przywraca średnią gwiazdek wygranych etapów 2–7 sprzed dnia 1
+         * (1,65 → 1,29 → 1,66, docs/BALANCE.md „Dzień 2”); 1,0 dawało prawie zawsze 2 ★.
+         */
+        const val SIEGE_STAR_FORGIVENESS = 0.6f
         /** Ułamek HP bazy na sekundę przy pełnej kontroli frontu przez wroga (przed presją). */
         const val SIEGE_ATTRITION = 0.0032f
         const val SHORT_DAY_STEPS = 8 * 60 * 60
@@ -1065,9 +1077,28 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
      */
     private fun applySiegeAttrition(dt: Float) {
         val control = ((player.front + enemy.front) * 0.5f / Defs.LANE).coerceIn(0f, 1f)
-        val rate = SIEGE_ATTRITION * siegePressure() * dt
-        player.baseHp -= player.baseMaxHp * rate * (1f - control)
-        enemy.baseHp -= enemy.baseMaxHp * rate * control
+        val pressure = siegePressure()
+        val rate = SIEGE_ATTRITION * pressure * dt
+        val playerLoss = player.baseMaxHp * rate * (1f - control)
+        val enemyLoss = enemy.baseMaxHp * rate * control
+        player.baseHp -= playerLoss
+        enemy.baseHp -= enemyLoss
+        val share = starNeutralSiegeShare(pressure)
+        if (share > 0f) {
+            player.siegeDamageTaken += playerLoss * share
+            enemy.siegeDamageTaken += enemyLoss * share
+        }
+    }
+
+    /**
+     * Dzień 2: część obrażeń baz, która wynika z szybszej presji niż standardowa
+     * ([SIEGE_RAMP] na minutę od [siegeStart]); nie odbiera gwiazdek ([Battle.stars]).
+     * Przy standardowym przyroście (etap 1, etapy od 8., inne tryby) zawsze 0.
+     */
+    private fun starNeutralSiegeShare(pressure: Float): Float {
+        if (pressure <= 1f || siegeRamp <= SIEGE_RAMP) return 0f
+        val standard = 1f + (time - siegeStart) / 60f * SIEGE_RAMP
+        return (1f - standard / pressure).coerceIn(0f, 1f)
     }
 
     fun surrender() { if (!over) { pendingVariant = null; pendingChoice = null; pendingCards = null; finish(1) } }
@@ -1590,9 +1621,15 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         // Doktryna Oblężenie (siegeMul strony atakującej): +30% obrażeń wobec baz.
         val before = s.baseHp
         val heavyBonus = if (attackerRole == Role.HEAVY) k.heavyBaseDmgMul else 1f
-        s.baseHp = (s.baseHp - d * k.siegeMul * heavyBonus * siegePressure()).coerceIn(0f, s.baseMaxHp)
+        val pressure = siegePressure()
+        s.baseHp = (s.baseHp - d * k.siegeMul * heavyBonus * pressure).coerceIn(0f, s.baseMaxHp)
         val damage = before - s.baseHp
-        if (damage > 0f) s.baseDamageTaken += damage
+        if (damage > 0f) {
+            s.baseDamageTaken += damage
+            // Nadwyżka z szybszej niż standardowa presji nie odbiera gwiazdek.
+            val share = starNeutralSiegeShare(pressure)
+            if (share > 0f) s.siegeDamageTaken += damage * share
+        }
         s.baseFlash = 0.15f
         k.xp += d * 0.12f * k.xpMul
         fx.add(FxBuffer.BASE_HIT, s.baseFront - s.dir * 30f, 80f, s.index, eraId = s.era)
@@ -1757,9 +1794,17 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
 
     // ---------------------------------------------------------------- wynik
 
+    /**
+     * Gwiazdki zwycięzcy kampanii z HP bazy gracza, do którego wraca [SIEGE_STAR_FORGIVENESS]
+     * obrażeń z przyspieszonej presji oblężniczej ([Side.siegeDamageTaken]), najwyżej do pełnego
+     * HP (Dzień 2: wcześniejsza presja w etapach 2–7 nie zabiera gwiazdek zwycięzcy). Przy
+     * standardowej presji (etap 1, etapy od 8.) bez zmian. Przebieg bitwy i [score] bez zmian.
+     */
     fun stars(): Int {
         if (winner != 0) return 0
-        val r = player.baseHp / player.baseMaxHp
+        val hp = (player.baseHp + player.siegeDamageTaken * SIEGE_STAR_FORGIVENESS)
+            .coerceAtMost(player.baseMaxHp)
+        val r = hp / player.baseMaxHp
         return when {
             r >= 0.75f -> 3
             r >= 0.4f -> 2
