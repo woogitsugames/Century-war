@@ -247,6 +247,8 @@ class FirstHourJourneyTest {
         val hints = hintsOf(bs) ?: return false
         if (hints.activeId >= 0) {
             val id = hints.activeId
+            if (battleHintsSeen.isEmpty() && bs.tut != null && bs.battle.time < tutorialEnd + HintOverlayDelay - 0.1f)
+                problem("$where: dymek #$id już ${"%.1f".format(bs.battle.time - tutorialEnd)} s po samouczku")
             battleHintsSeen.add(id)
             note(g, "$where: dymek #$id „${hintBody(hints).take(70)}”")
             tick(g, 0.1f, 15)
@@ -257,6 +259,9 @@ class FirstHourJourneyTest {
         }
         return false
     }
+
+    private var tutorialEnd = 0f
+    private val HintOverlayDelay = BattleScreen.AFTER_TUTORIAL_HINT_DELAY
 
     private fun hintBody(h: HintOverlay): String = field(h, "body").get(h) as String
 
@@ -344,6 +349,8 @@ class FirstHourJourneyTest {
             if (tut.showing) {
                 val step = tut.step
                 if (seen.add(step)) {
+                    if (lastShown == TutorialOverlay.S_TURRET && bs.showTurrets)
+                        problem("samouczek: panel wież otwarty po kroku wieży (zasłania jednostki)")
                     if (lastShown >= 0 && step < lastShown) problem("samouczek: krok $step po kroku $lastShown")
                     lastShown = step
                     note(g, "samouczek: krok $step")
@@ -379,6 +386,7 @@ class FirstHourJourneyTest {
             }
         }
         assertTrue("$tag: samouczek nie skończył się (krok ${tut.step}, ${b.time}s)", tut.finished || b.over)
+        tutorialEnd = b.time
         note(g, "samouczek ukończony po ${"%.1f".format(b.time / 60f)} min bitwy (kroki: ${seen.filter { it < 100 }.sorted()})")
     }
 
