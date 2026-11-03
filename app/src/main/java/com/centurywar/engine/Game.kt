@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.os.SystemClock
 import com.centurywar.BuildConfig
 import com.centurywar.crash.CrashReports
+import com.centurywar.game.Mode
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.AchievementDef
@@ -17,9 +18,16 @@ import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.meta.Missions
+import com.centurywar.meta.PlaytestLog
 import com.centurywar.meta.WhatsNewCatalog
+import com.centurywar.screens.AccessibilityScreen
 import com.centurywar.screens.BattleScreen
+import com.centurywar.screens.CodexScreen
 import com.centurywar.screens.MenuScreen
+import com.centurywar.screens.MissionsScreen
+import com.centurywar.screens.ReplayListScreen
+import com.centurywar.screens.ResearchScreen
+import com.centurywar.screens.SkirmishSetupScreen
 import com.centurywar.screens.ReplayScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -39,6 +47,8 @@ interface Host {
     fun openExternalUrl(url: String) {}
     fun showApacheLicense() {}
     fun shareProblemReport() {}
+    /** R2-04: „Raport dla testera” (okno z opisem, potem systemowe udostępnianie). */
+    fun sharePlaytestReport() {}
     fun shareReplay(id: String) {}
     fun requestProfileExport() {}
     fun requestProfileImport() {}
@@ -109,6 +119,9 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var history: BattleHistory? = null
     /** Ustawiane na wątku gry po zakończeniu odczytu historii w tle. */
     var historyLoaded = false
+    /** R2-04: lokalny dziennik testu (files/playtest.json). Null w testach bez dziennika. */
+    var playtest: PlaytestLog? = null
+    private var playtestBattleSeconds = 0f
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
 
@@ -423,8 +436,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     /**
-     * R2-03: tempo ×½ jest w cyklu tempa bitwy. Ręczny wybór gracza wygrywa; bez niego
-     * opcja albo włączony TalkBack (decyzja właściciela).
+     * R2-03: tempo ×½ jest w cyklu tempa bitwy, a bitwa startuje w ×½. Ręczny wybór gracza
+     * wygrywa; bez niego opcja albo włączony TalkBack (decyzje właściciela).
      */
     fun slowSpeedEnabled(): Boolean =
         if (profile.slowSpeedManual) profile.slowSpeedOption
@@ -518,6 +531,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         s.layout()
         startScreenTransition(previous, s, 1f)
         refreshBackHandling()
+        notePlaytestScreen(s)
     }
 
     fun push(s: Screen) {
@@ -530,6 +544,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         s.layout()
         startScreenTransition(previous, s, 1f)
         refreshBackHandling()
+        notePlaytestScreen(s)
     }
 
     /** Zmienia zakładkę Rekordów bez dokładania ekranów do stosu Wstecz. */
@@ -543,6 +558,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         s.layout()
         startScreenTransition(previous, s, 1f)
         refreshBackHandling()
+        notePlaytestScreen(s)
     }
 
     fun pop() {
@@ -633,6 +649,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val renderEnd = System.nanoTime()
         frameMetrics.add(renderStart - updateStart, renderEnd - renderStart, simulatedSteps, discardedSteps)
         monitor(dt)
+        playtestFrame(dt)
         if (profile.showFps) {
             refreshOverlay(dt)
             fpsPaint.textSize = 10 * ui.dp
@@ -656,6 +673,62 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     fun now() = SystemClock.uptimeMillis()
+
+    // ---------------------------------------------------------------- R2-04: dziennik testu
+
+    /** Bit ekranu w [PlaytestLog.screensVisited]; -1 dla ekranów spoza listy. */
+    internal fun playtestScreenBit(s: Screen): Int = when (s) {
+        is CodexScreen -> PlaytestLog.SCREEN_CODEX
+        is ResearchScreen -> PlaytestLog.SCREEN_RESEARCH
+        is MissionsScreen -> PlaytestLog.SCREEN_MISSIONS
+        is ReplayListScreen -> PlaytestLog.SCREEN_REPLAYS
+        is AccessibilityScreen -> PlaytestLog.SCREEN_ACCESSIBILITY
+        is SkirmishSetupScreen -> PlaytestLog.SCREEN_SKIRMISH
+        is BattleScreen -> when (s.cfg.mode) {
+            Mode.SKIRMISH -> PlaytestLog.SCREEN_SKIRMISH
+            Mode.ENDLESS -> if (s.cfg.weekly >= 0L) PlaytestLog.SCREEN_WEEKLY else PlaytestLog.SCREEN_ENDLESS
+            Mode.DAILY -> PlaytestLog.SCREEN_DAILY
+            Mode.CAMPAIGN -> -1
+        }
+        else -> -1
+    }
+
+    private fun notePlaytestScreen(s: Screen) {
+        val log = playtest ?: return
+        log.screenVisited(playtestScreenBit(s))
+        log.checkTutorial(profile.tutorialDone, profile.playSeconds)
+    }
+
+    /**
+     * Co 30 s bitwy: p95 klatki, redukcja jakości, zgubione kroki i status termiczny.
+     * Tylko pola prymitywne, bez alokacji i bez I/O (zapis przy onPause).
+     */
+    internal fun playtestFrame(dt: Float) {
+        val log = playtest ?: return
+        if (screen !is BattleScreen) return
+        playtestBattleSeconds += dt
+        if (playtestBattleSeconds < 30f) return
+        playtestBattleSeconds -= 30f
+        log.perfSample(frameMetrics.p95Ms(), quality.reduction, frameMetrics.totalDroppedSteps, thermalStatus)
+    }
+
+    /** Start aplikacji (MainActivity po utworzeniu gry). */
+    fun playtestStarted(nowMs: Long) {
+        playtest?.startSession(nowMs, frameMetrics.totalDroppedSteps)
+    }
+
+    /** Powrót z tła (wątek gry). */
+    fun playtestResumed(nowMs: Long) {
+        playtest?.resumed(nowMs, frameMetrics.totalDroppedSteps)
+    }
+
+    /** Przejście w tło: migawka i zapis w tle (wątek gry albo UI, gdy pętla stoi). */
+    fun playtestPaused(nowMs: Long) {
+        val log = playtest ?: return
+        log.paused(nowMs)
+        log.checkTutorial(profile.tutorialDone, profile.playSeconds)
+        log.saveAsync()
+    }
 
     /**
      * R2-05: system prosi o pamięć (`onTrimMemory`). Od Androida 14 przychodzą praktycznie

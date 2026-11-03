@@ -166,9 +166,41 @@ class SystemAccessibilityTest {
         assertEquals(1, BattleScreen(g, cfg).speed)
         assertEquals(1, s.nextSpeed(5, g.slowSpeedEnabled()))
 
-        // Bez TalkBack bitwa startuje w ×1.
+        // Bez TalkBack i bez opcji bitwa startuje w ×1.
         val plain = game()
         assertEquals(1, BattleScreen(plain, cfg).speed)
+    }
+
+    @Test
+    fun optionEnabledStartsHalfSpeedWithoutTalkBack() {
+        // Decyzja właściciela 3.11: włączona opcja = start w ×½ także bez TalkBack.
+        val g = game()
+        g.applySystemAccessibility(snapshot(talkBack = false))
+        val cfg = BattleConfig(Mode.SKIRMISH, 184L, 1f)
+        assertEquals(1, BattleScreen(g, cfg).speed)
+        val screen = AccessibilityScreen(g)
+        g.setScreen(screen)
+        val toggle = screen.buttons.first { it.id == 44 }
+        assertFalse(screen.accessibilityChecked(toggle))
+        screen.onClick(toggle)
+        assertTrue(g.profile.slowSpeedOption)
+        assertTrue(g.profile.slowSpeedManual)
+        assertEquals("Nowa bitwa startuje w ×½", 0, BattleScreen(g, cfg).speed)
+        val battle = Battle(cfg)
+        repeat(30) { battle.step() }
+        assertEquals("Wznowiona bitwa startuje w ×½", 0,
+            BattleScreen(g, cfg, restored = RestoredBattle(battle, false, -120f)).speed)
+
+        // Opcja przetrwa zapis profilu i wczytanie w nowej grze.
+        g.profile.save()
+        val file = g.profile.javaClass.getDeclaredField("file").apply { isAccessible = true }.get(g.profile) as File
+        val reloaded = game(Profile(file).also { it.load() })
+        assertEquals(0, BattleScreen(reloaded, cfg).speed)
+
+        // Wyłączenie opcji wraca do startu w ×1.
+        screen.onClick(toggle)
+        assertFalse(g.profile.slowSpeedOption)
+        assertEquals(1, BattleScreen(g, cfg).speed)
     }
 
     @Test

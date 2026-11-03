@@ -14,6 +14,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
 import com.centurywar.R
 import com.centurywar.game.Defs
+import com.centurywar.screens.AboutScreen
 import com.centurywar.screens.AccessibilityScreen
 import com.centurywar.screens.BattleAccessibility
 import com.centurywar.screens.BattleScreen
@@ -314,7 +315,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             return
         }
         val kind = when (screen) {
-            is MenuScreen, is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen -> BUTTONS
+            // R2-04: O grze (z „Raportem dla testera”) też ma węzły przycisków.
+            is MenuScreen, is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen, is AboutScreen -> BUTTONS
             else -> OTHER
         }
         val title = when (screen) {
@@ -322,6 +324,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             is SettingsScreen -> L["settings"]
             is AccessibilityScreen -> L["accessibility"]
             is HintSettingsScreen -> L["hint_settings"]
+            is AboutScreen -> L["about"]
             else -> L["a164_other"]
         }
         refreshList(screen, kind, title, vw, vh)
@@ -380,7 +383,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             is BattleScreen -> s.paused && !s.finished &&
                 (s.pauseMenu.contains(b) || b === s.pauseVibrationBtn || b === s.pauseSpeedBtn)
             is MenuScreen -> !s.hasOpenModal || b.id == 20 || b.id == 21
-            is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen -> true
+            is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen, is AboutScreen -> true
             else -> false
         }
     }

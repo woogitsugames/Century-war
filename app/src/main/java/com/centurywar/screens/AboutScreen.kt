@@ -25,6 +25,8 @@ class AboutScreen(g: Game) : Screen(g) {
     private val report = btn(3)
     private val deleteData = btn(4)
     private val history = btn(5)
+    /** R2-04: „Raport dla testera” obok „Zgłoś problem”. */
+    private val tester = btn(6)
     private val entries = LicenseCatalog.app
     private val links = Array(entries.size) { i -> btn(100 + i).apply { iconId = Icons.GLOBE } }
     private val privacyUrl = BuildConfig.PRIVACY_URL
@@ -57,6 +59,8 @@ class AboutScreen(g: Game) : Screen(g) {
         deleteData.iconId = Icons.RESTART
         report.label = L["report_problem"]
         report.iconId = Icons.BOOK
+        tester.label = L["pt182_button"]
+        tester.iconId = Icons.BOOK
         fullLicense.label = L["about_apache_full"]
         history.label = L["wn_history"]
         history.iconId = Icons.BOOK
@@ -87,7 +91,7 @@ class AboutScreen(g: Game) : Screen(g) {
         panel.set(left, chrome.top + 7 * dp, left + pw, h - g.insetB - 11 * dp)
         contentTop = panel.top + 11 * dp
         contentBottom = panel.bottom - 11 * dp
-        val introDp = 378f
+        val introDp = 434f
         val step = 103 * dp
         val fullHeight = (introDp + 24 + 70) * dp + entries.size * step
         maxScroll = max(0f, fullHeight - (contentBottom - contentTop))
@@ -103,7 +107,10 @@ class AboutScreen(g: Game) : Screen(g) {
         report.set(panel.left + 20 * dp, textStart + 210 * dp,
             min(250 * dp, pw - 40 * dp), 48 * dp)
         report.visible = inContent(report)
-        history.set(panel.left + 20 * dp, textStart + 266 * dp,
+        tester.set(panel.left + 20 * dp, textStart + 266 * dp,
+            min(250 * dp, pw - 40 * dp), 48 * dp)
+        tester.visible = inContent(tester)
+        history.set(panel.left + 20 * dp, textStart + 322 * dp,
             min(250 * dp, pw - 40 * dp), 48 * dp)
         history.visible = inContent(history)
         fullLicense.set(panel.left + 20 * dp, footerTop, min(310 * dp, pw - 40 * dp), 48 * dp)
@@ -149,9 +156,10 @@ class AboutScreen(g: Game) : Screen(g) {
         if (privacy.visible) ui.button(c, privacy, 13f)
         if (deleteData.visible) ui.button(c, deleteData, 13f)
         if (report.visible) ui.button(c, report, 13f)
+        if (tester.visible) ui.button(c, tester, 13f)
         if (history.visible) ui.button(c, history, 13f)
         val deletionStatus = L[deleteResultKey]
-        val statusY = textStart + 339 * dp
+        val statusY = textStart + 395 * dp
         if (statusY >= contentTop && statusY <= contentBottom) {
             ui.textO(c, deletionStatus, tx, statusY,
                 ui.fit(deletionStatus, 13f, textWidth, 9f), Ui.DIM)
@@ -193,10 +201,18 @@ class AboutScreen(g: Game) : Screen(g) {
             3 -> g.host.shareProblemReport()
             4 -> requestDataDeletion()
             5 -> g.push(WhatsNewScreen(g))
+            6 -> g.host.sharePlaytestReport()
             else -> if (b.id >= 100) entries.getOrNull(b.id - 100)?.let {
                 if (SecureLinks.isHttps(it.url)) g.host.openExternalUrl(it.url)
             }
         }
+    }
+
+    /** R2-04: TalkBack czyta także, że raport jest lokalny i wysyła go tylko gracz. */
+    override fun accessibilityLabel(b: Button): String = when {
+        b.id == 6 -> b.label + ", " + L["pt182_a11y"]
+        b.id >= 100 -> (entries.getOrNull(b.id - 100)?.name?.let { "$it, " } ?: "") + b.label
+        else -> super.accessibilityLabel(b)
     }
 
     /** Zapis żądania jest potwierdzeniem kolejki, nie odpowiedzią serwera. */

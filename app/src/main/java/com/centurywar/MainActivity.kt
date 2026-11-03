@@ -32,6 +32,7 @@ import android.graphics.Color
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import com.centurywar.crash.CrashReports
+import com.centurywar.crash.PlaytestReportText
 import com.centurywar.engine.Game
 import com.centurywar.engine.GameView
 import com.centurywar.engine.HapticGate
@@ -50,6 +51,7 @@ import com.centurywar.meta.Profile
 import com.centurywar.meta.ProfileBackup
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.PlaytestLog
 import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
 import com.centurywar.engine.Icons
@@ -126,6 +128,11 @@ class MainActivity : Activity(), Host {
             val root = app.filesDir
             var start = SystemClock.elapsedRealtimeNanos()
             val profile = Profile(File(root, "profile.json")).also { it.load() }
+            // R2-04: lokalny dziennik testu (mały plik, poza profilem i kopiami).
+            val playtest = PlaytestLog(File(root, PlaytestLog.FILE_NAME)).also {
+                it.load()
+                it.adoptProfile(profile.tutorialDone, profile.wins)
+            }
             profile.pruneDailyBoards(Daily.dayNumber())
             startup.record(StartupTimings.Phase.PROFILE, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
@@ -147,7 +154,7 @@ class MainActivity : Activity(), Host {
             startup.record(StartupTimings.Phase.LANGUAGES, start, SystemClock.elapsedRealtimeNanos())
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
-                    finishStartup(root, profile, snapshots, restored, detectedQuality, memoryClassMb)
+                    finishStartup(root, profile, snapshots, restored, detectedQuality, memoryClassMb, playtest)
                     if (pendingFatal != null) offerCrashReport(pendingFatal)
                 }
             }
@@ -156,11 +163,14 @@ class MainActivity : Activity(), Host {
 
     private fun finishStartup(
         root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?,
-        detectedQuality: Int, memoryClassMb: Int
+        detectedQuality: Int, memoryClassMb: Int, playtest: PlaytestLog
     ) {
         var start = SystemClock.elapsedRealtimeNanos()
         game = Game(this, profile, detectedQuality)
         game.bitmapCacheMemoryClassMb = memoryClassMb
+        game.playtest = playtest
+        // Pętla gry jeszcze nie działa: start sesji bezpośrednio na UI (bez I/O).
+        game.playtestStarted(System.currentTimeMillis())
         thermalWatch = ThermalWatch(getSystemService(android.os.PowerManager::class.java), game)
         // R2-03: rozmiar tekstu, animacje i TalkBack z ustawień telefonu (profil już wczytany).
         postSystemAccessibility()
@@ -368,7 +378,10 @@ class MainActivity : Activity(), Host {
         // TalkBack i animacje można przełączyć, gdy gra jest w tle (bez zmiany konfiguracji).
         postSystemAccessibility()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
-        game.post { game.checkDailyLogin() }
+        game.post {
+            game.checkDailyLogin()
+            game.playtestResumed(System.currentTimeMillis())
+        }
         if (startupFirstFrameShown) {
             DailyReminders.refresh(this)
             playGames?.refreshSignIn()
@@ -393,7 +406,10 @@ class MainActivity : Activity(), Host {
         val ran = AtomicBoolean(false)
         val task = Runnable {
             if (ran.compareAndSet(false, true)) {
-                try { game.current?.onPause(); game.profile.save() } finally { done.countDown() }
+                try {
+                    game.current?.onPause(); game.profile.save()
+                    game.playtestPaused(System.currentTimeMillis())
+                } finally { done.countDown() }
             }
         }
         if (view.loopActive) {
@@ -409,6 +425,7 @@ class MainActivity : Activity(), Host {
         game.snapshots?.awaitWrites(remainingSaveMs(deadline))
         game.history?.awaitWrites(remainingSaveMs(deadline))
         game.replays?.awaitWrites(remainingSaveMs(deadline))
+        game.playtest?.awaitWrites(remainingSaveMs(deadline))
         super.onPause()
     }
 
@@ -779,6 +796,44 @@ class MainActivity : Activity(), Host {
                 .setNegativeButton(L["report_cancel"], null)
                 .setOnDismissListener { hideSystemBars() }
                 .show()
+        }
+    }
+
+    /** R2-04: okno z opisem zawartości; anulowanie niczego nie wysyła. */
+    override fun sharePlaytestReport() {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            AlertDialog.Builder(this)
+                .setTitle(L["pt182_button"])
+                .setMessage(L["pt182_desc"])
+                .setPositiveButton(L["report_send"]) { _, _ -> sendPlaytestReport() }
+                .setNegativeButton(L["report_cancel"], null)
+                .setOnDismissListener { hideSystemBars() }
+                .show()
+        }
+    }
+
+    /**
+     * Migawka liczników na wątku gry (bez I/O), tekst poza nim, potem `ACTION_SEND`:
+     * gracz sam wybiera aplikację i odbiorcę; arkusz udostępniania nie wysyła nic sam.
+     */
+    private fun sendPlaytestReport() {
+        if (!::game.isInitialized) return
+        game.post {
+            val input = PlaytestReportText.collect(game)
+            Thread({
+                val device = CrashReports.deviceInfo()
+                val body = PlaytestReportText.build(device[0], device[1], device[2], input)
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, L["pt182_subject"])
+                        putExtra(Intent.EXTRA_TEXT, body)
+                    }
+                    runCatching { startActivity(Intent.createChooser(send, L["pt182_share_title"])) }
+                }
+            }, "playtest-share").apply { isDaemon = true; start() }
         }
     }
 

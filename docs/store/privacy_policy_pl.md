@@ -32,6 +32,7 @@ Gra zapisuje w prywatnej pamięci aplikacji:
 - ustawienia gry (np. język, jakość grafiki, dźwięk, wibracje, przypomnienia i ich godzinę);
 - tymczasowy zapis przerwanej bitwy do wznowienia (plik battle.snap);
 - do 10 lokalnych raportów awarii i błędów (katalog files/crash);
+- lokalny dziennik testu (plik files/playtest.json): dni i sesje gry, czas do ukończenia samouczka i pierwszej wygranej, serie porażek, kapitulacje, odwiedzone ekrany i wydajność ostatnich sesji;
 - przy włączeniu własnego rankingu: losowy UUID i oddzielny, 32-bajtowy sekret
   instalacji (w `profile.json`), używany do potwierdzania własności wpisów.
 
@@ -44,6 +45,8 @@ Plik battle.snap służy wyłącznie lokalnemu wznowieniu bitwy, nie jest wysył
 Po awarii aplikacja zapisuje lokalnie raport techniczny: wersję gry, model urządzenia, wersję Androida, nazwę ekranu, ostatnie 30 zdarzeń technicznych (np. otwarcie ekranu, etap bitwy) i stos wywołań. Na Androidzie 11 i nowszym raport może też opisywać systemową przyczynę poprzedniego zamknięcia gry (np. brak odpowiedzi aplikacji, błąd natywny, brak pamięci): kod przyczyny, krótki opis systemu, zużycie pamięci, a przy braku odpowiedzi stos wywołań wątku głównego i wątku gry. Zapis nie obejmuje pseudonimu, identyfikatora gracza, treści wyjątków ani danych profilu. Przechowywanych jest maksymalnie 10 raportów; starsze są automatycznie usuwane. Raporty nie są synchronizowane z Play Games ani obejmowane systemową kopią zapasową.
 
 Przy kolejnym uruchomieniu po awarii gra **jednorazowo pyta**, czy udostępnić raport. Można też wybrać **Ustawienia → O grze → Zgłoś problem**. W obu przypadkach aplikacja wyłącznie otwiera systemowe okno udostępniania tekstu (np. e-mail); **nie wysyła raportów automatycznie ani do wydawcy, ani do zewnętrznej usługi**. Użytkownik decyduje, czy i komu go przekazać. Zapisane raporty można usunąć przez wyczyszczenie danych aplikacji.
+
+**Ustawienia → O grze → Raport dla testera** działa tak samo: po opisie zawartości otwiera systemowe okno udostępniania z tekstem zawierającym wersję gry, model urządzenia, wersję Androida, postęp, czas gry, tryby, wydajność i ustawienia (z dziennika testu i profilu). Raport nie zawiera pseudonimu, identyfikatorów ani konta Play Games i **nie jest wysyłany automatycznie**. Dziennik testu nie jest synchronizowany z Play Games ani obejmowany systemową kopią zapasową.
 
 ## 3. Google Play Games — konto i uwierzytelnianie
 

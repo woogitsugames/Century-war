@@ -706,7 +706,17 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
    profilu, powiadomienie, logowanie Play Games, ranking i osiągnięcia
    (po wpisaniu prawdziwych ID). Poproś o datę, model telefonu, wersję
    Androida, zrzut i opis kroków dla każdego błędu. Zbieraj także
-   informację, co działało.
+   informację, co działało. **Poproś testerów o wysłanie „Raportu dla
+   testera” po 3. i po 10. dniu testu** (Ustawienia → O grze → Raport dla
+   testera): postęp, dni i sesje gry, tryby, wydajność telefonu i ustawienia.
+   To dane do odpowiedzi na pytania we wniosku o produkcję (pkt 9).
+
+   Raport jest **lokalny**: liczniki leżą w `files/playtest.json` (poza
+   `profile.json`, kopią Androida i Saved Games), gra niczego nie wysyła
+   sama ani przez sieć. Przycisk pokazuje opis zawartości, a potem
+   systemowe okno udostępniania; tester sam wybiera aplikację i odbiorcę,
+   a anulowanie nic nie wysyła. Raport nie zawiera nicku, UUID ani sekretu
+   rankingu, ani konta Play Games (tak jak „Zgłoś problem”).
 7. **Minimum Google (stan: 2.11.2026):** dla **osobistych kont
    deweloperskich utworzonych po 13 listopada 2023 r.** co najmniej
    **12 testerów musi mieć nieprzerwanie aktywny opt-in przez 14 dni**

@@ -32,6 +32,7 @@ The game stores the following in its private app storage:
 - settings (such as language, graphics quality, sound, vibration, reminders, and reminder hour);
 - a temporary interrupted-battle save for resuming play (the battle.snap file);
 - up to 10 local crash and error reports (the files/crash directory);
+- a local playtest log (the files/playtest.json file): days and sessions played, time to finish the tutorial and to the first win, loss streaks, surrenders, visited screens and performance of recent sessions;
 - if you opt into the publisher's leaderboard: a random UUID and a separate 32-byte
   installation secret stored in `profile.json` to establish ownership of your scores.
 
@@ -44,6 +45,8 @@ The battle.snap file is used only to resume a battle locally; it is not uploaded
 After a crash, the app stores a technical report on the device containing the game version, device model, Android version, current screen, the last 30 technical events (such as screen changes and battle stage), and the call stack. On Android 11 and later, a report may also describe the system's reason for the previous app exit (for example, app not responding, a native crash, or low memory): the reason code, the system's short description, memory usage, and for an unresponsive app the call stacks of the main thread and the game thread. It does **not** include the in-game nickname, player IDs, exception messages, or profile data. Up to 10 reports are retained; older reports are automatically removed. These files are not uploaded to Play Games and are excluded from Android system backup.
 
 On the next launch after a crash, the game asks **once** whether you want to share the report. You can also choose **Settings → About → Report a problem**. Both options only open the Android system text-sharing chooser (for example, email); the game **never automatically sends reports** to the publisher or a third-party service. You decide whether to send the report and to whom. Clearing the app's storage also deletes local reports.
+
+**Settings → About → Tester report** works the same way: after describing its contents it opens the Android sharing chooser with a text containing the game version, device model, Android version, progress, play time, modes, performance and settings (from the playtest log and the profile). It contains no nickname, player IDs or Play Games account and is **never sent automatically**. The playtest log is not uploaded to Play Games and is excluded from Android system backup.
 
 ## 3. Google Play Games — account and authentication
 

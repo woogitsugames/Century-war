@@ -8,6 +8,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import com.centurywar.meta.Profile
+import com.centurywar.screens.AboutScreen
 import com.centurywar.screens.AccessibilityScreen
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.HintSettingsScreen
@@ -35,6 +36,8 @@ class GameAccessibility164Test {
         override fun applyRenderScale(scale: Float) {}
         override fun applyFrameRate(fps: Int) {}
         override fun exit() {}
+        var playtestShares = 0
+        override fun sharePlaytestReport() { playtestShares++ }
     }
 
     private class Fixture(val game: Game, val view: GameView, val bitmap: Bitmap) {
@@ -241,6 +244,29 @@ class GameAccessibility164Test {
             f.node(f.buttonId(7))!!.getBoundsInScreen(box)
             assertTrue(kotlin.math.abs((button.r.centerX() * 2).toInt() - box.centerX()) <= 2)
             assertTrue(kotlin.math.abs((button.r.centerY() * 2).toInt() - box.centerY()) <= 2)
+        } finally { f.finish() }
+    }
+
+    /** R2-04: „Raport dla testera” w O grze ma opis TalkBack, otwiera okno hosta; Wstecz działa. */
+    @Test fun aboutTesterReportHasDescriptionAndBackWorks() {
+        val f = setup(w = 1600, h = 1400)
+        try {
+            f.game.push(AboutScreen(f.game))
+            f.frame()
+            val id = f.buttonId(6)
+            val node = f.node(id)!!
+            val description = node.contentDescription.toString()
+            assertTrue(description, description.contains(L["pt182_button"]))
+            assertTrue(description, description.contains(L["pt182_a11y"]))
+            assertTrue(node.isClickable)
+            assertEquals(L["about"], f.node(View.NO_ID)!!.contentDescription.toString())
+            val before = host.playtestShares
+            f.press(id)
+            assertEquals("Przycisk tylko prosi hosta o okno z opisem", before + 1, host.playtestShares)
+            assertTrue(f.game.current is AboutScreen)
+            f.game.requestBack()
+            f.frame()
+            assertTrue(f.game.current is MenuScreen)
         } finally { f.finish() }
     }
 }

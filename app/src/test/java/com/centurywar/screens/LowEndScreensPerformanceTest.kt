@@ -156,6 +156,28 @@ class LowEndScreensPerformanceTest {
         check("Pauza bitwy LOW") { s.update(1f / 60f); s.render(c) }
     }
 
+    /** R2-04: próbki dziennika testu co 30 s bitwy nie alokują w pętli. */
+    @Test fun playtestSamplingInBattleDoesNotAllocate() {
+        val g = game()
+        val c = canvas()
+        val dir = java.nio.file.Files.createTempDirectory("cw-r204-perf").toFile()
+        g.playtest = com.centurywar.meta.PlaytestLog(File(dir, "playtest.json")).also {
+            it.startSession(1_790_000_000_000L, 0L)
+        }
+        val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7702L, 1f, startEra = 0, maxEra = 0))
+        g.setScreen(s)
+        val button = BattleScreen::class.java.getDeclaredField("pauseBtn").apply {
+            isAccessible = true
+        }.get(s) as Button
+        s.onClick(button)
+        repeat(10) { g.frameMetrics.add(5_000_000L, 3_000_000L, 1, 0) }
+        // 0,1 s na klatkę: 900 klatek to trzy okna po 30 s.
+        check("Pauza bitwy + dziennik testu LOW") { s.update(1f / 60f); s.render(c); g.playtestFrame(0.1f) }
+        val perf = g.playtest!!.perfSessions()
+        assertEquals(1, perf.size)
+        assertTrue("Próbka wydajności zapisana", perf[0].worstP95Ms > 0f)
+    }
+
     @Test fun hintBubbleLow() {
         val g = game()
         val c = canvas()

@@ -170,7 +170,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         noteRow(c, shake, L["access_reduce_shake"], L["access_reduce_shake_note"], shakeNote)
         rowLabel(c, L["access_reduce_flash"], flash)
         rowLabel(c, L["access_left_handed_hud"], leftHud)
-        noteRow(c, slow, L["a11y181_slow"], L["a11y181_slow_d"], slowNote)
+        noteRow(c, slow, L["a11y181_slow"], L["a11y182_slow_d"], slowNote)
         if (markers.visible) ui.button(c, markers, 14f)
         if (shake.visible) ui.button(c, shake, 14f)
         if (flash.visible) ui.button(c, flash, 14f)

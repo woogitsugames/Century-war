@@ -86,9 +86,10 @@ class BattleScreen(
     private var acc = 0f
     /**
      * Tempo odtwarzania: 0 = ×½ (R2-03), 1, 3, 5. Nie wchodzi do zrzutu ani powtórki.
-     * Przy TalkBack bitwa (także wznowiona) startuje w ×½, chyba że gracz sam wyłączył tę opcję.
+     * Bitwa (także wznowiona) startuje w ×½, gdy opcja „Tempo bitwy ×½” jest włączona: przez
+     * gracza albo domyślnie przy TalkBack, chyba że gracz sam ją wyłączył (decyzja właściciela 3.11).
      */
-    internal var speed = if (g.touchExplorationActive && g.slowSpeedEnabled()) 0 else 1
+    internal var speed = if (g.slowSpeedEnabled()) 0 else 1
     /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
     internal var effectiveSpeed = 1f
     private var avgStepNs = 0f
@@ -1382,6 +1383,9 @@ class BattleScreen(
             pr.recordRankedDailyStreak(cfg.seed)
         pr.refreshBanners()
         g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
+        // R2-04: dziennik testu (porażki kampanii, kapitulacje, czas do pierwszej wygranej); bez I/O.
+        g.playtest?.battleSettled(cfg.mode == Mode.CAMPAIGN, won, surrendered, pr.playSeconds,
+            pr.tutorialDone, finishedAt)
         tipIcon = when (tipKey) {
             "tip_siege" -> Icons.HOURGLASS
             "tip_cap" -> Icons.HELMET

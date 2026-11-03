@@ -28,10 +28,13 @@ class ReleaseConfigTest {
             rule.getAttribute("path")
         }
         assertEquals(listOf("profile.json", "history.json"), included)
+        assertFalse(com.centurywar.meta.PlaytestLog.FILE_NAME in included)
         for (path in included) {
             assertFalse(path, path.startsWith("score-queue"))
             assertFalse(path, path.startsWith("crash"))
             assertFalse(path, path.endsWith(".snap"))
+            // R2-04: dziennik testu jest tylko lokalny (bez kopii Androida).
+            assertFalse(path, path.startsWith("playtest"))
             assertFalse(path, path == ".")
         }
     }

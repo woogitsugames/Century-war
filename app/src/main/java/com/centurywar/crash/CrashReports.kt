@@ -61,6 +61,13 @@ object CrashReports {
         exception = error,
     )
 
+    /** R2-04: wersja, model i Android do „Raportu dla testera” (te same wartości co wyżej). */
+    fun deviceInfo(): Array<String> = arrayOf(
+        BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")",
+        (Build.MANUFACTURER + " " + Build.MODEL).take(100),
+        (Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")").take(100),
+    )
+
     private fun save(fatal: Boolean, exception: Throwable) {
         store?.write(fatal, snapshot(exception))
     }
