@@ -70,7 +70,7 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       przechowywania danych — albo decyzja „na start bez rankingu globalnego”.
 - [ ] **Sekrety tylko w CI** (nigdy w repozytorium): klucz upload do podpisu, `CW_HMAC_KEY`,
       `CW_SERVER_URL`, `CW_PRIVACY_URL`.
-- [ ] **Google Play Games:** 73 identyfikatorów (1 projekt, 4 rankingi, 68 osiągnięć) z Play
+- [ ] **Google Play Games:** 79 identyfikatorów (1 projekt, 4 rankingi, 74 osiągnięcia) z Play
       Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
 - [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
       IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.
@@ -630,7 +630,7 @@ Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 **Jedynym źródłem identyfikatorów jest `docs/store/play_games_ids.properties`.**
 Nie edytuj ręcznie XML. Gradle generuje `games_ids.xml` osobno dla każdego wariantu
 w `app/build/generated/res/playGames/<wariant>/values/games_ids.xml`.
-Plik zawiera 73 kluczy: ID projektu, 4 rankingi i 68 osiągnięć.
+Plik zawiera 79 kluczy: ID projektu, 4 rankingi i 74 osiągnięcia.
 
 1. Otwórz Google Play Console → **Century War** (`com.centurywar.game`) →
    **Play Games Services → Setup and management → Configuration**. Utwórz usługę
@@ -641,7 +641,7 @@ Plik zawiera 73 kluczy: ID projektu, 4 rankingi i 68 osiągnięć.
    `leaderboard_endless` (oblężenie), `leaderboard_campaign` (gwiazdki),
    `leaderboard_skirmish` (potyczka) i `leaderboard_daily` (wyzwanie dnia).
    Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
-3. W **Play Games Services → Achievements** utwórz 68 osiągnięć standardowych.
+3. W **Play Games Services → Achievements** utwórz 74 osiągnięcia standardowe.
    Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego
    identyfikatora katalogu `id` skopiuj ID przyznane przez Play Console do
    `achievement_<id>`, np. `achievement_win_1`. Wszystkie klucze z szablonu

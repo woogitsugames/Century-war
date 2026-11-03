@@ -89,6 +89,9 @@ object Icons {
     const val FINAL_SPARK = 66
     const val FIRST_GUARD = 67
     const val BOSS_RECALL = 68
+    /** Zlecenie 176: wieża z trzema belkami stopnia i korona z falą Impulsu. */
+    const val TOWER_TIERS = 69
+    const val COMMANDER_PULSE = 70
 
     fun doctrineIcon(doctrine: Doctrine): Int = when (doctrine) {
         Doctrine.ECONOMY -> COINS
@@ -227,6 +230,8 @@ object Icons {
             FINAL_SPARK -> finalSpark(c)
             FIRST_GUARD -> firstGuard(c)
             BOSS_RECALL -> bossRecall(c)
+            TOWER_TIERS -> towerTiers(c)
+            COMMANDER_PULSE -> commanderPulse(c)
         }
         c.restoreToCount(save)
     }
@@ -1072,6 +1077,45 @@ object Icons {
     private fun firstGuard(c: Canvas) {
         shield(c, BLUE)
         star(c, 0f, -0.09f, 0.35f, GOLD_L, true)
+    }
+
+    /** Wieża w lewej części i trzy złote belki stopni po prawej (najwyższy stopień 3). */
+    private fun towerTiers(c: Canvas) {
+        c.save()
+        c.translate(-0.3f, 0.04f)
+        c.scale(0.78f, 0.78f)
+        tower(c)
+        c.restore()
+        for (i in 0..2) {
+            val y = 0.62f - i * 0.5f
+            p.reset()
+            p.moveTo(0.38f, y); p.lineTo(0.66f, y - 0.24f); p.lineTo(0.94f, y); p.lineTo(0.94f, y + 0.17f)
+            p.lineTo(0.66f, y - 0.07f); p.lineTo(0.38f, y + 0.17f); p.close()
+            shape(c, if (i == 2) GOLD_L else GOLD)
+        }
+    }
+
+    /** Korona dowódcy otoczona dwoma łukami fali Impulsu. */
+    private fun commanderPulse(c: Canvas) {
+        line.color = OUTLINE
+        line.strokeWidth = ow * 2.6f
+        r.set(-0.96f, -0.96f, 0.96f, 0.96f)
+        c.drawArc(r, 200f, 140f, false, line)
+        line.color = BLUE
+        line.strokeWidth = ow * 1.2f
+        c.drawArc(r, 200f, 140f, false, line)
+        line.color = OUTLINE
+        line.strokeWidth = ow * 2.6f
+        r.set(-0.96f, -0.75f, 0.96f, 1.17f)
+        c.drawArc(r, 20f, 140f, false, line)
+        line.color = BLUE
+        line.strokeWidth = ow * 1.2f
+        c.drawArc(r, 20f, 140f, false, line)
+        c.save()
+        c.translate(0f, 0.08f)
+        c.scale(0.62f, 0.62f)
+        crown(c)
+        c.restore()
     }
 
     private fun bossRecall(c: Canvas) {

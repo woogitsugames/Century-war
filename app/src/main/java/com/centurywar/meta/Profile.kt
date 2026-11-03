@@ -891,7 +891,11 @@ class Profile(private val file: File) {
                         AchievementMetric.CARD_RECALL_30.name,
                         AchievementMetric.CARD_NEW_50.name,
                         AchievementMetric.HARD_PERFECT.name,
-                        AchievementMetric.CARD_TOOLS_30.name -> value.coerceAtMost(1L)
+                        AchievementMetric.CARD_TOOLS_30.name,
+                        AchievementMetric.COMMANDER_SUMMONED.name,
+                        AchievementMetric.COMMANDER_SURVIVOR.name,
+                        AchievementMetric.TURRET_TIER_FOUR.name,
+                        AchievementMetric.LATE_NO_TURRET_WINS.name -> value.coerceAtMost(1L)
                         AchievementMetric.RAIN_WINS.name,
                         AchievementMetric.WIND_WINS.name,
                         AchievementMetric.NIGHT_WINS.name -> value.coerceAtMost(10_000_000L)
