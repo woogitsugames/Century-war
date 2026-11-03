@@ -112,6 +112,7 @@ object L {
     private val table: HashMap<String, Array<out String>> by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         HashMap<String, Array<out String>>(2048).apply {
         putAll(part0())
+        putAll(part186())
         putAll(part1())
         putAll(part2())
         putAll(part3())
@@ -175,6 +176,11 @@ object L {
         putAll(part182())
         }
     }
+
+    /** R6-02 M5: okno „Raport dla testera” mówi wprost o ustawieniach dostępności (TalkBack). */
+    private fun part186(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "pt186_desc" to t("Raport zawiera wersję gry, model telefonu, Android, postęp, czas gry, tryby, wydajność i ustawienia. Zawiera też ustawienia dostępności, w tym informację, czy działa TalkBack. Bez nicku, ID i konta Play Games. Gra nic nie wysyła sama: to ty wybierasz aplikację i odbiorcę.", "The report contains the game version, phone model, Android, progress, play time, modes, performance and settings. It also includes accessibility settings, including whether TalkBack is on. No nickname, ID or Play Games account. The game sends nothing by itself: you choose the app and the recipient.", "Der Bericht enthält Spielversion, Gerätemodell, Android, Fortschritt, Spielzeit, Modi, Leistung und Einstellungen. Er enthält auch die Bedienungshilfen-Einstellungen, einschließlich der Angabe, ob TalkBack aktiv ist. Kein Spielername, keine ID, kein Play-Games-Konto. Das Spiel sendet nichts selbst: Du wählst App und Empfänger.", "El informe incluye versión, modelo, Android, progreso, tiempo de juego, modos, rendimiento y ajustes. También incluye los ajustes de accesibilidad, incluido si TalkBack está activado. Sin apodo, ID ni cuenta de Play Juegos. El juego no envía nada solo: tú eliges la app y el destinatario.", "Le rapport contient version, modèle, Android, progression, temps de jeu, modes, performances et réglages. Il contient aussi les réglages d'accessibilité, y compris si TalkBack est activé. Ni pseudo, ni identifiant, ni compte Play Jeux. Le jeu n'envoie rien seul : vous choisissez l'appli et le destinataire.", "Il rapporto include versione, modello, Android, progressi, tempo di gioco, modalità, prestazioni e impostazioni. Include anche le impostazioni di accessibilità, compreso se TalkBack è attivo. Senza nickname, ID né account Play Giochi. Il gioco non invia nulla da solo: scegli tu app e destinatario.", "O relatório inclui versão, modelo, Android, progresso, tempo de jogo, modos, desempenho e definições. Inclui também as definições de acessibilidade, incluindo se o TalkBack está ativo. Sem apelido, ID nem conta Play Jogos. O jogo não envia nada sozinho: tu escolhes a app e o destinatário.", "Звіт містить версію, модель, Android, прогрес, час гри, режими, продуктивність і налаштування. Він також містить налаштування доступності, зокрема інформацію, чи працює TalkBack. Без псевдоніма, ID та акаунта Play Ігор. Гра нічого не надсилає сама: ти обираєш застосунок і отримувача.", "Het rapport bevat versie, toestelmodel, Android, voortgang, speeltijd, modi, prestaties en instellingen. Het bevat ook de toegankelijkheidsinstellingen, inclusief of TalkBack aanstaat. Geen bijnaam, ID of Play Games-account. De game verstuurt niets zelf: jij kiest de app en de ontvanger.", "Rapor sürüm, telefon modeli, Android, ilerleme, oyun süresi, modlar, performans ve ayarları içerir. Ayrıca TalkBack'in açık olup olmadığı dahil erişilebilirlik ayarlarını da içerir. Takma ad, kimlik veya Play Oyunlar hesabı yoktur. Oyun kendiliğinden bir şey göndermez: uygulamayı ve alıcıyı sen seçersin."),
+    )
 
     /** R2-04: „Raport dla testera”; tempo ×½ startuje bitwę także bez TalkBack (decyzja 3.11). */
     private fun part182(): Array<Pair<String, Array<out String>>> = arrayOf(

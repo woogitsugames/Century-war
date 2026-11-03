@@ -43,6 +43,18 @@ class LTest {
         assertEquals(keys.size, L.keys.size)
     }
 
+    /** R6-02 M5: okno raportu testera mówi o ustawieniach dostępności; „TalkBack” bez tłumaczenia. */
+    @Test
+    fun playtestReportDescriptionMentionsTalkBackInEveryLanguage() {
+        val entry = L.raw("pt186_desc")!!
+        val old = L.raw("pt182_desc")!!
+        assertEquals(L.CODES.size, entry.size)
+        for (i in L.CODES.indices) {
+            assertTrue("${L.CODES[i]}: ${entry[i]}", entry[i].contains("TalkBack"))
+            assertTrue("${L.CODES[i]}: dłuższy niż pt182_desc", entry[i].length > old[i].length)
+        }
+    }
+
     @Test
     fun placeholderRegexSupportsPositionalArguments() {
         val samples = "%1\$s %2\$d %.1f %%"
