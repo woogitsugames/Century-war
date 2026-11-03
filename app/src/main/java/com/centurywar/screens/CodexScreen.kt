@@ -499,8 +499,19 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 }
                 addGuide(Icons.weatherIcon(type), L[type.key], detail)
             }
-            PAGE_MODIFIERS -> for (mod in com.centurywar.game.Modifier.entries) {
-                addGuide(Icons.CROSSED_SWORDS, L[mod.key], L["sk_moddesc_" + mod.ordinal])
+            PAGE_MODIFIERS -> {
+                for (mod in com.centurywar.game.Modifier.entries) {
+                    addGuide(Icons.CROSSED_SWORDS, L[mod.key], L["sk_moddesc_" + mod.ordinal])
+                }
+                // Zlecenie 184: wydarzenia dnia i zestawy Oblężenia tygodnia w jednym miejscu.
+                val daily = L["cx184_daily_event"]
+                for (event in com.centurywar.game.DailyEvent.entries) {
+                    addGuide(Icons.dailyEventIcon(event), L[event.key], L[event.descriptionKey], daily)
+                }
+                val weekly = L["cx184_weekly_set"]
+                for (set in com.centurywar.game.ChallengeRuleSets.all) {
+                    addGuide(Icons.FLAG, L[set.key], L[set.descriptionKey], weekly)
+                }
             }
             PAGE_CARDS -> for (entry in com.centurywar.game.EndlessCard.entries) {
                 val rarity = L["er_" + entry.rarity.name.lowercase(Locale.ROOT)]
@@ -511,6 +522,10 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     com.centurywar.game.EndlessCard.BOSS_RECALL -> Icons.BOSS_RECALL
                     com.centurywar.game.EndlessCard.QUARTERMASTER -> Icons.SUPPLY_CRATE
                     com.centurywar.game.EndlessCard.MASTER_MASONS -> Icons.ANVIL
+                    com.centurywar.game.EndlessCard.SAPPERS -> Icons.SIEGE_HAMMER
+                    com.centurywar.game.EndlessCard.SHIELD_WALL -> Icons.SHIELD
+                    com.centurywar.game.EndlessCard.WAR_CHEST -> Icons.CHEST
+                    com.centurywar.game.EndlessCard.WAGER -> Icons.DICE
                     else -> Icons.CODEX
                 }
                 addGuide(icon, L[entry.textKey], L[entry.textKey + "_d"], rarity)

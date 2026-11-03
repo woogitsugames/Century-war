@@ -264,7 +264,7 @@ class BattleSnapshotTest {
         assertEquals(2, a.wave)
 
         val b = roundTrip(a)
-        assertEquals(19, BattleSnapshot.VERSION)
+        assertEquals(20, BattleSnapshot.VERSION)
         assertArrayEquals(a.player.cardStacks, b.player.cardStacks)
         assertArrayEquals(a.enemy.queueWaveTheme.copyOf(a.enemy.queueSize),
             b.enemy.queueWaveTheme.copyOf(b.enemy.queueSize))

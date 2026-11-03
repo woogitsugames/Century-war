@@ -55,6 +55,24 @@ class LTest {
         }
     }
 
+    /** Zlecenie 184: nowe karty, zestawy tygodnia i wydarzenia dnia mają 10 niepustych przekładów. */
+    @Test
+    fun content184KeysHaveAllLanguages() {
+        val keys = listOf("ec_sappers", "ec_shield_wall", "ec_war_chest", "ec_wager",
+            "week184_night", "week184_mercs", "week184_bastion", "day184_heavy", "day184_towers")
+            .flatMap { listOf(it, it + "_d") } + listOf("wn_184_content", "cx184_daily_event", "cx184_weekly_set")
+        for (k in keys) {
+            val entry = L.raw(k)
+            assertTrue("brak $k", entry != null)
+            assertEquals(k, L.CODES.size, entry!!.size)
+            for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
+        }
+        // Opis Zakładu mówi wprost o ryzyku we wszystkich językach (liczby 10% i 25%).
+        for (text in L.raw("ec_wager_d")!!) {
+            assertTrue(text, text.contains("10") && text.contains("25"))
+        }
+    }
+
     @Test
     fun placeholderRegexSupportsPositionalArguments() {
         val samples = "%1\$s %2\$d %.1f %%"

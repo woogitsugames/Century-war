@@ -449,6 +449,11 @@ class Ai(
 
     private fun doctrinePreference(d: Doctrine): Float = 100f - doctrineRank(d) * 8f
 
+    private companion object {
+        /** Obniżka wagi Zakładu dla profili innych niż szturmowy (strojenie: docs/BALANCE.md). */
+        const val WAGER_CAUTION = 30f
+    }
+
     /** Wartość dodatkowej karty w zależności od profilu; bez modyfikacji jej efektu. */
     private fun cardPreference(card: EndlessCard): Float {
         val doctrine = card.doctrine
@@ -465,30 +470,34 @@ class Ai(
                 EndlessCard.BURNING_TOWERS, EndlessCard.RAPID_TOWERS,
                 EndlessCard.TOWER_NETWORK, EndlessCard.IRON_CURTAIN,
                 EndlessCard.EMBER_FORGE, EndlessCard.REPAIR_CREW,
-                EndlessCard.FIRST_GUARD, EndlessCard.MASTER_MASONS -> 24f
+                EndlessCard.FIRST_GUARD, EndlessCard.MASTER_MASONS,
+                EndlessCard.SHIELD_WALL -> 24f
                 else -> 0f
             }
             AiPersonality.ECONOMIST -> when (card) {
                 EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD,
                 EndlessCard.SCAVENGER, EndlessCard.SUPPLY_LINE,
                 EndlessCard.MOBILIZATION, EndlessCard.FIELD_MEDICS,
-                EndlessCard.QUARTERMASTER -> 24f
+                EndlessCard.QUARTERMASTER, EndlessCard.WAR_CHEST -> 24f
                 else -> 0f
             }
             AiPersonality.SIEGER -> when (card) {
                 EndlessCard.FRONTLINE_PLATE, EndlessCard.SHARPSHOOTERS,
                 EndlessCard.ELITE_SCHOOL, EndlessCard.FORTRESS,
                 EndlessCard.FREE_ELITE, EndlessCard.MUSTER_BANNER,
-                EndlessCard.BOSS_RECALL -> 24f
+                EndlessCard.BOSS_RECALL, EndlessCard.SAPPERS -> 24f
                 else -> 0f
             }
             AiPersonality.BALANCED -> when (card) {
                 EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
                 EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE,
-                EndlessCard.FIELD_MEDICS -> 12f
+                EndlessCard.FIELD_MEDICS, EndlessCard.SHIELD_WALL -> 12f
                 else -> 0f
             }
         }
+        // Zlecenie 184: Zakład to ryzyko; poza profilem szturmowym AI bierze go rzadko.
+        if (card == EndlessCard.WAGER && personality != AiPersonality.ASSAULT)
+            value -= WAGER_CAUTION
         value += when (card) {
             EndlessCard.SUPPLY_LINE -> {
                 var total = 0

@@ -82,6 +82,9 @@ class EndlessBalanceReportTest {
         val defeats = ArrayList<Int>(100)
         val bonus = veteranBonuses()
         var waveTotal = 0
+        var scoreTotal = 0L
+        var wagerRuns = 0
+        var wagerBonus = 0L
         val maxSteps = 90_000
         for (seed in 1001L..1100L) {
             val b = Battle(BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonus))
@@ -94,6 +97,12 @@ class EndlessBalanceReportTest {
             }
             assertTrue(steps < maxSteps, "Timeout pomiaru Endless: seed=$seed")
             waveTotal += b.wave
+            scoreTotal += b.score()
+            // Zlecenie 184: ile punktów dał sam Zakład (różnica stawki za falę).
+            if (b.player.cardStacks[com.centurywar.game.EndlessCard.WAGER.ordinal] > 0) {
+                wagerRuns++
+                wagerBonus += b.wave * (com.centurywar.game.EndlessCards.WAGER_WAVE_SCORE - 250L)
+            }
             if (b.over) defeats.add(b.wave)
             for (i in thresholds.indices) {
                 if (b.wave > thresholds[i] || (b.wave == thresholds[i] && !b.over)) survived[i]++
@@ -118,6 +127,9 @@ class EndlessBalanceReportTest {
             else -> ((ordered[ordered.size / 2 - 1] + ordered[ordered.size / 2]) / 2.0).toString()
         }
         println("ENDLESS100_MEAN=${waveTotal / 100.0}")
+        println("ENDLESS100_SCORE_MEAN=${scoreTotal / 100.0}")
+        println("ENDLESS100_WAGER_RUNS=$wagerRuns/100")
+        println("ENDLESS100_SCORE_MEAN_WITHOUT_WAGER_BONUS=${(scoreTotal - wagerBonus) / 100.0}")
         println("ENDLESS100_FAILURES=${defeats.size}/100")
         println("ENDLESS100_DEFEAT_MEDIAN=$median")
         println("ENDLESS100_DEFEAT_WAVES=${ordered.joinToString(",")}")
@@ -195,4 +207,37 @@ class EndlessBalanceReportTest {
         }
     }
 
+    /**
+     * Zlecenie 184: każdy zestaw tygodnia na tych samych 8 tygodniach (seed, epoki),
+     * więc mediany fal są porównywalne między zestawami i między wersjami gry.
+     */
+    @Test fun weeklyRuleSets184() {
+        val first = com.centurywar.game.Weekly.firstRuleSetWeek()
+        val base = (0 until 8).map { com.centurywar.game.Weekly.config(first + 1L + 3L * it) }
+        for (index in 0 until com.centurywar.game.ChallengeRuleSets.COUNT) {
+            val set = com.centurywar.game.ChallengeRuleSets.forWeek(index.toLong())
+            val waves = ArrayList<Int>(8)
+            for (cfg in base) {
+                val config = BattleConfig(
+                    mode = cfg.mode, seed = cfg.seed, aiPower = cfg.aiPower,
+                    startEra = cfg.startEra, maxEra = cfg.maxEra,
+                    modifiers = linkedSetOf(set.first, set.second), playerBonuses = cfg.playerBonuses,
+                    weekly = cfg.weekly, weeklyCard = set.weeklyCard,
+                )
+                val battle = Battle(config)
+                battle.playerAi = Ai(battle, 0)
+                var steps = 0
+                while (!battle.over && battle.wave < 60 && steps < 90_000) {
+                    battle.step()
+                    battle.fx.count = 0
+                    steps++
+                }
+                assertTrue(steps < 90_000, "Timeout zestawu ${set.key}")
+                waves.add(battle.wave)
+            }
+            val sorted = waves.sorted()
+            println("WEEKLY184_SET KEY=${set.key} MEDIAN=${(sorted[3] + sorted[4]) / 2.0} " +
+                "MEAN=${waves.average()} WAVE20=${waves.count { it >= 20 }}/8 WAVES=${waves.joinToString(",")}")
+        }
+    }
 }

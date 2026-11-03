@@ -65,6 +65,13 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     // Zlecenie 170: dopisane na końcu.
     QUARTERMASTER(EndlessRarity.COMMON),
     MASTER_MASONS(EndlessRarity.UNCOMMON),
+
+    // Zlecenie 184 (dzień 6): dopisane na końcu.
+    SAPPERS(EndlessRarity.UNCOMMON),
+    SHIELD_WALL(EndlessRarity.COMMON),
+    WAR_CHEST(EndlessRarity.RARE),
+    /** Jednorazowe ryzyko: twardsze fale wroga za wyższy wynik za fale. */
+    WAGER(EndlessRarity.RARE),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
@@ -97,12 +104,25 @@ enum class EndlessWaveTheme(
 object EndlessCards {
     const val MAX_PERSISTENT_STACKS = 8
 
+    // Zlecenie 184: stałe nowych kart w jednym miejscu (symulacja, testy, opisy).
+    /** Saperzy: ciężkie jednostki gracza zadają bossom +25% za pełny stos. */
+    const val SAPPERS_BOSS_BONUS = 0.25f
+    /** Mur tarcz: -10% obrażeń od pocisków za pełny stos, najwyżej -25%. */
+    const val SHIELD_WALL_REDUCTION = 0.10f
+    const val SHIELD_WALL_MIN_MUL = 0.75f
+    /** Skarbiec wojenny: odsetek złota na początku fali i limit (× skala kosztów epoki). */
+    const val WAR_CHEST_INTEREST = 0.04f
+    const val WAR_CHEST_CAP = 40f
+    /** Zakład: HP jednostek kolejnych fal wroga i punkty za falę (zamiast 250). */
+    const val WAGER_ENEMY_HP_MUL = 1.10f
+    const val WAGER_WAVE_SCORE = 312L
+
     // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
     private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)
     private val totalPowers = floatArrayOf(0f, 1f, 1.6f, 2f, 2.3f, 2.5f, 2.65f, 2.75f, 2.8f)
     val economicSynergyCards = arrayOf(
         EndlessCard.ECONOMY, EndlessCard.PLUNDER, EndlessCard.EXTRA_GOLD,
-        EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER,
+        EndlessCard.BLOOD_GOLD, EndlessCard.SCAVENGER, EndlessCard.WAR_CHEST,
     )
     private val cards = EndlessCard.values()
     private val themes = EndlessWaveTheme.values()
@@ -119,7 +139,7 @@ object EndlessCards {
         EndlessCard.AUTO_BARRAGE, EndlessCard.CLONING, EndlessCard.MEDIC,
         EndlessCard.EXTRA_GOLD, EndlessCard.MOBILIZATION, EndlessCard.REPAIR_CREW,
         EndlessCard.SUPPLY, EndlessCard.CITADEL_HEART,
-        EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL -> false
+        EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL, EndlessCard.WAGER -> false
         else -> true
     }
 
@@ -162,7 +182,8 @@ object EndlessCards {
         if ((card == EndlessCard.TACTICS || card == EndlessCard.RALLY_MASTER) &&
             side.abilityCdMul <= Battle.MIN_ABILITY_CD_MUL) return false
         if (card == EndlessCard.MEDIC && side.baseHp >= side.baseMaxHp) return false
-        if ((card == EndlessCard.FIRST_GUARD || card == EndlessCard.BOSS_RECALL) &&
+        if ((card == EndlessCard.FIRST_GUARD || card == EndlessCard.BOSS_RECALL ||
+                card == EndlessCard.WAGER) &&
             side.cardStacks[card.ordinal] >= 1) return false
         if (card == EndlessCard.IRON_CURTAIN &&
             side.cardStacks[card.ordinal] >= 3) return false

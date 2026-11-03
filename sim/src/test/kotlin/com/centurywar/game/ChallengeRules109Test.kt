@@ -47,7 +47,9 @@ class ChallengeRules109Test {
                 assertEquals(Weather.entries[Rng(day * 65537L + 109L).nextInt(Weather.entries.size)], c.weather)
             }
         }
-        assertEquals("Każdy nowy zestaw powinien pojawić się w roku", ChallengeRuleSets.COUNT, themes.size)
+        // Zestawy zlecenia 184 mają odwrotną kolejność modyfikatorów niż pary dnia,
+        // więc w wyzwaniu dnia pojawia się tylko pierwsza szóstka (dni bez zmian).
+        assertEquals("Każdy zestaw dnia powinien pojawić się w roku", 6, themes.size)
     }
 
     @Test

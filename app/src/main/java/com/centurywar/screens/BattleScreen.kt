@@ -1652,6 +1652,10 @@ class BattleScreen(
         EndlessCard.BOSS_RECALL -> Icons.BOSS_RECALL
         EndlessCard.QUARTERMASTER -> Icons.SUPPLY_CRATE
         EndlessCard.MASTER_MASONS -> Icons.ANVIL
+        EndlessCard.SAPPERS -> Icons.SIEGE_HAMMER
+        EndlessCard.SHIELD_WALL -> Icons.SHIELD
+        EndlessCard.WAR_CHEST -> Icons.CHEST
+        EndlessCard.WAGER -> Icons.DICE
     }
 
     private fun rarityLabel(r: EndlessRarity): String = L[when (r) {
