@@ -118,8 +118,8 @@ W konsoli: **Play Games Services → Konfiguracja**. Utwórz:
 - **projekt** (1 ID, same cyfry);
 - **4 rankingi**, sortowane od największego wyniku: oblężenie (Endless), kampania, potyczka,
   wyzwanie dnia;
-- **78 osiągnięć**: 74 obecne + 4 nowe zatwierdzone 3.11 (`first_evolve`, `first_turret`,
-  `first_research`, `stages_3`).
+- **78 osiągnięć** (w tym 4 zatwierdzone 3.11 i już w grze: `first_evolve`, `first_turret`,
+  `first_research`, `stages_3`); wszystkie zwykłe, bez paska postępu.
 
 Razem **83 ID**. Nazwy i opisy osiągnięć dostaniesz od koordynatora w tabeli. Potem dodaj:
 - poświadczenia OAuth dla Androida (SHA-1 z kroku 3 i SHA-1 „App signing” z Konfiguracja →

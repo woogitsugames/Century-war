@@ -37,9 +37,8 @@ odblokowane osiągnięcia na górze. Ukryte jest 6 osiągnięć, tak jak w grze.
   usunąć. Jeśli chcemy przyrostowe, np. dla `win_*`, `battles_*`, `kills_*`, `research_*`,
   `daily_7/30` czy `turrets_50`, kod musi to obsłużyć **przed** publikacją. `kills_100000`
   przekracza limit 10 000 kroków, więc trzeba by go skalować. To decyzja koordynatora.
-- **4 osiągnięcia z R6-01** (`first_evolve`, `first_turret`, `first_research`, `stages_3`) mają
-  w arkuszu teksty pl/en ze zlecenia (kolumna `zrodlo_tekstu` = „R6-01”). Po scaleniu R6-01
-  uruchom skrypt ponownie: weźmie końcowe teksty i 10 języków z `part185()` w L.kt.
+- **4 osiągnięcia z R6-01** (`first_evolve`, `first_turret`, `first_research`, `stages_3`) są
+  już w grze; arkusz i import mają ich końcowe teksty w 10 językach z `part185()` w L.kt.
 - **Ranking dzienny:** Google zeruje dzienne rankingi o północy czasu UTC−7, a wyzwanie dnia
   w grze zmienia się o północy UTC. Wyniki z godzin 00:00–07:00 UTC trafiają więc do
   „wczorajszej” tablicy Google. Do oceny przez koordynatora: zostawić i opisać albo pokazywać
@@ -109,9 +108,8 @@ Jak build czyta ten plik (`buildSrc/.../PlayGamesIdsGenerator.kt`):
 - to zwykły plik `klucz=wartość`. Gradle generuje z niego `games_ids.xml`; nie edytuj XML;
 - `app_id` to same cyfry. Pozostałe ID zaczynają się literą i mają 12–128 znaków
   (litery, cyfry, `_`, `-`). Zły format oznacza błąd builda;
-- **nieznany klucz to błąd builda.** Dlatego 4 klucze z R6-01 (`achievement_first_evolve`,
-  `achievement_first_turret`, `achievement_first_research`, `achievement_stages_3`) wpisuj
-  dopiero po scaleniu R6-01, które dopisze je do generatora i do pliku;
+- **nieznany klucz to błąd builda**: plik ma dokładnie 83 klucze (projekt, 4 rankingi,
+  78 osiągnięć, w tym 4 z R6-01);
 - ID nie mogą się powtarzać;
 - jeśli brakuje choć jednego ID albo zostaje `REPLACE_ME`, wersja debug działa tylko lokalnie,
   a wersja do sklepu (release) się nie zbuduje.

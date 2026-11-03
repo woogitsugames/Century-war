@@ -208,7 +208,7 @@ object L {
 
     /** R6-01: cztery osiągnięcia pierwszej godziny (Play Games, LU-AC-GAC) i wpis „Co nowego”. */
     private fun part185(): Array<Pair<String, Array<out String>>> = arrayOf(
-        "ach_first_evolve" to t("Nowa epoka", "Into a New Era", "Neues Zeitalter", "Nueva era", "Nouvelle ère", "Nuova era", "Nova era", "Нова доба", "Nieuw tijdperk", "Yeni çağ"),
+        "ach_first_evolve" to t("Nowa epoka", "New Era", "Neues Zeitalter", "Nueva era", "Nouvelle ère", "Nuova era", "Nova era", "Нова доба", "Nieuw tijdperk", "Yeni çağ"),
         "ach_first_evolve_d" to t("Awansuj do następnej epoki.", "Advance to the next era.", "Steige in die nächste Epoche auf.", "Avanza a la siguiente era.", "Passez à l'ère suivante.", "Avanza all'era successiva.", "Avança para a era seguinte.", "Перейди до наступної епохи.", "Ga door naar het volgende tijdperk.", "Bir sonraki çağa geç."),
         "ach_first_turret" to t("Pierwsza wieża", "First Turret", "Erster Turm", "Primera torreta", "Première tourelle", "Prima torretta", "Primeira torre", "Перша вежа", "Eerste toren", "İlk kule"),
         "ach_first_turret_d" to t("Zbuduj wieżę.", "Build a turret.", "Baue einen Turm.", "Construye una torreta.", "Construisez une tourelle.", "Costruisci una torretta.", "Constrói uma torre.", "Збудуй вежу.", "Bouw een toren.", "Bir kule inşa et."),
