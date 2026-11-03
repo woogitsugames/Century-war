@@ -507,6 +507,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     com.centurywar.game.EndlessCard.FINAL_SPARK -> Icons.FINAL_SPARK
                     com.centurywar.game.EndlessCard.FIRST_GUARD -> Icons.FIRST_GUARD
                     com.centurywar.game.EndlessCard.BOSS_RECALL -> Icons.BOSS_RECALL
+                    com.centurywar.game.EndlessCard.QUARTERMASTER -> Icons.SUPPLY_CRATE
+                    com.centurywar.game.EndlessCard.MASTER_MASONS -> Icons.ANVIL
                     else -> Icons.CODEX
                 }
                 addGuide(icon, L[entry.textKey], L[entry.textKey + "_d"], rarity)

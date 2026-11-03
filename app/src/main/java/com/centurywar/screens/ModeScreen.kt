@@ -233,6 +233,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             DailyEvent.FORTIFIED_BASES -> Icons.SHIELD
             DailyEvent.GOLD_RUSH -> Icons.CHEST
             DailyEvent.MIRROR_ARMY -> Icons.CROSSED_SWORDS
+            DailyEvent.SIEGE_WORKS -> Icons.TOWER
+            DailyEvent.FORCED_MARCH -> Icons.BOLT
+            DailyEvent.SPOILS_OF_WAR -> Icons.BAG
             null -> if (rule == null) Icons.CALENDAR else Icons.FLAG
         }
         dailyMods = (if (event != null && rule != null) L[rule.key] + " · " else "") +

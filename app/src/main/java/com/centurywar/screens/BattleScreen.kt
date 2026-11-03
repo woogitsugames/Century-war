@@ -1476,6 +1476,8 @@ class BattleScreen(
         EndlessCard.FINAL_SPARK -> Icons.FINAL_SPARK
         EndlessCard.FIRST_GUARD -> Icons.FIRST_GUARD
         EndlessCard.BOSS_RECALL -> Icons.BOSS_RECALL
+        EndlessCard.QUARTERMASTER -> Icons.SUPPLY_CRATE
+        EndlessCard.MASTER_MASONS -> Icons.ANVIL
     }
 
     private fun rarityLabel(r: EndlessRarity): String = L[when (r) {

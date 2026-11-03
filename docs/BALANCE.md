@@ -1466,3 +1466,17 @@ Bez wyraźnych zmian w kampanii (różnice ±2 bitwy na 100; mediany czasu ±0,5
 - 2026-11-03 — regeneracja złotych powtórek: format zrzutu bitwy v17 (identyfikator rozliczenia, A156-10). Zmieniły się wyłącznie skróty `snapshotSha256`; wyniki, logi i stany symulacji bez zmian.
 
 - 2026-11-03 — regeneracja złotych powtórek: Tura 10: snapshot v17 po scaleniu z 163.
+## Zlecenie 170 — nowa zawartość (3.11.2026)
+
+Nowości bez zmian kampanii: wydarzenia dnia `SIEGE_WORKS` (wieżyczki −40% kosztu, +25% szybkostrzelności), `FORCED_MARCH` (+25% prędkości, +20% szkolenia), `SPOILS_OF_WAR` (+75% złota za zabicie) — wszystkie symetryczne dla obu stron, losowane dopiero od `Daily.EVENTS_V2_DAY` = `RELEASE_DAY + 8` (wcześniejsze dni, w tym przypięta powtórka `RELEASE_DAY + 3`, losują z zamrożonej szóstki). Karty Endless `QUARTERMASTER` (zwykła, +20% XP) i `MASTER_MASONS` (niepospolita, −12% kosztu wieżyczek i ich rozbudowy; tylko ze slotami wież).
+
+**Endless (`BalanceReport.endlessCommanderReport`, weteran, 100 seedów 1001–1100, wariant `z`):**
+
+| | Śr. fala | Mediana porażki | Fala 40 | Fala 50 | Fala 60 |
+|---|---:|---:|---:|---:|---:|
+| main przed 170 | 50,85 | 53 | 84/100 | 80/100 | 8/100 |
+| po 170 | 51,38 | 53 | 87/100 | 82/100 | 5/100 |
+
+`EndlessBalanceReportTest` (serwer): `TARGET_MEDIAN=OK`, `TARGET_SURVIVE_60=OK` (5/100, dolna granica celu 5–15). Nowe karty zmieniają losowanie ofert (inne karty w kolejnych falach), dlatego bot częściej dochodzi do fal 40–50, a rzadziej do 60 — wynik w celu, ale na granicy; przy kolejnej zmianie utrudniającej Endless trzeba to zmierzyć ponownie.
+
+Złote powtórki: nowe pozycje enumu `EndlessCard` wydłużają zapis `cardStacks` w migawce, więc `GoldenReplayTest` wymaga regeneracji (zrobi to koordynator razem z podbiciem `SimVersion.PROTOCOL`).
