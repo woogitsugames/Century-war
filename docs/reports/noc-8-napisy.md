@@ -59,8 +59,8 @@ nadal omijają wstęgę. Wyniki:
 | Język | Było | Jest |
 |---|---|---|
 | fr | 9 sp | 13,5 sp |
-| pt | 10,6 sp | ok. 12 sp |
-| nl | 10,4 sp | ok. 12 sp |
+| pt | 10,6 sp | 16,8 sp |
+| nl | 10,4 sp | 16,4 sp |
 
 Tytuły, które miały co najmniej 11 sp (pl, en, de, es, it, uk, tr), zachowują dotychczasowy rozmiar.
 Na 1600×720 nic się nie zmienia: tytuł stoi tam w jednym rzędzie z przyciskami.

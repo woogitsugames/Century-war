@@ -91,6 +91,22 @@ class Noc8NapisyTest {
         }
     }
 
+    /** Jedna gra na urządzenie i skalę (mniej pamięci natywnej Robolectric); język przełączany w miejscu. */
+    private val games = HashMap<String, Game>()
+
+    private fun gameFor(tag: String, lang: String, scale: Int = 100): Game {
+        val g = games.getOrPut("$tag/$scale") { game(devices.getValue(tag), lang, scale) }
+        g.profile.lang = lang
+        g.applyLanguage()
+        return g
+    }
+
+    @org.junit.After
+    fun closeGames() {
+        for (g in games.values) g.history?.close()
+        games.clear()
+    }
+
     private fun tick(g: Game, n: Int = 1, dt: Float = 1f / 30f) = repeat(n) { g.frame(tiny, dt) }
     private fun field(o: Any, name: String) = o.javaClass.getDeclaredField(name).apply { isAccessible = true }
 
@@ -146,9 +162,9 @@ class Noc8NapisyTest {
                     val arr = Array(L.CODES.size) { "$longPl, $longPl (${L.CODES[it]})" }
                     for (k in saved.keys) tab[k] = arr
                 }
-                for ((tag, d) in devices) for (scale in intArrayOf(100, 130)) for (lang in L.CODES) {
+                for (tag in devices.keys) for (scale in intArrayOf(100, 130)) for (lang in L.CODES) {
                     val where = "$tag/$lang/$scale${if (long) "/dlugi" else ""}"
-                    val g = game(d, lang, scale)
+                    val g = gameFor(tag, lang, scale)
                     tick(g, 3, 0.1f)
                     val st = SettingsScreen(g)
                     g.setScreen(st); tick(g, 4, 0.1f)
@@ -192,7 +208,6 @@ class Noc8NapisyTest {
                         if (!long && scale == 100 && shown.endsWith("…")) errors.append("$where: elipsa w '$shown'\n")
                         if (long && tag == "foldOuter") assertTrue("$where: długi podpis bez wielokropka", shown.endsWith("…"))
                     } else errors.append("$where: wiersz „Mniej wstrząsów” niewidoczny\n")
-                    g.history?.close()
                 }
             }
         } finally {
@@ -206,7 +221,7 @@ class Noc8NapisyTest {
     /** Czysta logika [RowNote]: dwa wiersze, gdy jest wysokość; inaczej jeden z „…”. */
     @Test
     fun rowNoteFallbacks() {
-        val g = game(devices.getValue("phone720"), "pl")
+        val g = gameFor("phone720", "pl")
         val ui = g.ui
         val dp = ui.dp
         val n = RowNote()
@@ -220,7 +235,6 @@ class Noc8NapisyTest {
         assertTrue(n.lines == 1 && n.first == "Krótki" && n.size == RowNote.NOTE_DP)
         n.layout(ui, "Średnio długi podpis do zawinięcia w wierszu", 150 * dp, 40 * dp)
         assertTrue(n.lines == 2 && !n.second.endsWith("…") && n.size >= RowNote.MIN_DP)
-        g.history?.close()
     }
 
     /** Wyniki bitwy: „Od nowa” ≥ 10 sp; układ przycisków zmienia się tylko tam, gdzie był za mały. */
@@ -229,8 +243,8 @@ class Noc8NapisyTest {
         val old = L.lang
         val errors = StringBuilder()
         try {
-            for ((tag, d) in devices) for (lang in L.CODES) {
-                val g = game(d, lang)
+            for (tag in devices.keys) for (lang in L.CODES) {
+                val g = gameFor(tag, lang)
                 tick(g, 3, 0.1f)
                 val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 161L, 1f))
                 g.setScreen(bs); tick(g, 2)
@@ -247,7 +261,6 @@ class Noc8NapisyTest {
                 val oldTight = g.ui.fit(L["replay"], 15f, usable * 0.44f - 50 * g.ui.dp * 0.88f - 16 * g.ui.dp) < 15f * 0.75f
                 log.append("$tag/$lang: dawniej ${if (oldTight) "równe" else "26/44/30"}, „${bs.restartEnd.label}” ${"%.1f".format(size)} dp, przycisk ${"%.0f".format(bs.restartEnd.r.width() / g.ui.dp)} dp\n")
                 if (size < 10f) errors.append("$tag/$lang: „${bs.restartEnd.label}” ${"%.1f".format(size)} dp\n")
-                g.history?.close()
             }
         } finally {
             L.lang = old
@@ -262,8 +275,8 @@ class Noc8NapisyTest {
         val old = L.lang
         val errors = StringBuilder()
         try {
-            for ((tag, d) in devices) for (lang in L.CODES) {
-                val g = game(d, lang)
+            for (tag in devices.keys) for (lang in L.CODES) {
+                val g = gameFor(tag, lang)
                 tick(g, 3, 0.1f)
                 g.setScreen(WhatsNewScreen(g)); tick(g, 4, 0.1f)
                 val texts = render(g, if (lang == "fr" || lang == "pt") "${tag}_${lang}_historia" else null)
@@ -273,7 +286,6 @@ class Noc8NapisyTest {
                 log.append("$tag/$lang: „$title” ${"%.1f".format(size)} dp\n")
                 if (size < 10f - 0.05f) errors.append("$tag/$lang: „$title” ${"%.1f".format(size)} dp\n")
                 if (t != null && (t.r.left < 0f || t.r.right > g.width)) errors.append("$tag/$lang: tytuł poza ekranem ${t.r}\n")
-                g.history?.close()
             }
         } finally {
             L.lang = old
