@@ -9,6 +9,8 @@
 # Metryki osiagniec sa dodatkowo zapisywane do JSON po nazwie.
 # Nie pozwalamy R8 usunac/unboxowac tych klas ani zmienic ich stalych.
 -keep enum com.centurywar.meta.AchievementMetric { *; }
+# Typ misji trafia do missionState w profilu po nazwie (MissionType.valueOf).
+-keep enum com.centurywar.meta.MissionType { *; }
 -keep enum com.centurywar.game.AiPersonality { *; }
 -keep enum com.centurywar.game.CampaignDifficulty { *; }
 -keep enum com.centurywar.game.DailyEvent { *; }

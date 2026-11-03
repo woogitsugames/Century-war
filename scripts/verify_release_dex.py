@@ -22,9 +22,10 @@ REQUIRED_CLASSES = (
     "com.centurywar.meta.PlayGamesLeaderboards",
 )
 
-# Ordinale sa czescia snapshotow i replayow; nazwy metryk sa kluczami JSON profilu.
+# Ordinale sa czescia snapshotow i replayow; nazwy metryk i typow misji sa w JSON profilu.
 REQUIRED_ENUMS = (
     "com.centurywar.meta.AchievementMetric",
+    "com.centurywar.meta.MissionType",
     "com.centurywar.game.AiPersonality",
     "com.centurywar.game.DailyEvent",
     "com.centurywar.game.Doctrine",
