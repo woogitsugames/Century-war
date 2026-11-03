@@ -64,6 +64,14 @@ class BattleAccessibilityTest {
             view.refreshAccessibilityNodes()
         }
 
+        /** Krok gry bez rysowania (długie pętle; rysowanie Canvas w Robolectric jest wolne). */
+        fun step(dt: Float = 1f / 60f, ms: Long = (dt * 1000f).toLong()) {
+            game.current!!.advanceTouch(dt)
+            game.current!!.update(dt)
+            now += ms
+            view.refreshAccessibilityNodes()
+        }
+
         fun node(id: Int): AccessibilityNodeInfo? = provider.createAccessibilityNodeInfo(id)
         fun text(id: Int): String = node(id)!!.contentDescription.toString()
 
@@ -263,14 +271,14 @@ class BattleAccessibilityTest {
         try {
             val start = f.revision
             val time0 = f.battle.time
-            repeat(600) { f.frame(1f / 60f, 16L) }
+            repeat(600) { f.step(1f / 60f, 16L) }
             val seconds = (f.battle.time - time0).coerceAtLeast(1f)
             val rebuilds = f.revision - start
             assertTrue("Przebudowy: $rebuilds w ${seconds}s", rebuilds <= 2 * seconds)
             assertTrue("Teksty się odświeżają", rebuilds > 0)
-            repeat(70) { f.frame(0f, 16L) }
+            repeat(70) { f.step(0f, 16L) }
             val idle = f.revision
-            repeat(600) { f.frame(0f, 16L) }
+            repeat(600) { f.step(0f, 16L) }
             assertEquals("Bez zmian w bitwie nie ma przebudów", idle, f.revision)
         } finally { f.finish() }
     }
@@ -350,7 +358,7 @@ class BattleAccessibilityTest {
             val tut = f.screen.tut
             assertNotNull(tut)
             var guard = 0
-            while (f.node(INFO_TUTORIAL) == null && guard++ < 900) f.frame(1f / 60f)
+            while (f.node(INFO_TUTORIAL) == null && guard++ < 900) f.step(1f / 60f)
             assertNotNull("Brak kroku samouczka", f.node(INFO_TUTORIAL))
             assertTrue(f.text(INFO_TUTORIAL), f.text(INFO_TUTORIAL).contains(L["tut_melee_t"]))
             assertNotNull(f.node(10_000))
