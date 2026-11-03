@@ -386,6 +386,7 @@ abstract class PrereleasePolishBase {
         tick(g, 16, 0.25f)
         shot(g, prefix, "wyniki")
         bs.onClick(bs.resultChartTab); tick(g, 4, 0.1f); shot(g, prefix, "wyniki_wykres")
+        winResultsGoal(prefix, g)
 
         val vs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 9900L, 1f, startEra = steam, maxEra = steam))
         g.setScreen(vs); tick(g, 3)
@@ -398,6 +399,45 @@ abstract class PrereleasePolishBase {
         tick(g, 2)
         if (e.pendingCards != null) shot(g, prefix, "endless_karty")
         g.setScreen(MenuScreen(g)); tick(g, 3)
+    }
+
+    /**
+     * R2-01: wygrana etapu 2 pokazuje „następny cel” w wierszu wskazówki: napis ≥ 8,5 dp,
+     * nieucięty, wszystkie wiersze narysowane, cel dotyku ≥ 48 dp nad rzędem przycisków.
+     */
+    protected fun winResultsGoal(prefix: String, g: Game) {
+        val ws = BattleScreen(g, Campaign.config(Campaign.stages[1], g.profile.bonuses(), 41L))
+        g.setScreen(ws); tick(g, 3)
+        ws.battle.enemy.baseHp = 0f
+        var n = 0
+        while (!ws.finished && n++ < 200) tick(g, 1, 0.1f)
+        tick(g, 16, 0.25f)
+        shot(g, prefix, "wyniki_cel")
+        checkResultGoal(g, ws, "$prefix/wyniki_cel")
+    }
+
+    protected fun checkResultGoal(g: Game, ws: BattleScreen, where: String) {
+        val dp = g.ui.dp
+        require10(ws.battle.winner == 0, "$where: bitwa nie jest wygrana")
+        require10(ws.resultGoalKind != com.centurywar.meta.NextGoalKind.NONE && ws.tipText.isNotEmpty(),
+            "$where: wygrana bez następnego celu")
+        val lines = (0 until ws.resultTipCount).map { ws.resultTipLines[it] ?: "" }
+        for (line in lines) {
+            val t = lastTexts.firstOrNull { it.s == line }
+            require10(t != null, "$where: wiersz celu „$line” nie jest narysowany")
+            if (t == null) continue
+            require10(t.sizePx / dp >= 8.5f, "$where: drobny napis celu ${"%.1f".format(t.sizePx / dp)} dp")
+            require10(t.r.left >= ws.resultPanel.left && t.r.right <= ws.resultPanel.right + 0.5f &&
+                t.r.left >= maxOf(0f, t.clip.left) - 1.5f * dp && t.r.right <= minOf(g.width.toFloat(), t.clip.right) + 1.5f * dp,
+                "$where: ucięty napis celu „$line”")
+            require10(t.r.bottom <= ws.restartEnd.r.top, "$where: napis celu na przyciskach wyników")
+        }
+        val b = ws.resultGoalBtn
+        val hit = RectF(b.r.left - b.hitSlop + b.hitOffsetX, b.r.top - b.hitSlop + b.hitOffsetY,
+            b.r.right + b.hitSlop + b.hitOffsetX, b.r.bottom + b.hitSlop + b.hitOffsetY)
+        require10(b.visible && hit.height() >= 47.5f * dp, "$where: cel dotyku ${hit.height() / dp} dp")
+        for (o in listOf(ws.continueBtn, ws.restartEnd, ws.replayEnd))
+            require10(!o.visible || !RectF.intersects(hit, o.r), "$where: cel nachodzi na #${o.id}")
     }
 
     /**

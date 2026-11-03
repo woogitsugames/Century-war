@@ -173,8 +173,17 @@ object L {
         putAll(part178())
         putAll(part181())
         putAll(part182())
+        putAll(part179())
         }
     }
+
+    /** R2-01: „Następny cel” na wynikach bitwy i w menu. */
+    private fun part179(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "goal179_missions" to t("Odbierz nagrody misji: %d", "Claim mission rewards: %d", "Missionsbelohnungen abholen: %d", "Recoge recompensas de misiones: %d", "Récupérez les récompenses de missions : %d", "Riscuoti le ricompense delle missioni: %d", "Recolhe as recompensas das missões: %d", "Забери нагороди місій: %d", "Haal missiebeloningen op: %d", "Görev ödüllerini al: %d"),
+        "goal179_research" to t("Stać cię na badanie: %s (%s)", "You can afford research: %s (%s)", "Forschung bezahlbar: %s (%s)", "Puedes pagar una investigación: %s (%s)", "Recherche à votre portée : %s (%s)", "Puoi permetterti una ricerca: %s (%s)", "Podes pagar uma pesquisa: %s (%s)", "Вистачає на дослідження: %s (%s)", "Onderzoek betaalbaar: %s (%s)", "Araştırmaya paran yetiyor: %s (%s)"),
+        "goal179_stage" to t("Następny etap %d: %s", "Next stage %d: %s", "Nächste Etappe %d: %s", "Siguiente etapa %d: %s", "Étape suivante %d : %s", "Prossima tappa %d: %s", "Próxima etapa %d: %s", "Наступний етап %d: %s", "Volgende etappe %d: %s", "Sonraki bölüm %d: %s"),
+        "goal179_weekly" to t("Oblężenie tygodnia: %d fal do progu %s", "Weekly Siege: %d waves for %s", "Wochenbelagerung: %d Wellen für %s", "Asedio semanal: %d oleadas para %s", "Siège hebdomadaire : %d vagues pour %s", "Assedio sett.: %d ondate per %s", "Cerco semanal: %d ondas para %s", "Тижнева облога: %d хвиль до рівня %s", "Wekelijks beleg: %d golven voor %s", "Haftalık Kuşatma: %d dalgada %s"),
+    )
 
     /** R2-04: „Raport dla testera”; tempo ×½ startuje bitwę także bez TalkBack (decyzja 3.11). */
     private fun part182(): Array<Pair<String, Array<out String>>> = arrayOf(

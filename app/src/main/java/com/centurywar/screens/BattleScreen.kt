@@ -139,6 +139,10 @@ class BattleScreen(
     internal var newRecord = false
     internal var tipKey = ""
     internal var tipText = ""
+    /** R2-01: cel z wiersza wskazówki (dotknięcie prowadzi do ekranu celu); NONE = brak. */
+    internal var resultGoalKind = com.centurywar.meta.NextGoalKind.NONE
+    /** R2-01: wiersz wskazówki narysowany w ostatniej klatce (cel dotyku nad nim). */
+    internal var resultGoalDrawn = false
     internal var resultReasonText1 = ""
     internal var resultReasonText2 = ""
     internal var tipIcon = Icons.BOLT
@@ -208,6 +212,8 @@ class BattleScreen(
         const val RESULT_STATS_TAB = 201
         const val RESULT_CHART_TAB = 202
         const val COMMANDER = 203
+        /** R2-01: niewidoczny przycisk nad wierszem „następnego celu” na wynikach. */
+        const val RESULT_GOAL = 204
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
         /** Noc 5: sekundy symulacji bez dymków po zakończeniu nakładki samouczka. */
@@ -274,6 +280,7 @@ class BattleScreen(
     internal val replayEnd = btn(WATCH_REPLAY)
     internal val resultStatsTab = btn(RESULT_STATS_TAB)
     internal val resultChartTab = btn(RESULT_CHART_TAB)
+    internal val resultGoalBtn = btn(RESULT_GOAL).also { it.visible = false }
     internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
     internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -962,6 +969,7 @@ class BattleScreen(
             }
             RESULT_STATS_TAB -> showResultChart = false
             RESULT_CHART_TAB -> showResultChart = true
+            RESULT_GOAL -> goalScreen()?.let { g.setScreen(it) }
             in DOCTRINE0..DOCTRINE0 + 2 -> {
                 val cards = battle.pendingCards
                 if (cards != null) {
@@ -997,6 +1005,15 @@ class BattleScreen(
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
         dailyEvent,
     )
+
+    /** R2-01: ekran celu z wiersza wskazówki; Wstecz z niego wraca do menu. */
+    private fun goalScreen(): Screen? = when (resultGoalKind) {
+        com.centurywar.meta.NextGoalKind.MISSIONS -> MissionsScreen(g)
+        com.centurywar.meta.NextGoalKind.RESEARCH -> ResearchScreen(g)
+        com.centurywar.meta.NextGoalKind.STAGE -> CampaignScreen(g)
+        com.centurywar.meta.NextGoalKind.WEEKLY_TIER -> ModeScreen(g, Mode.DAILY, true)
+        com.centurywar.meta.NextGoalKind.NONE -> null
+    }
 
     private fun nextScreen(): Screen = when (cfg.mode) {
         Mode.CAMPAIGN -> CampaignScreen(g)
@@ -1139,6 +1156,7 @@ class BattleScreen(
         pauseBtn -> L["a164_pause"]
         pauseVibrationBtn -> L["vibration"] + ": " + b.label
         pauseSpeedBtn -> L["cx_speed"] + ": " + b.label
+        resultGoalBtn -> tipText
         else -> super.accessibilityLabel(b)
     }
 

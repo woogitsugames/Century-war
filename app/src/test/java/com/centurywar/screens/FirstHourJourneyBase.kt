@@ -451,6 +451,9 @@ abstract class FirstHourJourneyBase {
                 if (index == 7 || attempt == 1 && index == 1) shot(g, "wyniki_etap${index + 1}")
                 won = o.won
                 if (o.won && o.reward <= 0) problem("$where: wygrana bez nagrody")
+                if (o.won) checkGoal(g, bs, where)
+                // R2-01: raz na ścieżkę gracz dotyka celu zamiast „Dalej”; Wstecz wraca do menu.
+                if (o.won && index == 2 && !goalTapped) { goalTapped = true; tapGoal(g, bs, where); continue }
                 tap(g, bs.continueBtn, "$where/dalej")
                 tick(g, 0.2f, 6)
                 if (g.current !is CampaignScreen) problem("$where: „Dalej” nie prowadzi na mapę (${name(g.current)})")
@@ -459,6 +462,62 @@ abstract class FirstHourJourneyBase {
             }
             if (!won) { note(g, "etap ${index + 1}: 3 porażki z rzędu — gracz utknął"); audit.append("etap ${index + 1}: 3 porażki\n"); return }
         }
+    }
+
+    // ------------------------------------------------------------------ R2-01: następny cel
+
+    protected var goalTapped = false
+
+    /** Obszar dotyku przycisku (z hitSlop i przesunięciem). */
+    protected fun hitRect(b: Button) = RectF(b.r.left - b.hitSlop + b.hitOffsetX, b.r.top - b.hitSlop + b.hitOffsetY,
+        b.r.right + b.hitSlop + b.hitOffsetX, b.r.bottom + b.hitSlop + b.hitOffsetY)
+
+    /** Po wygranej: niepusty cel, cel dotyku ≥ 48 dp, bez nachodzenia na przyciski wyników i baner. */
+    protected fun checkGoal(g: Game, bs: BattleScreen, where: String) {
+        val goal = bs.resultGoalBtn
+        if (bs.resultGoalKind == com.centurywar.meta.NextGoalKind.NONE || bs.tipText.isEmpty()) {
+            problem("$where: wygrana bez następnego celu"); return
+        }
+        if (!goal.visible || goal.r.isEmpty) { problem("$where: cel „${bs.tipText}” bez celu dotyku"); return }
+        val hit = hitRect(goal)
+        val dp = g.ui.dp
+        if (hit.height() < 47.5f * dp) problem("$where: cel dotyku ${hit.height() / dp} dp")
+        for (b in listOf(bs.continueBtn, bs.restartEnd, bs.replayEnd, bs.resultStatsTab, bs.resultChartTab))
+            if (b.visible && RectF.intersects(hit, b.r)) problem("$where: cel nachodzi na przycisk #${b.id} '${b.label}'")
+        if (!g.noticeBanner.isEmpty && RectF.intersects(g.noticeBanner, hit)) problem("$where: baner nad celem")
+        if (bs.accessibilityLabel(goal) != bs.tipText) problem("$where: opis TalkBack celu ≠ tekst celu")
+        if (reported.add("goal $where")) audit.append("$tag/$where: cel ${bs.resultGoalKind} „${bs.tipText}”\n")
+    }
+
+    protected fun tapGoal(g: Game, bs: BattleScreen, where: String) {
+        val kind = bs.resultGoalKind
+        note(g, "$where: gracz dotyka celu „${bs.tipText}” ($kind)")
+        shot(g, "wyniki_cel")
+        tap(g, bs.resultGoalBtn, "$where/cel")
+        tick(g, 0.2f, 6)
+        val expected = when (kind) {
+            com.centurywar.meta.NextGoalKind.MISSIONS -> MissionsScreen::class.java
+            com.centurywar.meta.NextGoalKind.RESEARCH -> ResearchScreen::class.java
+            com.centurywar.meta.NextGoalKind.STAGE -> CampaignScreen::class.java
+            com.centurywar.meta.NextGoalKind.WEEKLY_TIER -> ModeScreen::class.java
+            com.centurywar.meta.NextGoalKind.NONE -> null
+        }
+        if (g.current?.javaClass != expected) problem("$where: cel $kind otwiera ${name(g.current)}")
+        dwell(g, "$where/ekran celu", 1f)
+        val hints = hintsOf(g.current!!)
+        if (hints != null && hints.activeId >= 0) tap(g, hints.okBtn, "$where/OK dymka celu")
+        backToMenu(g, "$where/po celu")
+        val menu = g.current as? MenuScreen ?: return
+        tick(g, 0.1f, 2)
+        if (menu.goalBtn.visible) {
+            note(g, "menu: cel „${menu.goalText}” (${menu.goalKind})")
+            shot(g, "menu_cel")
+            val hit = hitRect(menu.goalBtn)
+            if (hit.height() < 47.5f * g.ui.dp) problem("menu: cel dotyku ${hit.height() / g.ui.dp} dp")
+            if (!g.noticeBanner.isEmpty && RectF.intersects(g.noticeBanner, menu.goalBtn.r)) problem("menu: baner nad celem")
+            for (b in menu.buttons) if (b !== menu.goalBtn && b.visible && b.id in 1..9 && RectF.intersects(b.r, menu.goalBtn.r))
+                problem("menu: cel nachodzi na kafel #${b.id}")
+        } else if (reported.add("menu goal hidden")) audit.append("$tag: menu bez linii celu (brak miejsca lub celu)\n")
     }
 
     // ------------------------------------------------------------------ meta
@@ -618,6 +677,7 @@ abstract class FirstHourJourneyBase {
         clock = 0f
         stageLogs.clear()
         researchBought = 0
+        goalTapped = false
         timeline.setLength(0)
         val g = game(d, lang)
         L.setCode(lang)
