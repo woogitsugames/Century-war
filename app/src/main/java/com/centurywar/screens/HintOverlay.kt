@@ -103,6 +103,8 @@ class HintOverlay(
         private val ROLES = Role.entries
         private const val CHECK_EVERY = 0.25f
         private const val GAP = 20f
+        /** Pierwsza bitwa kampanii: dłuższa przerwa, żeby nowy gracz nie dostał serii dymków. */
+        private const val FIRST_BATTLE_GAP = 50f
         private const val DISPLAY_TIME = 8f
         /** Przycisk OK (dp): z hitSlop 8 dp cel dotyku ma 48 dp wysokości. */
         internal const val OK_W = 56f
@@ -157,7 +159,9 @@ class HintOverlay(
         if (sinceCheck < CHECK_EVERY) return
         sinceCheck = 0f
         // Okno wariantu zatrzymuje bitwę: pokaż objaśnienie od razu, nie po 20 s.
-        if (b.pendingVariant == null && b.time - lastShownAt < GAP) return
+        val firstBattle = b.cfg.mode == Mode.CAMPAIGN && b.cfg.stageIndex == 0
+        val gap = if (firstBattle) FIRST_BATTLE_GAP else GAP
+        if (b.pendingVariant == null && b.time - lastShownAt < gap) return
         var best: HintDef? = null
         for (def in DEFINITIONS) {
             if (b.pendingVariant != null && def.id != VARIANT) continue
@@ -210,7 +214,9 @@ class HintOverlay(
             CAP -> p.aliveCount >= p.cap && p.gold >= b.armoryCost(p) * 1.3f && p.armory < 15
             RALLY -> p.rallyUnlocked && b.abilityReady(p, 1) && nearEnemyCount() >= 3
             HOLD -> !p.hold && b.enemy.aliveCount >= p.aliveCount + 3 && nearEnemyCount() >= 2
-            VETERAN -> p.era >= b.cfg.maxEra && p.rank > 0
+            // Ranga weterana nie jest tematem pierwszej bitwy (przegląd „pierwsza godzina”).
+            VETERAN -> p.era >= b.cfg.maxEra && p.rank > 0 &&
+                !(b.cfg.mode == Mode.CAMPAIGN && b.cfg.stageIndex == 0)
             SIEGE -> !b.endless && b.time >= Battle.SIEGE_START && b.siegePressure() > 1f
             MODIFIERS -> b.cfg.modifiers.isNotEmpty() && b.time < 60f
             FOG -> b.fog && b.time < 80f

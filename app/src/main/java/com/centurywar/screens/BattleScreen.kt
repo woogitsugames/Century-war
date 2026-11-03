@@ -377,6 +377,9 @@ class BattleScreen(
         val current = battle.player.era
         if (current == lastIntroEra) return
         lastIntroEra = current
+        // Pełnoekranowa zapowiedź epoki tylko w kampanii; w potyczce, Endless i wyzwaniach
+        // epoka widnieje w pasku, a zapowiedź zostaje niewidziana do pierwszej kampanii.
+        if (battle.cfg.mode != Mode.CAMPAIGN) return
         eraIntro = EraIntroOverlay.showIfFirst(g, current, battle, r)
         eraIntro?.layout()
     }

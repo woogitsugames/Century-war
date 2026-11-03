@@ -85,14 +85,14 @@ class EraIntroBattleScreenTest {
     }
 
     /** Te same polecenia trafiają do powtórki z planszą i bez niej. */
-    private fun logAfterEvolve(withIntro: Boolean): Replay.Log {
+    private fun logAfterEvolve(withIntro: Boolean, mode: Mode = Mode.CAMPAIGN): Replay.Log {
         val p = profile().apply {
             tutorialDone = true
             hintsEnabled = false
             eraIntrosEnabled = withIntro
         }
         val g = game(p)
-        val screen = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 6801L, 1f, startEra = 0, maxEra = 1))
+        val screen = BattleScreen(g, BattleConfig(mode, 6801L, 1f, startEra = 0, maxEra = 1))
         g.setScreen(screen)
         val battle = field(screen, "battle") as Battle
         val controller = field(screen, "commands") as BattleController
@@ -103,7 +103,8 @@ class EraIntroBattleScreenTest {
         screen.onClick(evolve)
         assertEquals(1, battle.player.era)
         val intro = field(screen, "eraIntro") as EraIntroOverlay?
-        assertEquals(withIntro, intro?.active == true)
+        // Pełnoekranowa zapowiedź tylko w kampanii (decyzja 3.11).
+        assertEquals(withIntro && mode == Mode.CAMPAIGN, intro?.active == true)
 
         // Bez kroku symulacji: wybór doktryny, potem trening jednostki.
         if (battle.pendingVariant != null) assertTrue(controller.variant(0))
@@ -111,7 +112,7 @@ class EraIntroBattleScreenTest {
         if (battle.pendingCards != null) assertTrue(controller.card(0))
         assertTrue(controller.queue(Role.MELEE))
 
-        if (withIntro) {
+        if (withIntro && mode == Mode.CAMPAIGN) {
             val before = battle.stepCount
             repeat(35) { screen.update(0.025f) }
             assertEquals(before, battle.stepCount)
@@ -122,6 +123,11 @@ class EraIntroBattleScreenTest {
             assertEquals(before, battle.stepCount)
         }
         return controller.log()
+    }
+
+    @Test
+    fun skirmishShowsNoFullscreenIntro() {
+        logAfterEvolve(true, Mode.SKIRMISH)
     }
 
     @Test
