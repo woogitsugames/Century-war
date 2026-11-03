@@ -128,6 +128,8 @@ class HintOverlay(
     private var upgradeIndex = 0
     private var screenFocus: RectF? = null
     private var body = ""
+    /** Dzień 5: treść dymka dla czytnika ekranu (odczyt na wątku gry). */
+    internal val accessibilityBody: String get() = body
     private val lines = arrayOfNulls<String>(24)
     private var lineCount = 0
     private var compact = false
