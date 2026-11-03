@@ -1,3 +1,17 @@
+# PRZEKAZANIE 3.11.2026 ok. 13:50 UTC (koniec limitu tygodniowego starej sesji)
+
+**Stan:** `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` (wszystko scalone, pełne testy zielone, ok. 5,5 min od zera). PROTOCOL **0.8.5**, `BattleSnapshot.VERSION` **19**, `Replay.VERSION` 7, 74 osiągnięcia / 79 ID Play Games (REPLACE_ME), muzyka nagrana 21 utworów w `app/src/main/assets/music/` (oryginały FLAC na gałęzi `music-src` — nie usuwać).
+**Zrobione 2–3.11:** dowódca 125, stopnie wież 140, audyt 156 i wszystkie poprawki (A156-01…27 poza danymi właściciela), fala 7 GPT 160–165, warianty 163, nowa zawartość 170 (druga sesja) i 176, muzyka (pętle bez przerwy, −7 dB pod efektami), noc 1–9 (rozliczenie bitwy idempotentne, UX Fold, wydarzenia dnia bez sprzeczności, pierwsza godzina, próba release R8, teksty, napisy, testy 2× szybsze), dzień 1 (etapy 2–7 ok. 8 min), dzień 2 (gwiazdki bez przyspieszonej presji, medale osobno na wynikach, „Co nowego” jako przycisk w menu — zatwierdzone, bez okna), dzień 3 (osiągnięcia i misje dowódcy/wież).
+**Zaplanowane zadania „nocna praca koordynatora” (:07/:37) WYŁĄCZONE.** Nowa sesja może ustawić własne (właściciel chce pracy autonomicznej: 1 agent + koordynator).
+**Kolejka (decyzje właściciela, do zrobienia po kolei):**
+1. Przegląd po dniach 1–3 (pierwsza godzina, zrzuty) + **przywrócić zegar bitwy pod minimapą na zewnętrznym Foldzie (904×2316), gdy działa presja** (zatwierdzone).
+2. TalkBack dla przycisków HUD w bitwie.
+3. Nowa zawartość (karty Endless / wyzwania tygodnia / warianty) z pomiarem balansu (Endless fala 60: cel 5–15/100, teraz na dolnej granicy).
+4. Grafiki i opisy sklepu z nowościami (`StoreGraphicsTest`, `docs/store/`), lista do testów zamkniętych (`docs/RELEASE.md`).
+**Zasady (obowiązujące):** CI tylko przy tagu `v*`, PR do main i ręcznie — **nie dodawać workflowów uruchamianych przy push** (limit minut). Pełne testy lokalnie przed każdym wypchnięciem na main. Gradle tylko przez `flock /tmp/claude-0/gradle.lock`. Testy: `./gradlew :app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun --continue --console=plain` (bez `--rerun` może wziąć wynik z cache). Zmiana wyników bitew ⇒ podbić PROTOCOL + regeneracja złotych powtórek (`ORG_GRADLE_PROJECT_goldenReason=... ./gradlew :sim:regenerateGolden -PserverOnly=true --no-configuration-cache`). Zmiana formatu zapisu bitwy ⇒ VERSION + odczyt starszych wersji. Nowe teksty w nowej `partNNN()` (następna wolna: **177**), 10 języków.
+**Otwarte u właściciela:** dane wydawcy/polityki/serwera/PGS (`docs/store/OWNER_INPUT.md`), podpis upload, data `Daily.RELEASE_DAY`, testy na telefonie (lista w `docs/RELEASE.md`). GPT 155 (tłumaczenia part145–151) nigdy nie przyszło — można zignorować (noc 7 przejrzała nowsze teksty).
+**Uwagi środowiskowe:** pełny dysk wcześniej przez `~/.gradle/caches/build-cache-1` (można usunąć); stare `/tmp/robolectric-nativeruntime*` zostały. Restarty workera zdarzają się często — agentom każ wypychać często.
+
 # KOLEJKA DNIA 3.11 (po południu, decyzje właściciela)
 main = b3e24191 (dzień 1–3 scalone, PROTOCOL 0.8.5, snapshot v19, 74 osiągnięcia / 79 ID PGS). „Co nowego” zostaje jako przycisk w menu (bez okna). Agenci kolejno (po jednym):
 1. `claude/dzien-4-przeglad`: przegląd po dniach 1–3 (pierwsza godzina, zrzuty) + przywrócić zegar bitwy pod minimapą na zewnętrznym Foldzie, gdy działa presja.
