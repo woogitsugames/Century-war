@@ -50,9 +50,30 @@ class Chrome(private val s: Screen) {
     fun title(c: Canvas, text: String) {
         val ui = s.ui
         val cx = s.w / 2 + (s.g.insetL - s.g.insetR) / 2
-        val maxW = s.w - s.g.insetL - s.g.insetR - 2 * 150 * s.dp - 260 * s.dp
         ui.ribbon(c, cx, s.g.insetT + (if (narrowTitleRow) 82 else 32) * s.dp, text, 20f, Ui.RIBBON, 220 * s.dp, Ui.GOLD,
-            maxW.coerceAtLeast(160 * s.dp))
+            titleMaxW(text))
+    }
+
+    /**
+     * Największa szerokość wstęgi. W jednym rzędzie z „Wstecz” i plakietkami zostaje środek ekranu
+     * (co najmniej 160 dp). Noc 8: gdy wstęga stoi w osobnym rzędzie (wąski ekran), a tytuł zmalałby
+     * poniżej 10 sp (fr „Historique des changements”, pt „Histórico de alterações” na Foldzie zewn.),
+     * wstęga poszerza się dokładnie tyle, ile trzeba na 10 sp (najwyżej do marginesów ekranu).
+     * Tytuły, które już mają co najmniej 10 sp, zachowują dotychczasowy rozmiar.
+     */
+    private fun titleMaxW(text: String): Float {
+        val d = s.dp
+        val ui = s.ui
+        val base = (s.w - s.g.insetL - s.g.insetR - 560 * d).coerceAtLeast(160 * d)
+        if (!narrowTitleRow) return base
+        val hh = 20f * d * ui.textScale * 1.05f
+        val tw = ui.measure(text, 20f, true)
+        if (tw + hh * 2.4f <= base || tw <= 0f) return base
+        val size = max(9f, 20f * (base - hh * 2.4f) / tw)
+        if (size * ui.textScale >= MIN_TITLE_SP) return base
+        val need = ui.measure(text, MIN_TITLE_SP / ui.textScale, true) + hh * 2.4f + 1f * d
+        val room = s.w - s.g.insetL - s.g.insetR - 2 * hh * 1.3f - 16 * d
+        return need.coerceAtMost(room).coerceAtLeast(base)
     }
 
     /** Prostokąt całej wstęgi wraz z końcówkami; ta sama geometria co Ui.ribbon. */
@@ -61,7 +82,7 @@ class Chrome(private val s: Screen) {
         val ui = s.ui
         val cx = (s.w + s.g.insetL - s.g.insetR) / 2f
         val cy = s.g.insetT + (if (narrowTitleRow) 82 else 32) * d
-        val maxW = (s.w - s.g.insetL - s.g.insetR - 560 * d).coerceAtLeast(160 * d)
+        val maxW = titleMaxW(text)
         val hh = 20f * d * ui.textScale * 1.05f
         var tw = ui.measure(text, 20f, true)
         if (tw + hh * 2.4f > maxW && tw > 0f) {
@@ -80,6 +101,11 @@ class Chrome(private val s: Screen) {
         if (s.ui.measure(full, fontDp, true) <= avail) return full
         if (s.ui.measure(short, fontDp * 0.85f, true) <= avail) return short
         return if (s.ui.measure(short, 9f / s.ui.textScale, true) <= avail) short else ""
+    }
+
+    private companion object {
+        /** Noc 8: najmniejszy tytuł na wstędze w osobnym rzędzie. */
+        const val MIN_TITLE_SP = 10f
     }
 
     private var medalsValue = Int.MIN_VALUE

@@ -50,6 +50,9 @@ import kotlin.math.min
 internal class BattleResultsPanel(private val owner: BattleScreen) {
     internal companion object {
         const val REPLAY_LABEL_DP = 15f
+        const val RESTART_LABEL_DP = 17f
+        /** Noc 8: najmniejszy podpis przycisku wyników. */
+        const val MIN_LABEL_SP = 10f
     }
 
     /**
@@ -89,7 +92,11 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         // Noc 3: gdy nawet krótka „Powtórka” obok ikony maleje poniżej 0,75 rozmiaru (zewnętrzny Fold,
         // niemiecki), trzy równe przyciski z ikoną nad podpisem zamiast ~8 sp.
         val sideAvail = usable * 0.44f - bh * 0.88f - 16 * dp
-        val tight = ui.fit(L["replay"], REPLAY_LABEL_DP, sideAvail) < REPLAY_LABEL_DP * 0.75f
+        // Noc 8: to samo, gdy podpis „Od nowa” obok ikony (26% szerokości) zmalałby poniżej 10 sp
+        // (fr „Recommencer” 8 dp na 1600×720); w równych przyciskach ma ~11 sp.
+        val restartAvail = usable * 0.26f - bh * 0.88f - 16 * dp
+        val tight = ui.fit(L["replay"], REPLAY_LABEL_DP, sideAvail) < REPLAY_LABEL_DP * 0.75f ||
+            ui.fit(L["restart"], RESTART_LABEL_DP, restartAvail) * ui.textScale < MIN_LABEL_SP
         val first = if (tight) usable / 3f else usable * 0.26f
         val middle = if (tight) usable / 3f else usable * 0.44f
         restartEnd.set(resultPanel.left + 20 * dp, resultPanel.bottom - bh - 24 * dp, first, bh)
@@ -274,7 +281,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         if (resultStatsTab.visible) ui.button(c, resultStatsTab, 12f)
         if (resultChartTab.visible) ui.button(c, resultChartTab, 12f)
         ui.button(c, continueBtn, 17f)
-        ui.button(c, restartEnd, 17f)
+        ui.button(c, restartEnd, RESTART_LABEL_DP)
         if (replayEnd.visible) {
             replayEnd.label = replayLabel(replayEnd.label)
             ui.button(c, replayEnd, REPLAY_LABEL_DP)

@@ -290,14 +290,15 @@ class SettingsScreen(g: Game) : Screen(g) {
                 val rl = rowLabel(b, b.r.left - tx - 6 * dp)
                 if (b === shakeBtn) {
                     // Noc 4: podpis wyjaśnia zależność od Dostępności › „Ogranicz potrząsanie”.
-                    val note = shakeNote.layout(ui, L["screen_shake_note"], b.r.left - tx - 6 * dp,
-                        if (rl.second.isEmpty()) 2 else 1)
+                    // Noc 8: podpis dostaje tylko miejsce wiersza (rowR) pod etykietą i przed przyciskiem.
                     val lh = rl.size * dp * ui.textScale * 1.1f
                     val labelLines = if (rl.second.isEmpty()) 1 else 2
-                    val top = b.r.centerY() - (lh * labelLines + note.lineHeight(ui) * note.lines) / 2f
+                    val note = shakeNote.layout(ui, L["screen_shake_note"], b.r.left - tx - 6 * dp,
+                        rowR.height() - lh * labelLines - NOTE_GAP * dp - NOTE_PAD * dp)
+                    val top = b.r.centerY() - (lh * labelLines + NOTE_GAP * dp + note.lineHeight(ui) * note.lines) / 2f
                     ui.textO(c, rl.first, tx, top + lh * 0.8f, rl.size, Ui.TEXT)
                     if (labelLines == 2) ui.textO(c, rl.second, tx, top + lh * 1.8f, rl.size, Ui.TEXT)
-                    note.draw(c, ui, tx, top + lh * labelLines + 1f * dp)
+                    note.draw(c, ui, tx, top + lh * labelLines + NOTE_GAP * dp)
                 } else if (rl.second.isEmpty()) {
                     ui.textO(c, rl.first, tx, b.r.centerY() + 5.5f * dp, rl.size, Ui.TEXT)
                 } else {
@@ -457,5 +458,8 @@ class SettingsScreen(g: Game) : Screen(g) {
     internal companion object {
         /** Wspólny rozmiar etykiet wierszy Ustawień (sp). */
         const val LABEL_DP = 15f
+        /** Noc 8: odstęp etykieta–podpis i zapas od krawędzi wiersza (dp). */
+        const val NOTE_GAP = 1f
+        const val NOTE_PAD = 2f
     }
 }
