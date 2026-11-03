@@ -64,7 +64,7 @@ jako `app_id`.
 - **Larger is better** (tego nie da się zmienić po publikacji);
 - kolejność z `kolejnosc`;
 - ochrona przed oszustwami zostaje włączona (domyślnie);
-- ikona 512×512, gdy będzie gotowa.
+- ikona 512×512 z `app/build/pgs-icons/lb_<tryb>.png` (generator w kroku 3).
 
 Po zapisaniu kliknij kartę każdego języka i wpisz tłumaczenie nazwy z L.kt
 (`board_endless`, `board_campaign`, `board_skirmish`, `board_daily`; kolumny w kolejności pl,
@@ -73,9 +73,20 @@ en, de, es, fr, it, pt, uk, nl, tr). Skopiuj ID każdego rankingu do `id_z_konso
 ## Krok 3: osiągnięcia (78, najlepiej importem)
 
 **Szybko (ok. 10 minut):**
-1. Spakuj do jednego ZIP-a, bez podkatalogów, pliki `docs/store/pgs_import/AchievementsMetadata.csv`
-   i `AchievementsLocalizations.csv`. Gdy będą ikony, dołącz też `AchievementsIconsMappings.csv`
-   i pliki PNG.
+1. Wygeneruj ikony 512×512 (R9, rysowane kodem; w repo jest tylko stykówka
+   `docs/store/assets/pgs/contact.png` i mapowanie) i spakuj ZIP importu, bez podkatalogów
+   (`AchievementsMetadata.csv`, `AchievementsLocalizations.csv`, `AchievementsIconsMappings.csv`
+   i 78 PNG `ach_*.png`; razem 81 plików, limit 403):
+
+   ```
+   PGS_ICONS=true flock /tmp/claude-0/gradle.lock ./gradlew :app:testDebugUnitTest --tests '*PgsIconsTest*' --rerun
+   rm -f build/pgs-achievements.zip
+   zip -j build/pgs-achievements.zip docs/store/pgs_import/AchievementsMetadata.csv \
+       docs/store/pgs_import/AchievementsLocalizations.csv \
+       app/build/pgs-icons/AchievementsIconsMappings.csv app/build/pgs-icons/ach_*.png
+   ```
+
+   Ikony rankingów (`app/build/pgs-icons/lb_*.png`) wgraj ręcznie w kroku 2.
 2. Wybierz **Achievements → Import achievements → Upload**, wskaż ZIP i kliknij **Save as draft**.
 
 Pliki są w formacie Google: bez nagłówka, 7 pól, `False` = standardowe, `Hidden`/`Revealed`,
