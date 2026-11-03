@@ -32,6 +32,8 @@ class ExitReasonsTest {
         context = RuntimeEnvironment.getApplication()
         dir = File(context.cacheDir, "exit-test").apply { deleteRecursively(); mkdirs() }
         store = CrashStore(dir)
+        // Zwykły start po pierwszym (znacznik już jest); pierwszy start testuje osobny przypadek.
+        prefs().edit().putLong(ExitReasons.LAST_EXIT_TS, 0L).commit()
     }
 
     @After
@@ -96,8 +98,7 @@ class ExitReasonsTest {
 
     @Test
     fun lowMemoryIsSavedButDoesNotTriggerCrashPrompt() {
-        add(ApplicationExitInfo.REASON_LOW_MEMORY, 7_000L,
-            importance = ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED)
+        add(ApplicationExitInfo.REASON_LOW_MEMORY, 7_000L)
         add(ApplicationExitInfo.REASON_SIGNALED, 8_000L)
         assertEquals(2, ExitReasons.collect(context, store, prefs()))
         assertNull(store.newest(fatalOnly = true))
@@ -122,6 +123,66 @@ class ExitReasonsTest {
         add(ApplicationExitInfo.REASON_ANR, 11_000L)
         assertEquals(1, ExitReasons.collect(context, store, prefs()))
         assertTrue(store.read(store.newest()!!.name)!!.contains("Brak śladu."))
+    }
+
+    @Test
+    fun lowMemoryAndResourceUsageInBackgroundAreSkipped() {
+        val cached = ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED
+        add(ApplicationExitInfo.REASON_LOW_MEMORY, 1_000L, importance = cached)
+        add(ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE, 2_000L,
+            importance = ActivityManager.RunningAppProcessInfo.IMPORTANCE_SERVICE)
+        assertEquals(0, ExitReasons.collect(context, store, prefs()))
+        assertNull(store.newest())
+        add(ApplicationExitInfo.REASON_LOW_MEMORY, 3_000L,
+            importance = ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE)
+        assertEquals(1, ExitReasons.collect(context, store, prefs()))
+        assertTrue(store.newest()!!.name.startsWith("exit-"))
+        assertFalse(ExitReasons.worthReporting(ApplicationExitInfo.REASON_LOW_MEMORY, cached))
+        assertTrue(ExitReasons.worthReporting(ApplicationExitInfo.REASON_LOW_MEMORY,
+            ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND))
+    }
+
+    @Test
+    fun anrIsStoredAsExitFatalWithEventTime() {
+        add(ApplicationExitInfo.REASON_ANR, 1_700_000_000_000L, trace = anrTrace)
+        assertEquals(1, ExitReasons.collect(context, store, prefs()))
+        val file = store.newest(fatalOnly = true)!!
+        assertTrue(file.name, file.name.startsWith("exit-fatal-"))
+        assertEquals(1_700_000_000_000L, file.lastModified())
+    }
+
+    @Test
+    fun firstStartWithoutMarkerOnlyRemembersNewestEntry() {
+        prefs().edit().clear().commit()
+        add(ApplicationExitInfo.REASON_ANR, 5_000L, trace = anrTrace)
+        add(ApplicationExitInfo.REASON_CRASH_NATIVE, 6_000L)
+        assertEquals(0, ExitReasons.collect(context, store, prefs()))
+        assertNull(store.newest())
+        assertEquals(6_000L, prefs().getLong(ExitReasons.LAST_EXIT_TS, -1L))
+        // Drugi start: nowe ANR już trafia do dziennika.
+        add(ApplicationExitInfo.REASON_ANR, 7_000L, trace = anrTrace)
+        assertEquals(1, ExitReasons.collect(context, store, prefs()))
+        assertNotNull(store.newest(fatalOnly = true))
+    }
+
+    @Test
+    fun firstStartWithoutEntriesSetsMarker() {
+        prefs().edit().clear().commit()
+        assertEquals(0, ExitReasons.collect(context, store, prefs()))
+        assertTrue(prefs().contains(ExitReasons.LAST_EXIT_TS))
+        add(ApplicationExitInfo.REASON_ANR, 7_000L, trace = anrTrace)
+        assertEquals(1, ExitReasons.collect(context, store, prefs()))
+    }
+
+    @Test
+    fun entriesFromBeforeLastUpdateAreSkipped() {
+        shadowOf(context.packageManager).getInternalMutablePackageInfo(context.packageName).lastUpdateTime = 10_000L
+        add(ApplicationExitInfo.REASON_ANR, 9_000L, trace = anrTrace)
+        add(ApplicationExitInfo.REASON_CRASH_NATIVE, 11_000L)
+        assertEquals(1, ExitReasons.collect(context, store, prefs()))
+        assertEquals(1, dir.listFiles()!!.size)
+        assertFalse(store.read(store.newest()!!.name)!!.contains("Przyczyna: ANR"))
+        assertEquals(11_000L, prefs().getLong(ExitReasons.LAST_EXIT_TS, 0L))
     }
 
     @Test

@@ -805,7 +805,7 @@ class MainActivity : Activity(), Host {
             if (isFinishing || isDestroyed) return@runOnUiThread
             AlertDialog.Builder(this)
                 .setTitle(L["pt182_button"])
-                .setMessage(L["pt182_desc"])
+                .setMessage(L["pt186_desc"])
                 .setPositiveButton(L["report_send"]) { _, _ -> sendPlaytestReport() }
                 .setNegativeButton(L["report_cancel"], null)
                 .setOnDismissListener { hideSystemBars() }

@@ -59,6 +59,46 @@ class CrashReportsTest {
     }
 
     @Test
+    fun processExitsDoNotEvictJavaCrashesAndReportPrefersJavaCrash() {
+        val dir = tempDir()
+        try {
+            val store = CrashStore(dir)
+            store.write(true, "awaria Javy", eventTime = 1_000_000L)
+            store.write(false, "złapany błąd", eventTime = 2_000_000L)
+            // Pięć nowszych zakończeń procesu (np. brak pamięci) nie wypiera awarii Javy.
+            for (i in 0 until 5) store.write(false, "brak pamięci " + i, exit = true, eventTime = 3_000_000L + i * 1000L)
+            assertEquals(2, dir.listFiles()!!.count { !it.name.startsWith("exit-") })
+            assertEquals(CrashStore.MAX_EXIT_LOGS, dir.listFiles()!!.count { it.name.startsWith("exit-") })
+            // „Zgłoś problem” wybiera awarię Javy, nie nowsze zakończenie procesu.
+            assertTrue(store.newest()!!.name.startsWith("caught-"))
+            assertTrue(store.newest(fatalOnly = true)!!.name.startsWith("fatal-"))
+            // ANR (exit-fatal) liczy się jak awaria w pytaniu po starcie.
+            val anr = store.write(true, "ANR", exit = true, eventTime = 4_000_000L)
+            assertEquals(anr.name, store.newest(fatalOnly = true)!!.name)
+            assertNotNull(store.read(anr.name))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun exitReportIsUsedOnlyWhenNothingElseExists() {
+        val dir = tempDir()
+        try {
+            val store = CrashStore(dir)
+            val exit = store.write(false, "brak pamięci", exit = true)
+            assertEquals(exit.name, store.newest()!!.name)
+            assertNull(store.newest(fatalOnly = true))
+            // Stare nazwy plików nadal są czytane.
+            File(dir, "fatal-123.txt").writeText("stara awaria")
+            assertEquals("stara awaria", store.read("fatal-123.txt"))
+            assertEquals("fatal-123.txt", store.newest()!!.name)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun reportOmitsExceptionMessagesAndPersonalIdentifiers() {
         val exception = IllegalStateException("MyNick secret-player-id-123")
         val report = CrashReportText.build(

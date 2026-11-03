@@ -6,6 +6,8 @@ import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
 
@@ -32,6 +34,12 @@ class Music internal constructor(
         private const val CHUNK_SAMPLES = 2048
         /** Sen, gdy bufor AudioTrack jest pełny (~1/3 porcji). */
         private const val FULL_SLEEP_MS = 15L
+        /** R6-02 M6: pierwszy ponowny odczyt cudzej muzyki (wygaszanie innej aplikacji). */
+        internal const val RECHECK_FIRST_MS = 500L
+        /** Kolejne odczyty, dopóki gra ustępuje cudzej muzyce. */
+        internal const val RECHECK_MS = 3_000L
+        /** Tyle kolejnych odczytów ciszy przywraca muzykę gry. */
+        private const val QUIET_READS = 2
     }
 
     @Volatile private var era = MENU
@@ -59,6 +67,19 @@ class Music internal constructor(
      * powrocie na pierwszy plan.
      */
     private var yieldToOther = false
+    /**
+     * R6-02 M6: dopóki gra ustępuje, wątek UI (nie pętla gry) co [RECHECK_MS] sprawdza, czy cudza
+     * muzyka ucichła; po [QUIET_READS] kolejnych odczytach ciszy muzyka gry wraca. Timer żyje tylko
+     * na pierwszym planie: [pause] i [release] go zdejmują. Handler powstaje dopiero przy pierwszym
+     * ustąpieniu (testy bez AudioManagera nigdy go nie tworzą).
+     */
+    private var recheckHandler: Handler? = null
+    private var recheckScheduled = false
+    private var quietReads = 0
+    private val recheck = Runnable { recheckOther() }
+
+    /** Dla testów: czy czeka zaplanowany odczyt cudzej muzyki. */
+    internal val isRecheckScheduled: Boolean @Synchronized get() = recheckScheduled
     private val focusRequest: AudioFocusRequest? = audio?.let {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(AudioAttributes.Builder()
@@ -75,6 +96,9 @@ class Music internal constructor(
         // Po trwałej utracie fokusu powrót do gry prosi o niego ponownie.
         if (focusLost) { focusLost = false; focusHeld = false }
         yieldToOther = !focusHeld && otherAppPlaying()
+        cancelRecheck()
+        quietReads = 0
+        if (yieldToOther) scheduleRecheck(RECHECK_FIRST_MS)
         sync()
     }
 
@@ -82,6 +106,7 @@ class Music internal constructor(
     @Synchronized
     fun pause() {
         foreground = false
+        cancelRecheck()
         sync()
     }
 
@@ -99,6 +124,7 @@ class Music internal constructor(
     fun release() {
         released = true
         foreground = false
+        cancelRecheck()
         sync()
     }
 
@@ -166,6 +192,38 @@ class Music internal constructor(
             else -> return // LOSS_TRANSIENT_CAN_DUCK: system sam ścisza strumień.
         }
         sync()
+    }
+
+    private fun scheduleRecheck(delayMs: Long) {
+        val h = recheckHandler ?: try {
+            Handler(Looper.getMainLooper()).also { recheckHandler = it }
+        } catch (_: RuntimeException) {
+            return
+        }
+        recheckScheduled = true
+        h.postDelayed(recheck, delayMs)
+    }
+
+    private fun cancelRecheck() {
+        recheckScheduled = false
+        recheckHandler?.removeCallbacks(recheck)
+    }
+
+    /**
+     * Wątek UI. Tylko przywraca muzykę gry (nigdy jej nie wycisza) i tylko bez fokusu, więc
+     * własna muzyka gry, liczona przez `isMusicActive`, nie może jej uciszyć.
+     */
+    @Synchronized
+    private fun recheckOther() {
+        recheckScheduled = false
+        if (!foreground || released || !yieldToOther || focusHeld) return
+        if (otherAppPlaying()) quietReads = 0 else quietReads++
+        if (quietReads >= QUIET_READS) {
+            yieldToOther = false
+            sync()
+        } else {
+            scheduleRecheck(RECHECK_MS)
+        }
     }
 
     private fun otherAppPlaying(): Boolean =
