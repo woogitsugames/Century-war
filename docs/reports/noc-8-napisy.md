@@ -91,3 +91,9 @@ Zrzuty kontrolne `app/build/screenshots/noc8_*.png` obejrzałem: Ustawienia fr/e
 Wzorce `updateScreenshots -PscreenReason=Noc_8_drobne_napisy` zmieniły się w dwóch plikach:
 `phone720_reg100_settings.png` i `foldOpen_reg100_settings.png`. Etykieta i podpis wiersza wstrząsów
 przesunęły się o 0,5 dp, bo odstęp 1 dp jest teraz wliczany w centrowanie. Wpis jest w `UPDATES.md`.
+
+Pełne `:app:testDebugUnitTest :sim:test :server:test --continue` przechodzi: 970 testów, 0 błędów, 11 pominiętych.
+Trzy przebiegi z domyślnymi ustawieniami (2 forki, `forkEvery=12`) zatrzymał OOM 137. To limit pamięci cgroup tej sesji:
+proces Java miał ok. 7,4 GB pamięci natywnej Robolectric. Testy na tym nie padały. Przebieg zielony uruchomiłem z ustawieniami
+z `docs/TEST_SPEED.md` dla małej pamięci: `-PtestForks=1 -PtestForkEvery=4` (15 min 39 s). `Noc8NapisyTest` używa jednej
+gry na urządzenie i skalę, żeby nie zwiększać zużycia pamięci.
