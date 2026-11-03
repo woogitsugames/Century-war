@@ -1482,3 +1482,33 @@ Nowości bez zmian kampanii: wydarzenia dnia `SIEGE_WORKS` (wieżyczki −40% ko
 Złote powtórki: nowe pozycje enumu `EndlessCard` wydłużają zapis `cardStacks` w migawce, więc `GoldenReplayTest` wymaga regeneracji (zrobi to koordynator razem z podbiciem `SimVersion.PROTOCOL`).
 
 - 2026-11-03 — regeneracja złotych powtórek: Tura 10: nowa zawartosc 170.
+
+**Noc 4 — wydarzenie dnia zgodne z modyfikatorami (od `EVENTS_V2_DAY`).** Jedna lista sprzeczności `Daily.EVENT_CONFLICTS`: `SIEGE_WORKS` × `NO_TURRETS`/`EXPENSIVE_TOWERS`, `FORCED_MARCH` × `FAST_UNITS`, `FORTIFIED_BASES` × `FRAGILE_BASES` (×2 i ×0,5 zdrowia bazy), `MARKSMEN` × `RANGED_HORDE` („tylko strzelcy” czyni hordę pustą). Pierwsze losowanie bez zmian; przy kolizji drugie losowanie z tego samego strumienia (`Rng(day * 131071 + 907)`) spośród wydarzeń zgodnych. Modyfikatory, epoki, siła AI i pogoda bez zmian; zmienia się tylko wydarzenie (a przez nie epoka startu przy `GOLD_RUSH` oraz siła 100% i styl dowódcy przy `MIRROR_ARMY`). Dni przed `EVENTS_V2_DAY` (w tym przypięta powtórka `RELEASE_DAY + 3`) identyczne — odcisk dni `RELEASE_DAY − 30 … EVENTS_V2_DAY − 1` w `DailyEventConflictsTest`. Bez innych par: `GOLD_RUSH` z `DOUBLE_INCOME`/`RICH_START` i `MIRROR_ARMY` z `NO_TURRETS` się sumują, ale sobie nie przeczą.
+
+Zmienione dni w pierwszych 3 latach od `EVENTS_V2_DAY` (21 z 273 dni z wydarzeniem; przed poprawką → po):
+
+| Dzień | Od premiery | Modyfikatory | Przed | Po |
+|---|---:|---|---|---|
+| 21164 | +11 | DOUBLE_INCOME, NO_TURRETS | SIEGE_WORKS | FORTIFIED_BASES |
+| 21196 | +43 | FRAGILE_BASES, GLASS_CANNON | FORTIFIED_BASES | GOLD_RUSH |
+| 21304 | +151 | RANGED_HORDE, EXPENSIVE_TOWERS | SIEGE_WORKS | FORCED_MARCH |
+| 21308 | +155 | FRAGILE_BASES, FOG_OF_WAR | FORTIFIED_BASES | SPOILS_OF_WAR |
+| 21320 | +167 | FRAGILE_BASES, NO_TURRETS | FORTIFIED_BASES | MARKSMEN |
+| 21372 | +219 | RANGED_HORDE, ARMORED_FOE | MARKSMEN | SPOILS_OF_WAR |
+| 21376 | +223 | FRAGILE_BASES, GLASS_CANNON | FORTIFIED_BASES | MIRROR_ARMY |
+| 21428 | +275 | RANGED_HORDE, SHORT_DAY | MARKSMEN | SIEGE_WORKS |
+| 21756 | +603 | NO_TURRETS, RANGED_HORDE | SIEGE_WORKS | RAPID_ABILITIES |
+| 21768 | +615 | FAST_UNITS, ARMORED_FOE | FORCED_MARCH | FREE_BARRAGE |
+| 21800 | +647 | NO_TURRETS, MERCENARIES | SIEGE_WORKS | FREE_BARRAGE |
+| 21924 | +771 | NO_TURRETS, SHORT_DAY | SIEGE_WORKS | RAPID_ABILITIES |
+| 22036 | +883 | RANGED_HORDE, RICH_START | MARKSMEN | SIEGE_WORKS |
+| 22040 | +887 | FRAGILE_BASES, NO_TURRETS | FORTIFIED_BASES | RAPID_ABILITIES |
+| 22060 | +907 | FAST_UNITS, EXPENSIVE_TOWERS | SIEGE_WORKS | FORTIFIED_BASES |
+| 22084 | +931 | FRAGILE_BASES, VETERANS | FORTIFIED_BASES | RAPID_ABILITIES |
+| 22092 | +939 | RANGED_HORDE, ARMORED_FOE | MARKSMEN | GOLD_RUSH |
+| 22152 | +999 | FRAGILE_BASES, SLOW_XP | FORTIFIED_BASES | FREE_BARRAGE |
+| 22172 | +1019 | NO_TURRETS, RICH_START | SIEGE_WORKS | SPOILS_OF_WAR |
+| 22188 | +1035 | DOUBLE_INCOME, FRAGILE_BASES | FORTIFIED_BASES | GOLD_RUSH |
+| 22228 | +1075 | NO_TURRETS, ARMORED_FOE | SIEGE_WORKS | MIRROR_ARMY |
+
+Wszystkie zmienione dni są po premierze (`RELEASE_DAY` to jeszcze data zastępcza), więc nikt ich nie grał. Konfiguracja dnia to dane wejściowe powtórki (serwer odtwarza ją z numeru dnia i porównuje wydarzenie), więc klient i serwer muszą mieć ten sam algorytm — podbicie `SimVersion.PROTOCOL` zostawiam koordynatorowi (zob. raport nocy 4).

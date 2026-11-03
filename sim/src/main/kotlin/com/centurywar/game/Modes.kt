@@ -422,6 +422,24 @@ object Daily {
         DailyEvent.FORTIFIED_BASES, DailyEvent.GOLD_RUSH, DailyEvent.MIRROR_ARMY,
     )
 
+    /**
+     * Jedyna lista sprzeczności wydarzenie–modyfikator (dni od [EVENTS_V2_DAY]):
+     * opis wydarzenia przeczy modyfikatorowi albo go powtarza.
+     */
+    val EVENT_CONFLICTS: Map<DailyEvent, Set<Modifier>> = mapOf(
+        // „Wieże tańsze i szybsze” przy „Bez wież” albo „Ciężkich wieżach”.
+        DailyEvent.SIEGE_WORKS to setOf(Modifier.NO_TURRETS, Modifier.EXPENSIVE_TOWERS),
+        // Dwa razy „szybsze jednostki” (×1,25 i ×1,5 prędkości).
+        DailyEvent.FORCED_MARCH to setOf(Modifier.FAST_UNITS),
+        // „Bazy mają dwa razy więcej zdrowia” przy „Kruchych bazach” (×2 i ×0,5).
+        DailyEvent.FORTIFIED_BASES to setOf(Modifier.FRAGILE_BASES),
+        // „Tylko strzelcy” czyni „Hordę strzelców” pustą.
+        DailyEvent.MARKSMEN to setOf(Modifier.RANGED_HORDE),
+    )
+
+    fun conflicts(event: DailyEvent, mods: Set<Modifier>): Boolean =
+        EVENT_CONFLICTS[event]?.any { it in mods } == true
+
     fun dayNumber(nowMillis: Long = System.currentTimeMillis()): Long = nowMillis / 86_400_000L
 
     fun config(day: Long, bonuses: Bonuses): BattleConfig =
@@ -455,7 +473,13 @@ object Daily {
         val event = if (!historical && (day - RELEASE_DAY) % 4L == 3L) {
             // Dni sprzed EVENTS_V2_DAY losują z zamrożonej szóstki (przypięte powtórki).
             val pool = if (day < EVENTS_V2_DAY) EVENTS_V1 else DailyEvent.entries.toTypedArray()
-            pool[Rng(day * 131_071L + 907L).nextInt(pool.size)]
+            val eventRng = Rng(day * 131_071L + 907L)
+            val first = pool[eventRng.nextInt(pool.size)]
+            // Od EVENTS_V2_DAY wydarzenie nie może przeczyć modyfikatorom dnia: przy kolizji
+            // drugie losowanie z tego samego strumienia, tylko spośród zgodnych wydarzeń.
+            // Pierwsze losowanie jest takie jak wcześniej, więc dni bez kolizji się nie zmieniają.
+            if (day < EVENTS_V2_DAY || !conflicts(first, mods)) first
+            else pool.filter { !conflicts(it, mods) }.let { it[eventRng.nextInt(it.size)] }
         } else null
         val eventStart = if (event == DailyEvent.GOLD_RUSH) 2 else start
         val eventMax = maxOf(maxEra, eventStart)
