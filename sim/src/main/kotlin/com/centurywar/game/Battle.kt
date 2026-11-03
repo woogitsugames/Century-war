@@ -229,6 +229,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         const val BALANCE_BASE_HP_MUL = 3f
         /** Od tej sekundy rośnie presja oblężnicza i działa blokada baz. */
         const val SIEGE_START = 480f
+        /** Przyrost presji oblężniczej na minutę po starcie (0,2 = +20%/min). */
+        const val SIEGE_RAMP = 0.2f
         /** Ułamek HP bazy na sekundę przy pełnej kontroli frontu przez wroga (przed presją). */
         const val SIEGE_ATTRITION = 0.0032f
         const val SHORT_DAY_STEPS = 8 * 60 * 60
@@ -282,6 +284,10 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
     var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
+    /** Sekunda startu presji oblężniczej: [SIEGE_START] poza etapami 2–7 kampanii (Dzień 1). */
+    val siegeStart: Float = Campaign.siegeStart(cfg)
+    /** Przyrost presji na minutę: [SIEGE_RAMP] poza etapami 2–7 kampanii. */
+    val siegeRamp: Float = Campaign.siegeRamp(cfg)
     /** Poprzednie powtórki odtwarzają stare reguły bitwy bez dowódcy. */
     val commanderAvailable = commanderEnabled && when (cfg.mode) {
         Mode.CAMPAIGN -> cfg.stageIndex >= 7
@@ -1001,7 +1007,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         }
         for (u in units) if (u.active) updateUnit(u, dt)
         for (p in projs) if (p.active) updateProj(p, dt)
-        if (!endless && !over && time >= SIEGE_START && Modifier.SHORT_DAY !in cfg.modifiers)
+        if (!endless && !over && time >= siegeStart && Modifier.SHORT_DAY !in cfg.modifiers)
             applySiegeAttrition(dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
@@ -1047,13 +1053,14 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     }
 
     /**
-     * Presja oblężnicza: po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę.
+     * Presja oblężnicza: od [siegeStart] (zwykle 8 minut) obrażenia zadawane bazom rosną o [siegeRamp]
+     * (zwykle 20%) na minutę; w etapach 2–7 kampanii od 4. minuty o 80% (Campaign.siegeStart).
      * Dzięki temu bitwa zawsze kiedyś się kończy (koniec z wiecznym patem przy wieżach).
      */
-    fun siegePressure(): Float = if (endless || time < SIEGE_START) 1f else 1f + (time - SIEGE_START) / 60f * 0.2f
+    fun siegePressure(): Float = if (endless || time < siegeStart) 1f else 1f + (time - siegeStart) / 60f * siegeRamp
 
     /**
-     * Blokada po [SIEGE_START]: obie bazy tracą HP proporcjonalnie do tego, jak daleko
+     * Blokada po [siegeStart]: obie bazy tracą HP proporcjonalnie do tego, jak daleko
      * przeciwnik trzyma front, więc nawet nieruchomy front w końcu rozstrzyga bitwę.
      */
     private fun applySiegeAttrition(dt: Float) {

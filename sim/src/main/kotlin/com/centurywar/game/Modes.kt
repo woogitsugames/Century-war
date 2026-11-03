@@ -187,6 +187,7 @@ object Campaign {
         // Tura 8: etapy 1-6 obniżone po wyłączeniu elit wroga bez badania gracza
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
+        // Dzień 1: etap 7 lżejszy o 5% po skróceniu etapów 2-7 (mniej gwiazdek i medali).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -194,6 +195,7 @@ object Campaign {
             4 -> 0.80f
             5 -> 0.80f
             6 -> 0.8245f
+            7 -> 0.95f
             11 -> 0.97f
             12 -> 0.828f
             16 -> 0.86f
@@ -234,6 +236,26 @@ object Campaign {
         stage.modifiers, bonuses, stage.index, tutorial,
         weather = stage.weather,
     )
+
+    /**
+     * Dzień 1: etapy 2–7 (indeksy 1–6) kończą się wcześniej, bo presja oblężnicza startuje
+     * po 4 minutach zamiast 8 i rośnie o 80% na minutę zamiast 20%. Mediana bitwy spada
+     * z ok. 13,5 do ok. 7,7 min, a nowy gracz dochodzi do dowódcy (etap 8) w ok. godzinę.
+     * HP baz nic tu nie daje: bitwy tych etapów rozstrzyga blokada (docs/BALANCE.md).
+     * Etap 1 (samouczek), etapy ≥ 8 i pozostałe tryby bez zmian; nie zależy od poziomu.
+     */
+    const val EARLY_SIEGE_START = 240f
+    const val EARLY_SIEGE_RAMP = 0.8f
+    val EARLY_SIEGE_STAGES = 1..6
+
+    private fun earlySiege(cfg: BattleConfig) =
+        cfg.mode == Mode.CAMPAIGN && !cfg.tutorial && cfg.stageIndex in EARLY_SIEGE_STAGES
+
+    fun siegeStart(cfg: BattleConfig): Float =
+        if (earlySiege(cfg)) EARLY_SIEGE_START else Battle.SIEGE_START
+
+    fun siegeRamp(cfg: BattleConfig): Float =
+        if (earlySiege(cfg)) EARLY_SIEGE_RAMP else Battle.SIEGE_RAMP
 
     /** Odczyt poziomu z konfiguracji przechowanej również w snapshotach i powtórkach. */
     fun difficulty(cfg: BattleConfig): CampaignDifficulty? {
