@@ -139,8 +139,8 @@ i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport n
 **B. Nowości (ok. 30–45 min, w kolejnych dniach)**
 6. Dojdź do **etapu 8**: w dolnym pasku bitwy pojawia się **Wódz**. Przywołaj go i sprawdź,
    czy pobliscy żołnierze świecą aurą.
-7. Kup wieżę, a potem podnieś jej **stopień** (panel wież, przycisk ulepszenia). Wieża ma
-   wyglądać inaczej na stopniu 2 i 3.
+7. Kup wieżę, a potem podnieś jej **stopień** (panel wież, przycisk ulepszenia). Przy wieży
+   ma być widać jej stopień (2, potem 3), a panel pokazuje koszt kolejnego.
 8. **Muzyka:** w menu gra spokojny motyw, w bitwie muzyka narasta, gdy armie się starły.
    Zgłoś trzaski, przerwy na złączeniu pętli albo zbyt głośną muzykę względem efektów.
 9. **Misje** (menu): odbierz nagrodę za ukończoną misję dnia. Zajrzyj w **Osiągnięcia**.
