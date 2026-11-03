@@ -1,3 +1,11 @@
+# KOLEJKA DNIA 3.11 (po południu, decyzje właściciela)
+main = b3e24191 (dzień 1–3 scalone, PROTOCOL 0.8.5, snapshot v19, 74 osiągnięcia / 79 ID PGS). „Co nowego” zostaje jako przycisk w menu (bez okna). Agenci kolejno (po jednym):
+1. `claude/dzien-4-przeglad`: przegląd po dniach 1–3 (pierwsza godzina, zrzuty) + przywrócić zegar bitwy pod minimapą na zewnętrznym Foldzie, gdy działa presja.
+2. `claude/dzien-5-talkback`: TalkBack dla przycisków HUD w bitwie.
+3. `claude/dzien-6-tresc`: nowa zawartość (karty Endless / wyzwania tygodnia / warianty) z pomiarem balansu.
+4. `claude/dzien-7-sklep`: grafiki i opisy sklepu z nowościami, lista do testów zamkniętych.
+CI: tylko tag/PR/ręcznie — nie dodawać workflowów.
+
 # DZIEŃ 3.11 (decyzje właściciela rano)
 - Skrócić etapy 2–7 do ok. 7–9 min (agent `claude/dzien-1-etapy`, PROTOCOL 0.8.5).
 - Zrobione przez koordynatora: pierwsza bitwa — przerwa między dymkami 50 s, bez dymka weterana; pełnoekranowe zapowiedzi epok tylko w kampanii.
