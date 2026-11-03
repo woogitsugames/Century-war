@@ -454,8 +454,24 @@ abstract class FirstHourJourneyBase {
                 if (o.won) checkGoal(g, bs, where)
                 // R2-01: raz na ścieżkę gracz dotyka celu zamiast „Dalej”; Wstecz wraca do menu.
                 if (o.won && index == 2 && !goalTapped) { goalTapped = true; tapGoal(g, bs, where); continue }
+                val help = bs.helpOffer
+                if (!o.won && attempt >= 2 && help == BattleScreen.HELP_NONE &&
+                    g.profile.campaignDifficulty != com.centurywar.game.CampaignDifficulty.EASY)
+                    problem("$where: druga porażka z rzędu bez propozycji pomocy")
                 tap(g, bs.continueBtn, "$where/dalej")
                 tick(g, 0.2f, 6)
+                // R2-02: po 2. porażce Dalej prowadzi do Badań (nad mapą) albo okna etapu z Łatwym.
+                if (help != BattleScreen.HELP_NONE) {
+                    note(g, "$where: propozycja pomocy „${bs.helpText}”")
+                    if (help == BattleScreen.HELP_RESEARCH) {
+                        if (g.current !is ResearchScreen) problem("$where: propozycja badania nie otwiera Badań (${name(g.current)})")
+                        else { dwell(g, "$where/badania z propozycji", 0.5f); g.requestBack(); tick(g, 0.2f, 4) }
+                    } else {
+                        val cs = g.current as? CampaignScreen
+                        if (cs == null || !cs.easySuggested) problem("$where: propozycja Łatwego bez okna etapu (${name(g.current)})")
+                        else { dwell(g, "$where/okno etapu z Łatwym", 0.5f); g.requestBack(); tick(g, 0.2f, 4) }
+                    }
+                }
                 if (g.current !is CampaignScreen) problem("$where: „Dalej” nie prowadzi na mapę (${name(g.current)})")
                 dwell(g, "$where/mapa po bitwie", 3.5f)
                 if (index == 1 && attempt == 1) firstResearch(g, "po etapie 2")
