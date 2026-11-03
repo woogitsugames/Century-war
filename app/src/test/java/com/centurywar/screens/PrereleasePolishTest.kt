@@ -38,6 +38,10 @@ class PrereleasePolishTest : PrereleasePolishBase() {
     @Test
     fun prereleaseTour() = prereleaseTourOn("phone720")
 
+    /** R2-03: tekst 130% z ustawień telefonu (Dostępność i HUD bitwy). */
+    @Test
+    fun textScale130FromSystem() = textScale130On("phone720")
+
     /** Tura 10: ✕ na liście powtórek usuwa dopiero po drugim dotknięciu i mówi o tym na ekranie. */
     @Test
     fun replayDeleteNeedsSecondTap() {

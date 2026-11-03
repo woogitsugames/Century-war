@@ -401,6 +401,46 @@ abstract class PrereleasePolishBase {
     }
 
     /**
+     * R2-03: tekst 130% przejęty z czcionki telefonu (i TalkBack) przy pierwszym uruchomieniu:
+     * Dostępność (góra z podpisem „według systemu”, dół z tempem ×½) i HUD bitwy w ×½.
+     * Bez wzorców regression100; raport pre10_audit_<urządzenie>_130.txt.
+     */
+    protected fun textScale130On(device: String) {
+        val old = L.lang
+        try {
+            for (lang in arrayOf("pl", "en", "de")) {
+                val g = game(devices.getValue(device), lang)
+                g.applySystemAccessibility(com.centurywar.engine.SystemA11y(1.3f, false, true))
+                val prefix = "${device}_${lang}_130"
+                counter = 0
+                require10(g.profile.textScale == 130 && !g.profile.textScaleManual,
+                    "$prefix: skala telefonu 1,3 nie dała 130%")
+                g.setScreen(MenuScreen(g)); tick(g, 4, 0.1f)
+                val acc = AccessibilityScreen(g)
+                open(g, acc, prefix, "dostepnosc")
+                val note = L["a11y181_from_system"].substringBefore(' ')
+                require10(lastTexts.any { it.s.startsWith(note) }, "$prefix: brak podpisu „według systemu”")
+                acc.onDrag(0f, -100000f); tick(g, 2)
+                shot(g, prefix, "dostepnosc_dol")
+                require10(acc.buttons.first { it.id == 44 }.visible, "$prefix: przełącznik tempa ×½ niewidoczny")
+                require10(lastTexts.any { it.s == L["a11y181_slow"] }, "$prefix: brak etykiety tempa ×½")
+                g.pop()
+                val bs = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7L, 1f))
+                g.setScreen(bs); tick(g, 3)
+                require10(bs.speed == 0, "$prefix: przy TalkBack bitwa nie startuje w ×½")
+                shot(g, prefix, "bitwa_hud")
+                require10(lastTexts.any { it.s == "×½" }, "$prefix: HUD nie pokazuje ×½")
+                bs.onClick(bs.pauseBtn); tick(g); shot(g, prefix, "bitwa_pauza")
+                g.history?.close()
+            }
+        } finally {
+            L.lang = old
+            File(out, "pre10_audit_${device}_130.txt").writeText(audit.toString())
+        }
+        assertTrue("Regresje przy tekście 130%:\n$regressions", regressions.isEmpty())
+    }
+
+    /**
      * Przegląd na jednym urządzeniu z [devices] (pl, en, de); raport pre10_audit_<urządzenie>.txt.
      * Noc 9: dawna pętla po czterech urządzeniach jest rozłożona na cztery klasy testowe.
      */

@@ -37,4 +37,8 @@ import java.io.File
 class PrereleasePolishFoldOuterTest : PrereleasePolishBase() {
     @Test
     fun prereleaseTour() = prereleaseTourOn("foldOuter")
+
+    /** R2-03: tekst 130% z ustawień telefonu (Dostępność i HUD bitwy). */
+    @Test
+    fun textScale130FromSystem() = textScale130On("foldOuter")
 }
