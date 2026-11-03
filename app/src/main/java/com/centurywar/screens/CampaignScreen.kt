@@ -720,6 +720,10 @@ class CampaignScreen(
         }
     }
 
+    /** R2-02: ✕ okna etapu nie ma podpisu; TalkBack czyta „Zamknij okno etapu”. */
+    override fun accessibilityLabel(b: Button): String =
+        if (b === close) L["help180_close"] else super.accessibilityLabel(b)
+
     /** Tura 9: ostatni komunikat po dotknięciu zablokowanego etapu (do testów). */
     internal var lastNotice = ""
 
