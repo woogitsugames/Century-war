@@ -70,7 +70,7 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       przechowywania danych — albo decyzja „na start bez rankingu globalnego”.
 - [ ] **Sekrety tylko w CI** (nigdy w repozytorium): klucz upload do podpisu, `CW_HMAC_KEY`,
       `CW_SERVER_URL`, `CW_PRIVACY_URL`.
-- [ ] **Google Play Games:** 71 identyfikatorów (1 projekt, 4 rankingi, 66 osiągnięć) z Play
+- [ ] **Google Play Games:** 73 identyfikatorów (1 projekt, 4 rankingi, 68 osiągnięć) z Play
       Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
 - [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
       IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.

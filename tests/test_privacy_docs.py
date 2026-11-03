@@ -125,7 +125,7 @@ class PrivacyDocumentationTest(unittest.TestCase):
             self.assertIn("{{OWNER." + key + "}}", self.pl)
             self.assertIn("{{OWNER." + key + "}}", self.en)
         for requirement in ("CW_SERVER_URL", "CW_PRIVACY_URL", "CW_HMAC_KEY",
-                            "adres", "66 osiągnięć", "71 identyfikatorów"):
+                            "adres", "68 osiągnięć", "73 identyfikatorów"):
             self.assertIn(requirement, owner)
         self.assertNotIn("{{OWNER.", self.safety)
 
@@ -136,15 +136,15 @@ class PrivacyDocumentationTest(unittest.TestCase):
             for line in ids.splitlines()
             if "=" in line and not line.lstrip().startswith("#")
         ]
-        self.assertEqual(71, len(keys))
-        self.assertEqual(66, sum(x.startswith("achievement_") for x in keys))
+        self.assertEqual(73, len(keys))
+        self.assertEqual(68, sum(x.startswith("achievement_") for x in keys))
         self.assertEqual(4, sum(x.startswith("leaderboard_") for x in keys))
         self.assertIn("app_id", keys)
         owner = read(STORE / "OWNER_INPUT.md")
         play_console = read(STORE / "PLAY_CONSOLE.md")
         setup = read(DOCS / "PLAY_GAMES_SETUP.md")
         for doc in (owner, play_console, setup, self.safety):
-            self.assertIn("66 osiągnięć", doc)
+            self.assertIn("68 osiągnięć", doc)
         self.assertNotRegex(play_console, r"54 osiągnię")
         self.assertIn("jako app_id", setup)
 
