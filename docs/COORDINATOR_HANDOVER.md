@@ -1,3 +1,10 @@
+# DZIEŃ 3.11 (decyzje właściciela rano)
+- Skrócić etapy 2–7 do ok. 7–9 min (agent `claude/dzien-1-etapy`, PROTOCOL 0.8.5).
+- Zrobione przez koordynatora: pierwsza bitwa — przerwa między dymkami 50 s, bez dymka weterana; pełnoekranowe zapowiedzi epok tylko w kampanii.
+- Do zrobienia (następny agent): medale z osiągnięć osobno na ekranie wyników; „Co nowego” widoczne w menu głównym po aktualizacji; na zewnętrznym Foldzie poprawić tylko kolizję „Presja oblężnicza” z HP baz i numer fali 8 sp w górnym pasku (zgoda właściciela, reszta compactTop bez zmian).
+- Muzyka: właściciel zaakceptował („Jest OK”).
+- Tryb pracy: autonomicznie, 1 agent + koordynator, budzenie :07 i :37.
+
 # STAN 3.11.2026 ok. 06:15 UTC (koniec nocy)
 - main = 5fc6f46a: dodatkowo noc 6 (próba release R8, keep MissionType), noc 7 (31 poprawek tekstów), noc 8 (RowNote, Recommencer, tytuł historii), noc 9 (testy 5,5–6 min, 4 forki, G1 periodic GC). Pełne testy zielone od zera. Dysk: wyczyszczono build cache (18 GB wolne); w /tmp zostają stare katalogi robolectric-nativeruntime* (usuwanie zablokowane przez uprawnienia).
 - Lista nocna wyczerpana — kolejne kroki wymagają decyzji właściciela (niżej). CI nadal przekazuje -PtestForks=1/2 (można podnieść).
