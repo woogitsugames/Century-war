@@ -7,7 +7,12 @@
 # znaczenia, np. menu.wav, ERA3_Battle.flac). Inne pliki są pomijane z ostrzeżeniem.
 # Wyjście (domyślnie app/src/main/assets/music/): <nazwa>.ogg, OGG Vorbis ~96 kb/s,
 # stereo 44,1 kHz, cisza na początku/końcu przycięta, głośność -16 LUFS (dwa przejścia
-# loudnorm), pętle (wszystko poza victory/defeat) z wejściem 0,5 s i wyjściem 1,5 s.
+# loudnorm), pętle (wszystko poza victory/defeat) zapętlone bez przerwy: odcinek S..E
+# oryginału bez cichego wejścia i wybrzmienia (music_loop_points.py), ostatnie
+# LOOP_XFADE s (domyślnie 3) przed E nałożone równą mocą na pierwsze LOOP_XFADE s od S;
+# plik zaczyna się w S+LOOP_XFADE, a jego koniec przechodzi w początek pętli — złączenie
+# jest ciągłe co do próbki.
+# LOOP_XFADE=0 przywraca stare zachowanie (wejście 0,5 s, wyjście 1,5 s).
 # Wynik jest deterministyczny (flagi bitexact, bez metadanych źródła).
 set -euo pipefail
 
@@ -19,6 +24,7 @@ TARGET_TP=-1.5
 TARGET_LRA=11
 FADE_IN=0.5
 FADE_OUT=1.5
+LOOP_XFADE="${LOOP_XFADE:-3}"
 
 if [[ -z "$IN" || ! -d "$IN" ]]; then
   echo "Użycie: $0 <katalog_z_plikami> [katalog_wyjściowy]" >&2
@@ -57,6 +63,7 @@ duration() { ffprobe -v error -show_entries format=duration -of default=nw=1:nk=
 
 declare -A SEEN=()
 DONE=()
+LOOPINFO=()
 shopt -s nullglob nocaseglob
 for src in "$IN"/*; do
   [[ -f "$src" ]] || continue
@@ -76,6 +83,36 @@ for src in "$IN"/*; do
 
   trimmed="$TMP/$base.wav"
   ffmpeg -hide_banner -loglevel error -y -i "$src" -vn -af "$TRIM" -ar 44100 -ac 2 -c:a pcm_s16le "$trimmed"
+  meta=()
+  loop=0
+  xf=0
+  [[ "$base" != victory && "$base" != defeat ]] && loop=1
+  if [[ $loop -eq 1 ]]; then
+    meta=(-metadata ANDROID_LOOP=true)
+    samples="$(ffprobe -v error -select_streams a:0 -show_entries stream=duration_ts -of default=nw=1:nk=1 "$trimmed")"
+    # Długość nakładki w próbkach, najwyżej 1/4 utworu.
+    xf="$(awk -v x="$LOOP_XFADE" -v s="$samples" 'BEGIN { n = int(x * 44100 + 0.5); if (n > int(s / 4)) n = int(s / 4); if (n < 0) n = 0; print n }')"
+    if [[ "$xf" -gt 0 ]]; then
+      # Punkty pętli S..E bez cichego wejścia i wybrzmienia oryginału, koniec dopasowany do
+      # rytmu początku (scripts/music_loop_points.py; bez python3: cały plik). Pętla = próbki
+      # [S+N..E-N), potem ostatnie N przed E wygaszane i pierwsze N od S narastające (równa
+      # moc, qsin). Ostatnia próbka pliku to próbka S+N-1 oryginału, pierwsza to S+N.
+      ls=0; le=$samples
+      if command -v python3 >/dev/null; then
+        read -r ls le < <(python3 -I "$ROOT/scripts/music_loop_points.py" "$trimmed" "$xf")
+      else
+        echo "UWAGA: brak python3, pętla $base bez doboru punktów (całe nagranie)." >&2
+      fi
+      (( le > samples )) && le=$samples
+      (( le - ls < 4 * xf )) && { ls=0; le=$samples; }
+      looped="$TMP/$base.loop.wav"
+      ffmpeg -hide_banner -loglevel error -y -i "$trimmed" -filter_complex \
+        "[0]asplit=3[a][b][c];[a]atrim=start_sample=$((ls + xf)):end_sample=$((le - xf)),asetpts=PTS-STARTPTS[body];[b]atrim=start_sample=$((le - xf)):end_sample=$le,asetpts=PTS-STARTPTS[tail];[c]atrim=start_sample=$ls:end_sample=$((ls + xf)),asetpts=PTS-STARTPTS[head];[tail]afade=t=out:ns=$xf:curve=qsin[t2];[head]afade=t=in:ns=$xf:curve=qsin[h2];[t2][h2]amix=inputs=2:normalize=0:duration=longest[x];[body][x]concat=n=2:v=0:a=1[out]" \
+        -map "[out]" -c:a pcm_s16le "$looped"
+      LOOPINFO+=("$(awk -v b="$base" -v s="$ls" -v e="$le" -v t="$samples" 'BEGIN { printf "%-16s start %5.2f s, koniec %.2f s przed końcem nagrania", b, s / 44100, (t - e) / 44100 }')")
+      trimmed="$looped"
+    fi
+  fi
   len="$(duration "$trimmed")"
   stats="$(measure "$trimmed")"
   mi="$(json_field input_i <<<"$stats")"
@@ -84,13 +121,20 @@ for src in "$IN"/*; do
   mth="$(json_field input_thresh <<<"$stats")"
   moff="$(json_field target_offset <<<"$stats")"
 
-  filter="loudnorm=I=$TARGET_LUFS:TP=$TARGET_TP:LRA=$TARGET_LRA:measured_I=$mi:measured_TP=$mtp:measured_LRA=$mlra:measured_thresh=$mth:offset=$moff:linear=true,aresample=44100"
-  meta=()
-  if [[ "$base" != victory && "$base" != defeat ]]; then
-    # Pętla: łagodne wejście i wyjście, żeby złączenie nie trzaskało; ANDROID_LOOP = pętla bez przerwy.
-    fo_start="$(awk -v d="$len" -v f="$FADE_OUT" 'BEGIN { s = d - f; if (s < 0) s = 0; printf "%.3f", s }')"
-    filter="$filter,afade=t=in:st=0:d=$FADE_IN,afade=t=out:st=$fo_start:d=$FADE_OUT"
-    meta=(-metadata ANDROID_LOOP=true)
+  # Normalizacja liniowa: samo wzmocnienie (bez przepróbkowania loudnorm do 192 kHz), więc
+  # długość i złączenie pętli zostają co do próbki. Gdy szczyt przekroczyłby TP, loudnorm.
+  gain="$(awk -v t="$TARGET_LUFS" -v i="$mi" 'BEGIN { printf "%.2f", t - i }')"
+  if awk -v p="$mtp" -v g="$gain" -v m="$TARGET_TP" 'BEGIN { exit !(p + g <= m) }'; then
+    filter="volume=${gain}dB"
+  else
+    filter="loudnorm=I=$TARGET_LUFS:TP=$TARGET_TP:LRA=$TARGET_LRA:measured_I=$mi:measured_TP=$mtp:measured_LRA=$mlra:measured_thresh=$mth:offset=$moff:linear=true,aresample=44100"
+  fi
+  if [[ $loop -eq 1 ]]; then
+    if [[ "$xf" -le 0 ]]; then
+      # LOOP_XFADE=0 (stare zachowanie): łagodne wejście i wyjście przeciw trzaskom.
+      fo_start="$(awk -v d="$len" -v f="$FADE_OUT" 'BEGIN { s = d - f; if (s < 0) s = 0; printf "%.3f", s }')"
+      filter="$filter,afade=t=in:st=0:d=$FADE_IN,afade=t=out:st=$fo_start:d=$FADE_OUT"
+    fi
   else
     # Przerywnik: tylko bardzo krótkie wyjście przeciw trzaskowi na ostatniej próbce.
     fo_start="$(awk -v d="$len" 'BEGIN { s = d - 0.05; if (s < 0) s = 0; printf "%.3f", s }')"
@@ -118,6 +162,10 @@ for base in "${NAMES[@]}"; do
   lufs="$(measure "$out" | json_field input_i)"
   printf '%-16s %8.1fs %8.1f KB %8s\n' "$base.ogg" "$len" "$(awk -v s="$size" 'BEGIN{print s/1024}')" "$lufs"
 done
+if [[ ${#LOOPINFO[@]} -gt 0 ]]; then
+  echo "Punkty pętli (nakładka ${LOOP_XFADE} s):"
+  printf '  %s\n' "${LOOPINFO[@]}"
+fi
 printf 'Razem: %d plików, %.2f MB\n' "${#DONE[@]}" "$(awk -v s="$total" 'BEGIN{print s/1048576}')"
 missing=()
 for base in "${NAMES[@]}"; do [[ -f "$OUT/$base.ogg" ]] || missing+=("$base"); done
