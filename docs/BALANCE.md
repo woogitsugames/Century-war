@@ -1513,4 +1513,89 @@ Zmienione dni w pierwszych 3 latach od `EVENTS_V2_DAY` (21 z 273 dni z wydarzeni
 
 Wszystkie zmienione dni są po premierze (`RELEASE_DAY` to jeszcze data zastępcza), więc nikt ich nie grał. Konfiguracja dnia to dane wejściowe powtórki (serwer odtwarza ją z numeru dnia i porównuje wydarzenie), więc klient i serwer muszą mieć ten sam algorytm — podbicie `SimVersion.PROTOCOL` zostawiam koordynatorowi (zob. raport nocy 4).
 
+## Dzień 1 — krótsze etapy 2–7 (3.11.2026)
+
+**Decyzja właściciela:** etapy kampanii 2–7 mają trwać ok. 7–9 min mediany zamiast 12–14,
+żeby nowy gracz zobaczył dowódcę (etap 8) po ok. 50–60 min gry razem z samouczkiem
+(raport `docs/reports/noc-5-pierwsza-godzina.md`: 87 min). Etap 1 i etapy ≥ 8 bez zmian.
+
+**Zmiana:** w etapach 2–7 (indeksy 1–6, każdy poziom trudności) presja oblężnicza
+startuje po **4 minutach** zamiast 8 i rośnie o **80%/min** zamiast 20%/min
+(`Campaign.siegeStart` / `Campaign.siegeRamp`, `Battle.siegeStart` / `Battle.siegeRamp`).
+Blokada baz (`SIEGE_ATTRITION`) i premia do obrażeń baz korzystają z tej samej presji.
+Endless, potyczka, wyzwania dnia/tygodnia, samouczek, AI i `aiPower` etapów bez zmian.
+`SimVersion.PROTOCOL` 0.8.4 → 0.8.5. Złote powtórki (kampania: etapy 1 i 29) nie zmieniły
+wyników; `BattleSnapshot.defsFingerprint` bez zmian, więc przerwana bitwa wznawia się po
+aktualizacji (na nowych zasadach presji).
+
+**Dlaczego ten mechanizm.** Wszystkie bitwy etapów 2–7 w pomiarze kończą się przez blokadę:
+mediana 13,2–13,6 min, czyli ok. 5,5 min po starcie presji. Mniejsze HP baz **nie skraca**
+bitwy (HP ×0,5 przy presji od 8. min: mediana 13,0–13,6 min, bez zmiany), bo blokada zabiera
+ułamek HP. Szybszy przyrost złota zmieniłby całe tempo bitwy (epoki, armia, zakupy), a sama
+presja działa symetrycznie i dopiero w drugiej połowie bitwy. Sam wcześniejszy start ma
+granicę: presja od 3. minuty przy +20%/min daje 8,7–9,0 min, od 2. minuty 7,7–8,4 min,
+dlatego start 4 min z szybszym przyrostem (otwarcie bitwy zostaje nietknięte).
+
+Przegląd wariantów (profil docelowy, 100 seedów, etapy 2–7, mediana / wygrane):
+
+| Start presji | Przyrost | HP baz | Mediana [min] | Wygrane 2–6 | Etap 7 |
+|---:|---:|---:|---:|---:|---:|
+| 480 s (przed) | 20%/min | ×1 | 13,2–13,6 | 86–99% | 69% |
+| 480 s | 20%/min | ×0,5 | 13,0–13,6 | 86–97% | 70% |
+| 300 s | 20%/min | ×0,6 | 10,5–10,8 | 85–92% | 72% |
+| 180 s | 20%/min | ×1 | 8,7–9,0 | 86–91% | 76% |
+| 180 s | 60%/min | ×1 | 7,0–7,3 | 76–91% | 74% |
+| 150 s | 50%/min | ×1 | 6,8–7,2 | 77–86% | 70% |
+| 210 s | 60%/min | ×1 | 7,5–7,7 | 81–89% | 69% |
+| **240 s** | **80%/min** | ×1 | **7,6–7,8** | **83–88%** | **67%** |
+| 270 s | 100%/min | ×1 | 7,8–8,0 | 82–87% | 69% |
+
+### Pomiar przed/po, 100 seedów na etap, Normalny
+
+`BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target BALANCE_STAGE_FROM=1
+BALANCE_STAGE_TO=9` (i `BALANCE_PROFILE=medale`). Zasady trybu (bez `BALANCE_COMMANDER`).
+„Oczekiwany czas” = średnia wygrana + (1 − p)/p średnich porażek, czyli czas przejścia
+etapu przy powtórkach do skutku (nowa kolumna `expected` w `BalanceReport`).
+
+| Etap | Profil docelowy | Wygrane przed → po | Mediana [min] przed → po | Oczekiwany czas [min] przed → po | Medale: wygrane przed → po | Medale: mediana przed → po |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | nowy | 86% → 86% | 13,8 → 13,8 | 15,9 → 15,9 | 86% → 86% | 13,8 → 13,8 |
+| 2 | nowy | 89% → 88% | 13,6 → **7,8** | 15,2 → 8,8 | 92% → 87% | 13,6 → 7,8 |
+| 3 | nowy | 92% → 88% | 13,6 → **7,8** | 14,7 → 8,8 | 94% → 82% | 13,7 → 7,8 |
+| 4 | nowy | 86% → 83% | 13,5 → **7,7** | 15,6 → 9,2 | 91% → 86% | 13,3 → 7,7 |
+| 5 | nowy | 92% → 86% | 13,3 → **7,6** | 14,3 → 8,8 | 95% → 93% | 12,9 → 7,7 |
+| 6 | nowy | 99% → 87% | 13,2 → **7,7** | 12,5 → 8,7 | 99% → 94% | 12,8 → 7,5 |
+| 7 | początkujący | 69% → 67% | 13,2 → **7,8** | 18,2 → 11,5 | 76% → 66% | 14,1 → 7,9 |
+| 8 | początkujący | 66% → 66% | 13,4 → 13,4 | 19,3 → 19,3 | 67% → 67% | 14,0 → 14,0 |
+| 9 | początkujący | 75% → 75% | 11,8 → 11,8 | 14,7 → 14,7 | 76% → 76% | 13,9 → 13,9 |
+| **2–7** | | **87,8% → 83,2%** | | **Σ 90,5 → 55,7** | **91,2% → 84,7%** | |
+
+Etapy 1, 8 i 9 są identyczne (kontrola). 0 patów przed i po.
+
+### Czas do dowódcy (etap 8)
+
+- **Bez porażek** (jak w przejściu z nocy 5): samouczek + etap 1 = 8,7 min, przerwy między
+  bitwami (mapa, wyniki, Badania) ok. 1,5 min, bitwy 2–7 77,1 min → **87 min**. Po zmianie
+  czasy bitew 2–7 maleją jak mediany (×0,57): 44,3 min → **ok. 55 min**.
+- **Z porażkami** na poziomie AI z `BalanceReport` (oczekiwany czas, dolne oszacowanie gracza):
+  8,7 + 1,5 + Σ 90,5 = **ok. 101 min przed**, 8,7 + 1,5 + 55,7 = **ok. 66 min po**.
+  Profil „medale”: 98 → 65 min.
+- Realistyczny przedział po zmianie: **55–66 min** (wcześniej 87–101 min).
+
+### Wnioski
+
+- Mediana etapów 2–7: 13,2–13,6 → **7,6–7,8 min** (cel 7–9).
+- Wygrane w paśmie celów: etapy 2–6 profilu „nowy” 83–88% (próg ≥ 70%), etap 7
+  „początkujący” 67% (próg ≥ 55%). Średnio −4,7 pp na 2–7; największy spadek na etapie 6
+  (99% → 87%), który wcześniej był wyraźnie łatwiejszy od sąsiadów. Krzywa 1 → 9:
+  86 → 88 → 88 → 83 → 86 → 87 → 67 → 66 → 75% (wcześniej 86 → 89 → 92 → 86 → 92 → 99 → 69 → 66 → 75%),
+  więc bez „dołka łatwości” przed epoką i etap 7 dalej jest progiem przed dowódcą.
+- Profil „medale” na etapie 3 (94% → 82%) i 7 (76% → 66%) traci najwięcej, ale zostaje
+  powyżej progów.
+- **Do koordynatora (UI, poza zakresem):** `HintOverlay` (dymek SIEGE) i `BattleScreen`
+  (`tip_siege`) używają `Battle.SIEGE_START`, a teksty `hint_siege`/`tip_siege` w `L.kt`
+  mówią o 8 minutach. W etapach 2–7 pasek presji (`siegePressure()`) rośnie od 4. minuty,
+  a dymek/wskazówka pojawią się dopiero po 8 min (o ile bitwa jeszcze trwa). Warto przejść
+  na `battle.siegeStart` i tekst bez liczby minut.
+
 - 2026-11-03 — regeneracja złotych powtórek: Dzien 1: krotsze etapy 2-7.
