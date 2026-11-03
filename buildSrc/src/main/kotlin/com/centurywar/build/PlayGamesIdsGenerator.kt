@@ -79,6 +79,12 @@ object PlayGamesIdsGenerator {
         "campaign_hard",
         "daily_events_9",
         "card_tools_30",
+        "commander_first",
+        "commander_survivor",
+        "commander_pulses_50",
+        "commander_wins_10",
+        "turret_tier_four",
+        "late_no_turrets",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +

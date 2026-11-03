@@ -59,6 +59,11 @@ enum class MissionType(val dailyGoal: Int, val weeklyGoal: Int, val bonus: Int =
     CARD_VARIETY(2, 10, 2, 2),
     WEEKLY_BRONZE(1, 3, 3, 2),
     ADVANCED_BATTLES(1, 5, 1, 2),
+    // Zlecenie 176: dowódca i stopnie wież; zapis po nazwie, nowe typy zawsze na końcu.
+    COMMANDER_SUMMONS(1, 6, 1, 2),
+    COMMANDER_WINS(1, 4, 2, 2),
+    TURRET_TIERS(2, 12, 1, 2),
+    TOP_TIER_WINS(1, 3, 2, 2),
 }
 
 /** Stałe nagrody i cele pozostają niezmienione do końca okresu. */
@@ -225,6 +230,10 @@ class Missions(private val profile: Profile) {
         MissionType.WEATHER_WINS -> profile.unlockedStage() >= 4
         MissionType.REPLAYS_WATCHED -> profile.battles > 0
         MissionType.STARS -> profile.totalStars() < Campaign.stages.size * 3
+        // Dowódca pojawia się od etapu 8 kampanii, stopnie wież po pierwszych etapach.
+        MissionType.COMMANDER_SUMMONS, MissionType.COMMANDER_WINS ->
+            profile.unlockedStage() >= Achievements.LATE_STAGE_INDEX
+        MissionType.TURRET_TIERS, MissionType.TOP_TIER_WINS -> profile.unlockedStage() >= 2
         else -> true
     }
 
@@ -271,12 +280,30 @@ class Missions(private val profile: Profile) {
         if (!refreshInternal(nowMillis, false)) return
         val upgrades = playerCommands?.commands?.count { it.kind == Replay.Kind.UNIT_UPGRADE } ?: 0
         val cards = playerCommands?.commands?.count { it.kind == Replay.Kind.CARD } ?: 0
-        for (item in state.daily) updateBattle(item, battle, newStars, upgrades, cards)
-        for (item in state.weekly) updateBattle(item, battle, newStars, upgrades, cards)
+        val tactics = BattleTactics(
+            playerCommands?.commands?.count { it.kind == Replay.Kind.SUMMON_COMMANDER } ?: 0,
+            playerCommands?.commands?.count { it.kind == Replay.Kind.TURRET_TIER } ?: 0,
+        )
+        for (item in state.daily) updateBattle(item, battle, newStars, upgrades, cards, tactics)
+        for (item in state.weekly) updateBattle(item, battle, newStars, upgrades, cards, tactics)
         if (persist) profile.save()
     }
 
-    private fun updateBattle(item: MissionItem, battle: Battle, newStars: Int, upgrades: Int, cards: Int) {
+    /** Przyjęte komendy dowódcy i stopni wież z logu bitwy (zlecenie 176). */
+    private class BattleTactics(val summons: Int, val turretTiers: Int)
+
+    private fun hasTopTierTurret(battle: Battle): Boolean {
+        val player = battle.player
+        for (i in 0 until minOf(player.slots, player.turretTier.size)) {
+            if (player.turretEra[i] >= 0 && player.turretTier[i] >= 3) return true
+        }
+        return false
+    }
+
+    private fun updateBattle(
+        item: MissionItem, battle: Battle, newStars: Int, upgrades: Int, cards: Int,
+        tactics: BattleTactics,
+    ) {
         val player = battle.player
         val won = battle.winner == 0
         val campaign = battle.cfg.mode == Mode.CAMPAIGN
@@ -330,6 +357,10 @@ class Missions(private val profile: Profile) {
                     battle.cfg.weekly == state.weeklyWeek && battle.wave >= Weekly.threshold(0)
                 ) item.add(1)
             MissionType.ADVANCED_BATTLES -> if (player.erasAdvanced > 0) item.add(1)
+            MissionType.COMMANDER_SUMMONS -> item.add(tactics.summons)
+            MissionType.COMMANDER_WINS -> if (won && tactics.summons > 0) item.add(1)
+            MissionType.TURRET_TIERS -> item.add(tactics.turretTiers)
+            MissionType.TOP_TIER_WINS -> if (won && hasTopTierTurret(battle)) item.add(1)
         }
     }
 

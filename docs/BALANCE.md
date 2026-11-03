@@ -1664,3 +1664,9 @@ ok. 35), przy powtórkach +5/★. Wygrane, czasy i przebieg kampanii bez zmian.
 
 
 - 2026-11-03 — regeneracja złotych powtórek: Dzien 2: gwiazdki bez presji.
+- 2026-11-03 — zawartość 176 (dowódca i stopnie wież): sześć osiągnięć (40, 140, 170, 200, 180,
+  160 medali; łącznie 890 jednorazowo, w skali istniejących 15–900) i cztery typy misji
+  (COMMANDER_SUMMONS, COMMANDER_WINS, TURRET_TIERS, TOP_TIER_WINS, waga 2, nagrody wg wzoru
+  misji). Liczone po bitwie z obserwacji `AchievementBattleTracker` i logu komend gracza; bez
+  zmian w `sim/`, PROTOCOL i złotych powtórkach. Misje dowódcy losują się dopiero od etapu 8,
+  misje stopni wież od etapu 3, więc nowy gracz ma tę samą rotację co wcześniej.

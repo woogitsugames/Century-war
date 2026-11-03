@@ -47,7 +47,8 @@ REQUIRED_FIELDS = {
 REQUIRED_ENUM_FIELDS = {
     "com.centurywar.meta.AchievementMetric": (),
     # Zapisywany po nazwie w missionState profilu.
-    "com.centurywar.meta.MissionType": ("BATTLES", "KILLS", "MODIFIER_WINS", "REPLAYS_WATCHED"),
+    "com.centurywar.meta.MissionType": ("BATTLES", "KILLS", "MODIFIER_WINS", "REPLAYS_WATCHED",
+                                      "COMMANDER_SUMMONS", "TOP_TIER_WINS"),
     "com.centurywar.game.AiPersonality": (),
     "com.centurywar.game.CampaignDifficulty": ("EASY", "NORMAL", "HARD"),
     "com.centurywar.game.DailyEvent": (),

@@ -21,6 +21,7 @@ object WhatsNewCatalog {
             "wn_135_access",
             "wn_145_battle",
             "wn_170_content",
+            "wn_176_content",
         )),
     )
 

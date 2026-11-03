@@ -27,6 +27,9 @@ enum class AchievementMetric {
     HARD_CAMPAIGN,
     // Zlecenie 170: nowe metryki na końcu.
     CARD_TOOLS_30,
+    // Zlecenie 176: dowódca (125) i stopnie wież (140), nowe metryki na końcu.
+    COMMANDER_SUMMONED, COMMANDER_SURVIVOR, COMMANDER_PULSES, COMMANDER_WINS,
+    TURRET_TIER_FOUR, LATE_NO_TURRET_WINS,
 }
 
 data class AchievementDef(
@@ -124,7 +127,17 @@ object Achievements {
         def("doctrine_victories_13", AchievementMetric.DOCTRINE_VICTORIES,
             com.centurywar.game.Doctrine.values().size.toLong(), 400, AchievementCategory.TACTICS),
         def("campaign_hard", AchievementMetric.HARD_CAMPAIGN, Campaign.stages.size.toLong(), 600, AchievementCategory.CAMPAIGN),
+        // Zlecenie 176: dowódca i stopnie wież, liczone wyłącznie z obserwacji bitwy.
+        def("commander_first", AchievementMetric.COMMANDER_SUMMONED, 1, 40, AchievementCategory.TACTICS),
+        def("commander_survivor", AchievementMetric.COMMANDER_SURVIVOR, 1, 140, AchievementCategory.TACTICS),
+        def("commander_pulses_50", AchievementMetric.COMMANDER_PULSES, 50, 170, AchievementCategory.COMBAT),
+        def("commander_wins_10", AchievementMetric.COMMANDER_WINS, 10, 200, AchievementCategory.TACTICS),
+        def("turret_tier_four", AchievementMetric.TURRET_TIER_FOUR, 1, 180, AchievementCategory.TACTICS),
+        def("late_no_turrets", AchievementMetric.LATE_NO_TURRET_WINS, 1, 160, AchievementCategory.CAMPAIGN),
     )
+
+    /** Etap kampanii (indeks od 0), od którego liczy się wygrana bez wież; etap 8 jak dowódca. */
+    const val LATE_STAGE_INDEX = 7
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
 
@@ -253,6 +266,19 @@ object Achievements {
             player.erasAdvanced > 0
         ) add(profile, AchievementMetric.ORBITAL_REACHED)
         if (won && battle.time <= 300f) add(profile, AchievementMetric.FAST_WINS)
+        if (won && cfg.mode == Mode.CAMPAIGN && cfg.stageIndex >= LATE_STAGE_INDEX &&
+            player.slots > 0 && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers
+        ) markOnce(profile, AchievementMetric.LATE_NO_TURRET_WINS)
+
+        // Dowódca i stopnie wież: tracker obserwuje każdy krok, bez niego liczymy stan końcowy.
+        val summoned = events?.commanderSummoned ?: AchievementBattleTracker.commanderOnField(battle)
+        if (summoned) markOnce(profile, AchievementMetric.COMMANDER_SUMMONED)
+        if (won && summoned) add(profile, AchievementMetric.COMMANDER_WINS)
+        if (won && events != null && events.commanderSurvived)
+            markOnce(profile, AchievementMetric.COMMANDER_SURVIVOR)
+        add(profile, AchievementMetric.COMMANDER_PULSES, (events?.commanderPulses ?: 0).toLong())
+        if (events?.turretTierFour ?: AchievementBattleTracker.allTurretsTopTier(battle))
+            markOnce(profile, AchievementMetric.TURRET_TIER_FOUR)
 
         // Warianty liczą się dopiero po wygranej; maski 1 i 2 przechodzą między bitwami.
         if (won) {

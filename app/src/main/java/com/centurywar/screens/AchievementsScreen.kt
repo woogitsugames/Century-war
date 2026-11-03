@@ -127,13 +127,24 @@ class AchievementsScreen(g: Game) : Screen(g) {
         drawHeldTooltip(c)
     }
 
+    /** Nowe osiągnięcia 176 mają własne symbole; pozostałe zachowują medal. */
+    private fun lockedIcon(a: com.centurywar.meta.AchievementDef): Int = when (a.metric) {
+        com.centurywar.meta.AchievementMetric.COMMANDER_SUMMONED,
+        com.centurywar.meta.AchievementMetric.COMMANDER_SURVIVOR,
+        com.centurywar.meta.AchievementMetric.COMMANDER_WINS -> Icons.CROWN
+        com.centurywar.meta.AchievementMetric.COMMANDER_PULSES -> Icons.COMMANDER_PULSE
+        com.centurywar.meta.AchievementMetric.TURRET_TIER_FOUR -> Icons.TOWER_TIERS
+        com.centurywar.meta.AchievementMetric.LATE_NO_TURRET_WINS -> Icons.SHIELD
+        else -> Icons.MEDAL
+    }
+
     private fun drawAchievement(c: Canvas, i: Int, y: Float) {
         val a = defs[i]
         val unlocked = Achievements.isUnlocked(g.profile, a.id)
         val hidden = a.hidden && !unlocked
         row.set(panel.left + 12 * dp, y, panel.right - 12 * dp, y + rowH)
         ui.card(c, row, if (unlocked) Color.rgb(43, 82, 61) else Color.rgb(39, 48, 70), 10f)
-        Icons.draw(c, if (unlocked) Icons.CHECK else if (hidden) Icons.LOCK else Icons.MEDAL,
+        Icons.draw(c, if (unlocked) Icons.CHECK else if (hidden) Icons.LOCK else lockedIcon(a),
             row.left + 25 * dp, y + 33 * dp, 32 * dp, dp = dp)
         val tx = row.left + 52 * dp
         val textWidth = row.width() - 113 * dp
