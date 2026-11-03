@@ -16,7 +16,14 @@ class DailyEventsTest {
             val cfg = Daily.config(day, Bonuses())
             val expected = if (offset >= 0L && offset % 4L == 3L)
                 (if (day < Daily.EVENTS_V2_DAY) DailyEvent.entries.take(6) else DailyEvent.entries)
-                    .let { pool -> pool[Rng(day * 131_071L + 907L).nextInt(pool.size)] }
+                    .let { pool ->
+                        val rng = Rng(day * 131_071L + 907L)
+                        val first = pool[rng.nextInt(pool.size)]
+                        // Noc 4: od EVENTS_V2_DAY kolizja z modyfikatorem to drugie losowanie.
+                        if (day < Daily.EVENTS_V2_DAY || !Daily.conflicts(first, cfg.modifiers)) first
+                        else pool.filter { !Daily.conflicts(it, cfg.modifiers) }
+                            .let { ok -> ok[rng.nextInt(ok.size)] }
+                    }
             else null
             assertEquals("Zdarzenie dnia $day", expected, cfg.dailyEvent)
             assertEquals(expected, Daily.config(day, Bonuses()).dailyEvent)

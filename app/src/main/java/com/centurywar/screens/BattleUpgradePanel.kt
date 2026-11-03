@@ -216,8 +216,7 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                 ui.medallion(c, cellLeft + mr, cy, mr,
                     if (te >= 0) Ui.ERA[te] else Color.rgb(60, 64, 78),
                     if (te >= 0) Icons.TOWER else -1, Ui.TRIM, Ui.PLAYER)
-                if (te < 0) ui.textO(c, slotNumbers[i], cellLeft + mr, cy + 2 * dp,
-                    8f, Ui.DIM, Paint.Align.CENTER, 1.2f)
+                // Pusty slot: numer tylko obok medalionu (noc 4, bez cyfry w kółku).
                 val tx = cellLeft + 16 * dp
                 ui.textO(c, slotNumbers[i], tx, cy + 2 * dp, 9f, Ui.DIM)
                 val nameX = tx + 14 * dp

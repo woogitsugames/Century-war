@@ -5,3 +5,4 @@
 - 2026-11-02 UTC: Tura 9 UX 2
 - 2026-11-02 UTC: Tura 9: przycisk dowodcy (Wodz) w potyczce, 125
 - 2026-11-02 UTC: Tura 10 szlif 2
+- 2026-11-03 UTC: Noc_4_usterki

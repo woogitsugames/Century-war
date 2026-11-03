@@ -166,8 +166,15 @@ object L {
         putAll(part154())
         putAll(part164())
         putAll(part170())
+        putAll(part172())
         }
     }
+
+    /** Noc 4: podpisy dwóch opcji wstrząsów (Dostępność ma pierwszeństwo przed Ustawieniami). */
+    private fun part172(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "screen_shake_note" to t("Nie działa przy „Ogranicz potrząsanie”", "Ignored while “Reduce shaking” is on", "Wirkungslos bei „Wackeln reduzieren“", "Sin efecto con «Reducir sacudidas»", "Sans effet avec « Réduire les secousses »", "Ignorato con «Riduci oscillazioni»", "Sem efeito com «Reduzir vibração»", "Не діє з «Зменшити тремтіння»", "Werkt niet bij ‘Minder schudden’", "“Sarsıntıyı azalt” açıkken etkisiz"),
+        "access_reduce_shake_note" to t("Wyłącza wszystkie wstrząsy ekranu i lot medali", "Turns off all screen shake and flying medals", "Schaltet jedes Bildschirmwackeln und fliegende Medaillen ab", "Desactiva toda sacudida de pantalla y el vuelo de medallas", "Coupe toutes les secousses écran et le vol des médailles", "Disattiva tutte le scosse schermo e il volo delle medaglie", "Desliga todo o tremor da tela e o voo das medalhas", "Вимикає все тремтіння екрана й політ медалей", "Zet alle schermtrilling en vliegende medailles uit", "Tüm ekran sarsıntısını ve madalya uçuşunu kapatır"),
+    )
 
     /** Zlecenie 170: nowe wydarzenia dnia, karty Endless, osiągnięcia i „Co nowego”. */
     private fun part170(): Array<Pair<String, Array<out String>>> = arrayOf(

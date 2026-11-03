@@ -7,6 +7,7 @@ import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
+import com.centurywar.engine.RowNote
 import com.centurywar.engine.Screen
 import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
@@ -115,6 +116,7 @@ class SettingsScreen(g: Game) : Screen(g) {
         var first = ""; var second = ""; var size = LABEL_DP
     }
     private val rowLabels = HashMap<Button, RowLabel>()
+    private val shakeNote = RowNote()
 
     internal fun rowLabel(b: Button, avail: Float): RowLabel {
         val rl = rowLabels.getOrPut(b) { RowLabel() }
@@ -286,7 +288,17 @@ class SettingsScreen(g: Game) : Screen(g) {
                 Icons.draw(c, iconOf(b), left + 10 * dp + isz / 2, b.r.centerY(), isz, dp = dp)
                 val tx = left + 20 * dp + isz
                 val rl = rowLabel(b, b.r.left - tx - 6 * dp)
-                if (rl.second.isEmpty()) {
+                if (b === shakeBtn) {
+                    // Noc 4: podpis wyjaśnia zależność od Dostępności › „Ogranicz potrząsanie”.
+                    val note = shakeNote.layout(ui, L["screen_shake_note"], b.r.left - tx - 6 * dp,
+                        if (rl.second.isEmpty()) 2 else 1)
+                    val lh = rl.size * dp * ui.textScale * 1.1f
+                    val labelLines = if (rl.second.isEmpty()) 1 else 2
+                    val top = b.r.centerY() - (lh * labelLines + note.lineHeight(ui) * note.lines) / 2f
+                    ui.textO(c, rl.first, tx, top + lh * 0.8f, rl.size, Ui.TEXT)
+                    if (labelLines == 2) ui.textO(c, rl.second, tx, top + lh * 1.8f, rl.size, Ui.TEXT)
+                    note.draw(c, ui, tx, top + lh * labelLines + 1f * dp)
+                } else if (rl.second.isEmpty()) {
                     ui.textO(c, rl.first, tx, b.r.centerY() + 5.5f * dp, rl.size, Ui.TEXT)
                 } else {
                     val lh = rl.size * dp * ui.textScale * 1.1f

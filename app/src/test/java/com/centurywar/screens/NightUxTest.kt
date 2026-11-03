@@ -341,11 +341,8 @@ class NightUxTest {
             val e = cfg.dailyEvent ?: continue
             counts[e.name] = (counts[e.name] ?: 0) + 1
             val m = cfg.modifiers
-            val clash = when (e) {
-                DailyEvent.SIEGE_WORKS -> m.filter { it == com.centurywar.game.Modifier.NO_TURRETS || it == com.centurywar.game.Modifier.EXPENSIVE_TOWERS }
-                DailyEvent.FORCED_MARCH -> m.filter { it == com.centurywar.game.Modifier.FAST_UNITS }
-                else -> emptyList()
-            }
+            // Jedna lista sprzeczności w sim (noc 4); po poprawce zestawienie ma być puste.
+            val clash = m.filter { it in Daily.EVENT_CONFLICTS[e].orEmpty() }
             if (clash.isNotEmpty()) {
                 counts[e.name + "+" + clash.joinToString("+")] = (counts[e.name + "+" + clash.joinToString("+")] ?: 0) + 1
                 if (sb.length < 4000) sb.append("dzień $day: ${e.name} z ${clash.joinToString()}\n")
