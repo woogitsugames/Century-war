@@ -50,16 +50,17 @@ class Chrome(private val s: Screen) {
     fun title(c: Canvas, text: String) {
         val ui = s.ui
         val cx = s.w / 2 + (s.g.insetL - s.g.insetR) / 2
-        ui.ribbon(c, cx, s.g.insetT + (if (narrowTitleRow) 82 else 32) * s.dp, text, 20f, Ui.RIBBON, 220 * s.dp, Ui.GOLD,
+        ui.ribbon(c, cx, s.g.insetT + (if (narrowTitleRow) 82 else 32) * s.dp, text, 20f, Ui.RIBBON, TITLE_MIN_W * s.dp, Ui.GOLD,
             titleMaxW(text))
     }
 
     /**
      * Największa szerokość wstęgi. W jednym rzędzie z „Wstecz” i plakietkami zostaje środek ekranu
      * (co najmniej 160 dp). Noc 8: gdy wstęga stoi w osobnym rzędzie (wąski ekran), a tytuł zmalałby
-     * poniżej 10 sp (fr „Historique des changements”, pt „Histórico de alterações” na Foldzie zewn.),
-     * wstęga poszerza się dokładnie tyle, ile trzeba na 10 sp (najwyżej do marginesów ekranu).
-     * Tytuły, które już mają co najmniej 10 sp, zachowują dotychczasowy rozmiar.
+     * poniżej 11 sp (fr „Historique des changements” 9 sp, pt „Histórico de alterações” 10,6 sp na Foldzie
+     * zewn.), tytuł wypełnia wstęgę o minimalnej szerokości, a gdy i to za mało — wstęga poszerza się tyle,
+     * ile trzeba na 10 sp (najwyżej do marginesów ekranu).
+     * Tytuły, które mają co najmniej 11 sp, zachowują dotychczasowy rozmiar.
      */
     private fun titleMaxW(text: String): Float {
         val d = s.dp
@@ -70,10 +71,13 @@ class Chrome(private val s: Screen) {
         val tw = ui.measure(text, 20f, true)
         if (tw + hh * 2.4f <= base || tw <= 0f) return base
         val size = max(9f, 20f * (base - hh * 2.4f) / tw)
-        if (size * ui.textScale >= MIN_TITLE_SP) return base
-        val need = ui.measure(text, MIN_TITLE_SP / ui.textScale, true) + hh * 2.4f + 1f * d
+        if (size * ui.textScale >= SMALL_TITLE_SP) return base
+        // Ta sama liniowa reguła co Ui.ribbon: rozmiar = 20 · (maxW − 2,4·hh) / tw.
+        val need = tw * (MIN_TITLE_SP / ui.textScale) / 20f * 1.002f + hh * 2.4f
         val room = s.w - s.g.insetL - s.g.insetR - 2 * hh * 1.3f - 16 * d
-        return need.coerceAtMost(room).coerceAtLeast(base)
+        // Najpierw wypełnia samą wstęgę o minimalnej szerokości 220 dp (bez jej poszerzania).
+        val body = TITLE_MIN_W * d + hh * 0.2f
+        return max(need, body).coerceAtMost(room).coerceAtLeast(base)
     }
 
     /** Prostokąt całej wstęgi wraz z końcówkami; ta sama geometria co Ui.ribbon. */
@@ -106,6 +110,10 @@ class Chrome(private val s: Screen) {
     private companion object {
         /** Noc 8: najmniejszy tytuł na wstędze w osobnym rzędzie. */
         const val MIN_TITLE_SP = 10f
+        /** Noc 8: tytuł mniejszy niż to (fr, pt, nl „Historia zmian” na Foldzie zewn.) wypełnia wstęgę. */
+        const val SMALL_TITLE_SP = 11f
+        /** Minimalna szerokość wstęgi tytułu (dp), jak w [title]. */
+        const val TITLE_MIN_W = 220f
     }
 
     private var medalsValue = Int.MIN_VALUE

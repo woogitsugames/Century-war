@@ -179,7 +179,7 @@ object L {
 
     /** Noc 4: podpisy dwóch opcji wstrząsów (Dostępność ma pierwszeństwo przed Ustawieniami). */
     private fun part172(): Array<Pair<String, Array<out String>>> = arrayOf(
-        "screen_shake_note" to t("Zależy od Dostępności", "Ignored while “Reduce shaking” is on", "Wirkungslos bei „Wackeln reduzieren“", "Depende de Accesibilidad", "Dépend de l'Accessibilité", "Dipende da Accessibilità", "Sem efeito com «Reduzir vibração»", "Залежить від Доступності", "Werkt niet bij ‘Minder schudden’", "“Sarsıntıyı azalt” açıkken etkisiz"),
+        "screen_shake_note" to t("Zależy od Dostępności", "Ignored while “Reduce shaking” is on", "Wirkungslos bei „Wackeln reduzieren“", "Depende de Accesibilidad", "Dépend de l'Accessibilité", "Dipende da Accessibilità", "Sem efeito com «Reduzir vibração»", "Див. «Доступність»", "Werkt niet bij ‘Minder schudden’", "“Sarsıntıyı azalt” açıkken etkisiz"),
         "access_reduce_shake_note" to t("Wyłącza wszystkie wstrząsy ekranu i lot medali", "Turns off all screen shake and flying medals", "Schaltet Bildschirmwackeln und fliegende Medaillen ganz ab", "Desactiva toda sacudida de pantalla y el vuelo de medallas", "Coupe toutes les secousses d'écran et le vol des médailles", "Disattiva tutte le scosse dello schermo e il volo delle medaglie", "Desliga todo o tremor da tela e o voo das medalhas", "Вимикає все тремтіння екрана й політ медалей", "Zet alle schermtrilling en vliegende medailles uit", "Tüm ekran sarsıntısını ve madalya uçuşunu kapatır"),
     )
 

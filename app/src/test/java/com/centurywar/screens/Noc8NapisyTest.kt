@@ -143,7 +143,7 @@ class Noc8NapisyTest {
             for (long in arrayOf(false, true)) {
                 if (long) {
                     // Sztucznie długi tekst we wszystkich językach (jedna wersja na język, z dopiskiem kodu).
-                    val arr = Array(L.CODES.size) { "$longPl (${L.CODES[it]})" }
+                    val arr = Array(L.CODES.size) { "$longPl, $longPl (${L.CODES[it]})" }
                     for (k in saved.keys) tab[k] = arr
                 }
                 for ((tag, d) in devices) for (scale in intArrayOf(100, 130)) for (lang in L.CODES) {
@@ -153,11 +153,22 @@ class Noc8NapisyTest {
                     val st = SettingsScreen(g)
                     g.setScreen(st); tick(g, 4, 0.1f)
                     val shakeBtn = field(st, "shakeBtn").get(st) as Button
+                    // Na 1600×720 wiersz wstrząsów jest pod krawędzią listy: przewijamy krokami po 20 dp.
+                    var steps = 0
+                    while (!shakeBtn.visible && steps++ < 100) {
+                        field(st, "scroll").setFloat(st, field(st, "scroll").getFloat(st) + 20f * g.ui.dp)
+                        st.layout(); tick(g)
+                    }
                     var texts = render(g, if (scale == 100 && (lang == "fr" || lang == "es" || long && lang == "pl")) "${tag}_${lang}${if (long) "_dlugi" else ""}_ustawienia" else null)
                     if (shakeBtn.visible) {
                         val note = field(st, "shakeNote").get(st) as RowNote
                         checkNote("$where/ustawienia", g, texts, note, shakeBtn,
                             shakeBtn.r.top - 3 * g.ui.dp, shakeBtn.r.bottom + 3 * g.ui.dp, errors)
+                        val shown = if (note.second.isEmpty()) note.first else note.first + " " + note.second
+                        assertTrue("$where: podpis ucięty bez wielokropka '$shown'",
+                            shown == L["screen_shake_note"] || shown.endsWith("…"))
+                        // Prawdziwe teksty przy skali 100% mieszczą się w całości (elipsa to tylko zabezpieczenie).
+                        if (!long && scale == 100 && shown.endsWith("…")) errors.append("$where: elipsa w '$shown'\n")
                         // Bufor: kolejna klatka bez zmian nie tworzy nowych napisów.
                         val first = note.first
                         render(g, null)
@@ -174,8 +185,12 @@ class Noc8NapisyTest {
                         val note = field(acc, "shakeNote").get(acc) as RowNote
                         checkNote("$where/dostepnosc", g, texts, note, shake,
                             shake.r.top - 6 * g.ui.dp, shake.r.bottom + 6 * g.ui.dp, errors)
-                        if (long) assertTrue("$where: długi podpis bez wielokropka",
-                            note.first.endsWith("…") || note.second.endsWith("…"))
+                        // Nic nie znika po cichu: albo cały tekst, albo „…” na końcu.
+                        val shown = if (note.second.isEmpty()) note.first else note.first + " " + note.second
+                        assertTrue("$where: podpis ucięty bez wielokropka '$shown'",
+                            shown == L["access_reduce_shake_note"] || shown.endsWith("…"))
+                        if (!long && scale == 100 && shown.endsWith("…")) errors.append("$where: elipsa w '$shown'\n")
+                        if (long && tag == "foldOuter") assertTrue("$where: długi podpis bez wielokropka", shown.endsWith("…"))
                     } else errors.append("$where: wiersz „Mniej wstrząsów” niewidoczny\n")
                     g.history?.close()
                 }
@@ -227,7 +242,10 @@ class Noc8NapisyTest {
                 val texts = render(g, if (lang == "fr" || lang == "de") "${tag}_${lang}_wyniki" else null)
                 val t = texts.lastOrNull { it.s == bs.restartEnd.label }
                 val size = (t?.sizePx ?: 0f) / g.ui.dp
-                log.append("$tag/$lang: „${bs.restartEnd.label}” ${"%.1f".format(size)} dp, przycisk ${"%.0f".format(bs.restartEnd.r.width() / g.ui.dp)} dp\n")
+                // Dawny warunek równych przycisków (tylko „Powtórka”), do porównania układu.
+                val usable = bs.resultPanel.width() - 40 * g.ui.dp - 10 * g.ui.dp
+                val oldTight = g.ui.fit(L["replay"], 15f, usable * 0.44f - 50 * g.ui.dp * 0.88f - 16 * g.ui.dp) < 15f * 0.75f
+                log.append("$tag/$lang: dawniej ${if (oldTight) "równe" else "26/44/30"}, „${bs.restartEnd.label}” ${"%.1f".format(size)} dp, przycisk ${"%.0f".format(bs.restartEnd.r.width() / g.ui.dp)} dp\n")
                 if (size < 10f) errors.append("$tag/$lang: „${bs.restartEnd.label}” ${"%.1f".format(size)} dp\n")
                 g.history?.close()
             }
