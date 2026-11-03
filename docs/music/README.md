@@ -35,7 +35,7 @@ Kolejną partię dodaje się tak samo; pliki o tej samej nazwie są nadpisywane.
 
 ## Rozmiar APK
 
-Komplet 21 utworów (w tym dwa krótkie przerywniki) po zszyciu pętli to **19,0 MiB** (wcześniej 21,1 MiB: pętle są krótsze o nakładkę 3 s i pominięty cichy wstęp/wybrzmienie). Pliki `.ogg` nie są kompresowane w APK (`noCompress`, wymagane przez `openFd`), ale Vorbis i tak się nie kompresuje. Jeśli rozmiar okaże się problemem, kandydatami do późniejszego pobierania są epoki 5–8 (gracz trafia tam po kilku godzinach gry) — gra i tak zagra wtedy syntezę.
+Komplet 21 utworów (w tym dwa krótkie przerywniki) po zszyciu pętli to **19,0 MiB** (wcześniej 21,1 MiB: pętle są krótsze o nakładkę 3 s i pominięty cichy wstęp/wybrzmienie); debug APK 23,2 MB zamiast 25,5 MB. Pliki `.ogg` nie są kompresowane w APK (`noCompress`, wymagane przez `openFd`), ale Vorbis i tak się nie kompresuje. Jeśli rozmiar okaże się problemem, kandydatami do późniejszego pobierania są epoki 5–8 (gracz trafia tam po kilku godzinach gry) — gra i tak zagra wtedy syntezę.
 
 ## Odtwarzanie — szczegóły i ograniczenia
 
