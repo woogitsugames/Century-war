@@ -33,6 +33,6 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties   # SDK: platforms;android-36, b
 ```
 
 ## Uwagi
-- Emulatora nie ma, wygląd sprawdzaj zrzutami z `ScreenshotTest*` (`ScreenshotTestMenus`, `ScreenshotTestBattle`, `ScreenshotTestFold`, `ScreenshotTestLayout`, `ScreenshotTestRegression100`).
+- Emulatora nie ma, wygląd sprawdzaj zrzutami z `ScreenshotTest*` (`ScreenshotTestMenus`, `ScreenshotTestBattle`, `ScreenshotTestFold`, `ScreenshotTestLayout`; wzorce `regression100` w `ScreenshotTestMenus`).
 - Przy błędzie 429 z Maven Central pobieraj artefakty z `https://maven-central.storage-download.googleapis.com/maven2` do `~/.m2/repository`.
 - Commity po polsku, z liniami atrybucji sesji. Nie twórz PR bez prośby użytkownika.

@@ -30,17 +30,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
-/**
- * Przegląd przed premierą na telefonach (720p, 20:9) oraz szlif 2. Ścieżka i narzędzia:
- * [PrereleasePolishBase]; ekrany Folda: [PrereleasePolishFoldTest] (noc 9: podział
- * dawnej pętli po urządzeniach na dwie klasy, żeby każdy proces Gradle dostał połowę).
- */
+/** Przegląd przed premierą na telefonie 720p oraz szlif 2; ścieżka i narzędzia: [PrereleasePolishBase]. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
 class PrereleasePolishTest : PrereleasePolishBase() {
     @Test
-    fun prereleaseTour() = prereleaseTourOn(listOf("phone720", "phone20x9"), "pre10_audit.txt")
+    fun prereleaseTour() = prereleaseTourOn("phone720")
 
     /** Tura 10: ✕ na liście powtórek usuwa dopiero po drugim dotknięciu i mówi o tym na ekranie. */
     @Test

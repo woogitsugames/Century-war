@@ -9,9 +9,10 @@ import org.junit.Assert.assertTrue
  * 42% (ARSENAL) – 63,5% (PLUNDER); po wyrównaniu w turze 10: 46,5% (BANNER) – 59,5% (FURY),
  * szczegóły w docs/BALANCE.md.
  *
- * Noc 9: doktryny są podzielone na dwie klasy (parzyste i nieparzyste pozycje w
- * [Doctrine.entries]), żeby oba procesy testowe Gradle dostały połowę pracy; seedy, progi
- * i komunikaty są bez zmian. Klasy: [DoctrineBalance82Test], [DoctrineBalance82OddTest].
+ * Noc 9: doktryny są podzielone na cztery klasy (pozycja w [Doctrine.entries] modulo 4),
+ * żeby procesy testowe Gradle dostały po ćwiartce pracy; seedy, progi i komunikaty są bez
+ * zmian. Klasy: [DoctrineBalance82Test], [DoctrineBalance82Mod1Test], [DoctrineBalance82Mod2Test],
+ * [DoctrineBalance82Mod3Test].
  */
 abstract class DoctrineBalance82Base {
     private fun duel(doctrine: Doctrine, boostedSide: Int, seed: Long): Int {
@@ -34,10 +35,10 @@ abstract class DoctrineBalance82Base {
         return if (b.over) b.winner else -1
     }
 
-    /** Doktryny z pozycji o podanej parzystości w [Doctrine.entries]. */
-    protected fun checkDoctrines(parity: Int) {
+    /** Doktryny z pozycji `index % 4 == part` w [Doctrine.entries]. */
+    protected fun checkDoctrines(part: Int) {
         val failures = StringBuilder()
-        for (doctrine in Doctrine.entries.filterIndexed { index, _ -> index % 2 == parity }) {
+        for (doctrine in Doctrine.entries.filterIndexed { index, _ -> index % 4 == part }) {
             var wins = 0
             var losses = 0
             var unfinished = 0

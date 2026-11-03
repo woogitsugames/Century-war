@@ -33,14 +33,11 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.util.Locale
 
-/**
- * Pierwsza godzina na zewnętrznym ekranie Folda (pl, en): ta sama ścieżka co
- * [FirstHourJourneyTest.firstHour], wydzielona w nocy 9 do osobnej klasy (czas testów).
- */
+/** Pierwsza godzina na zewnętrznym ekranie Folda (języki z parzystych pozycji, domyślnie pl); ścieżka: [FirstHourJourneyBase]. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
 class FirstHourJourneyFoldTest : FirstHourJourneyBase() {
     @Test
-    fun firstHour() = firstHourOn("foldOuter", "fh_audit_foldOuter.txt")
+    fun firstHour() = firstHourOn("foldOuter", 0)
 }

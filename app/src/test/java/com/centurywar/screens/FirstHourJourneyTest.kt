@@ -34,16 +34,15 @@ import java.io.File
 import java.util.Locale
 
 /**
- * Pierwsza godzina na telefonie (pl, en) i przerwany samouczek. Ścieżka i narzędzia:
- * [FirstHourJourneyBase]; Fold zewnętrzny: [FirstHourJourneyFoldTest] (noc 9: podział
- * dawnej pętli po urządzeniach na dwie klasy, żeby każdy proces Gradle dostał połowę).
+ * Pierwsza godzina na telefonie (języki z parzystych pozycji, domyślnie pl) i przerwany
+ * samouczek. Ścieżka i narzędzia: [FirstHourJourneyBase].
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
 class FirstHourJourneyTest : FirstHourJourneyBase() {
     @Test
-    fun firstHour() = firstHourOn("phone", "fh_audit.txt")
+    fun firstHour() = firstHourOn("phone", 0)
 
     /**
      * Aplikacja zabita w tle w połowie samouczka: po ponownym uruchomieniu menu pyta o wznowienie,

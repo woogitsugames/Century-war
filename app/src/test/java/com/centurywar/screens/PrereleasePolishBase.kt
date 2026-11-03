@@ -37,7 +37,9 @@ import java.io.File
  * Każdy kadr przechodzi przez płótno zapisujące napisy: wykrywa teksty ucięte przez krawędź
  * ekranu lub obszaru przycinania i teksty nachodzące na siebie. Przyciski sprawdza jak
  * NewPlayerJourneyTest (cel dotyku, bezpieczny obszar, zasłonięcie, angielski tekst).
- * Zrzuty: build/screenshots/pre10_<urządzenie>_<język>_<nr>_<ekran>.png, raport pre10_audit.txt.
+ * Zrzuty: build/screenshots/pre10_<urządzenie>_<język>_<nr>_<ekran>.png, raport pre10_audit_<urządzenie>.txt.
+ * Testy (noc 9: jedno urządzenie na klasę): [PrereleasePolishTest], [PrereleasePolishPhone20x9Test],
+ * [PrereleasePolishFoldOuterTest], [PrereleasePolishFoldInnerTest].
  * Twarde asercje dotyczą tylko błędów naprawionych w turze 10 (lista [regressions]).
  */
 abstract class PrereleasePolishBase {
@@ -398,19 +400,21 @@ abstract class PrereleasePolishBase {
         g.setScreen(MenuScreen(g)); tick(g, 3)
     }
 
-    /** Przegląd na podanych urządzeniach z [devices]; raport w [auditFile]. */
-    protected fun prereleaseTourOn(deviceNames: List<String>, auditFile: String) {
+    /**
+     * Przegląd na jednym urządzeniu z [devices] (pl, en, de); raport pre10_audit_<urządzenie>.txt.
+     * Noc 9: dawna pętla po czterech urządzeniach jest rozłożona na cztery klasy testowe.
+     */
+    protected fun prereleaseTourOn(device: String) {
         val old = L.lang
         try {
-            for (tag in deviceNames) for (lang in arrayOf("pl", "en", "de")) {
-                val d = devices.getValue(tag)
-                val g = game(d, lang)
-                tour("${tag}_$lang", g)
+            for (lang in arrayOf("pl", "en", "de")) {
+                val g = game(devices.getValue(device), lang)
+                tour("${device}_$lang", g)
                 g.history?.close()
             }
         } finally {
             L.lang = old
-            File(out, auditFile).writeText(audit.toString())
+            File(out, "pre10_audit_$device.txt").writeText(audit.toString())
         }
         assertTrue("Regresje szlifu przed premierą:\n$regressions", regressions.isEmpty())
     }

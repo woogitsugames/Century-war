@@ -68,6 +68,89 @@ import java.util.concurrent.TimeUnit
 @Config(sdk = [35])
 class ScreenshotTestFold : ScreenshotTestBase() {
     /**
+     * Kontrola nowych stanów zleceń 53–67: 720p, 1280×720@2, 20:9,
+     * Fold w obu orientacjach, DE/TR/UK i tekst 130%.
+     * Pliki audit74_after_* służą do wizualnego porównania z bazowymi screenshotami.
+     */
+    @Test
+    fun layout74VisualStates() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "phone1280" to intArrayOf(1280, 720, 2),
+                "phone20x9" to intArrayOf(2400, 1080, 3),
+                "foldLandscape" to intArrayOf(2184, 1968, 3),
+                "foldPortrait" to intArrayOf(1968, 2184, 3),
+            )) for (lang in arrayOf("de", "tr", "uk")) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720" || tag == "phone1280") Quality.LOW else Quality.HIGH)
+                if (tag == "phone20x9") g.setInsets(110, 0, 70, 40)
+                g.profile.lang = lang
+                g.profile.textScale = 130
+                g.profile.hintsEnabled = false
+                g.onLanguageChanged()
+                g.applyAccessibility()
+                val key = "$tag/$lang/130%"
+                val prefix = "audit74_after_${tag}_${lang}_130"
+
+                val menu = MenuScreen(g)
+                g.setScreen(menu)
+                clear74Notices(g)
+                g.showNotice(L["ms_streak"] + " 7/7: " + L["ms_daily"])
+                shot(g, "${prefix}_menu_notice", 1)
+                assert74Notice(g, menu, key)
+
+                clear74Notices(g)
+                val pause = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7401L, 1f,
+                    startEra = 2, maxEra = 7, weather = Weather.NIGHT,
+                    modifiers = setOf(Modifier.FOG_OF_WAR, Modifier.FAST_UNITS)))
+                g.setScreen(pause)
+                pause.onClick(field(pause, "pauseBtn").get(pause) as Button)
+                shot(g, "${prefix}_pause", 1)
+                assert74Pause(g, pause, key)
+
+                val steam = Defs.eraOf(com.centurywar.game.EraArt.STEAM)
+                val variants = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7402L, 1f,
+                    startEra = steam, maxEra = steam))
+                g.setScreen(variants)
+                (field(variants, "battle").get(variants) as Battle).pendingVariant = steam
+                shot(g, "${prefix}_variants", 1)
+                assert74Variants(g, variants, key)
+
+                val tooltip = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 7403L, 1f,
+                    startEra = 2, maxEra = 4))
+                g.setScreen(tooltip)
+                @Suppress("UNCHECKED_CAST")
+                val units = field(tooltip, "unitBtn").get(tooltip) as Array<Button>
+                assertTrue("$key: nie udało się otworzyć dymka", tooltip.onLongPress(units[0]))
+                Screen::class.java.getDeclaredField("heldButton").apply {
+                    isAccessible = true
+                    set(tooltip, units[0])
+                }
+                shot(g, "${prefix}_tooltip", 1)
+
+                val codex = CodexScreen(g, steam)
+                g.setScreen(codex)
+                codex.showCategory(2)
+                shot(g, "${prefix}_codex_tabs", 1)
+                assertNoCollisions(g, codex, "codex_variants74", "codex")
+
+                g.setScreen(CampaignScreen(g))
+                shot(g, "${prefix}_campaign", 1)
+                g.setScreen(AchievementsScreen(g))
+                shot(g, "${prefix}_achievements", 1)
+                g.setScreen(MissionsScreen(g))
+                shot(g, "${prefix}_missions", 1)
+                g.setScreen(AboutScreen(g))
+                shot(g, "${prefix}_about", 1)
+            }
+        } finally {
+            L.lang = originalLang
+        }
+    }
+
+    /**
      * Zlecenie 98: rzeczywisty obszar 1802x2000 i wąski ekran zewnętrzny.
      * Audytuje wszystkie stany menu przy zwykłym i powiększonym tekście.
      * PNG z polskiego interfejsu są publikowane jako artefakt CI.

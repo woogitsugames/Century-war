@@ -181,32 +181,6 @@ class ScreenshotTestMenus : ScreenshotTestBase() {
         }
     }
 
-    /** Podgląd wszystkich sześciu zdarzeń na 720p i rozłożonym Foldzie. */
-    @Test
-    fun specialDailyCards() {
-        val dates = LinkedHashMap<DailyEvent, Long>()
-        for (day in Daily.RELEASE_DAY + 3L..Daily.RELEASE_DAY + 720L step 4L) {
-            val event = Daily.config(day, Bonuses()).dailyEvent ?: continue
-            if (event !in dates) dates[event] = day
-            if (dates.size == DailyEvent.entries.size) break
-        }
-        assertTrue(dates.size == DailyEvent.entries.size)
-        for ((tag, dims) in mapOf(
-            "phone720" to intArrayOf(1600, 720, 2),
-            "foldOpen" to intArrayOf(2184, 1968, 3),
-            "foldPortrait" to intArrayOf(1968, 2184, 3),
-        )) {
-            val g = game(dims[0], dims[1], dims[2] * 0.9f,
-                if (tag == "phone720") Quality.LOW else Quality.HIGH)
-            for ((event, day) in dates) {
-                val screen = ModeScreen(g, Mode.DAILY, previewDailyDay = day)
-                g.setScreen(screen)
-                shot(g, "${tag}_daily_event_${event.name.lowercase()}")
-                assertTrue((field(screen, "dailyEventTitle").get(screen) as String).isNotBlank())
-            }
-        }
-    }
-
     /** Szybki zestaw: wszystkie ekrany menu i HUD bitwy z otwartymi panelami (bez długiej symulacji). */
     @Test
     fun menus() {
@@ -378,136 +352,6 @@ class ScreenshotTestMenus : ScreenshotTestBase() {
         }
     }
 
-    /** Układ modala i Kodeksu 720p / Fold, po polsku i po angielsku. */
-    @Test
-    fun variantScreens() {
-        val priorLang = com.centurywar.engine.L.lang
-        try {
-            val steam = Defs.eraOf(com.centurywar.game.EraArt.STEAM)
-            for ((tag, dims) in mapOf(
-                "phone720" to intArrayOf(1600, 720, 2),
-                "foldLandscape" to intArrayOf(2184, 1968, 3),
-                "foldPortrait" to intArrayOf(1968, 2184, 3),
-            )) {
-                val g = game(dims[0], dims[1], dims[2] * 0.9f, Quality.HIGH)
-                for (lang in arrayOf("pl", "en")) {
-                    com.centurywar.engine.L.setCode(lang)
-                    g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, 9900L, 1f,
-                        startEra = steam, maxEra = steam)))
-                    shot(g, "variant_modal_${tag}_${lang}")
-                    val variantCodex = CodexScreen(g, steam)
-                    g.setScreen(variantCodex)
-                    variantCodex.showCategory(2)
-                    shot(g, "variant_codex_${tag}_${lang}")
-                }
-            }
-        } finally {
-            com.centurywar.engine.L.lang = priorLang
-        }
-    }
-
-    /** Widok pusty, statystyki, historia i szczegóły na czterech proporcjach ekranu. */
-    @Test
-    fun battleHistoryScreens() {
-        for ((tag, dims) in mapOf(
-            "phone720" to intArrayOf(1600, 720, 2),
-            "phone20x9" to intArrayOf(2400, 1080, 3),
-            "foldOpen" to intArrayOf(2184, 1968, 3),
-            "foldPortrait" to intArrayOf(1968, 2184, 3),
-            "foldInner" to intArrayOf(1802, 2000, 4),
-            "foldOuter" to intArrayOf(904, 2316, 3),
-        )) {
-            val g = game(dims[0], dims[1], dims[2] * 0.9f,
-                if (tag == "phone720") Quality.LOW else Quality.HIGH)
-            val local = File.createTempFile("cw-history-shot", ".json").apply { delete() }
-            val archive = BattleHistory(local)
-            g.history = archive
-            val empty = StatsScreen(g)
-            g.setScreen(empty)
-            shot(g, tag + "_stats_empty")
-            empty.onClick(empty.buttons.first { it.id == 11 })
-            shot(g, tag + "_history_empty")
-
-            val now = System.currentTimeMillis()
-            archive.add(BattleHistory.Record(
-                date = now - 86_400_000L, mode = Mode.SKIRMISH.ordinal,
-                result = BattleHistory.LOSS, score = 1490, seconds = 230,
-                kills = 24, lost = 31, era = 4, advanced = 3,
-                roles = intArrayOf(12, 10, 5, 4), doctrines = 3, turrets = 2,
-                barrages = 3, rallies = 1, gold = 4500, baseDamage = 350,
-                aiPower = 110, personality = 1, medals = 7, tipKey = "tip_eco",
-            ))
-            archive.add(BattleHistory.Record(
-                date = now, mode = Mode.ENDLESS.ordinal, result = BattleHistory.WIN,
-                score = 9350, seconds = 420, kills = 45, lost = 40,
-                era = 5, advanced = 4, roles = intArrayOf(7, 15, 12, 6),
-                doctrines = 7, cards = IntArray(30) { if (it < 2) it + 1 else 0 },
-                turrets = 4, barrages = 5, rallies = 2, gold = 9000,
-                baseDamage = 600, wave = 17, bosses = 2, medals = 70,
-            ))
-            g.profile.recordBattle(Mode.SKIRMISH, false, 230)
-            g.profile.recordBattle(Mode.ENDLESS, true, 420)
-            g.profile.submit(Profile.BOARD_ENDLESS, 9350, 20_000L)
-            val stats = StatsScreen(g)
-            g.setScreen(stats)
-            shot(g, tag + "_stats")
-            stats.onClick(stats.buttons.first { it.id == 11 })
-            shot(g, tag + "_history")
-            val panel = field(stats, "panel").get(stats) as android.graphics.RectF
-            stats.onTap(panel.centerX(), panel.top + 40 * g.ui.dp)
-            shot(g, tag + "_history_detail")
-            archive.awaitWrites()
-            archive.close()
-        }
-    }
-
-    /** Zlecenie 105: historia 30 bitew, fale i czas dzienny na 720p i Foldzie. */
-    @Test
-    fun statsCharts105() {
-        for ((tag, dims) in screenshotDevices(mapOf(
-            "phone720" to intArrayOf(1600, 720, 2),
-            "foldOpen" to intArrayOf(2184, 1968, 3),
-        ))) {
-            val g = game(dims[0], dims[1], dims[2] * 0.9f,
-                if (tag == "phone720") Quality.LOW else Quality.HIGH)
-            val archive = BattleHistory(File.createTempFile("cw-stats105", ".json").apply { delete() })
-            try {
-                val now = System.currentTimeMillis()
-                // Dodaj od najstarszej do najnowszej: add() wstawia nowe bitwy na początek.
-                for (i in 39 downTo 0) {
-                    val mode = Mode.entries[i % 4]
-                    val won = i % 3 == 0
-                    val seconds = 120 + i * 15
-                    archive.add(BattleHistory.Record(
-                        date = now - (i / 3).toLong() * 86_400_000L,
-                        mode = mode.ordinal,
-                        result = if (won) BattleHistory.WIN else BattleHistory.LOSS,
-                        seconds = seconds,
-                        wave = if (mode == Mode.ENDLESS) 42 - i else 0,
-                        score = 1000L + i * 150L,
-                    ))
-                    g.profile.recordBattle(mode, won, seconds)
-                }
-                g.history = archive
-                g.historyLoaded = true
-                val screen = StatsScreen(g)
-                g.setScreen(screen)
-                val metrics = field(screen, "metrics").get(screen) as BattleHistory.Metrics
-                assertTrue(metrics.recentModes.size == 30)
-                shot(g, tag + "_stats105_top")
-                val maxScroll = field(screen, "maxScroll").getFloat(screen)
-                val target = (if (tag == "phone720") 580f else 470f) * g.ui.dp
-                field(screen, "scroll").setFloat(screen, minOf(target, maxScroll))
-                shot(g, tag + "_stats105_charts")
-                field(screen, "scroll").setFloat(screen, minOf(940f * g.ui.dp, maxScroll))
-                shot(g, tag + "_stats105_daily")
-            } finally {
-                archive.awaitWrites()
-                archive.close()
-            }
-        }
-    }
-
     /** Zrzuty ustawień i rankingu serwera: tryb bez zgody, bez żadnych zapytań HTTP. */
     @Test
     fun globalRankingMenus() {
@@ -533,82 +377,87 @@ class ScreenshotTestMenus : ScreenshotTestBase() {
         }
     }
 
-    /** Wszystkie działy Kodeksu: góra i dół na 720p oraz Foldzie w pionie, także przy 130%. */
+    /**
+     * Trwały zestaw 15 ekranów w 720p i na rozłożonym Foldzie.
+     * Oddzielne nazwy nie kolidują ze zrzutami innych testów.
+     */
     @Test
-    fun codexAllCategories() {
-        val priorLang = L.lang
-        try {
-            L.setCode("pl")
-            for ((tag, dims) in mapOf(
-                "phone720" to intArrayOf(1600, 720, 2),
-                "foldPortrait" to intArrayOf(1968, 2184, 3),
-                "foldInner" to intArrayOf(1802, 2000, 4),
-                "foldOuter" to intArrayOf(904, 2316, 3),
-            )) {
-                val g = game(dims[0], dims[1], dims[2] * 0.9f,
-                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
-                g.profile.textScale = 130
-                g.applyAccessibility()
-                val codex = CodexScreen(g, Defs.eraOf(com.centurywar.game.EraArt.STEAM))
-                g.setScreen(codex)
-                for (category in 0 until 10) {
-                    codex.showCategory(category)
-                    shot(g, "${tag}_codex_section_${category}_top")
-                    codex.onDrag(0f, -100000f)
-                    shot(g, "${tag}_codex_section_${category}_bottom")
-                }
-            }
-        } finally {
-            L.lang = priorLang
-        }
-    }
-
-    /** Menu, cztery zakładki Rekordów i tor logowania na czterech formatach. */
-    @Test
-    fun recordsUxFourFormats() {
-        val oldLang = L.lang
+    fun regression100() {
+        val originalLanguage = L.lang
         try {
             L.lang = L.PL
-            for ((tag, dims) in screenshotDevices(mapOf(
+            val devices = mapOf(
                 "phone720" to intArrayOf(1600, 720, 2),
-                "phone20x9" to intArrayOf(2400, 1080, 3),
                 "foldOpen" to intArrayOf(2184, 1968, 3),
-                "foldPortrait" to intArrayOf(1968, 2184, 3),
-                "foldInner" to intArrayOf(1802, 2000, 4),
-                "foldOuter" to intArrayOf(904, 2316, 3),
-            ))) {
+            )
+            val requested = System.getenv("CW_SCREENSHOT_DEVICE")?.trim().orEmpty()
+            val selected = if (requested.isEmpty()) devices else devices.filterKeys { it == requested }
+            require(selected.isNotEmpty()) { "Nieznane CW_SCREENSHOT_DEVICE=$requested" }
+            for ((tag, dims) in selected) {
                 val g = game(dims[0], dims[1], dims[2] * 0.9f,
                     if (tag == "phone720") Quality.LOW else Quality.HIGH)
                 g.profile.lang = "pl"
-                L.setCode("pl")
+                g.onLanguageChanged()
+                g.profile.hintsEnabled = false
                 g.profile.hintsSeen = Profile.HINT_VALID_MASK
+                g.profile.stars[0] = 3
+                g.profile.stars[1] = 2
+                g.profile.medals = 340
+                // Baner nagrody za logowanie nie jest częścią stabilnego wzorca.
                 (field(g, "noticeQueue").get(g) as MutableCollection<*>).clear()
                 (field(g, "noticeIcons").get(g) as MutableCollection<*>).clear()
                 field(g, "achievementSeconds").setFloat(g, 0f)
-                val state = Missions(g.profile).refresh(System.currentTimeMillis())
-                state.daily.firstOrNull()?.let { it.progress = it.target }
-                // Trzy wyniki jednego dowódcy: w Rekordach mają być daty, nie trzy pseudonimy.
-                val today = Missions.utcDay(System.currentTimeMillis())
-                g.profile.boards[Profile.BOARD_ENDLESS] = mutableListOf(
-                    com.centurywar.meta.ScoreEntry(g.profile.name, 195_000L, today),
-                    com.centurywar.meta.ScoreEntry(g.profile.name, 163_000L, today - 1L),
-                    com.centurywar.meta.ScoreEntry(g.profile.name, 121_000L, today - 2L),
-                )
-                g.setScreen(MenuScreen(g))
-                shot(g, "${tag}_87_menu", 2)
-                g.setScreen(RankingsScreen(g))
-                shot(g, "${tag}_87_records_rankings", 2)
-                g.setScreen(StatsScreen(g))
-                shot(g, "${tag}_87_records_stats", 2)
-                g.setScreen(ReplayListScreen(g))
-                shot(g, "${tag}_87_records_replays", 2)
-                g.setScreen(AchievementsScreen(g))
-                shot(g, "${tag}_87_records_achievements", 2)
-                g.setScreen(MissionsScreen(g))
-                shot(g, "${tag}_87_streak", 2)
+                // Wspólny zegar tła menu jest statyczny: po innych testach w tej samej JVM
+                // chmury i góry byłyby przesunięte względem wzorca.
+                MenuBg::class.java.getDeclaredField("time").apply { isAccessible = true }.setFloat(null, 0f)
+
+                fun capture(scene: String, frames: Int = 2) {
+                    val name = "${tag}_reg100_$scene"
+                    // dt=0 zamraża chmury i animacje niezależnie od System.nanoTime().
+                    g.finishScreenTransition()
+                    val bitmap = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+                    try {
+                        val canvas = Canvas(bitmap)
+                        repeat(frames) { g.frame(canvas, 0f) }
+                        File(out, "$name.png").outputStream().use {
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                    ScreenshotGolden.verify(name)
+                }
+
+                g.setScreen(MenuScreen(g)); capture("menu", 8)
+                // Zapowiedzi epok jako widziane: inaczej oba zrzuty kampanii pokazują nakładkę.
+                for (era in 0 until Defs.ERA_COUNT) g.profile.markEraIntroSeen(era)
+                val campaign = CampaignScreen(g)
+                g.setScreen(campaign); capture("campaign")
+                field(campaign, "selected").set(campaign, Campaign.stages[2])
+                capture("campaign_info")
+                g.setScreen(ResearchScreen(g)); capture("research")
+                g.setScreen(AchievementsScreen(g)); capture("achievements")
+                g.setScreen(ModeScreen(g, Mode.ENDLESS)); capture("mode_endless")
+                g.setScreen(ModeScreen(g, Mode.SKIRMISH)); capture("mode_skirmish")
+                g.setScreen(SkirmishSetupScreen(g)); capture("skirmish_setup")
+                g.setScreen(RankingsScreen(g)); capture("rankings")
+                g.setScreen(SettingsScreen(g)); capture("settings")
+                g.setScreen(AccessibilityScreen(g)); capture("accessibility")
+                g.setScreen(AboutScreen(g)); capture("about")
+                g.setScreen(CodexScreen(g, 0)); capture("codex")
+
+                val battleScreen = BattleScreen(g, BattleConfig(
+                    Mode.SKIRMISH, 100100L, 1f, startEra = 2, maxEra = 7,
+                ))
+                g.setScreen(battleScreen)
+                val battle = field(battleScreen, "battle").get(battleScreen) as Battle
+                battle.player.gold = 900f
+                capture("battle_hud", 6)
+                battleScreen.onClick(field(battleScreen, "pauseBtn").get(battleScreen) as Button)
+                capture("battle_pause", 3)
             }
         } finally {
-            L.lang = oldLang
+            L.lang = originalLanguage
         }
     }
 }

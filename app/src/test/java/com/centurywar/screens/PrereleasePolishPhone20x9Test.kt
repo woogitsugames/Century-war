@@ -30,14 +30,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
-/**
- * Przegląd przed premierą na zewnętrznym i wewnętrznym ekranie Folda: ta sama ścieżka co
- * [PrereleasePolishTest.prereleaseTour], wydzielona w nocy 9 do osobnej klasy (czas testów).
- */
+/** Przegląd przed premierą na telefonie 20:9; ścieżka i narzędzia: [PrereleasePolishBase]. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
-class PrereleasePolishFoldTest : PrereleasePolishBase() {
+class PrereleasePolishPhone20x9Test : PrereleasePolishBase() {
     @Test
-    fun prereleaseTour() = prereleaseTourOn(listOf("foldOuter", "foldInner"), "pre10_audit_fold.txt")
+    fun prereleaseTour() = prereleaseTourOn("phone20x9")
 }

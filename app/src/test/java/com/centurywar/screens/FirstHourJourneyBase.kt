@@ -47,6 +47,8 @@ import java.util.Locale
  * epoki, baner awansu), czy dymek nie zasłania przycisków HUD i czy baner powiadomień nie wchodzi
  * na bitwę. Każdy ekran poza bitwą: Wstecz (przycisk i systemowy), baner vs tytuł/Wstecz/dymek,
  * opisy TalkBack. Oś czasu: build/screenshots/fh_<urządzenie>_<język>_os_czasu.txt.
+ * Testy: [FirstHourJourneyTest], [FirstHourJourneyOddTest], [FirstHourJourneyFoldTest],
+ * [FirstHourJourneyFoldOddTest] (noc 9: jedna ścieżka urządzenie/język na klasę).
  */
 abstract class FirstHourJourneyBase {
     @get:Rule val folder = TemporaryFolder()
@@ -673,13 +675,18 @@ abstract class FirstHourJourneyBase {
         g.history?.close()
     }
 
-    /** Ścieżka na jednym urządzeniu z [devices]; dziennik problemów w [auditFile]. */
-    protected fun firstHourOn(device: String, auditFile: String) {
+    /**
+     * Ścieżka na jednym urządzeniu z [devices] dla języków z pozycji o parzystości [langParity]
+     * (domyślnie pl = 0, en = 1; `CW_TEXT_LANGS` zmienia listę). Noc 9: dawna pętla
+     * „wszystkie urządzenia × wszystkie języki” jest rozłożona na cztery klasy testowe, żeby
+     * procesy Gradle dostawały po jednej ścieżce. Dziennik: fh_audit_<urządzenie>_<języki>.txt.
+     */
+    protected fun firstHourOn(device: String, langParity: Int) {
         val old = L.lang
+        // Noc 7: CW_TEXT_LANGS=de,uk,... zmienia języki ścieżki (domyślnie pl i en).
+        val langs = (System.getenv("CW_TEXT_LANGS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?.takeIf { it.isNotEmpty() } ?: listOf("pl", "en")).filterIndexed { i, _ -> i % 2 == langParity }
         try {
-            // Noc 7: CW_TEXT_LANGS=de,uk,... zmienia języki ścieżki (domyślnie pl i en).
-            val langs = System.getenv("CW_TEXT_LANGS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
-                ?.takeIf { it.isNotEmpty() } ?: listOf("pl", "en")
             val d = devices.getValue(device)
             for (lang in langs) {
                 tag = "${device}_$lang"
@@ -688,7 +695,8 @@ abstract class FirstHourJourneyBase {
             }
         } finally {
             L.lang = old
-            File(out, auditFile).writeText(audit.toString() + "\n--- PROBLEMY ---\n" + problems)
+            if (langs.isNotEmpty()) File(out, "fh_audit_${device}_${langs.joinToString("_")}.txt")
+                .writeText(audit.toString() + "\n--- PROBLEMY ---\n" + problems)
         }
         assertTrue("Pierwsza godzina — problemy:\n$problems", problems.isEmpty())
     }

@@ -203,7 +203,7 @@ val balanceTestPatterns = categoryPatterns("balance")
 // Limit dwóch procesów JVM i pamięci, również na komputerach z 8 GB RAM.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
-    maxParallelForks = (configuredForks ?: 2).coerceIn(1, 2)
+    maxParallelForks = (configuredForks ?: 2).coerceIn(1, 4)
     // Robolectric zatrzymuje pamięć natywną bitmap, więc proces testowy wymieniamy
     // co 12 klas (kompromis właściciela, 3.11.2026): forkEvery=1 trwało ok. 16 min,
     // forkEvery=40 kończyło się OOM (137). Przy 12 klasach i 768 MiB sterty pełne
@@ -212,7 +212,8 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     // Pomiary i uzasadnienie: docs/TEST_SPEED.md, „Kompromis forkEvery”.
     // Na 8 GiB użyj -PtestForks=1 -PtestForkEvery=4; -PtestForkEvery=1 izoluje każdą klasę.
     forkEvery = (providers.gradleProperty("testForkEvery").orNull?.toLongOrNull() ?: 12L).coerceAtLeast(1L)
-    maxHeapSize = "768m"
+    maxHeapSize = providers.gradleProperty("testHeap").orNull ?: "768m"
+    providers.gradleProperty("testJvmArgs").orNull?.split(' ')?.filter { it.isNotBlank() }?.let { jvmArgs(it) }
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
 
     if (name == "testDebugUnitTest") {
@@ -298,7 +299,7 @@ if (updateScreenshotsRequested) {
 // Wykorzystuje standardowy Robolectric, nie osobną konfigurację bez zasobów Androida.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     if (updateScreenshotsRequested && name == "testDebugUnitTest") {
-        filter { includeTestsMatching("com.centurywar.screens.ScreenshotTestRegression100.regression100") }
+        filter { includeTestsMatching("com.centurywar.screens.ScreenshotTestMenus.regression100") }
         systemProperty("cw.screens.update", "true")
         systemProperty("cw.screens.reason", screenshotReason)
         outputs.upToDateWhen { false }
