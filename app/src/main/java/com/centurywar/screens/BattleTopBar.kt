@@ -54,6 +54,36 @@ internal class BattleTopBar(private val owner: BattleScreen) {
     val goldDrawn = RectF()
     val eraNameDrawn = RectF()
     val enemyEraDrawn = RectF()
+    /** Dzień 2: napis presji lub fali przeniesiony do bocznego pola (zewnętrzny Fold); pusty, gdy brak. */
+    val sideLabelDrawn = RectF()
+
+    internal companion object {
+        /** Dzień 2: najmniejszy napis presji/fali pod minimapą; mniejszy trafia do bocznego pola. */
+        const val MIN_MINI_LABEL_SP = 10f
+    }
+
+    /**
+     * Dzień 2 (zgoda właściciela, tylko gdy pod minimapą brakuje miejsca, np. zewnętrzny Fold):
+     * presja oblężnicza i numer fali w wolnym polu pod liczebnością armii, po stronie przeciwnej
+     * do nazwy epoki wroga, zamiast 8 sp na liczbach HP baz.
+     */
+    private fun drawSideLabel(c: Canvas, text: String, color: Int) {
+        with(owner) {
+            val l = g.insetL + 8 * dp
+            val right = w - g.insetR - 8 * dp
+            val leftHud = g.profile.leftHandedHud
+            val colL = if (leftHud) mini.right + 6 * dp else l
+            val colR = if (leftHud) right else mini.left - 6 * dp
+            val size = ui.fit(text, 11f, colR - colL, MIN_MINI_LABEL_SP)
+            val x = (colL + colR) * 0.5f
+            ui.textO(c, text, x, mini.bottom + 13 * dp, size, color, Paint.Align.CENTER, 2f)
+            record(sideLabelDrawn, text, x, mini.bottom + 13 * dp, size, Paint.Align.CENTER)
+        }
+    }
+
+    /** Czy napis pod minimapą zmalałby poniżej [MIN_MINI_LABEL_SP] (tylko dwurzędowy pasek). */
+    private fun tooSmallUnderMini(size: Float): Boolean =
+        owner.compactTop && size * owner.ui.textScale < MIN_MINI_LABEL_SP - 0.01f
 
     /** Prostokąt napisu o linii bazowej [y] (wysokość wersalików ~0,75 rozmiaru). */
     private fun record(out: RectF, s: String, x: Float, y: Float, sizeDp: Float, align: Paint.Align) {
@@ -275,15 +305,18 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                 if (ei != hpE) { hpE = ei; hpEText = ei.toString() }
                 hpEText
             }
-            ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp,
-                ui.fit(rightLabel, 11f, mini.width() * 0.28f, 8f),
+            sideLabelDrawn.setEmpty()
+            val rightSize = ui.fit(rightLabel, 11f, mini.width() * 0.28f, 8f)
+            if (battle.endless && tooSmallUnderMini(rightSize)) drawSideLabel(c, rightLabel, Ui.GOLD)
+            else ui.textO(c, rightLabel, mini.right, mini.bottom + 14 * dp, rightSize,
                 if (battle.endless) Ui.GOLD else Ui.ENEMY_TEXT, Paint.Align.RIGHT, 1.8f)
             val sp = battle.siegePressure()
             if (sp > 1f) {
                 val k = kotlin.math.round(sp * 10f).toInt()
                 if (k != siegeKey) { siegeKey = k; siegeText = L.f("siege_pressure", sp) }
-                ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp,
-                    ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f),
+                val siegeSize = ui.fit(siegeText, 11f, mini.width() * 0.40f, 8f)
+                if (tooSmallUnderMini(siegeSize)) drawSideLabel(c, siegeText, Ui.BAD)
+                else ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize,
                     Ui.BAD, Paint.Align.CENTER, 1.8f)
             } else {
                 val sec = battle.time.toInt()

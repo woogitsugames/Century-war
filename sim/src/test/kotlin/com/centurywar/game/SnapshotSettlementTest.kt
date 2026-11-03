@@ -41,6 +41,35 @@ class SnapshotSettlementTest {
         assertEquals(a.enemy.baseHp, b.enemy.baseHp, 0f)
     }
 
+    /** Dzień 2: v19 zapisuje obrażenia z presji oblężniczej (gwiazdki), v18 wczytuje się z 0. */
+    @Test
+    fun siegeDamageRoundTripsAndV18LoadsAsZero() {
+        val a = Battle(Campaign.config(Campaign.stages[2], Bonuses(), 2_002L)).also { b ->
+            b.playerAi = Ai(b, 0)
+            // Presja w etapach 2–7 zaczyna się po 4 minutach; 6 minut wystarcza na blokadę.
+            repeat(60 * 360) { if (!b.over) b.step() }
+        }
+        assertFalse(a.over)
+        assertTrue("presja musi już odebrać HP", a.player.siegeDamageTaken > 0f && a.enemy.siegeDamageTaken > 0f)
+        val b = BattleSnapshot.decode(BattleSnapshot.encode(a, battleId = 7L))!!.battle
+        assertEquals(a.player.siegeDamageTaken, b.player.siegeDamageTaken, 0f)
+        assertEquals(a.enemy.siegeDamageTaken, b.enemy.siegeDamageTaken, 0f)
+        assertTrue(BattleSnapshot.encode(a, battleId = 7L).contentEquals(BattleSnapshot.encode(b, battleId = 7L)))
+
+        val legacy = BattleSnapshot.encode(a, rankedDaily = false, camX = 0f, battleId = 7L, formatVersion = 18)
+        val old = BattleSnapshot.decode(legacy)
+        assertNotNull("zrzut v18 musi się wczytać po aktualizacji", old)
+        assertEquals(0f, old!!.battle.player.siegeDamageTaken, 0f)
+        assertEquals(0f, old.battle.enemy.siegeDamageTaken, 0f)
+        // Pole jest tylko statystyczne: dalszy przebieg identyczny jak oryginał.
+        repeat(600) { a.step(); old.battle.step() }
+        assertEquals(a.player.baseHp, old.battle.player.baseHp, 0f)
+        assertEquals(a.enemy.baseHp, old.battle.enemy.baseHp, 0f)
+        // v19 oznaczony jako v18 ma o 8 bajtów za dużo, więc nie przechodzi.
+        val mislabeled = BattleSnapshot.encode(b, battleId = 7L).copyOf().also { it[7] = 18 }
+        assertNull(BattleSnapshot.decode(mislabeled))
+    }
+
     @Test
     fun battleIdRoundTripsAndDoesNotChangeSimulation() {
         val a = battle()

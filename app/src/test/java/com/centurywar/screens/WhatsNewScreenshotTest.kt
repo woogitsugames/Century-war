@@ -55,7 +55,8 @@ class WhatsNewScreenshotTest {
         assertEquals(BuildConfig.VERSION_NAME, loaded.whatsNewSeenVersion)
     }
 
-    @Test fun oldProfileShowsOnceBeforeMenu() {
+    /** Dzień 2: po aktualizacji start od razu w menu; przycisk „Co nowego” do przeczytania. */
+    @Test fun oldProfileStartsInMenuWithWhatsNewButtonUntilRead() {
         val f = file()
         Profile(f).apply { tutorialDone = true; save() }
         Profile.awaitHintWrites()
@@ -66,14 +67,21 @@ class WhatsNewScreenshotTest {
         assertEquals("", p.whatsNewSeenVersion)
 
         val g = game(p)
+        val menu = g.current as MenuScreen
+        menu.update(0f)
+        assertTrue(menu.whatsNew.visible)
+        assertEquals("", p.whatsNewSeenVersion)
+        menu.onClick(menu.whatsNew)
         assertTrue(g.current is WhatsNewScreen)
         g.back()
-        assertTrue(g.current is MenuScreen)
+        assertTrue(g.current === menu)
         Profile.awaitHintWrites()
 
         val loaded = Profile(f).also { it.load() }
         assertEquals(BuildConfig.VERSION_NAME, loaded.whatsNewSeenVersion)
-        assertTrue(game(loaded).current is MenuScreen)
+        val again = game(loaded).current as MenuScreen
+        again.update(0f)
+        assertFalse(again.whatsNew.visible)
     }
 
     @Test fun invalidVersionIsSanitizedAndCloudDoesNotOverwriteLocalState() {
@@ -91,8 +99,12 @@ class WhatsNewScreenshotTest {
         assertEquals("", loaded.whatsNewSeenVersion)
     }
 
-    @Test fun historyFromAboutDoesNotAlterSeenVersion() {
-        val p = Profile(file())
+    /** Dzień 2: historia zmian z O grze też jest przeczytaniem nowości (przycisk w menu znika). */
+    @Test fun historyFromAboutMarksNewsRead() {
+        val f = file()
+        Profile(f).apply { tutorialDone = true; save() }
+        Profile.awaitHintWrites()
+        val p = Profile(f).also { it.load() }
         val g = game(p)
         p.whatsNewSeenVersion = "0.0.9"
         g.push(AboutScreen(g))
@@ -101,7 +113,7 @@ class WhatsNewScreenshotTest {
         assertTrue(g.current is WhatsNewScreen)
         g.back()
         assertTrue(g.current === about)
-        assertEquals("0.0.9", p.whatsNewSeenVersion)
+        assertEquals(BuildConfig.VERSION_NAME, p.whatsNewSeenVersion)
     }
 
     @Test fun screenshotsOn720pAndFold() {

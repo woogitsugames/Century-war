@@ -141,10 +141,19 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         resultBossesLabel = L["bosses_defeated"]
         resultWeeklyTiersLabel = L["weekly_tiers"]
         resultScoreLabel = L["score"]
-        resultRewardLabel = L["reward"]
         resultNewRecordLabel = L["new_record"]
         weeklyResultLabel = if (weeklyResultKey.isEmpty()) "" else L[weeklyResultKey]
-        rewardText = "+" + L.plural("medals_n", totalMedalsGained.toLong())
+        // Dzień 2: nagroda za bitwę i medale z osiągnięć osobno (wcześniej jedna suma).
+        val battleMedals = (totalMedalsGained - achievementMedals).coerceAtLeast(0)
+        val split = achievementMedals > 0 && battleMedals > 0
+        resultRewardLabel = when {
+            split -> L["res175_battle"]
+            achievementMedals > 0 -> L["res175_achievements"]
+            else -> L["reward"]
+        }
+        rewardText = "+" + L.plural("medals_n", (if (split) battleMedals else totalMedalsGained).toLong())
+        achievementRewardLabel = if (split) L["res175_achievements"] else ""
+        achievementRewardText = if (split) "+" + L.plural("medals_n", achievementMedals.toLong()) else ""
         retainedProgressText = L.f("battle84_kept", battle.player.kills, missionsAdvanced)
         if (defeatReasonCount > 0) {
             resultReasonText1 = defeatReasonText(defeatReasons[0]!!)
@@ -176,6 +185,25 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         } finally {
             ui.textScale = scale
         }
+        }
+    }
+
+    /** Dzień 2: niższy wiersz „Za osiągnięcia” pod nagrodą za bitwę (12 sp, bez tła), 19 dp. */
+    internal fun subRowHeight(): Float = 19 * owner.dp
+
+    fun drawResultSubRow(c: Canvas, y: Float, icon: Int, label: String, value: String): Float {
+        with(owner) {
+        val lh = subRowHeight()
+        if (y + lh > restartEnd.r.top - 8 * dp) { resultRowsClipped++; return y }
+        val lx = resultPanel.left + 30 * dp
+        val rx = resultPanel.right - 30 * dp
+        val cy = y + (lh - 3 * dp) * 0.5f
+        Icons.draw(c, icon, lx + 22 * dp, cy, 14 * dp, dp = dp)
+        val value13 = ui.fit(value, 13f, (rx - lx) * 0.45f, 10f)
+        val labelW = rx - ui.measure(value, value13, true) - 8 * dp - (lx + 34 * dp)
+        ui.textO(c, label, lx + 34 * dp, cy + 4.5f * dp, ui.fit(label, 12f, labelW, 10f), Ui.DIM, Paint.Align.LEFT, 1.6f)
+        ui.textO(c, value, rx, cy + 4.5f * dp, value13, Ui.GOLD, Paint.Align.RIGHT, 1.8f)
+        return y + lh
         }
     }
 
@@ -235,7 +263,10 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         if (cfg.mode == Mode.ENDLESS) rows += if (cfg.weekly >= 0L) 3 else 2
         if (cfg.mode != Mode.CAMPAIGN) rows++
         if (totalMedalsGained > 0) rows++
-        resultRowH = ((restartEnd.r.top - 8 * dp - y) / rows).coerceIn(20 * dp, 26 * dp)
+        val subRow = achievementRewardText.isNotEmpty()
+        // Niższy wiersz osiągnięć ma stałą wysokość; bez niego wiersze jak dotąd.
+        resultRowH = ((restartEnd.r.top - 8 * dp - y - (if (subRow) subRowHeight() else 0f)) / rows)
+            .coerceIn(20 * dp, 26 * dp)
         resultRowsClipped = 0
         y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
         y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
@@ -249,6 +280,8 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
         if (totalMedalsGained > 0) y = drawResultRow(c, y, Icons.MEDAL,
             resultRewardLabel, rewardText, Ui.GOLD)
+        if (subRow && totalMedalsGained > 0) y = drawResultSubRow(c, y, Icons.TROPHY,
+            achievementRewardLabel, achievementRewardText)
         if (!won && y + 23 * dp < restartEnd.r.top) {
             ui.textO(c, retainedProgressText, rp.centerX(), y + 17 * dp,
                 ui.fit(retainedProgressText, 11f, rp.width() - 32 * dp),

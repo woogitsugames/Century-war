@@ -1610,3 +1610,57 @@ seedach to szum ±5 pp, wybrano najmniejszą korektę, która wraca do poziomu s
   na `battle.siegeStart` i tekst bez liczby minut.
 
 - 2026-11-03 — regeneracja złotych powtórek: Dzien 1: krotsze etapy 2-7.
+
+## Dzień 2 — gwiazdki bez przyspieszonej presji (3.11.2026)
+
+**Decyzja właściciela:** po dniu 1 wcześniejsza presja oblężnicza w etapach 2–7 zabierała HP
+bazy także zwycięzcy, więc gwiazdek było mniej (1,65 → 1,29 ★ na wygraną). Gwiazdki mają
+wrócić do poziomu sprzed dnia 1, bez zmiany przebiegu bitwy.
+
+**Zmiana:** nowy licznik `Side.siegeDamageTaken` zbiera HP bazy utracone przez presję
+**szybszą niż standardowa**: przy każdej porcji blokady (`SIEGE_ATTRITION`) i obrażeń bazy
+dolicza część `1 − presja_std / presja`, gdzie `presja_std = 1 + (t − siegeStart)/60 × 0,2`.
+`Battle.stars()` liczy HP gracza jako `baseHp + 0,6 × siegeDamageTaken`, najwyżej pełne HP
+(`Battle.SIEGE_STAR_FORGIVENESS = 0,6`). Progi gwiazdek (75% / 40%) bez zmian. Reguła jest
+ta sama we wszystkich etapach i poziomach trudności: przy standardowej presji (etap 1, etapy
+od 8., inne tryby) licznik zostaje 0, więc ich gwiazdki są identyczne jak dotąd.
+`score()`, zwycięzca i czas bitwy bez zmian (stary wynik wygranych w pomiarze identyczny).
+`BattleSnapshot.VERSION` 18 → 19 (nowe pole na końcu strony; zrzuty v16–v18 wczytują się
+z licznikiem 0). **`SimVersion.PROTOCOL` bez zmian (0.8.5)**: gwiazdki nie wchodzą do
+wyniku weryfikowanego przez serwer (ranking etapów `campaign_N` używa `score()` z HP bazy
+i czasu); tablica „Kampania — gwiazdki” (lokalna i Play Games) to suma gwiazdek profilu,
+bez powtórki — złotych powtórek nie regenerowano.
+
+**Dlaczego 0,6.** Warianty zmierzone na tych samych 100 seedach (profil docelowy, etapy 2–7,
+średnia ★ wygranych): pominięcie całej presji (blokada + premia) — **3,00** (każda wygrana
+3 ★, bo bitwy rozstrzyga blokada); pominięcie nadwyżki ponad presję ×1 — 2,20 i zmiana
+także etapów 1, 8, 9 (1,37 → 2,05 na etapie 1); nadwyżka ponad standardową presję ×1,0 —
+2,07 (prawie zawsze 2 ★); ×0,5 — 1,56; **×0,6 — 1,66**; ×0,7 — 1,79.
+
+### Pomiar przed/po, 100 seedów na etap, Normalny
+
+`BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target|medale BALANCE_STAGE_FROM=1
+BALANCE_STAGE_TO=9`. Wygrane, mediany i oczekiwane czasy identyczne jak po dniu 1 (bitwy się
+nie zmieniły). „Przed dniem 1” z tabeli dnia 1.
+
+| Etap | ★ docelowy: przed dniem 1 → dzień 1 → dzień 2 | ★ „medale”: przed dniem 1 → dzień 1 → dzień 2 |
+|---:|---:|---:|
+| 1 | 1,37 → 1,37 → 1,37 | 1,37 → 1,37 → 1,37 |
+| 2 | 1,48 → 1,22 → **1,57** | 1,47 → 1,14 → **1,53** |
+| 3 | 1,48 → 1,17 → **1,60** | 1,33 → 1,23 → **1,63** |
+| 4 | 1,52 → 1,39 → **1,67** | 1,63 → 1,33 → **1,77** |
+| 5 | 1,71 → 1,34 → **1,81** | 1,94 → 1,37 → **1,71** |
+| 6 | 1,86 → 1,34 → **1,77** | 2,05 → 1,51 → **1,88** |
+| 7 | 1,86 → 1,25 → **1,55** | 1,11 → 1,07 → **1,39** |
+| 8 | 1,65 → 1,65 → 1,65 | 1,12 → 1,12 → 1,12 |
+| 9 | 2,17 → 2,17 → 2,17 | 1,33 → 1,33 → 1,33 |
+| **2–7** | **1,65 → 1,29 → 1,66** | **1,59 → 1,28 → 1,65** |
+| **2–9** | **1,72 → 1,44 → 1,72** | **1,50 → 1,26 → 1,55** |
+
+**Medale.** Nagroda za wygraną etapu to `20 + 6·etap + 5·★ + 12·nowe ★`, więc pierwsza
+wygrana daje 17 medali za każdą gwiazdkę. Średnio +2,26 ★ łącznie na etapach 2–7 (docelowy;
+„medale” +2,27) = **ok. +38 medali do etapu 8** przy pierwszych wygranych (dzień 1 zabrał
+ok. 35), przy powtórkach +5/★. Wygrane, czasy i przebieg kampanii bez zmian.
+
+
+- 2026-11-03 — regeneracja złotych powtórek: Dzien 2: gwiazdki bez presji.

@@ -20,7 +20,6 @@ import com.centurywar.meta.Missions
 import com.centurywar.meta.WhatsNewCatalog
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.MenuScreen
-import com.centurywar.screens.WhatsNewScreen
 import com.centurywar.screens.ReplayScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -415,16 +414,16 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         ui.dp = density * renderScale * boost * (if (minDp < 340f) minDp / 340f else 1f)
         if (screen == null) {
             val version = BuildConfig.VERSION_NAME
-            if (WhatsNewCatalog.shouldShow(profile.hasExistingSave, profile.whatsNewSeenVersion, version)) {
-                setScreen(WhatsNewScreen(this, automatic = true))
-            } else {
-                // Pierwsza instalacja i wersje bez notatek przechodzą od razu do menu.
+            // Dzień 2: po aktualizacji nie przerywamy startu oknem; menu pokazuje przycisk
+            // „Co nowego” (MenuScreen.whatsNew), dopóki gracz nie otworzy historii zmian.
+            if (!WhatsNewCatalog.shouldShow(profile.hasExistingSave, profile.whatsNewSeenVersion, version)) {
+                // Pierwsza instalacja i wersje bez notatek: nic do przeczytania.
                 if (profile.whatsNewSeenVersion != version) {
                     profile.whatsNewSeenVersion = version
                     profile.save()
                 }
-                setScreen(MenuScreen(this))
             }
+            setScreen(MenuScreen(this))
         }
         screen?.layout()
         for (s in stack) s.layout()

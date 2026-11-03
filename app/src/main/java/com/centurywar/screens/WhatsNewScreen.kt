@@ -27,6 +27,24 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
         listOfNotNull(WhatsNewCatalog.forVersion(BuildConfig.VERSION_NAME))
     else WhatsNewCatalog.releases
 
+    init {
+        // Dzień 2: otwarcie historii zmian (z menu lub z O grze) to przeczytanie nowości,
+        // więc przycisk „Co nowego” w menu znika.
+        if (!automatic) markRead(g)
+    }
+
+    internal companion object {
+        /** Czy menu ma pokazać przycisk „Co nowego” (nieprzeczytane notatki tej wersji). */
+        fun unread(g: Game): Boolean = WhatsNewCatalog.shouldShow(g.profile.hasExistingSave,
+            g.profile.whatsNewSeenVersion, BuildConfig.VERSION_NAME)
+
+        fun markRead(g: Game) {
+            if (!unread(g)) return
+            g.profile.whatsNewSeenVersion = BuildConfig.VERSION_NAME
+            g.profile.save()
+        }
+    }
+
     private data class Line(val text: String, val y: Float, val heading: Boolean, val bullet: Boolean)
     private val lines = ArrayList<Line>(24)
     private var contentTop = 0f

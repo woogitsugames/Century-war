@@ -168,8 +168,17 @@ object L {
         putAll(part170())
         putAll(part172())
         putAll(part173())
+        putAll(part175())
         }
     }
+
+    /** Dzień 2: medale za bitwę i za osiągnięcia osobno na wynikach, „Co nowego” w menu. */
+    private fun part175(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "res175_battle" to t("Za bitwę", "For the battle", "Für die Schlacht", "Por la batalla", "Pour la bataille", "Per la battaglia", "Pela batalha", "За битву", "Voor het gevecht", "Savaş için"),
+        "res175_achievements" to t("Za osiągnięcia", "For achievements", "Für Erfolge", "Por logros", "Pour les succès", "Per gli obiettivi", "Por conquistas", "За досягнення", "Voor prestaties", "Başarımlar için"),
+        "menu175_whats_new" to t("Co nowego", "What's new", "Neuigkeiten", "Novedades", "Nouveautés", "Novità", "Novidades", "Що нового", "Nieuw", "Yenilikler"),
+        "menu175_whats_new_desc" to t("Co nowego: zmiany w tej wersji, nieprzeczytane", "What's new: changes in this version, unread", "Neuigkeiten: Änderungen dieser Version, ungelesen", "Novedades: cambios de esta versión, sin leer", "Nouveautés : changements de cette version, non lus", "Novità: modifiche di questa versione, non lette", "Novidades: mudanças desta versão, não lidas", "Що нового: зміни в цій версії, непрочитані", "Nieuw: wijzigingen in deze versie, ongelezen", "Yenilikler: bu sürümdeki değişiklikler, okunmadı"),
+    )
 
     /** Noc 5 („Pierwsza godzina”): opisy TalkBack strzałek epok w potyczce. */
     private fun part173(): Array<Pair<String, Array<out String>>> = arrayOf(
