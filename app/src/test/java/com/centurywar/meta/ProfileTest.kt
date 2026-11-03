@@ -22,6 +22,36 @@ import java.nio.file.Files
 @Config(sdk = [35])
 class ProfileTest {
 
+    /** R2-03: nowe flagi są opcjonalne, migrują ze starego JSON i trafiają do chmury. */
+    @Test
+    fun systemAccessibilityFlagsMigrateAndSync() {
+        val source = Profile(tmpFile())
+        val keys = listOf("textScaleManual", "motionManual", "slowSpeedOption", "slowSpeedManual")
+        val old = JSONObject(source.toJson()).apply { keys.forEach { remove(it) } }
+        val p = Profile(tmpFile())
+        p.slowSpeedOption = true; p.slowSpeedManual = true; p.textScaleManual = true; p.motionManual = true
+        p.fromJson(old.toString())
+        assertFalse(p.textScaleManual); assertFalse(p.motionManual)
+        assertFalse(p.slowSpeedOption); assertFalse(p.slowSpeedManual)
+
+        // Stary profil z ręcznie wybranym rozmiarem lub ograniczeniem ruchu: wybór gracza.
+        p.fromJson(JSONObject(old.toString()).put("textScale", 115).toString())
+        assertTrue(p.textScaleManual); assertEquals(115, p.textScale); assertFalse(p.motionManual)
+        p.fromJson(JSONObject(old.toString()).put("reduceFlash", true).toString())
+        assertFalse(p.textScaleManual); assertTrue(p.motionManual)
+        // Zapisana flaga ma pierwszeństwo przed migracją.
+        p.fromJson(JSONObject(old.toString()).put("textScale", 130).put("textScaleManual", false).toString())
+        assertFalse(p.textScaleManual)
+
+        p.slowSpeedOption = true; p.slowSpeedManual = true; p.motionManual = true
+        val cloud = JSONObject(p.toCloudJson())
+        for (k in keys) assertTrue("Brak $k w chmurze", cloud.has(k))
+        assertTrue(cloud.getBoolean("slowSpeedOption"))
+        val other = Profile(tmpFile())
+        other.fromJson(cloud.toString())
+        assertTrue(other.slowSpeedOption); assertTrue(other.slowSpeedManual); assertTrue(other.motionManual)
+    }
+
     @Test
     fun campaignDifficultyUsesLegacyStarsAndClampsCorruptData() {
         val source = Profile(tmpFile())

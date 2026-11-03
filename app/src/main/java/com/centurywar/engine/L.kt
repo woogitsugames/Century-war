@@ -171,8 +171,17 @@ object L {
         putAll(part175())
         putAll(part176())
         putAll(part178())
+        putAll(part181())
         }
     }
+
+    /** R2-03: dostępność z ustawień telefonu i tempo bitwy ×½. */
+    private fun part181(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a11y181_slow" to t("Tempo bitwy ×½", "Battle speed ×½", "Kampftempo ×½", "Velocidad de batalla ×½", "Vitesse de bataille ×½", "Velocità battaglia ×½", "Velocidade da batalha ×½", "Швидкість бою ×½", "Gevechtssnelheid ×½", "Savaş hızı ×½"),
+        "a11y181_slow_d" to t("Wolniejsza bitwa, wyniki bez zmian", "Slower battle, same results", "Langsamere Schlacht, gleiche Ergebnisse", "Batalla más lenta, mismos resultados", "Bataille plus lente, mêmes résultats", "Battaglia più lenta, stessi risultati", "Batalha mais lenta, mesmos resultados", "Повільніший бій, ті самі результати", "Trager gevecht, zelfde resultaten", "Daha yavaş savaş, aynı sonuçlar"),
+        "a11y181_from_system" to t("Ustawione według systemu", "Set from system", "Vom System übernommen", "Según el sistema", "Selon le système", "Dal sistema", "Definido pelo sistema", "Як у системі", "Volgens systeem", "Sisteme göre"),
+        "a11y181_speed_tip" to t("Tempo bitwy: ×½, ×1, ×3, ×5. Teraz: %s.", "Battle speed: ×½, ×1, ×3, ×5. Now: %s.", "Kampftempo: ×½, ×1, ×3, ×5. Jetzt: %s.", "Velocidad: ×½, ×1, ×3, ×5. Ahora: %s.", "Vitesse : ×½, ×1, ×3, ×5. Actuelle : %s.", "Velocità: ×½, ×1, ×3, ×5. Ora: %s.", "Velocidade: ×½, ×1, ×3, ×5. Agora: %s.", "Швидкість: ×½, ×1, ×3, ×5. Зараз: %s.", "Snelheid: ×½, ×1, ×3, ×5. Nu: %s.", "Hız: ×½, ×1, ×3, ×5. Şimdi: %s."),
+    )
 
     /** Dzień 5: TalkBack w bitwie (węzły HUD, akcje ostrzału i ulepszeń, komunikaty). */
     private fun part178(): Array<Pair<String, Array<out String>>> = arrayOf(

@@ -148,6 +148,16 @@ class GameAccessibility164Test {
             assertTrue(before > 0)
             assertNotNull(f.node(f.buttonId(42)))
             assertTrue(f.node(f.buttonId(42))!!.contentDescription.toString().contains(L["access_reduce_flash"]))
+            // R2-03: tempo ×½ ma opis wiersza i stan zaznaczenia.
+            val slowId = f.buttonId(44)
+            val slow = f.node(slowId)!!
+            assertTrue(slow.contentDescription.toString().contains(L["a11y181_slow"]))
+            assertTrue(slow.isCheckable)
+            assertFalse(slow.isChecked)
+            f.press(slowId)
+            assertTrue(f.game.profile.slowSpeedOption)
+            assertTrue(f.game.profile.slowSpeedManual)
+            assertTrue(f.node(slowId)!!.isChecked)
         } finally { f.finish() }
     }
 

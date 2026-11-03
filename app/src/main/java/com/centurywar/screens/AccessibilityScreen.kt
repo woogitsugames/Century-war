@@ -32,6 +32,8 @@ class AccessibilityScreen(g: Game) : Screen(g) {
     private val shake = btn(41)
     private val flash = btn(42)
     private val leftHud = btn(43)
+    /** R2-03: tempo ×½ w bitwie. */
+    private val slow = btn(44)
     private val renderer = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 7L, 1f)))
     private val demoUnit = Defs.unit(0, Role.MELEE)
 
@@ -45,6 +47,8 @@ class AccessibilityScreen(g: Game) : Screen(g) {
     private var contentBottom = 0f
     private var dt = 0f
     private val shakeNote = RowNote()
+    private val slowNote = RowNote()
+    private val systemNote = RowNote()
 
     override fun isDragScreen() = true
 
@@ -54,7 +58,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         val left = (w + g.insetL - g.insetR - pw) / 2f
         contentTop = chrome.top + 8f * dp
         contentBottom = h - g.insetB - 10f * dp
-        val cardH = 779f * dp
+        val cardH = 840f * dp
         maxScroll = max(0f, cardH - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
         panel.set(left, contentTop - scroll, left + pw, contentTop - scroll + cardH)
@@ -76,6 +80,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         shake.set(panel.right - 20f * dp - toggleW, panel.top + 594f * dp, toggleW, 48f * dp)
         flash.set(panel.right - 20f * dp - toggleW, panel.top + 655f * dp, toggleW, 48f * dp)
         leftHud.set(panel.right - 20f * dp - toggleW, panel.top + 716f * dp, toggleW, 48f * dp)
+        slow.set(panel.right - 20f * dp - toggleW, panel.top + 777f * dp, toggleW, 48f * dp)
         for (b in buttons) if (b !== back) {
             b.visible = b.r.top >= contentTop && b.r.bottom <= contentBottom
         }
@@ -106,6 +111,9 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         shake.color = if (g.profile.reduceShake) Ui.BTN_GREEN else Ui.BTN
         flash.color = if (g.profile.reduceFlash) Ui.BTN_GREEN else Ui.BTN
         leftHud.color = if (g.profile.leftHandedHud) Ui.BTN_GREEN else Ui.BTN
+        val slowOn = g.slowSpeedEnabled()
+        slow.label = L[if (slowOn) "on" else "off"]
+        slow.color = if (slowOn) Ui.BTN_GREEN else Ui.BTN
     }
 
     override fun render(c: Canvas) {
@@ -152,19 +160,22 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             ui.fit(bad, 13f, badState.width() - 44f * dp), Ui.BAD)
 
         heading(c, L["access_text"], x, panel.top + 432f * dp, maxLabelW)
+        if (!g.profile.textScaleManual && g.systemA11y != null) systemTextNote(c, x, maxLabelW)
         for (b in sizes) if (b.visible) ui.button(c, b, 15f)
         val sample = L["access_sample"]
         ui.text(c, sample, panel.centerX(), panel.top + 511f * dp,
             ui.fit(sample, 16f, maxLabelW), Ui.TEXT, Paint.Align.CENTER)
 
         rowLabel(c, L["access_team_markers"], markers)
-        shakeRow(c, shake)
+        noteRow(c, shake, L["access_reduce_shake"], L["access_reduce_shake_note"], shakeNote)
         rowLabel(c, L["access_reduce_flash"], flash)
         rowLabel(c, L["access_left_handed_hud"], leftHud)
+        noteRow(c, slow, L["a11y181_slow"], L["a11y181_slow_d"], slowNote)
         if (markers.visible) ui.button(c, markers, 14f)
         if (shake.visible) ui.button(c, shake, 14f)
         if (flash.visible) ui.button(c, flash, 14f)
         if (leftHud.visible) ui.button(c, leftHud, 14f)
+        if (slow.visible) ui.button(c, slow, 14f)
         c.restore()
         chrome.title(c, L["accessibility"])
         ui.button(c, back, 16f)
@@ -174,15 +185,25 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         ui.textO(c, s, x, y, ui.fit(s, 18f, maxW), Ui.GOLD)
     }
 
-    /** Noc 4: wiersz „Ogranicz potrząsanie” z podpisem o zależności od Ustawień. */
-    private fun shakeRow(c: Canvas, b: Button) {
-        val s = L["access_reduce_shake"]
+    /** R2-03: podpis „Ustawione według systemu” obok nagłówka rozmiaru tekstu. */
+    private fun systemTextNote(c: Canvas, x: Float, maxW: Float) {
+        val head = L["access_text"]
+        val headW = ui.measure(head, ui.fit(head, 18f, maxW), true)
+        val avail = maxW - headW - 12f * dp
+        if (avail <= 0f) return
+        val note = systemNote.layout(ui, L["a11y181_from_system"], avail, 24f * dp)
+        val baseline = panel.top + 432f * dp
+        note.draw(c, ui, x + headW + 12f * dp, baseline - note.lineHeight(ui) * note.lines)
+    }
+
+    /** Noc 4: wiersz z podpisem pod etykietą („Ogranicz potrząsanie”, R2-03: „Tempo ×½”). */
+    private fun noteRow(c: Canvas, b: Button, s: String, noteText: String, rowNote: RowNote) {
         val x = panel.left + 20f * dp
         val avail = b.r.left - x - 10f * dp
         val size = ui.fit(s, 15f, avail)
         val lh = size * dp * ui.textScale * 1.1f
         // Noc 8: wiersz to przycisk z połową odstępu do sąsiadów (61 dp co wiersz, przycisk 48 dp).
-        val note = shakeNote.layout(ui, L["access_reduce_shake_note"], avail,
+        val note = rowNote.layout(ui, noteText, avail,
             b.r.height() + 12f * dp - lh - 3f * dp)
         val top = b.r.centerY() - (lh + 1f * dp + note.lineHeight(ui) * note.lines) / 2f
         ui.textO(c, s, x, top + lh * 0.8f, size, Ui.TEXT)
@@ -203,13 +224,14 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             41 -> L["access_reduce_shake"]
             42 -> L["access_reduce_flash"]
             43 -> L["access_left_handed_hud"]
+            44 -> L["a11y181_slow"]
             else -> return super.accessibilityLabel(b)
         }
         return row + ": " + b.label
     }
 
     override fun accessibilityCheckable(b: Button): Boolean =
-        b.id in 10 until 10 + Palette.COUNT || b.id in 30..32 || b.id in 40..43
+        b.id in 10 until 10 + Palette.COUNT || b.id in 30..32 || b.id in 40..44
 
     override fun accessibilityChecked(b: Button): Boolean = when (b.id) {
         in 10 until 10 + Palette.COUNT -> g.profile.palette == b.id - 10
@@ -220,6 +242,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         41 -> g.profile.reduceShake
         42 -> g.profile.reduceFlash
         43 -> g.profile.leftHandedHud
+        44 -> g.slowSpeedEnabled()
         else -> super.accessibilityChecked(b)
     }
 
@@ -227,13 +250,17 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         when (b.id) {
             -1 -> { g.profile.save(); g.pop(); return }
             in 10..13 -> g.profile.palette = b.id - 10
-            30 -> g.profile.textScale = 100
-            31 -> g.profile.textScale = 115
-            32 -> g.profile.textScale = 130
+            30 -> { g.profile.textScale = 100; g.profile.textScaleManual = true }
+            31 -> { g.profile.textScale = 115; g.profile.textScaleManual = true }
+            32 -> { g.profile.textScale = 130; g.profile.textScaleManual = true }
             40 -> g.profile.teamMarkers = !g.profile.teamMarkers
-            41 -> g.profile.reduceShake = !g.profile.reduceShake
-            42 -> g.profile.reduceFlash = !g.profile.reduceFlash
+            41 -> { g.profile.reduceShake = !g.profile.reduceShake; g.profile.motionManual = true }
+            42 -> { g.profile.reduceFlash = !g.profile.reduceFlash; g.profile.motionManual = true }
             43 -> g.profile.leftHandedHud = !g.profile.leftHandedHud
+            44 -> {
+                g.profile.slowSpeedOption = !g.slowSpeedEnabled()
+                g.profile.slowSpeedManual = true
+            }
         }
         g.applyAccessibility()
         g.profile.save()

@@ -81,6 +81,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     fun applyLoadedProfile() {
         onLanguageChanged()
         applyAccessibility()
+        // Profil z pliku lub chmury: ustawienia telefonu znów obowiązują tam, gdzie gracz nie wybrał sam.
+        systemA11y?.let { applySystemAccessibility(it) }
         setQuality(effectiveQualityLevel())
         applyFrameRate()
         applySfxVolume()
@@ -376,6 +378,43 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         screen?.layout()
         for (s in stack) s.layout()
     }
+
+    /** R2-03: TalkBack (eksploracja dotykiem) włączony w systemie; ustawia [applySystemAccessibility]. */
+    var touchExplorationActive = false
+    /** Ostatni odczyt ustawień telefonu; null, dopóki aktywność go nie przekazała (testy). */
+    internal var systemA11y: SystemA11y? = null
+        private set
+
+    /**
+     * R2-03 (wątek gry): rozmiar tekstu i ograniczenia ruchu według telefonu, o ile gracz nie
+     * zmienił ich ręcznie. Profil zapisujemy tylko przy faktycznej zmianie.
+     */
+    internal fun applySystemAccessibility(s: SystemA11y) {
+        systemA11y = s
+        touchExplorationActive = s.touchExploration
+        var changed = false
+        if (!profile.textScaleManual) {
+            val target = SystemAccessibility.textScaleFor(s.fontScale)
+            if (profile.textScale != target) { profile.textScale = target; changed = true }
+        }
+        if (!profile.motionManual && s.animationsOff && (!profile.reduceShake || !profile.reduceFlash)) {
+            profile.reduceShake = true
+            profile.reduceFlash = true
+            changed = true
+        }
+        if (changed) {
+            applyAccessibility()
+            profile.saveAsync()
+        }
+    }
+
+    /**
+     * R2-03: tempo ×½ jest w cyklu tempa bitwy. Ręczny wybór gracza wygrywa; bez niego
+     * opcja albo włączony TalkBack (decyzja właściciela).
+     */
+    fun slowSpeedEnabled(): Boolean =
+        if (profile.slowSpeedManual) profile.slowSpeedOption
+        else profile.slowSpeedOption || touchExplorationActive
 
     fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
 

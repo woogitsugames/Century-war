@@ -84,7 +84,11 @@ class BattleScreen(
     internal val resultChartArea = RectF()
     internal var showResultChart = false
     private var acc = 0f
-    internal var speed = 1
+    /**
+     * Tempo odtwarzania: 0 = ×½ (R2-03), 1, 3, 5. Nie wchodzi do zrzutu ani powtórki.
+     * Przy TalkBack bitwa (także wznowiona) startuje w ×½, chyba że gracz sam wyłączył tę opcję.
+     */
+    internal var speed = if (g.touchExplorationActive && g.slowSpeedEnabled()) 0 else 1
     /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
     internal var effectiveSpeed = 1f
     private var avgStepNs = 0f
@@ -176,6 +180,8 @@ class BattleScreen(
         const val RALLY = 13
         const val STANCE = 14
         const val SPEED = 15
+        /** R2-03: mnożnik tempa; [speed] 0 oznacza ×½. */
+        fun speedFactor(speed: Int): Float = if (speed == 0) 0.5f else speed.toFloat()
         const val EVOLVE = 16
         const val PAUSE = 17
         const val RESUME = 20
@@ -593,7 +599,7 @@ class BattleScreen(
                 val availableSteps = if (sampledStepFrames < 30 || avgStepNs <= 0f) 20f
                     else (budgetMs * 1_000_000f / avgStepNs).coerceIn(1f, 20f)
                 val allowedSpeed = availableSteps * Battle.STEP / dt.coerceAtLeast(0.001f)
-                effectiveSpeed = min(speed.toFloat(), allowedSpeed.coerceAtLeast(1f))
+                effectiveSpeed = min(speedFactor(speed), allowedSpeed.coerceAtLeast(1f))
                 acc += dt * effectiveSpeed * tutScale
                 var steps = 0
                 val startedNs = System.nanoTime()
@@ -628,7 +634,7 @@ class BattleScreen(
             }
         }
         maybeShowEraIntro()
-        if (paused || finished || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speed.toFloat()
+        if (paused || finished || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speedFactor(speed)
         // Awans rangi jest zdarzeniem interfejsu, nie modyfikuje bitwy ani powtórki.
         val newRank = battle.player.rank
         if (newRank > lastSfxRank) g.sfx(Sound.RANK_UP, 0.62f, 250, priority = 2)
@@ -740,10 +746,25 @@ class BattleScreen(
     internal val slotSellKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
     internal val slotTierKey = IntArray(Defs.MAX_TURRET_SLOTS) { Int.MIN_VALUE }
     internal var slotLabelLanguage = -1
-    /** Indeks = mnożnik prędkości (1, 3, 5; zob. onClick SPEED). */
-    internal val speedLabels = arrayOf("", "×1", "×2", "×3", "×4", "×5")
+    /** Indeks = mnożnik prędkości (0 = ×½, 1, 3, 5; zob. onClick SPEED). */
+    internal val speedLabels = arrayOf("×½", "×1", "×2", "×3", "×4", "×5")
     internal val limitedSpeedLabels = Array(6) { target ->
         Array(6) { actual -> "×$target → ×$actual" }
+    }
+
+    /** R2-03: cykl tempa ×1 → ×3 → ×5, z opcją ×½: ×½ → ×1 → ×3 → ×5 → ×½. */
+    internal fun nextSpeed(current: Int, slow: Boolean): Int = when (current) {
+        0 -> 1
+        1 -> 3
+        3 -> 5
+        else -> if (slow) 0 else 1
+    }
+
+    /** Napis przycisku tempa; ×½ nie ma ograniczenia budżetem CPU. */
+    internal fun speedButtonLabel(): String {
+        if (speed == 0) return speedLabels[0]
+        val shown = effectiveSpeed.toInt().coerceIn(1, speed)
+        return if (shown == speed) speedLabels[speed] else limitedSpeedLabels[speed][shown]
     }
 
     internal fun costStr(slot: Int, v: Int): String {
@@ -798,7 +819,11 @@ class BattleScreen(
                 title = L[if (p.hold) "hold" else "advance"]
                 body = L[if (p.hold) "tip53_hold" else "tip53_advance"]
             }
-            SPEED -> { title = L["tip53_speed_title"]; body = L.f("tip53_speed", speed) }
+            SPEED -> {
+                title = L["tip53_speed_title"]
+                body = if (g.slowSpeedEnabled()) L.f("a11y181_speed_tip", speedLabels[speed])
+                    else L.f("tip53_speed", speed)
+            }
             EVOLVE -> {
                 title = L[if (p.era >= cfg.maxEra) "rank" else "evolve"].let {
                     if (p.era >= cfg.maxEra) L.f("rank", p.rank) else it
@@ -890,7 +915,7 @@ class BattleScreen(
             RALLY -> commands.rally()
             COMMANDER -> commands.summonCommander()
             STANCE -> commands.stance(!p.hold)
-            SPEED, PAUSE_SPEED -> speed = when (speed) { 1 -> 3; 3 -> 5; else -> 1 }
+            SPEED, PAUSE_SPEED -> speed = nextSpeed(speed, g.slowSpeedEnabled())
             PAUSE_VIBRATION -> {
                 g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
                 g.profile.save()

@@ -40,6 +40,7 @@ import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
 import com.centurywar.engine.StartupTimings
+import com.centurywar.engine.SystemAccessibility
 import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.RestoredBattle
@@ -156,6 +157,8 @@ class MainActivity : Activity(), Host {
         var start = SystemClock.elapsedRealtimeNanos()
         game = Game(this, profile, detectedQuality)
         game.bitmapCacheMemoryClassMb = memoryClassMb
+        // R2-03: rozmiar tekstu, animacje i TalkBack z ustawień telefonu (profil już wczytany).
+        postSystemAccessibility()
         startup.record(StartupTimings.Phase.GAME, start, SystemClock.elapsedRealtimeNanos())
         start = SystemClock.elapsedRealtimeNanos()
         game.history = BattleHistory(File(root, "history.json")).also { history ->
@@ -356,6 +359,8 @@ class MainActivity : Activity(), Host {
 
     private fun resumeGame() {
         view.onResume()
+        // TalkBack i animacje można przełączyć, gdy gra jest w tle (bez zmiany konfiguracji).
+        postSystemAccessibility()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post { game.checkDailyLogin() }
         if (startupFirstFrameShown) {
@@ -909,6 +914,14 @@ class MainActivity : Activity(), Host {
             game.updateDensity(nextDensity)
             if (game.profile.lang.isEmpty()) game.onLanguageChanged()
         }
+        postSystemAccessibility()
+    }
+
+    /** R2-03: odczyt na wątku UI, zastosowanie na wątku gry. */
+    private fun postSystemAccessibility() {
+        if (!::game.isInitialized) return
+        val snapshot = SystemAccessibility.read(this)
+        game.post { game.applySystemAccessibility(snapshot) }
     }
 
     override fun applyRenderScale(scale: Float) {

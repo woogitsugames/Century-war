@@ -215,8 +215,7 @@ internal class BattleBottomHud(private val owner: BattleScreen) {
         stanceBtn.highlight = p.hold
         speedBtn.visible = !modal
         speedBtn.iconId = Icons.SPEED
-        val shownSpeed = effectiveSpeed.toInt().coerceIn(1, speed)
-        speedBtn.label = if (shownSpeed == speed) speedLabels[speed] else limitedSpeedLabels[speed][shownSpeed]
+        speedBtn.label = speedButtonLabel()
         evolveBtn.visible = !modal
         val canEvo = battle.canEvolve(p)
         evolveBtn.enabled = canEvo

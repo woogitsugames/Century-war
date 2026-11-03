@@ -281,6 +281,17 @@ class Profile(private val file: File) {
     var reduceFlash = false
     /** Opcjonalne lustrzane sterowanie bitwą, domyślnie wyłączone. */
     var leftHandedHud = false
+    /**
+     * R2-03: gracz sam wybrał rozmiar tekstu w Dostępności; skala czcionki systemu
+     * już go nie zmienia.
+     */
+    var textScaleManual = false
+    /** R2-03: gracz sam przełączył „Ogranicz potrząsanie” albo „Ogranicz błyski”. */
+    var motionManual = false
+    /** R2-03: tempo ×½ w cyklu tempa bitwy (×½ → ×1 → ×3 → ×5). */
+    var slowSpeedOption = false
+    /** R2-03: gracz sam przełączył tempo ×½ (ważniejsze niż domyślne ×½ przy TalkBack). */
+    var slowSpeedManual = false
     var sound = true
     var sfxVolume = 0.8f
         set(value) { field = if (value.isFinite()) value.coerceIn(0f, 1f) else 0.8f }
@@ -522,6 +533,10 @@ class Profile(private val file: File) {
         o.put("reduceShake", reduceShake)
         o.put("reduceFlash", reduceFlash)
         o.put("leftHandedHud", leftHandedHud)
+        o.put("textScaleManual", textScaleManual)
+        o.put("motionManual", motionManual)
+        o.put("slowSpeedOption", slowSpeedOption)
+        o.put("slowSpeedManual", slowSpeedManual)
         o.put("sound", sound)
         o.put("sfxVolume", sfxVolume.toDouble())
         o.put("musicVolume", musicVolume.toDouble())
@@ -995,6 +1010,14 @@ class Profile(private val file: File) {
         reduceShake = json.optBoolean("reduceShake", false)
         reduceFlash = json.optBoolean("reduceFlash", false)
         leftHandedHud = json.opt("leftHandedHud") == true
+        // R2-03: profil sprzed flag *Manual. Rozmiar inny niż 100% albo włączone ograniczenia
+        // ruchu mógł ustawić tylko gracz, więc takiego wyboru nie nadpisuje ustawienie systemu.
+        textScaleManual = if (json.has("textScaleManual")) json.opt("textScaleManual") == true
+            else textScale != 100
+        motionManual = if (json.has("motionManual")) json.opt("motionManual") == true
+            else reduceShake || reduceFlash
+        slowSpeedOption = json.opt("slowSpeedOption") == true
+        slowSpeedManual = json.opt("slowSpeedManual") == true
         sound = json.optBoolean("sound", true)
         // Stare profile (także z sound=false) zachowują domyślne 80% efektów.
         sfxVolume = json.optDouble("sfxVolume", 0.8).toFloat()
@@ -1062,6 +1085,7 @@ class Profile(private val file: File) {
         quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
         palette = 0; teamMarkers = false; textScale = 100
         reduceShake = false; reduceFlash = false; leftHandedHud = false
+        textScaleManual = false; motionManual = false; slowSpeedOption = false; slowSpeedManual = false
         showFps = false; lang = ""; skirmishDiff = 1; skirmishSetup = SkirmishSetup.defaults()
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
