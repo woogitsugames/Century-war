@@ -1,14 +1,16 @@
 name: Test balansu Endless (20 i 100 seedów)
 on:
+  # Oszczędność minut CI (3.11.2026): tylko PR do main i ręcznie.
   pull_request:
-    branches: ['claude/**']
-    paths:
-      - 'sim/**'
-      - 'server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt'
-      - '.github/workflows/endless-balance.yml'
+    branches:
+      - main
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   balance:
     name: Porównanie fali AI

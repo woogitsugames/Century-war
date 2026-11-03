@@ -1,13 +1,14 @@
 name: PGS — Android build i testy
 
 on:
-  push:
-    branches:
-      - gpt/01-play-games
+  # Dawne jednorazowe uruchomienia gałęzi GPT wyłączone (3.11.2026); tylko ręcznie.
   workflow_dispatch:
-
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android:

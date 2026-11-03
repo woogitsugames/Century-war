@@ -3,30 +3,11 @@ name: Backend rankingów
 # Build i testy aplikacji (w tym symulacji z :sim) wykonuje android.yml.
 # Tu :sim:test i :server:test, bez Android SDK (settings.gradle.kts pomija :app przy zadaniach :server:*).
 on:
-  push:
+  # Oszczędność minut CI (3.11.2026): tylko PR do main i ręcznie.
+  pull_request:
     branches:
       - main
-      - 'claude/**'
-      - 'gpt/**'
-    paths:
-      - "server/**"
-      - "docker-compose.yml"
-      - ".env.example"
-      - "sim/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - ".github/workflows/server.yml"
-  pull_request:
-    paths:
-      - "server/**"
-      - "docker-compose.yml"
-      - ".env.example"
-      - "sim/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - ".github/workflows/server.yml"
   workflow_dispatch:
-
 permissions:
   contents: read
 

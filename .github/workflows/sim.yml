@@ -1,29 +1,17 @@
 name: Testy symulacji JVM
 
 on:
-  push:
-    branches: ['main', 'claude/**', 'gpt/**']
-    paths:
-      - 'sim/**'
-      - 'app/src/main/java/com/centurywar/meta/**'
-      - 'app/src/test/java/com/centurywar/meta/**'
-      - 'docs/BALANCE.md'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - '.github/workflows/sim.yml'
+  # Oszczędność minut CI (3.11.2026): tylko PR do main i ręcznie.
   pull_request:
-    paths:
-      - 'sim/**'
-      - 'app/src/main/java/com/centurywar/meta/**'
-      - 'app/src/test/java/com/centurywar/meta/**'
-      - 'docs/BALANCE.md'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - '.github/workflows/sim.yml'
+    branches:
+      - main
   workflow_dispatch:
-
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   simulation:

@@ -1,20 +1,15 @@
 name: Android CI
 
 on:
+  # Oszczędność minut CI (decyzja właściciela 3.11.2026): bez uruchomień przy każdym
+  # wypchnięciu; pełne testy wykonuje koordynator lokalnie przed scaleniem.
   push:
-    branches:
-      - main
-      - 'claude/**'
-      - 'gpt/**'
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
-      - 'claude/**'
-      - 'gpt/**'
   workflow_dispatch:
-
 permissions:
   contents: read
 

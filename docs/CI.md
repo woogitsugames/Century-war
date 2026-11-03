@@ -246,3 +246,12 @@ Przy częściowo ustawionych zmiennych konfiguracja Gradle zwróci błąd. Plik 
 - Testy symulacji, reguł, zrzutów bitwy i lokalizacji dzialaja w JVM; nie wymagaja emulatora. Testy Robolectric (SDK 35) pobieraja przy pierwszym uruchomieniu duze artefakty; kolejne korzystaja z cache.
 - Artefakty z jobow debug/lint/robolectric sa przechowywane przez 14 dni, a release przez 90 dni.
 - Raport z nieudanego kroku oraz diagnostyka `lint` znajduja sie na stronie uruchomienia workflow w zakladce **Actions**.
+
+## Oszczędność minut CI (3.11.2026, decyzja właściciela)
+
+Limit minut GitHub Actions: workflowy **nie uruchamiają się przy zwykłym wypchnięciu** na `main`, `claude/**` ani `gpt/**`.
+- `android.yml`: tylko tag `v*` (wydanie: testy + podpisany build w jednym przebiegu), PR do `main` i ręcznie (*Run workflow*).
+- `server.yml`, `sim.yml`, `endless-balance.yml`, `release-check.yml`: tylko PR do `main` i ręcznie.
+- Dawne workflowy gałęzi GPT (`campaign-balance`, `play-games-check`, `store-graphics`): tylko ręcznie.
+- Wszędzie `concurrency` z `cancel-in-progress`.
+Pełne testy (`:app:testDebugUnitTest :sim:test :server:test`) koordynator uruchamia lokalnie przed każdym scaleniem na `main`. Zleceń GPT nie należy prosić o dodawanie nowych workflowów uruchamianych przy push.

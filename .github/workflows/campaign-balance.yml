@@ -1,14 +1,13 @@
 name: Balans kampanii (20 seedow)
 on:
-  push:
-    branches: ['gpt/42-campaign-endgame-balance']
-    paths:
-      - 'sim/src/main/kotlin/com/centurywar/game/Modes.kt'
-      - 'app/src/test/java/com/centurywar/game/BalanceReport.kt'
-      - '.github/workflows/campaign-balance.yml'
+  # Dawne jednorazowe uruchomienia gałęzi GPT wyłączone (3.11.2026); tylko ręcznie.
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   stages:

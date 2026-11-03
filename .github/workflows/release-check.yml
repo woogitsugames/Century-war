@@ -4,14 +4,17 @@ name: Weryfikacja wydania Android
 # i uruchomien recznych. Jawna flaga CI dopuszcza podpis debug — to NIE sa
 # artefakty do publikacji; podpisany release buduje job `release` w android.yml po tagu v*.
 on:
+  # Oszczędność minut CI (3.11.2026): tylko PR do main i ręcznie.
   pull_request:
     branches:
       - main
-      - 'claude/**'
   workflow_dispatch:
-
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release-smoke:
