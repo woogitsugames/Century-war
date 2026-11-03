@@ -1386,6 +1386,8 @@ class BattleScreen(
         // R2-04: dziennik testu (porażki kampanii, kapitulacje, czas do pierwszej wygranej); bez I/O.
         g.playtest?.battleSettled(cfg.mode == Mode.CAMPAIGN, won, surrendered, pr.playSeconds,
             pr.tutorialDone, finishedAt)
+        // R6-L8: zapis w tle także po bitwie, żeby awaria w trakcie sesji nie gubiła liczników.
+        g.playtest?.saveAsync()
         tipIcon = when (tipKey) {
             "tip_siege" -> Icons.HOURGLASS
             "tip_cap" -> Icons.HELMET
