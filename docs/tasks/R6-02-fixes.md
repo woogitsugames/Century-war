@@ -39,6 +39,8 @@ resztę zostaw.
   `ShadowPackageManager`).
 
 ### M3: termika nie spycha jakości do minimum
+**Decyzja właściciela (3.11 wieczorem):** z powodu nagrzewania najwyżej **2 stopnie** obniżenia
+jakości i **bez zmniejszania skali obrazu** (bufora). Poniższe wartości są zatwierdzone.
 - `engine/QualityGovernor.kt`, `record()` (ok. 52–80):
   - osobny licznik `thermalSteps` (zerowany w `reset()` i przy powrocie jakości);
   - termika dodaje stopień tylko gdy `thermalSteps < THERMAL_MAX_STEPS` (= 2);
@@ -60,16 +62,19 @@ resztę zostaw.
   wynosi ≤ 2 na sekundę zegara testowego (`setAccessibilityClock`).
 
 ### M5: raport testera mówi wprost o ustawieniach dostępności
+**Decyzja właściciela (3.11 wieczorem):** okno „Raport dla testera” przed wysłaniem mówi, że
+raport zawiera ustawienia dostępności, w tym informację, czy działa TalkBack. Wiersz „TalkBack”
+w raporcie (`crash/PlaytestReportText.kt:177`) **zostaje**; nie usuwaj go.
 - `engine/L.kt`: nowa `part186()` z kluczem `pt186_desc` (10 języków; zastępuje użycie
   `pt182_desc` w `MainActivity.sharePlaytestReport`). Treść jak `pt182_desc` plus zdanie
-  „Zawiera też ustawienia dostępności, np. czy działa czytnik ekranu.” Starego klucza nie
-  usuwaj (inne miejsca, testy).
+  „Zawiera też ustawienia dostępności, w tym informację, czy działa TalkBack.” (nazwa
+  „TalkBack” bez tłumaczenia we wszystkich językach). Starego klucza nie usuwaj (inne miejsca,
+  testy).
 - `docs/store/privacy_policy_pl.md` i `_en.md` (jeśli opisują raport testera; jeśli nie, dopisz
-  krótki akapit przy raporcie problemu): raport ręczny, zawiera ustawienia dostępności, gra nic
-  nie wysyła sama.
-- **Do decyzji koordynatora/właściciela:** zamiast opisu można usunąć wiersz „TalkBack” z
-  raportu (`crash/PlaytestReportText.kt:177`) i zostawić tylko „tempo ×½”. Domyślnie: opis.
-- Testy: `PlaytestReportTextTest` bez zmian; `LTest` dla `pt186_desc`.
+  krótki akapit przy raporcie problemu): raport ręczny, zawiera ustawienia dostępności (w tym,
+  czy działa TalkBack), gra nic nie wysyła sama.
+- Testy: `PlaytestReportTextTest` bez zmian (wiersz TalkBack nadal w raporcie); `LTest` dla
+  `pt186_desc` (każdy język zawiera „TalkBack”).
 
 ### M6: muzyka gry wraca, gdy cudza muzyka ucichnie
 - `engine/Music.kt` (`resume()` ok. 70–78, `sync()` ok. 190, `otherAppPlaying()` 171):

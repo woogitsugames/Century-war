@@ -5,6 +5,10 @@
 `putAll(part` = liczba `private fun part`). **Gradle:** wyłącznie
 `flock /tmp/claude-0/gradle.lock ./gradlew ...`. Commity po polsku, wypychaj często.
 
+**Decyzja właściciela (3.11 wieczorem):** zatwierdzone 4 nowe osiągnięcia z tabeli niżej
+(`first_evolve`, `first_turret`, `first_research`, `stages_3`), nagrody razem **50 medali**.
+Po zmianie: **78 osiągnięć, 83 ID Play Games**.
+
 ## Cel
 
 Wytyczna Play Games **LU-AC-GAC** (warunek „Quests” w programie Level Up): co najmniej
@@ -72,7 +76,7 @@ Uwagi:
   `docs/store/OWNER_INPUT.md:29`, `docs/store/data_safety.md:72`, `docs/PLAY_GAMES_SETUP.md:44`,
   `docs/store/listing_pl.md` i `listing_en.md` („74 osiągnięcia”) oraz 8 pozostałych
   `listing_*.md` („74 …”), `docs/COORDINATOR_HANDOVER.md` (tylko nowy wpis, starych nie zmieniać).
-- `meta/WhatsNewCatalog.kt` + tekst „Co nowego” (w `part185()`), jeśli koordynator nie zdecyduje inaczej.
+- `meta/WhatsNewCatalog.kt` + tekst „Co nowego” (w `part185()`).
 
 ## Testy do dopisania
 
@@ -86,8 +90,8 @@ Uwagi:
   `first_turret`, `first_research`, `stages_3` odblokowane przed 60:00 czasu gry.
 - **Wariant ostrożny** (nowy test w tej samej bazie): gracz pomija samouczek
   (`tut.skip`), przegrywa etap 2 raz i nie kupuje badań do 30. minuty. Nadal ≥ 4 osiągnięcia
-  przed 60:00 (bez `first_research` musi wystarczyć reszta). Jeśli nie wystarczy, obniż próg
-  `stages_3` do `stages_2` i opisz to w raporcie.
+  przed 60:00 (bez `first_research` musi wystarczyć reszta). Progów nie zmieniaj (zestaw
+  zatwierdzony); jeśli nie wystarczy, opisz to w raporcie i zgłoś koordynatorowi.
 - `PlayGamesIdsTest` i `PlayGamesIdsGeneratorTest` z nowymi liczbami. `releaseChecklist`
   nadal wymaga wszystkich ID (83).
 
