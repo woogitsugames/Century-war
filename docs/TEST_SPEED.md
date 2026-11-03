@@ -183,13 +183,16 @@ testowy **co 12 klas** przy stercie **768 MiB** i dwóch równoległych procesac
 |---|---:|---:|---|
 | `forkEvery=1`, 384 MiB | ok. 16 min (pomiar koordynatora) | — | nie |
 | `forkEvery=6`, 640 MiB | 13 min 14 s (testy `:sim`/`:server` z cache) | ok. 10,3 GB | nie |
-| `forkEvery=12`, 768 MiB | **13 min 0 s**, z kompilacją wszystkich modułów od zera | ok. 11,7 GB | nie |
+| `forkEvery=12`, 768 MiB | **13 min 0 s** z kompilacją od zera; **13 min 2 s** samo ponowne wykonanie testów (`--rerun`) | ok. 11,7–12,3 GB | nie |
+| `forkEvery=20`, 768 MiB | 12 min 31 s (`--rerun`) | ok. 13,1 GB (zostaje 3 GB) | nie |
 
 Pomiar: 4 CPU, 15 GB RAM, `free -m` co 10 s; zajętość obejmuje także demony Gradle/Kotlin.
-Bez kompilacji (kolejne uruchomienie po zmianie tylko testów) czas spada do ok. 11–12 min.
+Wybrano **12**: rzadsza wymiana procesu daje tylko ok. 30 s, a zużywa ok. 1 GB więcej pamięci.
+Celu 11–12 min nie da się osiągnąć samym `forkEvery` — wąskim gardłem jest nierówny podział klas
+między dwa procesy (Gradle przydziela klasy po kolei, bez równoważenia czasu).
 Najdłuższe klasy (czas sumaryczny ok. 17 min dzielony na dwa procesy): `ScreenshotTest` ok. 5,6 min,
 `PrereleasePolishTest` i `DoctrineBalance82Test` po ok. 2 min, `BattleScreenTest` ok. 1,4 min —
-dalsze skracanie wymaga dzielenia tych klas, nie zmiany `forkEvery`.
+dalsze skracanie wymaga podzielenia tych klas (zwłaszcza `ScreenshotTest`), nie zmiany `forkEvery`.
 
 Nadpisanie bez edycji pliku: `-PtestForkEvery=N` (np. `-PtestForkEvery=1` do izolacji
 podejrzanego testu, `-PtestForks=1 -PtestForkEvery=4` na komputerze z 8 GiB).

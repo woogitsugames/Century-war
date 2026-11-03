@@ -207,8 +207,9 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     // Robolectric zatrzymuje pamięć natywną bitmap, więc proces testowy wymieniamy
     // co 12 klas (kompromis właściciela, 3.11.2026): forkEvery=1 trwało ok. 16 min,
     // forkEvery=40 kończyło się OOM (137). Przy 12 klasach i 768 MiB sterty pełne
-    // :app:testDebugUnitTest :sim:test :server:test trwa ok. 13 min z kompilacją od zera
-    // (4 CPU / 15 GB, szczyt ok. 11,7 GB zajętej pamięci całego kontenera, bez 137).
+    // :app:testDebugUnitTest :sim:test :server:test trwa ok. 13 min (4 CPU / 15 GB,
+    // szczyt ok. 12,3 GB zajętej pamięci kontenera, bez 137); 20 klas: 12,5 min, 13,1 GB.
+    // Pomiary i uzasadnienie: docs/TEST_SPEED.md, „Kompromis forkEvery”.
     // Na 8 GiB użyj -PtestForks=1 -PtestForkEvery=4; -PtestForkEvery=1 izoluje każdą klasę.
     forkEvery = (providers.gradleProperty("testForkEvery").orNull?.toLongOrNull() ?: 12L).coerceAtLeast(1L)
     maxHeapSize = "768m"

@@ -40,7 +40,7 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
       wydanie na tagu dopiero po zielonych testach tego samego commita, obrazy zrzutów
       w artefakcie CI (A156-11, 12, 14, 15, 26, 27).
 - [x] Pełne testy (`:app:testDebugUnitTest :sim:test :server:test`) zielone na gałęzi
-      integracyjnej — ok. 11–12 min (szczegóły w [TEST_SPEED.md](TEST_SPEED.md)).
+      integracyjnej — ok. 13 min (szczegóły w [TEST_SPEED.md](TEST_SPEED.md)).
 
 ### Zostało — decyzje i dane właściciela
 
