@@ -125,6 +125,8 @@ class BattleScreen(
     internal var reward = 0
     internal var rewardText = ""
     internal var totalMedalsGained = 0
+    /** Dzień 2: część [totalMedalsGained] z osiągnięć (pokazywana na wynikach osobno). */
+    internal var achievementMedals = 0
     internal var missionsAdvanced = 0
     internal var retainedProgressText = ""
     internal val defeatReasons = arrayOfNulls<String>(2)
@@ -151,6 +153,8 @@ class BattleScreen(
     internal var resultWeeklyTiersLabel = ""
     internal var resultScoreLabel = ""
     internal var resultRewardLabel = ""
+    internal var achievementRewardLabel = ""
+    internal var achievementRewardText = ""
     internal var resultNewRecordLabel = ""
     internal var resultStars = 0
     internal var resultCustomSkirmish = false
@@ -1141,6 +1145,7 @@ class BattleScreen(
         if (!settled) {
             reward = 0
             totalMedalsGained = 0
+            achievementMedals = 0
             snapshots?.deleteSettledAsync(id)
         }
         if (won) g.host.onBattleWon()
@@ -1256,6 +1261,8 @@ class BattleScreen(
             .count { it.progress > (missionBefore[it.id] ?: it.progress) }
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))
         totalMedalsGained = (pr.medals - medalsBefore).coerceAtLeast(0)
+        // Medale ponad nagrodę bitwy przyznały osiągnięcia (misje odbiera się osobno).
+        achievementMedals = (totalMedalsGained - reward.coerceAtLeast(0)).coerceAtLeast(0)
         tipKey = if (won) "" else when {
             !battle.endless && battle.time >= battle.siegeStart + 35f -> "tip_siege"
             battle.player.aliveCount >= battle.player.cap &&

@@ -37,6 +37,9 @@ class MenuScreen(g: Game) : Screen(g) {
     private val missions = btn(9)
     private val settings = btn(7)
     private val codex = btn(8)
+    /** Dzień 2: „Co nowego” po aktualizacji, dopóki gracz nie otworzy historii zmian. */
+    internal val whatsNew = btn(WHATS_NEW).also { it.visible = false }
+    private var whatsNewSeenRef: String? = null
     private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, research,
         rankings, missions, settings, codex)
     private val scrollCue = ScrollCue()
@@ -102,6 +105,8 @@ class MenuScreen(g: Game) : Screen(g) {
     private companion object {
         const val RESUME_YES = 20
         const val RESUME_NO = 21
+        const val WHATS_NEW = 10
+        const val WHATS_NEW_H = 40f
     }
 
     // logo
@@ -212,8 +217,61 @@ class MenuScreen(g: Game) : Screen(g) {
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
         codex.set(settings.r.left - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
+        // W rzędzie Kodeksu i Ustawień, na lewo od Kodeksu (między logo a ikonami).
+        layoutWhatsNew(codex.r.left - 12 * dp, landscape = true)
         layoutResume(cx)
         refreshMissionBadge()
+    }
+
+    /** Szerokość przycisku „Co nowego”: medalion z ikoną + napis 14 sp. */
+    private fun whatsNewWidth(): Float {
+        val h = WHATS_NEW_H * dp
+        return min(190 * dp, h * 0.88f + 16 * dp + ui.measure(whatsNew.label, 14f, true))
+    }
+
+    private fun layoutWhatsNew(right: Float, landscape: Boolean) {
+        whatsNew.label = L["menu175_whats_new"]
+        whatsNew.iconId = Icons.BOOK
+        whatsNew.tooltipTitle = ""
+        val bw = whatsNewWidth()
+        val bh = WHATS_NEW_H * dp
+        // Cel dotyku 48 dp przy niższym (40 dp) przycisku.
+        whatsNew.hitSlop = 4 * dp
+        if (landscape) {
+            whatsNew.set(right - bw, g.insetT + 14 * dp, bw, bh)
+            // Gdy logo sięga za daleko w prawo, przycisk schodzi pod Kodeks i Ustawienia.
+            val logoRight = w / 2 + (g.insetL - g.insetR) / 2 + logoFill.measureText(L["title"]) / 2
+            if (whatsNew.r.left < logoRight + 8 * dp)
+                whatsNew.set(settings.r.right - bw, settings.r.bottom + 22 * dp, bw, bh)
+        } else {
+            // Pion: w rzędzie tabliczki gracza; przy długim imieniu (do 16 znaków) sama ikona
+            // z czerwoną kropką (opis TalkBack bez zmian), bo niżej leży logo.
+            val rowTop = g.insetT + 14 * dp
+            whatsNew.set(right - bw, rowTop, bw, bh)
+            if (whatsNew.r.left < playerPlateRight() + 10 * dp) {
+                whatsNew.label = ""
+                whatsNew.set(right - bh, rowTop, bh, bh)
+            }
+        }
+        refreshWhatsNew(force = true)
+    }
+
+    /** Prawa krawędź tabliczki gracza (te same wymiary co w [drawPlayer]). */
+    private fun playerPlateRight(): Float {
+        val pr = g.profile
+        val l = g.insetL + 12 * dp
+        val ph = 48 * dp
+        val stats = ui.measure(pr.medals.toString(), 13f, true) +
+            ui.measure(pr.totalStars().toString(), 13f, true) + 52 * dp
+        return l + ph + max(ui.measure(pr.name, 15f, true), stats) + 22 * dp
+    }
+
+    /** Widoczność liczymy tylko po zmianie znacznika wersji (porównanie referencji, bez alokacji). */
+    private fun refreshWhatsNew(force: Boolean = false) {
+        val seen = g.profile.whatsNewSeenVersion
+        if (!force && seen === whatsNewSeenRef) return
+        whatsNewSeenRef = seen
+        whatsNew.visible = WhatsNewScreen.unread(g)
     }
 
     /** Osobny układ pionowy; istniejąca geometria pozioma pozostaje nietknięta. */
@@ -250,6 +308,7 @@ class MenuScreen(g: Game) : Screen(g) {
         settings.label = L["settings"]
         codex.label = L["codex"]
         positionPortraitTiles()
+        layoutWhatsNew(w - g.insetR - 12 * dp, landscape = false)
     }
 
     /** Pozycje są przeliczane przy przeciąganiu, bez tworzenia obiektów w klatce. */
@@ -276,6 +335,7 @@ class MenuScreen(g: Game) : Screen(g) {
 
     override fun onTouch(e: TouchEvent): Boolean {
         if (!portraitMenu || g.resumeOffer != null || hints.okBtn.visible) return false
+        if (whatsNew.visible && whatsNew.contains(e.x, e.y)) return false
         if (e.action == TouchEvent.DOWN && (e.y < portraitTop || e.y >= portraitBottom))
             return true
         if (e.action == TouchEvent.UP && (e.y < portraitTop || e.y >= portraitBottom))
@@ -332,6 +392,7 @@ class MenuScreen(g: Game) : Screen(g) {
             refreshMissionBadge()
         }
         updateResumeVisibility()
+        refreshWhatsNew()
         val pr = g.profile
         eliteReady = EliteUnlock.affordable(pr)
         hints.update(dt)
@@ -377,13 +438,15 @@ class MenuScreen(g: Game) : Screen(g) {
             scrollCue.vertical(c, w - g.insetR - 12 * dp, portraitTop, portraitBottom,
                 portraitScroll, portraitMaxScroll, dp)
             drawPlayer(c)
+            drawWhatsNew(c)
         } else {
             // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).
             for (i in buttons.indices) {
                 val b = buttons[i]
-                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn)
+                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew)
                     ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
             }
+            drawWhatsNew(c)
             drawPlayer(c)
             drawTileBadges(c)
             ui.textO(c, L["codex"], codex.r.centerX(), codex.r.bottom + 13 * dp,
@@ -394,6 +457,18 @@ class MenuScreen(g: Game) : Screen(g) {
         if (g.resumeOffer == null) hints.draw(c)
         drawHeldTooltip(c)
         if (g.resumeOffer != null) drawResume(c)
+    }
+
+    private fun drawWhatsNew(c: Canvas) {
+        if (!whatsNew.visible) return
+        ui.button(c, whatsNew, 14f)
+        // Czerwona kropka „nieprzeczytane” w rogu, jak plakietki kafelków.
+        val bx = whatsNew.r.right - 4 * dp
+        val by = whatsNew.r.top + 4 * dp
+        ui.fill.color = Ui.OUTLINE
+        c.drawCircle(bx, by, 7 * dp, ui.fill)
+        ui.fill.color = Color.rgb(210, 59, 52)
+        c.drawCircle(bx, by, 5 * dp, ui.fill)
     }
 
     private fun drawTileBadges(c: Canvas) {
@@ -505,6 +580,7 @@ class MenuScreen(g: Game) : Screen(g) {
     override fun accessibilityLabel(b: Button): String = when (b) {
         settings -> L["settings"]
         codex -> L["codex"]
+        whatsNew -> L["menu175_whats_new_desc"]
         else -> super.accessibilityLabel(b)
     }
 
@@ -540,6 +616,7 @@ class MenuScreen(g: Game) : Screen(g) {
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
             9 -> g.push(MissionsScreen(g))
+            WHATS_NEW -> g.push(WhatsNewScreen(g))
         }
     }
 }
