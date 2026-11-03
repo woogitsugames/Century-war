@@ -15,6 +15,8 @@ class Quality(val level: Int, val reduction: Int = 0, val gpuReduction: Int = 0)
         const val HIGH = 3
         /** Górny limit pikseli bufora: powyżej tego różnica jest niewidoczna, a koszt rośnie. */
         private const val MAX_PIXELS = 3_900_000f
+        /** Stopnie CPU oszczędzające efekty; dalsze obniżają skalę bufora. */
+        const val EFFECT_STEPS = 4
 
         fun detect(ctx: Context): Int {
             val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -34,10 +36,10 @@ class Quality(val level: Int, val reduction: Int = 0, val gpuReduction: Int = 0)
     private val cpuReduction = (reduction - gpuReduction).coerceAtLeast(0)
     private val normalScale = when (level) { LOW -> 0.75f; MED -> 0.9f; else -> 1f }
     /** Pierwsze cztery stopnie oszczędzają efekty; kolejne obniżają bufor po 0,05. */
-    val maxReductionSteps = 4 + ((normalScale - 0.6f + 0.001f) / 0.05f).toInt()
+    val maxReductionSteps = EFFECT_STEPS + ((normalScale - 0.6f + 0.001f) / 0.05f).toInt()
     // Przy ograniczeniu GPU skala spada od pierwszego stopnia, bez czekania na efekty.
     val baseScale = (normalScale -
-        ((cpuReduction - 4).coerceAtLeast(0) + gpuReduction) * 0.05f).coerceAtLeast(0.6f)
+        ((cpuReduction - EFFECT_STEPS).coerceAtLeast(0) + gpuReduction) * 0.05f).coerceAtLeast(0.6f)
     private val particleBase = when (level) { LOW -> 70; MED -> 160; else -> 320 }
     val maxParticles = when {
         cpuReduction <= 0 -> particleBase
