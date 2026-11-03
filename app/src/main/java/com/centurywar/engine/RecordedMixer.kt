@@ -9,6 +9,8 @@ interface TrackPlayer {
     fun release()
     /** Fałsz po zakończeniu utworu bez pętli. */
     val isPlaying: Boolean
+    /** Wołane co krok miksu na wątku sterującym (np. przygotowanie następnego okrążenia pętli). */
+    fun maintain() {}
 }
 
 /** Otwiera i przygotowuje utwór; null = nie da się odtworzyć. Wołana poza wątkiem gry. */
@@ -189,6 +191,7 @@ internal class RecordedMixer(
     }
 
     private fun apply(g: Group, base: Float) {
+        g.calm?.maintain(); g.battle?.maintain()
         val gain = base * equalPower(g.fade)
         val calm = g.calm
         val battle = g.battle

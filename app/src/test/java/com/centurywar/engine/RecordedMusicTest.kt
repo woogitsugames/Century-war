@@ -13,6 +13,8 @@ class RecordedMusicTest {
         var released = false
         var level = -1f
         var finished = false
+        var maintained = 0
+        override fun maintain() { check(!released); maintained++ }
         override fun start() { check(!released); started = true }
         override fun setVolume(value: Float) { check(!released) { "głośność po zwolnieniu: $name" }; level = value }
         override fun release() { check(!released) { "podwójne zwolnienie: $name" }; released = true }
@@ -39,6 +41,20 @@ class RecordedMusicTest {
                                   volume: Float = 1f, duck: Float = 1f) {
         var t = 0f
         while (t < seconds - 1e-4f) { update(0.04f, target, intensity, volume, duck); t += 0.04f }
+    }
+
+    @Test fun loopsAreMaintainedEveryStep() {
+        val f = FakeFactory()
+        val m = RecordedMixer(catalog("era1_calm", "era1_battle", "era2_calm"), f)
+        m.run(1f, 1)
+        val calm = f.live("era1_calm")!!
+        val battle = f.live("era1_battle")!!
+        assertEquals(25, calm.maintained)
+        assertEquals(25, battle.maintained)
+        // W trakcie przenikania epok obie pary dostają krok (łańcuch okrążeń nie może stanąć).
+        m.run(1f, 2)
+        assertEquals(50, calm.maintained)
+        assertTrue(f.live("era2_calm")!!.maintained > 20)
     }
 
     @Test fun catalogListsAllSunoTracks() {

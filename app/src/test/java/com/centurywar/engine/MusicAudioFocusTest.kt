@@ -4,6 +4,7 @@ import android.media.AudioManager
 import org.robolectric.RuntimeEnvironment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -52,6 +53,24 @@ class MusicAudioFocusTest {
             // Suwak na 0: fokus oddany od razu (Spotify może wznowić).
             m.setVolume(0f)
             assertSame(req.audioFocusRequest, shadowOf(am).lastAbandonedAudioFocusRequest)
+        } finally { m.release() }
+    }
+
+    @Test fun lostFocusIsNotStolenBackBySlider() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            m.resume()
+            val first = shadowOf(am).lastAudioFocusRequest!!
+            // Gracz włącza Spotify: gra traci fokus i milknie.
+            first.listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+            m.setVolume(0.7f)
+            m.setEra(2)
+            assertSame("bez ponownego żądania w tej samej sesji", first, shadowOf(am).lastAudioFocusRequest)
+            // Powrót do gry z tła prosi o fokus na nowo.
+            m.pause()
+            m.resume()
+            assertNotSame(first, shadowOf(am).lastAudioFocusRequest)
         } finally { m.release() }
     }
 

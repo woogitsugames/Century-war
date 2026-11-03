@@ -31,7 +31,12 @@ for n in menu era3_battle era3_calm victory; do
   codec="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 "$OUT/$n.ogg")"
   [[ "$codec" == "vorbis,44100,2" ]] || fail "$n: format $codec"
   len="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$OUT/$n.ogg")"
-  awk -v d="$len" 'BEGIN { exit !(d > 5.7 && d < 6.4) }' || fail "$n: cisza nieprzycięta ($len s)"
+  if [[ "$n" == victory ]]; then
+    awk -v d="$len" 'BEGIN { exit !(d > 5.7 && d < 6.4) }' || fail "$n: cisza nieprzycięta ($len s)"
+  else
+    # Pętla: 6 s tonu minus nakładka (najwyżej 1/4 nagrania = 1,5 s) zszyta w pliku.
+    awk -v d="$len" 'BEGIN { exit !(d > 4.3 && d < 4.7) }' || fail "$n: pętla $len s (oczekiwane ~4,5 s)"
+  fi
 done
 [[ $(ls "$OUT" | wc -l) -eq 4 ]] || fail "nieznane pliki trafiły do wyjścia: $(ls "$OUT")"
 grep -q "nieznany.wav" <<<"$log" || fail "brak ostrzeżenia o nieznanym pliku"
@@ -47,6 +52,19 @@ ffprobe -v error -show_entries format_tags=ANDROID_LOOP:stream_tags=ANDROID_LOOP
 if ffprobe -v error -show_entries format_tags:stream_tags -of default=nw=1 "$OUT/victory.ogg" | grep -qi "ANDROID_LOOP"; then
   fail "victory.ogg nie powinien być pętlą"
 fi
+# Złączenie pętli bez „oddechu”: RMS pierwszych i ostatnich 50 ms jak w środku (stały ton).
+edge_rms() { # plik początek_s
+  ffmpeg -hide_banner -nostats -ss "$2" -t 0.05 -i "$1" -ac 1 -af astats -f null - 2>&1 \
+    | grep "RMS level dB" | tail -n1 | sed -E 's/.*: //'
+}
+for n in menu era3_calm; do
+  mid="$(edge_rms "$OUT/$n.ogg" 2)"
+  for at in 0 4.4; do
+    e="$(edge_rms "$OUT/$n.ogg" "$at")"
+    awk -v a="$e" -v b="$mid" 'BEGIN { d = a - b; exit !(d > -3 && d < 3) }' \
+      || fail "$n: poziom przy złączeniu ($at s) $e dB, w środku $mid dB"
+  done
+done
 # Determinizm: drugi przebieg daje identyczne bajty.
 "$ROOT/scripts/convert_music.sh" "$IN" "$OUT2" >/dev/null 2>&1
 for f in "$OUT"/*.ogg; do cmp -s "$f" "$OUT2/$(basename "$f")" || fail "niedeterministyczny $(basename "$f")"; done
