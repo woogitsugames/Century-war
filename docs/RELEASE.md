@@ -79,6 +79,11 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       i decyzji, czy wchodzi przed testami zamkniętymi.
 - [ ] **Numer wersji** pierwszego wydania (`releaseVersionCode`, `releaseVersionName` w
       `gradle.properties`; dziś `1` i `0.1.0-dev`).
+- [ ] **Status handlowca w Play Console** (trader / non-trader, termin **1.02.2027**) — decyzja
+      właściciela, bo od niej zależy, co sklep pokaże publicznie. Szczegóły:
+      [„Formalności Play 2026–2027”](#formalności-play-20262027).
+- [ ] **Weryfikacja tożsamości dewelopera** (Android Developer Verification) zrobiona przed
+      wysyłaniem testerom plików APK spoza Play — patrz ta sama sekcja.
 
 ### Zostało — próby na prawdziwych urządzeniach
 
@@ -105,6 +110,26 @@ Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone, koordynator budu
 uruchamia `./gradlew :app:releaseChecklist` (zatrzyma wydanie, jeśli czegoś brakuje)
 i postępuje według sekcji „Testy zamknięte w Play Console” poniżej
 (12 testerów przez 14 dni dla nowego konta osobistego).
+
+## Formalności Play 2026–2027
+
+Stan: **3 listopada 2026 r.** Lista uzupełnia „Zostało” powyżej i
+[`store/PLAY_CONSOLE.md`](store/PLAY_CONSOLE.md) (sekcja 8). Oznaczenia:
+**[oficjalne]** — strona Google; **[nieoficjalne]** — artykuł lub blog, do sprawdzenia
+w konsoli przed decyzją.
+
+| Co | Termin / próg | Co zrobić u nas | Źródło |
+|---|---|---|---|
+| **Status handlowca** (EOG i UK; każde aktywne konto, bez względu na kraje dystrybucji) | do **1.02.2027** [oficjalne] | Właściciel deklaruje w Play Console. Handlowiec: w sklepie publicznie nazwa, adres, telefon, e-mail (organizacja także D-U-N-S). Nie-handlowiec: tylko e-mail i kraj. Planowana monetyzacja (`store/monetization_plan.md`) zwykle oznacza handlowca | [Google: trader status](https://support.google.com/googleplay/android-developer/answer/13628312) |
+| **Weryfikacja tożsamości dewelopera** | od **30.09.2026** w Indonezji, Singapurze i Tajlandii; globalnie **w 2027** (bez dokładnej daty) [oficjalne]. Wcześniejsze artykuły wymieniały też Brazylię i wrzesień jako miesiąc — oficjalna strona tego nie potwierdza | Konto zweryfikować przed globalnym wdrożeniem. APK debug przez `adb` zostaje dozwolone [oficjalne]. Wysyłka APK testerom poza Play: po wdrożeniu w Polsce przejść na tor testów wewnętrznych Play (do 100 osób) albo konto „limited distribution” (do 20 urządzeń, bez dowodu tożsamości) [oficjalne] | [Google: developer verification](https://support.google.com/android-developer-console/answer/16561738) |
+| **16 KB page size** | aplikacje z targetSdk 35+ muszą je wspierać; od **1.02.2027** nie da się wydać aktualizacji bez wsparcia [oficjalne] | Gra nie ma bibliotek natywnych (sprawdzone 3.11.2026 dla PGS 22.1.0, `play-services-base`, `basement`), więc jest zgodna. Kontrola przed każdym AAB: `unzip -l app-release.aab \| grep '\.so$'` ma zwrócić pusto; jeśli nowe SDK wniesie `.so` — `zipalign -c -P 16 -v 4` na APK z bundletool | [Google: 16 KB](https://developer.android.com/guide/practices/page-sizes) |
+| **Android vitals** | próg złego działania: **1,09%** awarii i **0,47%** ANR zauważalnych przez użytkownika (średnio), **8%** na model telefonu [oficjalne] | Przez cały test zamknięty co tydzień: Play Console → Jakość → Android vitals (awarie, ANR, wolne sesje, pamięć). Przekroczenie = niższa widoczność i ostrzeżenie w karcie sklepu | [Android vitals](https://developer.android.com/games/optimize/vitals) |
+| **Progi pamięci** (gry, p90 z 28 dni, anon RSS + swap) | od **02.2027** [oficjalne]; np. telefon 4 GB: 2,25 GB na pierwszym planie, 2,0 GB w tle; bitmapy w tle > 200 MB = źle; DEX ≥ 25% optymalizacji tylko gdy DEX gry > 50 MB | Spodziewamy się dużego zapasu (budżet bitmap 2–8 MiB). Zmierzyć `adb shell dumpsys meminfo com.centurywar.game` w Endless po fali 40 i dopisać do `PERFORMANCE.md` | [Google: progi pamięci](https://support.google.com/googleplay/android-developer/answer/17492799), [blog 08.2026](https://android-developers.googleblog.com/2026/08/app-quality-memory-optimization-secure-onboarding.html) |
+| **targetSdk 36** | nowe aplikacje i aktualizacje od **31.08.2026** [oficjalne] | Spełnione (`targetSdk = 36`) | [Google: target API](https://developer.android.com/google/play/requirements/target-sdk) |
+| **targetSdk 37 (Android 17)** | prawdopodobnie **31.08.2027** — tak wynika z rytmu Google, oficjalna tabela jeszcze tego nie podaje [nieoficjalne] | Gry są zwolnione z ignorowania orientacji na dużych ekranach (`android:appCategory="game"`) [oficjalne]. Przed podniesieniem sprawdzić na Foldzie wymuszone przez użytkownika proporcje | [Android 17: ograniczenia ignorowane](https://developer.android.com/about/versions/17/changes/ff-restrictions-ignored), [ecorpit (nieoficjalne)](https://ecorpit.com/android-17-targetsdk-37-adaptive-layout-migration-2026/) |
+| **Wniosek o produkcję** (konto osobiste po 13.11.2023) | 12 testerów z ciągłym opt-in przez 14 dni; ocena zwykle do 7 dni [oficjalne] | Google pisze wprost, że powodem dalszego testowania może być **„insufficient tester engagement during the testing period”** [oficjalne] — testerzy muszą grać, nie tylko zainstalować. Raport testera (zlecenie `tasks/R2-04-tester-report.md`) daje dane do odpowiedzi | [Google: wymagania testów](https://support.google.com/googleplay/android-developer/answer/14151465) |
+| **Raport przedpremierowy** | automatycznie po wgraniu AAB na tor testowy [oficjalne] | Przejrzeć awarie, zrzuty, ostrzeżenia dostępności po każdym AAB | [Google: pre-launch report](https://support.google.com/googleplay/android-developer/answer/9842757) |
+| **Firebase Test Lab** (opcjonalnie) | plan Spark bez opłat: **5 testów dziennie na fizycznych i 10 na wirtualnych urządzeniach**; plan Blaze: 30 / 60 min dziennie bez opłat, potem 5 / 1 USD za godzinę [oficjalne] | Tylko po decyzji właściciela (projekt Firebase). `gcloud firebase test android run --type robo` | [Firebase: limity Test Lab](https://firebase.google.com/docs/test-lab/usage-quotas-pricing) |
 
 ## Testy ręczne czytnika ekranu (164)
 

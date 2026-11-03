@@ -139,6 +139,8 @@ Wgraj **`app/build/outputs/bundle/release/app-release.aab`**, nie debug APK. Zwi
 - [ ] Opłacono rejestrację Play Console; zachowano rachunek. [Opłata](https://support.google.com/googleplay/android-developer/answer/6112435)
 - [ ] Zweryfikowano tożsamość przedstawiciela, firmę, domenę w Search Console i wszystkie wymagane kontakty. [Weryfikacja](https://support.google.com/googleplay/android-developer/answer/10841920), [witryna](https://support.google.com/googleplay/android-developer/answer/13205715)
 - [ ] W [OWNER_INPUT.md](OWNER_INPUT.md) wpisano prawdziwe dane właściciela i datę; **bez haseł ani skanów w repo**.
+- [ ] Złożono **deklarację statusu handlowca** (trader / non-trader) — termin **1.02.2027**; sprawdzono, które dane kontaktowe sklep pokaże publicznie (sekcja 8). [Trader status](https://support.google.com/googleplay/android-developer/answer/13628312)
+- [ ] Zarejestrowano konto i aplikację w **Android Developer Verification** przed globalnym wdrożeniem w 2027 (sekcja 8). [Developer verification](https://support.google.com/android-developer-console/answer/16561738)
 
 ### Karta gry i deklaracje
 - [ ] Aplikacja `com.centurywar.game`, kategoria **Game**, darmowa v1; poprawne języki, kraje, e-mail wsparcia. [Tworzenie](https://support.google.com/googleplay/android-developer/answer/9859152)
@@ -156,6 +158,8 @@ Wgraj **`app/build/outputs/bundle/release/app-release.aab`**, nie debug APK. Zwi
 - [ ] Ustawiono cztery sekrety podpisu; wykonano `bundleRelease`, AAB jest podpisany kluczem upload, nie debug. [docs/CI.md](../CI.md), [Google signing](https://developer.android.com/studio/publish/app-signing)
 - [ ] W Play App Signing zapisano SHA-1 certyfikatu **app signing** i skonfigurowano OAuth PGS; `docs/store/play_games_ids.properties` bez `REPLACE_ME` (projekt, 4 rankingi, 74 osiągnięcia); sprawdzono logowanie i Saved Games. [PLAY_GAMES_SETUP.md](../PLAY_GAMES_SETUP.md)
 - [ ] Wykonano build i testy Gradle oraz kontrolę ostatecznego manifestu, PGS, offline, 720p/Fold, danych, stabilności. [docs/CI.md](../CI.md), [docs/RELEASE.md](../RELEASE.md)
+- [ ] AAB bez bibliotek natywnych albo z bibliotekami wyrównanymi do 16 KB (`unzip -l app-release.aab | grep '\.so$'` pusto). [16 KB](https://developer.android.com/guide/practices/page-sizes)
+- [ ] W czasie testu zamkniętego co tydzień przejrzano **Android vitals** i **raport przedpremierowy** (progi w sekcji 8). [Vitals](https://developer.android.com/games/optimize/vitals)
 - [ ] Przeprowadzono **internal** i zalecany **closed test**; nie zastosowano bezpodstawnie reguły 12/14 do konta organizacji. [Tory testów](https://support.google.com/googleplay/android-developer/answer/9845334)
 - [ ] Utworzono release **Production**, przejrzano ostrzeżenia i Publishing overview, wysłano do review, potwierdzono status udostępnienia. [Wydania](https://support.google.com/googleplay/android-developer/answer/9859348)
 
@@ -167,5 +171,26 @@ Wgraj **`app/build/outputs/bundle/release/app-release.aab`**, nie debug APK. Zwi
 4. **Data safety jest warunkowe:** dokument źródłowy rozróżnia przyszły protokół rankingu ze zlecenia 80 od wersji faktycznie wdrożonej. Nie zakładaj, że funkcja moderacji już działa.
 5. **Brak finalnego AAB i certyfikatów w tym zleceniu:** nie można potwierdzić `AD_ID`, rzeczywistych transferów transytywnych bibliotek, skuteczności OAuth i ostatecznych odpowiedzi Data safety.
 6. **Brak obowiązku 12/14 dla konta firmy nie znaczy „brak testów”:** przed produkcją należy wykonać rzeczywisty QA i spełnić indywidualne zadania widoczne w Play Console. [Google — testing](https://support.google.com/googleplay/android-developer/answer/9845334).
+
+## 8. Formalności i progi jakości 2026–2027 (stan 3.11.2026)
+
+Pełna tabela z terminami i oznaczeniem źródeł (oficjalne / nieoficjalne) jest w
+[docs/RELEASE.md → „Formalności Play 2026–2027”](../RELEASE.md#formalności-play-20262027). Skrót:
+
+1. **Status handlowca** (EOG i UK) do **1.02.2027**. Handlowiec: publiczna nazwa, adres, telefon,
+   e-mail (organizacja także D-U-N-S); nie-handlowiec: tylko e-mail i kraj. Konto organizacji
+   z planowaną monetyzacją będzie zwykle handlowcem — adres firmy, nie prywatny.
+2. **Weryfikacja dewelopera:** wymóg dla instalacji na certyfikowanych telefonach od
+   **30.09.2026** w Indonezji, Singapurze i Tajlandii, globalnie w **2027**. Instalacje przez
+   `adb` pozostają dozwolone.
+3. **16 KB:** gra w Kotlinie bez `.so` jest zgodna; od **1.02.2027** aktualizacje bez wsparcia
+   16 KB nie przejdą — kontrola przy każdym nowym SDK.
+4. **Android vitals:** 1,09% awarii, 0,47% ANR, 8% na model telefonu.
+5. **Pamięć od 02.2027:** progi RSS + swap dla gier zależne od RAM (np. 4 GB: 2,25 GB na
+   pierwszym planie), bitmapy w tle ≤ 200 MB.
+6. **targetSdk 37:** spodziewany termin 31.08.2027 (źródło nieoficjalne); gry zwolnione
+   z ignorowania orientacji dzięki `appCategory="game"`.
+7. **Wniosek o produkcję** (dotyczy tylko konta osobistego): Google może kazać testować dalej
+   przy „insufficient tester engagement” — oficjalne sformułowanie z pomocy Play Console.
 
 **Reguła aktualizacji:** przed każdym nowym AAB sprawdzaj ponownie polityki Google, zmiany SDK, nowe zakupy/reklamy, publiczne nazwy graczy, ochronę danych i odpowiedzi IARC. Dokument opisuje wymagania zweryfikowane **1 listopada 2026 r.**; nie jest potwierdzeniem, że konkretne konto lub gra zostały już zaakceptowane przez Google.
