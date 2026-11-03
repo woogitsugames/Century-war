@@ -134,6 +134,11 @@ object Achievements {
         def("commander_wins_10", AchievementMetric.COMMANDER_WINS, 10, 200, AchievementCategory.TACTICS),
         def("turret_tier_four", AchievementMetric.TURRET_TIER_FOUR, 1, 180, AchievementCategory.TACTICS),
         def("late_no_turrets", AchievementMetric.LATE_NO_TURRET_WINS, 1, 160, AchievementCategory.CAMPAIGN),
+        // R6-01: cztery szybkie osiągnięcia pierwszej godziny (wytyczna Play Games LU-AC-GAC).
+        def("first_evolve", AchievementMetric.EVOLUTIONS, 1, 10, AchievementCategory.TACTICS),
+        def("first_turret", AchievementMetric.TURRETS_BUILT, 1, 10, AchievementCategory.TACTICS),
+        def("first_research", AchievementMetric.RESEARCH_LEVELS, 1, 10, AchievementCategory.RESEARCH),
+        def("stages_3", AchievementMetric.STAGES, 3, 20, AchievementCategory.CAMPAIGN),
     )
 
     /** Etap kampanii (indeks od 0), od którego liczy się wygrana bez wież; etap 8 jak dowódca. */

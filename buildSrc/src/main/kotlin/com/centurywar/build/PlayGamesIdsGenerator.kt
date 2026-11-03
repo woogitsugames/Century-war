@@ -85,6 +85,10 @@ object PlayGamesIdsGenerator {
         "commander_wins_10",
         "turret_tier_four",
         "late_no_turrets",
+        "first_evolve",
+        "first_turret",
+        "first_research",
+        "stages_3",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +

@@ -171,6 +171,7 @@ object L {
         putAll(part175())
         putAll(part176())
         putAll(part178())
+        putAll(part185())
         putAll(part181())
         putAll(part182())
         putAll(part179())
@@ -203,6 +204,19 @@ object L {
         "pt182_share_title" to t("Udostępnij raport testera", "Share tester report", "Testerbericht teilen", "Compartir informe de prueba", "Partager le rapport de test", "Condividi rapporto tester", "Partilhar relatório de teste", "Поділитися звітом тестувальника", "Testrapport delen", "Test raporunu paylaş"),
         "pt182_a11y" to t("lokalny raport, wysyłasz go tylko ty", "local report, only you send it", "lokaler Bericht, nur du sendest ihn", "informe local, solo tú lo envías", "rapport local, vous seul l'envoyez", "rapporto locale, lo invii solo tu", "relatório local, só tu o envias", "локальний звіт, надсилаєш його лише ти", "lokaal rapport, alleen jij verstuurt het", "yerel rapor, yalnızca sen gönderirsin"),
         "a11y182_slow_d" to t("Bitwa startuje w ×½, wyniki bez zmian", "Battles start at ×½, same results", "Schlachten starten mit ×½, gleiche Ergebnisse", "Las batallas empiezan a ×½, mismos resultados", "Les batailles démarrent à ×½, mêmes résultats", "Le battaglie partono a ×½, stessi risultati", "As batalhas começam a ×½, mesmos resultados", "Бій починається з ×½, ті самі результати", "Gevechten starten op ×½, zelfde resultaten", "Savaşlar ×½ ile başlar, aynı sonuçlar"),
+    )
+
+    /** R6-01: cztery osiągnięcia pierwszej godziny (Play Games, LU-AC-GAC) i wpis „Co nowego”. */
+    private fun part185(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "ach_first_evolve" to t("Nowa epoka", "Into a New Era", "Neues Zeitalter", "Nueva era", "Nouvelle ère", "Nuova era", "Nova era", "Нова доба", "Nieuw tijdperk", "Yeni çağ"),
+        "ach_first_evolve_d" to t("Awansuj do następnej epoki.", "Advance to the next era.", "Steige in die nächste Epoche auf.", "Avanza a la siguiente era.", "Passez à l'ère suivante.", "Avanza all'era successiva.", "Avança para a era seguinte.", "Перейди до наступної епохи.", "Ga door naar het volgende tijdperk.", "Bir sonraki çağa geç."),
+        "ach_first_turret" to t("Pierwsza wieża", "First Turret", "Erster Turm", "Primera torreta", "Première tourelle", "Prima torretta", "Primeira torre", "Перша вежа", "Eerste toren", "İlk kule"),
+        "ach_first_turret_d" to t("Zbuduj wieżę.", "Build a turret.", "Baue einen Turm.", "Construye una torreta.", "Construisez une tourelle.", "Costruisci una torretta.", "Constrói uma torre.", "Збудуй вежу.", "Bouw een toren.", "Bir kule inşa et."),
+        "ach_first_research" to t("Pierwsze badanie", "First Research", "Erste Forschung", "Primera investigación", "Première recherche", "Prima ricerca", "Primeira pesquisa", "Перше дослідження", "Eerste onderzoek", "İlk araştırma"),
+        "ach_first_research_d" to t("Kup dowolne badanie.", "Buy any research.", "Kaufe eine beliebige Forschung.", "Compra cualquier investigación.", "Achetez une recherche au choix.", "Acquista una ricerca qualsiasi.", "Compra qualquer pesquisa.", "Купи будь-яке дослідження.", "Koop een willekeurig onderzoek.", "Herhangi bir araştırma satın al."),
+        "ach_stages_3" to t("Trzy etapy", "Three Stages", "Drei Etappen", "Tres etapas", "Trois étapes", "Tre tappe", "Três etapas", "Три етапи", "Drie etappes", "Üç bölüm"),
+        "ach_stages_3_d" to t("Ukończ 3 etapy kampanii.", "Complete 3 campaign stages.", "Schließe 3 Kampagnenetappen ab.", "Completa 3 etapas de la campaña.", "Terminez 3 étapes de campagne.", "Completa 3 tappe della campagna.", "Conclui 3 etapas da campanha.", "Пройди 3 етапи кампанії.", "Voltooi 3 campagne-etappes.", "Seferin 3 bölümünü tamamla."),
+        "wn_185_achievements" to t("Cztery nowe osiągnięcia na start: nowa epoka, pierwsza wieża, pierwsze badanie i trzy etapy kampanii.", "Four new starter achievements: a new era, your first turret, your first research and three campaign stages.", "Vier neue Einstiegserfolge: neues Zeitalter, erster Turm, erste Forschung und drei Kampagnenetappen.", "Cuatro nuevos logros iniciales: nueva era, primera torreta, primera investigación y tres etapas de campaña.", "Quatre nouveaux succès de départ : nouvelle ère, première tourelle, première recherche et trois étapes de campagne.", "Quattro nuovi obiettivi iniziali: nuova era, prima torretta, prima ricerca e tre tappe della campagna.", "Quatro novas conquistas iniciais: nova era, primeira torre, primeira pesquisa e três etapas da campanha.", "Чотири нові стартові досягнення: нова доба, перша вежа, перше дослідження і три етапи кампанії.", "Vier nieuwe startprestaties: nieuw tijdperk, eerste toren, eerste onderzoek en drie campagne-etappes.", "Dört yeni başlangıç başarımı: yeni çağ, ilk kule, ilk araştırma ve üç sefer bölümü."),
     )
 
     /** R2-03: dostępność z ustawień telefonu i tempo bitwy ×½. */

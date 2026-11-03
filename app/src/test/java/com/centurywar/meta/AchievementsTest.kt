@@ -38,9 +38,9 @@ class AchievementsTest {
 
     @Test
     fun catalogIsCompleteAndLocalized() {
-        assertEquals(74, Achievements.all.size)
-        assertEquals(74, Achievements.all.map { it.id }.toSet().size)
-        assertEquals(74, Achievements.all.map { it.pgsKey }.toSet().size)
+        assertEquals(78, Achievements.all.size)
+        assertEquals(78, Achievements.all.map { it.id }.toSet().size)
+        assertEquals(78, Achievements.all.map { it.pgsKey }.toSet().size)
         for (a in Achievements.all) {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
@@ -264,5 +264,65 @@ class AchievementsTest {
         b.surrender()
         assertTrue(Achievements.onBattleEnd(p, b, cfg, true).isEmpty())
         assertEquals(0, p.battles)
+    }
+
+    // R6-01: cztery osiągnięcia pierwszej godziny.
+    @Test
+    fun firstHourAchievementsMatchApprovedTable() {
+        val expected = listOf(
+            listOf("first_evolve", AchievementMetric.EVOLUTIONS, 1L, 10, AchievementCategory.TACTICS),
+            listOf("first_turret", AchievementMetric.TURRETS_BUILT, 1L, 10, AchievementCategory.TACTICS),
+            listOf("first_research", AchievementMetric.RESEARCH_LEVELS, 1L, 10, AchievementCategory.RESEARCH),
+            listOf("stages_3", AchievementMetric.STAGES, 3L, 20, AchievementCategory.CAMPAIGN),
+        )
+        // Dopisane na końcu katalogu, w ustalonej kolejności.
+        assertEquals(expected.map { it[0] }, Achievements.all.takeLast(4).map { it.id })
+        for (row in expected) {
+            val a = Achievements.byId(row[0] as String)!!
+            assertEquals(row[1], a.metric)
+            assertEquals(row[2], a.threshold)
+            assertEquals(row[3], a.medalReward)
+            assertEquals(row[4], a.category)
+            assertFalse(a.hidden)
+            assertEquals("cw_" + a.id, a.pgsKey)
+        }
+        assertEquals(50, expected.sumOf { it[3] as Int })
+        // Nazwy unikalne w każdym języku (LU-AC-GAB), opisy także.
+        for (lang in L.CODES.indices) {
+            val names = Achievements.all.map { L.text("ach_" + it.id, lang) }
+            assertEquals(L.CODES[lang], names.size, names.toSet().size)
+            val descs = Achievements.all.map { L.text("ach_" + it.id + "_d", lang) }
+            assertEquals(L.CODES[lang], descs.size, descs.toSet().size)
+        }
+    }
+
+    @Test
+    fun firstEvolveAndTurretUnlockAfterAnyBattle() {
+        val p = profile()
+        val cfg = BattleConfig(Mode.SKIRMISH, 31L, 1f)
+        val b = finished(cfg, false)
+        b.player.erasAdvanced = 1
+        b.player.turretsBuilt = 1
+        val earned = ids(Achievements.onBattleEnd(p, b, cfg, false))
+        assertTrue("first_evolve" in earned)
+        assertTrue("first_turret" in earned)
+        assertFalse("evolutions_50" in earned)
+        assertFalse("turrets_50" in earned)
+    }
+
+    @Test
+    fun firstResearchUnlocksOnFirstPurchaseAndStagesThreeOnThirdStage() {
+        val p = profile()
+        val def = Profile.research.first { it.key == "r_income" }
+        p.levels[def.key] = 1
+        val earned = ids(Achievements.onResearchBought(p, def))
+        assertEquals(setOf("first_research"), earned)
+        p.stars[0] = 3
+        p.stars[1] = 1
+        val cfg = BattleConfig(Mode.SKIRMISH, 32L, 1f)
+        assertFalse("stages_3" in ids(Achievements.onBattleEnd(p, finished(cfg, false), cfg, false)))
+        p.stars[2] = 2
+        val cfg2 = BattleConfig(Mode.SKIRMISH, 33L, 1f)
+        assertTrue("stages_3" in ids(Achievements.onBattleEnd(p, finished(cfg2, false), cfg2, false)))
     }
 }
