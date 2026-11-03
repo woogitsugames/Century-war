@@ -355,7 +355,15 @@ class NightUxTest {
     fun nightTour() {
         val old = L.lang
         try {
-            for ((tag, d) in devices) {
+            // Noc 7: CW_TEXT_LANGS=de,uk,... — pełna trasa tylko w tych językach na 1600×720 i Foldzie zewn.
+            val only = System.getenv("CW_TEXT_LANGS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+            if (!only.isNullOrEmpty()) {
+                for (tag in arrayOf("phone720", "foldOuter")) for (lang in only) {
+                    val g = game(devices.getValue(tag), lang)
+                    tour("${tag}_$lang", g, extended = true)
+                    g.history?.close()
+                }
+            } else for ((tag, d) in devices) {
                 for (lang in arrayOf("pl", "en", "de")) {
                     val g = game(d, lang)
                     tour("${tag}_$lang", g, extended = true)

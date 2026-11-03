@@ -65,7 +65,9 @@ class Content170ScreenshotTest {
     @Test fun newCardsAndDailyEvents() {
         val old = L.lang
         try {
-            for ((tag, d) in devices) for (lang in arrayOf("pl", "de")) {
+            val langs = System.getenv("CW_TEXT_LANGS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?.toTypedArray() ?: arrayOf("pl", "de")
+            for ((tag, d) in devices) for (lang in langs) {
                 val g = game(d[0].toInt(), d[1].toInt(), d[2], lang)
                 val es = BattleScreen(g, BattleConfig(Mode.ENDLESS, 2026L, 1f))
                 g.setScreen(es)
