@@ -50,8 +50,13 @@ internal object HintFrame {
                      hyphen: Boolean = false): Int {
         var n = 0
         var line = ""
-        for (word in s.split(' ')) {
-            if (word.isEmpty()) continue
+        val parts = s.split(' ')
+        for ((index, part) in parts.withIndex()) {
+            if (part.isEmpty() || (index > 0 && isGlued(part))) continue
+            // Noc 3: „12 %”, „expérience :” — znak po spacji (de/fr) nie zaczyna nowego wiersza.
+            var word = part
+            var k = index + 1
+            while (k < parts.size && isGlued(parts[k])) { word = word + " " + parts[k]; k++ }
             val combined = if (line.isEmpty()) word else "$line $word"
             if (line.isNotEmpty() && ui.measure(combined, size) > width) {
                 if (n == out.size) return n
@@ -73,6 +78,9 @@ internal object HintFrame {
         if (line.isNotEmpty() && n < out.size) out[n++] = line
         return n
     }
+
+    /** Krótki znak stawiany po spacji (francuskie „:”, „!”, niemieckie „%”) trzyma się poprzedniego słowa. */
+    private fun isGlued(part: String) = part.length in 1..2 && part.all { it in "%:;!?»" }
 
     private val sideOrder = IntArray(4)
 
