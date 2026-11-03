@@ -1089,9 +1089,10 @@ object Icons {
         for (i in 0..2) {
             val y = 0.62f - i * 0.5f
             p.reset()
-            p.moveTo(0.38f, y); p.lineTo(0.66f, y - 0.24f); p.lineTo(0.94f, y); p.lineTo(0.94f, y + 0.17f)
-            p.lineTo(0.66f, y - 0.07f); p.lineTo(0.38f, y + 0.17f); p.close()
-            shape(c, if (i == 2) GOLD_L else GOLD)
+            p.moveTo(0.3f, y); p.lineTo(0.66f, y - 0.3f); p.lineTo(1.02f, y); p.lineTo(1.02f, y + 0.3f)
+            p.lineTo(0.66f, y); p.lineTo(0.3f, y + 0.3f); p.close()
+            fillPath(c, if (i == 2) GOLD_L else GOLD)
+            outline(c, ow * 0.7f)
         }
     }
 
@@ -1112,8 +1113,8 @@ object Icons {
         line.strokeWidth = ow * 1.2f
         c.drawArc(r, 20f, 140f, false, line)
         c.save()
-        c.translate(0f, 0.08f)
-        c.scale(0.62f, 0.62f)
+        c.translate(0f, 0.06f)
+        c.scale(0.74f, 0.74f)
         crown(c)
         c.restore()
     }

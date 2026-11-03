@@ -41,7 +41,7 @@ class Content176ScreenshotTest {
         }
         val f = File.createTempFile("profile176", ".json").apply { delete() }
         val profile = Profile(f).apply {
-            this.lang = lang; tutorialDone = true; medals = 340
+            this.lang = lang; tutorialDone = true; hintsEnabled = false; medals = 340
             for (i in 0..Achievements.LATE_STAGE_INDEX) stars[i] = 2
             unlockedAchievements.add("commander_first")
             achievementCounters[AchievementMetric.COMMANDER_SUMMONED.name] = 1L
@@ -82,9 +82,14 @@ class Content176ScreenshotTest {
                 state.daily[1] = MissionItem("d_${day}_TURRET_TIERS", MissionType.TURRET_TIERS, 2, 12, progress = 1)
                 state.daily[2] = MissionItem("d_${day}_TOP_TIER_WINS", MissionType.TOP_TIER_WINS, 1, 16)
                 state.weekly[0] = MissionItem("w_${week}_COMMANDER_WINS", MissionType.COMMANDER_WINS, 4, 50, progress = 2)
+                // Losowanie mogło już dać ten typ w innym slocie; zrzut pokazuje go raz.
+                for (i in 1 until state.weekly.size) if (state.weekly[i].type == MissionType.COMMANDER_WINS)
+                    state.weekly[i] = MissionItem("w_${week}_BATTLES", MissionType.BATTLES, 12, 47)
 
                 val missions = MissionsScreen(g)
                 g.setScreen(missions)
+                g.finishScreenTransition()
+                scrollToEnd(missions)
                 shot(g, "content176_${tag}_${lang}_missions")
 
                 val ach = AchievementsScreen(g)
@@ -103,7 +108,10 @@ class Content176ScreenshotTest {
                 scrollToEnd(codex)
                 shot(g, "content176_${tag}_${lang}_codex_abilities")
 
-                g.setScreen(WhatsNewScreen(g))
+                val news = WhatsNewScreen(g)
+                g.setScreen(news)
+                g.finishScreenTransition()
+                scrollToEnd(news)
                 shot(g, "content176_${tag}_${lang}_whats_new")
             }
             assertTrue(File(out, "content176_phone720_pl_missions.png").isFile)
