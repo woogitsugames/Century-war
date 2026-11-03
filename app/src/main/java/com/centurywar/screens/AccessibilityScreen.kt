@@ -8,6 +8,7 @@ import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
 import com.centurywar.engine.Palette
+import com.centurywar.engine.RowNote
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
@@ -43,6 +44,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
     private var contentTop = 0f
     private var contentBottom = 0f
     private var dt = 0f
+    private val shakeNote = RowNote()
 
     override fun isDragScreen() = true
 
@@ -156,7 +158,7 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             ui.fit(sample, 16f, maxLabelW), Ui.TEXT, Paint.Align.CENTER)
 
         rowLabel(c, L["access_team_markers"], markers)
-        rowLabel(c, L["access_reduce_shake"], shake)
+        shakeRow(c, shake)
         rowLabel(c, L["access_reduce_flash"], flash)
         rowLabel(c, L["access_left_handed_hud"], leftHud)
         if (markers.visible) ui.button(c, markers, 14f)
@@ -170,6 +172,19 @@ class AccessibilityScreen(g: Game) : Screen(g) {
 
     private fun heading(c: Canvas, s: String, x: Float, y: Float, maxW: Float) {
         ui.textO(c, s, x, y, ui.fit(s, 18f, maxW), Ui.GOLD)
+    }
+
+    /** Noc 4: wiersz „Ogranicz potrząsanie” z podpisem o zależności od Ustawień. */
+    private fun shakeRow(c: Canvas, b: Button) {
+        val s = L["access_reduce_shake"]
+        val x = panel.left + 20f * dp
+        val avail = b.r.left - x - 10f * dp
+        val size = ui.fit(s, 15f, avail)
+        val lh = size * dp * ui.textScale * 1.1f
+        val note = shakeNote.layout(ui, L["access_reduce_shake_note"], avail, 2)
+        val top = b.r.centerY() - (lh + note.lineHeight(ui) * note.lines) / 2f
+        ui.textO(c, s, x, top + lh * 0.8f, size, Ui.TEXT)
+        note.draw(c, ui, x, top + lh + 1f * dp)
     }
 
     private fun rowLabel(c: Canvas, s: String, b: Button) {
