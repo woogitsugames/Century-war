@@ -1757,3 +1757,8 @@ liczbę kroków i zabójstwa; zmienia się tylko skrót zrzutu (`snapshotSha256`
 ma 4 dodatkowe stosy kart. Dni od premiery do `EVENTS_V3_DAY` mają te same wydarzenia
 (test `Content184Test.daysBeforeEventsV3KeepTheirEvents` z listą z HEAD sprzed zmiany).
 Karty nie występują w kampanii, więc jej balans się nie zmienia.
+Po regeneracji: we wszystkich 10 złotych powtórkach (także Endless i tydzień) wynik, zwycięzca,
+fala, kroki, zabójstwa i czas są identyczne; zmienił się wyłącznie `snapshotSha256` (format v20).
+Powtórki Endless/tygodnia kończą się przed pierwszą ofertą kart z nowymi pozycjami.
+
+- 2026-11-03 — regeneracja złotych powtórek: D6 184: nowe karty Endless, zestawy tygodnia, wydarzenia dnia, zrzut v20.
