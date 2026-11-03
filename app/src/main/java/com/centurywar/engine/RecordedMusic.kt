@@ -61,7 +61,7 @@ internal class RecordedMusic(
     private fun run() {
         val me = Thread.currentThread()
         try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) } catch (_: RuntimeException) { }
-        val mixer = RecordedMixer(catalogRef, factory, onBroken)
+        val mixer = RecordedMixer(catalogRef, factory, onBroken, RecordedMixer.LOOP_GAIN, RecordedMixer.STINGER_GAIN)
         var last = System.nanoTime()
         try {
             while (worker === me) {

@@ -27,10 +27,23 @@ internal class RecordedMixer(
     private val catalog: MusicCatalog,
     private val factory: TrackPlayerFactory,
     private val onBroken: (String) -> Unit = {},
+    /** Mnożnik pętli względem suwaka (na urządzeniu [LOOP_GAIN]; testy logiki: 1). */
+    private val loopGain: Float = 1f,
+    /** Mnożnik przerywnika względem suwaka (na urządzeniu [STINGER_GAIN]). */
+    private val stingerGain: Float = 1f,
 ) {
     companion object {
         const val NONE = Int.MIN_VALUE
         const val ERA_FADE_S = 2f
+        /**
+         * Poziom nagrań względem efektów. Pliki mają -16 LUFS, a efekty bitwy (SoundSynth przez
+         * Sound, suwak efektów 0,8) dają ok. -35 LUFS; MediaPlayer.setVolume jest liniowe. Przy
+         * suwaku muzyki 0,5 pętla ma więc -16 - 6 - 20 = ok. -42 LUFS, czyli ~7 dB pod efektami
+         * (pomiar w docs/music/README.md). Suwak 1,0 = -36 LUFS.
+         */
+        const val LOOP_GAIN = 0.1f
+        /** Przerywnik wyniku zastępuje efekt zwycięstwa/porażki: +6 dB nad pętlą. */
+        const val STINGER_GAIN = 0.2f
         /**
          * Start pętli z ciszy. Pliki nie mają już własnego wejścia (pętla jest zszyta
          * crossfade'em w pliku i zaczyna się w środku frazy), więc wejście robi mikser.
@@ -165,10 +178,10 @@ internal class RecordedMixer(
         }
 
         val vol = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 0f
-        val base = vol * duckLevel * loopLevel
+        val base = vol * loopGain * duckLevel * loopLevel
         current?.let { apply(it, base) }
         outgoing?.let { apply(it, base) }
-        stinger?.setVolume(vol)
+        stinger?.setVolume(vol * stingerGain)
     }
 
     private fun switchTo(target: Int) {
@@ -237,19 +250,26 @@ internal class BattleMixFollower {
         private set
     private var held = 0f
     private var hold = 0f
+    /** Podtrzymanie minęło i miks schodzi; tolerancja już go nie zatrzymuje. */
+    private var falling = false
 
     fun update(dt: Float, want: Float) {
         val w = if (want.isFinite()) want.coerceIn(0f, 1f) else 0f
-        if (w >= held - HOLD_TOLERANCE) {
-            if (w > held) held = w
+        if (w >= held) {
+            held = w
             hold = HOLD_S
-        } else if (hold > 0f) {
+            falling = false
+        } else if (!falling && w >= held - HOLD_TOLERANCE) {
+            hold = HOLD_S
+        } else if (!falling && hold > 0f) {
             hold -= dt
+            if (hold <= 0f) falling = true
         } else {
+            falling = true
             held = maxOf(w, held - dt / FALL_S)
         }
         value = if (held > value) minOf(held, value + dt / RISE_S) else held
     }
 
-    fun reset() { value = 0f; held = 0f; hold = 0f }
+    fun reset() { value = 0f; held = 0f; hold = 0f; falling = false }
 }

@@ -57,6 +57,24 @@ class RecordedMusicTest {
         assertTrue(f.live("era2_calm")!!.maintained > 20)
     }
 
+    @Test fun deviceGainsKeepMusicUnderEffects() {
+        val f = FakeFactory()
+        val m = RecordedMixer(catalog("menu", "victory"), f, {}, RecordedMixer.LOOP_GAIN, RecordedMixer.STINGER_GAIN)
+        m.run(1f, Music.MENU, volume = 0.5f)
+        val menu = f.live("menu")!!
+        assertEquals("suwak 0,5 x LOOP_GAIN", 0.05f, menu.level, 1e-4f)
+        // -16 LUFS pliku + 20 log10(0,05) = ok. -42 LUFS; efekty bitwy ok. -35 LUFS (README).
+        val lufs = -16f + 20f * kotlin.math.log10(menu.level)
+        assertTrue("muzyka 6-9 dB pod efektami: $lufs", -35f - lufs in 6f..9f)
+        m.run(1f, Music.MENU, volume = 1f)
+        assertEquals("suwak działa liniowo", 0.1f, menu.level, 1e-4f)
+        m.run(1f, Music.MENU, volume = 0f)
+        assertEquals(0f, menu.level, 0f)
+        assertTrue(m.playStinger(true))
+        m.run(0.2f, Music.MENU, volume = 0.5f)
+        assertEquals("przerywnik +6 dB nad pętlą", 0.1f, f.live("victory")!!.level, 1e-4f)
+    }
+
     @Test fun catalogListsAllSunoTracks() {
         assertEquals(21, MusicCatalog.ALL.size)
         assertTrue("menu" in MusicCatalog.ALL && "era8_battle" in MusicCatalog.ALL && "defeat" in MusicCatalog.ALL)

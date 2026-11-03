@@ -14,12 +14,12 @@ class ChainedLoopTest {
         var pos = 0
         var playing = false
         var released = false
-        var volume = -1f
+        var level = -1f
         var next: Seg? = null
         var loopInPlace = false
         var restarts = 0
         override fun start() { check(!released); playing = true }
-        override fun setVolume(value: Float) { check(!released) { "głośność po zwolnieniu $id" }; volume = value }
+        override fun setVolume(value: Float) { check(!released) { "głośność po zwolnieniu $id" }; level = value }
         override val isPlaying: Boolean get() = playing
         override val remainingMs: Int get() = lengthMs - pos
         override fun chain(next: LoopSegment?) {
@@ -74,9 +74,9 @@ class ChainedLoopTest {
         val first = o.all[0]
         val second = o.all[1]
         assertSame("połączone przez setNextMediaPlayer", second, first.next)
-        assertEquals("następnik ma bieżącą głośność", 0.4f, second.volume, 0f)
+        assertEquals("następnik ma bieżącą głośność", 0.4f, second.level, 0f)
         loop.setVolume(0.2f)
-        assertEquals(0.2f, second.volume, 0f)
+        assertEquals(0.2f, second.level, 0f)
         // 5 minut gry: kolejne okrążenia, zawsze najwyżej dwa odtwarzacze.
         var maxLive = 0
         repeat(300) { play(loop, o, 1); maxLive = maxOf(maxLive, o.live.size) }
