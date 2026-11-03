@@ -130,9 +130,17 @@ internal class BattleUpgradePanel(private val owner: BattleScreen) {
                     else panel.right - (20 + 54 + 4 + 64 + 4 + 64) * dp
                 y = panel.top + turretHeaderH + i * turretRowH + (turretRowH - bh) / 2f
             } else {
-                bw = 64 * dp; tw = 64 * dp; sw = 54 * dp
+                // Noc 3: w wąskim panelu (zewnętrzny Fold) przyciski stoją pod nazwą, więc dzielą całą
+                // szerokość wiersza; „Verkaufen 55” na 54 dp malało do 8 sp.
+                if (narrow) {
+                    // Do 80 dp: przycisk zostaje „pionowy” (ikona nad podpisem, Ui.button).
+                    bw = min(80 * dp, (pw - 34 * dp - 8 * dp) / 3f); tw = bw; sw = bw
+                    bx = panel.centerX() - (bw * 3f + 8 * dp) / 2f
+                } else {
+                    bw = 64 * dp; tw = 64 * dp; sw = 54 * dp
+                    bx = panel.right - (20 + 54 + 4 + 64 + 4 + 64) * dp
+                }
                 bh = min(48 * dp, (if (narrow) turretRowH - 50 * dp else turretRowH - 2 * dp).coerceAtLeast(0f))
-                bx = panel.right - (20 + 54 + 4 + 64 + 4 + 64) * dp
                 y = panel.top + turretHeaderH + i * turretRowH + turretRowH - bh - (if (narrow) 6 else 2) * dp
             }
             slotBuy[i].set(bx, y, bw, bh)

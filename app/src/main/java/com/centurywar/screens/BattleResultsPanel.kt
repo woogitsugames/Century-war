@@ -61,6 +61,11 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             val full = L["battle84_watch_replay"]
             if (current != full && current != L["replay"]) return current
             val r = replayEnd.r
+            // Noc 3: w wąskim panelu przycisk ma ikonę nad podpisem, jak Restart i Dalej.
+            if (r.width() <= r.height() * 1.7f) {
+                val size = REPLAY_LABEL_DP * 0.86f
+                return if (ui.fit(full, size, r.width() - 8 * dp) >= size * 0.75f) full else L["replay"]
+            }
             val avail = r.width() - r.height() * 0.88f - 16 * dp
             return if (ui.fit(full, REPLAY_LABEL_DP, avail) >= REPLAY_LABEL_DP * 0.75f) full else L["replay"]
         }
@@ -81,8 +86,12 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         // Przyciski i zakładki z odstępem od złotej lamówki ramki (Ui.PANEL_TRIM_INSET).
         val usable = rw - 40 * dp - gap * 2
         val bh = 50 * dp
-        val first = usable * 0.26f
-        val middle = usable * 0.44f
+        // Noc 3: gdy nawet krótka „Powtórka” obok ikony maleje poniżej 0,75 rozmiaru (zewnętrzny Fold,
+        // niemiecki), trzy równe przyciski z ikoną nad podpisem zamiast ~8 sp.
+        val sideAvail = usable * 0.44f - bh * 0.88f - 16 * dp
+        val tight = ui.fit(L["replay"], REPLAY_LABEL_DP, sideAvail) < REPLAY_LABEL_DP * 0.75f
+        val first = if (tight) usable / 3f else usable * 0.26f
+        val middle = if (tight) usable / 3f else usable * 0.44f
         restartEnd.set(resultPanel.left + 20 * dp, resultPanel.bottom - bh - 24 * dp, first, bh)
         replayEnd.set(restartEnd.r.right + gap, restartEnd.r.top, middle, bh)
         continueBtn.set(replayEnd.r.right + gap, restartEnd.r.top, usable - first - middle, bh)

@@ -245,9 +245,12 @@ class NewPlayerJourneyTest {
         }
         val r = bs.replayEnd
         if (r.visible) {
-            val avail = r.r.width() - r.r.height() * 0.88f - 16 * dp
-            val size = g.ui.fit(r.label, BattleResultsPanel.REPLAY_LABEL_DP, avail)
-            require9(size >= BattleResultsPanel.REPLAY_LABEL_DP * 0.75f,
+            // Noc 3: wąski panel ma ikonę nad podpisem (podpis 0,86 rozmiaru na całej szerokości).
+            val side = r.r.width() > r.r.height() * 1.7f
+            val base = BattleResultsPanel.REPLAY_LABEL_DP * (if (side) 1f else 0.86f)
+            val avail = if (side) r.r.width() - r.r.height() * 0.88f - 16 * dp else r.r.width() - 8 * dp
+            val size = g.ui.fit(r.label, base, avail)
+            require9(size >= base * 0.75f,
                 "$where: '${r.label}' na przycisku powtórki ma tylko ${"%.1f".format(size)} sp")
         }
         for (tab in listOf(bs.resultStatsTab, bs.resultChartTab)) {

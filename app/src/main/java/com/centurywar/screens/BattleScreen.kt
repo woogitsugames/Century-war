@@ -423,6 +423,17 @@ class BattleScreen(
         resultsView.layoutResults()
         val cw = min(230 * dp, (w - g.insetL - g.insetR - 60 * dp) / 3)
         val chH = min(218 * dp, (h - g.insetT - g.insetB) * 0.48f)
+        // Noc 3: na wąskim pionowym ekranie (zewnętrzny Fold, telefon w pionie) trzy karty w rzędzie
+        // miały ~90 dp i łamały opisy w pół słowa; tam karty stoją jedna pod drugą.
+        val availH = h - g.insetT - g.insetB
+        if (cw < 150 * dp && availH >= 520 * dp) {
+            val sw = min(340 * dp, w - g.insetL - g.insetR - 48 * dp)
+            val gap = 12 * dp
+            val sh = min(190 * dp, (availH * 0.62f - 2 * gap) / 3f)
+            val top = g.insetT + (availH - 3 * sh - 2 * gap) / 2f + 17 * dp
+            val left = (w + g.insetL - g.insetR - sw) / 2f
+            for (i in 0..2) doctrineBtn[i].set(left, top + i * (sh + gap), sw, sh)
+        } else
         for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
         val freeW = w - g.insetL - g.insetR - 50 * dp
         val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
@@ -1666,7 +1677,8 @@ class BattleScreen(
         c.drawColor(Color.argb(160, 0, 0, 0))
         ui.ribbon(c, w / 2, doctrineBtn[0].r.top - 34 * dp,
             if (cards == null) L["choose_doctrine"] else L["choose_card"],
-            22f, Ui.RIBBON, 300 * dp)
+            22f, Ui.RIBBON, min(300 * dp, w - g.insetL - g.insetR - 140 * dp), Ui.GOLD,
+            w - g.insetL - g.insetR - 130 * dp)
         for (i in 0..2) {
             val b = doctrineBtn[i]
             val off = if (b.pressed) 3 * dp else 0f

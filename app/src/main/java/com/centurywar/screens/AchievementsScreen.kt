@@ -29,6 +29,10 @@ class AchievementsScreen(g: Game) : Screen(g) {
     private val descriptions = Array(defs.size) { "" }
     private val rewardText = Array(defs.size) { "" }
     private val progressText = Array(defs.size) { "" }
+    /** Noc 3: opis, który w jednym wierszu zmalałby poniżej 10,5 sp, łamiemy na dwa wiersze. */
+    private val descLines = Array(defs.size) { arrayOfNulls<String>(3) }
+    private val descCount = IntArray(defs.size)
+    private val descSize = FloatArray(defs.size) { 11f }
     private val lastProgress = LongArray(defs.size) { -1L }
     private var completeText = ""
     private var lastComplete = -1
@@ -55,6 +59,16 @@ class AchievementsScreen(g: Game) : Screen(g) {
             names[i] = L["ach_" + a.id]
             descriptions[i] = L["ach_" + a.id + "_d"]
             rewardText[i] = "+" + a.medalReward
+        }
+        val textWidth = width - 24 * dp - 113 * dp
+        for (i in defs.indices) {
+            descCount[i] = 0
+            if (ui.fit(descriptions[i], 12f, textWidth) * ui.textScale >= 10.5f) continue
+            for (size in floatArrayOf(11f, 10.5f)) {
+                if (HintFrame.wrapHintInto(ui, descriptions[i], textWidth, size, descLines[i]) == 2) {
+                    descCount[i] = 2; descSize[i] = size; break
+                }
+            }
         }
         refreshProgress()
     }
@@ -126,11 +140,15 @@ class AchievementsScreen(g: Game) : Screen(g) {
         val title = if (hidden) L["achievement_hidden"] else names[i]
         val desc = if (hidden) L["achievement_hidden_desc"] else descriptions[i]
         ui.textO(c, title, tx, y + 24 * dp, ui.fit(title, 15f, textWidth), if (unlocked) Ui.GOLD else Ui.TEXT)
-        ui.text(c, desc, tx, y + 44 * dp, ui.fit(desc, 12f, textWidth), Ui.DIM)
+        val twoLines = !hidden && descCount[i] == 2
+        if (twoLines) {
+            ui.text(c, descLines[i][0] ?: "", tx, y + 41 * dp, descSize[i], Ui.DIM)
+            ui.text(c, descLines[i][1] ?: "", tx, y + 55 * dp, descSize[i], Ui.DIM)
+        } else ui.text(c, desc, tx, y + 44 * dp, ui.fit(desc, 12f, textWidth), Ui.DIM)
         if (!hidden) {
-            ui.bar(c, tx, y + 56 * dp, max(12 * dp, textWidth - 90 * dp), 7 * dp,
+            ui.bar(c, tx, y + (if (twoLines) 63 else 56) * dp, max(12 * dp, textWidth - 90 * dp), 7 * dp,
                 lastProgress[i].toFloat() / a.threshold.toFloat(), if (unlocked) Ui.GOOD else Ui.XP)
-            ui.textO(c, progressText[i], tx, y + 78 * dp, 11f, Ui.DIM)
+            ui.textO(c, progressText[i], tx, y + (if (twoLines) 81 else 78) * dp, 11f, Ui.DIM)
         }
         val right = row.right - 23 * dp
         Icons.draw(c, Icons.MEDAL, right, y + 30 * dp, 21 * dp, dp = dp)
