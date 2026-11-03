@@ -16,9 +16,12 @@ class CategoryTest(unittest.TestCase):
         rules = patterns()
         cases = {
             "com.centurywar.engine.LTest.languages": "fast",
-            "com.centurywar.screens.ScreenshotTest.menus": "screenshots",
+            "com.centurywar.screens.ScreenshotTestMenus.menus": "screenshots",
             "com.centurywar.screens.PrereleasePolishTest.prereleaseTour": "screenshots",
             "com.centurywar.screens.PrereleasePolishTest.replayDeleteNeedsSecondTap": "screenshots",
+            "com.centurywar.screens.PrereleasePolishFoldTest.prereleaseTour": "screenshots",
+            "com.centurywar.screens.ScreenshotTestRegression100.regression100": "screenshots",
+            "com.centurywar.game.DoctrineBalance82OddTest.allDoctrinesStayBetweenFortyAndSixtyFivePercent": "balance",
             "com.centurywar.screens.ScreenshotGoldenTest.identicalPixelsPass": "screenshots",
             "com.centurywar.game.ArtGalleryTest.gallery": "screenshots",
             "com.centurywar.game.BalanceReport.campaignReport": "balance",

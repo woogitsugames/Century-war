@@ -52,7 +52,7 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertIn("forkEvery = 1L", self.gradle)
         self.assertIn('maxHeapSize = "384m"', self.gradle)
         rules = (ROOT / "gradle/test-categories.properties").read_text(encoding="utf-8")
-        self.assertIn("*PrereleasePolishTest*", rules)
+        self.assertIn("*PrereleasePolish*", rules)
 
     def test_png_outputs_are_cached_and_checked_before_upload(self):
         self.assertIn('outputs.dir(layout.buildDirectory.dir("screenshots"))', self.gradle)

@@ -298,7 +298,7 @@ if (updateScreenshotsRequested) {
 // Wykorzystuje standardowy Robolectric, nie osobną konfigurację bez zasobów Androida.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     if (updateScreenshotsRequested && name == "testDebugUnitTest") {
-        filter { includeTestsMatching("com.centurywar.screens.ScreenshotTest.regression100") }
+        filter { includeTestsMatching("com.centurywar.screens.ScreenshotTestRegression100.regression100") }
         systemProperty("cw.screens.update", "true")
         systemProperty("cw.screens.reason", screenshotReason)
         outputs.upToDateWhen { false }

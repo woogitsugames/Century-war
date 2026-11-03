@@ -33,7 +33,7 @@ jobs:
       - name: Testy tłumaczeń, profilu i chmury
         run: ./gradlew :app:testDebugUnitTest --tests '*LTest*' --tests '*ProfileTest*' --tests '*ProfileCloudTest*' --no-configuration-cache --console=plain
       - name: Zrzuty nowych ekranów Play Games
-        run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.playGamesMenus*' --no-configuration-cache --console=plain
+        run: ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTestMenus.playGamesMenus*' --no-configuration-cache --console=plain
       - name: Dołącz zrzuty interfejsu
         if: always()
         uses: actions/upload-artifact@v4

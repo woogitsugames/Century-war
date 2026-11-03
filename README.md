@@ -30,7 +30,7 @@ Fold 2184×1968. Łącznie **30 wersjonowanych PNG** w
 
 ```bash
 # Sprawdzenie wzorców (odchylenia kończą się błędem testu):
-./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest.regression100*' \
+./gradlew :app:testDebugUnitTest --tests '*ScreenshotTestRegression100*' \
   --tests '*ScreenshotGoldenTest*' --console=plain --no-configuration-cache
 
 # Świadoma zmiana wzorców, dopiero po zatwierdzeniu nowego wyglądu:

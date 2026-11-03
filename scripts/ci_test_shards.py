@@ -10,7 +10,8 @@ from pathlib import Path
 
 
 TEST_ROOT = Path(__file__).resolve().parents[1] / "app/src/test/java"
-SCREENSHOTS = "com.centurywar.screens.ScreenshotTest"
+# Długie metody zrzutów bitew i samouczka; od nocy 9 w ScreenshotTestBattle (podział ScreenshotTest).
+SCREENSHOTS = "com.centurywar.screens.ScreenshotTestBattle"
 HEAVY_SCREEN_METHODS = {"screens", "tutorial"}
 VISUAL_CLASSES = {
     "ArtGalleryTest",
