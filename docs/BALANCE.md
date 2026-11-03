@@ -1464,3 +1464,5 @@ Bez wyraźnych zmian w kampanii (różnice ±2 bitwy na 100; mediany czasu ±0,5
 
 - 2026-11-02 — regeneracja złotych powtórek: Tura 10: warianty Pary i Krzemu (163).
 - 2026-11-03 — regeneracja złotych powtórek: format zrzutu bitwy v17 (identyfikator rozliczenia, A156-10). Zmieniły się wyłącznie skróty `snapshotSha256`; wyniki, logi i stany symulacji bez zmian.
+
+- 2026-11-03 — regeneracja złotych powtórek: Tura 10: snapshot v17 po scaleniu z 163.
