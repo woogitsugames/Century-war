@@ -14,7 +14,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * Fokus audio: gra z własną muzyką bierze AUDIOFOCUS_GAIN (inne odtwarzacze pauzują),
+ * Fokus audio: gra z własną muzyką bierze AUDIOFOCUS_GAIN, ale gdy cudza muzyka już gra, nie przerywa jej;
  * ale przy głośności muzyki 0 w ogóle o niego nie prosi i oddaje go od razu po ściszeniu,
  * więc Spotify i inne aplikacje grają dalej.
  */
@@ -83,6 +83,23 @@ class MusicAudioFocusTest {
             val req = shadowOf(am).lastAudioFocusRequest!!.audioFocusRequest
             m.pause()
             assertSame(req, shadowOf(am).lastAbandonedAudioFocusRequest)
+        } finally { m.release() }
+    }
+
+    @Test fun otherAppMusicIsNotInterrupted() {
+        val m = music()
+        try {
+            m.setVolume(0.5f)
+            shadowOf(am).setIsMusicActive(true)
+            m.resume()
+            m.setEra(2)
+            m.setVolume(0.7f)
+            assertNull("cudza muzyka gra: bez żądania fokusu", shadowOf(am).lastAudioFocusRequest)
+            // Gracz wyłączył Spotify i wrócił do gry: muzyka gry wraca.
+            m.pause()
+            shadowOf(am).setIsMusicActive(false)
+            m.resume()
+            assertNotNull(shadowOf(am).lastAudioFocusRequest)
         } finally { m.release() }
     }
 }

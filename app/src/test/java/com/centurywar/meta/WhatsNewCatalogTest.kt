@@ -78,8 +78,8 @@ class WhatsNewCatalogTest {
     }
 
     @Test fun currentNotesDescribeRecentFeatures() {
-        assertEquals(listOf("wn_135_modes", "wn_135_profile", "wn_135_access", "wn_145_battle", "wn_170_content",
-            "wn_176_content"),
+        assertEquals(listOf("wn_176_content", "wn_170_content", "wn_145_battle", "wn_135_access", "wn_135_profile",
+            "wn_135_modes"),
             WhatsNewCatalog.forVersion(version)!!.textKeys)
     }
 

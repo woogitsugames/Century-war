@@ -53,6 +53,12 @@ class Music internal constructor(
 
     private var focusLost = false
     private var focusHeld = false
+    /**
+     * Decyzja właściciela 3.11: gdy przy wejściu do gry gra już cudza muzyka (np. Spotify),
+     * muzyka gry milknie i nie zabiera fokusu; efekty dźwiękowe grają dalej. Sprawdzane przy każdym
+     * powrocie na pierwszy plan.
+     */
+    private var yieldToOther = false
     private val focusRequest: AudioFocusRequest? = audio?.let {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(AudioAttributes.Builder()
@@ -68,6 +74,7 @@ class Music internal constructor(
         foreground = true
         // Po trwałej utracie fokusu powrót do gry prosi o niego ponownie.
         if (focusLost) { focusLost = false; focusHeld = false }
+        yieldToOther = !focusHeld && otherAppPlaying()
         sync()
     }
 
@@ -152,6 +159,9 @@ class Music internal constructor(
         sync()
     }
 
+    private fun otherAppPlaying(): Boolean =
+        try { audio?.isMusicActive == true } catch (_: RuntimeException) { false }
+
     /** Fokus audio trzymany tylko, gdy muzyka ma grać; bez AudioManagera (testy) pomijany. */
     private fun syncFocus(want: Boolean) {
         val am = audio ?: return
@@ -169,7 +179,7 @@ class Music internal constructor(
     }
 
     private fun sync() {
-        val base = foreground && !released && volume > 0f
+        val base = foreground && !released && volume > 0f && !yieldToOther
         syncFocus(base)
         val want = base && !focusLost
         val rec = recorded

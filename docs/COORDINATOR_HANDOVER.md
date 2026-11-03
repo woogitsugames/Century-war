@@ -1,6 +1,9 @@
 # SESJA 3.11.2026 po południu (nowy koordynator)
 - **Tryb (decyzja właściciela 3.11 ok. 15:00 UTC): do 2 agentów opus naraz, ciągle coś zlecać; jeden może być od ciągłego researchu.** Budzenie koordynatora: zaplanowane zadania :07 i :37 (trig_019iEZV9uBTiJzAhkVqdaR1m, trig_012Lu7xBxbPkWWLNivKj4zSE).
 - W toku: `claude/dzien-4-przeglad` (zegar pod minimapą na zewnętrznym Foldzie przy presji + przegląd po dniach 1–3, raport `docs/reports/day4-review.md`), `claude/research-1` (ciągły research: `docs/research/R1-backlog.md` — TOP 10 do zlecenia; wymagania Play 2026, retencja, dostępność, wydajność, zawartość).
+- **3.11 ok. 17:15 UTC: właściciel prosi o 1 agenta opus przez 3 h (limit 5-godzinny). Do ok. 20:15 UTC tylko jeden agent; potem znów do 2.**
+- Decyzje właściciela 3.11 po południu: „Co nowego” najnowsze na górze + tytuł „Co nowego” z menu (zrobione przez koordynatora); muzyka gry nie przerywa cudzej muzyki (zrobione: `Music.yieldToOther`); R2-02 najpierw badanie, potem Łatwy; R2-03 ustawienia z telefonu także w obecnych profilach (chyba że zmienione ręcznie) + bitwa ×½ z TalkBack.
+- Gotowe zlecenia (kolejność): D5 TalkBack (w toku, `claude/dzien-5-talkback`) → R2-03 → R2-05 → R2-04 → R2-01 → R2-02 → D6 zawartość (`docs/tasks/D6-content.md`) → D7 grafiki sklepu; R5-server-hardening po decyzjach właściciela o serwerze (`docs/research/R5-server.md`, 6 pytań).
 - Następne części tekstów: part177 zajęte przez dzień 4; kolejna wolna 178.
 
 # PRZEKAZANIE 3.11.2026 ok. 13:50 UTC (koniec limitu tygodniowego starej sesji)

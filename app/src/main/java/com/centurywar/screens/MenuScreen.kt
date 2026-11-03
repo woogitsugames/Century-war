@@ -616,7 +616,7 @@ class MenuScreen(g: Game) : Screen(g) {
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
             9 -> g.push(MissionsScreen(g))
-            WHATS_NEW -> g.push(WhatsNewScreen(g))
+            WHATS_NEW -> g.push(WhatsNewScreen(g, fromMenu = true))
         }
     }
 }

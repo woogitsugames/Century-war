@@ -15,7 +15,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 /** Krótka lista zmian po aktualizacji; z O grze dostępne jest pełne archiwum. */
-class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g) {
+/** [fromMenu]: wejście przyciskiem „Co nowego” w menu — taki sam tytuł jak przycisk (decyzja właściciela 3.11). */
+class WhatsNewScreen(
+    g: Game,
+    private val automatic: Boolean = false,
+    private val fromMenu: Boolean = false,
+) : Screen(g) {
     override val crashName get() = "WhatsNewScreen"
     override val blocksNotices get() = true
 
@@ -136,7 +141,7 @@ class WhatsNewScreen(g: Game, private val automatic: Boolean = false) : Screen(g
         bg.draw(c, w, h, dt)
         chrome.dim(c, 125)
         ui.panel(c, panel)
-        chrome.title(c, L[if (automatic) "wn_title" else "wn_history"])
+        chrome.title(c, L[if (automatic || fromMenu) "wn_title" else "wn_history"])
 
         val saved = c.save()
         c.clipRect(panel.left + 9 * dp, contentTop, panel.right - 9 * dp, contentBottom)

@@ -13,15 +13,18 @@ object WhatsNewCatalog {
 
     private val LINE = Regex("""^v?(\d+)\.(\d+)(?:[.\-+].*)?$""")
 
-    /** Najnowsze wydania na początku. Identyfikator to „major.minor” (notesKey(versionName)). */
+    /**
+     * Najnowsze wydania na początku, a w wydaniu najnowsze wpisy na górze (decyzja właściciela 3.11).
+     * Identyfikator to „major.minor” (notesKey(versionName)).
+     */
     val releases: List<Release> = listOf(
         Release("0.1", listOf(
-            "wn_135_modes",
-            "wn_135_profile",
-            "wn_135_access",
-            "wn_145_battle",
-            "wn_170_content",
             "wn_176_content",
+            "wn_170_content",
+            "wn_145_battle",
+            "wn_135_access",
+            "wn_135_profile",
+            "wn_135_modes",
         )),
     )
 
