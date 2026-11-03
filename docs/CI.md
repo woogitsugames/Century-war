@@ -34,8 +34,10 @@ wariantów AGP. `fast-tests` sprawdza `:app:test --dry-run` i odrzuca
 `testReleaseUnitTest` oraz `releaseChecklist`. Testy buildSrc
 uwzględniają 71 wymaganych kluczy Play Games.
 
-Robolectric: `maxHeapSize=384m`, `forkEvery=1`, maksymalnie 2 forki.
-Test `PrereleasePolishTest` należy do `screenshots`, nie do `fast`.
+Robolectric (noc 9): `maxHeapSize=768m`, okresowy GC (`-XX:G1PeriodicGCInterval=2000`),
+`forkEvery=50`, domyślnie 4 procesy (nie więcej niż rdzeni, `-PtestForks=N`).
+Szczegóły i pomiary: [TEST_SPEED.md](TEST_SPEED.md), sekcja „Noc 9”.
+Klasy `PrereleasePolish*` należą do `screenshots`, nie do `fast`.
 Audyt 156 potwierdził zaliczone **osobne** kategorie przy 8 GiB,
 jednym forku i takiej izolacji (fast: 8 min 22 s;
 screenshots: 9 min 48 s). **To nie jest aktualny pomiar
@@ -45,8 +47,8 @@ pełnego `:app:testDebugUnitTest`.**
 # Pełny pomiar pod limitem 8 GiB:
 ./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache --max-workers=1 -PtestForks=1
 
-# Pełny pomiar na hoście 16 GiB:
-./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache -PtestForks=2
+# Pełny pomiar na hoście 16 GiB (domyślnie 4 procesy):
+./gradlew :app:testDebugUnitTest --console=plain --no-configuration-cache
 ```
 
 ### Zrzuty PNG (A156-27)
@@ -99,9 +101,9 @@ Pełny lokalny zestaw nie jest zastępowany tym zadaniem:
 ```
 
 Własność `-PtestForks=1` ogranicza testy do jednego procesu JVM.
-Domyślnie są maksymalnie dwa procesy testowe po 384 MiB sterty,
-`forkEvery=1` klas. Dzięki temu testy nie zajmują niekontrolowanie
-pamięci na maszynach z 8–16 GB RAM. `quickCheck` filtruje
+Domyślnie są maksymalnie cztery procesy testowe (nie więcej niż rdzeni)
+po 768 MiB sterty z okresowym GC; każdy zajmuje do ok. 2 GB RSS.
+Na maszynie z 8 GB RAM użyj `-PtestForks=2` (lub `1`). `quickCheck` filtruje
 `testDebugUnitTest` **tylko wtedy, gdy uruchomiono zadanie quickCheck**;
 nie należy łączyć obu nazw zadań w jednej komendzie, jeżeli potrzebny
 jest pełny przebieg.

@@ -49,8 +49,10 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertIn("testReleaseUnitTest|releaseChecklist", self.job("fast-tests"))
 
     def test_memory_limit_and_heavy_screenshots_are_isolated(self):
-        self.assertIn("forkEvery = 1L", self.gradle)
-        self.assertIn('maxHeapSize = "384m"', self.gradle)
+        # Noc 9: okresowy GC zwalnia natywne bitmapy Robolectric, procesy nie rosną do 7 GB.
+        self.assertIn('"-XX:G1PeriodicGCInterval=2000"', self.gradle)
+        self.assertIn("?: 50L).coerceAtLeast(1L)", self.gradle)
+        self.assertIn('maxHeapSize = "768m"', self.gradle)
         rules = (ROOT / "gradle/test-categories.properties").read_text(encoding="utf-8")
         self.assertIn("*PrereleasePolish*", rules)
 

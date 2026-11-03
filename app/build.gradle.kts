@@ -200,20 +200,24 @@ fun categoryPatterns(category: String): List<String> =
 val screenshotTestPatterns = categoryPatterns("screenshots")
 val balanceTestPatterns = categoryPatterns("balance")
 
-// Limit dwóch procesów JVM i pamięci, również na komputerach z 8 GB RAM.
+// Procesy testowe aplikacji: liczba, wymiana i pamięć (noc 9, pomiary w docs/TEST_SPEED.md).
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    // Gradle rozdaje klasy procesom po kolei (round robin), nie według czasu; ciężkie testy są
+    // więc podzielone na czwórki sąsiednich klas (ScreenshotTest*, FirstHourJourney*,
+    // PrereleasePolish*, DoctrineBalance82*), równe dla 1, 2 i 4 procesów.
+    // Domyślnie 4 procesy (nie więcej niż rdzeni); na 8 GiB RAM użyj -PtestForks=2.
     val configuredForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()
-    maxParallelForks = (configuredForks ?: 2).coerceIn(1, 4)
-    // Robolectric zatrzymuje pamięć natywną bitmap, więc proces testowy wymieniamy
-    // co 12 klas (kompromis właściciela, 3.11.2026): forkEvery=1 trwało ok. 16 min,
-    // forkEvery=40 kończyło się OOM (137). Przy 12 klasach i 768 MiB sterty pełne
-    // :app:testDebugUnitTest :sim:test :server:test trwa ok. 13 min (4 CPU / 15 GB,
-    // szczyt ok. 12,3 GB zajętej pamięci kontenera, bez 137); 20 klas: 12,5 min, 13,1 GB.
-    // Pomiary i uzasadnienie: docs/TEST_SPEED.md, „Kompromis forkEvery”.
-    // Na 8 GiB użyj -PtestForks=1 -PtestForkEvery=4; -PtestForkEvery=1 izoluje każdą klasę.
-    forkEvery = (providers.gradleProperty("testForkEvery").orNull?.toLongOrNull() ?: 12L).coerceAtLeast(1L)
-    maxHeapSize = providers.gradleProperty("testHeap").orNull ?: "768m"
-    providers.gradleProperty("testJvmArgs").orNull?.split(' ')?.filter { it.isNotBlank() }?.let { jvmArgs(it) }
+    val cpus = Runtime.getRuntime().availableProcessors()
+    maxParallelForks = (configuredForks ?: 4).coerceIn(1, 4).coerceAtMost(cpus.coerceAtLeast(1))
+    // Natywne bitmapy Robolectric zwalnia dopiero GC obiektu Javy; sterta prawie nie rośnie,
+    // więc bez wymuszenia proces urastał do 7,7 GB RSS (dlatego wcześniej forkEvery=12).
+    // Okresowy cykl G1 (gdy przez 2 s nie było GC) trzyma proces poniżej ok. 2 GB RSS
+    // bez zmiany czasu testów.
+    jvmArgs("-XX:+UseG1GC", "-XX:G1PeriodicGCInterval=2000")
+    // Przy okresowym GC proces nie musi być wymieniany: 50 klas to tylko bezpiecznik
+    // (dziś ok. 35 klas na proces). -PtestForkEvery=1 izoluje każdą klasę.
+    forkEvery = (providers.gradleProperty("testForkEvery").orNull?.toLongOrNull() ?: 50L).coerceAtLeast(1L)
+    maxHeapSize = "768m"
     testLogging.showStandardStreams = providers.environmentVariable("PERF_REPORT").orNull == "true"
 
     if (name == "testDebugUnitTest") {

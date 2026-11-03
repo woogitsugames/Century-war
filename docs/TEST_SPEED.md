@@ -175,6 +175,8 @@ Zasady wydania na tagu i cache PNG: [CI.md](CI.md).
 
 ## Kompromis forkEvery (3.11.2026, decyzja właściciela)
 
+> **Nieaktualne od nocy 9** — obecna konfiguracja i pomiary: sekcja „Noc 9” niżej.
+
 `forkEvery=1` (każda klasa testowa Androida w nowym procesie JVM) był bezpieczny pamięciowo,
 ale pełny zestaw trwał ok. **16 min**. Obecnie `app/build.gradle.kts` wymienia proces
 testowy **co 12 klas** przy stercie **768 MiB** i dwóch równoległych procesach.
@@ -196,3 +198,91 @@ dalsze skracanie wymaga podzielenia tych klas (zwłaszcza `ScreenshotTest`), nie
 
 Nadpisanie bez edycji pliku: `-PtestForkEvery=N` (np. `-PtestForkEvery=1` do izolacji
 podejrzanego testu, `-PtestForks=1 -PtestForkEvery=4` na komputerze z 8 GiB).
+
+## Noc 9: równy podział na procesy i okresowy GC (3.11.2026)
+
+**Wynik:** pełne `:app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun --continue`
+na 4 CPU / 15 GB: **11 min 38 s → ok. 5 min 35 s**, szczyt zajętej pamięci kontenera
+**10,5 GB → ok. 8 GB**, największy proces testowy **7,7 GB → ok. 1,4 GB RSS**.
+Żaden test nie został usunięty ani osłabiony; liczba metod rośnie (617 → 626), bo podzielone
+pętle są osobnymi metodami.
+
+### Przyczyny wolnego przebiegu
+
+1. **Gradle nie równoważy czasu.** `maxParallelForks` rozdaje klasy procesom po kolei
+   (round robin) w kolejności skanowania katalogów (pliki przed podkatalogami, alfabetycznie).
+   Przed zmianą proces 0 dostał 663 s pracy (m.in. `ScreenshotTest` 230 s, `FirstHourJourneyTest`
+   124 s, `PrereleasePolishTest` 79 s, `DoctrineBalance82Test` 77 s), a proces 1 — 186 s:
+   od 193. sekundy pracował tylko jeden proces. Sprawdzone na XML (`timestamp`, `time`)
+   symulacją przydziału — zero kolizji w obrębie procesu.
+2. **Natywne bitmapy Robolectric zwalnia dopiero GC obiektu Javy.** Obiekty Javy są małe, sterta
+   768 MiB prawie się nie zapełnia, więc GC prawie nie działa, a pamięć natywna rośnie
+   (`PrereleasePolish*` na Foldzie: ok. 75 MB/s, proces do **7,7 GB RSS**). To był powód
+   `forkEvery=12` i ryzyka OOM.
+
+### Zmiany
+
+- **Czwórki sąsiednich klas.** Ciężka praca jest w czterech klasach o sąsiednich nazwach;
+  przy 1, 2 lub 4 procesach każdy dostaje równą część, niezależnie od reszty listy:
+  - `ScreenshotTest` → `ScreenshotTestBattle`, `ScreenshotTestFold`, `ScreenshotTestLayout`,
+    `ScreenshotTestMenus` (podział mechaniczny, wspólne narzędzia w abstrakcyjnej
+    `ScreenshotTestBase`; metody, nazwy PNG i wzorce `src/test/resources/screens/` bez zmian;
+    `regression100` jest w `ScreenshotTestMenus`, `updateScreenshots` filtruje
+    `com.centurywar.screens.ScreenshotTestMenus.regression100`);
+  - `FirstHourJourneyTest` → baza `FirstHourJourneyBase` i klasy `FirstHourJourneyTest`
+    (telefon, pl + przerwany samouczek), `…OddTest` (telefon, en), `…FoldTest`, `…FoldOddTest`
+    (Fold zewnętrzny); `CW_TEXT_LANGS` dzieli się na języki z parzystych i nieparzystych pozycji;
+    dziennik `fh_audit_<urządzenie>_<języki>.txt` zamiast jednego `fh_audit.txt`;
+  - `PrereleasePolishTest` → baza `PrereleasePolishBase`, po jednym urządzeniu na klasę
+    (`PrereleasePolishTest` = 720p + dwa krótkie testy, `…Phone20x9Test`, `…FoldOuterTest`,
+    `…FoldInnerTest`); raporty `pre10_audit_<urządzenie>.txt`; kategoria `*PrereleasePolish*`;
+  - `DoctrineBalance82Test` → baza `DoctrineBalance82Base`, doktryny `index % 4`
+    (`DoctrineBalance82Test`, `…Mod1Test`, `…Mod2Test`, `…Mod3Test`); te same seedy i progi,
+    workflow `sim-balance-82.yml` filtruje `*DoctrineBalance82*`.
+- **Okresowy GC** w procesach testowych aplikacji: `-XX:+UseG1GC -XX:G1PeriodicGCInterval=2000`
+  (cykl G1, gdy przez 2 s nie było GC). `PrereleasePolishFoldTest` osobno: 3,0 GB → 0,77 GB RSS,
+  czas bez zmian (79 s oba przebiegi).
+- **`forkEvery=50`** (bezpiecznik; dziś ok. 35 klas na proces, więc bez wymiany) i
+  **domyślnie 4 procesy** (`maxParallelForks`, nie więcej niż rdzeni; `-PtestForks=N`, 1–4).
+  Na komputerze z 8 GiB: `-PtestForks=2`.
+
+### Pomiary (4 CPU, 15 GB, `free -m` i RSS procesów „Gradle Test Executor” co 5 s)
+
+| Przebieg | Procesy | forkEvery | GC | Czas ścienny | Szczyt zajętej pamięci | Największy proces |
+|---|---:|---:|---|---:|---:|---:|
+| przed zmianą (z kompilacją testów z cache) | 2 | 12 | — | **698 s** | 10,5 GB | — |
+| pary klas | 2 | 12 | — | 500 s¹ | 11,9 GB | 7,7 GB |
+| pary klas | 2 | 12 | okresowy | 480 s | 5,1 GB | 1,2 GB |
+| pary klas | 2 | bez wymiany | okresowy | 427 s | 6,3 GB | 1,8 GB |
+| pary klas | 4 | bez wymiany | okresowy | 363 s | 8,1 GB | 2,0 GB |
+| czwórki klas | 3 | bez wymiany | okresowy | 373 s | 7,4 GB | 1,8 GB |
+| czwórki klas | 4 | bez wymiany | okresowy | 335 s¹ | 8,0 GB | 1,4 GB |
+
+¹ z kompilacją zmienionych testów (ok. 40–60 s). „Bez wymiany”: `-PtestForkEvery=1000`.
+Zajętość obejmuje demony Gradle i Kotlin (ok. 2–3,4 GB przed startem testów).
+Przy czterech procesach sumaryczny czas metod rośnie o ok. 30% (rywalizacja o 4 rdzenie),
+ale czas ścienny i tak spada. Trzy procesy są gorsze od czterech: czwórki klas
+nie dzielą się równo na trzy.
+
+**Dysk:** każdy proces Robolectric rozpakowuje ok. 203 MB natywnego środowiska do
+`/tmp/robolectric-nativeruntime*`, a jeden przebieg zapisuje w lokalnym build cache
+ok. 840 MB (katalog `app/build/screenshots` jest wyjściem zadania). Przy prawie pełnym dysku
+testy padają na `FileSystemException`/`UnsatisfiedLinkError` — to nie są błędy testów.
+
+### Jak sprawdzić równowagę po dodaniu ciężkiej klasy
+
+Kolejność przydziału to posortowane nazwy (pliki przed podkatalogami pakietu), a proces to
+`indeks % liczba procesów`. Nowy test trwający ponad ok. 30 s warto od razu rozbić na cztery
+sąsiednie klasy (wspólna abstrakcyjna baza, bez `@Test` w bazie), jak powyżej.
+`python3 scripts/ci_test_timings.py app/build/test-results/testDebugUnitTest --top 20`
+pokazuje najdłuższe klasy.
+
+### Seedy w testach ścieżek
+
+`FirstHourJourneyTest` uruchamia potyczkę i Endless przyciskiem z UI, a gra bierze wtedy
+seed z `System.nanoTime()` (`ModeScreen`, `SkirmishSetupScreen`). We wszystkich pełnych
+przebiegach tej nocy (2–4 procesy, poza jednym przerwanym przez pełny dysk) wszystkie klasy `FirstHourJourney*` przeszły, a asercje
+ścieżki nie zależą od wyniku tych bitew (Endless kończy się poddaniem po 15 min). Podmiana
+ekranu bitwy na inny seed po dotknięciu przycisku zmieniłaby przebieg (zapowiedź epoki,
+zapis bitwy), więc seedy zostały bez zmian; niestabilności nie zaobserwowano.
+
