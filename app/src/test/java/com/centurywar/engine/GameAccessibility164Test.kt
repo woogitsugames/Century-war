@@ -41,8 +41,8 @@ class GameAccessibility164Test {
         private val canvas = Canvas(bitmap)
         val provider get() = view.accessibilityNodeProvider!!
 
-        fun frame() {
-            game.frame(canvas, 0f)
+        fun frame(dt: Float = 0f) {
+            game.frame(canvas, dt)
             view.refreshAccessibilityNodes()
         }
 
@@ -166,24 +166,39 @@ class GameAccessibility164Test {
         } finally { f.finish() }
     }
 
+    /** Dzień 5: poza pauzą HUD ma osobne węzły; pauza nadal ma tylko pięć kontrolek, wyniki mają opis. */
     @Test fun battleExposesOnlyPauseUntilPausedAndThenOnlyFiveControls() {
         val f = setup()
         try {
             val battle = BattleScreen(f.game, BattleConfig(Mode.SKIRMISH, 7L, 1f))
             f.game.setScreen(battle)
             f.frame()
-            assertEquals(1, f.childCount())
-            assertNotNull(f.node(0))
-            assertEquals("android.widget.Button", f.node(0)!!.className.toString())
-            f.press(0)
+            val pauseId = GameAccessibility.BTN_BASE + BattleScreen.PAUSE
+            assertNotNull(f.node(pauseId))
+            assertEquals("android.widget.Button", f.node(pauseId)!!.className.toString())
+            assertTrue(f.childCount() > 5)
+            f.press(pauseId)
             assertTrue(battle.paused)
             assertEquals(5, f.childCount())
-            assertNull("Po otwarciu pauzy nie może pozostać węzeł bitwy", f.node(0))
+            assertNull("Po otwarciu pauzy nie może pozostać węzeł HUD", f.node(pauseId))
             val resumeId = f.buttonId(BattleScreen.RESUME)
             assertTrue(f.node(resumeId)!!.contentDescription.toString().contains(L["resume"]))
             f.press(resumeId)
             assertFalse(battle.paused)
-            assertEquals(1, f.childCount())
+            assertNotNull(f.node(pauseId))
+
+            // Koniec bitwy: opis wyniku i przyciski wyników.
+            f.press(pauseId)
+            f.press(f.buttonId(BattleScreen.QUIT))
+            repeat(12) { f.frame(0.1f) }
+            assertTrue(battle.finished)
+            val result = f.node(GameAccessibility.INFO_RESULT)
+            assertNotNull(result)
+            assertTrue(result!!.contentDescription.toString().isNotBlank())
+            val cont = f.node(GameAccessibility.BTN_BASE + BattleScreen.CONTINUE)
+            assertNotNull(cont)
+            assertTrue(cont!!.contentDescription.toString().contains(L["continue"]))
+            assertNull(f.node(pauseId))
         } finally { f.finish() }
     }
 

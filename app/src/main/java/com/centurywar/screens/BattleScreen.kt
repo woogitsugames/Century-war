@@ -1099,6 +1099,60 @@ class BattleScreen(
         else -> super.accessibilityLabel(b)
     }
 
+    // ---------------------------------------------------------------- czytnik ekranu (Dzień 5)
+
+    internal val hintOkBtn: Button get() = hints.okBtn
+    internal val hintAccessibilityText: String get() = hints.accessibilityBody
+    internal val eraIntroActive: Boolean get() = eraIntro?.active == true
+    internal val eraIntroAccessibilityText: String get() = eraIntro?.accessibilityText ?: ""
+
+    /** Nazwa, rzadkość i opis karty lub doktryny; ten sam opis co na karcie wyboru. */
+    internal fun choiceAccessibilityText(i: Int): String {
+        val card = battle.pendingCards?.getOrNull(i)
+        val doctrine = battle.pendingChoice?.getOrNull(i)
+        if (card == null && doctrine == null) return ""
+        val name = L[card?.textKey ?: doctrine!!.key]
+        val desc = L[choiceDescriptionKey(card, doctrine)]
+        return if (card != null) "$name, ${rarityLabel(card.rarity)}. $desc" else "$name. $desc"
+    }
+
+    internal fun variantAccessibilityText(i: Int): String {
+        val era = battle.pendingVariant ?: return ""
+        val variant = Defs.spec(era).variants.getOrNull(i) ?: return ""
+        return L[variant.nameKey] + ". " + L[variant.descKey]
+    }
+
+    /**
+     * Ostrzał z akcji czytnika ekranu, bez przeciągania: ten sam wybór celu
+     * ([BarrageAiming.snapBarrageTarget], z omijaniem własnych jednostek) i ta sama komenda
+     * co po przeciągnięciu celownika, więc powtórka jest zgodna. true = ostrzał wystrzelił.
+     */
+    internal fun accessibilityBarrage(mode: Int): Boolean {
+        if (paused || finished || eraIntro?.active == true || battle.pendingVariant != null ||
+            battle.pendingChoice != null || battle.pendingCards != null || showUpgrade >= 0) return false
+        val p = battle.player
+        if (!barrageBtn.visible || !battle.abilityReady(p, 0)) return false
+        val t = tut
+        if (t != null && !t.allows(barrageBtn)) return false
+        hints.onAction()
+        aimingBarrage = false
+        val x = when (mode) {
+            BattleAccessibility.BARRAGE_FRONT -> {
+                var nearest = Float.NaN
+                for (u in battle.units) {
+                    if (!u.alive || u.side != 1) continue
+                    if (battle.fog && !p.fogSight && u.x - p.front > 650f) continue
+                    if (nearest.isNaN() || u.x < nearest) nearest = u.x
+                }
+                if (nearest.isNaN()) p.front + 400f else nearest
+            }
+            BattleAccessibility.BARRAGE_BASE -> p.baseFront + 260f
+            else -> p.front + 400f
+        }
+        barrageView.fireAimedBarrage(barrageView.snapBarrageTarget(x))
+        return !battle.abilityReady(p, 0)
+    }
+
     override fun onBack(): Boolean {
         if (eraIntro?.active == true) { eraIntro?.dismiss(); return true }
         if (aimingBarrage) { aimingBarrage = false; return true }

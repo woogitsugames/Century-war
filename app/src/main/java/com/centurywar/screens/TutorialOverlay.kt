@@ -420,6 +420,15 @@ class TutorialOverlay(
         else -> "tut_done"
     }
 
+    /** Dzień 5: tekst bieżącego kroku dla czytnika ekranu; pusty, gdy dymka nie ma. */
+    internal fun accessibilityText(): String = when {
+        finished -> ""
+        skipPending -> L["tut85_skip_title"] + " " + L["tut85_skip_body"]
+        !showing -> ""
+        counter.isEmpty() -> title + ". " + L[bodyKey()]
+        else -> title + ", " + counter + ". " + L[bodyKey()]
+    }
+
     private fun hasNext() = step == S_INCOME || step == S_KILL || step == S_CAMERA || step == S_DONE
 
     /** Obejmuje najliczniejsze widoczne skupisko przeciwników w zasięgu ostrzału. */

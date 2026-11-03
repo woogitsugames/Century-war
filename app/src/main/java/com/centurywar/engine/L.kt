@@ -170,8 +170,49 @@ object L {
         putAll(part173())
         putAll(part175())
         putAll(part176())
+        putAll(part178())
         }
     }
+
+    /** Dzień 5: TalkBack w bitwie (węzły HUD, akcje ostrzału i ulepszeń, komunikaty). */
+    private fun part178(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a178_battle" to t("Bitwa", "Battle", "Schlacht", "Batalla", "Bataille", "Battaglia", "Batalha", "Битва", "Gevecht", "Savaş"),
+        "a178_gold" to t("Złoto: %d", "Gold: %d", "Gold: %d", "Oro: %d", "Or : %d", "Oro: %d", "Ouro: %d", "Золото: %d", "Goud: %d", "Altın: %d"),
+        "a178_xp" to t("Doświadczenie: %d%% do: %s", "Experience: %d%% to: %s", "Erfahrung: %d %% bis: %s", "Experiencia: %d %% hasta: %s", "Expérience : %d %% vers : %s", "Esperienza: %d%% verso: %s", "Experiência: %d%% até: %s", "Досвід: %d%% до: %s", "Ervaring: %d%% tot: %s", "Deneyim: %%%d, hedef: %s"),
+        "a178_xp_ready" to t("Doświadczenie: gotowe do awansu", "Experience: ready to evolve", "Erfahrung: bereit zum Aufstieg", "Experiencia: lista para evolucionar", "Expérience : prêt à évoluer", "Esperienza: pronto a evolvere", "Experiência: pronto para evoluir", "Досвід: можна розвиватися", "Ervaring: klaar om te evolueren", "Deneyim: çağ atlamaya hazır"),
+        "a178_bases" to t("Twoja baza %d%%, baza wroga %d%%", "Your base %d%%, enemy base %d%%", "Deine Basis %d %%, gegnerische Basis %d %%", "Tu base %d %%, base enemiga %d %%", "Votre base %d %%, base ennemie %d %%", "La tua base %d%%, base nemica %d%%", "A tua base %d%%, base inimiga %d%%", "Твоя база %d%%, ворожа база %d%%", "Jouw basis %d%%, vijandelijke basis %d%%", "Üssün %%%d, düşman üssü %%%d"),
+        "a178_base" to t("Twoja baza %d%%", "Your base %d%%", "Deine Basis %d %%", "Tu base %d %%", "Votre base %d %%", "La tua base %d%%", "A tua base %d%%", "Твоя база %d%%", "Jouw basis %d%%", "Üssün %%%d"),
+        "a178_wave" to t("Fala %d, następna: %s", "Wave %d, next: %s", "Welle %d, nächste: %s", "Oleada %d, siguiente: %s", "Vague %d, suivante : %s", "Ondata %d, prossima: %s", "Onda %d, seguinte: %s", "Хвиля %d, наступна: %s", "Golf %d, volgende: %s", "Dalga %d, sonraki: %s"),
+        "a178_army" to t("Armia %d/%d", "Army %d/%d", "Armee %d/%d", "Ejército %d/%d", "Armée %d/%d", "Esercito %d/%d", "Exército %d/%d", "Армія %d/%d", "Leger %d/%d", "Ordu %d/%d"),
+        "a178_unit" to t("%s, %d złota", "%s, %d gold", "%s, %d Gold", "%s, %d de oro", "%s, %d or", "%s, %d oro", "%s, %d de ouro", "%s, %d золота", "%s, %d goud", "%s, %d altın"),
+        "a178_no_gold" to t("za mało złota", "not enough gold", "zu wenig Gold", "oro insuficiente", "pas assez d'or", "oro insufficiente", "ouro insuficiente", "замало золота", "te weinig goud", "altın yetersiz"),
+        "a178_queue_full" to t("kolejka pełna", "queue full", "Warteschlange voll", "cola llena", "file pleine", "coda piena", "fila cheia", "черга заповнена", "wachtrij vol", "sıra dolu"),
+        "a178_locked" to t("zablokowane", "locked", "gesperrt", "bloqueado", "verrouillé", "bloccato", "bloqueado", "заблоковано", "vergrendeld", "kilitli"),
+        "a178_training" to t("w szkoleniu", "in training", "in Ausbildung", "en entrenamiento", "en formation", "in addestramento", "em treino", "навчається", "in training", "eğitimde"),
+        "a178_queued" to t("w kolejce: %d", "queued: %d", "in Warteschlange: %d", "en cola: %d", "en file : %d", "in coda: %d", "na fila: %d", "у черзі: %d", "in wachtrij: %d", "sırada: %d"),
+        "a178_upgrade_action" to t("Ulepsz: %s", "Upgrade: %s", "Verbessern: %s", "Mejorar: %s", "Améliorer : %s", "Potenzia: %s", "Melhorar: %s", "Покращити: %s", "Verbeteren: %s", "Geliştir: %s"),
+        "a178_barrage_cluster" to t("Ostrzał: najbliższa grupa wrogów", "Barrage: nearest enemy group", "Sperrfeuer: nächste Gegnergruppe", "Bombardeo: grupo enemigo más cercano", "Barrage : groupe ennemi le plus proche", "Sbarramento: gruppo nemico più vicino", "Bombardeio: grupo inimigo mais próximo", "Обстріл: найближча група ворогів", "Spervuur: dichtstbijzijnde vijandelijke groep", "Baraj ateşi: en yakın düşman grubu"),
+        "a178_barrage_front" to t("Ostrzał: czoło wroga", "Barrage: enemy front line", "Sperrfeuer: gegnerische Frontlinie", "Bombardeo: vanguardia enemiga", "Barrage : front ennemi", "Sbarramento: prima linea nemica", "Bombardeio: linha da frente inimiga", "Обстріл: передова ворога", "Spervuur: vijandelijke frontlinie", "Baraj ateşi: düşman ön hattı"),
+        "a178_barrage_base" to t("Ostrzał: przed moją bazą", "Barrage: in front of my base", "Sperrfeuer: vor meiner Basis", "Bombardeo: frente a mi base", "Barrage : devant ma base", "Sbarramento: davanti alla mia base", "Bombardeio: em frente à minha base", "Обстріл: перед моєю базою", "Spervuur: voor mijn basis", "Baraj ateşi: üssümün önü"),
+        "a178_ready" to t("gotowe", "ready", "bereit", "listo", "prêt", "pronto", "pronto", "готово", "klaar", "hazır"),
+        "a178_cooldown" to t("odnowienie: %d s", "cooldown: %d s", "Abklingzeit: %d s", "recarga: %d s", "recharge : %d s", "ricarica: %d s", "recarga: %d s", "відновлення: %d с", "afkoeltijd: %d s", "bekleme: %d sn"),
+        "a178_stance" to t("Postawa", "Stance", "Haltung", "Postura", "Posture", "Postura", "Postura", "Позиція", "Houding", "Duruş"),
+        "a178_level" to t("poziom %d", "level %d", "Stufe %d", "nivel %d", "niveau %d", "livello %d", "nível %d", "рівень %d", "niveau %d", "seviye %d"),
+        "a178_open" to t("otwarte", "open", "geöffnet", "abierto", "ouvert", "aperto", "aberto", "відкрито", "open", "açık"),
+        "a178_era_up" to t("Nowa epoka: %s", "New era: %s", "Neue Epoche: %s", "Nueva era: %s", "Nouvelle ère : %s", "Nuova era: %s", "Nova era: %s", "Нова епоха: %s", "Nieuw tijdperk: %s", "Yeni çağ: %s"),
+        "a178_enemy_era_up" to t("Wróg awansował: %s", "Enemy evolved: %s", "Gegner aufgestiegen: %s", "El enemigo evolucionó: %s", "L'ennemi a évolué : %s", "Il nemico è evoluto: %s", "O inimigo evoluiu: %s", "Ворог розвинувся: %s", "Vijand geëvolueerd: %s", "Düşman çağ atladı: %s"),
+        "a178_base_half" to t("Twoja baza poniżej połowy", "Your base is below half", "Deine Basis unter der Hälfte", "Tu base por debajo de la mitad", "Votre base sous la moitié", "La tua base sotto la metà", "A tua base abaixo de metade", "Твоя база нижче половини", "Jouw basis onder de helft", "Üssün yarının altında"),
+        "a178_base_low" to t("Twoja baza w krytycznym stanie", "Your base is critical", "Deine Basis ist kritisch", "Tu base está en estado crítico", "Votre base est critique", "La tua base è in stato critico", "A tua base está em estado crítico", "Твоя база в критичному стані", "Jouw basis is kritiek", "Üssün kritik durumda"),
+        "a178_enemy_base_low" to t("Baza wroga w krytycznym stanie", "Enemy base is critical", "Gegnerische Basis ist kritisch", "Base enemiga en estado crítico", "Base ennemie critique", "Base nemica in stato critico", "Base inimiga em estado crítico", "Ворожа база в критичному стані", "Vijandelijke basis is kritiek", "Düşman üssü kritik durumda"),
+        "a178_boss" to t("Nadciąga boss", "A boss is coming", "Ein Boss naht", "Se acerca un jefe", "Un boss approche", "Arriva un boss", "Aproxima-se um chefe", "Наближається бос", "Er komt een baas aan", "Bir boss geliyor"),
+        "a178_barrage_ready" to t("Ostrzał gotowy", "Barrage ready", "Sperrfeuer bereit", "Bombardeo listo", "Barrage prêt", "Sbarramento pronto", "Bombardeio pronto", "Обстріл готовий", "Spervuur klaar", "Baraj ateşi hazır"),
+        "a178_rally_ready" to t("Zryw gotowy", "Rally ready", "Ansturm bereit", "Ímpetu listo", "Élan prêt", "Slancio pronto", "Ímpeto pronto", "Ривок готовий", "Stormloop klaar", "Atılım hazır"),
+        "a178_commander_ready" to t("Dowódca gotowy", "Commander ready", "Kommandant bereit", "Comandante listo", "Commandant prêt", "Comandante pronto", "Comandante pronto", "Командир готовий", "Commandant klaar", "Komutan hazır"),
+        "a178_choice_open" to t("Wybór: %s", "Choice: %s", "Auswahl: %s", "Elección: %s", "Choix : %s", "Scelta: %s", "Escolha: %s", "Вибір: %s", "Keuze: %s", "Seçim: %s"),
+        "a178_end_win" to t("Koniec bitwy: zwycięstwo", "Battle over: victory", "Schlacht beendet: Sieg", "Fin de la batalla: victoria", "Fin de la bataille : victoire", "Fine della battaglia: vittoria", "Fim da batalha: vitória", "Бій завершено: перемога", "Gevecht voorbij: overwinning", "Savaş bitti: zafer"),
+        "a178_end_loss" to t("Koniec bitwy: porażka", "Battle over: defeat", "Schlacht beendet: Niederlage", "Fin de la batalla: derrota", "Fin de la bataille : défaite", "Fine della battaglia: sconfitta", "Fim da batalha: derrota", "Бій завершено: поразка", "Gevecht voorbij: nederlaag", "Savaş bitti: yenilgi"),
+        "a178_status" to t("Komunikaty bitwy", "Battle messages", "Schlachtmeldungen", "Mensajes de batalla", "Messages de bataille", "Messaggi di battaglia", "Mensagens da batalha", "Повідомлення бою", "Gevechtsberichten", "Savaş mesajları"),
+    )
 
     /** Zlecenie 176: osiągnięcia i misje dowódcy oraz stopni wież, Kodeks, „Co nowego”. */
     private fun part176(): Array<Pair<String, Array<out String>>> = arrayOf(

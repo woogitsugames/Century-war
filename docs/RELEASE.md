@@ -204,12 +204,15 @@ w konsoli przed decyzją.
 
 ## Testy ręczne czytnika ekranu (164)
 
-Zakres przed premierą: menu główne, Ustawienia, Dostępność, Podpowiedzi
-oraz przyciski panelu pauzy. W trakcie bitwy TalkBack udostępnia jeden
-element z opisem bitwy i działaniem **Pauza**; HUD i pozostałe ekrany
-nie mają jeszcze osobnych wirtualnych kontrolek. Suwaki głośności
-rysowane poza `Screen.buttons` nadal wymagają dotyku — nie traktować
-tego zakresu jako pełnej dostępności gry.
+Zakres przed premierą: menu główne, Ustawienia, Dostępność, Podpowiedzi,
+panel pauzy oraz (Dzień 5) cała bitwa: HUD (złoto, doświadczenie, bazy,
+fala w Endless, armia, jednostki, akcje, awans, pauza), wybór doktryny,
+karty Endless i wariantu epoki, panel wież, panel ulepszenia, zapowiedź
+epoki, samouczek i wyniki. Ostrzał i ulepszenie jednostki działają przez
+akcje TalkBack (bez przeciągania), a ważne zdarzenia czyta żywy region
+„Komunikaty bitwy”. Kampania (mapa etapów), Kodeks i pozostałe ekrany
+nadal nie mają osobnych kontrolek; suwaki głośności w pauzie wymagają
+dotyku — nie traktować tego zakresu jako pełnej dostępności gry.
 
 - [ ] Android 8/9 i Android 15+: włączyć **TalkBack**, uruchomić aplikację.
   Eksploracja palcem i przesuwanie fokusu pokazują przyciski menu,
@@ -226,16 +229,37 @@ tego zakresu jako pełnej dostępności gry.
   nie mogą pozostawać węzły, a nowe przyciski powinny dostać fokus.
 - [ ] Otworzyć Podpowiedzi: włączyć/wyłączyć podpowiedzi, skontrolować
   ostrzegające potwierdzenia i wrócić do Ustawień.
-- [ ] Uruchomić bitwę: poza pauzą istnieje **jeden** opisany element
-  z akcją Pauza, bez setek pustych węzłów HUD. Po aktywacji widać
+- [ ] Uruchomić bitwę: przesuwanie fokusu idzie kolejno: Złoto,
+  Doświadczenie, bazy, (fala), armia, cztery jednostki z ceną i stanem,
+  akcje, awans, pauza, „Komunikaty bitwy”. Po aktywacji pauzy widać
   tylko przyciski pauzy (Wznów, Restart, Wyjdź, wibracje, tempo).
-  Wznowić i sprawdzić ponowne zredukowanie drzewa.
+  Wznowić i sprawdzić, że HUD wraca z tym samym fokusem.
+- [ ] Telefon 720p i Fold (okładka, trzy rzędy HUD): eksploracja HUD
+  palcem — każdy przycisk ma własny prostokąt, bez nachodzenia, a
+  strzałka ulepszenia nie jest osobnym elementem.
+- [ ] Na jednostce otworzyć menu akcji TalkBack (gest, np. trzy palce
+  albo „w dół, potem w prawo”) i wybrać **Ulepsz: …**: otwiera się panel
+  ulepszenia z opisem, Ulepsz i Wstecz.
+- [ ] Na Ostrzale: podwójne dotknięcie strzela w najbliższą grupę wrogów
+  (bez celowania palcem); z menu akcji sprawdzić „czoło wroga” i „przed
+  moją bazą”. Ostrzał nie spada na własnych żołnierzy; stan pokazuje
+  „odnowienie: N s” (co 5 s).
+- [ ] Endless do pierwszej oferty kart: TalkBack ogłasza okno „Wybierz
+  kartę”, każda karta czyta nazwę, rzadkość i pełny opis; podwójne
+  dotknięcie wybiera kartę.
+- [ ] Awansować epokę: „Komunikaty bitwy” czytają „Nowa epoka: …”;
+  kolejne komunikaty co najmniej co 3 s, a „Twoja baza w krytycznym
+  stanie” i koniec bitwy od razu.
 - [ ] Wywołać okno wznowienia zapisanej bitwy z menu: fokus ma
   obejmować Wznów/Porzuć, a nie zasłonięte kafelki menu.
 - [ ] Powtórzyć na telefonie 720p oraz Foldzie po zmianie rozmiaru
   i orientacji, sprawdzając pozycje prostokątów eksploracji dotykiem.
 - [ ] Sprawdzić **Switch Access**: skanowanie kontrolek i aktywację
-  kliknięć menu, ustawień oraz pauzy bez zwykłych gestów.
+  kliknięć menu, ustawień, pauzy oraz jednostek w bitwie (szkolenie
+  jednostki przełącznikiem) bez zwykłych gestów.
+- [ ] Porównać płynność bitwy (licznik FPS z Ustawień) z włączonym
+  TalkBack i bez niego: z usługą drzewo przebudowuje się średnio
+  najwyżej dwa razy na sekundę, bez widocznych zacięć.
 - [ ] Wyłączyć wszystkie usługi dostępności i porównać wydajność
   oraz liczbę alokacji pętli gry z bazą; nie może powstawać drzewo
   wirtualnych kontrolek w kolejnych klatkach.

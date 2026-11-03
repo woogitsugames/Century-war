@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dzień 5: akcje niestandardowe TalkBack w bitwie. -->
+    <item type="id" name="cw_a11y_upgrade" />
+    <item type="id" name="cw_a11y_barrage_front" />
+    <item type="id" name="cw_a11y_barrage_cluster" />
+    <item type="id" name="cw_a11y_barrage_base" />
+</resources>

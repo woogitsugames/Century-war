@@ -69,6 +69,9 @@ class EraIntroOverlay private constructor(
 
     val active: Boolean get() = remaining > 0f
 
+    /** Dzień 5: tytuł i opowieść zapowiedzi dla czytnika ekranu. */
+    internal val accessibilityText: String get() = "$title. $story"
+
     // Teksty muszą być gotowe przed pierwszym rysowaniem, nie dopiero po zmianie języka.
     init { onLanguageChanged() }
 

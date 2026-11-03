@@ -220,6 +220,8 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     /** Punkt testowy; w aplikacji migawka powstaje wyłącznie na wątku gry. */
     internal fun refreshAccessibilityNodes() = accessibility.refresh()
     internal val accessibilityRevision get() = accessibility.revision
+    internal fun refreshAccessibilityIfEnabled() = accessibility.refreshIfEnabled()
+    internal fun setAccessibilityClock(clock: () -> Long) { accessibility.clock = clock }
 
     override fun onHoverEvent(e: MotionEvent): Boolean =
         if (accessibility.onHover(e)) true else super.onHoverEvent(e)
