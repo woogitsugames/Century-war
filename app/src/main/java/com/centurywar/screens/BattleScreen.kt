@@ -1257,7 +1257,7 @@ class BattleScreen(
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))
         totalMedalsGained = (pr.medals - medalsBefore).coerceAtLeast(0)
         tipKey = if (won) "" else when {
-            !battle.endless && battle.time >= Battle.SIEGE_START + 35f -> "tip_siege"
+            !battle.endless && battle.time >= battle.siegeStart + 35f -> "tip_siege"
             battle.player.aliveCount >= battle.player.cap &&
                 battle.player.gold >= battle.armoryCost(battle.player) * 1.3f -> "tip_cap"
             counterRoleLoss() -> "tip_counter"

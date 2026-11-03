@@ -217,7 +217,7 @@ class HintOverlay(
             // Ranga weterana nie jest tematem pierwszej bitwy (przegląd „pierwsza godzina”).
             VETERAN -> p.era >= b.cfg.maxEra && p.rank > 0 &&
                 !(b.cfg.mode == Mode.CAMPAIGN && b.cfg.stageIndex == 0)
-            SIEGE -> !b.endless && b.time >= Battle.SIEGE_START && b.siegePressure() > 1f
+            SIEGE -> !b.endless && b.time >= b.siegeStart && b.siegePressure() > 1f
             MODIFIERS -> b.cfg.modifiers.isNotEmpty() && b.time < 60f
             FOG -> b.fog && b.time < 80f
             CARD -> b.endless && b.wave > 0 && (b.wave + 1) % Battle.ENDLESS_CHOICE_EVERY == 0 &&
