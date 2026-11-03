@@ -1,3 +1,7 @@
+# STAN 3.11.2026 ok. 06:15 UTC (koniec nocy)
+- main = 5fc6f46a: dodatkowo noc 6 (próba release R8, keep MissionType), noc 7 (31 poprawek tekstów), noc 8 (RowNote, Recommencer, tytuł historii), noc 9 (testy 5,5–6 min, 4 forki, G1 periodic GC). Pełne testy zielone od zera. Dysk: wyczyszczono build cache (18 GB wolne); w /tmp zostają stare katalogi robolectric-nativeruntime* (usuwanie zablokowane przez uprawnienia).
+- Lista nocna wyczerpana — kolejne kroki wymagają decyzji właściciela (niżej). CI nadal przekazuje -PtestForks=1/2 (można podnieść).
+
 # STAN 3.11.2026 ok. 02:40 UTC (noc)
 - main = c91947ba: noc 1 (A156-10 rozliczenie), noc 2 (muzyka), noc 3 (UX Fold), noc 4 (wydarzenia dnia vs modyfikatory), noc 5 (pierwsza godzina), fala 7 GPT 160–165, 163, nowa zawartość 170 (druga sesja), PROTOCOL 0.8.4, snapshot v18.
 - W toku: noc 6 „Próba wersji release” (`claude/noc-6-release`). GPT 155 (tłumaczenia) nie przyszło.
