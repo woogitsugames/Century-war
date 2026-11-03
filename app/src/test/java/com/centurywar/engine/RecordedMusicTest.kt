@@ -101,12 +101,15 @@ class RecordedMusicTest {
         val calm = f.live("era3_calm")!!
         val battle = f.live("era3_battle")!!
         assertTrue(calm.started && battle.started && calm.looping && battle.looping)
-        assertEquals("start bez przenikania", 0.8f, calm.level, 1e-4f)
+        assertTrue("start z ciszy łagodnie (plik nie ma własnego wejścia)", calm.level < 0.3f)
+        m.run(RecordedMixer.START_FADE_S, 3, volume = 0.8f)
+        assertEquals("po wejściu pełna głośność", 0.8f, calm.level, 1e-4f)
         assertEquals(0f, battle.level, 1e-4f)
         // Skok intensywności: wygładzenie ~1,5 s, w połowie mniej więcej pół na pół.
         m.run(0.76f, 3, intensity = 1f, volume = 0.8f)
         assertEquals(0.5f, m.mix, 0.05f)
-        assertEquals(0.8f, calm.level + battle.level, 1e-3f)
+        // Równa moc: suma mocy obu wersji stała (liniowo byłoby −3 dB w połowie).
+        assertEquals(0.64f, calm.level * calm.level + battle.level * battle.level, 1e-3f)
         m.run(0.8f, 3, intensity = 1f, volume = 0.8f)
         assertEquals(1f, m.mix, 0f)
         assertEquals(0f, calm.level, 1e-4f)
@@ -131,7 +134,7 @@ class RecordedMusicTest {
         m.update(0.04f, 0, 0f, 1f, 1f)
         assertEquals(3, f.openCount)
         m.run(1f, 0)
-        assertTrue("w połowie przenikania oba słychać", menu.level in 0.3f..0.7f)
+        assertTrue("w połowie przenikania oba słychać: ${menu.level}", menu.level in 0.3f..0.8f)
         m.run(1.1f, 0)
         assertTrue(menu.released)
         assertEquals(2, f.openCount)
@@ -192,14 +195,19 @@ class RecordedMusicTest {
         sting.finished = true
         m.update(0.04f, 2, 0f, 1f, 1f)
         assertTrue(sting.released)
-        m.run(2f, 2)
+        m.run(RecordedMixer.STINGER_GAP_S - 0.05f, 2)
+        assertEquals("krótka cisza po przerywniku", 0f, f.live("era2_calm")!!.level, 1e-4f)
+        m.run(RecordedMixer.STINGER_RETURN_S / 2f + 0.05f, 2)
+        val mid = f.live("era2_calm")!!.level
+        assertTrue("płynny powrót: $mid", mid in 0.35f..0.65f)
+        m.run(RecordedMixer.STINGER_RETURN_S / 2f + 0.1f, 2)
         assertEquals("pętla wraca po przerywniku", 1f, f.live("era2_calm")!!.level, 1e-3f)
     }
 
     @Test fun duckAndVolumeApply() {
         val f = FakeFactory()
         val m = RecordedMixer(catalog("menu"), f)
-        m.run(0.2f, Music.MENU, volume = 0.5f)
+        m.run(0.7f, Music.MENU, volume = 0.5f)
         assertEquals(0.5f, f.live("menu")!!.level, 1e-4f)
         m.run(0.5f, Music.MENU, volume = 0.5f, duck = 0.4f)
         assertEquals(0.2f, f.live("menu")!!.level, 0.01f)

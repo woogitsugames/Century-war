@@ -29,11 +29,18 @@ internal class RecordedMixer(
     companion object {
         const val NONE = Int.MIN_VALUE
         const val ERA_FADE_S = 2f
-        const val MIX_SMOOTH_S = 1.5f
+        /**
+         * Start pętli z ciszy. Pliki nie mają już własnego wejścia (pętla jest zszyta
+         * crossfade'em w pliku i zaczyna się w środku frazy), więc wejście robi mikser.
+         */
+        const val START_FADE_S = 0.6f
         const val DUCK_ATTACK_S = 0.06f
         const val DUCK_RELEASE_S = 0.5f
         const val STINGER_MUTE_S = 0.4f
-        const val STINGER_RETURN_S = 1.5f
+        /** Cisza po końcu przerywnika, zanim pętla zacznie wracać. */
+        const val STINGER_GAP_S = 0.6f
+        /** Powrót pętli po przerywniku (krzywa równej mocy). */
+        const val STINGER_RETURN_S = 3f
 
         private fun smoothstep(a: Float, b: Float, x: Float): Float {
             val t = ((x - a) / (b - a)).coerceIn(0f, 1f)
@@ -43,10 +50,18 @@ internal class RecordedMixer(
         /** Docelowy udział wersji bojowej dla intensywności 0..1. */
         fun battleWeight(intensity: Float): Float =
             if (intensity.isFinite()) smoothstep(0.25f, 0.75f, intensity) else 0f
+
+        /**
+         * Wzmocnienie równej mocy dla postępu 0..1 (sin ćwiartki): dwie nieskorelowane
+         * nagrania w połowie przenikania dają tę samą moc co jedno (liniowe dawało −3 dB).
+         */
+        fun equalPower(x: Float): Float = kotlin.math.sin(x.coerceIn(0f, 1f) * (Math.PI.toFloat() / 2f))
     }
 
     private class Group(val key: Int, val calm: TrackPlayer?, val battle: TrackPlayer?) {
         var fade = 0f
+        /** Czas narastania [fade] w sekundach (przenikanie epok albo start z ciszy). */
+        var fadeInS = ERA_FADE_S
         fun release() { calm?.release(); battle?.release() }
         val size: Int get() = (if (calm != null) 1 else 0) + (if (battle != null) 1 else 0)
     }
@@ -57,14 +72,17 @@ internal class RecordedMixer(
     /** Ostatni żądany cel; nieudane otwarcie nie jest ponawiane co krok. */
     private var requested = NONE
 
-    /** Wygładzony udział wersji bojowej. */
-    var mix = 0f
-        private set
+    private val follower = BattleMixFollower()
+    /** Wygładzony udział wersji bojowej (z histerezą, [BattleMixFollower]). */
+    val mix: Float get() = follower.value
     var duckLevel = 1f
         private set
-    /** Mnożnik pętli podczas przerywnika (0 = wyciszone). */
-    var loopLevel = 1f
-        private set
+    /** Postęp powrotu pętli po przerywniku 0..1; 0 = wyciszona. */
+    private var loopProgress = 1f
+    /** Czas od końca przerywnika (cisza [STINGER_GAP_S] przed powrotem pętli). */
+    private var sinceStinger = Float.MAX_VALUE
+    /** Mnożnik pętli podczas przerywnika i po nim (0 = wyciszone), gładka krzywa S. */
+    val loopLevel: Float get() = (1f - kotlin.math.cos(loopProgress * Math.PI.toFloat())) * 0.5f
 
     val openPlayers: Int get() = (current?.size ?: 0) + (outgoing?.size ?: 0) + (if (stinger != null) 1 else 0)
     val currentKey: Int get() = current?.key ?: NONE
@@ -121,15 +139,13 @@ internal class RecordedMixer(
             switchTo(target)
         }
 
-        current?.let { it.fade = (it.fade + step / ERA_FADE_S).coerceAtMost(1f) }
+        current?.let { it.fade = (it.fade + step / it.fadeInS).coerceAtMost(1f) }
         outgoing?.let {
             it.fade -= step / ERA_FADE_S
             if (it.fade <= 0f) { it.release(); outgoing = null }
         }
 
-        val wantMix = battleWeight(intensity)
-        val maxMove = step / MIX_SMOOTH_S
-        mix += (wantMix - mix).coerceIn(-maxMove, maxMove)
+        follower.update(step, battleWeight(intensity))
 
         val duck = if (duckTarget.isFinite()) duckTarget.coerceIn(0f, 1f) else 1f
         val tau = if (duck < duckLevel) DUCK_ATTACK_S else DUCK_RELEASE_S
@@ -137,10 +153,14 @@ internal class RecordedMixer(
         if (step > 0f && kotlin.math.abs(duck - duckLevel) < 0.002f) duckLevel = duck
 
         val s = stinger
-        if (s != null && !s.isPlaying) { s.release(); stinger = null }
-        loopLevel = if (stinger != null) {
-            (loopLevel - step / STINGER_MUTE_S).coerceAtLeast(0f)
-        } else (loopLevel + step / STINGER_RETURN_S).coerceAtMost(1f)
+        if (s != null && !s.isPlaying) { s.release(); stinger = null; sinceStinger = 0f }
+        if (stinger != null) {
+            loopProgress = (loopProgress - step / STINGER_MUTE_S).coerceAtLeast(0f)
+        } else {
+            // Pętla wraca dopiero po krótkiej ciszy, żeby nie nachodzić na wybrzmienie przerywnika.
+            if (sinceStinger < STINGER_GAP_S) sinceStinger += step
+            else loopProgress = (loopProgress + step / STINGER_RETURN_S).coerceAtMost(1f)
+        }
 
         val vol = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 0f
         val base = vol * duckLevel * loopLevel
@@ -155,6 +175,7 @@ internal class RecordedMixer(
             // Powrót do poprzedniej pary w trakcie przenikania: zamiana ról bez otwierania plików.
             outgoing = current
             current = out
+            out.fadeInS = ERA_FADE_S
             return
         }
         out?.release()
@@ -164,16 +185,17 @@ internal class RecordedMixer(
         if (prev != null && stinger != null) { prev.release(); prev = null; current = null }
         current = openGroup(target)
         if (prev != null) outgoing = prev
-        else current?.fade = 1f // nic nie gra w tle: start bez przenikania (plik ma własne wejście)
+        else current?.fadeInS = START_FADE_S // nic nie gra w tle: krótkie wejście z ciszy
     }
 
     private fun apply(g: Group, base: Float) {
-        val gain = base * g.fade
+        val gain = base * equalPower(g.fade)
         val calm = g.calm
         val battle = g.battle
         if (calm != null && battle != null) {
-            calm.setVolume(gain * (1f - mix))
-            battle.setVolume(gain * mix)
+            val m = mix
+            calm.setVolume(gain * equalPower(1f - m))
+            battle.setVolume(gain * equalPower(m))
         } else {
             calm?.setVolume(gain)
             battle?.setVolume(gain)
@@ -186,7 +208,45 @@ internal class RecordedMixer(
         outgoing?.release(); outgoing = null
         stinger?.release(); stinger = null
         requested = NONE
-        loopLevel = 1f
+        loopProgress = 1f
+        sinceStinger = Float.MAX_VALUE
         duckLevel = 1f
+        follower.reset()
     }
+}
+
+/**
+ * Udział wersji bojowej z histerezą: wzrost napięcia podąża szybko ([RISE_S] na pełną
+ * skalę), spadek dopiero po [HOLD_S] bez nowego szczytu, potem powoli ([FALL_S]).
+ * Krótkie przerwy w walce (fala zginęła, następna za chwilę) nie „pompują” miksu.
+ */
+internal class BattleMixFollower {
+    companion object {
+        const val RISE_S = 1.5f
+        const val HOLD_S = 7f
+        const val FALL_S = 4f
+        /** Spadek celu o mniej niż tyle nie zdejmuje podtrzymania. */
+        const val HOLD_TOLERANCE = 0.15f
+    }
+
+    /** Bieżący udział 0..1. */
+    var value = 0f
+        private set
+    private var held = 0f
+    private var hold = 0f
+
+    fun update(dt: Float, want: Float) {
+        val w = if (want.isFinite()) want.coerceIn(0f, 1f) else 0f
+        if (w >= held - HOLD_TOLERANCE) {
+            if (w > held) held = w
+            hold = HOLD_S
+        } else if (hold > 0f) {
+            hold -= dt
+        } else {
+            held = maxOf(w, held - dt / FALL_S)
+        }
+        value = if (held > value) minOf(held, value + dt / RISE_S) else held
+    }
+
+    fun reset() { value = 0f; held = 0f; hold = 0f }
 }
