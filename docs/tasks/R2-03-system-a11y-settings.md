@@ -8,7 +8,7 @@ w `engine/L.kt` (10 języków). **Gradle:** wyłącznie `flock /tmp/claude-0/gra
 
 1. Przy **pierwszym uruchomieniu** rozmiar tekstu gry wynika z systemowej skali czcionki.
 2. Gdy w systemie wyłączono animacje, gra od początku ogranicza wstrząsy i błyski.
-3. Nowa opcja **tempa ×0,5** w Dostępności (cykl ×½ → ×1 → ×3 → ×5), proponowana, gdy działa TalkBack.
+3. Nowa opcja **tempa ×0,5** w Dostępności (cykl ×½ → ×1 → ×3 → ×5). Przy włączonym TalkBack bitwa startuje w ×½ (decyzja właściciela).
 
 Ręczny wybór gracza zawsze ma pierwszeństwo i nie jest nadpisywany przy kolejnych uruchomieniach.
 
@@ -34,7 +34,7 @@ Ręczny wybór gracza zawsze ma pierwszeństwo i nie jest nadpisywany przy kolej
 ## Zmiany
 
 1. **Profile:** `var textScaleManual = false`, `var motionManual = false`,
-   `var slowSpeedOption = false`. Klucze opcjonalne (`optBoolean`, nie w `mandatory`). Wysyłać
+   `var slowSpeedOption = false`, `var slowSpeedManual = false`. Klucze opcjonalne (`optBoolean`, nie w `mandatory`). Wysyłać
    do chmury jak inne ustawienia, czyli nie dodawać ich do `remove()` w `cloudJson`.
    `AccessibilityScreen.onClick` ustawia `textScaleManual = true` przy 30–32 i
    `motionManual = true` przy 41/42. Reset ustawień zeruje flagi.
@@ -55,16 +55,24 @@ Ręczny wybór gracza zawsze ma pierwszeństwo i nie jest nadpisywany przy kolej
    - jeśli `!profile.motionManual && s.animationsOff`: `reduceShake = true`, `reduceFlash = true`;
    - `touchExplorationActive = s.touchExploration` (pole w `Game`, dla bitwy). Bez zapisu
      profilu w każdej klatce, zapis tylko przy faktycznej zmianie.
-   - Dotyczy też istniejących profili, które nigdy nie zmieniały tych opcji. To celowe, bo
-     wartości domyślne tylko zgadywały ustawienia systemu.
+   - **Decyzja właściciela (3.11):** ustawienia z telefonu przejmujemy **także w obecnych
+     profilach**, chyba że gracz zmienił daną opcję ręcznie. Profil sprzed tej wersji nie ma
+     flag `*Manual`, więc traktuj go jak „nie zmieniane ręcznie”, z jednym wyjątkiem: jeśli
+     zapisany `textScale` jest różny od 100 albo `reduceShake`/`reduceFlash` = `true`, to
+     gracz musiał je kiedyś ustawić. Wtedy przy pierwszym odczycie ustaw odpowiednią flagę
+     `*Manual = true` (migracja w `Profile.restore`, test na starym JSON).
 4. **Tempo ×0,5:**
    - Wartość `speed = 0` oznacza ×0,5. Funkcja `speedFactor(speed) = if (speed == 0) 0.5f else speed.toFloat()`
      zastępuje `speed.toFloat()` w ok. 596 i 631. `speedLabels[0] = "×½"`, a `limitedSpeedLabels`
      sprawdzić dla indeksu 0.
    - Cykl przy `profile.slowSpeedOption`: `0 → 1 → 3 → 5 → 0`, bez opcji bez zmian.
-   - Opcja w `AccessibilityScreen` (nowy przycisk, id 44, wiersz jak `leftHud`). Gdy
-     `g.touchExplorationActive` i opcja jeszcze nie była ustawiona ręcznie, bitwa startuje
-     z `speed = 0` i opcją widoczną w dymku `tip53_speed`.
+   - Opcja w `AccessibilityScreen` (nowy przycisk, id 44, wiersz jak `leftHud`) +
+     `slowSpeedManual` (ustawiane przy dotknięciu przycisku).
+   - **Decyzja właściciela (3.11): przy włączonym TalkBack bitwa startuje w tempie ×½.**
+     Gdy `g.touchExplorationActive`, nowa bitwa (także wznowiona) startuje z `speed = 0`,
+     a cykl zawiera ×½, nawet bez opcji. Wyjątek: gracz ręcznie **wyłączył** opcję
+     (`slowSpeedManual && !slowSpeedOption`). Wtedy start ×1. Dymek `tip53_speed` mówi
+     o ×½.
    - Nie zapisywać tempa w zrzucie bitwy, jeśli dziś nie jest zapisywane (sprawdzić
      `BattleSnapshot` i odczyt). Format zrzutu się nie zmienia, więc `BattleSnapshot.VERSION`
      zostaje 19.
@@ -76,6 +84,10 @@ Ręczny wybór gracza zawsze ma pierwszeństwo i nie jest nadpisywany przy kolej
 - `engine/SystemAccessibilityTest` (Robolectric, `@Config(fontScale = 1.3f)` albo
   `RuntimeEnvironment.setFontScale`): świeży profil → 130; profil z `textScaleManual` → bez zmian;
   `ANIMATOR_DURATION_SCALE = 0` → `reduceShake`/`reduceFlash` na `true`, chyba że `motionManual`.
+- Migracja: stary profil z `textScale = 100` i bez flag przejmuje skalę z telefonu; stary profil
+  z `textScale = 115` dostaje `textScaleManual = true` i zostaje przy 115.
+- TalkBack: z `touchExplorationActive` bitwa startuje z `speed = 0` (×½), także po wznowieniu;
+  po ręcznym wyłączeniu opcji startuje z ×1.
 - `meta/ProfileTest`: nowe klucze wczytywane z wartościami domyślnymi ze starego JSON;
   `toCloudJson` zawiera `slowSpeedOption`.
 - `screens/BattleScreen`-owy test tempa: przy opcji cykl ½→1→3→5, `acc` rośnie o połowę;

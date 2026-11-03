@@ -39,10 +39,13 @@ moment, w którym gracz odchodzi.
      `lastSettledBattle` (`Profile.kt` ok. 601–608). `reset()` (ok. 1180) zeruje licznik.
    - Licznik zmienia się wewnątrz `pr.settleBattle(...)`, więc rozlicza się raz (A156-10).
 2. **Wynik po 2. porażce** (`streak >= 2`, etap ≥ 2, poziom ≠ EASY): `tipText` dostaje
-   **przed** powodem porażki jedno zdanie: „Ten etap sprawia kłopot. Spróbuj na poziomie
-   Łatwy (bez rankingu)” albo, gdy gracza stać na badanie (`Profile.canBuy`; najtańsze
-   z `Research.defs`, elita przez `EliteUnlock`), „Stać cię na badanie: %s”. Badanie ma
-   pierwszeństwo, bo nie wyłącza rankingu. Całość mieści się w istniejących `resultTipLines`
+   **przed** powodem porażki jedno zdanie. **Kolejność (decyzja właściciela 3.11):
+   najpierw badanie, potem Łatwy.**
+   - Gdy gracza stać na badanie (`Profile.canBuy`; elita przez `EliteUnlock` jako pierwsza,
+     potem najtańsze z `Research.defs`): „Stać cię na badanie: %s”. Dalej prowadzi wtedy do
+     `ResearchScreen` (a nie do okna etapu).
+   - Gdy nie stać go na żadne badanie: „Ten etap sprawia kłopot. Spróbuj na poziomie Łatwy
+     (bez rankingu)”, a Dalej otwiera okno etapu (punkt 3). Całość mieści się w istniejących `resultTipLines`
    (`prepareResultTipLines`), ograniczonych do dostępnej wysokości.
 3. **Szybka zmiana poziomu:** po dotknięciu Dalej przy aktywnej propozycji Łatwego
    `CampaignScreen` otwiera okno tego etapu (`selected = Campaign.stages[idx]`) z wyróżnionym
@@ -61,6 +64,8 @@ moment, w którym gracz odchodzi.
   do `toCloudJson()`; stary profil bez kluczy wczytuje się (wartości domyślne).
 - Rozliczenie raz: ponowne `settleBattle` tej samej bitwy nie zwiększa licznika (wzór:
   `FirstHourJourneyTest.tutorialInterruptedResumedSettlesOnce`).
+- Kolejność: przy 2 porażkach i medalach na badanie wynik proponuje badanie (Dalej → Badania);
+  bez medali proponuje Łatwy (Dalej → okno etapu z wyróżnionym EASY).
 - Test ekranu: po 2 porażkach na etapie 11 wynik zawiera tekst propozycji. Dalej otwiera okno
   etapu 11 z wyróżnionym EASY. Napisy na 720p i zewnętrznym Foldzie nieucięte
   (płótno testowe z `PrereleasePolishBase`).
