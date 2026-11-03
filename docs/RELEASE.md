@@ -837,7 +837,7 @@ Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
    kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
    [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
    Nie publikuj APK/AAB podpisanych kluczem debug.
-4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 66
+4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 74
    osiągnięć w Play Console. Ich ID wpisz wyłącznie w
    `docs/store/play_games_ids.properties` (bez ręcznego XML).
    Skonfiguruj testerów, OAuth i Saved Games; zweryfikuj logowanie,
