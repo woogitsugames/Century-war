@@ -35,6 +35,7 @@ class BalanceReport {
         val enemyEra: Int,
         val playerCommander: Boolean = false,
         val enemyCommander: Boolean = false,
+        val stars: Int = 0,
     )
     private data class Summary(
         val stage: Stage,
@@ -49,6 +50,8 @@ class BalanceReport {
         val enemyCommanders: Int = 0,
         val meanWinMinutes: Double = Double.NaN,
         val meanLossMinutes: Double = Double.NaN,
+        /** Średnia gwiazdek wygranych bitew (Battle.stars: HP bazy gracza na końcu). */
+        val meanWinStars: Double = Double.NaN,
     ) {
         /**
          * Oczekiwany czas przejścia etapu przy powtórkach do skutku (rozkład geometryczny):
@@ -179,6 +182,7 @@ class BalanceReport {
             enemyEra = battle.enemy.era,
             playerCommander = playerCommander,
             enemyCommander = enemyCommander,
+            stars = battle.stars(),
         )
     }
 
@@ -207,6 +211,7 @@ class BalanceReport {
             enemyCommanders = results.count { it.enemyCommander },
             meanWinMinutes = results.filter { it.winner == 0 }.map { it.minutes }.average(),
             meanLossMinutes = results.filter { it.winner != 0 }.map { it.minutes }.average(),
+            meanWinStars = results.filter { it.winner == 0 }.map { it.stars.toDouble() }.average(),
         )
     }
 
@@ -331,7 +336,7 @@ class BalanceReport {
                     " win=${fmt(result.winPct)}% median=${fmt(result.medianMinutes)}m" +
                     " timeout=${fmt(result.timeoutPct)}% era=${fmt(result.avgEra)}" +
                     " winMean=${fmt(result.meanWinMinutes)}m lossMean=${fmt(result.meanLossMinutes)}m" +
-                    " expected=${fmt(result.expectedMinutes)}m" +
+                    " expected=${fmt(result.expectedMinutes)}m stars=${fmt(result.meanWinStars)}" +
                     " cmd=${result.playerCommanders}/${result.enemyCommanders}")
             }
         }

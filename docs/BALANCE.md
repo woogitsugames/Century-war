@@ -1523,7 +1523,10 @@ Wszystkie zmienione dni są po premierze (`RELEASE_DAY` to jeszcze data zastępc
 startuje po **4 minutach** zamiast 8 i rośnie o **80%/min** zamiast 20%/min
 (`Campaign.siegeStart` / `Campaign.siegeRamp`, `Battle.siegeStart` / `Battle.siegeRamp`).
 Blokada baz (`SIEGE_ATTRITION`) i premia do obrażeń baz korzystają z tej samej presji.
-Endless, potyczka, wyzwania dnia/tygodnia, samouczek, AI i `aiPower` etapów bez zmian.
+Dodatkowo etap 7 ma korektę `stageRamp` **0,95** (aiPower 0,87 → 0,83): krótsza blokada
+zostawia zwycięzcy mniej HP bazy, więc gwiazdek i medali przed etapem 7 jest mniej
+(niżej), a w przejściu „pierwszej godziny” etap 7 przegrywał się w połowie podejść.
+Endless, potyczka, wyzwania dnia/tygodnia, samouczek, AI i pozostałe `aiPower` bez zmian.
 `SimVersion.PROTOCOL` 0.8.4 → 0.8.5. Złote powtórki (kampania: etapy 1 i 29) nie zmieniły
 wyników; `BattleSnapshot.defsFingerprint` bez zmian, więc przerwana bitwa wznawia się po
 aktualizacji (na nowych zasadach presji).
@@ -1554,44 +1557,52 @@ Przegląd wariantów (profil docelowy, 100 seedów, etapy 2–7, mediana / wygra
 
 `BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target BALANCE_STAGE_FROM=1
 BALANCE_STAGE_TO=9` (i `BALANCE_PROFILE=medale`). Zasady trybu (bez `BALANCE_COMMANDER`).
-„Oczekiwany czas” = średnia wygrana + (1 − p)/p średnich porażek, czyli czas przejścia
-etapu przy powtórkach do skutku (nowa kolumna `expected` w `BalanceReport`).
+Nowe kolumny w `BalanceReport`: `expected` — oczekiwany czas przejścia etapu przy
+powtórkach do skutku (średnia wygrana + (1 − p)/p średnich porażek) i `stars` — średnia
+gwiazdek wygranych bitew. „Po” obejmuje korektę etapu 7.
 
-| Etap | Profil docelowy | Wygrane przed → po | Mediana [min] przed → po | Oczekiwany czas [min] przed → po | Medale: wygrane przed → po | Medale: mediana przed → po |
-|---:|---|---:|---:|---:|---:|---:|
-| 1 | nowy | 86% → 86% | 13,8 → 13,8 | 15,9 → 15,9 | 86% → 86% | 13,8 → 13,8 |
-| 2 | nowy | 89% → 88% | 13,6 → **7,8** | 15,2 → 8,8 | 92% → 87% | 13,6 → 7,8 |
-| 3 | nowy | 92% → 88% | 13,6 → **7,8** | 14,7 → 8,8 | 94% → 82% | 13,7 → 7,8 |
-| 4 | nowy | 86% → 83% | 13,5 → **7,7** | 15,6 → 9,2 | 91% → 86% | 13,3 → 7,7 |
-| 5 | nowy | 92% → 86% | 13,3 → **7,6** | 14,3 → 8,8 | 95% → 93% | 12,9 → 7,7 |
-| 6 | nowy | 99% → 87% | 13,2 → **7,7** | 12,5 → 8,7 | 99% → 94% | 12,8 → 7,5 |
-| 7 | początkujący | 69% → 67% | 13,2 → **7,8** | 18,2 → 11,5 | 76% → 66% | 14,1 → 7,9 |
-| 8 | początkujący | 66% → 66% | 13,4 → 13,4 | 19,3 → 19,3 | 67% → 67% | 14,0 → 14,0 |
-| 9 | początkujący | 75% → 75% | 11,8 → 11,8 | 14,7 → 14,7 | 76% → 76% | 13,9 → 13,9 |
-| **2–7** | | **87,8% → 83,2%** | | **Σ 90,5 → 55,7** | **91,2% → 84,7%** | |
+| Etap | Profil docelowy | Wygrane przed → po | Mediana [min] przed → po | Oczekiwany czas [min] przed → po | ★ wygranych przed → po | Medale: wygrane przed → po | Medale: mediana przed → po | Medale: ★ przed → po |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | nowy | 86% → 86% | 13,8 → 13,8 | 15,9 → 15,9 | 1,37 → 1,37 | 86% → 86% | 13,8 → 13,8 | 1,37 → 1,37 |
+| 2 | nowy | 89% → 88% | 13,6 → **7,8** | 15,2 → 8,8 | 1,48 → 1,22 | 92% → 87% | 13,6 → 7,8 | 1,47 → 1,14 |
+| 3 | nowy | 92% → 88% | 13,6 → **7,8** | 14,7 → 8,8 | 1,48 → 1,17 | 94% → 82% | 13,7 → 7,8 | 1,33 → 1,23 |
+| 4 | nowy | 86% → 83% | 13,5 → **7,7** | 15,6 → 9,2 | 1,52 → 1,39 | 91% → 86% | 13,3 → 7,7 | 1,63 → 1,33 |
+| 5 | nowy | 92% → 86% | 13,3 → **7,6** | 14,3 → 8,8 | 1,71 → 1,34 | 95% → 93% | 12,9 → 7,7 | 1,94 → 1,37 |
+| 6 | nowy | 99% → 87% | 13,2 → **7,7** | 12,5 → 8,7 | 1,86 → 1,34 | 99% → 94% | 12,8 → 7,5 | 2,05 → 1,51 |
+| 7 | początkujący | 69% → 75% | 13,2 → **7,8** | 18,2 → 10,2 | 1,86 → 1,25 | 76% → 75% | 14,1 → 7,9 | 1,11 → 1,07 |
+| 8 | początkujący | 66% → 66% | 13,4 → 13,4 | 19,3 → 19,3 | 1,65 → 1,65 | 67% → 67% | 14,0 → 14,0 | 1,12 → 1,12 |
+| 9 | początkujący | 75% → 75% | 11,8 → 11,8 | 14,7 → 14,7 | 2,17 → 2,17 | 76% → 76% | 13,9 → 13,9 | 1,33 → 1,33 |
+| **2–7** | | **87,8% → 84,5%** | **13,4 → 7,7** | **Σ 90,5 → 54,4** | **1,65 → 1,29** | **91,2% → 86,2%** | **13,4 → 7,7** | **1,59 → 1,28** |
 
-Etapy 1, 8 i 9 są identyczne (kontrola). 0 patów przed i po.
+Etapy 1, 8 i 9 są identyczne (kontrola). 0 patów przed i po. Etap 7 bez korekty 0,95:
+67% (docelowy) / 66% (medale); z korektą 0,92 / 0,88: 70% / 80% (docelowy) — przy 100
+seedach to szum ±5 pp, wybrano najmniejszą korektę, która wraca do poziomu sprzed zmiany.
 
 ### Czas do dowódcy (etap 8)
 
-- **Bez porażek** (jak w przejściu z nocy 5): samouczek + etap 1 = 8,7 min, przerwy między
-  bitwami (mapa, wyniki, Badania) ok. 1,5 min, bitwy 2–7 77,1 min → **87 min**. Po zmianie
-  czasy bitew 2–7 maleją jak mediany (×0,57): 44,3 min → **ok. 55 min**.
-- **Z porażkami** na poziomie AI z `BalanceReport` (oczekiwany czas, dolne oszacowanie gracza):
-  8,7 + 1,5 + Σ 90,5 = **ok. 101 min przed**, 8,7 + 1,5 + 55,7 = **ok. 66 min po**.
-  Profil „medale”: 98 → 65 min.
-- Realistyczny przedział po zmianie: **55–66 min** (wcześniej 87–101 min).
+- **Model z pomiaru** (samouczek + etap 1 = 8,7 min i ok. 1,5 min przerw między bitwami
+  z przejścia nocy 5, plus oczekiwany czas etapów 2–7 z porażkami na poziomie AI):
+  przed 8,7 + 1,5 + 90,5 ≈ **101 min**, po 8,7 + 1,5 + 54,4 ≈ **65 min**
+  (profil „medale”: 98 → 64 min). Bez porażek: 87 → ok. **56 min** (6 × 7,7 min).
+- **Przejście „pierwszej godziny”** (`FirstHourJourneyTest`, 4 przejścia, seedy z zegara,
+  do 3 podejść): przed (noc 5) **87 min**; po zmianie Wódz w HUD po **56, 58, 65 i 72 min**
+  (średnio 63 min). Bitwy 2–7 trwały 7,2–8,0 min; porażki tylko na etapie 7 (0, 0, 1 i 2
+  podejścia). Wygrane miały głównie 1–2 ★. Ten sam test przed korektą etapu 7: 55, 65,
+  73 i 82 min (6 porażek, z tego 4 na etapie 7).
 
 ### Wnioski
 
 - Mediana etapów 2–7: 13,2–13,6 → **7,6–7,8 min** (cel 7–9).
 - Wygrane w paśmie celów: etapy 2–6 profilu „nowy” 83–88% (próg ≥ 70%), etap 7
-  „początkujący” 67% (próg ≥ 55%). Średnio −4,7 pp na 2–7; największy spadek na etapie 6
-  (99% → 87%), który wcześniej był wyraźnie łatwiejszy od sąsiadów. Krzywa 1 → 9:
-  86 → 88 → 88 → 83 → 86 → 87 → 67 → 66 → 75% (wcześniej 86 → 89 → 92 → 86 → 92 → 99 → 69 → 66 → 75%),
-  więc bez „dołka łatwości” przed epoką i etap 7 dalej jest progiem przed dowódcą.
-- Profil „medale” na etapie 3 (94% → 82%) i 7 (76% → 66%) traci najwięcej, ale zostaje
-  powyżej progów.
+  „początkujący” 75% (próg ≥ 55%). Średnio −3,3 pp na 2–7 (medale −5,0 pp); największy
+  spadek na etapie 6 (99% → 87%), który wcześniej był wyraźnie łatwiejszy od sąsiadów.
+  Krzywa 1 → 9: 86 → 88 → 88 → 83 → 86 → 87 → 75 → 66 → 75% (wcześniej
+  86 → 89 → 92 → 86 → 92 → 99 → 69 → 66 → 75%): etap 7 dalej jest progiem przed etapem 8.
+- **Skutek uboczny: mniej gwiazdek.** Gwiazdki liczą HP bazy gracza na końcu, a szybsza
+  blokada zabiera je też zwycięzcy: średnio 1,65 → 1,29 ★ na wygraną (−0,36). To ok. −6 medali
+  na etap przy pierwszej wygranej (5/★ + 12 za nową ★), czyli ok. −35 medali do etapu 8 —
+  stąd korekta etapu 7. Trzy gwiazdki na etapach 2–7 są trudniejsze; do decyzji, czy to
+  akceptowalne (alternatywa: łagodniejszy przyrost presji kosztem dłuższych bitew).
 - **Do koordynatora (UI, poza zakresem):** `HintOverlay` (dymek SIEGE) i `BattleScreen`
   (`tip_siege`) używają `Battle.SIEGE_START`, a teksty `hint_siege`/`tip_siege` w `L.kt`
   mówią o 8 minutach. W etapach 2–7 pasek presji (`siegePressure()`) rośnie od 4. minuty,

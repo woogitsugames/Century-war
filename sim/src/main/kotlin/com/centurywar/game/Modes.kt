@@ -187,6 +187,7 @@ object Campaign {
         // Tura 8: etapy 1-6 obniżone po wyłączeniu elit wroga bez badania gracza
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
+        // Dzień 1: etap 7 lżejszy o 5% po skróceniu etapów 2-7 (mniej gwiazdek i medali).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -194,6 +195,7 @@ object Campaign {
             4 -> 0.80f
             5 -> 0.80f
             6 -> 0.8245f
+            7 -> 0.95f
             11 -> 0.97f
             12 -> 0.828f
             16 -> 0.86f
