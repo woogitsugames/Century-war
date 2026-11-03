@@ -421,7 +421,9 @@ abstract class PrereleasePolishBase {
         require10(ws.battle.winner == 0, "$where: bitwa nie jest wygrana")
         require10(ws.resultGoalKind != com.centurywar.meta.NextGoalKind.NONE && ws.tipText.isNotEmpty(),
             "$where: wygrana bez następnego celu")
-        val lines = (0 until ws.resultTipCount).map { ws.resultTipLines[it] ?: "" }
+        // Cel w zawiniętych wierszach albo (ciasno, 720p) w jednym wierszu mniejszym pismem.
+        val lines = if (lastTexts.any { it.s == ws.tipText }) listOf(ws.tipText)
+            else (0 until ws.resultTipCount).map { ws.resultTipLines[it] ?: "" }
         for (line in lines) {
             val t = lastTexts.firstOrNull { it.s == line }
             require10(t != null, "$where: wiersz celu „$line” nie jest narysowany")

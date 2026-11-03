@@ -174,8 +174,17 @@ object L {
         putAll(part181())
         putAll(part182())
         putAll(part179())
+        putAll(part180())
         }
     }
+
+    /** R2-02: pomoc po porażkach w kampanii (propozycja na wynikach i dymek w oknie etapu). */
+    private fun part180(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "help180_research" to t("Stać cię na badanie: %s", "You can afford research: %s", "Forschung bezahlbar: %s", "Puedes pagar una investigación: %s", "Recherche à votre portée : %s", "Puoi permetterti una ricerca: %s", "Podes pagar uma pesquisa: %s", "Вистачає на дослідження: %s", "Onderzoek betaalbaar: %s", "Araştırmaya paran yetiyor: %s"),
+        "help180_easy" to t("Ten etap sprawia kłopot. Spróbuj na poziomie Łatwy (bez rankingu)", "This stage is tough. Try Easy difficulty (no ranking)", "Diese Etappe ist knifflig. Versuch es auf Leicht (ohne Rangliste)", "Esta etapa es complicada. Prueba en Fácil (sin clasificación)", "Cette étape est coriace. Essayez en Facile (sans classement)", "Questa tappa è ostica. Prova il livello Facile (senza classifica)", "Esta etapa está difícil. Experimenta o nível Fácil (sem classificação)", "Цей етап складний. Спробуй рівень Легкий (без рейтингу)", "Deze etappe is lastig. Probeer Makkelijk (zonder ranglijst)", "Bu bölüm zorlu. Kolay seviyeyi dene (sıralama yok)"),
+        "help180_hint_title" to t("Poziom trudności", "Difficulty", "Schwierigkeit", "Dificultad", "Difficulté", "Difficoltà", "Dificuldade", "Складність", "Moeilijkheid", "Zorluk"),
+        "help180_hint" to t("możesz go zmienić w każdej chwili. Łatwy nie liczy się do rankingu.", "you can change it any time. Easy doesn't count for the ranking.", "jederzeit änderbar. Leicht zählt nicht für die Rangliste.", "puedes cambiarla cuando quieras. Fácil no cuenta para la clasificación.", "modifiable à tout moment. Facile ne compte pas pour le classement.", "puoi cambiarla quando vuoi. Facile non conta per la classifica.", "podes mudá-la a qualquer momento. Fácil não conta para a classificação.", "її можна змінити будь-коли. Легкий не враховується в рейтингу.", "je kunt die altijd wijzigen. Makkelijk telt niet mee voor de ranglijst.", "istediğin zaman değiştirebilirsin. Kolay sıralamaya sayılmaz."),
+    )
 
     /** R2-01: „Następny cel” na wynikach bitwy i w menu. */
     private fun part179(): Array<Pair<String, Array<out String>>> = arrayOf(

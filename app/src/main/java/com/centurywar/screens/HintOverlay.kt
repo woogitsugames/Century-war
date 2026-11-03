@@ -75,6 +75,8 @@ class HintOverlay(
         const val ENEMY_ELITE = 22
         const val TURRET_TIER = 23
         const val COMMANDER = 24
+        /** R2-02: trzecia porażka z rzędu na etapie: poziom trudności (okno etapu). */
+        const val DIFFICULTY = 25
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -180,6 +182,7 @@ class HintOverlay(
             in RESEARCH..ENDLESS_MENU -> SCREEN_KEYS[id - RESEARCH]
             FIRST_BATTLE -> "first_next_steps"
             ELITE_RESEARCH -> "elite141_menu_hint"
+            DIFFICULTY -> "help180_hint"
             else -> return
         }
         if (battle != null || activeId >= 0 ||
@@ -258,6 +261,7 @@ class HintOverlay(
             BOSS -> L[if (battle?.currentBoss()?.bossKind == 2) "hint_boss_aura" else key]
             MODIFIERS -> modifierDescription()
             ELITE_RESEARCH, ENEMY_ELITE -> EliteUnlock.text(key, g.profile)
+            DIFFICULTY -> L["help180_hint_title"] + ": " + L[key]
             // „Od 8. etapu” ma sens tylko w kampanii; w potyczce i Endless opis bez etapu.
             COMMANDER -> L[if (battle?.cfg?.mode == Mode.CAMPAIGN) key else "comm145_hint"]
             else -> L[key]
