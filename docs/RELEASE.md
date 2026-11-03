@@ -2,7 +2,8 @@
 
 ## Kandydat do testów zamkniętych
 
-Stan: **3 listopada 2026 r.** Lista dla właściciela — bez wiedzy programistycznej.
+Stan: **3 listopada 2026 r., wieczór (po dniu 4; dzień 5 — TalkBack w bitwie — w toku).**
+Lista dla właściciela — bez wiedzy programistycznej.
 „Zrobione” znaczy: poprawka jest w kodzie i ma automatyczny test. „Zostało” znaczy:
 bez tego nie wysyłamy gry testerom w Google Play. Numery w nawiasach (np. A156-10)
 to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
@@ -52,6 +53,22 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
       z wersją bez minifikacji. Poprawka: typ misji (`MissionType`, zapisywany w profilu po
       nazwie) chroniony regułą R8 jak metryki osiągnięć; kontrola obejmuje teraz pola
       rozliczenia bitwy (A156-10).
+
+- [x] **Nowości tur 9–10 i dni 1–4** (sprawdzone automatycznie, do obejrzenia przez testerów
+      według scenariusza niżej):
+  - **Wódz** od 8. etapu kampanii (przycisk w dolnym pasku bitwy) i **stopnie wież** 1–3;
+  - **nagrana muzyka**: 21 utworów, spokojny i bojowy motyw każdej epoki, płynne przejścia,
+    muzyka ciszej pod efektami;
+  - **krótsze etapy 2–7** (ok. 7–9 min zamiast 12–14), gwiazdki bez przyspieszania presji;
+  - **pierwsza bitwa** spokojniejsza (dymki co 50 s, pełnoekranowe zapowiedzi epok tylko
+    w kampanii);
+  - **wyniki bitwy**: medale „Za bitwę” i „Za osiągnięcia” osobno;
+  - **„Co nowego”** jako przycisk w menu (z kropką po aktualizacji) i strzałka przewijania listy;
+  - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 74 osiągnięcia), wpisy w Kodeksie;
+  - **zewnętrzny ekran Folda**: zegar bitwy pod minimapą także przy presji oblężniczej,
+    górny pasek bez nachodzenia napisów.
+- [ ] **W toku:** dzień 5 — TalkBack dla przycisków w bitwie (`docs/tasks/D5-talkback-hud.md`).
+      Do tego czasu czytnik ekranu obsługuje menu, ustawienia i pauzę.
 
 ### Zostało — decyzje i dane właściciela
 
@@ -103,6 +120,60 @@ Automatyczne testy tego nie zastąpią. Wystarczy telefon i Galaxy Fold właści
       (przerwana bitwa ze starej wersji nadal się wznawia).
 - [ ] Logowanie Play Games, rankingi, osiągnięcia i zapis w chmurze — po wpisaniu prawdziwych ID.
 - [ ] Muzyka: głośność względem efektów, pętle i przenikanie (uwagi z odsłuchu właściciela).
+
+### Scenariusz dla testerów: telefon i Galaxy Fold, krok po kroku
+
+Tę listę dostają testerzy (i właściciel przed wysyłką). Każdy krok to jedno zadanie i jedno
+pytanie „czy wyszło?”. Jeśli coś nie działa: zrób zrzut ekranu, zanotuj, co robiłeś tuż przed,
+i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport nie zawiera nicku.
+
+**A. Pierwsze uruchomienie (ok. 15 min, nowa instalacja)**
+1. Zainstaluj grę ze sklepu Play (link testowy), uruchom. Menu ma się pojawić w kilka sekund.
+2. Dotknij **Graj** i przejdź samouczek. Dymki mają wskazywać przyciski, nic nie może zasłaniać
+   przycisku, którego dymek dotyczy.
+3. Wygraj pierwszą bitwę. Na wynikach: gwiazdki, medale „Za bitwę” i ewentualnie
+   „Za osiągnięcia”. Dotknij **Dalej**.
+4. Na mapie kampanii zagraj etap 2. Bitwa ma trwać mniej więcej 7–9 minut.
+5. Wejdź w **Badania** i kup coś za medale. Wróć przyciskiem Wstecz telefonu.
+
+**B. Nowości (ok. 30–45 min, w kolejnych dniach)**
+6. Dojdź do **etapu 8**: w dolnym pasku bitwy pojawia się **Wódz**. Przywołaj go i sprawdź,
+   czy pobliscy żołnierze świecą aurą.
+7. Kup wieżę, a potem podnieś jej **stopień** (panel wież, przycisk ulepszenia). Wieża ma
+   wyglądać inaczej na stopniu 2 i 3.
+8. **Muzyka:** w menu gra spokojny motyw, w bitwie muzyka narasta, gdy armie się starły.
+   Zgłoś trzaski, przerwy na złączeniu pętli albo zbyt głośną muzykę względem efektów.
+9. **Misje** (menu): odbierz nagrodę za ukończoną misję dnia. Zajrzyj w **Osiągnięcia**.
+10. **Co nowego** (przycisk w menu): lista otwiera się, da się ją przewinąć do końca.
+11. Zagraj **Oblężenie bez końca** do pierwszego wyboru kart (fala 5) i do bossa (fala 10).
+12. Zagraj **Wyzwanie dnia** i zakładkę **Oblężenie tygodnia**.
+
+**C. Przerwy i zapis (ok. 10 min)**
+13. W trakcie bitwy przełącz się na inną aplikację na minutę i wróć. Gra ma być w pauzie,
+    sama nie gra dalej.
+14. W trakcie bitwy zamknij grę z listy ostatnich aplikacji. Uruchom ponownie: gra proponuje
+    **Wznów**. Dokończ bitwę i sprawdź, że nagroda przyszła raz.
+15. Wyłącz internet (tryb samolotowy) i zagraj bitwę. Wszystko poza Play Games ma działać.
+
+**D. Galaxy Fold i duże ekrany (tylko kto ma składany telefon albo tablet)**
+16. Na **zewnętrznym ekranie** zagraj bitwę do presji oblężniczej (napis o presji). Zegar
+    bitwy ma być widoczny pod minimapą, napisy górnego paska nie mogą na siebie nachodzić.
+17. **Rozłóż** telefon w trakcie bitwy i złóż go z powrotem. Bitwa trwa dalej, przyciski
+    reagują tam, gdzie je widać (bez przesunięcia dotyku).
+18. Na wewnętrznym ekranie przejrzyj menu, Kodeks i Ustawienia. Nic nie może być ucięte.
+
+**E. Dostępność i ustawienia (ok. 10 min)**
+19. **Ustawienia → Dostępność**: zmień paletę kolorów, rozmiar tekstu na 130%, włącz
+    „mniej błysków”. Zagraj chwilę bitwy i sprawdź, czy wszystko jest czytelne.
+20. Włącz **tryb leworęczny** i sprawdź, czy przyciski bitwy są po drugiej stronie.
+21. (Kto używa czytnika ekranu) włącz **TalkBack** i przejdź menu oraz ustawienia. Bitwa
+    z TalkBack będzie w następnej wersji (dzień 5).
+22. Zmień **język** gry w Ustawieniach i wróć do polskiego.
+
+**F. Co odesłać po teście**
+23. Model telefonu i wersja Androida (Ustawienia telefonu → Informacje o telefonie).
+24. Co się podobało, co było niejasne, gdzie gra się zacinała lub grzała telefon.
+25. Ile dni i mniej więcej ile minut dziennie grałeś. Google pyta o to przy wniosku o produkcję.
 
 ### Kiedy wysyłamy testerom
 
@@ -597,10 +668,10 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
    kontem Google, które widnieje na liście**, zaakceptowali udział i
    zainstalowali grę przez Google Play. Sprawdzaj aktywnych uczestników
    w konsoli, a nie tylko listę zaproszonych.
-6. Przekaż testerom krótką listę: uruchomienie, samouczek, bitwa,
-   przerwanie i wznowienie, powtórka, zmiana języka, eksport/import
-   kopii profilu, powiadomienie, offline, logowanie Play Games,
-   ranking i osiągnięcia. Poproś o datę, model telefonu, wersję
+6. Przekaż testerom **„Scenariusz dla testerów: telefon i Galaxy Fold”**
+   (sekcja wyżej) oraz dodatkowo: powtórka, eksport/import kopii
+   profilu, powiadomienie, logowanie Play Games, ranking i osiągnięcia
+   (po wpisaniu prawdziwych ID). Poproś o datę, model telefonu, wersję
    Androida, zrzut i opis kroków dla każdego błędu. Zbieraj także
    informację, co działało.
 7. **Minimum Google (stan: 2.11.2026):** dla **osobistych kont
