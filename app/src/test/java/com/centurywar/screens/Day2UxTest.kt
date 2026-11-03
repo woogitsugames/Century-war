@@ -320,7 +320,7 @@ class Day2UxTest {
     // ------------------------------------------------------------------ górny pasek (Fold)
 
     private fun topBarTexts(d: Device, lang: String, endless: Boolean, wave: Int, leftHanded: Boolean,
-                            name: String?): Triple<Game, BattleScreen, TextCanvas> {
+                            name: String?, time: Float = 300f): Triple<Game, BattleScreen, TextCanvas> {
         L.setCode(lang)
         val p = Profile(profileFile()).apply {
             this.lang = lang; tutorialDone = true; hintsEnabled = false; eraIntrosEnabled = false
@@ -331,7 +331,7 @@ class Day2UxTest {
             else Campaign.config(Campaign.stages[3], Bonuses(), 5L)
         val bs = BattleScreen(g, cfg)
         g.setScreen(bs)
-        if (endless) bs.battle.wave = wave else bs.battle.time = 300f
+        if (endless) bs.battle.wave = wave else bs.battle.time = time
         return Triple(g, bs, render(g, name))
     }
 
@@ -407,13 +407,14 @@ class Day2UxTest {
                 val tag = "$lang${if (left) "_left" else ""}_${time.toInt()}"
                 val save = !left && time == 300f && lang in setOf("pl", "en", "de")
                 val (g, bs, c) = topBarTexts(fold, lang, endless = false, wave = 0, leftHanded = left,
-                    name = if (save) "day4_foldOuter_siege_clock_$lang" else null)
+                    name = if (save) "day4_foldOuter_siege_clock_$lang" else null, time = time)
                 val dp = g.ui.dp
                 assertTrue("$tag: presja", bs.battle.siegePressure() > 1f)
                 assertFalse("$tag: presja w bocznym polu", bs.topBarView.sideLabelDrawn.isEmpty)
                 val sec = time.toInt()
                 val clockText = "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}"
-                val clock = c.texts.single { it.s == clockText }
+                val clock = c.texts.singleOrNull { it.s == clockText }
+                    ?: throw AssertionError("$tag: brak zegara '$clockText' w ${c.texts.map { it.s }}")
                 assertTrue("$tag: zegar ${clock.sizePx / dp} sp", clock.sizePx / dp >= 10f - 0.05f)
                 assertTrue("$tag: zegar pod minimapą", clock.r.top >= bs.mini.bottom - 1 * dp &&
                     clock.r.bottom <= bs.topBar.bottom)
