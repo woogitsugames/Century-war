@@ -15,3 +15,10 @@ Roep een commandant op: zijn aura versterkt nabijgelegen troepen. Verbeter de ve
 Speel 36 campagneniveaus met instelbare moeilijkheid, weersta golven in de eindeloze belegering of stel een eigen gevecht samen. Weer, vaardigheden, doctrines en onderzoek bieden tactische keuzes.
 
 Bekijk herhalingen en de grafiek na het gevecht, speel vaandels vrij en sla je profiel op in een bestand. Pas kleuren aan en gebruik de linkshandige modus. Campagne en lokale voortgang werken offline.
+
+Elk tijdperk heeft eigen opgenomen muziek: een rustig thema en een gevechtsthema die tijdens het gevecht vloeiend in elkaar overgaan. 74 prestaties en dagelijkse en wekelijkse missies geven steeds nieuwe doelen.
+
+Toegankelijkheid: kleurenpaletten voor kleurenblindheid en hoog contrast, grotere tekst, minder flitsen en schermschudden, en ondersteuning voor schermlezers in menu’s en instellingen.
+
+## What's new (test release)
+Testversie. Nieuw: commandant (vanaf niveau 8) en torenniveaus, opgenomen muziek voor elk tijdperk, nieuwe prestaties en missies, kortere eerste campagneniveaus (ca. 8 min), duidelijkere gevechtsresultaten en verbeteringen voor Galaxy Fold. Toegankelijkheid: kleurenpaletten, grotere tekst, TalkBack in menu’s en instellingen (gevecht volgt). Meld problemen via: Instellingen → Over het spel → Probleem melden.
