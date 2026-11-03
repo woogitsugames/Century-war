@@ -218,6 +218,16 @@ internal class RecordedMixer(
         }
     }
 
+    /**
+     * R2-05 (brak pamięci w tle): zwalnia odtwarzacze, które nie grają: wygasającą parę
+     * i zakończony przerywnik. Bieżąca para gra dalej bez przerwy.
+     */
+    fun releaseIdle() {
+        outgoing?.release(); outgoing = null
+        val s = stinger
+        if (s != null && !s.isPlaying) { s.release(); stinger = null; sinceStinger = 0f }
+    }
+
     /** Pauza/zwolnienie: wszystkie odtwarzacze zwolnione, następny start od początku utworu. */
     fun releaseAll() {
         current?.release(); current = null

@@ -65,6 +65,19 @@ object CrashReports {
         store?.write(fatal, snapshot(exception))
     }
 
+    /**
+     * R2-05: przyczyny poprzedniego zakończenia procesu (ANR, błąd natywny, brak pamięci; API 30+)
+     * do lokalnego dziennika. Wołane na wątku I/O przy uruchamianiu, przed [pendingFatal].
+     */
+    fun collectExitReasons(context: Context) {
+        val log = store ?: return
+        try {
+            ExitReasons.collect(context, log, context.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
+        } catch (_: Exception) {
+            // Diagnostyka nie może zatrzymać startu gry.
+        }
+    }
+
     /** Wołane na wątku I/O przy uruchamianiu, nie podczas renderowania. */
     fun pendingFatal(context: Context): String? {
         val recent = store?.newest(fatalOnly = true) ?: return null

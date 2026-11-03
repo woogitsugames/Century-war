@@ -279,4 +279,56 @@ class RecordedMusicTest {
         }
         assertTrue(f.all.isNotEmpty())
     }
+
+    /** R2-05: TRIM_MEMORY_BACKGROUND zwalnia tylko odtwarzacze, które nie grają. */
+    @Test fun releaseIdleDropsOutgoingPairButKeepsCurrentPlaying() {
+        val f = FakeFactory()
+        val m = RecordedMixer(catalog("era1_calm", "era1_battle", "era2_calm", "victory"), f)
+        m.run(1f, 1)
+        m.run(0.4f, 2) // w trakcie przenikania: era1 wygasa, era2 narasta
+        assertEquals(3, m.openPlayers)
+        m.releaseIdle()
+        assertNull(f.live("era1_calm"))
+        assertNull(f.live("era1_battle"))
+        val era2 = f.live("era2_calm")!!
+        assertTrue(era2.isPlaying)
+        m.run(2f, 2)
+        assertTrue("bieżąca pętla gra dalej", era2.isPlaying && era2.level > 0f)
+        // Zakończony przerywnik też jest zwalniany; grający zostaje.
+        assertTrue(m.playStinger(true))
+        m.releaseIdle()
+        assertTrue(m.stingerPlaying)
+        f.live("victory")!!.finished = true
+        m.releaseIdle()
+        assertFalse(m.stingerPlaying)
+        m.run(0.2f, 2)
+    }
+
+    /** R2-05: muzyka wraca po trimMemory w tle i onResume (pauza zwolniła już odtwarzacze). */
+    @Test fun musicResumesAfterTrimMemoryInBackground() {
+        val f = FakeFactory()
+        val music = Music(catalog("menu", "era1_calm"), f, null)
+        try {
+            music.resume()
+            val deadline = System.currentTimeMillis() + 3000
+            while (synchronized(f) { f.openCount } == 0 && System.currentTimeMillis() < deadline) Thread.sleep(5)
+            assertTrue(music.isPlaying)
+            music.pause()
+            val stop = System.currentTimeMillis() + 3000
+            while (synchronized(f) { f.openCount } > 0 && System.currentTimeMillis() < stop) Thread.sleep(5)
+            assertEquals(0, f.openCount)
+            music.trimMemory()
+            music.resume()
+            val again = System.currentTimeMillis() + 3000
+            while (synchronized(f) { f.live("menu") } == null && System.currentTimeMillis() < again) Thread.sleep(5)
+            assertTrue(music.isPlaying)
+            assertTrue(synchronized(f) { f.live("menu") }!!.started)
+            // Trim w trakcie gry nie zatrzymuje bieżącego utworu.
+            music.trimMemory()
+            Thread.sleep(120)
+            assertTrue(synchronized(f) { f.live("menu") }!!.isPlaying)
+        } finally {
+            music.release()
+        }
+    }
 }

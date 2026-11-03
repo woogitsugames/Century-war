@@ -102,6 +102,24 @@ zamiast dzielenia tekstu na ciągi znaków przy każdej klatce. Gradienty
 tła już wcześniej były budowane przy zmianie rozmiaru — nie przenosimy ich
 na gorącą ścieżkę renderowania.
 
+### Termika i brak pamięci (R2-05)
+
+- **Termika:** `ThermalWatch` (MainActivity, od `onResume` do `onPause`) przekazuje do
+  `Game.thermalStatus` status z `PowerManager.addThermalStatusListener` (API 29+), a na
+  API 30+ co 10 s w bitwie `getThermalHeadroom(10)` do `Game.thermalHeadroom` (wątek UI,
+  nigdy pętla gry; `NaN` ignorujemy). `QualityGovernor.record(..., thermal)` traktuje status
+  `MODERATE` (2) lub wyżej, albo zapas ≥ 0,85, jak sygnał nagrzewania: po **3 s** obniża jeden
+  stopień **CPU** (`reduction`, bez skali bufora). Powrót jakości tylko przy statusie
+  ≤ `LIGHT` (1) i dotychczasowych 10 s zapasu. Progi CPU/GPU (4 s / 3 s / 10 s) bez zmian.
+  Nakładka FPS dopisuje `T<status>` w dolnym wierszu, gdy status > 0.
+- **`onTrimMemory`:** `Game.trimMemory` (UI_HIDDEN 20 i RUNNING_* jak 20, BACKGROUND 40)
+  woła `Screen.onTrimMemory` dla bieżącego ekranu i stosu. Kampania zwalnia obrazy epok
+  (odbudowa przy pierwszym `render`), bitwa bitmapy błysku i warstwy tła `Backdrops`,
+  zapowiedź epoki swoje `Picture`, gdy jest nieaktywna. Od 40 wątek nagrań zwalnia
+  odtwarzacze, które nie grają. Stan bitwy i `SoundPool` zostają. Gdy pętla stoi (gra w tle),
+  zwalnianie wykonuje się od razu na UI, jak migawka w `onPause`. Odbudowa po powrocie
+  może raz przyciąć klatkę.
+
 ### Testy lokalne i pomiar na urządzeniu
 
 ```bash

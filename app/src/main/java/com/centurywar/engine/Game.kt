@@ -95,6 +95,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     }
 
     private fun syncMusicScreen(s: Screen) {
+        battleActive = s is BattleScreen
         if (s !is BattleScreen && s !is ReplayScreen) {
             music?.setEra(Music.MENU)
             music?.setIntensity(0f)
@@ -200,6 +201,17 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     // CPU nie obejmuje vsync i uśpienia; pomiary post/odstępu dopisuje GameView.
     val frameMetrics = FrameMetrics()
     private val governor = QualityGovernor()
+
+    /**
+     * R2-05: status termiczny (`PowerManager.THERMAL_STATUS_*`) od słuchacza w MainActivity
+     * i zapas `getThermalHeadroom(10)` (NaN = brak danych, API < 30 albo poza bitwą).
+     * Zapisywane z wątku UI, czytane w [monitor].
+     */
+    @Volatile var thermalStatus = 0
+    @Volatile var thermalHeadroom = Float.NaN
+    /** Czy bieżący ekran to bitwa; wątek UI odpytuje zapas termiczny tylko wtedy. */
+    @Volatile var battleActive = false
+        private set
     private var frameAvg = 16f
     var fps = 60f
         private set
@@ -224,7 +236,9 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val m = frameMetrics
         fun tenth(v: Float) = (v * 10f).toInt() / 10f
         overlayTop = "${fps.toInt()} FPS  U ${tenth(m.avgUpdateMs)}  R ${tenth(m.avgRenderMs)}  GPU/post ${tenth(m.avgPostMs)}  p95 ${tenth(m.p95Ms())} ms"
-        overlayBottom = "Q${quality.level}-${quality.reduction}  ${(renderScale * 100).toInt()}%  p${quality.maxParticles}  steps ${m.steps}  lost ${m.droppedSteps}"
+        val thermal = thermalStatus
+        overlayBottom = "Q${quality.level}-${quality.reduction}  ${(renderScale * 100).toInt()}%  p${quality.maxParticles}  steps ${m.steps}  lost ${m.droppedSteps}" +
+            (if (thermal > 0) "  T$thermal" else "")
     }
     /** Gotowe teksty powiadomień (budowane przy zdarzeniu, nie w renderze) i ich ikony. */
     private val noticeQueue = ArrayDeque<String>()
@@ -635,10 +649,34 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         fps = 1000f / frameAvg.coerceAtLeast(1f)
         if (governor.record(frameMetrics.avgCpuMs, dt, profile.quality == 0,
                 profile.fpsCap, quality.maxReductionSteps,
-                frameMetrics.avgFrameIntervalMs, frameMetrics.refreshHz)) {
+                frameMetrics.avgFrameIntervalMs, frameMetrics.refreshHz,
+                QualityGovernor.thermalSignal(thermalStatus, thermalHeadroom))) {
             setQuality(effectiveQualityLevel())
         }
     }
 
     fun now() = SystemClock.uptimeMillis()
+
+    /**
+     * R2-05: system prosi o pamięć (`onTrimMemory`). Od Androida 14 przychodzą praktycznie
+     * tylko UI_HIDDEN (20) i BACKGROUND (40); starsze RUNNING_* (5–15) traktujemy jak 20.
+     * Ekrany zwalniają odtwarzalne bufory (Picture, bitmapy błysku), które odbudują same;
+     * stan bitwy i SoundPool zostają. Od 40 muzyka zwalnia odtwarzacze, które nie grają.
+     * Tylko wątek gry (albo UI, gdy pętla stoi).
+     */
+    fun trimMemory(level: Int) {
+        if (level <= 0) return
+        val normalized = if (level >= TRIM_BACKGROUND) TRIM_BACKGROUND else TRIM_UI_HIDDEN
+        screen?.onTrimMemory(normalized)
+        for (s in stack) s.onTrimMemory(normalized)
+        val from = transitionFrom
+        if (from != null && from !== screen && from !in stack) from.onTrimMemory(normalized)
+        if (normalized >= TRIM_BACKGROUND) music?.trimMemory()
+    }
+
+    companion object {
+        /** `ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN` i `TRIM_MEMORY_BACKGROUND`. */
+        const val TRIM_UI_HIDDEN = 20
+        const val TRIM_BACKGROUND = 40
+    }
 }

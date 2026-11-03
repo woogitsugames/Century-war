@@ -149,4 +149,75 @@ class QualityGovernorTest {
         assertTrue(g.reduction >= 1)
         assertTrue(g.gpuReduction >= 1)
     }
+
+    // ---- R2-05: termika
+
+    private fun driveThermal(g: QualityGovernor, duration: Float, cpuMs: Float, thermal: Int): Int {
+        var changes = 0
+        repeat((duration * 60f).toInt()) {
+            if (g.record(cpuMs, 1f / 60f, true, 0, 12, thermal = thermal)) changes++
+        }
+        return changes
+    }
+
+    @Test fun moderateThermalStatusDropsOneCpuStepAfterThreeSecondsOnHealthyCpu() {
+        val g = QualityGovernor()
+        assertEquals(0, driveThermal(g, 2.9f, 8f, QualityGovernor.THERMAL_MODERATE))
+        assertEquals(0, g.reduction)
+        assertEquals(1, driveThermal(g, 0.2f, 8f, QualityGovernor.THERMAL_MODERATE))
+        assertEquals(1, g.reduction)
+        // Tylko stopień CPU: skala bufora (GPU) bez zmian.
+        assertEquals(0, g.gpuReduction)
+    }
+
+    @Test fun lightThermalStatusDoesNotDropQuality() {
+        val g = QualityGovernor()
+        assertEquals(0, driveThermal(g, 10f, 8f, QualityGovernor.THERMAL_LIGHT))
+        assertEquals(0, g.reduction)
+    }
+
+    @Test fun qualityReturnsOnlyWhenPhoneCooledToLight() {
+        val g = QualityGovernor()
+        driveThermal(g, 3.2f, 8f, QualityGovernor.THERMAL_MODERATE)
+        assertEquals(1, g.reduction)
+        // Zdrowy CPU, ale wciąż gorąco (SEVERE): kolejne stopnie w dół, nigdy w górę.
+        driveThermal(g, 15f, 8f, 3)
+        assertTrue(g.reduction > 1)
+        val hot = g.reduction
+        // Po ostygnięciu do LIGHT powrót dopiero po zwykłych 10 s zapasu.
+        assertEquals(0, driveThermal(g, 9.5f, 8f, QualityGovernor.THERMAL_LIGHT))
+        assertEquals(hot, g.reduction)
+        assertEquals(1, driveThermal(g, 1f, 8f, QualityGovernor.THERMAL_LIGHT))
+        assertEquals(hot - 1, g.reduction)
+    }
+
+    @Test fun thermalNoneKeepsPreviousResults() {
+        val plain = QualityGovernor()
+        val thermal = QualityGovernor()
+        val loads = floatArrayOf(23f, 30f, 10f, 6f, 25f, 12f, 8f)
+        repeat(40) { step ->
+            val cpu = loads[step % loads.size]
+            repeat(45) {
+                assertEquals(plain.record(cpu, 1f / 60f, true, 0, 12, 22f, 60f),
+                    thermal.record(cpu, 1f / 60f, true, 0, 12, 22f, 60f, thermal = 0))
+            }
+            assertEquals(plain.reduction, thermal.reduction)
+            assertEquals(plain.gpuReduction, thermal.gpuReduction)
+        }
+    }
+
+    @Test fun headroomSignalCountsAsModerateAndIgnoresNaN() {
+        assertEquals(0, QualityGovernor.thermalSignal(0, Float.NaN))
+        assertEquals(0, QualityGovernor.thermalSignal(0, 0.5f))
+        assertEquals(2, QualityGovernor.thermalSignal(0, 0.85f))
+        assertEquals(1, QualityGovernor.thermalSignal(1, 0.84f))
+        assertEquals(4, QualityGovernor.thermalSignal(4, 0.9f))
+        assertEquals(0, QualityGovernor.thermalSignal(0, Float.POSITIVE_INFINITY))
+    }
+
+    @Test fun manualQualityIgnoresThermal() {
+        val g = QualityGovernor()
+        repeat(600) { g.record(8f, 1f / 60f, false, 0, 12, thermal = 4) }
+        assertEquals(0, g.reduction)
+    }
 }

@@ -87,6 +87,12 @@ abstract class Screen(val g: Game) {
     open fun onPause() {}
 
     /**
+     * R2-05: zwolnij bufory, które ekran sam odbuduje przy następnym layout()/render()
+     * ([Game.TRIM_UI_HIDDEN] albo [Game.TRIM_BACKGROUND]). Nie ruszaj stanu gry.
+     */
+    open fun onTrimMemory(level: Int) {}
+
+    /**
      * Czy tap na widocznym, ale wyłączonym przycisku pomocniczym ma zostać pochłonięty
      * zamiast trafić do [onTap].
      */

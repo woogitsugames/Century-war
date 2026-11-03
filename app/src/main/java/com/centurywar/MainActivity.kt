@@ -41,6 +41,7 @@ import com.centurywar.engine.Quality
 import com.centurywar.engine.Sound
 import com.centurywar.engine.StartupTimings
 import com.centurywar.engine.SystemAccessibility
+import com.centurywar.engine.ThermalWatch
 import com.centurywar.engine.Music
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.RestoredBattle
@@ -95,6 +96,8 @@ class MainActivity : Activity(), Host {
     private var startupFirstFrameShown = false
     private var audioInitStarted = false
     private val profileImportRunning = AtomicBoolean(false)
+    /** R2-05: status termiczny i zapas dla regulatora jakości (od onResume do onPause). */
+    private var thermalWatch: ThermalWatch? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,6 +134,7 @@ class MainActivity : Activity(), Host {
             val restored = snapshots.loadBattle(profile.lastSettledBattle)
             startup.record(StartupTimings.Phase.SNAPSHOT, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
+            CrashReports.collectExitReasons(app)
             val pendingFatal = CrashReports.pendingFatal(app)
             startup.record(StartupTimings.Phase.CRASH, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
@@ -157,6 +161,7 @@ class MainActivity : Activity(), Host {
         var start = SystemClock.elapsedRealtimeNanos()
         game = Game(this, profile, detectedQuality)
         game.bitmapCacheMemoryClassMb = memoryClassMb
+        thermalWatch = ThermalWatch(getSystemService(android.os.PowerManager::class.java), game)
         // R2-03: rozmiar tekstu, animacje i TalkBack z ustawień telefonu (profil już wczytany).
         postSystemAccessibility()
         startup.record(StartupTimings.Phase.GAME, start, SystemClock.elapsedRealtimeNanos())
@@ -359,6 +364,7 @@ class MainActivity : Activity(), Host {
 
     private fun resumeGame() {
         view.onResume()
+        thermalWatch?.start()
         // TalkBack i animacje można przełączyć, gdy gra jest w tle (bez zmiany konfiguracji).
         postSystemAccessibility()
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
@@ -381,6 +387,7 @@ class MainActivity : Activity(), Host {
             return
         }
         game.music?.pause()
+        thermalWatch?.stop()
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(300)
         val done = CountDownLatch(1)
         val ran = AtomicBoolean(false)
@@ -403,6 +410,16 @@ class MainActivity : Activity(), Host {
         game.history?.awaitWrites(remainingSaveMs(deadline))
         game.replays?.awaitWrites(remainingSaveMs(deadline))
         super.onPause()
+    }
+
+    /**
+     * R2-05: system prosi o pamięć. Gdy pętla gry pracuje, zwalnianie idzie przez kolejkę
+     * wątku gry; gdy stoi (gra w tle), wykonujemy je od razu na UI, jak migawkę w onPause.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (!::game.isInitialized) return
+        if (view.loopActive) game.post { game.trimMemory(level) } else game.trimMemory(level)
     }
 
     /** Na Androidzie 13+ brak callbacku w menu pozwala systemowi animować wyjście. */

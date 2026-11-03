@@ -41,7 +41,7 @@ Plik battle.snap służy wyłącznie lokalnemu wznowieniu bitwy, nie jest wysył
 
 ### Lokalne raportowanie problemów
 
-Po awarii aplikacja zapisuje lokalnie raport techniczny: wersję gry, model urządzenia, wersję Androida, nazwę ekranu, ostatnie 30 zdarzeń technicznych (np. otwarcie ekranu, etap bitwy) i stos wywołań. Zapis nie obejmuje pseudonimu, identyfikatora gracza, treści wyjątków ani danych profilu. Przechowywanych jest maksymalnie 10 raportów; starsze są automatycznie usuwane. Raporty nie są synchronizowane z Play Games ani obejmowane systemową kopią zapasową.
+Po awarii aplikacja zapisuje lokalnie raport techniczny: wersję gry, model urządzenia, wersję Androida, nazwę ekranu, ostatnie 30 zdarzeń technicznych (np. otwarcie ekranu, etap bitwy) i stos wywołań. Na Androidzie 11 i nowszym raport może też opisywać systemową przyczynę poprzedniego zamknięcia gry (np. brak odpowiedzi aplikacji, błąd natywny, brak pamięci): kod przyczyny, krótki opis systemu, zużycie pamięci, a przy braku odpowiedzi stos wywołań wątku głównego i wątku gry. Zapis nie obejmuje pseudonimu, identyfikatora gracza, treści wyjątków ani danych profilu. Przechowywanych jest maksymalnie 10 raportów; starsze są automatycznie usuwane. Raporty nie są synchronizowane z Play Games ani obejmowane systemową kopią zapasową.
 
 Przy kolejnym uruchomieniu po awarii gra **jednorazowo pyta**, czy udostępnić raport. Można też wybrać **Ustawienia → O grze → Zgłoś problem**. W obu przypadkach aplikacja wyłącznie otwiera systemowe okno udostępniania tekstu (np. e-mail); **nie wysyła raportów automatycznie ani do wydawcy, ani do zewnętrznej usługi**. Użytkownik decyduje, czy i komu go przekazać. Zapisane raporty można usunąć przez wyczyszczenie danych aplikacji.
 

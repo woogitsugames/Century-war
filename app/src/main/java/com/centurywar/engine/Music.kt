@@ -85,6 +85,15 @@ class Music internal constructor(
         sync()
     }
 
+    /**
+     * R2-05: przy TRIM_MEMORY_BACKGROUND wątek nagrań zwalnia odtwarzacze, które nie grają
+     * (wygasająca para, zakończony przerywnik). Po pauzie wątek i tak zwolnił wszystko,
+     * a [resume] otwiera bieżący utwór od nowa, więc wznowienie się nie zmienia.
+     */
+    fun trimMemory() {
+        recorded?.requestTrim()
+    }
+
     /** Koniec życia Activity; po tym muzyka już nie wystartuje. */
     @Synchronized
     fun release() {

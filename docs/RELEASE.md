@@ -120,6 +120,15 @@ Automatyczne testy tego nie zastąpią. Wystarczy telefon i Galaxy Fold właści
       (przerwana bitwa ze starej wersji nadal się wznawia).
 - [ ] Logowanie Play Games, rankingi, osiągnięcia i zapis w chmurze — po wpisaniu prawdziwych ID.
 - [ ] Muzyka: głośność względem efektów, pętle i przenikanie (uwagi z odsłuchu właściciela).
+- [ ] **Brak pamięci (R2-05):** w trakcie kampanii i bitwy (debug) wykonaj
+      `adb shell am send-trim-memory com.centurywar.game RUNNING_LOW` (Android 13 i starsze)
+      albo przełącz grę w tło i `adb shell am send-trim-memory com.centurywar.game BACKGROUND`.
+      Po powrocie mapa kampanii, tło bitwy i błysk bazy są na miejscu, muzyka wraca, bitwa
+      trwa od tego samego miejsca, w logcat brak błędów.
+- [ ] **ANR → pytanie o raport (R2-05, Android 11+):** w buildzie debug wywołaj brak odpowiedzi
+      (`adb shell am hang` na kilkanaście sekund w trakcie gry, potem „Zamknij aplikację”),
+      uruchom grę ponownie: pojawia się jednorazowe pytanie o raport, a raport zawiera
+      „Przyczyna: ANR” i stos wątku `main`. Ślad nie może zawierać ścieżek z nazwą konta.
 
 ### Scenariusz dla testerów: telefon i Galaxy Fold, krok po kroku
 

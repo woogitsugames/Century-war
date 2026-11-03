@@ -31,6 +31,7 @@ internal class RecordedMusic(
     @Volatile var intensity = 0f
     @Volatile var volume = 0.5f
     private val stingerRequest = AtomicInteger(STINGER_NONE)
+    private val trimRequest = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var worker: Thread? = null
 
     val isActive: Boolean get() = worker != null
@@ -49,6 +50,11 @@ internal class RecordedMusic(
             stingerRequest.set(STINGER_NONE)
             t.interrupt()
         }
+    }
+
+    /** Wykonywane przez wątek nagrań; bez wątku odtwarzacze są już zwolnione. */
+    fun requestTrim() {
+        if (worker != null) trimRequest.set(true)
     }
 
     fun requestStinger(victory: Boolean) {
@@ -72,6 +78,7 @@ internal class RecordedMusic(
                     STINGER_VICTORY -> mixer.playStinger(true)
                     STINGER_DEFEAT -> mixer.playStinger(false)
                 }
+                if (trimRequest.getAndSet(false)) mixer.releaseIdle()
                 mixer.update(dt, target, intensity, volume, duckLevel())
                 Thread.sleep(TICK_MS)
             }

@@ -323,6 +323,8 @@ class CampaignScreen(g: Game) : Screen(g) {
         c.clipRect(viewportL, top, viewportR, bottom)
         c.translate(if (portraitMap) 0f else -scroll, if (portraitMap) -scroll else 0f)
 
+        // R2-05: po onTrimMemory obrazy epok nagrywamy ponownie (raz, przy pierwszej klatce).
+        if (pictureWidth < 0) rebuildPictures()
         for (e in 0 until Defs.ERA_COUNT) {
             val begin = e * regionSpan - scroll
             val span = if (portraitMap) viewportH else viewportW
@@ -444,6 +446,13 @@ class CampaignScreen(g: Game) : Screen(g) {
         }
         if (!locked) ui.stars(c, x, y + r + 5 * dp, r * 0.58f,
             g.profile.stars[i], 3, 0.95f)
+    }
+
+    /** R2-05: obrazy epok odbudują się przy najbliższym render(). */
+    override fun onTrimMemory(level: Int) {
+        regionPictures.fill(null)
+        pictureWidth = -1
+        eraIntro?.trimMemory()
     }
 
     /** Każdy obraz epoki jest wektorowy i tworzony tylko przy zmianie geometrii. */

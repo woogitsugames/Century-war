@@ -180,6 +180,12 @@ class BattleRenderer(private val g: Game, private val b: Battle,
 
     /** Zwolnienie bitmap błysku nie zmienia zapamiętanych rysunków Picture. */
     fun releaseFlashCache() = baseFlashCache.release()
+
+    /** R2-05: bitmapy błysku i warstwy tła odtwarzają się same przy następnym rysowaniu. */
+    fun trimMemory() {
+        baseFlashCache.release()
+        backdrops.trimMemory()
+    }
     internal val cachedFlashBytes: Long get() = baseFlashCache.cachedBytes
 
     fun layout(w: Float, h: Float, topReserve: Float, bottomReserve: Float) {

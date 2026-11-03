@@ -168,6 +168,10 @@ class BattleScreen(
     internal companion object {
         /** Odstęp tekstu kart doktryn/kart Endless od krawędzi (lamówka + 6 dp), w dp. */
         const val CHOICE_TEXT_PAD = Ui.PANEL_TRIM_INSET + 6f
+        /** Węższe przyciski pauzy (dp) układamy w kolumnie; telefon i Fold mają ≥ 150 dp. */
+        const val PAUSE_ROW_MIN_W = 120f
+        /** Odstęp przycisków pauzy w kolumnie (dp). */
+        const val PAUSE_STACK_GAP = 10f
         /** Kolory rzadkości kart Endless: własna paleta, niezależna od liczby epok. */
         val CARD_RARITY = intArrayOf(
             android.graphics.Color.rgb(150, 104, 60), android.graphics.Color.rgb(84, 112, 150),
@@ -259,6 +263,9 @@ class BattleScreen(
     private val pauseSfxRect = RectF()
     private val pauseMusicRect = RectF()
     private var pauseWide = false
+    /** Dzień 7: przyciski pauzy jeden pod drugim (wąski pionowy ekran). */
+    internal var pauseStacked = false
+        private set
     private var pauseSliderPointer = -1
     private var pauseSliderMusic = false
     internal val continueBtn = btn(CONTINUE)
@@ -485,7 +492,14 @@ class BattleScreen(
         val freeH = h - g.insetT - g.insetB - 20 * dp
         pauseWide = freeW >= 560 * dp || freeW > freeH
         val pw = min(if (pauseWide) 780 * dp else 520 * dp, freeW)
-        val ph = min(if (pauseWide) 354 * dp else 560 * dp, freeH)
+        val side = (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp
+        val buttonGap = 12 * dp
+        // Dzień 7: wąski pionowy ekran (zewnętrzny Fold, ok. 335 dp) dawał przyciski ~82 dp,
+        // w których medalion ikony zostawiał na napis ~24 dp (8 sp). Wtedy układamy je jeden
+        // pod drugim na pełną szerokość, a panel rośnie o dodatkowe rzędy (gdy jest miejsce).
+        pauseStacked = !pauseWide && (pw - side * 2 - buttonGap * 2) / 3f < PAUSE_ROW_MIN_W * dp
+        val stackExtra = if (pauseStacked) (pauseMenu.size - 1) * (48 * dp + PAUSE_STACK_GAP * dp) else 0f
+        val ph = min((if (pauseWide) 354 * dp else 560 * dp) + stackExtra, freeH)
         val cx = (g.insetL + w - g.insetR) * 0.5f
         val cy = (g.insetT + h - g.insetB) * 0.5f
         pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
@@ -493,7 +507,7 @@ class BattleScreen(
         // Pełne 48 dp i wyraźny odstęp od złotej lamówki ramki (zgłoszenie z Folda).
         val buttonH = 48 * dp
         val buttonTop = pausePanel.bottom -
-            (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp - buttonH
+            (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp - buttonH - stackExtra
         val contentTop = pausePanel.top + 48 * dp
         val contentBottom = buttonTop - 10 * dp
         val avail = contentBottom - contentTop
@@ -535,12 +549,15 @@ class BattleScreen(
         pauseVibrationBtn.hitSlop = (48 * dp - ctrlH).coerceAtLeast(0f) / 2f
         pauseSpeedBtn.hitSlop = pauseVibrationBtn.hitSlop
 
-        val buttonGap = 12 * dp
-        val side = (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp
         val buttonW = (pw - side * 2 - buttonGap * 2) / 3f
         for (i in pauseMenu.indices) {
-            pauseMenu[i].set(pausePanel.left + side + i * (buttonW + buttonGap),
-                buttonTop, buttonW, buttonH)
+            if (pauseStacked) {
+                pauseMenu[i].set(pausePanel.left + side,
+                    buttonTop + i * (buttonH + PAUSE_STACK_GAP * dp), pw - side * 2, buttonH)
+            } else {
+                pauseMenu[i].set(pausePanel.left + side + i * (buttonW + buttonGap),
+                    buttonTop, buttonW, buttonH)
+            }
             pauseMenu[i].hitSlop = (48 * dp - buttonH).coerceAtLeast(0f) / 2f
         }
     }
@@ -1190,6 +1207,12 @@ class BattleScreen(
         }
         paused = !paused
         return true
+    }
+
+    /** R2-05: tylko bufory rysowania; stan bitwy zostaje nietknięty. */
+    override fun onTrimMemory(level: Int) {
+        r.trimMemory()
+        eraIntro?.trimMemory()
     }
 
     /** Przy pauzie serializujemy stan na wątku gry, a fsync wykonuje wątek I/O. */

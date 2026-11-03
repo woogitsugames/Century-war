@@ -66,6 +66,13 @@ class Backdrops(private val g: Game, private val b: Battle) {
         skyGround = -1f
     }
 
+    /** R2-05: zwalnia nagrane warstwy krajobrazu; [drawLandscape] nagra je ponownie. */
+    fun trimMemory() {
+        invalidate()
+        cachedEra = -1
+        pictures.fill(null)
+    }
+
     private fun palette(): IntArray {
         val spec = Defs.spec(b.player.era)
         val variant = b.player.eraVariant

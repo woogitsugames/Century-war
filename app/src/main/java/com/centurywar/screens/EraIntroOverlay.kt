@@ -95,6 +95,13 @@ class EraIntroOverlay private constructor(
 
     fun dismiss() { remaining = 0f }
 
+    /** R2-05: po zakończeniu zapowiedzi jej Picture nie są już potrzebne. */
+    fun trimMemory() {
+        if (active) return
+        landscape = null
+        figures = null
+    }
+
     /** Po zmianie rozmiaru lub gęstości przygotowujemy tło i postacie poza render(). */
     fun layout() {
         val w = g.width.toFloat()

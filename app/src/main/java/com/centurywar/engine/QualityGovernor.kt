@@ -13,6 +13,8 @@ class QualityGovernor {
     private var slowFor = 0f
     private var gpuSlowFor = 0f
     private var spareFor = 0f
+    /** R2-05: czas statusu termicznego co najmniej [THERMAL_MODERATE]. */
+    private var thermalFor = 0f
     private var sinceChange = 3f
 
     fun reset(): Boolean {
@@ -22,6 +24,7 @@ class QualityGovernor {
         slowFor = 0f
         gpuSlowFor = 0f
         spareFor = 0f
+        thermalFor = 0f
         sinceChange = 3f
         return changed
     }
@@ -29,10 +32,14 @@ class QualityGovernor {
     /**
      * Brak pomiaru odstępu (0 ms) pozostawia poprzednie zachowanie CPU-only,
      * np. w testach ekranów rysowanych bez SurfaceView.
+     *
+     * R2-05: [thermal] to status termiczny telefonu (`PowerManager.THERMAL_STATUS_*`, 0 = brak
+     * danych). Od [THERMAL_MODERATE] przez 3 s obniżamy jeden stopień CPU, zanim system zacznie
+     * dławić procesor; powrót jakości wymaga statusu najwyżej [THERMAL_LIGHT].
      */
     fun record(
         cpuMs: Float, seconds: Float, automatic: Boolean, fpsCap: Int, maximum: Int,
-        frameIntervalMs: Float = 0f, refreshHz: Float = 60f
+        frameIntervalMs: Float = 0f, refreshHz: Float = 60f, thermal: Int = 0
     ): Boolean {
         if (!automatic) return reset()
         val dt = seconds.coerceIn(0f, 0.1f)
@@ -42,12 +49,14 @@ class QualityGovernor {
         val gpuSlow = frameIntervalMs > target * 1.35f && cpuMs <= budget * 0.80f
         val gpuHealthy = frameIntervalMs <= 0f || frameIntervalMs <= target * 1.10f
         val cpuSpare = cpuMs <= budget * 0.70f
+        val cool = thermal <= THERMAL_LIGHT
+        if (thermal >= THERMAL_MODERATE) thermalFor += dt else thermalFor = 0f
 
         sinceChange += dt
         when {
             cpuSlow -> { slowFor += dt; gpuSlowFor = 0f; spareFor = 0f }
             gpuSlow -> { gpuSlowFor += dt; slowFor = 0f; spareFor = 0f }
-            cpuSpare && gpuHealthy -> { spareFor += dt; slowFor = 0f; gpuSlowFor = 0f }
+            cpuSpare && gpuHealthy && cool -> { spareFor += dt; slowFor = 0f; gpuSlowFor = 0f }
             else -> { slowFor = 0f; gpuSlowFor = 0f; spareFor = 0f }
         }
         if (sinceChange < 3f) return false
@@ -55,6 +64,12 @@ class QualityGovernor {
             reduction++
             // Gdy skala osiągnie minimum, kolejne stopnie ograniczają efekty.
             if (gpuReduction < (maximum - 4).coerceAtLeast(0)) gpuReduction++
+            changed()
+            return true
+        }
+        if (thermalFor >= 3f && reduction < maximum) {
+            // Nagrzewanie: stopień CPU (efekty, cząstki), bez zmiany skali bufora.
+            reduction++
             changed()
             return true
         }
@@ -77,9 +92,20 @@ class QualityGovernor {
         slowFor = 0f
         gpuSlowFor = 0f
         spareFor = 0f
+        thermalFor = 0f
     }
 
     companion object {
+        /** `PowerManager.THERMAL_STATUS_LIGHT` i `THERMAL_STATUS_MODERATE` (API 29). */
+        const val THERMAL_LIGHT = 1
+        const val THERMAL_MODERATE = 2
+        /** `getThermalHeadroom` od tej wartości traktujemy jak [THERMAL_MODERATE]. */
+        const val HEADROOM_HOT = 0.85f
+
+        /** Status do [record]: wyższy z raportowanego statusu i progu zapasu (NaN ignorujemy). */
+        fun thermalSignal(status: Int, headroom: Float): Int =
+            if (headroom.isFinite() && headroom >= HEADROOM_HOT) maxOf(status, THERMAL_MODERATE) else status
+
         fun budgetMs(fpsCap: Int): Float = if (fpsCap == 30) 1000f / 30f else 1000f / 60f
 
         /** Ekran 90/120 Hz nie wymusza 90/120 FPS; 30 FPS jest świadomym limitem. */
