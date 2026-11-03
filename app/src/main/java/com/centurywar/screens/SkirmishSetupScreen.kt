@@ -324,6 +324,15 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
             60 + Random.nextInt(29) * 5, mask))
     }
 
+    /** Noc 5: strzałki epok mają tylko ikony; TalkBack czyta epokę i kierunek zmiany. */
+    override fun accessibilityLabel(b: Button): String = when (b) {
+        eraButtons[0] -> fromName + ", " + L["fh173_era_earlier"]
+        eraButtons[1] -> fromName + ", " + L["fh173_era_later"]
+        eraButtons[2] -> toName + ", " + L["fh173_era_earlier"]
+        eraButtons[3] -> toName + ", " + L["fh173_era_later"]
+        else -> super.accessibilityLabel(b)
+    }
+
     override fun onClick(b: Button) {
         when (b.id) {
             -1 -> g.pop()

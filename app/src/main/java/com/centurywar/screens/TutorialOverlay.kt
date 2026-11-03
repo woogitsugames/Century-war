@@ -298,6 +298,8 @@ class TutorialOverlay(
         if (step >= S_DONE) { finished = true; markDone(); hideButtons(); return }
         // Krok postawy nie zostawia armii w Trzymaj (np. po limicie czasu).
         if (step == S_STANCE && showing && p.hold) commands.stance(false)
+        // Noc 5: po zakupie wieży panel wież zasłaniał przyciski jednostek do następnego kroku.
+        if (step == S_TURRET && showing) t.closeTurrets()
         step++
         showing = false
         phaseT = 0f

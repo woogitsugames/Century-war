@@ -195,6 +195,8 @@ class BattleScreen(
         const val COMMANDER = 203
         /** Autozapis co tyle sekund czasu bitwy (zapis pliku w tle). */
         const val AUTOSAVE_EVERY = 30f
+        /** Noc 5: sekundy symulacji bez dymków po zakończeniu nakładki samouczka. */
+        const val AFTER_TUTORIAL_HINT_DELAY = 8f
 
         /** Losowy, niezerowy identyfikator bitwy; 0 oznacza „brak” w profilu i zrzucie. */
         internal fun newBattleId(): Long {
@@ -690,13 +692,15 @@ class BattleScreen(
                 }
             }
         }
-        if (paused || finished) tut?.hideUnderOverlay()
+        // Noc 5: zapowiedź epoki (np. po awansie w kroku „Awansuj”) zasłania samouczek w całości.
+        if (paused || finished || eraIntro?.active == true) tut?.hideUnderOverlay()
         evolveBanner.update(dt, battle.player.era, cfg.maxEra, evolveBtn.enabled && evolveBtn.visible,
             finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
                 battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null ||
                 showTurrets || showUpgrade >= 0 || aimingBarrage || hints.activeId >= 0)
         val criticalDaily = rankedDaily && (battle.player.baseHp <= battle.player.baseMaxHp * 0.18f ||
             battle.enemy.baseHp <= battle.enemy.baseMaxHp * 0.18f)
+        if (tut != null && !tut.finished) hints.holdOff(AFTER_TUTORIAL_HINT_DELAY)
         hints.update(dt, finished || paused || eraIntro?.active == true || (tut != null && !tut.finished) ||
             battle.pendingChoice != null || battle.pendingCards != null ||
             showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f ||
@@ -1523,7 +1527,7 @@ class BattleScreen(
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
         if (!finished && !paused) evolveBanner.draw(c, ui)
         if (!finished) {
-            tut?.draw(c)
+            if (eraIntro?.active != true) tut?.draw(c)
             // Pod pauzą samouczek widać, ale jego przyciski nie mogą łapać dotyku (leżą na liście pierwsze).
             if (paused) tut?.hideUnderOverlay()
             hints.draw(c)
