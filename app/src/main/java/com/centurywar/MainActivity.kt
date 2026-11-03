@@ -126,7 +126,8 @@ class MainActivity : Activity(), Host {
             startup.record(StartupTimings.Phase.PROFILE, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
             val snapshots = SnapshotStore(File(root, "battle.snap"))
-            val restored = snapshots.loadBattle()
+            // Zrzut już rozliczonej bitwy (proces zginął po zapisie profilu) jest odrzucany.
+            val restored = snapshots.loadBattle(profile.lastSettledBattle)
             startup.record(StartupTimings.Phase.SNAPSHOT, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
             val pendingFatal = CrashReports.pendingFatal(app)

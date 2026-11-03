@@ -10,8 +10,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 
-/** Bitwa odtworzona ze zrzutu razem z danymi ekranu, które nie należą do symulacji. */
-class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Float)
+/**
+ * Bitwa odtworzona ze zrzutu razem z danymi ekranu, które nie należą do symulacji.
+ * [battleId] to trwały identyfikator rozliczenia (A156-10); 0 = zrzut sprzed wersji 17.
+ */
+class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Float, val battleId: Long = 0L)
 
 /**
  * Zrzut całego stanu bitwy do zwartego formatu binarnego (Android potrafi zabić aplikację
@@ -27,7 +30,13 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 16
+    const val VERSION = 17
+    /**
+     * Wersja 16 różni się tylko brakiem identyfikatora rozliczenia na końcu danych.
+     * Taki zrzut nadal wznawiamy (aktualizacja gry nie kasuje przerwanej bitwy),
+     * a ekran bitwy nadaje mu nowy identyfikator.
+     */
+    const val LEGACY_VERSION_WITHOUT_ID = 16
     private const val MAGIC = 0x43575342 // "CWSB"
     private const val MAX_BYTES = 1 shl 20
 
@@ -71,7 +80,7 @@ object BattleSnapshot {
 
     // ------------------------------------------------------------------ zapis
 
-    fun encode(b: Battle, rankedDaily: Boolean = false, camX: Float = 0f): ByteArray {
+    fun encode(b: Battle, rankedDaily: Boolean = false, camX: Float = 0f, battleId: Long = 0L): ByteArray {
         val bo = ByteArrayOutputStream(8192)
         val o = DataOutputStream(bo)
         o.writeInt(defsFingerprint)
@@ -132,6 +141,8 @@ object BattleSnapshot {
             o.writeFloat(p.tx); o.writeFloat(p.t); o.writeFloat(p.dur); o.writeFloat(p.delay)
             o.writeFloat(p.dmg); o.writeFloat(p.splash); o.writeFloat(p.siegeMul); o.writeFloat(p.burnDps)
         }
+        // v17: identyfikator rozliczenia nie wpływa na symulację, dlatego jest na końcu.
+        o.writeLong(battleId)
         o.flush()
         val payload = bo.toByteArray()
         val crc = CRC32().apply { update(payload) }.value.toInt()
@@ -219,18 +230,21 @@ object BattleSnapshot {
         return try {
             if (bytes.size < 16 || bytes.size > MAX_BYTES) return null
             val h = DataInputStream(ByteArrayInputStream(bytes))
-            if (h.readInt() != MAGIC || h.readInt() != VERSION) return null
+            if (h.readInt() != MAGIC) return null
+            val version = h.readInt()
+            if (version != VERSION && version != LEGACY_VERSION_WITHOUT_ID) return null
             val len = h.readInt()
             val crc = h.readInt()
             if (len != bytes.size - 16) return null
             if (CRC32().apply { update(bytes, 16, len) }.value.toInt() != crc) return null
-            read(DataInputStream(ByteArrayInputStream(bytes, 16, len)))
+            val data = ByteArrayInputStream(bytes, 16, len)
+            read(DataInputStream(data), version)?.takeIf { data.available() == 0 }
         } catch (_: Exception) {
             null
         }
     }
 
-    private fun read(i: DataInputStream): RestoredBattle? {
+    private fun read(i: DataInputStream, version: Int): RestoredBattle? {
         if (i.readInt() != defsFingerprint) return null
         val ranked = i.readBoolean()
         val camX = i.readFloat()
@@ -317,7 +331,8 @@ object BattleSnapshot {
             p.tx = i.readFloat(); p.t = i.readFloat(); p.dur = i.readFloat(); p.delay = i.readFloat()
             p.dmg = i.readFloat(); p.splash = i.readFloat(); p.siegeMul = i.readFloat(); p.burnDps = i.readFloat()
         }
-        return RestoredBattle(b, ranked, camX)
+        val battleId = if (version >= 17) i.readLong() else 0L
+        return RestoredBattle(b, ranked, camX, battleId)
     }
 
     internal fun readConfig(i: DataInputStream, hasDailyEvent: Boolean = true): BattleConfig? {
@@ -449,13 +464,15 @@ class SnapshotStore(private val file: File) {
     private val lock = Any()
     private var seq = 0L
     private var written = 0L
+    /** Identyfikator bitwy ostatnio zleconego zapisu (lub wczytanej bitwy); 0 = brak. */
+    private var owner = 0L
     private val io by lazy {
         Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
     }
 
     /** Zapis w tle. Zamek chroni tylko numerację, nigdy fsync. */
-    fun saveAsync(bytes: ByteArray) {
-        val my = synchronized(lock) { ++seq }
+    fun saveAsync(bytes: ByteArray, battleId: Long = 0L) {
+        val my = synchronized(lock) { owner = battleId; ++seq }
         io.execute {
             if (synchronized(lock) { my != seq || my <= written }) return@execute
             if (writeAtomic(bytes)) synchronized(lock) { written = my }
@@ -463,8 +480,8 @@ class SnapshotStore(private val file: File) {
     }
 
     /** Do narzędzi i testów; gra używa wyłącznie saveAsync. */
-    fun saveNow(bytes: ByteArray): Boolean {
-        val my = synchronized(lock) { ++seq }
+    fun saveNow(bytes: ByteArray, battleId: Long = 0L): Boolean {
+        val my = synchronized(lock) { owner = battleId; ++seq }
         return try {
             io.submit<Boolean> {
                 if (synchronized(lock) { my != seq || my <= written }) false
@@ -478,12 +495,33 @@ class SnapshotStore(private val file: File) {
 
     /** Usunięcie z wątku gry odbywa się także poza nim. */
     fun deleteAsync() {
-        val my = synchronized(lock) { ++seq }
+        val my = synchronized(lock) { owner = 0L; ++seq }
         io.execute {
             if (synchronized(lock) { my != seq }) return@execute
             removeFiles()
             synchronized(lock) { written = my }
         }
+    }
+
+    /**
+     * Usuwa zrzut rozliczonej bitwy [battleId] (A156-10), wywoływane dopiero po trwałym
+     * zapisie profilu, więc zwykle z wątku I/O profilu. Jeśli w międzyczasie zlecono zapis
+     * innej bitwy (nowa bitwa zdążyła się zapisać), jej zrzut zostaje nietknięty.
+     * Zwraca false, gdy usunięcie pominięto.
+     */
+    fun deleteSettledAsync(battleId: Long): Boolean {
+        if (battleId == 0L) return false
+        val my = synchronized(lock) {
+            if (owner != battleId) return false
+            owner = 0L
+            ++seq
+        }
+        io.execute {
+            if (synchronized(lock) { my != seq }) return@execute
+            removeFiles()
+            synchronized(lock) { written = my }
+        }
+        return true
     }
 
     /** Ograniczona czasowo bariera używana przy przechodzeniu aplikacji w tło. */
@@ -500,7 +538,7 @@ class SnapshotStore(private val file: File) {
 
     /** Synchroniczne usunięcie tylko dla narzędzi i odczytu przy starcie. */
     fun delete() {
-        val my = synchronized(lock) { ++seq }
+        val my = synchronized(lock) { owner = 0L; ++seq }
         try {
             io.submit {
                 removeFiles()
@@ -527,8 +565,14 @@ class SnapshotStore(private val file: File) {
         }
     }
 
-    /** Wczytuje poprawny zapis główny, .tmp albo ostatnią bezpieczną kopię. */
-    fun loadBattle(): RestoredBattle? {
+    /**
+     * Wczytuje poprawny zapis główny, .tmp albo ostatnią bezpieczną kopię.
+     * [settledBattleId] to identyfikator ostatnio rozliczonej bitwy z profilu: taki zrzut
+     * pozostał tylko dlatego, że proces zginął między zapisem profilu a usunięciem
+     * zrzutu (A156-10). Jest usuwany, a nie oferowany do wznowienia, żeby nagroda
+     * nie została naliczona drugi raz.
+     */
+    fun loadBattle(settledBattleId: Long = 0L): RestoredBattle? {
         GameIoCounter.diskAccess()
         val originals = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
             else arrayOf(file, tmp)
@@ -556,7 +600,8 @@ class SnapshotStore(private val file: File) {
                 SaveGuard.report("snapshot-format")
                 continue
             }
-            if (restored.battle.over) {
+            if (restored.battle.over ||
+                (settledBattleId != 0L && restored.battleId == settledBattleId)) {
                 delete()
                 return null
             }
@@ -567,6 +612,7 @@ class SnapshotStore(private val file: File) {
                     SaveGuard.report("snapshot-recovery", e)
                 }
             }
+            synchronized(lock) { owner = restored.battleId }
             return restored
         }
         // Zapis niekompatybilny zostaje do diagnostyki / migracji, profil nie jest dotykany.

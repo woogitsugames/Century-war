@@ -152,6 +152,15 @@ class Profile(private val file: File) {
     var lastDailyChallengeStreakDay = -1L
         private set
 
+    /**
+     * Identyfikator ostatnio rozliczonej bitwy (A156-10). Trafia na dysk w tej samej
+     * migawce co nagrody, więc ponowne rozliczenie tej samej bitwy (np. zrzut, który
+     * przetrwał zabicie procesu po zapisie profilu) niczego nie dodaje. 0 = brak
+     * (także stare profile bez tego pola). Wartość jest lokalna: nie idzie do chmury.
+     */
+    @Volatile var lastSettledBattle = 0L
+        private set
+
     fun bannerUnlocked(id: Int): Boolean =
         id in 0 until BannerCatalog.COUNT && unlockedBanners and (1 shl id) != 0
 
@@ -487,6 +496,7 @@ class Profile(private val file: File) {
         o.put("dailyChallengeStreak", dailyChallengeStreak)
         o.put("bestDailyChallengeStreak", bestDailyChallengeStreak)
         o.put("lastDailyChallengeStreakDay", lastDailyChallengeStreakDay)
+        o.put("lastSettledBattle", lastSettledBattle)
         o.put("bestWave", bestWave)
         o.put("lastRankedDaily", lastRankedDaily)
         o.put("weeklyWeek", weeklyWeek)
@@ -573,6 +583,7 @@ class Profile(private val file: File) {
         val localSecret = playerSecret
         val localConsent = globalRanking
         val localWhatsNewVersion = whatsNewSeenVersion
+        val localSettled = lastSettledBattle
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
@@ -581,6 +592,8 @@ class Profile(private val file: File) {
         playerSecret = localSecret
         globalRanking = localConsent && localId.isNotEmpty()
         whatsNewSeenVersion = localWhatsNewVersion
+        // Zrzut bitwy jest lokalny, więc i znacznik jej rozliczenia pozostaje lokalny.
+        lastSettledBattle = localSettled
     }
 
     /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
@@ -592,12 +605,14 @@ class Profile(private val file: File) {
         remove("playerSecret")
         remove("globalRanking")
         remove("whatsNewSeenVersion")
+        remove("lastSettledBattle")
     }.toString()
 
     /** Migawka jest spójna; wątek wywołujący nie dotyka dysku. */
     @Synchronized
     fun save() {
         if (newerProfileVersion) return
+        if (settlingDepth > 0) { deferredSave = true; return }
         val json = try { toJson() } catch (_: Exception) { return }
         val seq = ++saveSeq
         hintWriter.execute { writeJson(json, seq) }
@@ -626,10 +641,70 @@ class Profile(private val file: File) {
         val seq: Long
         synchronized(this) {
             if (newerProfileVersion) return
+            if (settlingDepth > 0) { deferredSave = true; return }
             json = try { toJson() } catch (_: Exception) { return }
             seq = ++saveSeq
         }
         hintWriter.execute { writeJson(json, seq) }
+    }
+
+    // Rozliczenie bitwy: zapisy z Achievements/Missions w trakcie [settleBattle] są
+    // odkładane, aby na dysk nie trafiła połowa nagród bez znacznika rozliczenia.
+    private var settlingDepth = 0
+    private var deferredSave = false
+
+    /** Czy bitwa [battleId] została już rozliczona (0 nigdy nie jest rozliczone). */
+    fun isBattleSettled(battleId: Long): Boolean = battleId != 0L && battleId == lastSettledBattle
+
+    /**
+     * Idempotentne, trwałe rozliczenie bitwy (A156-10).
+     *
+     * 1. Jeśli [battleId] jest już rozliczona, nic nie zmienia i zwraca false.
+     * 2. Wykonuje [apply] (naliczenie nagród, gwiazdek, misji, statystyk) bez zapisów
+     *    pośrednich i ustawia [lastSettledBattle] = [battleId].
+     * 3. Zleca jedną spójną migawkę profilu (atomowy zapis SaveGuard na wątku I/O).
+     * 4. [onPersisted] uruchamia się na wątku I/O profilu dopiero, gdy na dysku jest ta
+     *    migawka albo nowsza; przy błędzie zapisu nie uruchamia się wcale. Służy do
+     *    usunięcia zrzutu bitwy, więc zrzut znika dopiero po utrwaleniu nagrody.
+     *
+     * Przerwanie procesu przed krokiem 3 zostawia zrzut (bitwę można wznowić, nagroda
+     * jeszcze nie istnieje na dysku). Przerwanie między 3 i 4 zostawia zrzut z tym samym
+     * identyfikatorem, który przy starcie jest odrzucany (SnapshotStore.loadBattle).
+     */
+    fun settleBattle(battleId: Long, onPersisted: () -> Unit = {}, apply: () -> Unit): Boolean {
+        synchronized(this) {
+            if (isBattleSettled(battleId)) return false
+            settlingDepth++
+        }
+        try {
+            apply()
+            synchronized(this) { if (battleId != 0L) lastSettledBattle = battleId }
+        } finally {
+            synchronized(this) {
+                settlingDepth--
+                if (settlingDepth == 0) deferredSave = false
+            }
+        }
+        val seq = saveTracked()
+        if (seq != Long.MAX_VALUE) hintWriter.execute { notifyPersisted(seq, onPersisted) }
+        return true
+    }
+
+    private fun notifyPersisted(seq: Long, onPersisted: () -> Unit, seen: Long = seq) {
+        val latest = saveSeq
+        when {
+            writtenSeq >= seq -> try {
+                onPersisted()
+            } catch (e: Exception) {
+                SaveGuard.report("settle-callback", e)
+            }
+            // Nowsza migawka (z tym samym stanem rozliczenia) zastąpiła naszą w kolejce:
+            // sprawdź ponownie po niej. Bez nowych zapisów kończymy, zamiast kręcić się w pętli.
+            latest > seen && !newerProfileVersion ->
+                hintWriter.execute { notifyPersisted(seq, onPersisted, latest) }
+            // Zapis się nie udał: zrzut zostaje, a rozliczenie trafi na dysk z kolejnym
+            // zapisem; zbędny zrzut usuwa wtedy start gry (loadBattle).
+        }
     }
 
     /** Bariera zapisu przy pauzie; nie trzymamy blokady profilu podczas fsync. */
@@ -956,6 +1031,7 @@ class Profile(private val file: File) {
             .coerceIn(dailyChallengeStreak, 100_000)
         lastDailyChallengeStreakDay = json.optLong("lastDailyChallengeStreakDay", -1L)
             .coerceIn(-1L, 100_000L)
+        lastSettledBattle = json.optLong("lastSettledBattle", 0L)
         if (lastDailyChallengeStreakDay < 0L) dailyChallengeStreak = 0
         unlockedBanners = (json.optInt("unlockedBanners", 1) and BannerCatalog.VALID_MASK) or 1
         refreshBanners()
@@ -972,6 +1048,7 @@ class Profile(private val file: File) {
         selectedBanner = 0; unlockedBanners = 1
         dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L
         whatsNewSeenVersion = ""; hasExistingSave = false
+        lastSettledBattle = 0L
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true
         eraIntrosSeen = 0L; eraIntrosEnabled = true
