@@ -680,7 +680,10 @@ class FirstHourJourneyTest {
     fun firstHour() {
         val old = L.lang
         try {
-            for ((dev, d) in devices) for (lang in listOf("pl", "en")) {
+            // Noc 7: CW_TEXT_LANGS=de,uk,... zmienia języki ścieżki (domyślnie pl i en).
+            val langs = System.getenv("CW_TEXT_LANGS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?.takeIf { it.isNotEmpty() } ?: listOf("pl", "en")
+            for ((dev, d) in devices) for (lang in langs) {
                 tag = "${dev}_$lang"
                 reported.clear()
                 journey(d, lang, lastStage = 7)
