@@ -181,8 +181,10 @@ class AccessibilityScreen(g: Game) : Screen(g) {
         val avail = b.r.left - x - 10f * dp
         val size = ui.fit(s, 15f, avail)
         val lh = size * dp * ui.textScale * 1.1f
-        val note = shakeNote.layout(ui, L["access_reduce_shake_note"], avail, 2)
-        val top = b.r.centerY() - (lh + note.lineHeight(ui) * note.lines) / 2f
+        // Noc 8: wiersz to przycisk z połową odstępu do sąsiadów (61 dp co wiersz, przycisk 48 dp).
+        val note = shakeNote.layout(ui, L["access_reduce_shake_note"], avail,
+            b.r.height() + 12f * dp - lh - 3f * dp)
+        val top = b.r.centerY() - (lh + 1f * dp + note.lineHeight(ui) * note.lines) / 2f
         ui.textO(c, s, x, top + lh * 0.8f, size, Ui.TEXT)
         note.draw(c, ui, x, top + lh + 1f * dp)
     }
