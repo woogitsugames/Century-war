@@ -1662,3 +1662,5 @@ wygrana daje 17 medali za każdą gwiazdkę. Średnio +2,26 ★ łącznie na eta
 „medale” +2,27) = **ok. +38 medali do etapu 8** przy pierwszych wygranych (dzień 1 zabrał
 ok. 35), przy powtórkach +5/★. Wygrane, czasy i przebieg kampanii bez zmian.
 
+
+- 2026-11-03 — regeneracja złotych powtórek: Dzien 2: gwiazdki bez presji.

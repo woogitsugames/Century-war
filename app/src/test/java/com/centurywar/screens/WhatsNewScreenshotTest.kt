@@ -101,10 +101,12 @@ class WhatsNewScreenshotTest {
 
     /** Dzień 2: historia zmian z O grze też jest przeczytaniem nowości (przycisk w menu znika). */
     @Test fun historyFromAboutMarksNewsRead() {
-        val p = Profile(file())
+        val f = file()
+        Profile(f).apply { tutorialDone = true; save() }
+        Profile.awaitHintWrites()
+        val p = Profile(f).also { it.load() }
         val g = game(p)
         p.whatsNewSeenVersion = "0.0.9"
-        p.hasExistingSave = true
         g.push(AboutScreen(g))
         val about = g.current as AboutScreen
         about.onClick(about.buttons.first { it.id == 5 }) // 5 = Co nowego (4 to usuwanie danych po 93)

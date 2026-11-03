@@ -55,5 +55,5 @@
     {"step":10000,"kind":"RALLY","argument":0},
     {"step":11000,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":2081,"winner":1,"wave":7,"steps":11000,"kills":20,"enemyKills":14,"timeBits":1127699798,"snapshotSha256":"fbe70184608c8033d884e8a2d34209bdbc7161beaaa16d8d788c0ab9f944c4ad"}
+  "expected": {"score":2081,"winner":1,"wave":7,"steps":11000,"kills":20,"enemyKills":14,"timeBits":1127699798,"snapshotSha256":"9297e6d75b5299ec45c8f6f4c90ebb4aa37202fe2af8988a8798ee7d3c6957f1"}
 }
