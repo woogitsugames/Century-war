@@ -65,6 +65,26 @@ class BattleHistoryTest {
         }
     }
 
+    /** Zlecenie 184: wpis zapisany przed czterema nowymi kartami Endless ma krótszą tablicę. */
+    @Test
+    fun oldEntryWithShorterCardArrayLoads() {
+        val f = file()
+        val old = com.centurywar.game.EndlessCard.entries.size - 4
+        val h = BattleHistory(f)
+        h.add(entry(7, mode = Mode.ENDLESS).copy(cards = IntArray(old) { it % 3 }))
+        h.awaitWrites()
+        h.close()
+        val restored = BattleHistory(f).also { it.load() }
+        try {
+            val record = restored.snapshot().single()
+            assertEquals(com.centurywar.game.EndlessCard.entries.size, record.cards.size)
+            assertEquals(1, record.cards[1])
+            for (i in old until record.cards.size) assertEquals(0, record.cards[i])
+        } finally {
+            restored.close()
+        }
+    }
+
     @Test
     fun ignoresBadEntriesAndClampsOptionalValues() {
         val f = file()

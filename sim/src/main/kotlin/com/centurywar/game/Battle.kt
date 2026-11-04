@@ -437,6 +437,10 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             e.cap = p.cap
             e.slots = p.slots
         }
+        // Zlecenie 184: po slotach z badań gracza, symetrycznie (+1 slot obu stronom).
+        if (cfg.dailyEvent == DailyEvent.TOWER_DUEL) {
+            for (s in sides) if (s.slots > 0) s.slots = min(Defs.MAX_TURRET_SLOTS, s.slots + 1)
+        }
         // Przeciwnik ma taki sam limit armii i slotów, jak strona bez badań.
         if (cfg.tutorial) { e.gold *= 0.5f; p.xpMul *= 1.5f } // samouczek: łagodniejszy start, szybszy awans
         if (endless) {
@@ -487,8 +491,14 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /** Cena jednostki po zastosowaniu reguły specjalnej dnia. */
     fun unitCost(side: Side, role: Role): Int {
         val cost = side.unit(role).cost
-        return if (cfg.dailyEvent == DailyEvent.MARKSMEN && role == Role.RANGED)
-            cost * 7 / 10 else cost
+        return eventCost(cost, role)
+    }
+
+    /** Cena po wydarzeniu dnia; ta sama przy zakupie i zwrocie z kolejki. */
+    private fun eventCost(cost: Int, role: Role): Int = when {
+        cfg.dailyEvent == DailyEvent.MARKSMEN && role == Role.RANGED -> cost * 7 / 10
+        cfg.dailyEvent == DailyEvent.HEAVY_DAY && role == Role.HEAVY -> cost * 4 / 5
+        else -> cost
     }
 
     fun canQueue(side: Side, role: Role): Boolean {
@@ -532,8 +542,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (side.queueSize == 0) return false
         val id = side.queue[--side.queueSize]
         val def = Defs.allUnits[id]
-        side.gold += if (cfg.dailyEvent == DailyEvent.MARKSMEN && def.role == Role.RANGED)
-            def.cost * 7 / 10 else def.cost
+        side.gold += eventCost(def.cost, def.role)
         if (side.queueSize == 0) side.trainT = 0f
         return true
     }
@@ -699,6 +708,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             EndlessCard.SUPPLY_LINE, EndlessCard.IRON_CURTAIN, EndlessCard.LAST_BASTION,
             EndlessCard.FIELD_MEDICS, EndlessCard.FINAL_SPARK,
             EndlessCard.FIRST_GUARD, EndlessCard.BOSS_RECALL -> Unit
+            // Zlecenie 184: działają przez stosy w damageUnit, startWave i score().
+            EndlessCard.SAPPERS, EndlessCard.SHIELD_WALL, EndlessCard.WAR_CHEST,
+            EndlessCard.WAGER -> Unit
             else -> Unit
         }
         applyCard71Synergies(side, card, power)
@@ -717,7 +729,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             }
         } else if (card == EndlessCard.ECONOMY || card == EndlessCard.PLUNDER ||
             card == EndlessCard.EXTRA_GOLD || card == EndlessCard.BLOOD_GOLD ||
-            card == EndlessCard.SCAVENGER) {
+            card == EndlessCard.SCAVENGER || card == EndlessCard.WAR_CHEST) {
             if (card != EndlessCard.EXTRA_GOLD ||
                 side.cardStacks[card.ordinal] <= EndlessCards.MAX_PERSISTENT_STACKS) {
                 for (stack in 1..side.cardStacks[EndlessCard.SUPPLY_LINE.ordinal]) {
@@ -1547,7 +1559,15 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         // Tarcza pochłania pierwsze trafienie przy pełnym zdrowiu (także po wyleczeniu).
         val firstGuard = if (endless && u.side == 0 && u.hp >= u.maxHp &&
             sides[0].cardStacks[EndlessCard.FIRST_GUARD.ordinal] > 0) 0.6f else 1f
-        val dealt = d * multiplier * rallyArmor * firstGuard *
+        // Zlecenie 184: Saperzy (ciężcy gracza przeciw bossom, także na tarczę) i Mur tarcz.
+        val sappers = if (endless && attacker == 0 && u.isBoss && shooterRole == Role.HEAVY)
+            1f + EndlessCards.SAPPERS_BOSS_BONUS *
+                EndlessCards.totalStackPower(sides[0].cardStacks[EndlessCard.SAPPERS.ordinal]) else 1f
+        val shieldWall = if (endless && projectile && u.side == 0 &&
+            (u.def.role == Role.MELEE || u.def.role == Role.HEAVY))
+            max(EndlessCards.SHIELD_WALL_MIN_MUL, 1f - EndlessCards.SHIELD_WALL_REDUCTION *
+                EndlessCards.totalStackPower(sides[0].cardStacks[EndlessCard.SHIELD_WALL.ordinal])) else 1f
+        val dealt = d * multiplier * rallyArmor * firstGuard * sappers * shieldWall *
             (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
         if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
@@ -1679,6 +1699,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             baseDmgMul *= bonus
         }
         if (Modifier.ARMORED_FOE in mods) baseHpMul *= 1.3f
+        // Zakład: stan wynika z zapisanych stosów kart, więc nie wymaga pola w zrzucie.
+        if (p.cardStacks[EndlessCard.WAGER.ordinal] > 0) baseHpMul *= EndlessCards.WAGER_ENEMY_HP_MUL
         e.hpMul = (1f + inEra * 0.05f) * (1f + max(0, wave - 48) * 0.06f) * baseHpMul
         // Tura 6: dodatkowe +5% obrażeń na falę od fali 45. Po kartach 108 i RNG AI 97 do fali 60
         // dochodziło 16/100 seedów (cel 5–15); samo zdrowie fal prawie nic nie zmieniało (docs/BALANCE.md).
@@ -1705,6 +1727,16 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         }
         if (p.repairPerWave > 0f) {
             p.baseHp = min(p.baseMaxHp, p.baseHp + p.baseMaxHp * p.repairPerWave)
+        }
+        // Skarbiec wojenny: odsetki od złota z limitem zależnym od epoki.
+        val chest = p.cardStacks[EndlessCard.WAR_CHEST.ordinal]
+        if (chest > 0) {
+            val interest = min(p.gold * EndlessCards.WAR_CHEST_INTEREST * EndlessCards.totalStackPower(chest),
+                EndlessCards.WAR_CHEST_CAP * Defs.costScale(p.era))
+            if (interest > 0f) {
+                p.gold += interest
+                p.goldEarned += interest
+            }
         }
         // Medycy leczą żywych rannych dopiero na początku nowej fali.
         val medics = p.cardStacks[EndlessCard.FIELD_MEDICS.ordinal]
@@ -1814,7 +1846,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
 
     /** Wynik do rankingów. Liczony wyłącznie z przebiegu symulacji. */
     fun score(): Long = when (cfg.mode) {
-        Mode.ENDLESS -> wave * 250L + player.kills * 12L + (time / 2f).toLong() + bossesDefeated * 1500L
+        Mode.ENDLESS -> wave * (if (player.cardStacks[EndlessCard.WAGER.ordinal] > 0)
+            EndlessCards.WAGER_WAVE_SCORE else 250L) + player.kills * 12L + (time / 2f).toLong() + bossesDefeated * 1500L
         else -> {
             if (winner != 0) player.killValue.toLong() / 4
             else {

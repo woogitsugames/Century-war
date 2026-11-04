@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.Doctrine
 import com.centurywar.game.Weather
 import kotlin.math.cos
@@ -107,6 +108,21 @@ object Icons {
         Doctrine.SUPPLY -> SUPPLY_CRATE
         Doctrine.SIEGE_MASTERS -> SIEGE_HAMMER
         Doctrine.VIGILANCE -> WATCH_EYE
+    }
+
+    /** Ikona wydarzenia dnia (ekran trybów i Kodeks). */
+    fun dailyEventIcon(event: DailyEvent): Int = when (event) {
+        DailyEvent.MARKSMEN -> CROSSHAIR
+        DailyEvent.RAPID_ABILITIES -> STOPWATCH
+        DailyEvent.FREE_BARRAGE -> BOMB
+        DailyEvent.FORTIFIED_BASES -> SHIELD
+        DailyEvent.GOLD_RUSH -> CHEST
+        DailyEvent.MIRROR_ARMY -> CROSSED_SWORDS
+        DailyEvent.SIEGE_WORKS -> TOWER
+        DailyEvent.FORCED_MARCH -> BOLT
+        DailyEvent.SPOILS_OF_WAR -> BAG
+        DailyEvent.HEAVY_DAY -> HELMET
+        DailyEvent.TOWER_DUEL -> TOWER
     }
 
     fun weatherIcon(weather: Weather): Int = when (weather) {

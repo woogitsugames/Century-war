@@ -20,6 +20,7 @@ object WhatsNewCatalog {
     val releases: List<Release> = listOf(
         Release("0.1", listOf(
             "wn_185_achievements",
+            "wn_184_content",
             "wn_176_content",
             "wn_170_content",
             "wn_145_battle",

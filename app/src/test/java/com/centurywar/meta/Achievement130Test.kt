@@ -130,8 +130,8 @@ class Achievement130Test {
         for ((i, event) in DailyEvent.values().withIndex()) {
             record(p, finished(BattleConfig(Mode.DAILY, 500L + i, 1f, dailyEvent = event), true))
         }
-        // Zlecenie 170: dziewięć wydarzeń odblokowuje oba osiągnięcia.
-        assertEquals(9L, Achievements.progress(p, Achievements.byId("daily_events_6")!!))
+        // Zlecenie 170: dziewięć wydarzeń odblokowuje oba osiągnięcia (184: razem jedenaście).
+        assertEquals(DailyEvent.entries.size.toLong(), Achievements.progress(p, Achievements.byId("daily_events_6")!!))
         assertTrue(Achievements.isUnlocked(p, "daily_events_6"))
         assertTrue(Achievements.isUnlocked(p, "daily_events_9"))
 
@@ -175,7 +175,8 @@ class Achievement130Test {
         Profile.awaitHintWrites()
         val restored = Profile(file).apply { load() }
         assertEquals(63L, restored.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name])
-        assertEquals(511L, restored.achievementCounters[AchievementMetric.DAILY_EVENTS.name])
+        assertEquals((1L shl DailyEvent.entries.size) - 1L,
+            restored.achievementCounters[AchievementMetric.DAILY_EVENTS.name])
         assertEquals((1L shl Modifier.values().size) - 1L,
             restored.achievementCounters[AchievementMetric.MODIFIER_VICTORIES.name])
         assertEquals((1L shl Doctrine.values().size) - 1L,

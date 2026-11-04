@@ -48,6 +48,18 @@ class EndlessCardsTest {
         assertTrue(Doctrine.ECONOMY in p.doctrines)
         assertEquals(1, p.cardStacks[EndlessCard.ECONOMY.ordinal])
         assertEquals(1, p.cardStacks[EndlessCard.BLOOD_GOLD.ordinal])
+
+        // Zlecenie 184: efekty działają przez stosy (szczegóły w :sim Content184Test).
+        val income = p.incomeMul
+        for (card in arrayOf(EndlessCard.SAPPERS, EndlessCard.SHIELD_WALL,
+                EndlessCard.WAR_CHEST, EndlessCard.WAGER)) {
+            b.applyEndlessCard(p, card)
+            assertEquals(card.name, 1, p.cardStacks[card.ordinal])
+        }
+        assertEquals("Skarbiec nie zmienia dochodu bez Linii zaopatrzenia", income, p.incomeMul, 0f)
+        assertTrue(!EndlessCards.canOffer(EndlessCard.WAGER, p))
+        assertEquals(b.wave * com.centurywar.game.EndlessCards.WAGER_WAVE_SCORE, b.score() - (p.kills * 12L + (b.time / 2f).toLong() +
+            b.bossesDefeated * 1500L))
     }
 
     @Test

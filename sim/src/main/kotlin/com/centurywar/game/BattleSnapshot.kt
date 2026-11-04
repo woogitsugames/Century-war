@@ -30,11 +30,23 @@ class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Flo
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 19
+    const val VERSION = 20
     /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
     private const val FIRST_WITH_SIEGE_DAMAGE = 19
     /** Wersje 16–17 zapisywały karty Endless sprzed zlecenia 170 (bez dwóch ostatnich kart). */
     private const val CARDS_BEFORE_170 = 2
+    /** Wersje 16–19 nie znały czterech kart zlecenia 184 (Saperzy, Mur tarcz, Skarbiec, Zakład). */
+    private const val CARDS_BEFORE_184 = 4
+
+    /** Liczba stosów kart zapisana w danej wersji formatu (nowe karty zawsze na końcu enuma). */
+    private fun storedCards(version: Int): Int {
+        val all = EndlessCard.entries.size
+        return when {
+            version >= 20 -> all
+            version >= 18 -> all - CARDS_BEFORE_184
+            else -> all - CARDS_BEFORE_184 - CARDS_BEFORE_170
+        }
+    }
     /**
      * Wersja 16 różni się tylko brakiem identyfikatora rozliczenia na końcu danych.
      * Taki zrzut nadal wznawiamy (aktualizacja gry nie kasuje przerwanej bitwy),
@@ -202,7 +214,7 @@ object BattleSnapshot {
         o.writeFloat(s.eliteDmgMul); o.writeFloat(s.lastStandMul); o.writeFloat(s.cloneChance)
         o.writeFloat(s.repairPerWave); o.writeInt(s.freeElitesPerWave); o.writeInt(s.freeEliteCredits)
         o.writeFloat(s.autoBarrageInterval); o.writeFloat(s.autoBarrageTimer)
-        val cards = if (formatVersion >= 18) s.cardStacks.size else s.cardStacks.size - CARDS_BEFORE_170
+        val cards = storedCards(formatVersion)
         for (k in 0 until cards) o.writeInt(s.cardStacks[k])
         o.writeShort(s.cap); o.writeBoolean(s.eliteUnlocked); o.writeBoolean(s.rallyUnlocked)
         o.writeShort(s.doctrines.size)
@@ -242,7 +254,8 @@ object BattleSnapshot {
             val h = DataInputStream(ByteArrayInputStream(bytes))
             if (h.readInt() != MAGIC) return null
             val version = h.readInt()
-            if (version != VERSION && version != 18 && version != 17 && version != LEGACY_VERSION_WITHOUT_ID) return null
+            if (version != VERSION && version != 19 && version != 18 && version != 17 &&
+                version != LEGACY_VERSION_WITHOUT_ID) return null
             val len = h.readInt()
             val crc = h.readInt()
             if (len != bytes.size - 16) return null
@@ -404,8 +417,7 @@ object BattleSnapshot {
         s.eliteDmgMul = i.readFloat(); s.lastStandMul = i.readFloat(); s.cloneChance = i.readFloat()
         s.repairPerWave = i.readFloat(); s.freeElitesPerWave = i.readInt(); s.freeEliteCredits = i.readInt()
         s.autoBarrageInterval = i.readFloat(); s.autoBarrageTimer = i.readFloat()
-        val storedCards = if (version >= 18) s.cardStacks.size else s.cardStacks.size - CARDS_BEFORE_170
-        for (k in 0 until storedCards) s.cardStacks[k] = i.readInt()
+        for (k in 0 until storedCards(version)) s.cardStacks[k] = i.readInt()
         s.cap = i.readShort().toInt(); s.eliteUnlocked = i.readBoolean(); s.rallyUnlocked = i.readBoolean()
         val dn = i.readShort().toInt()
         require(dn in 0..1000)

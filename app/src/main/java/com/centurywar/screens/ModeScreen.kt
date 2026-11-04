@@ -226,17 +226,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             rule != null -> cachedWrap(L[rule.descriptionKey], full - 23 * dp, 12f)
             else -> emptyArray()
         }
-        dailyEventIcon = when (event) {
-            DailyEvent.MARKSMEN -> Icons.CROSSHAIR
-            DailyEvent.RAPID_ABILITIES -> Icons.STOPWATCH
-            DailyEvent.FREE_BARRAGE -> Icons.BOMB
-            DailyEvent.FORTIFIED_BASES -> Icons.SHIELD
-            DailyEvent.GOLD_RUSH -> Icons.CHEST
-            DailyEvent.MIRROR_ARMY -> Icons.CROSSED_SWORDS
-            DailyEvent.SIEGE_WORKS -> Icons.TOWER
-            DailyEvent.FORCED_MARCH -> Icons.BOLT
-            DailyEvent.SPOILS_OF_WAR -> Icons.BAG
-            null -> if (rule == null) Icons.CALENDAR else Icons.FLAG
+        dailyEventIcon = when {
+            event != null -> Icons.dailyEventIcon(event)
+            rule == null -> Icons.CALENDAR
+            else -> Icons.FLAG
         }
         dailyMods = (if (event != null && rule != null) L[rule.key] + " · " else "") +
             L["modifiers"] + ": " + cfg.modifiers.joinToString(", ") { L[it.key] }

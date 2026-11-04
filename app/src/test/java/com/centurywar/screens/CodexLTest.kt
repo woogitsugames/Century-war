@@ -61,6 +61,17 @@ class CodexLTest {
             required.add(theme.textKey)
             required.add(theme.textKey + "_d")
         }
+        // Zlecenie 184: wydarzenia dnia i zestawy tygodnia na stronie modyfikatorów.
+        required.add("cx184_daily_event")
+        required.add("cx184_weekly_set")
+        for (event in com.centurywar.game.DailyEvent.entries) {
+            required.add(event.key)
+            required.add(event.descriptionKey)
+        }
+        for (set in com.centurywar.game.ChallengeRuleSets.all) {
+            required.add(set.key)
+            required.add(set.descriptionKey)
+        }
         val missing = required.filterNot { it in L.keys }
         assertTrue("Kodeks nie ma tłumaczeń: $missing", missing.isEmpty())
     }

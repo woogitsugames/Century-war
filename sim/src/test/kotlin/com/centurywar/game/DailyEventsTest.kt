@@ -15,7 +15,11 @@ class DailyEventsTest {
             val day = Daily.RELEASE_DAY + offset
             val cfg = Daily.config(day, Bonuses())
             val expected = if (offset >= 0L && offset % 4L == 3L)
-                (if (day < Daily.EVENTS_V2_DAY) DailyEvent.entries.take(6) else DailyEvent.entries)
+                (when {
+                    day < Daily.EVENTS_V2_DAY -> DailyEvent.entries.take(6)
+                    day < Daily.EVENTS_V3_DAY -> DailyEvent.entries.take(9)
+                    else -> DailyEvent.entries
+                })
                     .let { pool ->
                         val rng = Rng(day * 131_071L + 907L)
                         val first = pool[rng.nextInt(pool.size)]

@@ -79,6 +79,9 @@ enum class DailyEvent(val key: String, val descriptionKey: String) {
     SIEGE_WORKS("day_siege_works", "day_siege_works_d"),
     FORCED_MARCH("day_forced_march", "day_forced_march_d"),
     SPOILS_OF_WAR("day_spoils", "day_spoils_d"),
+    // Zlecenie 184: losowane dopiero od Daily.EVENTS_V3_DAY.
+    HEAVY_DAY("day184_heavy", "day184_heavy_d"),
+    TOWER_DUEL("day184_towers", "day184_towers_d"),
 }
 
 /** Mnożniki z badań gracza (metaprogresja). Liczy je [com.centurywar.meta.Profile]. */
@@ -269,8 +272,14 @@ object Campaign {
 
 
 /**
- * Sześć zestawów łączących istniejące modyfikatory z pogodą dnia
+ * Dziewięć zestawów łączących istniejące modyfikatory z pogodą dnia
  * i kartą startową tygodnia. Kolejność i skład są stałe dla rankingu.
+ *
+ * Zlecenie 184 dopisało trzy zestawy przed premierą, gdy nie było jeszcze historycznych
+ * tygodni tematycznych. Po premierze zmiana [COUNT] przestawiłaby rotację [forWeek],
+ * więc kolejne zestawy wymagają własnego progu tygodnia (wzór: [Weekly.firstRuleSetWeek]).
+ * Kolejność modyfikatorów w nowych zestawach jest odwrotna niż w parach [Daily], więc
+ * [Daily.ruleSet] ich nie zwraca i dni pozostają bez zmian.
  */
 object ChallengeRuleSets {
     class RuleSet(
@@ -294,9 +303,20 @@ object ChallengeRuleSets {
             EndlessCard.EXTRA_GOLD),
         RuleSet("day109_iron", "day109_iron_d", Modifier.GLASS_CANNON, Modifier.ARMORED_FOE,
             EndlessCard.BULWARK),
+        // Zlecenie 184: dopisane na końcu.
+        RuleSet("week184_night", "week184_night_d", Modifier.FOG_OF_WAR, Modifier.ARMORED_FOE,
+            EndlessCard.VIGILANCE),
+        // Strojenie D6: z Grabieżą mediana fali 41,5 (inne zestawy 8,5–12,5), z Marszem 12,5.
+        RuleSet("week184_mercs", "week184_mercs_d", Modifier.MERCENARIES, Modifier.DOUBLE_INCOME,
+            EndlessCard.MARCH),
+        RuleSet("week184_bastion", "week184_bastion_d", Modifier.EXPENSIVE_TOWERS,
+            Modifier.FRAGILE_BASES, EndlessCard.FRONTLINE_PLATE),
     )
 
-    const val COUNT = 6
+    const val COUNT = 9
+
+    /** Wszystkie zestawy w stałej kolejności (Kodeks, testy). */
+    val all: List<RuleSet> get() = SETS.asList()
 
     fun forModifiers(first: Modifier, second: Modifier): RuleSet? =
         SETS.firstOrNull { it.first == first && it.second == second }
@@ -343,7 +363,7 @@ object Weekly {
 
     /**
      * Zestaw tematyczny co [RULE_SET_EVERY] tygodnie, pozostałe tygodnie losowane jak dotąd.
-     * Ten sam zestaw wraca dopiero po COUNT * RULE_SET_EVERY = 18 tygodniach.
+     * Ten sam zestaw wraca dopiero po COUNT * RULE_SET_EVERY = 27 tygodniach.
      */
     fun ruleSet(week: Long): ChallengeRuleSets.RuleSet? {
         val offset = week - firstRuleSetWeek()
@@ -359,6 +379,14 @@ object Weekly {
         return ChallengeRuleSets.forModifiers(a, b) != null ||
             ChallengeRuleSets.forModifiers(b, a) != null
     }
+
+    /**
+     * Karta tygodnia musi przejść [EndlessCards.canOffer] na starcie. Czujność bez slotów
+     * wież i bez mgły (albo z odsłoniętą mgłą) byłaby odrzucona, więc wtedy Twierdza.
+     */
+    internal fun startCard(card: EndlessCard, mods: Set<Modifier>): EndlessCard =
+        if (card == EndlessCard.VIGILANCE && Modifier.NO_TURRETS in mods &&
+            Modifier.FOG_OF_WAR !in mods) EndlessCard.FORTRESS else card
 
     fun config(week: Long): BattleConfig {
         require(week >= 0L) { "Nieprawidłowy numer tygodnia" }
@@ -380,7 +408,8 @@ object Weekly {
         } else {
             mods.add(rule.first); mods.add(rule.second)
         }
-        val card = rule?.weeklyCard ?: START_CARDS[rng.nextInt(START_CARDS.size)]
+        val card = rule?.let { startCard(it.weeklyCard, mods) }
+            ?: START_CARDS[rng.nextInt(START_CARDS.size)]
         return BattleConfig(
             mode = Mode.ENDLESS, seed = seed, aiPower = 1f,
             startEra = start, maxEra = max, modifiers = mods,
@@ -438,6 +467,16 @@ object Daily {
     /** Od tego dnia (dwa cykle po premierze) losujemy także dni dodane w zleceniu 170. */
     const val EVENTS_V2_DAY = RELEASE_DAY + 8L
 
+    /** Od tego dnia losujemy także wydarzenia z zlecenia 184 (pełna lista [DailyEvent]). */
+    const val EVENTS_V3_DAY = RELEASE_DAY + 15L
+
+    // Zamrożona dziewiątka z zlecenia 170: dni od EVENTS_V2_DAY do EVENTS_V3_DAY bez zmian.
+    private val EVENTS_V2 = arrayOf(
+        DailyEvent.MARKSMEN, DailyEvent.RAPID_ABILITIES, DailyEvent.FREE_BARRAGE,
+        DailyEvent.FORTIFIED_BASES, DailyEvent.GOLD_RUSH, DailyEvent.MIRROR_ARMY,
+        DailyEvent.SIEGE_WORKS, DailyEvent.FORCED_MARCH, DailyEvent.SPOILS_OF_WAR,
+    )
+
     // Zamrożona pierwsza szóstka: dopisanie zdarzeń nie przelosuje wcześniejszych dni.
     private val EVENTS_V1 = arrayOf(
         DailyEvent.MARKSMEN, DailyEvent.RAPID_ABILITIES, DailyEvent.FREE_BARRAGE,
@@ -457,6 +496,8 @@ object Daily {
         DailyEvent.FORTIFIED_BASES to setOf(Modifier.FRAGILE_BASES),
         // „Tylko strzelcy” czyni „Hordę strzelców” pustą.
         DailyEvent.MARKSMEN to setOf(Modifier.RANGED_HORDE),
+        // „Dodatkowy slot wieży” przy „Bez wież” albo „Ciężkich wieżach”.
+        DailyEvent.TOWER_DUEL to setOf(Modifier.NO_TURRETS, Modifier.EXPENSIVE_TOWERS),
     )
 
     fun conflicts(event: DailyEvent, mods: Set<Modifier>): Boolean =
@@ -494,7 +535,11 @@ object Daily {
         // Czwarty dzień cyklu to RELEASE_DAY + 3; przeszłe dni pozostają bez zmian.
         val event = if (!historical && (day - RELEASE_DAY) % 4L == 3L) {
             // Dni sprzed EVENTS_V2_DAY losują z zamrożonej szóstki (przypięte powtórki).
-            val pool = if (day < EVENTS_V2_DAY) EVENTS_V1 else DailyEvent.entries.toTypedArray()
+            val pool = when {
+                day < EVENTS_V2_DAY -> EVENTS_V1
+                day < EVENTS_V3_DAY -> EVENTS_V2
+                else -> DailyEvent.entries.toTypedArray()
+            }
             val eventRng = Rng(day * 131_071L + 907L)
             val first = pool[eventRng.nextInt(pool.size)]
             // Od EVENTS_V2_DAY wydarzenie nie może przeczyć modyfikatorom dnia: przy kolizji

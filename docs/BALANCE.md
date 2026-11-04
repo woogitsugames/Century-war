@@ -1673,3 +1673,96 @@ ok. 35), przy powtórkach +5/★. Wygrane, czasy i przebieg kampanii bez zmian.
 - 2026-11-03 — R6-01 (osiągnięcia pierwszej godziny): `first_evolve` 10, `first_turret` 10,
   `first_research` 10, `stages_3` 20 medali (razem 50 jednorazowo); przy 196–356 medalach
   zdobytych w pierwszej godzinie (noc 5) to ok. +10–15% medali na start, bez strojenia nagród.
+
+
+## D6 — Dzień 6: karty 184, zestawy tygodnia, wydarzenia dnia (3.11.2026)
+
+Nowe karty Endless (Saperzy, Mur tarcz, Skarbiec wojenny, Zakład), trzy zestawy Oblężenia
+tygodnia (Nocna straż, Żołd i łupy, Kruchy bastion) i dwa symetryczne wydarzenia dnia
+(Dzień ciężkiej piechoty, Pojedynek wież) od `Daily.EVENTS_V3_DAY` = premiera + 15.
+`SimVersion.PROTOCOL` 0.8.5 → **0.8.6**, `BattleSnapshot.VERSION` 19 → **20**,
+`Replay.VERSION` bez zmian (`RANKED_REPLAY_FORMATS` = `{7}`).
+
+Pomiar: „przed” = `origin/integ/tura10` (caba585) w osobnym worktree, „po” = ten PR
+(commit 0a50d55 + strojenie poniżej). Endless: weteran 80% badań, `EndlessBalanceReportTest`.
+
+### Endless, 100 seedów (cel: fala 60 = 5–15/100, mediana porażek 45–55, fala 20 ≥ 95)
+
+| Metryka | 1001–1100 przed | 1001–1100 po | 2001–2100 przed | 2001–2100 po |
+|---|---:|---:|---:|---:|
+| Fala 60 (żywa baza) | 3/100 | **9/100** | 10/100 | **6/100** |
+| Mediana fali porażki | 54 | **53** | 54 | **53** |
+| Fala 20 | 100/100 | 100/100 | 100/100 | 100/100 |
+| Fala 40 / 50 | 82 / 80 | 85 / 79 | 88 / 87 | 85 / 77 |
+| Średnia fala | 50,68 | 51,22 | 52,12 | 50,96 |
+| Średni wynik | 20 704 | 21 064 | 21 465 | 20 952 |
+| Rozkład (<20, 20–29, 30–39, 40–44, 45–49, 50–54, 55–59, 60) | 0,0,18,2,0,57,20,3 | 0,1,13,4,3,51,19,9 | 0,1,11,1,0,64,13,10 | 0,1,13,4,3,56,17,6 |
+
+Przed zmianą obie próby różniły się o 7 punktów na fali 60 (3 i 10), więc to szum próby;
+po zmianie obie są w paśmie 5–15. Krzywej fal nie ruszano.
+
+### Zakład (WAGER) — wpływ na wynik
+
+`wagerScoreEffect184`: ten sam seed z Zakładem dokładanym przy pierwszej ofercie (fala 5)
+i bez niego. AI sama bierze Zakład rzadko (waga −30 poza profilem szturmowym): 3/100 i 5/100
+przebiegów.
+
+| Premia za falę | Próba | Śr. wynik bez → z Zakładem | Zmiana | Śr. fala bez → z | Fala 60 bez → z |
+|---|---|---:|---:|---:|---:|
+| ×1,25 (312 pkt) | 1001–1100 | 21 105 → 23 423 | **+11,0%** | 51,22 → 49,84 | 9 → 7 |
+| ×1,15 (287 pkt) | 1001–1100 | 21 064 → 22 177 | +5,3% | 51,22 → 49,84 | 9 → 7 |
+| ×1,15 (287 pkt) | 2001–2100 | 20 952 → 21 874 | +4,4% | 50,96 → 49,24 | 6 → 4 |
+
+**Decyzja:** ×1,25 przekraczało próg +10%, więc zgodnie ze zleceniem premia to **×1,15**
+(`EndlessCards.WAGER_WAVE_SCORE` = 287). Kara (HP fal ×1,1) kosztuje ok. 1,5 fali i 2 przebiegi
+do fali 60 na 100, więc Zakład to realne ryzyko za ok. +5% wyniku.
+
+### Oblężenie tygodnia: zestawy na tych samych 8 tygodniach
+
+`weeklyRuleSets184`: każdy zestaw (para modyfikatorów + karta) na tych samych 8 seedach
+i epokach (losowe tygodnie od `firstRuleSetWeek() + 1`), bez badań (zasady tygodnia).
+
+| Zestaw | Mediana fali przed | po |
+|---|---:|---:|
+| day109_gold | 12,0 | 12,5 |
+| day109_march | 11,0 | 10,0 |
+| day109_rain | 10,5 | 11,0 |
+| day109_veterans | 12,0 | 10,5 |
+| day109_hired | 12,0 | 11,0 |
+| day109_iron | 9,5 | 8,5 |
+| **week184_night** (Mgła + Opancerzony wróg, Czujność) | — | **12,0** |
+| **week184_mercs** (Najemnicy + Podwójny dochód) z Grabieżą | — | 41,5 (4/8 do fali 60) |
+| **week184_mercs** z Marszem bojowym | — | **12,5** |
+| **week184_bastion** (Ciężkie wieże + Kruche bazy, Pancerz piechoty) | — | **10,0** |
+
+Pasmo istniejących zestawów: 8,5–12,5. „Żołd i łupy” z Grabieżą wychodził daleko poza pasmo
+(złoto za zabójstwa + podwójny dochód + najemnicy). Próba kart dla tej pary: Grabież 41,5,
+Krwawe złoto 60, Zbieracz 14, Musztra 13, Marsz bojowy 12,5 (dla porównania Najemnicy + Wolne
+XP z Grabieżą 10,5). **Decyzja:** karta tygodnia → **Marsz bojowy** (modyfikatory bez zmian).
+Różnice zestawów 109 między „przed” i „po” to wpływ nowych kart na oferty (te same seedy).
+
+### Wydarzenia dnia: lustrzane bitwy AI vs AI
+
+`BALANCE_RUN=true BALANCE_DAILY_EVENT=<nazwa> ./gradlew :app:testDebugUnitTest --rerun --tests '*BalanceReport.mirrorReport*'`
+(20 seedów × 3 epoki × 2 przebiegi z zamienionymi osobowościami stron = 120 bitew).
+
+| Wydarzenie | Wygrane strony 0 | Średni czas [min] | Zmiana czasu | Pat |
+|---|---:|---:|---:|---:|
+| brak | 56/120 (46,7%) | 13,11 | — | 0 |
+| HEAVY_DAY | 63/120 (52,5%) | 12,39 | −5,5% | 0 |
+| TOWER_DUEL | 59/120 (49,2%) | 13,14 | +0,2% | 0 |
+
+Obie w paśmie 45–55% i bez wydłużenia bitew o > 20%.
+
+### Regresja
+
+Kampania, potyczka i dni sprzed `EVENTS_V3_DAY`: złote powtórki mają ten sam wynik, zwycięzcę,
+liczbę kroków i zabójstwa; zmienia się tylko skrót zrzutu (`snapshotSha256`), bo zrzut v20
+ma 4 dodatkowe stosy kart. Dni od premiery do `EVENTS_V3_DAY` mają te same wydarzenia
+(test `Content184Test.daysBeforeEventsV3KeepTheirEvents` z listą z HEAD sprzed zmiany).
+Karty nie występują w kampanii, więc jej balans się nie zmienia.
+Po regeneracji: we wszystkich 10 złotych powtórkach (także Endless i tydzień) wynik, zwycięzca,
+fala, kroki, zabójstwa i czas są identyczne; zmienił się wyłącznie `snapshotSha256` (format v20).
+Powtórki Endless/tygodnia kończą się przed pierwszą ofertą kart z nowymi pozycjami.
+
+- 2026-11-03 — regeneracja złotych powtórek: D6 184: nowe karty Endless, zestawy tygodnia, wydarzenia dnia, zrzut v20.
