@@ -189,6 +189,7 @@ object L {
         putAll(part180())
         putAll(part184())
         putAll(part193())
+        putAll(part198())
         }
     }
 
@@ -232,6 +233,20 @@ object L {
         "wb193_news" to t("Od twojej ostatniej gry są nowości: zajrzyj do „%s”.", "There's news since you last played: open “%s”.", "Seit deinem letzten Spiel gibt es Neues: öffne „%s“.", "Hay novedades desde tu última partida: abre «%s».", "Du nouveau depuis votre dernière partie : ouvrez « %s ».", "Ci sono novità dall'ultima partita: apri «%s».", "Há novidades desde o último jogo: abre «%s».", "Від твоєї останньої гри є новини: відкрий «%s».", "Er is nieuws sinds je laatste spel: open ‘%s’.", "Son oyunundan beri yenilikler var: “%s” bölümüne bak."),
         "wb193_daily" to t("Dziś w wyzwaniu dnia: %s", "Today's Daily Challenge: %s", "Heutige Tageschallenge: %s", "Desafío diario de hoy: %s", "Défi du jour : %s", "Sfida del giorno di oggi: %s", "Desafio diário de hoje: %s", "Сьогоднішній виклик дня: %s", "Daguitdaging van vandaag: %s", "Bugünün mücadelesi: %s"),
         "rem193_goal" to t("Twój cel: %s", "Your goal: %s", "Dein Ziel: %s", "Tu objetivo: %s", "Votre objectif : %s", "Il tuo obiettivo: %s", "O teu objetivo: %s", "Твоя мета: %s", "Je doel: %s", "Hedefin: %s"),
+    )
+
+    /** R11-03: kamienie milowe w trakcie Endless i Oblężenia tygodnia (wstęga, pauza, TalkBack). */
+    private fun part198(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "ms198_tier0" to t("Brąz zdobyty! +%1$s po bitwie", "Bronze reached! +%1$s after the battle", "Bronze erreicht! +%1$s nach der Schlacht", "¡Bronce conseguido! +%1$s tras la batalla", "Bronze obtenu ! +%1$s après la bataille", "Bronzo ottenuto! +%1$s dopo la battaglia", "Bronze conquistado! +%1$s após a batalha", "Бронзу здобуто! +%1$s після бою", "Brons behaald! +%1$s na de strijd", "Bronz kazanıldı! Savaştan sonra +%1$s"),
+        "ms198_tier1" to t("Srebro zdobyte! +%1$s po bitwie", "Silver reached! +%1$s after the battle", "Silber erreicht! +%1$s nach der Schlacht", "¡Plata conseguida! +%1$s tras la batalla", "Argent obtenu ! +%1$s après la bataille", "Argento ottenuto! +%1$s dopo la battaglia", "Prata conquistada! +%1$s após a batalha", "Срібло здобуто! +%1$s після бою", "Zilver behaald! +%1$s na de strijd", "Gümüş kazanıldı! Savaştan sonra +%1$s"),
+        "ms198_tier2" to t("Złoto zdobyte! +%1$s po bitwie", "Gold reached! +%1$s after the battle", "Gold erreicht! +%1$s nach der Schlacht", "¡Oro conseguido! +%1$s tras la batalla", "Or obtenu ! +%1$s après la bataille", "Oro ottenuto! +%1$s dopo la battaglia", "Ouro conquistado! +%1$s após a batalha", "Золото здобуто! +%1$s після бою", "Goud behaald! +%1$s na de strijd", "Altın kazanıldı! Savaştan sonra +%1$s"),
+        "ms198_record" to t("Nowy rekord: fala %1$d!", "New record: wave %1$d!", "Neuer Rekord: Welle %1$d!", "¡Nuevo récord: oleada %1$d!", "Nouveau record : vague %1$d !", "Nuovo record: ondata %1$d!", "Novo recorde: onda %1$d!", "Новий рекорд: хвиля %1$d!", "Nieuw record: golf %1$d!", "Yeni rekor: dalga %1$d!"),
+        "ms198_to_record" to t("do rekordu: %1$d", "to record: %1$d", "bis zum Rekord: %1$d", "para el récord: %1$d", "avant le record : %1$d", "al record: %1$d", "para o recorde: %1$d", "до рекорду: %1$d", "tot het record: %1$d", "rekora kalan: %1$d"),
+        "ms198_to_record_short" to t("rekord −%1$d", "record −%1$d", "Rekord −%1$d", "récord −%1$d", "record −%1$d", "record −%1$d", "recorde −%1$d", "рекорд −%1$d", "record −%1$d", "rekor −%1$d"),
+        "ms198_pause_record" to t("Rekord: fala %1$d", "Record: wave %1$d", "Rekord: Welle %1$d", "Récord: oleada %1$d", "Record : vague %1$d", "Record: ondata %1$d", "Recorde: onda %1$d", "Рекорд: хвиля %1$d", "Record: golf %1$d", "Rekor: dalga %1$d"),
+        "ms198_pause_tier_next" to t("%1$s: fala %2$d", "%1$s: wave %2$d", "%1$s: Welle %2$d", "%1$s: oleada %2$d", "%1$s : vague %2$d", "%1$s: ondata %2$d", "%1$s: onda %2$d", "%1$s: хвиля %2$d", "%1$s: golf %2$d", "%1$s: dalga %2$d"),
+        "ms198_tier_a11y" to t("Oblężenie tygodnia, zdobyty próg: %1$s. Po bitwie %2$s.", "Weekly Siege tier reached: %1$s. %2$s after the battle.", "Stufe der Wochenbelagerung erreicht: %1$s. %2$s nach der Schlacht.", "Nivel del Asedio semanal conseguido: %1$s. %2$s tras la batalla.", "Palier du Siège hebdomadaire obtenu : %1$s. %2$s après la bataille.", "Livello dell'Assedio settimanale ottenuto: %1$s. %2$s dopo la battaglia.", "Nível do Cerco semanal conquistado: %1$s. %2$s após a batalha.", "Тижнева облога, здобуто рівень: %1$s. Після бою %2$s.", "Niveau van de weekbelegering behaald: %1$s. %2$s na de strijd.", "Haftalık Kuşatma kademesi kazanıldı: %1$s. Savaştan sonra %2$s."),
+        "ms198_record_a11y" to t("Nowy rekord: fala %1$d.", "New record: wave %1$d.", "Neuer Rekord: Welle %1$d.", "Nuevo récord: oleada %1$d.", "Nouveau record : vague %1$d.", "Nuovo record: ondata %1$d.", "Novo recorde: onda %1$d.", "Новий рекорд: хвиля %1$d.", "Nieuw record: golf %1$d.", "Yeni rekor: dalga %1$d."),
     )
 
     /** R2-01: „Następny cel” na wynikach bitwy i w menu. */

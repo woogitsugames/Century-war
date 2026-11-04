@@ -56,6 +56,12 @@ internal class BattleTopBar(private val owner: BattleScreen) {
     val enemyEraDrawn = RectF()
     /** Dzień 2: napis presji lub fali przeniesiony do bocznego pola (zewnętrzny Fold); pusty, gdy brak. */
     val sideLabelDrawn = RectF()
+    /** R11-03: wiersz „Następna fala” i blok bossa (tytuł, opis, pasek HP); do testów nachodzenia. */
+    val nextThemeDrawn = RectF()
+    val bossDrawn = RectF()
+    private var nextThemeToRecord = -1
+    private var nextThemeBase = ""
+    private var nextThemeShort = ""
 
     internal companion object {
         /** Dzień 2: najmniejszy napis presji/fali pod minimapą; mniejszy trafia do bocznego pola. */
@@ -356,11 +362,14 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                 if (bossSecondDescText.isNotEmpty()) ui.textO(c, bossSecondDescText,
                     w * 0.5f, topBar.bottom + 46 * dp,
                     ui.fit(bossSecondDescText, 10f, bw, 7f), Ui.TEXT, Paint.Align.CENTER, 1.5f)
-                ui.bar(c, bx, topBar.bottom + (if (bossSecondDescText.isEmpty()) 40f else 54f) * dp, bw, 8 * dp,
-                    boss.hp / boss.maxHp, Ui.ENEMY)
-            }
-            if (battle.wave != nextThemeShown) {
+                val barY = topBar.bottom + (if (bossSecondDescText.isEmpty()) 40f else 54f) * dp
+                ui.bar(c, bx, barY, bw, 8 * dp, boss.hp / boss.maxHp, Ui.ENEMY)
+                bossDrawn.set(bx, topBar.bottom + 4 * dp, bx + bw, barY + 8 * dp)
+            } else bossDrawn.setEmpty()
+            val toRecord = milestones?.wavesToRecord ?: 0
+            if (battle.wave != nextThemeShown || toRecord != nextThemeToRecord) {
                 nextThemeShown = battle.wave
+                nextThemeToRecord = toRecord
                 val nextKind = battle.nextBossKind
                 nextThemeText = if (nextKind != EndlessBosses.NONE) {
                     val second = battle.nextBossSecondaryKind
@@ -368,12 +377,34 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                         L[EndlessBosses.nameKeys[nextKind]] +
                         (if (second != EndlessBosses.NONE) " + " + L[EndlessBosses.nameKeys[second]] else "")
                 } else L["next_wave"] + " " + L[battle.nextWaveKey]
+                // R11-03: od fali „rekord − 5” dopisek „· do rekordu: N” (krótszy, gdy brak miejsca).
+                nextThemeBase = nextThemeText
+                if (toRecord > 0) {
+                    nextThemeShort = nextThemeBase + " · " + L.f("ms198_to_record_short", toRecord)
+                    nextThemeText = nextThemeBase + " · " + L.f("ms198_to_record", toRecord)
+                } else nextThemeShort = nextThemeText
             }
-            ui.textO(c, nextThemeText, w * 0.5f,
-                topBar.bottom + (if (boss == null) 20f else
-                    if (boss.bossSecondaryKind == EndlessBosses.NONE) 64f else 78f) * dp,
-                ui.fit(nextThemeText, 11f, w - g.insetL - g.insetR - 26 * dp, 8f),
-                Ui.GOLD, Paint.Align.CENTER, 1.7f)
+            val themeW = w - g.insetL - g.insetR - 26 * dp
+            var theme = nextThemeText
+            var themeSize = ui.fit(theme, 11f, themeW, 8f)
+            if (themeSize < 10f && theme !== nextThemeShort) {
+                theme = nextThemeShort
+                themeSize = ui.fit(theme, 11f, themeW, 8f)
+            }
+            val themeY = topBar.bottom + (if (boss == null) 20f else
+                if (boss.bossSecondaryKind == EndlessBosses.NONE) 64f else 78f) * dp
+            ui.textO(c, theme, w * 0.5f, themeY, themeSize, Ui.GOLD, Paint.Align.CENTER, 1.7f)
+            record(nextThemeDrawn, theme, w * 0.5f, themeY, themeSize, Paint.Align.CENTER)
+            // R11-03: wstęga kamienia milowego pod wierszem „Następna fala” (i pod paskiem bossa).
+            if (milestoneRibbon.active && !milestoneRibbonHeld()) {
+                val hh = 14f * dp * ui.textScale * 1.05f
+                milestoneRibbon.draw(c, ui, w * 0.5f, themeY + 6 * dp + hh * 0.75f + 4 * dp,
+                    min(420 * dp, w - g.insetL - g.insetR - 16 * dp), dp)
+            } else milestoneRibbon.drawn.setEmpty()
+        } else {
+            nextThemeDrawn.setEmpty()
+            bossDrawn.setEmpty()
+            milestoneRibbon.drawn.setEmpty()
         }
         // Epoka wroga w osobnej linii na szerokim HUD; nie nachodzi na pogodę.
         val ex = if (leftHud) pauseBtn.r.right + 10 * dp else pauseBtn.r.left - 10 * dp

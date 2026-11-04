@@ -699,6 +699,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
     private var evBaseBand = 0
     private var evEnemyLow = false
     private var evBosses = 0
+    private var evTiers = 0
+    private var evRecords = 0
     private var evChoice = false
     private var evFinished = false
     private val evUsed = BooleanArray(3)
@@ -723,6 +725,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             evBaseBand = band
             evEnemyLow = enemyLow
             evBosses = b.bossesSpawned
+            evTiers = s.milestones?.tierEvents ?: 0
+            evRecords = s.milestones?.recordEvents ?: 0
             evChoice = choice
             evFinished = s.finished
             evUsed.fill(false)
@@ -745,6 +749,19 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         evEnemyLow = enemyLow
         if (b.endless && b.bossesSpawned > evBosses) announce(L["a178_boss"], PRIO_NORMAL, now)
         evBosses = b.bossesSpawned
+        // R11-03: próg tygodnia i rekord fali (osobne liczniki: każdy komunikat raz).
+        val ms = s.milestones
+        if (ms != null) {
+            // Oba naraz (lub z bossem tej samej fali): jeden komunikat, żeby kolejka nie zgubiła progu.
+            val tierText = if (ms.tierEvents > evTiers && ms.lastTier >= 0)
+                L.f("ms198_tier_a11y", L[com.centurywar.screens.BattleScreen.WEEKLY_TIER_NAMES[ms.lastTier]],
+                    L.plural("medals_n", com.centurywar.game.Weekly.medalReward(ms.lastTier).toLong())) else null
+            val recordText = if (ms.recordEvents > evRecords) L.f("ms198_record_a11y", ms.recordWave) else null
+            val text = if (tierText != null && recordText != null) "$tierText $recordText" else tierText ?: recordText
+            if (text != null) announce(text, PRIO_NORMAL, now)
+            evTiers = ms.tierEvents
+            evRecords = ms.recordEvents
+        }
         for (i in 0..1) {
             if (p.abilityCd[i] > 0f) evUsed[i] = true
             else if (evUsed[i] && b.abilityReady(p, i)) {

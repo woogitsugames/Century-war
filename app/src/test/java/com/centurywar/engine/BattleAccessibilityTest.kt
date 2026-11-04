@@ -372,6 +372,31 @@ class BattleAccessibilityTest {
         } finally { f.finish() }
     }
 
+    /** R11-03: próg Oblężenia tygodnia ogłaszany raz (TalkBack), także gdy fala potem rośnie. */
+    @Test fun weeklyTierAnnouncedOnce() {
+        val week = com.centurywar.game.Weekly.weekNumber(com.centurywar.game.Daily.RELEASE_DAY) + 3L
+        val f = setup(com.centurywar.game.Weekly.config(week))
+        try {
+            val b = f.battle
+            b.pendingCards = null
+            b.wave = 9
+            f.frame(0f, 4000L)
+            b.wave = 10
+            f.frame(0f, 4000L)
+            val expected = L.f("ms198_tier_a11y", L["weekly_bronze"], L.plural("medals_n", 25L))
+            assertEquals(expected, f.text(STATUS))
+            for (w in 11..19) {
+                b.wave = w
+                f.frame(0f, 4000L)
+            }
+            assertEquals(1, f.screen.milestones!!.tierEvents)
+            b.wave = 20
+            f.frame(0f, 4000L)
+            assertEquals(L.f("ms198_tier_a11y", L["weekly_silver"], L.plural("medals_n", 60L)), f.text(STATUS))
+            assertEquals(2, f.screen.milestones!!.tierEvents)
+        } finally { f.finish() }
+    }
+
     @Test fun tutorialExposesStepTextAndOnlyAllowedButtons() {
         val f = setup(Campaign.config(Campaign.stages[0], Profile(File.createTempFile("cw-b", ".json").apply { delete() }).bonuses(), 1L, tutorial = true),
             tutorialSeen = false)

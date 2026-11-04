@@ -181,6 +181,9 @@ class BattleScreen(
     internal var resultTipCount = 0
 
     internal companion object {
+        /** R11-03: wstęgi progów tygodnia (pełne zdania: rodzaj gramatyczny progu). */
+        val MILESTONE_TIER_KEYS = arrayOf("ms198_tier0", "ms198_tier1", "ms198_tier2")
+        val WEEKLY_TIER_NAMES = arrayOf("weekly_bronze", "weekly_silver", "weekly_gold")
         /** Odstęp tekstu kart doktryn/kart Endless od krawędzi (lamówka + 6 dp), w dp. */
         const val CHOICE_TEXT_PAD = Ui.PANEL_TRIM_INSET + 6f
         /** Węższe przyciski pauzy (dp) układamy w kolumnie; telefon i Fold mają ≥ 150 dp. */
@@ -303,6 +306,15 @@ class BattleScreen(
     /** R10-03: sygnały zdarzeń bitwy; stan interfejsu, poza zrzutem i powtórką. */
     internal val alerts = BattleAlerts()
     private var lastBossSfxAt = BattleAlerts.NEVER
+    /**
+     * R11-03: kamienie milowe Endless (progi Oblężenia tygodnia, rekord fali w zwykłym Endless).
+     * Rekord fali (`Profile.bestWave`) zapisuje tylko zwykłe Endless, więc tylko tam go ogłaszamy.
+     * Nagród nie zmienia: medale i rekord liczy dalej wyłącznie [settleRewards].
+     */
+    internal val milestones: EndlessMilestones? = if (cfg.mode != Mode.ENDLESS) null else
+        if (cfg.weekly >= 0L) EndlessMilestones(0, g.profile.weeklyClaimedFor(cfg.weekly), true)
+        else EndlessMilestones(g.profile.bestWave, 0, false)
+    internal val milestoneRibbon = MilestoneRibbon()
     private var alertPulse = 0f
     private var alertPctShown = 100
     internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
@@ -736,6 +748,13 @@ class BattleScreen(
         val alertMask = alerts.step(battle, battle.time)
         if (!finished && !paused) BattleSfx.playAlerts(g, alertMask, speed >= 5,
             kotlin.math.abs(battle.time - lastBossSfxAt) < 1f)
+        val ms = milestones
+        if (ms != null && !finished) {
+            val msMask = ms.step(battle.wave)
+            if (msMask != 0) onMilestones(msMask)
+        }
+        if (finished) { if (milestoneRibbon.active) milestoneRibbon.clear() }
+        else milestoneRibbon.update(dt, milestoneRibbonHeld())
         alertPulse = (alertPulse + dt) % 1f
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) {
@@ -781,6 +800,22 @@ class BattleScreen(
             showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f ||
             evolveBanner.goBtn.visible)
         refreshBaseAlert()
+    }
+
+    /** R11-03: wstęga czeka, gdy ekran zajmuje inna nakładka (nie nachodzi na nią). */
+    internal fun milestoneRibbonHeld(): Boolean =
+        paused || finished || eraIntro?.active == true || (tut != null && !tut.finished) ||
+            battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null ||
+            showTurrets || showUpgrade >= 0 || aimingBarrage || hints.activeId >= 0 ||
+            evolveBanner.active
+
+    /** R11-03: wstęga, sygnał (istniejący dźwięk R10-03, wyżej) i teksty budowane raz przy zdarzeniu. */
+    private fun onMilestones(mask: Int) {
+        for (i in 0 until Weekly.TIER_COUNT) if (mask and (EndlessMilestones.TIER_0 shl i) != 0)
+            milestoneRibbon.push(L.f(MILESTONE_TIER_KEYS[i],
+                L.plural("medals_n", Weekly.medalReward(i).toLong())))
+        if (mask and EndlessMilestones.RECORD != 0) milestoneRibbon.push(L.f("ms198_record", battle.wave))
+        g.sfx(Sound.ALERT_READY, 0.75f, 2_000, pitch = 1.26f, priority = 2)
     }
 
     internal var turretSlotsLaid = -1
@@ -1629,6 +1664,12 @@ class BattleScreen(
     private val pauseModifierLines = arrayOfNulls<String>(12)
     private var pauseModifierCount = 0
     private var pauseModifierWidth = -1f
+    /** R11-03: rekord i progi tygodnia w pauzie Endless (jeden albo dwa wiersze). */
+    private var pauseMilestoneWave = -1
+    internal var pauseMilestoneText = ""
+    internal var pauseMilestoneText2 = ""
+    private var pauseMilestoneWidth = -1f
+    private var pauseMilestoneSplit = false
 
     /** Aktualizacja rzadkich napisów poza render; liczby tylko, gdy stan się zmieni. */
     internal fun refreshPauseTexts() {
@@ -1659,6 +1700,7 @@ class BattleScreen(
             pauseEnemyEra = -1
             pauseWeather = -1
             pauseModifierWidth = -1f
+            pauseMilestoneWave = -1
         }
         val seconds = battle.time.toInt()
         if (pauseSeconds != seconds) {
@@ -1694,6 +1736,37 @@ class BattleScreen(
             pauseModifierWidth = width
             pauseModifierCount = HintFrame.wrapInto(ui, pauseModifierText, width, 12f, pauseModifierLines)
         }
+        val ms = milestones
+        if (ms != null && (pauseMilestoneWave != battle.wave || pauseMilestoneWidth != width)) {
+            pauseMilestoneWave = battle.wave
+            pauseMilestoneWidth = width
+            refreshPauseMilestone(ms)
+        }
+    }
+
+    private fun refreshPauseMilestone(ms: EndlessMilestones) {
+        val wave = battle.wave
+        var record = ""
+        var tiers = ""
+        if (cfg.weekly >= 0L) {
+            val claimed = g.profile.weeklyClaimedFor(cfg.weekly)
+            for (i in 0 until Weekly.TIER_COUNT) {
+                val name = L[WEEKLY_TIER_NAMES[i]]
+                val reached = wave >= Weekly.threshold(i) || claimed and (1 shl i) != 0
+                val part = if (reached) "$name ✓" else L.f("ms198_pause_tier_next", name, Weekly.threshold(i))
+                tiers = if (tiers.isEmpty()) part else "$tiers · $part"
+                if (!reached) break
+            }
+        } else {
+            val shown = ms.recordShown(wave)
+            if (shown > 0) record = L.f("ms198_pause_record", shown)
+        }
+        val one = if (record.isEmpty()) tiers else if (tiers.isEmpty()) record else "$record · $tiers"
+        // Jeden wiersz, gdy mieści się w kolumnie (min. 10 sp); inaczej rekord i progi osobno.
+        pauseMilestoneSplit = record.isNotEmpty() && tiers.isNotEmpty() &&
+            ui.fit(one, min(13f, pauseStatSize), pauseInfoW, 9f) < 10f
+        pauseMilestoneText = if (pauseMilestoneSplit) record else one
+        pauseMilestoneText2 = if (pauseMilestoneSplit) tiers else ""
     }
     private val pausePanel = RectF()
     private var pauseInfoX = 0f
@@ -1853,6 +1926,11 @@ class BattleScreen(
         }
         if (pauseOpponentText.isNotEmpty())
             pauseLine(c, pauseOpponentText, x, pauseOpponentY, infoWidth, Ui.GOLD, min(11f, size))
+        else if (pauseMilestoneText.isNotEmpty()) {
+            // R11-03: miejsce przeciwnika potyczki (w Endless puste) zajmuje rekord i progi.
+            pauseLine(c, pauseMilestoneText, x, pauseOpponentY, infoWidth, Ui.GOLD, min(13f, size))
+            pauseLine(c, pauseMilestoneText2, x, pauseOpponentY + pauseModStep, infoWidth, Ui.GOLD, min(13f, size))
+        }
 
         if (pauseWide) {
             ui.fill.color = Ui.FRAME_L

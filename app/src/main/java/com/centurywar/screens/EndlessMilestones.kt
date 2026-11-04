@@ -26,6 +26,9 @@ internal class EndlessMilestones(
         private set
     var recordEvents = 0
         private set
+    /** Fala, na której pobito rekord (0 = jeszcze nie). */
+    var recordWave = 0
+        private set
     /** Ostatnio ogłoszony próg (0..2) albo -1. */
     var lastTier = -1
         private set
@@ -67,10 +70,14 @@ internal class EndlessMilestones(
         if (!recordDone && wave > bestWaveAtStart) {
             recordDone = true
             recordEvents++
+            recordWave = wave
             mask = mask or RECORD
         }
         return mask
     }
+
+    /** Rekord do pokazania w pauzie: dawny albo bieżąca fala, gdy już go pobito (0 = brak). */
+    fun recordShown(wave: Int): Int = if (bestWaveAtStart > wave) bestWaveAtStart else wave
 
     private fun updateToRecord(wave: Int) {
         wavesToRecord = if (bestWaveAtStart > 0 && wave >= bestWaveAtStart - RECORD_LEAD && wave <= bestWaveAtStart)
