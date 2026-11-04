@@ -1080,7 +1080,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
 
     /**
      * Presja oblężnicza: od [siegeStart] (zwykle 8 minut) obrażenia zadawane bazom rosną o [siegeRamp]
-     * (zwykle 20%) na minutę; w etapach 2–7 kampanii od 4. minuty o 80% (Campaign.siegeStart).
+     * (zwykle 20%) na minutę; w etapach 2–7 kampanii od 4. minuty o 80%, w 8–12 od 5. minuty
+     * o 50% (Campaign.siegeStart, R11-02).
      * Dzięki temu bitwa zawsze kiedyś się kończy (koniec z wiecznym patem przy wieżach).
      */
     fun siegePressure(): Float = if (endless || time < siegeStart) 1f else 1f + (time - siegeStart) / 60f * siegeRamp
@@ -1107,7 +1108,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /**
      * Dzień 2: część obrażeń baz, która wynika z szybszej presji niż standardowa
      * ([SIEGE_RAMP] na minutę od [siegeStart]); nie odbiera gwiazdek ([Battle.stars]).
-     * Przy standardowym przyroście (etap 1, etapy od 8., inne tryby) zawsze 0.
+     * Przy standardowym przyroście (etap 1, etapy od 13., inne tryby) zawsze 0.
      */
     private fun starNeutralSiegeShare(pressure: Float): Float {
         if (pressure <= 1f || siegeRamp <= SIEGE_RAMP) return 0f
@@ -1831,8 +1832,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /**
      * Gwiazdki zwycięzcy kampanii z HP bazy gracza, do którego wraca [SIEGE_STAR_FORGIVENESS]
      * obrażeń z przyspieszonej presji oblężniczej ([Side.siegeDamageTaken]), najwyżej do pełnego
-     * HP (Dzień 2: wcześniejsza presja w etapach 2–7 nie zabiera gwiazdek zwycięzcy). Przy
-     * standardowej presji (etap 1, etapy od 8.) bez zmian. Przebieg bitwy i [score] bez zmian.
+     * HP (Dzień 2: wcześniejsza presja w etapach 2–7 nie zabiera gwiazdek zwycięzcy; R11-02:
+     * w etapach 8–12 zwrot [siegeStarForgiveness] = 1,0). Przy standardowej presji (etap 1,
+     * etapy od 13.) bez zmian. Przebieg bitwy i [score] bez zmian.
      */
     fun stars(): Int {
         if (winner != 0) return 0

@@ -191,6 +191,7 @@ object Campaign {
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
         // Dzień 1: etap 7 lżejszy o 5% po skróceniu etapów 2-7 (mniej gwiazdek i medali).
+        // R11-02: etap 12 lżejszy o 2% (0,828 → 0,811) po skróceniu etapów 8-12.
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -200,7 +201,7 @@ object Campaign {
             6 -> 0.8245f
             7 -> 0.95f
             11 -> 0.97f
-            12 -> 0.828f
+            12 -> 0.811f
             16 -> 0.86f
             17 -> 0.92f
             18 -> 0.85f

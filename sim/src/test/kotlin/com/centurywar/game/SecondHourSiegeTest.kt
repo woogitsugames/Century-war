@@ -19,6 +19,9 @@ class SecondHourSiegeTest {
                 val b = Battle(Campaign.config(Campaign.stages[index], Bonuses(), 7L, difficulty = difficulty))
                 assertEquals("etap ${index + 1} $difficulty", start, b.siegeStart)
                 assertEquals("etap ${index + 1} $difficulty", ramp, b.siegeRamp)
+                val forgiveness = if (index + 1 in 8..12) Campaign.SECOND_SIEGE_STAR_FORGIVENESS
+                    else Battle.SIEGE_STAR_FORGIVENESS
+                assertEquals("etap ${index + 1} $difficulty", forgiveness, b.siegeStarForgiveness)
             }
         }
     }
