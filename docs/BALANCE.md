@@ -2073,7 +2073,8 @@ Wygrane / oczekiwany czas przejścia [min].
 | śr. wygrane 28–36 | 48,1 → **53,2%** | 43,4 → 50,0% | 43,7 → 48,8% | 46,3 → 50,7% | 66,8 → 71,7% | 67,6 → 71,6% |
 
 Ocena (kryterium d33): realny gracz — etap 28 ostrzegawcza → **płynnie** (80 → 65%, −15 pp,
-1,41×), 30–33 ≥ 50% (bez stref); „medale” bez ściany (28: 2,02× → 0,77× przy 29; 31–33 ≥ 46%);
+1,41×), 30–33 ≥ 50% (bez stref); „medale” bez ściany (28: 69 → 55%, 1,46× zamiast 2,02×; 31–33 46–53%; strefy
+ostrzegawcze < 50% zostają na 29, 31, 33, 36);
 „medale” + dowódca na 28 nadal **ściana** (69 → 42%, 1,95×). Docelowy najwyżej 78% (28, 32; cel
 tury 10 „≤ ok. 75%”, +3 pp w szumie). Etapy 19–27 bez zmian (klif 19 z dowódcą jak w D37).
 
