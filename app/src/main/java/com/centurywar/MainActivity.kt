@@ -216,6 +216,8 @@ class MainActivity : Activity(), Host {
     @Volatile internal var exitReasonsCollected = false
         private set
     internal val gameReady: Boolean get() = ::game.isInitialized
+    /** Testy R11-04: zwykły start nigdy nie włącza trybu pętli testowej. */
+    internal val testLoopActive: Boolean get() = ::game.isInitialized && game.testLoop
 
     private fun finishStartup(
         root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?,

@@ -110,12 +110,25 @@ class ReleaseConfigTest {
     @Test fun onlyReplayViewerActivityIsPublicAndReceiversArePrivate() {
         val manifest = xml("AndroidManifest.xml")
         val activities = manifest.getElementsByTagName("activity")
-        assertEquals(1, activities.length)
-        val main = activities.item(0) as Element
-        assertEquals(".MainActivity", main.getAttribute("android:name"))
+        // R11-04: poza grą tylko pętla testowa Play (osobny proces, jeden filtr TEST_LOOP).
+        assertEquals(2, activities.length)
+        val all = (0 until activities.length).map { activities.item(it) as Element }
+        val main = all.first { it.getAttribute("android:name") == ".MainActivity" }
         assertEquals("true", main.getAttribute("android:exported"))
         val filters = main.getElementsByTagName("intent-filter")
         assertTrue(filters.length >= 2)
+        val loop = all.first { it.getAttribute("android:name") == ".testloop.TestLoopActivity" }
+        assertEquals(":testloop", loop.getAttribute("android:process"))
+        assertEquals("true", loop.getAttribute("android:excludeFromRecents"))
+        val loopFilters = loop.getElementsByTagName("intent-filter")
+        assertEquals(1, loopFilters.length)
+        val loopFilter = loopFilters.item(0) as Element
+        val actions = loopFilter.getElementsByTagName("action")
+        assertEquals(1, actions.length)
+        assertEquals("com.google.intent.action.TEST_LOOP",
+            (actions.item(0) as Element).getAttribute("android:name"))
+        assertEquals("application/javascript",
+            (loopFilter.getElementsByTagName("data").item(0) as Element).getAttribute("android:mimeType"))
         val receivers = manifest.getElementsByTagName("receiver")
         assertEquals(1, receivers.length)
         val reminder = receivers.item(0) as Element

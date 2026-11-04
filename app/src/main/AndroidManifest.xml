@@ -73,6 +73,28 @@
             </intent-filter>
         </activity>
 
+        <!-- R11-04: pętla gry dla raportu przedpremierowego Google Play i Firebase Test Lab.
+             Osobna Activity w osobnym procesie: zwykły start (MainActivity) bez zmian,
+             profil gracza nietknięty (TestLoopActivity pisze tylko do cacheDir/testloop). -->
+        <activity
+            android:name=".testloop.TestLoopActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|density|uiMode|fontScale|locale|layoutDirection"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:process=":testloop"
+            android:screenOrientation="sensorLandscape"
+            android:taskAffinity="${applicationId}.testloop"
+            tools:ignore="DiscouragedApi">
+            <intent-filter>
+                <action android:name="com.google.intent.action.TEST_LOOP" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/javascript" />
+            </intent-filter>
+        </activity>
+        <meta-data android:name="com.google.test.loops" android:value="4" />
+        <meta-data android:name="com.google.test.loops.player_experience" android:value="1,4" />
+        <meta-data android:name="com.google.test.loops.performance" android:value="2,3" />
+
         <provider
             android:name=".meta.ReplayShareProvider"
             android:authorities="${applicationId}.replays"
