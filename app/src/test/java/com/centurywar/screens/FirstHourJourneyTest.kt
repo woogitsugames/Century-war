@@ -50,8 +50,9 @@ class FirstHourJourneyTest : FirstHourJourneyBase() {
 
     /**
      * Aplikacja zabita w tle w połowie samouczka: po ponownym uruchomieniu menu pyta o wznowienie,
-     * bitwa kończy się bez nakładki samouczka i rozlicza raz; kolejny start nie oferuje jej znowu.
-     * Odmowa wznowienia przywraca samouczek od początku.
+     * bitwa wraca z nakładką samouczka od przerwanego kroku (backlog R10 poz. 6), kończy się
+     * i rozlicza raz; kolejny start nie oferuje jej znowu. Odmowa wznowienia przywraca samouczek
+     * od początku. Pozostałe kroki: [TutorialResumeTest].
      */
     @Test
     fun tutorialInterruptedResumedSettlesOnce() {
@@ -99,12 +100,21 @@ class FirstHourJourneyTest : FirstHourJourneyBase() {
             if (menu.accessibilityLabel(yes).isBlank()) problem("„Wznów” bez opisu TalkBack")
             tap(g2, yes, "wznów")
             val bs2 = g2.current as BattleScreen
-            assertNull("wznowiony samouczek odtwarza nakładkę od zera", bs2.tut)
+            val tut2 = requireNotNull(bs2.tut) { "wznowiony samouczek bez nakładki" }
+            assertEquals("wznowiony samouczek nie wraca do przerwanego kroku", tut.step, tut2.step)
             assertTrue("wznowiona bitwa nie startuje w pauzie", bs2.paused)
             tick(g2, 0.1f, 2)
             shot(g2, "wznowiona_pauza")
+            if (tut2.skipBtn.visible || tut2.nextBtn.visible) problem("przyciski samouczka pod pauzą po wznowieniu")
             tap(g2, bs2.pauseMenu[0], "wznów z pauzy")
             assertFalse(bs2.paused)
+            guard = 0
+            while (!tut2.showing && guard++ < 600) tick(g2, 0.1f)
+            assertTrue("przerwany krok nie wraca po wznowieniu", tut2.showing)
+            assertEquals("po wznowieniu pokazano inny krok", tut.step, tut2.step)
+            shot(g2, "wznowiony_krok")
+            playTutorial(g2, bs2)
+            assertTrue("wznowiony samouczek nie zalicza się", tut2.finished && g2.profile.tutorialDone)
             val o = playWithAi(g2, bs2, "wznowiony samouczek")
             flush(g2)
             val gained = bs2.totalMedalsGained
@@ -136,6 +146,7 @@ class FirstHourJourneyTest : FirstHourJourneyBase() {
             tap(g4, button(g4.current!!, 1), "graj ponownie")
             val bs4 = g4.current as? BattleScreen
             assertTrue("po odmowie Graj nie wraca do samouczka", bs4?.tut != null)
+            assertEquals("po odmowie samouczek nie startuje od pierwszego kroku", TutorialOverlay.S_MELEE, bs4!!.tut!!.step)
         } finally {
             L.lang = old
         }
