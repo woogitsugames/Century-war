@@ -1,3 +1,10 @@
+# SESJA 4.11.2026 wieczór (nowy koordynator, session_01Xqzfc6jFDk5i9HM8BK82vV)
+- **BLOKADA:** sieć środowiska blokuje `dl.google.com` (SDK i AGP) — Gradle nie działa, brak testów i APK. Poproszono właściciela o dopisanie hosta w ustawieniach sieci. `main` nadal = 210f868 (za `integ/tura10`): po odblokowaniu najpierw pełne testy integ i wypchnięcie.
+- Budzenie: trig_01XahRKetEe53pBuzDCyR8zq (:07), trig_01Y3WGdM7Xqiwj2kbkDwuhYS (:37).
+- Gałęzie bez kompilacji (czekają na build, scalać po kolei, każda z raportem `docs/reports/d2x-*.md`/`d3x-*.md`): `claude/dzien-28-nowosc` (R11-06, part201), `claude/dzien-29-zegar` (stabilny WelcomeBack193Test: zegar w konstruktorze Game, SaveGuard reset), `claude/dzien-30-teksty` (R12 poz. 3, ew. part202), `claude/dzien-31-od-premiery` (R12 poz. 5, part203). Research: `docs/research/R12-backlog.md` (scalony na integ).
+- **Decyzje właściciela 4.11 wieczór:** etap 19 — najpierw pomiar (R12 M1–M3), potem złagodzić, jeśli potwierdzi ścianę (przed AAB); testy zamknięte BEZ serwera rankingu; w wersjach testowych napis „pełne zasady od premiery” (RELEASE_DAY bez zmian); pierwsze wydanie v0.1.0 (versionCode 1), najpierw test wewnętrzny, potem zamknięty.
+- Następne części tekstów: part204+.
+
 # SESJA 3.11.2026 po południu (nowy koordynator)
 - **Tryb (decyzja właściciela 3.11 ok. 15:00 UTC): do 2 agentów opus naraz, ciągle coś zlecać; jeden może być od ciągłego researchu.** Budzenie koordynatora: zaplanowane zadania :07 i :37 (trig_019iEZV9uBTiJzAhkVqdaR1m, trig_012Lu7xBxbPkWWLNivKj4zSE).
 - W toku: `claude/dzien-4-przeglad` (zegar pod minimapą na zewnętrznym Foldzie przy presji + przegląd po dniach 1–3, raport `docs/reports/day4-review.md`), `claude/research-1` (ciągły research: `docs/research/R1-backlog.md` — TOP 10 do zlecenia; wymagania Play 2026, retencja, dostępność, wydajność, zawartość).
