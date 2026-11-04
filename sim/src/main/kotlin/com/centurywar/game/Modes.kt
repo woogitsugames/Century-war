@@ -191,6 +191,7 @@ object Campaign {
         // (profil „nowy” nie ma elit), 12/18/32 po strojeniu osobowości 127.
         // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
         // Dzień 1: etap 7 lżejszy o 5% po skróceniu etapów 2-7 (mniej gwiazdek i medali).
+        // R11-02: etap 12 lżejszy o 2% (0,828 → 0,811) po skróceniu etapów 8-12.
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -200,7 +201,7 @@ object Campaign {
             6 -> 0.8245f
             7 -> 0.95f
             11 -> 0.97f
-            12 -> 0.828f
+            12 -> 0.811f
             16 -> 0.86f
             17 -> 0.92f
             18 -> 0.85f
@@ -251,14 +252,36 @@ object Campaign {
     const val EARLY_SIEGE_RAMP = 0.8f
     val EARLY_SIEGE_STAGES = 1..6
 
-    private fun earlySiege(cfg: BattleConfig) =
-        cfg.mode == Mode.CAMPAIGN && !cfg.tutorial && cfg.stageIndex in EARLY_SIEGE_STAGES
+    /**
+     * R11-02: etapy 8–12 (indeksy 7–11, pierwsze z dowódcą) też krócej, ale łagodniej niż
+     * 2–7: bez tego bitwa po dowódcy nagle trwała dwa razy dłużej (13,4 zamiast 7,7 min).
+     * Wartości z pomiaru w docs/BALANCE.md (sekcja „R11-02”); nie zależy od poziomu.
+     */
+    const val SECOND_SIEGE_START = 300f
+    const val SECOND_SIEGE_RAMP = 0.5f
+    val SECOND_SIEGE_STAGES = 7..11
 
-    fun siegeStart(cfg: BattleConfig): Float =
-        if (earlySiege(cfg)) EARLY_SIEGE_START else Battle.SIEGE_START
+    private fun campaignStage(cfg: BattleConfig, stages: IntRange) =
+        cfg.mode == Mode.CAMPAIGN && !cfg.tutorial && cfg.stageIndex in stages
 
-    fun siegeRamp(cfg: BattleConfig): Float =
-        if (earlySiege(cfg)) EARLY_SIEGE_RAMP else Battle.SIEGE_RAMP
+    fun siegeStart(cfg: BattleConfig): Float = when {
+        campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_START
+        campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_START
+        else -> Battle.SIEGE_START
+    }
+
+    /** R11-02: zwrot gwiazdek z przyspieszonej presji; etapy 8–12 wyżej niż dzień 2 (0,6). */
+    const val SECOND_SIEGE_STAR_FORGIVENESS = 1.0f
+
+    fun siegeStarForgiveness(cfg: BattleConfig): Float =
+        if (campaignStage(cfg, SECOND_SIEGE_STAGES)) SECOND_SIEGE_STAR_FORGIVENESS
+        else Battle.SIEGE_STAR_FORGIVENESS
+
+    fun siegeRamp(cfg: BattleConfig): Float = when {
+        campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_RAMP
+        campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_RAMP
+        else -> Battle.SIEGE_RAMP
+    }
 
     /** Odczyt poziomu z konfiguracji przechowanej również w snapshotach i powtórkach. */
     fun difficulty(cfg: BattleConfig): CampaignDifficulty? {

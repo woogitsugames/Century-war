@@ -1766,3 +1766,68 @@ fala, kroki, zabójstwa i czas są identyczne; zmienił się wyłącznie `snapsh
 Powtórki Endless/tygodnia kończą się przed pierwszą ofertą kart z nowymi pozycjami.
 
 - 2026-11-03 — regeneracja złotych powtórek: D6 184: nowe karty Endless, zestawy tygodnia, wydarzenia dnia, zrzut v20.
+
+## R11-02 — druga godzina: krótsze etapy 8–12 (4.11.2026)
+
+**Decyzja właściciela:** etapy 8–12 (pierwsze z dowódcą) mają trwać ok. 9–10 min mediany
+zamiast 12–14. Po dniu 1 etapy 2–7 trwały 7,7 min, a etap 8 wracał do 13,4 min.
+
+**Zmiana (wzorzec dnia 1, łagodniej):** w etapach 8–12 (indeksy 7–11, każdy poziom
+trudności, bez samouczka) presja oblężnicza startuje po **5 minutach** (300 s) zamiast 8
+i rośnie o **50%/min** zamiast 20%/min (`Campaign.SECOND_SIEGE_*`, `Campaign.siegeStart` /
+`siegeRamp`). Etapy 2–7, 1 i 13+ oraz inne tryby bez zmian. Stopniowanie 8–10 / 11–12 nie
+było potrzebne: etap 13 (stare zasady) ma u profilu docelowego medianę 9,3 min, czyli tyle
+co nowe 8–12.
+
+**Gwiazdki bez kary za presję:** reguła dnia 2 (`siegeDamageTaken`) liczy tylko nadwyżkę
+ponad +20%/min od wcześniejszego startu, a współczynnik 0,6 zostawiał w etapach 8–12 spadek
+★ o 6–20% (profil docelowy: 8: 1,65 → 1,46, 10: 2,01 → 1,60, 12: 2,09 → 1,71). Dlatego
+w 8–12 zwrot wynosi **1,0** (`Campaign.siegeStarForgiveness`, `Battle.siegeStarForgiveness`);
+w etapach 2–7 dalej 0,6, poza nimi licznik jest 0. Gwiazdki nie wchodzą do `score()`.
+
+**Korekta:** etap 12 `stageRamp` 0,828 → **0,811** (−2%): bez niej 70% → 63% (poza pasmem
+±5 pp). Przegląd `BALANCE_POWER_SCALE` dla etapu 12: 0,98 → 71%, 0,96 → 70%, 0,94 → 74%;
+wybrano najmniejszą.
+
+`SimVersion.PROTOCOL` 0.8.6 → **0.8.7** (`RANKED_REPLAY_FORMATS` bez zmian, `Replay.VERSION`
+7 bez zmian). `BattleSnapshot.defsFingerprint` nie obejmuje zasad presji kampanii, więc
+przerwana bitwa etapu 8–12 wznawia się po aktualizacji na nowych zasadach (test
+`SecondHourControlTest`), bez ścieżki R10-01.
+
+### Pomiar przed/po, 100 seedów na etap, Normalny
+
+`BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target|medale BALANCE_STAGE_FROM=7
+BALANCE_STAGE_TO=14`, zasady trybu (bez `BALANCE_COMMANDER`). „Po” z korektą etapu 12.
+
+| Etap | Wygrane przed → po | Mediana [min] przed → po | Oczekiwany [min] przed → po | ★ przed → po | Medale: wygrane | Medale: mediana | Medale: ★ |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 7 | 75% → 75% | 7,8 → 7,8 | 10,2 → 10,2 | 1,55 → 1,55 | 75% → 75% | 7,9 → 7,9 | 1,39 → 1,39 |
+| 8 | 66% → 69% | 13,4 → **9,5** | 19,3 → 13,5 | 1,65 → 1,77 | 67% → 72% | 14,0 → 9,6 | 1,12 → 1,50 |
+| 9 | 75% → 70% | 11,8 → **9,0** | 14,7 → 11,8 | 2,17 → 2,29 | 76% → 73% | 13,9 → 9,5 | 1,33 → 1,70 |
+| 10 | 67% → 72% | 12,9 → **9,4** | 18,2 → 12,4 | 2,01 → 1,88 | 75% → 71% | 13,9 → 9,5 | 1,19 → 1,79 |
+| 11 | 61% → 65% | 12,1 → **9,0** | 19,4 → 13,5 | 2,02 → 2,03 | 76% → 75% | 13,6 → 9,4 | 1,49 → 1,83 |
+| 12 | 70% → 67% | 11,8 → **9,1** | 16,4 → 13,1 | 2,09 → 1,93 | 84% → 87% | 13,9 → 9,4 | 1,27 → 1,76 |
+| 13 | 67% → 67% | 9,3 → 9,3 | 13,3 → 13,3 | 2,51 → 2,51 | 76% → 76% | 13,9 → 13,9 | 1,29 → 1,29 |
+| 14 | 57% → 57% | 12,2 → 12,2 | 20,5 → 20,5 | 2,04 → 2,04 | 75% → 75% | 13,9 → 13,9 | 1,27 → 1,27 |
+| **8–12** | **67,8% → 68,6%** | **11,8–13,4 → 9,0–9,5** | **Σ 87,9 → 64,3** | **1,99 → 1,98** | **75,6% → 75,6%** | **13,6–14,0 → 9,4–9,6** | **1,28 → 1,72** |
+
+Etapy 7, 13 i 14 identyczne (kontrola). 0 patów. Najkrótsza mediana 9,0 min (próg ≥ 4).
+Najgorszy spadek ★ profilu docelowego: etap 12 −7,7%, etap 10 −6,5% (próg 10%).
+Profil „medale” ma ★ wyraźnie wyżej (gwiazdki nie są trudniejsze; łatwiejsze o ok. +0,44 ★).
+
+**Z dowódcą (`BALANCE_COMMANDER=on`, profil docelowy):** wygrane 8–12 przed 67/73/68/52/71%,
+po 69/69/61/57/72%; mediany 13,7/12,1/13,1/12,2/11,8 → 9,5/9,1/9,3/9,1/9,3 min; ★ 1,51/2,10/
+1,81/1,96/2,11 → 1,72/2,13/2,00/2,04/1,92. Różnica „z dowódcą / zasady trybu” zostaje
+w granicach szumu 100 seedów (przed −9…+1 pp, po −11…+5 pp; etap 10 po −11 pp, etap 11
+przed −9 pp), dowódca obu stron występuje w 96–100% bitew.
+
+### Druga godzina (model)
+
+Suma oczekiwanych czasów 8–12 plus 1,5 min przerwy po każdej bitwie: profil docelowy
+87,9 + 7,5 = **95 min → 64,3 + 7,5 = 72 min**; „medale” 91,4 + 7,5 = 99 min → 62,8 + 7,5 =
+70 min. W 60 min po dowódcy mieści się ok. 3,2 etapu przed i ok. 4,2 etapu po (8–11
+w 57 min). Medale za wygrane etapów 8–12 przychodzą ok. 1,35× szybciej (te same nagrody
+w krótszym czasie, plus więcej ★), więc badania przed etapem 19 rosną szybciej; do
+obserwacji przy pomiarze etapów 19+.
+
+- 2026-11-04 — regeneracja złotych powtórek: R11-02: krotsza presja etapow 8-12.
