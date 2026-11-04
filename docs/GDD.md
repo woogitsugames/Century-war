@@ -57,7 +57,7 @@
 - **Awans epoki** zużywa XP. HP bazy rośnie proporcjonalnie i dostaje +10%.
 - **Rangi weteranów:** w ostatniej dostępnej epoce nadwyżka XP daje rangi (+6% obrażeń i HP za rangę).
 - **Zbrojownia:** złoto w bitwie zamieniane na +8% obrażeń i HP. Przewaga ekonomiczna nie przepada, gdy armia jest pełna.
-- **Presja oblężnicza:** po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę, a blokada stopniowo uszczupla HP baz zależnie od pozycji frontu, nawet bez trafień. Koniec z wiecznym patem. Nie dotyczy trybu bez końca.
+- **Presja oblężnicza:** po 8 minutach obrażenia zadawane bazom rosną o 20% na minutę (w kampanii krócej: etapy 2–7 od 4. minuty o 80%/min, etapy 8–12 od 5. minuty o 50%/min, etapy 13–18 od 6. minuty o 40%/min; samouczek i etapy 19+ bez zmian; `Campaign.siegeStart`/`siegeRamp`, `docs/BALANCE.md`), a blokada stopniowo uszczupla HP baz zależnie od pozycji frontu, nawet bez trafień. Koniec z wiecznym patem. Nie dotyczy trybu bez końca.
 - **Postawa:** Naprzód albo Trzymaj (jednostki czekają na linii obrony).
 - **Kolejka:** 5 jednostek. Limit armii: 12, z badaniami do 18.
 - **Uczciwe AI:** AI gra według tych samych zasad co gracz. Trudność to wyłącznie jawny mnożnik. Po porażce gra podpowiada, dlaczego przegrałeś.
