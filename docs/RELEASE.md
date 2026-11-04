@@ -733,6 +733,11 @@ Każdy scenariusz kończy się sam (`finish()`); twardy limit 4 minuty (wynik `t
 - Bez nowych uprawnień i bibliotek; gra niczego nie wysyła (Data safety bez zmian).
 - R8: `-keep class com.centurywar.testloop.TestLoopActivity { public <init>(); }` w
   `app/proguard-rules.pro`; reszta pętli jest wywoływana bezpośrednio z tej klasy.
+  Próba 4.11.2026 (`assembleRelease` jak smoke CI, syntetyczne ID, podpis debug tylko do próby):
+  build OK bez ostrzeżeń R8, `TestLoopActivity` z niezmienioną nazwą w DEX, w manifeście APK
+  filtr `TEST_LOOP` + `application/javascript`, `com.google.test.loops` = 4 i etykiety;
+  `verify_release_mapping.py` i `verify_release_dex.py` zaliczone. Uruchomienia na telefonie po
+  R8 (adb) jeszcze nie było — pierwszy raport przedpremierowy to pokaże.
 
 ### Wynik (JSON, wersja pola `v` = 1)
 
