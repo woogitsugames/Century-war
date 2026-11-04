@@ -6,8 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * R11-02 i etapy 13–18: kontrola determinizmu etapu 19 (stare zasady presji) i wznowienie
- * przerwanej bitwy etapu 9.
+ * R11-02, etapy 13–18 i etap 19 (dzień 35): kontrola determinizmu etapu 21 (stare zasady
+ * presji, stageRamp bez zmian) i wznowienie przerwanej bitwy etapu 9. Do PROTOCOL 0.8.8
+ * kontrola była na etapie 19; od 0.8.9 etap 19 jest lżejszy, więc przeniesiona na 21.
  */
 class SecondHourControlTest {
     private fun expectedLine(stage: Int, seed: Long, limit: Int): String {
@@ -17,10 +18,10 @@ class SecondHourControlTest {
         return GoldenFixtures.render(scenario).lines().first { "\"expected\"" in it }.trim()
     }
 
-    /** Wynik zapisany przy PROTOCOL 0.8.7: etap 19 ma nadal stare zasady presji. */
+    /** Wynik zapisany przy PROTOCOL 0.8.8: etap 21 ma nadal stare zasady presji i siłę AI. */
     @Test
-    fun stageNineteenUnchanged() {
-        assertEquals(STAGE_19_BEFORE, expectedLine(19, 91019L, 60 * 60 * 25))
+    fun stageTwentyOneUnchanged() {
+        assertEquals(STAGE_21_BEFORE, expectedLine(21, 91021L, 60 * 60 * 25))
     }
 
     @Test
@@ -38,8 +39,8 @@ class SecondHourControlTest {
     }
 
     companion object {
-        const val STAGE_19_BEFORE = "\"expected\": {\"score\":18985,\"winner\":1,\"wave\":0,\"steps\":32345," +
-            "\"kills\":142,\"enemyKills\":304,\"timeBits\":1141294422," +
-            "\"snapshotSha256\":\"6f1a86c91a824604babed2436184678064a887dffa7e5dfff01fd631fb785a35\"}"
+        const val STAGE_21_BEFORE = "\"expected\": {\"score\":23482,\"winner\":1,\"wave\":0,\"steps\":36436," +
+            "\"kills\":149,\"enemyKills\":297,\"timeBits\":1142411538," +
+            "\"snapshotSha256\":\"28751cca4072d2d5be17b8bda3d5f78ba3189328ce07398dcc9596a6ce34bb4e\"}"
     }
 }
