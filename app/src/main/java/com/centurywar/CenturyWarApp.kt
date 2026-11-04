@@ -6,6 +6,7 @@ import android.util.Log
 import com.centurywar.crash.CrashReports
 import com.centurywar.engine.StartupTimings
 import com.centurywar.meta.PlayGamesLeaderboards
+import com.centurywar.testloop.TestLoopProcess
 import com.google.android.gms.games.PlayGamesSdk
 
 /** SDK musi zostać uruchomione przed Activity, ale tylko po uzupełnieniu ID. */
@@ -17,6 +18,8 @@ class CenturyWarApp : Application() {
     override fun onCreate() {
         val begin = SystemClock.elapsedRealtimeNanos()
         super.onCreate()
+        // R11-04: proces pętli testowej (TestLoopActivity) bez dziennika awarii gracza i bez PGS.
+        if (TestLoopProcess.isTestLoop(TestLoopProcess.current())) return
         CrashReports.install(this)
         if (PlayGamesLeaderboards.isConfigured(this)) {
             try {

@@ -67,6 +67,9 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
   - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 79 osiągnięć), wpisy w Kodeksie;
   - **zewnętrzny ekran Folda**: zegar bitwy pod minimapą także przy presji oblężniczej,
     górny pasek bez nachodzenia napisów.
+- [x] **Pętla gry dla raportu przedpremierowego Play (R11-04)**: 4 scenariusze grają same
+      (menu, bitwa AI ×3, późny Endless, przerwanie i wznowienie), wynik w JSON, osobny profil
+      pętli; instrukcja w „Raport przedpremierowy i pętla gry”.
 - [ ] **W toku:** dzień 5 — TalkBack dla przycisków w bitwie (`docs/tasks/D5-talkback-hud.md`).
       Do tego czasu czytnik ekranu obsługuje menu, ustawienia i pauzę.
 
@@ -671,6 +674,118 @@ wersję aplikacji, datę UTC i wynik każdego punktu (OK / BŁĄD).
 identyczny wynik powtórki oraz porównywalny (w granicach zmienności
 urządzenia) start w debug i release. Każdą różnicę zgłoś z logcat,
 wersją Androida i krokami reprodukcji.
+
+## Raport przedpremierowy i pętla gry (R11-04)
+
+**Po co.** Po każdym wgraniu AAB na tor testowy Google uruchamia grę na kilku swoich telefonach
+(raport przedpremierowy: awarie, ANR, wydajność, dostępność, zrzuty). Gra rysowana na własnym
+płótnie jest dla robota Google jednym obrazkiem: bez pętli gry klika losowo i do bitwy prawie
+nie dociera. Dlatego gra ma **pętlę gry** (standard Firebase Test Lab „Game Loop”, którego
+używa też Play): 4 scenariusze, które grają same i same się kończą.
+
+**Decyzja właściciela (4.11.2026):** pętla jest włączona w raporcie przedpremierowym dla każdego
+wydania testowego.
+
+### Co ma kliknąć właściciel w Play Console
+
+Nic nie trzeba włączać osobno — Play sam wykrywa pętlę w AAB. Wystarczy:
+
+1. **Testowanie i publikacja → Testowanie → Testy wewnętrzne** (albo **Testy zamknięte**) →
+   **Utwórz nową wersję** → wgraj podpisany `app-release.aab` → **Zapisz** → **Sprawdź wersję** →
+   **Rozpocznij wdrażanie**. (Po angielsku: *Test and release → Testing → Internal testing →
+   Create new release*.) Raport startuje sam po wgraniu paczki.
+2. Po ok. godzinie (czasem kilku) otwórz **Testowanie i publikacja → Testowanie → Raport
+   przedpremierowy** (*Pre-launch report*) → **Przegląd**. Karty **Stabilność**, **Wydajność**,
+   **Dostępność**; w **Wyświetl szczegóły** są zrzuty i film z telefonów. Bitwa AI kontra AI
+   na zrzutach oznacza, że pętla zadziałała.
+3. **Raport przedpremierowy → Ustawienia** (*Settings*): niczego nie zmieniaj. Nie podawaj
+   danych logowania (gra nie ma konta), nie wgrywaj skryptu Robo. Raport jest domyślnie włączony;
+   gdyby ktoś go kiedyś wyłączył, w tych ustawieniach włącz go z powrotem.
+4. Jeśli raport nie pojawi się w ciągu 2 dni, wgraj tę samą wersję ponownie z nowym
+   `versionCode` (Google uruchamia raport, gdy ma wolne telefony).
+
+Konto Firebase **nie jest potrzebne**.
+
+### Scenariusze (manifest: `com.google.test.loops` = 4)
+
+| Nr | Etykieta | Co robi | Czas |
+|---:|---|---|---|
+| 1 | `player_experience` | zimny start, 20 s menu, wejście i wyjście: Kampania, Badania, Kodeks, Ustawienia | ok. 50 s |
+| 2 | `performance` | etap 8 kampanii, stałe ziarno, AI po obu stronach, tempo ×3; 3 min albo do końca bitwy, potem wyniki | do 3 min 10 s |
+| 3 | `performance` | Endless od 4. epoki (jak fala 20–30), AI gracza, ×3, 3 min (bossy co 10 fal) | do 3 min 10 s |
+| 4 | `player_experience` | bitwa ×1 30 s → przerwanie (zapis zrzutu jak przy wyjściu do tła) → wczytanie zrzutu → 30 s | ok. 1 min |
+
+Każdy scenariusz kończy się sam (`finish()`); twardy limit 4 minuty (wynik `timeout`).
+
+### Jak to działa i dlaczego nie psuje gry gracza
+
+- Osobna `TestLoopActivity` w osobnym procesie `:testloop` (`excludeFromRecents`), z filtrem
+  `com.google.intent.action.TEST_LOOP` + `application/javascript`. `MainActivity` i zwykły start
+  są bez zmian (test `ordinaryStartNeverEntersTestLoop`).
+- Profil pętli (z ukończonym samouczkiem, bez dymków i zapowiedzi epok) i zrzut bitwy leżą
+  **tylko** w `cacheDir/testloop/`, czyszczonym na starcie pętli. `profile.json`, `history.json`,
+  `battle.snap`, powtórki gracza: nietknięte (test bajt w bajt). Bez Play Games, rankingu online
+  (`Game.testLoop`), przypomnień i dziennika awarii gracza (awarie i tak widzi raport Google).
+  Jedyna wspólna rzecz: pamięć podręczna syntezowanych dźwięków w `cache/sfx` (te same pliki).
+- Filtr jest eksportowany (każda aplikacja może uruchomić pętlę), dlatego plik wyników trafia
+  tylko pod adres z intencji i nigdy do własnych plików gry (`content://` naszych dostawców
+  i `file://` w katalogach danych gry są odrzucane). Brak adresu = wynik tylko w logcat.
+- Bez nowych uprawnień i bibliotek; gra niczego nie wysyła (Data safety bez zmian).
+- R8: `-keep class com.centurywar.testloop.TestLoopActivity { public <init>(); }` w
+  `app/proguard-rules.pro`; reszta pętli jest wywoływana bezpośrednio z tej klasy.
+  Próba 4.11.2026 (`assembleRelease` jak smoke CI, syntetyczne ID, podpis debug tylko do próby):
+  build OK bez ostrzeżeń R8, `TestLoopActivity` z niezmienioną nazwą w DEX, w manifeście APK
+  filtr `TEST_LOOP` + `application/javascript`, `com.google.test.loops` = 4 i etykiety;
+  `verify_release_mapping.py` i `verify_release_dex.py` zaliczone. Uruchomienia na telefonie po
+  R8 (adb) jeszcze nie było — pierwszy raport przedpremierowy to pokaże.
+
+### Wynik (JSON, wersja pola `v` = 1)
+
+Plik pod adresem z intencji i linia w `adb logcat -s CWTestLoop`. Przykład (liczby poglądowe,
+nie pomiar):
+
+```json
+{"v":1,"scenario":2,"result":"ok","versionName":"0.1.0-dev","versionCode":1,"protocol":"0.8.6",
+ "device":{"model":"Google Pixel 6a","sdk":35},"quality":2,"qualityMin":2,"reductionMax":1,
+ "frames":{"count":10750,"p50":16.8,"p95":19.5,"max":61.3},"discardedSteps":0,
+ "pssStartKb":151000,"pssEndKb":168000,"battleTimeS":540.0,"winner":-1,"elapsedS":185.1}
+```
+
+`result`: `ok` / `timeout` / `error` (z polem `reason`). `frames` to odstępy między klatkami
+w ms (p50, p95, max) w fazie pomiaru; scenariusz 1 ma też `startupMs` (od startu procesu do
+pierwszej klatki menu) i `screens` (p50/p95 na każdym ekranie); 2 i 3: `battleTimeS`, `winner`
+(−1 = bitwa trwa), `wave` (Endless), `discardedSteps`; 4: `snapshotSaved`, `snapshotLoaded`,
+`snapshotLoadMs`, `resumedAtS`. `quality`/`qualityMin` to poziom grafiki (1 niski … 3 wysoki),
+`reductionMax` — ile stopni obniżył regulator. Progi do porównania: `docs/PERFORMANCE.md`.
+Raport Play nie pokazuje tego pliku (pokazuje własne wykresy klatek, CPU i pamięci); plik
+czyta się w Test Lab albo lokalnie.
+
+### Uruchomienie lokalne i w Test Lab
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -W -a com.google.intent.action.TEST_LOOP \
+  -n com.centurywar.game/com.centurywar.testloop.TestLoopActivity \
+  -t application/javascript --ei scenario 2
+adb logcat -s CWTestLoop    # linia z JSON po zakończeniu scenariusza
+```
+
+Firebase Test Lab (tylko jeśli właściciel kiedyś założy projekt Firebase; **niewymagane**):
+
+```bash
+gcloud firebase test android run --type=game-loop --app=app-release.apk \
+  --scenario-numbers=1,2,3,4 --device model=<model>,version=<api>
+```
+
+**Źródła (sprawdzone 4.11.2026):**
+[Pomoc Play: raport przedpremierowy i pętle gry](https://support.google.com/googleplay/android-developer/answer/9842757)
+— „gra lub aplikacja OpenGL potrzebuje pętli gry”, robot sam ją wykrywa i uruchamia, bez konta
+Firebase; [Pomoc Play: korzystanie z raportów przedpremierowych](https://support.google.com/googleplay/android-developer/answer/7002270)
+— ścieżka *Test and release → Testing → Pre-launch report*, raporty automatycznie po wgraniu
+paczki, wyniki zwykle w ciągu godziny;
+[Firebase Test Lab: Game Loop](https://firebase.google.com/docs/test-lab/android/game-loop)
+— filtr intencji, `com.google.test.loops`, etykiety, `scenario`, plik wyników z `getData()`,
+`finish()` po każdej pętli, `--scenario-numbers`.
 
 ## Testy zamknięte w Play Console
 

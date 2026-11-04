@@ -316,3 +316,31 @@ Log końcowy testów: `BUILD SUCCESSFUL in 52s`, APK: `BUILD SUCCESSFUL in 42s`.
 **Ograniczenie:** JVM/Robolectric nie mierzy GPU, temperatury ani PSS na
 fizycznym urządzeniu 2–3 GB RAM. Osobna walidacja na sprzęcie docelowym
 (720p oraz Fold) jest nadal potrzebna.
+
+## R11-04 — pętla gry w raporcie przedpremierowym Play
+
+Pętla gry (`TestLoopActivity`, opis i instrukcja w [RELEASE.md](RELEASE.md#raport-przedpremierowy-i-pętla-gry-r11-04))
+gra sama 4 scenariusze na telefonach Google i zapisuje JSON z odstępami klatek (p50/p95/max),
+najniższym poziomem grafiki, liczbą odrzuconych kroków symulacji i pamięcią PSS.
+
+### Progi do porównania
+
+Te same cele co w `LowEndScreensPerformanceTest` i „Budżet klatki” wyżej. Uwaga: pętla mierzy
+**odstęp między klatkami** (to, co widzi gracz, razem z GPU i vsync), a test JVM — czas CPU
+`update + render`; odstęp przy 60 Hz nie spadnie poniżej ok. 16,7 ms.
+
+| Scenariusz pętli | Cel na tanim telefonie (2–3 GB RAM) | Sygnał problemu |
+|---|---|---|
+| 1: menu, Kampania, Badania, Kodeks, Ustawienia | p95 ≤ 20 ms (60 Hz) lub ≤ 36 ms (limit 30 FPS); `startupMs` ≤ 2500 | p95 > 33 ms na którymkolwiek ekranie, `startupMs` > 4000 |
+| 2: bitwa etapu 8, AI, ×3 | p95 ≤ 25 ms, `discardedSteps` = 0, `reductionMax` ≤ 2 | `max` > 250 ms (przycięcie), `qualityMin` niższy niż `quality` przez całą bitwę |
+| 3: Endless od 4. epoki, ×3 | p95 ≤ 25 ms, `discardedSteps` ≤ 60 (1 s symulacji) | wzrost PSS `pssEndKb − pssStartKb` > 60 000 KB |
+| 4: przerwanie i wznowienie | `snapshotLoaded` = true, `snapshotLoadMs` ≤ 200 | `snapshotLoaded` = false (błąd zrzutu) |
+
+### Wyniki z telefonów Google
+
+Do uzupełnienia po pierwszym raporcie przedpremierowym (model, Android, scenariusz, p50/p95/max,
+`qualityMin`, `discardedSteps`, PSS). Nie wpisywać wartości z JVM ani szacunków.
+
+| Data | Wersja | Telefon | Android | Scen. | p50 / p95 / max (ms) | qualityMin | discarded | PSS start → koniec (MB) |
+|---|---|---|---|---:|---|---:|---:|---|
+| — | — | — | — | — | — | — | — | — |

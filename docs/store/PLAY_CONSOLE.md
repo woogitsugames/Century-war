@@ -129,6 +129,22 @@ Wgraj **`app/build/outputs/bundle/release/app-release.aab`**, nie debug APK. Zwi
 2. **Closed:** zaproś szerszą grupę i udostępnij link opt-in (każdy tester musi się zapisać), podaj adres zbierania opinii. Sprawdź rozdzielczości 720p/Fold, odtwarzanie bitwy, zapisy, prywatność, brak reklam/IAP, logowanie PGS i synchronizację danych. Jeśli konto **osobiste** objęte przepisem, weryfikuj rzeczywiste 12/14 w konsoli; zwykłe wysłanie 12 zaproszeń nie wystarcza. [Google — tory i link testerów](https://support.google.com/googleplay/android-developer/answer/9845334), [Google — próg 12/14](https://support.google.com/googleplay/android-developer/answer/14151465).
 3. **Production:** utwórz nowe wydanie lub promuj sprawdzoną wersję AAB na tor produkcyjny, podaj notatki release, przejrzyj **Publishing overview**, wyślij do oceny, sprawdzaj status i dopiero po akceptacji opublikuj (lub użyj zarządzanego publikowania, jeżeli zostało włączone). [Google — wydania](https://support.google.com/googleplay/android-developer/answer/9859348), [Google — statusy](https://support.google.com/googleplay/android-developer/answer/9859751).
 
+**Raport przedpremierowy i pętla gry (decyzja właściciela 4.11.2026: włączona dla każdego wydania testowego).**
+Gra ma wbudowaną „pętlę gry”: Google po wgraniu AAB sam uruchamia na swoich telefonach
+4 scenariusze (menu, dwie bitwy AI ×3, przerwanie i wznowienie) i pokazuje awarie, przycięcia
+i pamięć w raporcie. Co kliknąć:
+
+1. **Testowanie i publikacja → Testowanie → Testy wewnętrzne** (lub **Testy zamknięte**) →
+   **Utwórz nową wersję** → wgraj podpisany AAB → **Zapisz** → **Sprawdź wersję** → **Rozpocznij wdrażanie**.
+2. Po ok. godzinie: **Testowanie i publikacja → Testowanie → Raport przedpremierowy → Przegląd**
+   → karty Stabilność / Wydajność / Dostępność → **Wyświetl szczegóły** (zrzuty, film).
+3. **Raport przedpremierowy → Ustawienia**: zostaw bez zmian (bez danych logowania, bez skryptu Robo).
+   Raport jest domyślnie włączony; jeśli ktoś go wyłączył, włącz go tam z powrotem.
+4. Brak raportu po 2 dniach: wgraj wersję ponownie z nowym `versionCode`.
+
+Konto Firebase nie jest potrzebne. Szczegóły, scenariusze i odczyt wyników: [RELEASE.md](../RELEASE.md#raport-przedpremierowy-i-pętla-gry-r11-04).
+[Google — pętle gry w raporcie](https://support.google.com/googleplay/android-developer/answer/9842757).
+
 **Uwaga:** użytkownik będący zapisanym testerem wewnętrznym może nie otrzymywać wersji z innego toru, dopóki nie zrezygnuje z toru internal. Udostępnione linki mogą pojawić się z opóźnieniem po pierwszej publikacji testu. [Google — tory testowe](https://support.google.com/googleplay/android-developer/answer/9845334).
 
 ## 6. Checklista właściciela — zaznaczaj dopiero po wykonaniu
@@ -160,6 +176,7 @@ Wgraj **`app/build/outputs/bundle/release/app-release.aab`**, nie debug APK. Zwi
 - [ ] Wykonano build i testy Gradle oraz kontrolę ostatecznego manifestu, PGS, offline, 720p/Fold, danych, stabilności. [docs/CI.md](../CI.md), [docs/RELEASE.md](../RELEASE.md)
 - [ ] AAB bez bibliotek natywnych albo z bibliotekami wyrównanymi do 16 KB (`unzip -l app-release.aab | grep '\.so$'` pusto). [16 KB](https://developer.android.com/guide/practices/page-sizes)
 - [ ] W czasie testu zamkniętego co tydzień przejrzano **Android vitals** i **raport przedpremierowy** (progi w sekcji 8). [Vitals](https://developer.android.com/games/optimize/vitals)
+- [ ] Po każdym wgraniu AAB na tor testowy otwarto **Testowanie → Raport przedpremierowy → Przegląd** i sprawdzono, że na zrzutach jest bitwa AI kontra AI (pętla gry działa; nic nie trzeba włączać). [Pętla gry](../RELEASE.md#raport-przedpremierowy-i-pętla-gry-r11-04)
 - [ ] Przeprowadzono **internal** i zalecany **closed test**; nie zastosowano bezpodstawnie reguły 12/14 do konta organizacji. [Tory testów](https://support.google.com/googleplay/android-developer/answer/9845334)
 - [ ] Utworzono release **Production**, przejrzano ostrzeżenia i Publishing overview, wysłano do review, potwierdzono status udostępnienia. [Wydania](https://support.google.com/googleplay/android-developer/answer/9859348)
 
