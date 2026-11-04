@@ -584,6 +584,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
     }
 
     private fun planHud(s: BattleScreen) {
+        // R10-03: węzeł znaku „baza atakowana” istnieje tylko, gdy znak jest widoczny (≥ 2,5 s).
+        emitButton(s, s.baseAlertBtn)
         emitInfo(s, INFO_GOLD, s.goldRect)
         emitInfo(s, INFO_XP, s.xpRect)
         emitInfo(s, INFO_BASES, s.mini)

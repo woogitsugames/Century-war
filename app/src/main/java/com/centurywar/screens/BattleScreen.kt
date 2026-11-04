@@ -223,6 +223,8 @@ class BattleScreen(
         const val COMMANDER = 203
         /** R2-01: niewidoczny przycisk nad wierszem „następnego celu” na wynikach. */
         const val RESULT_GOAL = 204
+        /** R10-03: znak „baza atakowana” przy lewej krawędzi pola. */
+        const val BASE_ALERT = 205
         const val HELP_NONE = 0
         const val HELP_RESEARCH = 1
         const val HELP_EASY = 2
@@ -293,6 +295,14 @@ class BattleScreen(
     internal val resultStatsTab = btn(RESULT_STATS_TAB)
     internal val resultChartTab = btn(RESULT_CHART_TAB)
     internal val resultGoalBtn = btn(RESULT_GOAL).also { it.visible = false }
+    /** R10-03: widoczny tylko, gdy baza obrywa poza kadrem i nie ma innej nakładki. */
+    internal val baseAlertBtn = btn(BASE_ALERT).also { it.visible = false }
+    /** R10-03: sygnały zdarzeń bitwy; stan interfejsu, poza zrzutem i powtórką. */
+    internal val alerts = BattleAlerts()
+    private var lastBossSfxAt = BattleAlerts.NEVER
+    private var alertPulse = 0f
+    private var alertPctShown = -1
+    private var alertPctText = ""
     internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
     internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -425,6 +435,10 @@ class BattleScreen(
         // OK oraz przyciski samouczka mają pierwszeństwo przed HUD.
         tut?.let { buttons.add(0, it.nextBtn); buttons.add(0, it.skipBtn) }
         buttons.add(0, hints.okBtn)
+        // Znak bazy jest pierwszy, ale łapie dotyk tylko widoczny (gdy nie ma samouczka ani dymka).
+        buttons.remove(baseAlertBtn)
+        buttons.add(0, baseAlertBtn)
+        BattleSfx.prepareAlerts(g)
     }
 
     override fun layout() {
@@ -458,6 +472,11 @@ class BattleScreen(
         topBarView.layoutArmy()
 
         r.layout(w, h, topH + g.insetT + 10 * dp, hudH)
+        // R10-03: plakietka 44 dp przy lewej krawędzi pola, 60 dp nad ziemią (cel dotyku 48 dp).
+        val alertSize = 44 * dp
+        baseAlertBtn.set(fieldRect.left + g.insetL + 8 * dp, r.groundY - 60 * dp - alertSize / 2f,
+            alertSize, alertSize)
+        baseAlertBtn.hitSlop = 2 * dp
 
         layoutPause()
         evolveBanner.layout()
@@ -711,7 +730,11 @@ class BattleScreen(
             }
             music.setIntensity(tension)
         }
-        BattleSfx.play(g, battle, r.camX, r.worldVisible)
+        if (BattleSfx.play(g, battle, r.camX, r.worldVisible)) lastBossSfxAt = battle.time
+        val alertMask = alerts.step(battle, battle.time)
+        if (!finished && !paused) BattleSfx.playAlerts(g, alertMask, speed >= 5,
+            kotlin.math.abs(battle.time - lastBossSfxAt) < 1f)
+        alertPulse = (alertPulse + dt) % 1f
         if (finished) resultTime += dt
         if (manualCam > 0f) manualCam -= dt else if (!finished) {
             followRamp = (followRamp + dt * 0.8f).coerceAtMost(1f)
@@ -755,7 +778,7 @@ class BattleScreen(
             battle.pendingChoice != null || battle.pendingCards != null ||
             showTurrets || showUpgrade >= 0 || criticalDaily || introRemaining > 0f ||
             evolveBanner.goBtn.visible)
-
+        refreshBaseAlert()
     }
 
     internal var turretSlotsLaid = -1
@@ -942,6 +965,10 @@ class BattleScreen(
 
     override fun onClick(b: Button) {
         if (eraIntro?.active == true) return
+        if (b === baseAlertBtn) {
+            focusPlayerBase()
+            return
+        }
         if (aimingBarrage && b.id != BARRAGE) aimingBarrage = false
         val p = battle.player
         if (hints.onClick(b)) return
@@ -1114,6 +1141,61 @@ class BattleScreen(
 
 
 
+    /** R10-03: kamera na własną bazę (lewy kraniec jak na starcie); automat pauzuje jak po przewinięciu. */
+    internal fun focusPlayerBase() {
+        r.camX = -120f
+        r.clampCam()
+        manualCam = 5f
+        followRamp = 0f
+        tut?.onCamera()
+    }
+
+    /**
+     * R10-03: znak „baza atakowana” — baza gracza oberwała w ostatnich 2,5 s symulacji i jest poza
+     * kadrem, a żadna inna nakładka (samouczek, dymek, wybór, zapowiedź epoki, pauza, panel,
+     * celowanie ostrzału) nie jest aktywna. Wołane w update() po ułożeniu przycisków HUD.
+     */
+    private fun refreshBaseAlert() {
+        val p = battle.player
+        val t = tut
+        baseAlertBtn.visible = !finished && !paused && !battle.over && !aimingBarrage &&
+            eraIntro?.active != true && battle.pendingVariant == null && battle.pendingChoice == null &&
+            battle.pendingCards == null && (t == null || (!t.showing && !t.skipConfirmationVisible)) &&
+            hints.activeId < 0 && showUpgrade < 0 && !(showTurrets && turretOverlay) &&
+            !evolveBanner.goBtn.visible &&
+            battle.time - alerts.baseHitAt < BattleAlerts.HIT_SHOW_SECONDS &&
+            r.screenX(p.baseFront) < fieldRect.left
+        var pct = if (p.baseMaxHp > 0f) kotlin.math.round(p.baseHp / p.baseMaxHp * 100f).toInt().coerceIn(0, 100) else 100
+        if (pct == 0 && p.baseHp > 0f) pct = 1
+        if (pct != alertPctShown) {
+            alertPctShown = pct
+            alertPctText = "$pct%"
+        }
+    }
+
+    /** Czerwona plakietka: tarcza i strzałka w lewo, obok HP bazy w %, gdy ≤ 50%. Bez alokacji. */
+    private fun drawBaseAlert(c: Canvas) {
+        val b = baseAlertBtn
+        if (!b.visible) return
+        val alpha = if (g.profile.reduceFlash) 255
+            else (207.5f + 47.5f * kotlin.math.sin(alertPulse * 2f * Math.PI.toFloat() * 2f)).toInt().coerceIn(160, 255)
+        val rad = 10 * dp
+        val f = ui.fill
+        f.shader = null
+        f.color = Ui.OUTLINE
+        f.alpha = alpha
+        c.drawRoundRect(b.r.left - 2 * dp, b.r.top - 2 * dp, b.r.right + 2 * dp, b.r.bottom + 2 * dp,
+            rad + 2 * dp, rad + 2 * dp, f)
+        f.color = Ui.BTN_RED
+        f.alpha = alpha
+        c.drawRoundRect(b.r, rad, rad, f)
+        f.alpha = 255
+        val cy = b.r.centerY()
+        Icons.draw(c, Icons.BACK, b.r.left + 11 * dp, cy, 14 * dp, dp = dp)
+        Icons.draw(c, Icons.SHIELD, b.r.left + 27 * dp, cy, 24 * dp, dp = dp)
+        if (alertPctShown <= 50) ui.textO(c, alertPctText, b.r.right + 6 * dp, cy + 5 * dp, 14f, Ui.TEXT)
+    }
+
     override fun onDrag(dx: Float, dy: Float) {
         if (finished || paused || (showTurrets && turretOverlay)) return
         // Podczas celowania palec przesuwa celownik, a nie kamerę.
@@ -1197,6 +1279,7 @@ class BattleScreen(
         pauseVibrationBtn -> L["vibration"] + ": " + b.label
         pauseSpeedBtn -> L["cx_speed"] + ": " + b.label
         resultGoalBtn -> resultGoalText
+        baseAlertBtn -> L.f("alert190_base_a11y", alertPctShown)
         else -> super.accessibilityLabel(b)
     }
 
@@ -1704,6 +1787,7 @@ class BattleScreen(
         ui.button(c, evolveBtn, 15f)
         evolveBanner.drawEvolveGlow(c, evolveBtn, evolveBtn.enabled)
         ui.button(c, pauseBtn, 15f)
+        drawBaseAlert(c)
         if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawTurretPanel(c)
         if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawUpgradePanel(c)
         if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)

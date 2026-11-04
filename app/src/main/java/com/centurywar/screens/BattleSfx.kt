@@ -120,11 +120,15 @@ object BattleSfx {
         EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH, EraArt.ORBITAL -> Sound.EVOLVE_FUTURE
     }
 
-    /** Dwie kolejki priorytetu, panoramowanie według kamery, limit drobnych głosów. */
-    fun play(g: Game, battle: Battle, camX: Float, worldVisible: Float) {
+    /**
+     * Dwie kolejki priorytetu, panoramowanie według kamery, limit drobnych głosów.
+     * Zwraca true, gdy w tej klatce zabrzmiał [Sound.BOSS] (R10-03: sygnały go nie dublują).
+     */
+    fun play(g: Game, battle: Battle, camX: Float, worldVisible: Float): Boolean {
         val fx = battle.fx
-        if (g.sound == null) return
-        if (fx.count == 0) return
+        if (g.sound == null) return false
+        if (fx.count == 0) return false
+        var boss = false
         val center = camX + worldVisible * 0.5f
         val range = worldVisible.coerceAtLeast(1f) * 0.9f
         val half = worldVisible.coerceAtLeast(1f) * 0.5f
@@ -173,6 +177,7 @@ object BattleSfx {
                     FxBuffer.EVOLVE -> {
                         if (fx.value[i] >= 2f) {
                             g.sfx(Sound.BOSS, 0.8f, 500, pan = pan, priority = 3)
+                            boss = true
                             g.music?.duck(0.36f, 1.3f)
                         } else {
                             g.sfx(evolveSound(style), if (fx.side[i] == 0) 0.8f else 0.4f,
@@ -189,5 +194,37 @@ object BattleSfx {
                 }
             }
         }
+        return boss
+    }
+
+    /** R10-03: próbki sygnałów zamawiane przy starcie bitwy gracza (nie w powtórce ani w menu). */
+    fun prepareAlerts(g: Game) {
+        val sound = g.sound ?: return
+        sound.prewarm(Sound.ALERT_BASE)
+        sound.prewarm(Sound.ALERT_ENEMY_ERA)
+        sound.prewarm(Sound.ALERT_READY)
+    }
+
+    /**
+     * R10-03: sygnały ważnych zdarzeń bitwy gracza ([BattleAlerts]). Głośność i wyłącznik jak
+     * efekty (Game.sfx). [fast] = tempo ×5: bez sygnału gotowości. [bossNow] = w tej sekundzie
+     * zabrzmiał już Sound.BOSS, więc epoka wroga i presja milczą.
+     */
+    fun playAlerts(g: Game, mask: Int, fast: Boolean, bossNow: Boolean) {
+        if (mask == 0 || g.sound == null) return
+        if (mask and BattleAlerts.BASE_LOW != 0) {
+            g.sfx(Sound.ALERT_BASE, 1f, 4_000, pitch = 0.94f, priority = 3)
+            g.music?.duck(0.5f, 0.6f)
+        } else if (mask and BattleAlerts.BASE_HALF != 0) {
+            g.sfx(Sound.ALERT_BASE, 0.85f, 4_000, priority = 3)
+        }
+        if (!bossNow) {
+            // Presja oblężnicza: te same dwa tony co epoka wroga, niżej i ciszej.
+            if (mask and BattleAlerts.ENEMY_ERA != 0) g.sfx(Sound.ALERT_ENEMY_ERA, 0.85f, 1_500, priority = 3)
+            else if (mask and BattleAlerts.SIEGE != 0)
+                g.sfx(Sound.ALERT_ENEMY_ERA, 0.7f, 1_500, pitch = 0.8f, priority = 3)
+        }
+        if (!fast && mask and BattleAlerts.ABILITY_READY != 0)
+            g.sfx(Sound.ALERT_READY, 0.45f, 2_000, priority = 1)
     }
 }

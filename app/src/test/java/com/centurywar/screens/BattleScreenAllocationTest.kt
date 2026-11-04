@@ -84,6 +84,31 @@ class BattleScreenAllocationTest {
         assertTrue("$label: $allocated B na 600 klatek (limit < 16384 B)", allocated < 16 * 1024)
     }
 
+    /** R10-03: detektor sygnałów i znak „baza atakowana” (widoczny, pulsujący) bez alokacji. */
+    @Test fun baseAlertDoesNotAllocatePerFrame() {
+        val f = fixture(4790L)
+        val screen = f.screen
+        val p = f.battle.player
+        val manual = BattleScreen::class.java.getDeclaredField("manualCam").apply { isAccessible = true }
+        fun frame() {
+            manual.setFloat(screen, 30f)
+            screen.r.camX = 1e6f
+            screen.r.clampCam()
+            p.baseHp -= p.baseMaxHp * 0.001f
+            if (p.baseHp < p.baseMaxHp * 0.3f) p.baseHp = p.baseMaxHp * 0.45f
+            screen.update(1f / 60f)
+            screen.render(f.canvas)
+        }
+        val meter = meter()
+        repeat(300) { frame() }
+        assertTrue("Znak bazy widoczny", screen.baseAlertBtn.visible)
+        val before = meter.bytes()
+        repeat(600) { frame() }
+        val allocated = meter.bytes() - before
+        assertTrue("Znak bazy widoczny do końca", screen.baseAlertBtn.visible)
+        assertTrue("Znak bazy: $allocated B na 600 klatek (limit < 16384 B)", allocated < 16 * 1024)
+    }
+
     @Test fun turretPanelDoesNotAllocatePerFrame() {
         val f = fixture(4701L)
         val p = f.battle.player

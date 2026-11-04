@@ -73,6 +73,9 @@ class Sound(private val ctx: Context) {
         const val ERROR = SoundSynth.ERROR
         const val REWARD = SoundSynth.REWARD
         const val RANK_UP = SoundSynth.RANK_UP
+        const val ALERT_BASE = SoundSynth.ALERT_BASE
+        const val ALERT_ENEMY_ERA = SoundSynth.ALERT_ENEMY_ERA
+        const val ALERT_READY = SoundSynth.ALERT_READY
         private const val COUNT = SoundSynth.COUNT
         private const val VARIANTS = SoundSynth.VARIANTS
         private const val SAMPLE_COUNT = COUNT * VARIANTS
