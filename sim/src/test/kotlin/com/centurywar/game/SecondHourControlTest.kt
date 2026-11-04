@@ -5,7 +5,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** R11-02: kontrola determinizmu etapu 13 i wznowienie przerwanej bitwy etapu 9. */
+/**
+ * R11-02 i etapy 13–18: kontrola determinizmu etapu 19 (stare zasady presji) i wznowienie
+ * przerwanej bitwy etapu 9.
+ */
 class SecondHourControlTest {
     private fun expectedLine(stage: Int, seed: Long, limit: Int): String {
         val scenario = GoldenFixtures.Scenario("stage-$stage", limit) {
@@ -14,10 +17,10 @@ class SecondHourControlTest {
         return GoldenFixtures.render(scenario).lines().first { "\"expected\"" in it }.trim()
     }
 
-    /** Wynik zapisany przed R11-02 (PROTOCOL 0.8.6): etap 13 ma nadal stare zasady presji. */
+    /** Wynik zapisany przy PROTOCOL 0.8.7: etap 19 ma nadal stare zasady presji. */
     @Test
-    fun stageThirteenUnchanged() {
-        assertEquals(STAGE_13_BEFORE, expectedLine(13, 91013L, 60 * 60 * 14))
+    fun stageNineteenUnchanged() {
+        assertEquals(STAGE_19_BEFORE, expectedLine(19, 91019L, 60 * 60 * 25))
     }
 
     @Test
@@ -35,8 +38,8 @@ class SecondHourControlTest {
     }
 
     companion object {
-        const val STAGE_13_BEFORE = "\"expected\": {\"score\":10898,\"winner\":1,\"wave\":0,\"steps\":45449," +
-            "\"kills\":263,\"enemyKills\":336,\"timeBits\":1144872688," +
-            "\"snapshotSha256\":\"5107928f35b7935c7ab4bdd8ba33bf954b4e8a5d622015b332bc12812ff32765\"}"
+        const val STAGE_19_BEFORE = "\"expected\": {\"score\":18985,\"winner\":1,\"wave\":0,\"steps\":32345," +
+            "\"kills\":142,\"enemyKills\":304,\"timeBits\":1141294422," +
+            "\"snapshotSha256\":\"6f1a86c91a824604babed2436184678064a887dffa7e5dfff01fd631fb785a35\"}"
     }
 }

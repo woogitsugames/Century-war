@@ -44,8 +44,8 @@ class SiegeStarsDay2Test {
 
     @Test
     fun standardPressureStagesKeepOldStars() {
-        // Etap 1 i etapy od 13. mają standardową presję: licznik zostaje 0, gwiazdki jak dawniej.
-        for (index in intArrayOf(0, 13, 20)) {
+        // Etap 1 i etapy od 19. mają standardową presję: licznik zostaje 0, gwiazdki jak dawniej.
+        for (index in intArrayOf(0, 19, 20)) {
             val b = campaign(index, 77L + index)
             var steps = 0
             while (!b.over && steps < (30 * 60 / Battle.STEP).toInt()) { b.step(); b.fx.count = 0; steps++ }
