@@ -55,6 +55,8 @@ class Profile(private val file: File) {
         /** Pierwszy etap Epoki żelaza ma indeks 8 (dawny etap 9). */
         const val IRON_FIRST_STAGE = 8
         const val INSERTED_STAGE_COUNT = 4
+        /** Górna granica dni UTC w polach dni profilu (ok. roku 4700). */
+        internal const val MAX_DAY = 1_000_000L
 
         /**
          * Migracje danych profilu (plik i zapis z chmury):
@@ -240,6 +242,38 @@ class Profile(private val file: File) {
         private set
     private val weeklyClaimHistory = HashMap<Long, Int>()
     var tutorialDone = false
+    /**
+     * R10-07: dzień UTC ostatniej wizyty w menu (sesji lub powrotu z bitwy); −1 = nieznany.
+     * Idzie do chmury, ale przy odczycie z chmury wygrywa późniejszy dzień (lokalny albo
+     * chmurowy), więc stary zapis nie odtworzy przerwy i nie da drugiej premii za powrót.
+     */
+    var lastPlayDay = -1L
+        private set
+    /** R10-07: dzień UTC ostatniej przyznanej premii za powrót (−1 = nigdy). */
+    var welcomeBackDay = -1L
+        private set
+
+    /**
+     * R10-07: powrót po przerwie. Ustawia [lastPlayDay] na [today] i, gdy od ostatniej wizyty
+     * minęło co najmniej [minGapDays] dni (po samouczku), dolicza [bonus] medali. Dzień,
+     * premia i znacznik trafiają na dysk w jednej atomowej migawce: zabicie procesu przed
+     * zapisem nie zostawia premii, po zapisie przerwy już nie ma. True = premia przyznana teraz.
+     * Ten sam dzień i cofnięty zegar niczego nie zmieniają (bez zapisu).
+     */
+    fun claimWelcomeBack(today: Long, minGapDays: Long, bonus: Int): Boolean {
+        if (today !in 0L..MAX_DAY || today <= lastPlayDay) return false
+        val previous = lastPlayDay
+        val due = tutorialDone && previous >= 0L && today - previous >= minGapDays &&
+            welcomeBackDay < today
+        lastPlayDay = today
+        if (due) {
+            medals = (medals.toLong() + bonus.coerceAtLeast(0)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            welcomeBackDay = today
+        }
+        save()
+        return due
+    }
+
     /** Ostatnia wersja aplikacji, której komunikat już zamknięto; stan lokalny. */
     var whatsNewSeenVersion = ""
         set(value) { field = if (value.isEmpty() || RELEASE_VERSION.matches(value)) value else "" }
@@ -556,6 +590,8 @@ class Profile(private val file: File) {
         o.put("weeklyClaimed", weeklyClaimed)
         o.put("weeklyClaims", JSONObject(weeklyClaimHistory.mapKeys { it.key.toString() }))
         o.put("tutorialDone", tutorialDone)
+        o.put("lastPlayDay", lastPlayDay)
+        o.put("welcomeBackDay", welcomeBackDay)
         o.put("whatsNewSeenVersion", whatsNewSeenVersion)
         o.put("hintsSeen", hintsSeen and HINT_VALID_MASK)
         o.put("hintsEnabled", hintsEnabled)
@@ -644,6 +680,8 @@ class Profile(private val file: File) {
         val localSettled = lastSettledBattle
         val localLossStage = campaignLossStreakStage
         val localLossStreak = campaignLossStreak
+        val localPlayDay = lastPlayDay
+        val localWelcomeDay = welcomeBackDay
         val o = JSONObject(json)
         val version = o.optInt("v", 1)
         require(version in 1..CURRENT_VERSION) { "Nieobsługiwana wersja profilu: $version" }
@@ -656,6 +694,10 @@ class Profile(private val file: File) {
         lastSettledBattle = localSettled
         campaignLossStreakStage = localLossStage
         campaignLossStreak = localLossStreak
+        // R10-07: późniejsza wizyta i premia wygrywają, więc zapis z chmury (lub import)
+        // nie odtworzy przerwy, za którą premia już była.
+        lastPlayDay = maxOf(lastPlayDay, localPlayDay)
+        welcomeBackDay = maxOf(welcomeBackDay, localWelcomeDay)
     }
 
     /** Snapshot Play Games nie zawiera lokalnej zgody ani identyfikatora rankingu. */
@@ -1122,6 +1164,11 @@ class Profile(private val file: File) {
         selectedBanner = json.optInt("selectedBanner", 0).coerceIn(0, BannerCatalog.COUNT - 1)
             .takeIf { bannerUnlocked(it) } ?: BannerCatalog.DEFAULT
         missionState.fromJson(missions)
+        // R10-07: profil sprzed pola lastPlayDay: ostatni dzień widziany przez misje
+        // (aktualizowany przy każdym starcie i powrocie z tła) to ostatnia wizyta.
+        lastPlayDay = (if (json.has("lastPlayDay")) json.optLong("lastPlayDay", -1L)
+            else missionState.lastSeenDay).let { if (it in 0L..MAX_DAY) it else -1L }
+        welcomeBackDay = json.optLong("welcomeBackDay", -1L).let { if (it in 0L..MAX_DAY) it else -1L }
         boards.clear(); boards.putAll(newBoards)
         skirmishHistory.clear(); skirmishHistory.addAll(newHistory)
     }
@@ -1132,6 +1179,7 @@ class Profile(private val file: File) {
         selectedBanner = 0; unlockedBanners = 1
         dailyChallengeStreak = 0; bestDailyChallengeStreak = 0; lastDailyChallengeStreakDay = -1L
         whatsNewSeenVersion = ""; hasExistingSave = false
+        lastPlayDay = -1L; welcomeBackDay = -1L
         lastSettledBattle = 0L
         campaignLossStreakStage = -1; campaignLossStreak = 0
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true

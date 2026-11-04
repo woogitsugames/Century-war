@@ -29,21 +29,24 @@ internal object NextGoals {
 
     /**
      * [skipMissions]: menu ma już czerwoną plakietkę misji, więc nie dubluje jej celem.
+     * [lang]: indeks języka tekstu (R10-07: powiadomienie w języku profilu, bez zmiany [L.lang]).
      */
-    fun pick(p: Profile, nowMillis: Long, context: Mode?, skipMissions: Boolean = false): NextGoal {
+    fun pick(p: Profile, nowMillis: Long, context: Mode?, skipMissions: Boolean = false,
+             lang: Int = L.lang): NextGoal {
         if (!skipMissions) {
             val claims = pendingClaims(p, nowMillis)
-            if (claims > 0) return NextGoal(NextGoalKind.MISSIONS, L.f("goal179_missions", claims), claims)
+            if (claims > 0) return NextGoal(NextGoalKind.MISSIONS, L.fIn(lang, "goal179_missions", claims), claims)
         }
         val research = affordableResearch(p)
         if (research >= 0) {
             val def = Research.defs[research]
             return NextGoal(NextGoalKind.RESEARCH,
-                L.f("goal179_research", L[def.key], L.plural("medals_n", def.cost(p.level(def.key)).toLong())), research)
+                L.fIn(lang, "goal179_research", L.text(def.key, lang),
+                    L.pluralIn(lang, "medals_n", def.cost(p.level(def.key)).toLong())), research)
         }
         val stage = p.unlockedStage()
         if (stage in p.stars.indices && p.stars[stage] == 0) {
-            return NextGoal(NextGoalKind.STAGE, L.f("goal179_stage", stage + 1, stageNovelty(stage)), stage)
+            return NextGoal(NextGoalKind.STAGE, L.fIn(lang, "goal179_stage", stage + 1, stageNovelty(stage, lang)), stage)
         }
         val campaignDone = p.stars.isNotEmpty() && p.stars.all { it > 0 }
         if (context == Mode.ENDLESS || campaignDone) {
@@ -52,13 +55,13 @@ internal object NextGoals {
             for (i in 0 until Weekly.TIER_COUNT) {
                 if (mask and (1 shl i) != 0) continue
                 return NextGoal(NextGoalKind.WEEKLY_TIER,
-                    L.f("goal179_weekly", Weekly.threshold(i), L[TIER_KEYS[i]]), i)
+                    L.fIn(lang, "goal179_weekly", Weekly.threshold(i), L.text(TIER_KEYS[i], lang)), i)
             }
         }
         if (campaignDone) {
             for (i in p.stars.indices) {
                 if (p.hardWon(i)) continue
-                return NextGoal(NextGoalKind.HARD_STAGE, L.f("hard189_goal", i + 1, stageNovelty(i)), i)
+                return NextGoal(NextGoalKind.HARD_STAGE, L.fIn(lang, "hard189_goal", i + 1, stageNovelty(i, lang)), i)
             }
         }
         return NONE
@@ -92,11 +95,11 @@ internal object NextGoals {
     }
 
     /** Pierwsza nowość etapu: modyfikator, pogoda albo zakres epok. */
-    fun stageNovelty(index: Int): String {
+    fun stageNovelty(index: Int, lang: Int = L.lang): String {
         val s = Campaign.stages[index]
         val mod = s.modifiers.firstOrNull()
-        if (mod != null) return L[mod.key]
-        if (s.weather != Weather.CLEAR) return L[s.weather.key]
-        return L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]])
+        if (mod != null) return L.text(mod.key, lang)
+        if (s.weather != Weather.CLEAR) return L.text(s.weather.key, lang)
+        return L.fIn(lang, "eras_range", L.text(Defs.eraKeys[s.startEra], lang), L.text(Defs.eraKeys[s.maxEra], lang))
     }
 }

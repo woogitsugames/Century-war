@@ -53,6 +53,10 @@ object L {
 
     fun f(key: String, vararg args: Any): String = String.format(Locale.ROOT, get(key), *args)
 
+    /** Jak [f], ale w języku [langIdx] (powiadomienia: bez zmiany języka gry). */
+    fun fIn(langIdx: Int, key: String, vararg args: Any): String =
+        String.format(Locale.ROOT, text(key, langIdx), *args)
+
     /** Indeks formy liczebnika w kolejności języków CODES. */
     fun pluralIndex(langIdx: Int, n: Long): Int {
         val last = Math.floorMod(n, 10L)
@@ -75,12 +79,15 @@ object L {
     }
 
     /** n wybiera formę; args ustalają kolejność argumentów (np. %s przed %d). */
-    fun plural(key: String, n: Long, vararg args: Any): String {
+    fun plural(key: String, n: Long, vararg args: Any): String = pluralIn(lang, key, n, *args)
+
+    /** Jak [plural], ale w języku [langIdx]. */
+    fun pluralIn(langIdx: Int, key: String, n: Long, vararg args: Any): String {
         val e = table[key]
-        val raw = e?.getOrNull(lang)?.takeIf { it.isNotEmpty() }
+        val raw = e?.getOrNull(langIdx)?.takeIf { it.isNotEmpty() }
             ?: e?.getOrNull(EN) ?: key
         val forms = raw.split('|')
-        val form = forms[pluralIndex(lang, n).coerceAtMost(forms.lastIndex)]
+        val form = forms[pluralIndex(langIdx, n).coerceAtMost(forms.lastIndex)]
         return if (args.isEmpty()) String.format(Locale.ROOT, form, n)
             else String.format(Locale.ROOT, form, *args)
     }
@@ -181,6 +188,7 @@ object L {
         putAll(part179())
         putAll(part180())
         putAll(part184())
+        putAll(part193())
         }
     }
 
@@ -216,6 +224,14 @@ object L {
         "help180_close" to t("Zamknij okno etapu", "Close stage window", "Etappenfenster schließen", "Cerrar ventana de etapa", "Fermer la fenêtre d'étape", "Chiudi finestra tappa", "Fechar janela da etapa", "Закрити вікно етапу", "Etappevenster sluiten", "Bölüm penceresini kapat"),
         "help180_hint_title" to t("Poziom trudności", "Difficulty", "Schwierigkeit", "Dificultad", "Difficulté", "Difficoltà", "Dificuldade", "Складність", "Moeilijkheid", "Zorluk"),
         "help180_hint" to t("możesz go zmienić w każdej chwili. Łatwy nie liczy się do rankingu.", "you can change it any time. Easy doesn't count for the ranking.", "jederzeit änderbar. Leicht zählt nicht für die Rangliste.", "puedes cambiarla cuando quieras. Fácil no cuenta para la clasificación.", "modifiable à tout moment. Facile ne compte pas pour le classement.", "puoi cambiarla quando vuoi. Facile non conta per la classifica.", "podes mudá-la a qualquer momento. Fácil não conta para a classificação.", "її можна змінити будь-коли. Легкий не враховується в рейтингу.", "je kunt die altijd wijzigen. Makkelijk telt niet mee voor de ranglijst.", "istediğin zaman değiştirebilirsin. Kolay sıralamaya sayılmaz."),
+    )
+
+    /** R10-07: powitanie po przerwie (banery w menu) i cel w dziennym przypomnieniu. */
+    private fun part193(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "wb193_hello" to t("Witaj z powrotem! Premia za powrót: %s.", "Welcome back! Return bonus: %s.", "Willkommen zurück! Rückkehrbonus: %s.", "¡Bienvenido de nuevo! Premio por volver: %s.", "Bon retour ! Prime de retour : %s.", "Bentornato! Premio per il ritorno: %s.", "Bem-vindo de volta! Prémio de regresso: %s.", "З поверненням! Бонус за повернення: %s.", "Welkom terug! Terugkeerbonus: %s.", "Tekrar hoş geldin! Dönüş ödülü: %s."),
+        "wb193_news" to t("Od twojej ostatniej gry są nowości: zajrzyj do „%s”.", "There's news since you last played: open “%s”.", "Seit deinem letzten Spiel gibt es Neues: öffne „%s“.", "Hay novedades desde tu última partida: abre «%s».", "Du nouveau depuis votre dernière partie : ouvrez « %s ».", "Ci sono novità dall'ultima partita: apri «%s».", "Há novidades desde o último jogo: abre «%s».", "Від твоєї останньої гри є новини: відкрий «%s».", "Er is nieuws sinds je laatste spel: open ‘%s’.", "Son oyunundan beri yenilikler var: “%s” bölümüne bak."),
+        "wb193_daily" to t("Dziś w wyzwaniu dnia: %s", "Today's Daily Challenge: %s", "Heutige Tageschallenge: %s", "Desafío diario de hoy: %s", "Défi du jour : %s", "Sfida del giorno di oggi: %s", "Desafio diário de hoje: %s", "Сьогоднішній виклик дня: %s", "Daguitdaging van vandaag: %s", "Bugünün mücadelesi: %s"),
+        "rem193_goal" to t("Twój cel: %s", "Your goal: %s", "Dein Ziel: %s", "Tu objetivo: %s", "Votre objectif : %s", "Il tuo obiettivo: %s", "O teu objetivo: %s", "Твоя мета: %s", "Je doel: %s", "Hedefin: %s"),
     )
 
     /** R2-01: „Następny cel” na wynikach bitwy i w menu. */
