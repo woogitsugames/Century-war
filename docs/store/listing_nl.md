@@ -16,7 +16,7 @@ Speel 36 campagneniveaus met instelbare moeilijkheid, weersta golven in de einde
 
 Bekijk herhalingen en de grafiek na het gevecht, speel vaandels vrij en sla je profiel op in een bestand. Pas kleuren aan en gebruik de linkshandige modus. Campagne en lokale voortgang werken offline.
 
-Elk tijdperk heeft eigen opgenomen muziek: een rustig thema en een gevechtsthema die tijdens het gevecht vloeiend in elkaar overgaan. 78 prestaties en dagelijkse en wekelijkse missies geven steeds nieuwe doelen.
+Elk tijdperk heeft eigen opgenomen muziek: een rustig thema en een gevechtsthema die tijdens het gevecht vloeiend in elkaar overgaan. 79 prestaties en dagelijkse en wekelijkse missies geven steeds nieuwe doelen.
 
 Toegankelijkheid: kleurenpaletten voor kleurenblindheid en hoog contrast, grotere tekst, minder flitsen en schermschudden, en ondersteuning voor schermlezers in menu’s en instellingen.
 

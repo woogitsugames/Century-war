@@ -415,14 +415,17 @@ class BattleScreen(
             g.snapshots?.saveAsync(snapshotBytes(), battleId, metaBytes())
     }
 
-    /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
+    /**
+     * Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie).
+     * Bitwa wznowiona po zabiciu procesu wraca do kroku zapisanego w profilu (backlog R10 poz. 6).
+     */
     internal val tut: TutorialOverlay? =
-        if (restored == null && cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, commands, TutorialOverlay.Targets(
+        if (cfg.tutorial && cfg.mode == Mode.CAMPAIGN && !g.profile.tutorialDone) TutorialOverlay(g, battle, commands, TutorialOverlay.Targets(
             unitBtn, evolveBtn, turretBtn, armoryBtn, stanceBtn, rallyBtn, barrageBtn, slotBuy, doctrineBtn,
             arrayOf(unitBtn[0], unitBtn[1], unitBtn[2], unitBtn[3], turretBtn, armoryBtn, barrageBtn, rallyBtn, stanceBtn, speedBtn, evolveBtn),
             goldRect, xpRect, mini, fieldRect, { showTurrets }, { showTurrets = false },
             { aimingBarrage }, { x -> r.screenX(x) }, { r.groundY }, { r.k },
-        )) else null
+        ), battleId, if (restored != null) g.profile.tutorialResumeStep(battleId) else TutorialOverlay.S_MELEE) else null
 
     /** Dymek nie wykonuje komend i nie modyfikuje tempa symulacji. */
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(

@@ -28,7 +28,7 @@ ODKRYJ SWOJĄ STRATEGIĘ
 - Powtórki — zapisuj zakończone starcia i odtwarzaj je z kontrolą tempa oraz osi czasu.
 - Poziomy trudności kampanii, sztandary do odblokowania i wykres po bitwie.
 - Eksport i import profilu, ustawienia kolorów oraz układ leworęczny.
-- Samouczek, kodeks, 78 osiągnięć, misje dzienne i tygodniowe oraz lokalne rekordy.
+- Samouczek, kodeks, 79 osiągnięć, misje dzienne i tygodniowe oraz lokalne rekordy.
 - Dostępność — palety barw przyjazne daltonistom i wysoki kontrast, większy tekst, mniej błysków i wstrząsów, czytnik ekranu w menu i ustawieniach.
 - 10 języków, w tym polski i angielski.
 

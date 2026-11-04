@@ -1,7 +1,7 @@
 # Play Games: z arkusza do konsoli i z powrotem
 
 Stan: 3.11.2026. Pliki:
-- `docs/store/play_games_sheet.csv`: arkusz do wpisywania ręcznie, 4 rankingi i 78 osiągnięć;
+- `docs/store/play_games_sheet.csv`: arkusz do wpisywania ręcznie, 4 rankingi i 79 osiągnięć;
 - `docs/store/pgs_import/`: pliki do **importu wszystkich osiągnięć naraz**;
 - `tools/pgs_sheet.py`: generuje oba z kodu gry (`python3 tools/pgs_sheet.py`, a samo sprawdzenie
   to `--check`). Po każdej zmianie osiągnięć albo tekstów uruchom go ponownie.
@@ -17,8 +17,8 @@ Stan: 3.11.2026. Pliki:
 | Nazwa osiągnięcia / rankingu | do 100 znaków, unikalna w języku | najdłuższa pl: 25 |
 | Opis osiągnięcia | do 500 znaków | najdłuższy pl: 62 |
 | Punkty jednego osiągnięcia | wielokrotność 5, od 5 do 200 | 5–40 |
-| Suma punktów gry | najwyżej 2000 (XP gracza = 100 × punkty) | **1495** (149 500 XP), zapas 505 na przyszłe osiągnięcia |
-| Liczba osiągnięć | najwyżej 400 przez całe życie gry | 78 |
+| Suma punktów gry | najwyżej 2000 (XP gracza = 100 × punkty) | **1515** (151 500 XP), zapas 485 na przyszłe osiągnięcia (własny budżet 1600) |
+| Liczba osiągnięć | najwyżej 400 przez całe życie gry | 79 |
 | Rankingi | najwyżej 70 | 4 |
 | Ikona | 512×512 PNG/JPEG; osiągnięcie: kolorowe (szarą wersję robi Google), w toaście przycięte do koła; bez tekstu | brak (zlecenie `docs/tasks/R9-achievement-icons.md`) |
 | Kroki osiągnięcia przyrostowego | do 10 000 | żadne nie jest przyrostowe (patrz niżej) |
@@ -70,13 +70,13 @@ Po zapisaniu kliknij kartę każdego języka i wpisz tłumaczenie nazwy z L.kt
 (`board_endless`, `board_campaign`, `board_skirmish`, `board_daily`; kolumny w kolejności pl,
 en, de, es, fr, it, pt, uk, nl, tr). Skopiuj ID każdego rankingu do `id_z_konsoli`.
 
-## Krok 3: osiągnięcia (78, najlepiej importem)
+## Krok 3: osiągnięcia (79, najlepiej importem)
 
 **Szybko (ok. 10 minut):**
 1. Wygeneruj ikony 512×512 (R9, rysowane kodem; w repo jest tylko stykówka
    `docs/store/assets/pgs/contact.png` i mapowanie) i spakuj ZIP importu, bez podkatalogów
    (`AchievementsMetadata.csv`, `AchievementsLocalizations.csv`, `AchievementsIconsMappings.csv`
-   i 78 PNG `ach_*.png`; razem 81 plików, limit 403):
+   i 79 PNG `ach_*.png`; razem 82 plików, limit 403):
 
    ```
    PGS_ICONS=true flock /tmp/claude-0/gradle.lock ./gradlew :app:testDebugUnitTest --tests '*PgsIconsTest*' --rerun
@@ -101,7 +101,7 @@ wpisuje się na kartach języków; teksty są w L.kt pod `ach_<id>` i `ach_<id>_
 
 **Czy dodawać 8 pozostałych języków od razu?** Tak. Wszystkie 10 języków jest już
 przetłumaczonych w L.kt (ta sama gra), import dodaje je bez dodatkowej pracy, a później
-każde tłumaczenie to ręczne wpisywanie (78 × 9 pól).
+każde tłumaczenie to ręczne wpisywanie (79 × 9 pól).
 
 ## Krok 4: ID z konsoli do `docs/store/play_games_ids.properties`
 
@@ -119,8 +119,8 @@ Jak build czyta ten plik (`buildSrc/.../PlayGamesIdsGenerator.kt`):
 - to zwykły plik `klucz=wartość`. Gradle generuje z niego `games_ids.xml`; nie edytuj XML;
 - `app_id` to same cyfry. Pozostałe ID zaczynają się literą i mają 12–128 znaków
   (litery, cyfry, `_`, `-`). Zły format oznacza błąd builda;
-- **nieznany klucz to błąd builda**: plik ma dokładnie 83 klucze (projekt, 4 rankingi,
-  78 osiągnięć, w tym 4 z R6-01);
+- **nieznany klucz to błąd builda**: plik ma dokładnie 84 klucze (projekt, 4 rankingi,
+  79 osiągnięć, w tym 4 z R6-01 i 1 po D6);
 - ID nie mogą się powtarzać;
 - jeśli brakuje choć jednego ID albo zostaje `REPLACE_ME`, wersja debug działa tylko lokalnie,
   a wersja do sklepu (release) się nie zbuduje.

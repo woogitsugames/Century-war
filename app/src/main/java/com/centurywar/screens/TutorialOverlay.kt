@@ -27,6 +27,11 @@ import kotlin.math.sin
  * a każdy ma limit czasu, więc samouczek nigdy się nie zablokuje.
  * Przycisk "Pomiń samouczek" jest dostępny przez cały czas.
  *
+ * Backlog R10 poz. 6: każde przejście do następnego kroku trafia do profilu
+ * ([com.centurywar.meta.Profile.rememberTutorialStep], klucz [battleId]). Bitwa wznowiona
+ * po zabiciu procesu tworzy nakładkę od [startStep]: przerwany krok zaczyna się od początku
+ * (czeka na swój warunek), wcześniejsze kroki się nie powtarzają.
+ *
  * Rysowanie nie alokuje: teksty są łamane tylko przy zmianie kroku albo szerokości.
  */
 class TutorialOverlay(
@@ -34,6 +39,10 @@ class TutorialOverlay(
     private val battle: Battle,
     private val commands: BattleController,
     private val t: Targets,
+    /** Identyfikator rozliczenia bitwy; 0 = krok nie jest zapamiętywany. */
+    private val battleId: Long = 0L,
+    /** Krok, od którego zaczyna nakładka wznowionej bitwy (0 = od początku). */
+    startStep: Int = S_MELEE,
 ) {
     /** Elementy ekranu bitwy, na które samouczek wskazuje (referencje, nie kopie). */
     class Targets(
@@ -147,6 +156,13 @@ class TutorialOverlay(
     private val dp get() = g.ui.dp
 
     init {
+        if (startStep > S_MELEE) {
+            step = startStep.coerceAtMost(S_DONE)
+            // Licznik oczekiwania na warunek kroku liczy się od chwili wznowienia.
+            waitStartSim = battle.time
+            // Przerwano krok postawy z armią w Trzymaj: krok wraca, by przywrócić Naprzód.
+            if (step == S_STANCE && p.hold) { stanceHeld = true; stanceUsed = false }
+        }
         skipBtn.visible = false
         nextBtn.visible = false
         nextBtn.highlight = true
@@ -213,7 +229,7 @@ class TutorialOverlay(
         S_DOCTRINE -> battle.pendingChoice == null && (p.doctrines.isNotEmpty() || p.era == battle.cfg.startEra)
         S_TURRET -> p.slots == 0 || anyTurret()
         S_ARMORY -> p.armory > 0
-        S_STANCE -> stanceUsed
+        S_STANCE -> stanceUsed && !stanceHeld
         S_RALLY -> !p.rallyUnlocked || p.ralliesUsed > 0
         S_BARRAGE -> p.barragesUsed > 0
         else -> false
@@ -226,7 +242,7 @@ class TutorialOverlay(
         S_DOCTRINE -> battle.pendingChoice != null
         S_TURRET -> waited >= 2f
         S_ARMORY -> p.armory < 15 && (p.aliveCount >= p.cap || p.gold >= battle.armoryCost(p) * 1.35f)
-        S_STANCE -> !p.hold && enemiesNear(700f) >= 2
+        S_STANCE -> stanceHeld || (!p.hold && enemiesNear(700f) >= 2)
         S_RALLY -> p.rallyUnlocked && battle.abilityReady(p, 1) && enemiesNear(700f) >= 2
         S_BARRAGE -> battle.abilityReady(p, 0) && enemiesNear(1350f) >= 3
         S_CAMERA -> waited >= 3f
@@ -301,6 +317,7 @@ class TutorialOverlay(
         // Noc 5: po zakupie wieży panel wież zasłaniał przyciski jednostek do następnego kroku.
         if (step == S_TURRET && showing) t.closeTurrets()
         step++
+        g.profile.rememberTutorialStep(battleId, step)
         showing = false
         phaseT = 0f
         waitStartSim = battle.time

@@ -33,7 +33,8 @@ LOCALES = {"en": "en-US", "de": "de-DE", "es": "es-ES", "fr": "fr-FR", "it": "it
 NAME_MAX, DESC_MAX = 100, 500
 POINTS_TOTAL_MAX, POINTS_ONE_MAX = 2000, 200
 # Proponowany budżet: zostawiamy zapas na przyszłe osiągnięcia.
-POINTS_BUDGET = 1500
+# 4.11 (po D6): 1500 → 1600, bo „Wygrany zakład” (20 pkt) daje sumę 1515; limit Google to 2000.
+POINTS_BUDGET = 1600
 
 LEADERBOARDS = [  # klucz w properties, klucz nazwy w L.kt, uwaga
     ("leaderboard_endless", "board_endless", "punkty Oblężenia (Endless)"),
