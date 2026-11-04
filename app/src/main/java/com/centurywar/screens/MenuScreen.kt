@@ -20,13 +20,16 @@ import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
 import com.centurywar.meta.NextGoalKind
 import com.centurywar.meta.NextGoals
+import com.centurywar.meta.TesterSurvey
 import kotlin.math.max
 import kotlin.math.min
 
 class MenuScreen(g: Game) : Screen(g) {
     override val crashName get() = "MenuScreen"
     /** W menu Wstecz przechwytujemy tylko przy otwartym oknie. */
-    val hasOpenModal get() = g.resumeOffer != null
+    val hasOpenModal get() = g.resumeOffer != null || surveyStep != SURVEY_HIDDEN
+    /** R11 (pozycja 7): ankieta zasłania menu, więc banery czekają na jej zamknięcie. */
+    override val blocksNotices: Boolean get() = surveyStep != SURVEY_HIDDEN
     private val bg = MenuBg()
     private val battleScene = MenuBattleScene()
     private val emblem = MenuEmblem()
@@ -74,7 +77,26 @@ class MenuScreen(g: Game) : Screen(g) {
     private val resumePanel = RectF()
     /** Zlecenie 141: jednorazowy dymek prowadzący do Doktryny elit. */
     private val hints = HintOverlay(g)
+    // R11 (pozycja 7): jednorazowa ankieta testera (ocena 1–5, potem jedno pytanie).
+    internal val surveyRates = Array(5) { btn(SURVEY_RATE + it) }
+    internal val surveyIssues = Array(TesterSurvey.ISSUES) { btn(SURVEY_ISSUE + it) }
+    internal val surveySkip = btn(SURVEY_SKIP)
+    internal var surveyStep = SURVEY_HIDDEN
+        private set
+    internal val surveyPanel = RectF()
+    private var surveyQuiet = 0f
+    private val surveyNoteLines = arrayOfNulls<String>(4)
+    private var surveyNoteCount = 0
+    private var surveyTitle = ""
+    private var surveyScale = ""
+    private var surveyNoteY = 0f
+    private var surveyScaleY = 0f
     init {
+        // Ankieta leży nad kafelkami: jej przyciski dostają dotyk przed menu.
+        for (b in surveyRates) { buttons.remove(b); buttons.add(0, b) }
+        for (b in surveyIssues) { buttons.remove(b); buttons.add(0, b) }
+        buttons.remove(surveySkip); buttons.add(0, surveySkip)
+        hideSurveyButtons()
         buttons.add(0, hints.okBtn)
         // Okno „Wznowić bitwę?” leży nad kafelkami menu: jego przyciski muszą dostać dotyk pierwsze,
         // inaczej tap w „Porzuć” trafiał w zasłonięty kafelek i był ignorowany.
@@ -121,6 +143,13 @@ class MenuScreen(g: Game) : Screen(g) {
         /** Najmniejszy napis celu (sp); przy braku miejsca linia znika zamiast maleć. */
         const val GOAL_MIN_SP = 11f
         const val WHATS_NEW_H = 40f
+        const val SURVEY_RATE = 30
+        const val SURVEY_ISSUE = 40
+        const val SURVEY_SKIP = 45
+        const val SURVEY_HIDDEN = 0
+        const val SURVEY_RATING = 1
+        const val SURVEY_QUESTION = 2
+        val SURVEY_ISSUE_KEYS = arrayOf("t200_issue_hard", "t200_issue_long", "t200_issue_unclear", "t200_issue_none")
     }
 
     // logo
@@ -158,6 +187,7 @@ class MenuScreen(g: Game) : Screen(g) {
         if (portraitMenu) {
             layoutPortrait()
             layoutResume(w / 2 + (g.insetL - g.insetR) / 2)
+            layoutSurvey()
             refreshMissionBadge()
             refreshGoal()
             return
@@ -235,6 +265,7 @@ class MenuScreen(g: Game) : Screen(g) {
         // W rzędzie Kodeksu i Ustawień, na lewo od Kodeksu (między logo a ikonami).
         layoutWhatsNew(codex.r.left - 12 * dp, landscape = true)
         layoutResume(cx)
+        layoutSurvey()
         refreshMissionBadge()
         refreshGoal()
     }
@@ -380,7 +411,7 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     override fun onTouch(e: TouchEvent): Boolean {
-        if (!portraitMenu || g.resumeOffer != null || hints.okBtn.visible) return false
+        if (!portraitMenu || hasOpenModal || hints.okBtn.visible) return false
         if (whatsNew.visible && whatsNew.contains(e.x, e.y)) return false
         if (e.action == TouchEvent.DOWN && (e.y < portraitTop || e.y >= portraitBottom))
             return true
@@ -447,7 +478,8 @@ class MenuScreen(g: Game) : Screen(g) {
         val pr = g.profile
         eliteReady = EliteUnlock.affordable(pr)
         hints.update(dt)
-        if (eliteReady && g.resumeOffer == null && research.visible && research.r.width() > 0f)
+        updateSurvey(dt)
+        if (eliteReady && !hasOpenModal && research.visible && research.r.width() > 0f)
             hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber()
         daily.sub = if (dailyFree) L["daily_free"] else ""
@@ -499,7 +531,8 @@ class MenuScreen(g: Game) : Screen(g) {
             // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).
             for (i in buttons.indices) {
                 val b = buttons[i]
-                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew && b !== goalBtn)
+                if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew && b !== goalBtn &&
+                    b.id !in SURVEY_RATE..SURVEY_SKIP)
                     ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
             }
             drawGoal(c)
@@ -511,9 +544,10 @@ class MenuScreen(g: Game) : Screen(g) {
             ui.textO(c, L["settings"], settings.r.centerX(), settings.r.bottom + 13 * dp,
                 ui.fit(L["settings"], 10f, 64 * dp), Ui.TEXT, Paint.Align.CENTER)
         }
-        if (g.resumeOffer == null) hints.draw(c)
+        if (!hasOpenModal) hints.draw(c)
         drawHeldTooltip(c)
         if (g.resumeOffer != null) drawResume(c)
+        else if (surveyStep != SURVEY_HIDDEN) drawSurvey(c)
     }
 
     /** R2-01: przyciemniony pasek z ikoną celu, złotym napisem i strzałką „dalej”. */
@@ -581,9 +615,146 @@ class MenuScreen(g: Game) : Screen(g) {
         ui.button(c, resumeYes, 17f)
     }
 
+    /** Czytnik ekranu: przy otwartym oknie tylko jego przyciski mają węzły. */
+    fun accessibilityEligibleButton(b: Button): Boolean = when {
+        g.resumeOffer != null -> b === resumeYes || b === resumeNo
+        surveyStep != SURVEY_HIDDEN -> b === surveySkip || b in surveyRates || b in surveyIssues
+        else -> true
+    }
+
+    private fun hideSurveyButtons() {
+        for (b in surveyRates) b.visible = false
+        for (b in surveyIssues) b.visible = false
+        surveySkip.visible = false
+    }
+
+    /** Pytanie dopiero w spokojnym menu: bez okien, dymków, banerów i „Co nowego”. */
+    private fun updateSurvey(dt: Float) {
+        if (surveyStep != SURVEY_HIDDEN) return
+        val log = g.playtest
+        val quiet = log != null && g.resumeOffer == null && g.lostBattle == null &&
+            !hints.okBtn.visible && !whatsNew.visible && !g.hasNotices() &&
+            TesterSurvey.due(g.testerSurveyEnabled, log.surveyState, g.profile.tutorialDone,
+                g.profile.battles, log.daysPlayed)
+        if (!quiet) { surveyQuiet = 0f; return }
+        surveyQuiet += dt
+        if (surveyQuiet < TesterSurvey.QUIET_SECONDS) return
+        surveyQuiet = 0f
+        surveyStep = SURVEY_RATING
+        layoutSurvey()
+    }
+
+    private fun surveyClick(b: Button) {
+        val log = g.playtest
+        val now = System.currentTimeMillis()
+        when {
+            surveyStep == SURVEY_RATING && b.id in SURVEY_RATE until SURVEY_RATE + 5 -> {
+                log?.surveyRated(b.id - SURVEY_RATE + 1, now)
+                log?.saveAsync()
+                surveyStep = SURVEY_QUESTION
+                layoutSurvey()
+            }
+            surveyStep == SURVEY_QUESTION && b.id in SURVEY_ISSUE until SURVEY_ISSUE + TesterSurvey.ISSUES -> {
+                log?.surveyIssueChosen(b.id - SURVEY_ISSUE)
+                log?.saveAsync()
+                closeSurvey(thanks = true)
+            }
+            b === surveySkip -> {
+                if (surveyStep == SURVEY_RATING) {
+                    log?.surveySkipped(now)
+                    log?.saveAsync()
+                    closeSurvey(thanks = false)
+                } else closeSurvey(thanks = true)
+            }
+        }
+    }
+
+    private fun closeSurvey(thanks: Boolean) {
+        surveyStep = SURVEY_HIDDEN
+        hideSurveyButtons()
+        if (thanks) g.showNotice(L["t200_thanks"], Icons.CHECK)
+    }
+
+    /** Panel na środku bezpiecznego obszaru; na wąskim ekranie odpowiedzi w jednej kolumnie. */
+    private fun layoutSurvey() {
+        hideSurveyButtons()
+        if (surveyStep == SURVEY_HIDDEN) return
+        val cx = w / 2 + (g.insetL - g.insetR) / 2
+        val pw = min(460 * dp, w - g.insetL - g.insetR - 32 * dp)
+        val inner = pw - 48 * dp
+        val gap = 10 * dp
+        val bh = 48 * dp
+        surveySkip.label = L["t200_skip"]
+        val lineH = 14 * dp * ui.textScale * 1.3f
+        val cols = if (pw >= 400 * dp) 2 else 1
+        val content: Float
+        if (surveyStep == SURVEY_RATING) {
+            surveyTitle = L["t200_title"]
+            surveyNoteCount = HintFrame.wrapInto(ui, L["t200_note"], inner, 13f, surveyNoteLines)
+            surveyScale = L["t200_scale"]
+            content = surveyNoteCount * lineH + 12 * dp + 56 * dp + 8 * dp + 18 * dp * ui.textScale
+        } else {
+            surveyTitle = L["t200_question"]
+            surveyNoteCount = 0
+            surveyScale = ""
+            val rows = (TesterSurvey.ISSUES + cols - 1) / cols
+            content = rows * bh + (rows - 1) * gap
+        }
+        val ph = min(52 * dp + content + 16 * dp + bh + 20 * dp, h - g.insetT - g.insetB - 24 * dp)
+        val cy = (g.insetT + h - g.insetB) / 2
+        surveyPanel.set(cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2)
+        val left = surveyPanel.left + 24 * dp
+        val y = surveyPanel.top + 52 * dp
+        if (surveyStep == SURVEY_RATING) {
+            surveyNoteY = y + 10 * dp
+            val ry = y + surveyNoteCount * lineH + 12 * dp
+            val rw = (inner - 4 * 8 * dp) / 5f
+            for (i in surveyRates.indices) {
+                val b = surveyRates[i]
+                b.label = (i + 1).toString()
+                b.set(left + i * (rw + 8 * dp), ry, rw, 56 * dp)
+                b.visible = true
+            }
+            surveyScaleY = ry + 56 * dp + 8 * dp + 12 * dp * ui.textScale
+        } else {
+            val tw = (inner - (cols - 1) * gap) / cols
+            for (i in surveyIssues.indices) {
+                val b = surveyIssues[i]
+                b.label = L[SURVEY_ISSUE_KEYS[i]]
+                b.set(left + (i % cols) * (tw + gap), y + (i / cols) * (bh + gap), tw, bh)
+                b.visible = true
+            }
+        }
+        val sw = min(inner, max(160 * dp, ui.measure(surveySkip.label, 16f, true) + 48 * dp))
+        surveySkip.set(cx - sw / 2, surveyPanel.bottom - bh - 20 * dp, sw, bh)
+        surveySkip.visible = true
+    }
+
+    private fun drawSurvey(c: Canvas) {
+        c.drawColor(Color.argb(160, 0, 0, 0))
+        val p = surveyPanel
+        ui.panel(c, p)
+        ui.ribbon(c, p.centerX(), p.top + 4 * dp, surveyTitle, 20f, Ui.RIBBON, p.width() * 0.7f,
+            Ui.GOLD, p.width() + 20 * dp)
+        var y = surveyNoteY
+        for (i in 0 until surveyNoteCount) {
+            ui.text(c, surveyNoteLines[i] ?: "", p.centerX(), y, 13f, Ui.TEXT, Paint.Align.CENTER)
+            y += 14 * dp * ui.textScale * 1.3f
+        }
+        if (surveyStep == SURVEY_RATING) for (b in surveyRates) ui.button(c, b, 22f)
+        else for (b in surveyIssues) ui.button(c, b, 15f)
+        if (surveyScale.isNotEmpty()) {
+            ui.text(c, surveyScale, p.centerX(), surveyScaleY,
+                ui.fit(surveyScale, 12f, p.width() - 48 * dp, 10f), Ui.DIM, Paint.Align.CENTER)
+        }
+        ui.button(c, surveySkip, 16f)
+    }
+
     override fun onBack(): Boolean {
         // Wstecz tylko chowa pytanie; zrzut zostaje (zapyta przy następnym uruchomieniu).
         if (g.resumeOffer != null) { g.resumeOffer = null; return true }
+        // Wstecz w ankiecie = Pomiń (bez ponownego pytania).
+        if (surveyStep != SURVEY_HIDDEN) { surveyClick(surveySkip); return true }
         return false
     }
 
@@ -652,8 +823,14 @@ class MenuScreen(g: Game) : Screen(g) {
         settings -> L["settings"]
         codex -> L["codex"]
         whatsNew -> L["menu175_whats_new_desc"]
+        surveySkip -> L["t200_skip"]
         goalBtn -> goalText
         // R10-02: TalkBack czyta też drugi licznik kafla Kampanii („Korony 5/36”).
+        in surveyRates -> {
+            val n = L.f("t200_rate_n", b.id - SURVEY_RATE + 1)
+            if (b === surveyRates[0]) "$surveyTitle. $n" else n
+        }
+        in surveyIssues -> if (b === surveyIssues[0]) "$surveyTitle. ${b.label}" else b.label
         campaign -> if (b.sub2.isEmpty()) super.accessibilityLabel(b)
             else super.accessibilityLabel(b) + ", " + L["hard189_crowns"] + " " + b.sub2
         else -> super.accessibilityLabel(b)
@@ -674,6 +851,7 @@ class MenuScreen(g: Game) : Screen(g) {
             }
             return // okno pytania blokuje resztę menu
         }
+        if (surveyStep != SURVEY_HIDDEN) { surveyClick(b); return }
         if (hints.onClick(b)) return
         hints.onAction()
         when (b.id) {

@@ -192,8 +192,24 @@ object L {
         putAll(part193())
         putAll(part198())
         putAll(part196())
+        putAll(part200())
         }
     }
+
+    /** R11 (pozycja 7): jednorazowa ankieta testera w menu (tylko wersje testowe). */
+    private fun part200(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "t200_title" to t("Jak ci się gra?", "How do you like it?", "Wie gefällt es dir?", "¿Qué te parece?", "Ça te plaît ?", "Come ti sembra?", "Estás a gostar?", "Як тобі гра?", "Hoe vind je het?", "Nasıl buldun?"),
+        "t200_note" to t("Wersja testowa. Odpowiedź zostaje w telefonie i trafi tylko do „Raportu dla testera”, jeśli go udostępnisz.", "Test version. Your answer stays on this phone and only goes into the “Tester report” if you share it.", "Testversion. Deine Antwort bleibt auf dem Gerät und landet nur im „Testerbericht“, wenn du ihn teilst.", "Versión de prueba. Tu respuesta se queda en el teléfono y solo va al «Informe de prueba» si lo compartes.", "Version de test. Ta réponse reste sur le téléphone et n'apparaît que dans le « Rapport de test » si tu le partages.", "Versione di prova. La risposta resta sul telefono e finisce solo nel «Rapporto tester», se lo condividi.", "Versão de teste. A resposta fica no telemóvel e só vai para o «Relatório de teste» se o partilhares.", "Тестова версія. Відповідь лишається на телефоні й потрапить лише у «Звіт тестувальника», якщо ти ним поділишся.", "Testversie. Je antwoord blijft op de telefoon en komt alleen in het ‘Testrapport’ als je het deelt.", "Test sürümü. Cevabın telefonda kalır ve yalnızca paylaşırsan “Test raporu”na girer."),
+        "t200_scale" to t("1 = słabo, 5 = świetnie", "1 = poor, 5 = great", "1 = schwach, 5 = super", "1 = flojo, 5 = genial", "1 = bof, 5 = génial", "1 = scarso, 5 = ottimo", "1 = fraco, 5 = ótimo", "1 = слабко, 5 = чудово", "1 = matig, 5 = top", "1 = zayıf, 5 = harika"),
+        "t200_rate_n" to t("Ocena %1\$d z 5", "Rating %1\$d of 5", "Bewertung %1\$d von 5", "Nota %1\$d de 5", "Note %1\$d sur 5", "Voto %1\$d su 5", "Nota %1\$d de 5", "Оцінка %1\$d з 5", "Score %1\$d van 5", "5 üzerinden %1\$d puan"),
+        "t200_question" to t("Co najbardziej przeszkadza?", "What bothers you most?", "Was stört am meisten?", "¿Qué te molesta más?", "Qu'est-ce qui gêne le plus ?", "Cosa ti disturba di più?", "O que incomoda mais?", "Що найбільше заважає?", "Wat stoort het meest?", "En çok ne rahatsız ediyor?"),
+        "t200_issue_hard" to t("Za trudno", "Too hard", "Zu schwer", "Demasiado difícil", "Trop difficile", "Troppo difficile", "Demasiado difícil", "Надто складно", "Te moeilijk", "Çok zor"),
+        "t200_issue_long" to t("Za długie bitwy", "Battles too long", "Kämpfe zu lang", "Batallas largas", "Batailles longues", "Battaglie lunghe", "Batalhas longas", "Задовгі бої", "Te lange gevechten", "Savaşlar uzun"),
+        "t200_issue_unclear" to t("Niejasne zasady", "Unclear rules", "Unklare Regeln", "Reglas confusas", "Règles floues", "Regole poco chiare", "Regras confusas", "Незрозумілі правила", "Onduidelijke regels", "Kurallar belirsiz"),
+        "t200_issue_none" to t("Nic, jest dobrze", "Nothing, it's good", "Nichts, alles gut", "Nada, está bien", "Rien, c'est bien", "Niente, va bene", "Nada, está bom", "Нічого, усе добре", "Niets, het is goed", "Hiçbir şey, iyi"),
+        "t200_skip" to t("Pomiń", "Skip", "Überspringen", "Omitir", "Passer", "Salta", "Ignorar", "Пропустити", "Overslaan", "Atla"),
+        "t200_thanks" to t("Dzięki! Odpowiedź jest w Raporcie dla testera", "Thanks! Your answer is in the Tester report", "Danke! Die Antwort steht im Testerbericht", "¡Gracias! La respuesta está en el Informe de prueba", "Merci ! La réponse est dans le Rapport de test", "Grazie! La risposta è nel Rapporto tester", "Obrigado! A resposta está no Relatório de teste", "Дякуємо! Відповідь є у Звіті тестувальника", "Bedankt! Je antwoord staat in het Testrapport", "Teşekkürler! Cevabın Test raporunda"),
+    )
 
     /** R11-01: TalkBack i robot Play na ekranach poza bitwą (mapa kampanii, badania, misje, listy). */
     private fun part196(): Array<Pair<String, Array<out String>>> = arrayOf(

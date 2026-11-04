@@ -113,6 +113,9 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var cw = 0f
     private var ch = 0f
     private var statCols = 3
+    /** Dzień 26: wąski pionowy ekran (zewnętrzny Fold): statystyki w jednej kolumnie, napisy ≥ 10 sp. */
+    internal var narrowStats = false
+        private set
     private var previewW = 0f
     private var previewH = 0f
     private var scroll = 0f
@@ -272,7 +275,11 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         cols = (contentW / ((if (ui.textScale > 1.15f) 375f else 380f) * dp))
             .toInt().coerceIn(1, 3)
         cw = (contentW - (cols - 1) * gap) / cols
-        statCols = if (cw >= 340 * dp) 3 else 2
+        // Dzień 26 (R11, poz. 8): na zewnętrznym Foldzie (ok. 335 dp) dwie kolumny zostawiały
+        // etykiecie ok. 30 dp i „Odstęp 2 / 3” malało do 7 sp (po niemiecku wchodziło na wartość).
+        // Tylko tam jedna kolumna; telefony i rozłożony Fold bez zmian.
+        narrowStats = cw < 340 * dp && w - g.insetL - g.insetR < 420 * dp && h > w
+        statCols = if (cw >= 340 * dp) 3 else if (narrowStats) 1 else 2
         previewW = min(128 * dp, cw * 0.34f)
         previewH = 112 * dp
         val unitRows = (MAX_STATS + statCols - 1) / statCols
@@ -871,7 +878,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             ui.textO(c, v, cx + cellW - 7 * dp, cy + 4.6f * dp, vSize, if (ups[k]) Ui.GOOD else Ui.TEXT, Paint.Align.RIGHT, 1.6f)
             val lab = labels[k] ?: ""
             val lAvail = cellW - 7 * dp - vw - 6 * dp - 23 * dp
-            val lSize = min(11f, ui.fit(lab, 11f, lAvail, 7f))
+            val lSize = min(11f, ui.fit(lab, 11f, lAvail, if (narrowStats) 10f else 7f))
             ui.text(c, lab, cx + 23 * dp, cy + 4 * dp, lSize, Ui.DIM)
         }
     }
