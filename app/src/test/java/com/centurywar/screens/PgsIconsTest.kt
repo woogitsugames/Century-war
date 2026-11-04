@@ -183,14 +183,41 @@ class PgsIconsTest {
      * symbol na środku, gwiazdki stopnia na dole, znaczek w prawym górnym rogu.
      * [withSymbol] = false rysuje samo tło (do kontroli kontrastu).
      */
-    private fun render(spec: Spec, category: AchievementCategory?, withSymbol: Boolean = true): Bitmap {
+    private fun render(spec: Spec, category: AchievementCategory?, withSymbol: Boolean = true): Bitmap =
+        render(spec, category, withSymbol, lightDisc(spec, category))
+
+    private val lightCache = HashMap<Pair<Spec, AchievementCategory?>, Boolean>()
+
+    /**
+     * Jasna czy ciemna tarcza: wybieramy wariant o większym kontraście symbolu w szarości
+     * (żółty księżyc czy kolba mają średnią jasność, więc sama jasność symbolu nie wystarcza).
+     */
+    private fun lightDisc(spec: Spec, category: AchievementCategory?): Boolean = lightCache.getOrPut(spec to category) {
+        val dark = contrast(render(spec, category, true, false), render(spec, category, false, false))
+        val light = contrast(render(spec, category, true, true), render(spec, category, false, true))
+        light > dark + 0.03 || (abs(light - dark) <= 0.03 && symbolLuminance(spec.symbol) < 0.42f)
+    }
+
+    /** Średnia różnica luminancji pikseli symbolu względem tego samego miejsca na samym tle. */
+    private fun contrast(full: Bitmap, bg: Bitmap): Double {
+        val px = pixels(full); val bgPx = pixels(bg)
+        full.recycle(); bg.recycle()
+        var sum = 0.0; var n = 0
+        for (i in px.indices) if (px[i] != bgPx[i]) {
+            val dl = abs(lum(px[i]) - lum(bgPx[i]))
+            if (dl > 0.02f) { sum += dl; n++ }
+        }
+        return if (n < size * size / 40) 0.0 else sum / n
+    }
+
+    private fun render(spec: Spec, category: AchievementCategory?, withSymbol: Boolean, lightBg: Boolean): Bitmap {
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val base = categoryColor(category)
         // Ciemny symbol dostaje jasną tarczę, jasny — ciemną (kontrast także w szarości).
-        val darkSymbol = symbolLuminance(spec.symbol) < 0.42f
-        val top = if (darkSymbol) mix(base, Color.WHITE, 0.55f) else scale(base, 0.78f)
-        val bottom = if (darkSymbol) mix(base, Color.WHITE, 0.25f) else scale(base, 0.34f)
+        val darkSymbol = lightBg
+        val top = if (darkSymbol) mix(base, Color.WHITE, 0.62f) else scale(base, 0.62f)
+        val bottom = if (darkSymbol) mix(base, Color.WHITE, 0.32f) else scale(base, 0.26f)
         val rim = rimColor(spec.tier)
         val rOuter = 0.485f * size
         val rDisc = 0.44f * size
@@ -222,17 +249,23 @@ class PgsIconsTest {
         c.drawCircle(half, half, rDisc - 0.03f * size, stroke)
 
         if (withSymbol) {
-            val symbolY = if (spec.tier > 0) half - 0.035f * size else half
-            Icons.draw(c, spec.symbol, half, symbolY, 0.47f * size)
+            val symbolY = if (spec.tier > 0) half - 0.05f * size else half
+            Icons.draw(c, spec.symbol, half, symbolY, if (spec.tier > 0) 0.44f * size else 0.47f * size)
         }
         // Gwiazdki stopnia (1–4) na dolnym łuku.
         if (spec.tier > 0) {
             val n = spec.tier
-            val step = 0.085f * size
-            val y = half + 0.305f * size
+            val step = 0.112f * size
+            val y = half + 0.29f * size
+            // Ciemna belka pod gwiazdkami: stopień czytelny także po pomniejszeniu i w szarości.
+            fill.shader = null
+            fill.color = Color.argb(150, 20, 16, 26)
+            val bw = (n - 1) * step / 2f + 0.07f * size
+            c.drawRoundRect(half - bw, y - 0.062f * size, half + bw, y + 0.062f * size,
+                0.062f * size, 0.062f * size, fill)
             for (i in 0 until n) {
                 val x = half + (i - (n - 1) / 2f) * step
-                Icons.draw(c, Icons.STAR, x, y, 0.095f * size)
+                Icons.draw(c, Icons.STAR, x, y, 0.125f * size)
             }
         }
         // Znaczek: mała tarcza z obwódką w prawym górnym rogu, w kole r = 0,42 boku.
@@ -287,19 +320,9 @@ class PgsIconsTest {
         if (opaque < 0.9f * inside) problems.add("$name: w kole r=0,42 tylko ${100 * opaque / inside}% nieprzezroczystych")
         if (outsideContent > 0) problems.add("$name: $outsideContent pikseli w rogach poza kołem")
         // Kontrast w szarości: piksele symbolu (różne od samego tła) vs to samo miejsce na tle.
-        val bg = render(spec, category, withSymbol = false)
-        val bgPx = pixels(bg)
-        bg.recycle()
-        var sumS = 0.0; var sumB = 0.0; var n = 0
-        for (i in px.indices) if (px[i] != bgPx[i]) {
-            val dl = abs(lum(px[i]) - lum(bgPx[i]))
-            if (dl > 0.02f) { sumS += lum(px[i]); sumB += lum(bgPx[i]); n++ }
-        }
-        if (n < size * size / 40) problems.add("$name: symbol prawie niewidoczny ($n px)")
-        else {
-            val diff = abs(sumS - sumB) / n
-            if (diff < 0.25) problems.add("$name: kontrast w szarości ${"%.2f".format(diff)} < 0,25")
-        }
+        val diff = contrast(bmp.copy(Bitmap.Config.ARGB_8888, false), render(spec, category, withSymbol = false))
+        if (diff == 0.0) problems.add("$name: symbol prawie niewidoczny")
+        else if (diff < 0.25) problems.add("$name: kontrast w szarości ${"%.2f".format(diff)} < 0,25")
         return problems
     }
 
