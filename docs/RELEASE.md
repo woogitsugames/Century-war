@@ -2,7 +2,8 @@
 
 ## Kandydat do testów zamkniętych
 
-Stan: **3 listopada 2026 r., wieczór (po dniu 4; dzień 5 — TalkBack w bitwie — w toku).**
+Stan: **4 listopada 2026 r., wieczór (gałąź `integ/tura10`, PROTOCOL 0.8.8: etapy 2–18 krótsze,
+ankieta testera, pętla testowa Play; przegląd R12 w `docs/research/R12-backlog.md`).**
 Lista dla właściciela — bez wiedzy programistycznej.
 „Zrobione” znaczy: poprawka jest w kodzie i ma automatyczny test. „Zostało” znaczy:
 bez tego nie wysyłamy gry testerom w Google Play. Numery w nawiasach (np. A156-10)
@@ -32,9 +33,14 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
 - [x] **Reset postępu** kasuje też zapis przerwanej bitwy (A156-18); profil z chmury Play
       Games od razu stosuje wszystkie ustawienia (A156-19); zmiana rozmiaru wyświetlania
       i Galaxy Fold przeliczają układ (A156-20).
-- [x] **Czytnik ekranu TalkBack** rozpoznaje przyciski menu, ustawień i pauzy (A156-21) —
-      wymaga jeszcze próby na telefonie, patrz niżej.
+- [x] **Czytnik ekranu TalkBack** rozpoznaje przyciski menu, ustawień i pauzy (A156-21), ekrany
+      poza bitwą (mapa, tryby, Badania, Misje, listy; R11-01) i przyciski paska bitwy (dzień 5) —
+      wymaga jeszcze próby na telefonie, patrz niżej. **Decyzja właściciela 4.11:** koniec prac
+      specjalnie dla niewidomych; to, co jest, zostaje, ale w sklepie nie obiecujemy gry dla
+      niewidomych (tylko palety, kontrast, większy tekst, tempo ×½, czytnik ekranu w menu).
 - [x] **Muzyka** nie zawiesza się po błędzie dźwięku (A156-22); nagrane utwory gry (21 plików) są w pakiecie.
+- [x] **Balans wariantów epok** (A156-13): Para i Krzem wyrównane (różnica 3 i 2 pp zamiast
+      17,5 i 11; `docs/BALANCE.md`, sekcja „A156-13”), gałąź `gpt/163-variant-balance` scalona.
 - [x] **Polityka prywatności i Data safety** opisują to, co gra robi naprawdę (A156-16);
       opis gry bez porównań do innych gier (A156-23).
 - [x] **Kontrole automatyczne wydania**: testy konfiguracji, osobne testy debug i release,
@@ -59,7 +65,9 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
   - **Wódz** od 8. etapu kampanii (przycisk w dolnym pasku bitwy) i **stopnie wież** 1–3;
   - **nagrana muzyka**: 21 utworów, spokojny i bojowy motyw każdej epoki, płynne przejścia,
     muzyka ciszej pod efektami;
-  - **krótsze etapy 2–7** (ok. 7–9 min zamiast 12–14), gwiazdki bez przyspieszania presji;
+  - **krótsze etapy 2–18**: 2–7 ok. 7–9 min, 8–12 ok. 9–9,5 min, 13–18 ok. 10–11 min (zamiast
+    12–14), gwiazdki bez kary za przyspieszoną presję (`docs/BALANCE.md`: dzień 1, R11-02,
+    „Etapy 13–18”); etapy 19+ bez zmian;
   - **pierwsza bitwa** spokojniejsza (dymki co 50 s, pełnoekranowe zapowiedzi epok tylko
     w kampanii);
   - **wyniki bitwy**: medale „Za bitwę” i „Za osiągnięcia” osobno;
@@ -67,11 +75,22 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
   - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 79 osiągnięć), wpisy w Kodeksie;
   - **zewnętrzny ekran Folda**: zegar bitwy pod minimapą także przy presji oblężniczej,
     górny pasek bez nachodzenia napisów.
+- [x] **Nowości z 3–4.11 (kolejne dni i R11):**
+  - **powitanie po przerwie**: po 3+ dniach bez gry baner w menu i premia za powrót (+30 medali);
+  - **kamienie milowe w Oblężeniu bez końca** i Oblężeniu tygodnia: brąz, srebro, złoto
+    (premia po bitwie) i nowy rekord fali;
+  - **„oddech” muzyki w bitwie**: co ok. 2,5 min muzyka na ok. 30 s cichnie do tła;
+  - **samouczek wraca**, jeśli Android zamknie grę w jego trakcie; utracona bitwa po
+    aktualizacji z komunikatem i zwrotem próby.
 - [x] **Pętla gry dla raportu przedpremierowego Play (R11-04)**: 4 scenariusze grają same
       (menu, bitwa AI ×3, późny Endless, przerwanie i wznowienie), wynik w JSON, osobny profil
-      pętli; instrukcja w „Raport przedpremierowy i pętla gry”.
-- [ ] **W toku:** dzień 5 — TalkBack dla przycisków w bitwie (`docs/tasks/D5-talkback-hud.md`).
-      Do tego czasu czytnik ekranu obsługuje menu, ustawienia i pauzę.
+      pętli i osobny proces `:testloop`; instrukcja w „Raport przedpremierowy i pętla gry”.
+- [x] **Ankieta testera** (tylko wersje testowe, flaga `TESTER_SURVEY`): jednorazowo w menu po
+      samouczku i 5 bitwach albo w 3. dniu gry; odpowiedź tylko w „Raporcie dla testera”
+      (sekcja „Ankieta testera” niżej).
+- [ ] **W drodze (gałąź `claude/dzien-28-nowosc`, jeszcze nie na `integ/tura10`):** „Nowość na
+      tym etapie” w panelu etapu i iskra na mapie kampanii (R11 poz. 6). Do scalenia scenariusz
+      testera o niej nie wspomina.
 
 ### Zostało — decyzje i dane właściciela
 
@@ -94,9 +113,6 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
 - [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
       IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.
-- [ ] **Balans wariantów epok** (A156-13: Para i Krzem w lustrzanym teście 41/59 i 44,5/55,5 %,
-      limit 10 punktów): poprawka czeka na gałęzi `gpt/163-variant-balance` — do przeglądu
-      i decyzji, czy wchodzi przed testami zamkniętymi.
 - [ ] **Numer wersji** pierwszego wydania (`releaseVersionCode`, `releaseVersionName` w
       `gradle.properties`; dziś `1` i `0.1.0-dev`).
 - [ ] **Status handlowca w Play Console** (trader / non-trader, termin **1.02.2027**) — decyzja
@@ -138,6 +154,9 @@ Automatyczne testy tego nie zastąpią. Wystarczy telefon i Galaxy Fold właści
 Tę listę dostają testerzy (i właściciel przed wysyłką). Każdy krok to jedno zadanie i jedno
 pytanie „czy wyszło?”. Jeśli coś nie działa: zrób zrzut ekranu, zanotuj, co robiłeś tuż przed,
 i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport nie zawiera nicku.
+W **3. i 10. dniu** testu wyślij też „Raport dla testera” (**Ustawienia → O grze**), nawet
+jeśli wszystko działa. W menu raz pojawi się krótka **ankieta** (ocena 1–5 i „Co najbardziej
+przeszkadza?”); odpowiedz albo dotknij „Pomiń”. Odpowiedź trafia tylko do tego raportu.
 
 **A. Pierwsze uruchomienie (ok. 15 min, nowa instalacja)**
 1. Zainstaluj grę ze sklepu Play (link testowy), uruchom. Menu ma się pojawić w kilka sekund.
@@ -150,7 +169,9 @@ i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport n
 
 **B. Nowości (ok. 30–45 min, w kolejnych dniach)**
 6. Dojdź do **etapu 8**: w dolnym pasku bitwy pojawia się **Wódz**. Przywołaj go i sprawdź,
-   czy pobliscy żołnierze świecą aurą.
+   czy pobliscy żołnierze świecą aurą. Bitwy etapów 8–12 trwają ok. 9–10 min, 13–18
+   ok. 10–11 min. Od etapu 19 bitwy znów są dłuższe; napisz, jeśli etap 19 wyda się nagle
+   dużo trudniejszy od 18.
 7. Kup wieżę, a potem podnieś jej **stopień** (panel wież, przycisk ulepszenia). Przy wieży
    ma być widać jej stopień (2, potem 3), a panel pokazuje koszt kolejnego.
 8. **Muzyka:** w menu gra spokojny motyw, w bitwie muzyka narasta, gdy armie się starły.
@@ -158,7 +179,13 @@ i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport n
 9. **Misje** (menu): odbierz nagrodę za ukończoną misję dnia. Zajrzyj w **Osiągnięcia**.
 10. **Co nowego** (przycisk w menu): lista otwiera się, da się ją przewinąć do końca.
 11. Zagraj **Oblężenie bez końca** do pierwszego wyboru kart (fala 5) i do bossa (fala 10).
-12. Zagraj **Wyzwanie dnia** i zakładkę **Oblężenie tygodnia**.
+    Po drodze pojawia się wstęga **brąz / srebro / złoto** (premia po bitwie), a w kolejnych
+    próbach licznik „do rekordu”.
+12. Zagraj **Wyzwanie dnia** i zakładkę **Oblężenie tygodnia**. Do dnia premiery obowiązują
+    tu zasady sprzed premiery (bez dowódcy, pogody i wydarzeń dnia; oblężenie tygodnia bez
+    nowych zestawów). To zasada, nie błąd.
+12a. Jeśli wrócisz do gry po **3 lub więcej dniach przerwy**, w menu ma się pojawić powitanie
+    z premią za powrót.
 
 **C. Przerwy i zapis (ok. 10 min)**
 13. W trakcie bitwy przełącz się na inną aplikację na minutę i wróć. Gra ma być w pauzie,
@@ -178,14 +205,17 @@ i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport n
 19. **Ustawienia → Dostępność**: zmień paletę kolorów, rozmiar tekstu na 130%, włącz
     „mniej błysków”. Zagraj chwilę bitwy i sprawdź, czy wszystko jest czytelne.
 20. Włącz **tryb leworęczny** i sprawdź, czy przyciski bitwy są po drugiej stronie.
-21. (Kto używa czytnika ekranu) włącz **TalkBack** i przejdź menu oraz ustawienia. Bitwa
-    z TalkBack będzie w następnej wersji (dzień 5).
+21. (Kto używa czytnika ekranu) włącz **TalkBack** i przejdź menu, ustawienia i mapę
+    kampanii. Przy włączonym TalkBack bitwa startuje w tempie ×½ (opcja **Tempo bitwy ×½**
+    w Ustawienia → Dostępność). Gra nie jest przygotowana dla osób niewidomych i dalszej
+    obsługi bitwy czytnikiem ekranu nie planujemy.
 22. Zmień **język** gry w Ustawieniach i wróć do polskiego.
 
 **F. Co odesłać po teście**
 23. Model telefonu i wersja Androida (Ustawienia telefonu → Informacje o telefonie).
 24. Co się podobało, co było niejasne, gdzie gra się zacinała lub grzała telefon.
 25. Ile dni i mniej więcej ile minut dziennie grałeś. Google pyta o to przy wniosku o produkcję.
+26. „Raport dla testera” z 3. i 10. dnia (jeśli jeszcze nie poszedł).
 
 ### Kiedy wysyłamy testerom
 
