@@ -283,6 +283,27 @@ class BattleAccessibilityTest {
         } finally { f.finish() }
     }
 
+    @Test fun limitedSpeedJitterDoesNotRebuildEveryFrame() {
+        val f = setup(skirmish())
+        try {
+            f.screen.speed = 5
+            repeat(70) { f.step(0f, 16L) }
+            val start = f.revision
+            val ms0 = f.now
+            for (i in 0 until 600) {
+                f.game.current!!.advanceTouch(0f)
+                f.game.current!!.update(0f)
+                // Tempo ograniczone budżetem CPU waha się między ×4 a ×5 co klatkę.
+                f.screen.effectiveSpeed = if (i % 2 == 0) 4.6f else 5f
+                f.now += 16L
+                f.view.refreshAccessibilityNodes()
+            }
+            val seconds = (f.now - ms0) / 1000f
+            val rebuilds = f.revision - start
+            assertTrue("Przebudowy: $rebuilds w ${seconds}s", rebuilds <= 2 * seconds)
+        } finally { f.finish() }
+    }
+
     @Test fun noRefreshWithoutAccessibilityService() {
         val f = setup(skirmish())
         try {

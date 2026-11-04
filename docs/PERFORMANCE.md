@@ -111,6 +111,12 @@ na gorącą ścieżkę renderowania.
   `MODERATE` (2) lub wyżej, albo zapas ≥ 0,85, jak sygnał nagrzewania: po **3 s** obniża jeden
   stopień **CPU** (`reduction`, bez skali bufora). Powrót jakości tylko przy statusie
   ≤ `LIGHT` (1) i dotychczasowych 10 s zapasu. Progi CPU/GPU (4 s / 3 s / 10 s) bez zmian.
+  **R6-02 M3 (decyzja właściciela):** termika daje **najwyżej 2 stopnie**
+  (`THERMAL_MAX_STEPS`, licznik `thermalSteps`), drugi dopiero po **15 s** dalszego
+  nagrzania, i **nigdy nie obniża skali bufora**: stopień termiczny tylko wtedy, gdy
+  `reduction - gpuReduction < Quality.EFFECT_STEPS` (zostały efekty do wyłączenia). Licznik
+  zeruje się przy każdym powrocie jakości i w `reset()`; dalsze stopnie dają już tylko
+  rzeczywiste przeciążenie CPU/GPU.
   Nakładka FPS dopisuje `T<status>` w dolnym wierszu, gdy status > 0.
 - **`onTrimMemory`:** `Game.trimMemory` (UI_HIDDEN 20 i RUNNING_* jak 20, BACKGROUND 40)
   woła `Screen.onTrimMemory` dla bieżącego ekranu i stosu. Kampania zwalnia obrazy epok

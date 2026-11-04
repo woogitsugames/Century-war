@@ -15,6 +15,9 @@ class QualityGovernor {
     private var spareFor = 0f
     /** R2-05: czas statusu termicznego co najmniej [THERMAL_MODERATE]. */
     private var thermalFor = 0f
+    /** R6-02 M3: stopnie dodane z powodu termiki (najwyżej [THERMAL_MAX_STEPS]). */
+    var thermalSteps = 0
+        private set
     private var sinceChange = 3f
 
     fun reset(): Boolean {
@@ -25,6 +28,7 @@ class QualityGovernor {
         gpuSlowFor = 0f
         spareFor = 0f
         thermalFor = 0f
+        thermalSteps = 0
         sinceChange = 3f
         return changed
     }
@@ -36,6 +40,10 @@ class QualityGovernor {
      * R2-05: [thermal] to status termiczny telefonu (`PowerManager.THERMAL_STATUS_*`, 0 = brak
      * danych). Od [THERMAL_MODERATE] przez 3 s obniżamy jeden stopień CPU, zanim system zacznie
      * dławić procesor; powrót jakości wymaga statusu najwyżej [THERMAL_LIGHT].
+     *
+     * R6-02 M3 (decyzja właściciela): termika daje najwyżej [THERMAL_MAX_STEPS] stopnie, drugi
+     * dopiero po [THERMAL_NEXT_S] s nagrzania od poprzedniej zmiany, i nigdy nie obniża skali
+     * bufora (stopień termiczny tylko wtedy, gdy zostały jeszcze efekty do wyłączenia).
      */
     fun record(
         cpuMs: Float, seconds: Float, automatic: Boolean, fpsCap: Int, maximum: Int,
@@ -67,9 +75,12 @@ class QualityGovernor {
             changed()
             return true
         }
-        if (thermalFor >= 3f && reduction < maximum) {
+        val thermalWait = if (thermalSteps == 0) 3f else THERMAL_NEXT_S
+        if (thermalFor >= thermalWait && thermalSteps < THERMAL_MAX_STEPS && reduction < maximum &&
+            reduction - gpuReduction < Quality.EFFECT_STEPS) {
             // Nagrzewanie: stopień CPU (efekty, cząstki), bez zmiany skali bufora.
             reduction++
+            thermalSteps++
             changed()
             return true
         }
@@ -81,6 +92,7 @@ class QualityGovernor {
         if (spareFor >= 10f && reduction > 0) {
             reduction--
             if (gpuReduction > 0) gpuReduction--
+            thermalSteps = 0
             changed()
             return true
         }
@@ -101,6 +113,10 @@ class QualityGovernor {
         const val THERMAL_MODERATE = 2
         /** `getThermalHeadroom` od tej wartości traktujemy jak [THERMAL_MODERATE]. */
         const val HEADROOM_HOT = 0.85f
+        /** R6-02 M3: najwięcej stopni obniżenia jakości z powodu nagrzewania. */
+        const val THERMAL_MAX_STEPS = 2
+        /** Odstęp (s) przed kolejnym stopniem termicznym. */
+        const val THERMAL_NEXT_S = 15f
 
         /** Status do [record]: wyższy z raportowanego statusu i progu zapasu (NaN ignorujemy). */
         fun thermalSignal(status: Int, headroom: Float): Int =

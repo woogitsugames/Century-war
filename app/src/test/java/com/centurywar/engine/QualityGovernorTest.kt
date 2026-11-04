@@ -170,6 +170,50 @@ class QualityGovernorTest {
         assertEquals(0, g.gpuReduction)
     }
 
+    @Test fun moderateThermalForTwoMinutesGivesExactlyTwoStepsWithoutScale() {
+        val g = QualityGovernor()
+        driveThermal(g, 120f, 8f, QualityGovernor.THERMAL_MODERATE)
+        assertEquals(2, g.reduction)
+        assertEquals(2, g.thermalSteps)
+        assertEquals(0, g.gpuReduction)
+        assertEquals(1f, Quality(Quality.HIGH, g.reduction, g.gpuReduction).baseScale, 0.001f)
+    }
+
+    @Test fun secondThermalStepWaitsFifteenSeconds() {
+        val g = QualityGovernor()
+        assertEquals(1, driveThermal(g, 3.2f, 8f, QualityGovernor.THERMAL_MODERATE))
+        assertEquals(0, driveThermal(g, 14.5f, 8f, QualityGovernor.THERMAL_MODERATE))
+        assertEquals(1, g.reduction)
+        assertEquals(1, driveThermal(g, 1f, 8f, QualityGovernor.THERMAL_MODERATE))
+        assertEquals(2, g.reduction)
+    }
+
+    @Test fun thermalStepsReturnAfterCoolingAndCanRepeat() {
+        val g = QualityGovernor()
+        driveThermal(g, 60f, 8f, QualityGovernor.THERMAL_MODERATE)
+        assertEquals(2, g.reduction)
+        assertEquals(0, driveThermal(g, 9.5f, 8f, QualityGovernor.THERMAL_LIGHT))
+        assertEquals(1, driveThermal(g, 1f, 8f, QualityGovernor.THERMAL_LIGHT))
+        assertEquals(1, g.reduction)
+        assertEquals(0, g.thermalSteps)
+        driveThermal(g, 11f, 8f, QualityGovernor.THERMAL_LIGHT)
+        assertEquals(0, g.reduction)
+        // Ponowne nagrzanie znów daje najwyżej 2 stopnie.
+        driveThermal(g, 60f, 8f, QualityGovernor.THERMAL_MODERATE)
+        assertEquals(2, g.reduction)
+    }
+
+    @Test fun thermalDoesNotCrossIntoBufferScale() {
+        val g = QualityGovernor()
+        // Przeciążony CPU wyczerpał już 3 stopnie efektów.
+        drive(g, 4.5f, 30f); drive(g, 4.5f, 30f); drive(g, 4.5f, 30f)
+        assertEquals(3, g.reduction)
+        driveThermal(g, 60f, 8f, QualityGovernor.THERMAL_MODERATE)
+        // Tylko jeden stopień termiczny mieści się w efektach; skala bufora bez zmian.
+        assertEquals(4, g.reduction)
+        assertEquals(1f, Quality(Quality.HIGH, g.reduction, g.gpuReduction).baseScale, 0.001f)
+    }
+
     @Test fun lightThermalStatusDoesNotDropQuality() {
         val g = QualityGovernor()
         assertEquals(0, driveThermal(g, 10f, 8f, QualityGovernor.THERMAL_LIGHT))
@@ -180,9 +224,9 @@ class QualityGovernorTest {
         val g = QualityGovernor()
         driveThermal(g, 3.2f, 8f, QualityGovernor.THERMAL_MODERATE)
         assertEquals(1, g.reduction)
-        // Zdrowy CPU, ale wciąż gorąco (SEVERE): kolejne stopnie w dół, nigdy w górę.
-        driveThermal(g, 15f, 8f, 3)
-        assertTrue(g.reduction > 1)
+        // Zdrowy CPU, ale wciąż gorąco (SEVERE): drugi stopień po 15 s, nigdy w górę.
+        driveThermal(g, 16f, 8f, 3)
+        assertEquals(2, g.reduction)
         val hot = g.reduction
         // Po ostygnięciu do LIGHT powrót dopiero po zwykłych 10 s zapasu.
         assertEquals(0, driveThermal(g, 9.5f, 8f, QualityGovernor.THERMAL_LIGHT))

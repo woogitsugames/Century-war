@@ -110,7 +110,9 @@ internal object BattleAccessibility {
             BattleScreen.TURRET -> p.slots
             BattleScreen.ARMORY -> p.armory
             BattleScreen.STANCE -> if (p.hold) 1 else 0
-            BattleScreen.SPEED -> s.speed * 8 + if (s.speed == 0) 0 else s.effectiveSpeed.toInt().coerceIn(1, s.speed)
+            // R6-02 M4: tylko wybrane tempo. Ograniczenie budżetem CPU („×5 → ×3”) waha się co
+            // klatkę; jego napis odświeża się z limitem 1 s przez stan (b.label).
+            BattleScreen.SPEED -> s.speed
             BattleScreen.RALLY -> if (p.rallyT > 0f) 1 else 0
             BattleScreen.COMMANDER -> if (p.commanderCd < 0f) 1 else if (p.commanderCd > 0f) 2 else 0
             BattleScreen.EVOLVE -> p.era * 1000 + p.rank

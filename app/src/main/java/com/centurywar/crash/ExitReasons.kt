@@ -15,7 +15,13 @@ import java.time.Instant
  * ANR, błędy natywne i zabicie z braku pamięci są dziś widoczne tylko w Android vitals;
  * zapisujemy je lokalnie w [CrashStore]. Nic nie jest wysyłane automatycznie.
  * Wołane na wątku I/O przy starcie, przed [CrashReports.pendingFatal]: ANR i awaria natywna
- * są zapisywane jako „fatal”, więc obejmuje je istniejące pytanie o raport.
+ * są zapisywane jako `exit-fatal-…` i liczą się jak awaria, więc obejmuje je istniejące pytanie
+ * o raport. Pozostałe przyczyny trafiają do `exit-…` z osobnym limitem (R6-02 M1, [CrashStore]).
+ *
+ * R6-02 M2: pierwsze uruchomienie bez znacznika [LAST_EXIT_TS] (instalacja albo aktualizacja do
+ * wersji z tą funkcją) tylko zapamiętuje najnowszy wpis i nic nie zapisuje; wpisy sprzed
+ * `lastUpdateTime` pakietu też pomijamy (np. po wyczyszczeniu danych), żeby stare ANR nie pytały
+ * o raport.
  */
 object ExitReasons {
     const val LAST_EXIT_TS = "last_exit_ts"
@@ -37,9 +43,12 @@ object ExitReasons {
     fun worthReporting(reason: Int, importance: Int): Boolean = when (reason) {
         ApplicationExitInfo.REASON_ANR,
         ApplicationExitInfo.REASON_CRASH_NATIVE,
-        ApplicationExitInfo.REASON_LOW_MEMORY,
-        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE,
         ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> true
+        // R6-02 M1: zabicie z braku pamięci lub za zużycie zasobów w tle to normalna praca
+        // systemu; liczy się tylko, gdy gracz widział grę.
+        ApplicationExitInfo.REASON_LOW_MEMORY,
+        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE ->
+            importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
         // Sygnał (np. zabicie przez system) liczy się tylko na pierwszym planie.
         ApplicationExitInfo.REASON_SIGNALED ->
             importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
@@ -68,16 +77,23 @@ object ExitReasons {
         } catch (_: RuntimeException) {
             return 0
         }
+        if (!prefs.contains(LAST_EXIT_TS)) {
+            // Pierwszy start z tą funkcją: tylko znacznik, bez raportów o dawnych zdarzeniach.
+            prefs.edit().putLong(LAST_EXIT_TS, exits.maxOfOrNull { it.timestamp } ?: 0L).apply()
+            return 0
+        }
         val last = prefs.getLong(LAST_EXIT_TS, 0L)
+        val updated = lastUpdateTime(context)
         var newest = last
         var written = 0
         for (info in exits.sortedBy { it.timestamp }) {
             val ts = info.timestamp
             if (ts <= last) continue
             if (ts > newest) newest = ts
+            if (ts < updated) continue
             if (!worthReporting(info.reason, info.importance)) continue
             try {
-                store.write(isFatal(info.reason), report(info))
+                store.write(isFatal(info.reason), report(info), exit = true, eventTime = ts)
                 written++
             } catch (_: Exception) {
                 // Brak miejsca: raport przepada, start gry trwa dalej.
@@ -86,6 +102,12 @@ object ExitReasons {
         // Znacznik zapisujemy także dla pominiętych wpisów, żeby nie oglądać ich przy każdym starcie.
         if (newest != last) prefs.edit().putLong(LAST_EXIT_TS, newest).apply()
         return written
+    }
+
+    private fun lastUpdateTime(context: Context): Long = try {
+        context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+    } catch (_: Exception) {
+        0L
     }
 
     @TargetApi(30)
