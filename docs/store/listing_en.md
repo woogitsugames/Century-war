@@ -28,7 +28,7 @@ CHOOSE YOUR STRATEGY
 - Replays — save completed battles and watch them with playback speed and timeline controls.
 - Campaign difficulty levels, unlockable banners and a post-battle chart.
 - Export or import your profile; adjust colour options and use a left-handed layout.
-- Tutorial, codex, 78 achievements, daily and weekly missions, and local records.
+- Tutorial, codex, 79 achievements, daily and weekly missions, and local records.
 - Accessibility — colour-blind-friendly palettes and high contrast, larger text, fewer flashes and less screen shake, screen reader support in menus and settings.
 - 10 supported languages, including English and Polish.
 

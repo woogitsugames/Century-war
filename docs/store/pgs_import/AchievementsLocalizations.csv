@@ -511,6 +511,15 @@ Wódz zwycięstw,Comandante vitorioso,Vence 10 batalhas em que invocas um comand
 Wódz zwycięstw,Переможний командир,Виграй 10 боїв – у яких ти кличеш командира.,uk
 Wódz zwycięstw,Zegevierende commandant,Win 10 gevechten waarin je een commandant oproept.,nl-NL
 Wódz zwycięstw,Muzaffer komutan,Komutan çağırdığın 10 savaş kazan.,tr-TR
+Wygrany zakład,Wager won,Reach wave 40 in Endless Siege with the Wager card.,en-US
+Wygrany zakład,Gewonnene Wette,Erreiche Welle 40 in der Endlosen Belagerung mit der Karte Wette.,de-DE
+Wygrany zakład,Apuesta ganada,Alcanza la oleada 40 en el Asedio sin fin con la carta Apuesta.,es-ES
+Wygrany zakład,Pari gagné,Atteins la vague 40 du Siège sans fin avec la carte Pari.,fr-FR
+Wygrany zakład,Scommessa vinta,Raggiungi l'ondata 40 nell'Assedio infinito con la carta Scommessa.,it-IT
+Wygrany zakład,Aposta ganha,Chega à vaga 40 no Cerco sem fim com a carta Aposta.,pt-PT
+Wygrany zakład,Вигране парі,Досягни хвилі 40 у Нескінченній облозі з картою Парі.,uk
+Wygrany zakład,Gewonnen weddenschap,Bereik golf 40 in Eindeloos beleg met de kaart Weddenschap.,nl-NL
+Wygrany zakład,Kazanılan iddia,Sonsuz Kuşatma'da İddia kartıyla 40. dalgaya ulaş.,tr-TR
 Gwardia,Elite Guard,Train 100 elite units in total.,en-US
 Gwardia,Elitegarde 100,Insgesamt ausgebildete Eliteeinheiten: 100.,de-DE
 Gwardia,Guardia de élite 100,Unidades de élite entrenadas: 100.,es-ES
@@ -619,24 +628,24 @@ Doktryny zwycięzców,Doutrinas vencedoras,Vence batalhas usando cada uma das 13
 Doktryny zwycięzców,Доктрини переможців,Переможи в боях з усіма 13 доктринами.,uk
 Doktryny zwycięzców,Winnende doctrines,Win gevechten met elk van de 13 doctrines.,nl-NL
 Doktryny zwycięzców,Zafer doktrinleri,13 doktrinin her biriyle savaş kazan.,tr-TR
-Kalendarz wojny,War calendar,Win a daily challenge with each of the nine daily events.,en-US
-Kalendarz wojny,Kriegskalender,Gewinne eine Tageschallenge mit jedem der neun Ereignisse.,de-DE
-Kalendarz wojny,Calendario bélico,Gana un desafío diario con cada uno de los nueve eventos.,es-ES
-Kalendarz wojny,Calendrier de guerre,Gagnez un défi du jour avec chacun des neuf événements.,fr-FR
-Kalendarz wojny,Calendario di guerra,Vinci una sfida del giorno con ognuno dei nove eventi.,it-IT
-Kalendarz wojny,Calendário de guerra,Vence um desafio diário com cada um dos nove eventos.,pt-PT
-Kalendarz wojny,Календар війни,Виграй виклик дня з кожною з дев'яти подій.,uk
-Kalendarz wojny,Oorlogskalender,Win een daguitdaging met elk van de negen gebeurtenissen.,nl-NL
-Kalendarz wojny,Savaş takvimi,Dokuz olayın her biriyle bir günlük mücadele kazan.,tr-TR
-Sześć oblicz wojny,Six faces of war,Reach wave 20 in all six weekly rule sets.,en-US
-Sześć oblicz wojny,Sechs Gesichter des Krieges,Erreiche Welle 20 mit allen sechs Wochen-Regelsets.,de-DE
-Sześć oblicz wojny,Seis rostros de la guerra,Alcanza la oleada 20 con los seis conjuntos de reglas semanales.,es-ES
-Sześć oblicz wojny,Six visages de la guerre,Atteins la vague 20 avec les six ensembles de règles hebdomadaires.,fr-FR
-Sześć oblicz wojny,Sei volti della guerra,Raggiungi l'ondata 20 con tutti e sei i set di regole settimanali.,it-IT
-Sześć oblicz wojny,Seis faces da guerra,Chega à vaga 20 nos seis conjuntos de regras semanais.,pt-PT
-Sześć oblicz wojny,Шість облич війни,Досягни хвилі 20 у всіх шести тижневих наборах.,uk
-Sześć oblicz wojny,Zes gezichten van oorlog,Bereik golf 20 met alle zes wekelijkse regelsets.,nl-NL
-Sześć oblicz wojny,Savaşın altı yüzü,Altı haftalık kural setinin hepsinde 20. dalgaya ulaş.,tr-TR
+Kalendarz wojny,War calendar,Win a daily challenge with nine different daily events.,en-US
+Kalendarz wojny,Kriegskalender,Gewinne eine Tageschallenge mit neun verschiedenen Tagesereignissen.,de-DE
+Kalendarz wojny,Calendario bélico,Gana un desafío diario con nueve eventos diarios distintos.,es-ES
+Kalendarz wojny,Calendrier de guerre,Gagnez un défi du jour avec neuf événements du jour différents.,fr-FR
+Kalendarz wojny,Calendario di guerra,Vinci una sfida del giorno con nove eventi del giorno diversi.,it-IT
+Kalendarz wojny,Calendário de guerra,Vence um desafio diário com nove eventos diários diferentes.,pt-PT
+Kalendarz wojny,Календар війни,Виграй виклик дня з дев'ятьма різними подіями дня.,uk
+Kalendarz wojny,Oorlogskalender,Win een daguitdaging met negen verschillende dagevenementen.,nl-NL
+Kalendarz wojny,Savaş takvimi,Dokuz farklı günlük olayla bir günlük mücadele kazan.,tr-TR
+Sześć oblicz wojny,Six faces of war,Reach wave 20 in any six different weekly rule sets.,en-US
+Sześć oblicz wojny,Sechs Gesichter des Krieges,Erreiche Welle 20 mit beliebigen sechs verschiedenen Wochen-Regelsets.,de-DE
+Sześć oblicz wojny,Seis rostros de la guerra,Alcanza la oleada 20 con seis conjuntos de reglas semanales distintos cualesquiera.,es-ES
+Sześć oblicz wojny,Six visages de la guerre,Atteins la vague 20 avec six ensembles de règles hebdomadaires différents au choix.,fr-FR
+Sześć oblicz wojny,Sei volti della guerra,Raggiungi l'ondata 20 con sei set di regole settimanali diversi a scelta.,it-IT
+Sześć oblicz wojny,Seis faces da guerra,Chega à vaga 20 em quaisquer seis conjuntos de regras semanais diferentes.,pt-PT
+Sześć oblicz wojny,Шість облич війни,Досягни хвилі 20 у будь-яких шести різних тижневих наборах.,uk
+Sześć oblicz wojny,Zes gezichten van oorlog,Bereik golf 20 met zes willekeurige verschillende wekelijkse regelsets.,nl-NL
+Sześć oblicz wojny,Savaşın altı yüzü,Herhangi altı farklı haftalık kural setinde 20. dalgaya ulaş.,tr-TR
 Pełna konstelacja,Full Constellation,Earn all 108 campaign stars.,en-US
 Pełna konstelacja,Vollständiges Sternbild,Gesammelte Kampagnensterne: 108.,de-DE
 Pełna konstelacja,Constelación completa,Estrellas obtenidas en campaña: 108.,es-ES

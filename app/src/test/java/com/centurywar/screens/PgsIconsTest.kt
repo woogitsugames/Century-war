@@ -31,7 +31,7 @@ import kotlin.math.hypot
  * R9: ikony 512×512 osiągnięć i rankingów Play Games, rysowane kodem w stylu gry (bez tekstu i cyfr).
  *
  * Bez flagi test sprawdza kilka ikon i kompletność mapowania. `PGS_ICONS=true` zapisuje wszystkie
- * 78 + 4 ikony do `build/pgs-icons/` (z `AchievementsIconsMappings.csv` i stykówką), sprawdza je
+ * 79 + 4 ikony do `build/pgs-icons/` (z `AchievementsIconsMappings.csv` i stykówką), sprawdza je
  * wszystkie i kopiuje stykówki oraz mapowanie do `docs/store/assets/pgs/`.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -121,6 +121,8 @@ class PgsIconsTest {
         "commander_wins_10" to Spec(Icons.CROWN, 2),
         "turret_tier_four" to Spec(Icons.TOWER_TIERS),
         "late_no_turrets" to Spec(Icons.TOWER, 0, Icons.FLAG),
+        // Po D6: „Wygrany zakład” — kość (karta Zakład) z pucharem.
+        "wager_40" to Spec(Icons.DICE, 0, Icons.TROPHY),
     )
 
     /** Rankingi: symbol trybu jak w menu, znaczek pucharu (Rankingi). */

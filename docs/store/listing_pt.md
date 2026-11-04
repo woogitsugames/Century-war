@@ -16,7 +16,7 @@ Enfrenta 36 fases de campanha com dificuldade ajustável, resiste às vagas do c
 
 Vê as repetições e o gráfico após a batalha, desbloqueia estandartes e guarda o perfil num ficheiro. Ajusta as cores e ativa o modo para canhotos. A campanha e o progresso local funcionam offline.
 
-Cada era tem a sua própria música gravada: um tema calmo e outro de batalha que se misturam suavemente durante o combate. 78 conquistas e missões diárias e semanais dão-te sempre novos objetivos.
+Cada era tem a sua própria música gravada: um tema calmo e outro de batalha que se misturam suavemente durante o combate. 79 conquistas e missões diárias e semanais dão-te sempre novos objetivos.
 
 Acessibilidade: paletas para daltonismo e alto contraste, texto maior, menos flashes e tremores de ecrã e suporte para leitor de ecrã nos menus e nas definições.
 

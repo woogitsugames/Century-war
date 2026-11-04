@@ -89,6 +89,7 @@ object PlayGamesIdsGenerator {
         "first_turret",
         "first_research",
         "stages_3",
+        "wager_40",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +

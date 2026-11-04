@@ -30,6 +30,8 @@ enum class AchievementMetric {
     // Zlecenie 176: dowódca (125) i stopnie wież (140), nowe metryki na końcu.
     COMMANDER_SUMMONED, COMMANDER_SURVIVOR, COMMANDER_PULSES, COMMANDER_WINS,
     TURRET_TIER_FOUR, LATE_NO_TURRET_WINS,
+    // Po D6 (4.11): fala 40 z kartą Zakład, metryka na końcu.
+    WAGER_40,
 }
 
 data class AchievementDef(
@@ -49,6 +51,9 @@ data class AchievementDef(
 object Achievements {
     /** Maska wszystkich wydarzeń dnia (9 po zleceniu 170). */
     val DAILY_EVENT_MASK: Long = (1L shl com.centurywar.game.DailyEvent.entries.size) - 1L
+
+    /** Maska zestawów Oblężenia tygodnia: dowolne 6 z 9 po D6 (wcześniej tylko 6 pierwszych). */
+    val WEEKLY_RULESET_MASK: Long = (1L shl ChallengeRuleSets.COUNT) - 1L
 
     private fun def(
         id: String, metric: AchievementMetric, threshold: Long, reward: Int,
@@ -139,10 +144,16 @@ object Achievements {
         def("first_turret", AchievementMetric.TURRETS_BUILT, 1, 10, AchievementCategory.TACTICS),
         def("first_research", AchievementMetric.RESEARCH_LEVELS, 1, 10, AchievementCategory.RESEARCH),
         def("stages_3", AchievementMetric.STAGES, 3, 20, AchievementCategory.CAMPAIGN),
+        // Po D6: fala 40 z Zakładem (docs/BALANCE.md, D6: do fali 40 dochodzi ok. 85/100 weteranów,
+        // a Zakład kosztuje ok. 1,5 fali), więc wymaga badań i dobrej talii, ale nie rekordu.
+        def("wager_40", AchievementMetric.WAGER_40, 1, 200, AchievementCategory.ENDLESS),
     )
 
     /** Etap kampanii (indeks od 0), od którego liczy się wygrana bez wież; etap 8 jak dowódca. */
     const val LATE_STAGE_INDEX = 7
+
+    /** Fala osiągnięcia „Wygrany zakład”. */
+    const val WAGER_WAVE = 40
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
 
@@ -165,7 +176,8 @@ object Achievements {
         AchievementMetric.STEAM_VARIANTS, AchievementMetric.SILICON_VARIANTS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 3L).toLong()
         AchievementMetric.WEEKLY_RULESETS ->
-            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 63L).toLong()
+            java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
+                WEEKLY_RULESET_MASK).toLong()
         AchievementMetric.DAILY_EVENTS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
                 DAILY_EVENT_MASK).toLong()
@@ -326,6 +338,9 @@ object Achievements {
                 (battle.player.cardStacks[com.centurywar.game.EndlessCard.QUARTERMASTER.ordinal] > 0 ||
                     battle.player.cardStacks[com.centurywar.game.EndlessCard.MASTER_MASONS.ordinal] > 0))
                 markOnce(profile, AchievementMetric.CARD_TOOLS_30)
+            if (battle.wave >= WAGER_WAVE &&
+                battle.player.cardStacks[com.centurywar.game.EndlessCard.WAGER.ordinal] > 0)
+                markOnce(profile, AchievementMetric.WAGER_40)
             if (battle.wave >= 50 && newCardMask != 0)
                 markOnce(profile, AchievementMetric.CARD_NEW_50)
             val rule = if (cfg.weekly >= 0L) Weekly.ruleSet(cfg.weekly) else null
