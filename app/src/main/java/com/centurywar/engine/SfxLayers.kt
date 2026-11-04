@@ -80,6 +80,10 @@ internal object SfxLayers {
         SoundSynth.RESEARCH -> Recipe(UI, 490f, 0.12f, 0.83f, 0.13f, 48f, 19f, notes = 2, interval = 0.1f, climb = 5)
         SoundSynth.STAR -> Recipe(UI, 660f, 0.08f, 0.95f, 0.12f, 57f, 15f, notes = 2, interval = 0.09f, climb = 7)
         SoundSynth.BOSS -> Recipe(MOTOR, 240f, 1.1f, 0.9f, 0.58f, 14f, 6f, -0.58f)
+        // R10-03: niski róg alarmowy (dwa dęcia; korpus każdej nuty gaśnie ok. 17/s), dwa tony w dół, jasny „dzyń”.
+        SoundSynth.ALERT_BASE -> Recipe(UI, 233f, 0.06f, 1.0f, 0.08f, 40f, 3f, -0.06f, notes = 2, interval = 0.22f, climb = -1)
+        SoundSynth.ALERT_ENEMY_ERA -> Recipe(UI, 520f, 0.12f, 0.95f, 0.1f, 40f, 5f, notes = 2, interval = 0.19f, climb = -5)
+        SoundSynth.ALERT_READY -> Recipe(UI, 990f, 0.06f, 0.95f, 0.06f, 60f, 15f, notes = 1)
         else -> Recipe(WOOD, 250f, 0.8f, 0.7f, 0.3f, 25f, 15f)
     }
 

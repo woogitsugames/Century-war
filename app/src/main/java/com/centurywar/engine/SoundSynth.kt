@@ -6,7 +6,7 @@ package com.centurywar.engine
  */
 object SoundSynth {
     const val SAMPLE_RATE = 22_050
-    const val VERSION = 3
+    const val VERSION = 4
     const val VARIANTS = 2
     const val MAX_CACHE_BYTES = 2 * 1_024 * 1_024
 
@@ -68,7 +68,11 @@ object SoundSynth {
     const val ERROR = 53
     const val REWARD = 54
     const val RANK_UP = 55
-    const val COUNT = 56
+    // R10-03: sygnały bitwy (dopisane na końcu, stare indeksy bez zmian).
+    const val ALERT_BASE = 56
+    const val ALERT_ENEMY_ERA = 57
+    const val ALERT_READY = 58
+    const val COUNT = 59
 
     fun duration(id: Int): Float {
         require(id in 0 until COUNT)
@@ -85,6 +89,9 @@ object SoundSynth {
             in TURRET_PRIMITIVE..TURRET_ENERGY -> 0.28f
             MEDALS, ACHIEVEMENT, ERA_UNLOCK, REWARD, RANK_UP -> 0.46f
             BOSS -> 0.48f
+            ALERT_BASE -> 0.5f
+            ALERT_ENEMY_ERA -> 0.4f
+            ALERT_READY -> 0.2f
             in CARD_COMMON..CARD_LEGENDARY, RESEARCH, STAR -> 0.28f
             else -> 0.16f
         }

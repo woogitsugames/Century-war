@@ -37,6 +37,24 @@ class SoundSynthTest {
         assertTrue("Za duży bank WAV: $bytes", bytes <= SoundSynth.MAX_CACHE_BYTES)
     }
 
+    /** R10-03: trzy sygnały bitwy na końcu listy, krótkie i bez przesterowania. */
+    @Test fun battleAlertsAreShortAndClean() {
+        assertEquals(59, SoundSynth.COUNT)
+        assertEquals(4, SoundSynth.VERSION)
+        val ids = intArrayOf(SoundSynth.ALERT_BASE, SoundSynth.ALERT_ENEMY_ERA, SoundSynth.ALERT_READY)
+        assertArrayEquals(intArrayOf(56, 57, 58), ids)
+        for (id in ids) {
+            assertTrue("Za długi sygnał $id", SoundSynth.duration(id) <= 0.6f)
+            for (variant in 0 until SoundSynth.VARIANTS) {
+                var peak = 0f
+                for (v in SoundSynth.render(id, variant)) peak = maxOf(peak, abs(v))
+                assertTrue("Przesterowanie sygnału $id/$variant: $peak", peak <= 0.95f)
+            }
+        }
+        assertTrue(SoundSynth.duration(SoundSynth.ALERT_READY) < SoundSynth.duration(SoundSynth.ALERT_BASE))
+        assertFalse(SoundSynth.render(SoundSynth.ALERT_BASE).contentEquals(SoundSynth.render(SoundSynth.THUMP)))
+    }
+
     @Test fun epochsHaveDifferentSpectralProfiles() {
         val wood = highBandEnergy(SoundSynth.render(SoundSynth.HIT_WOOD))
         val bronze = highBandEnergy(SoundSynth.render(SoundSynth.HIT_BRONZE))

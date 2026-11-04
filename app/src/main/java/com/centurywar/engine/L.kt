@@ -174,6 +174,7 @@ object L {
         putAll(part176())
         putAll(part178())
         putAll(part185())
+        putAll(part190())
         putAll(part181())
         putAll(part182())
         putAll(part179())
@@ -236,6 +237,11 @@ object L {
         "hard189_goal" to t("Trudny: zdobądź koronę na etapie %d (%s)", "Hard: earn a crown on stage %d (%s)", "Schwer: Krone auf Etappe %d holen (%s)", "Difícil: gana la corona en la etapa %d (%s)", "Difficile : couronne à l'étape %d (%s)", "Difficile: corona nella tappa %d (%s)", "Difícil: coroa na etapa %d (%s)", "Складний: корона на етапі %d (%s)", "Moeilijk: kroon op etappe %d (%s)", "Zor: %d. bölümde taç kazan (%s)"),
         "hard189_a11y" to t("korona Trudnego", "Hard crown", "Schwer-Krone", "corona de Difícil", "couronne Difficile", "corona Difficile", "coroa do Difícil", "корона Складного", "Moeilijk-kroon", "Zor tacı"),
         "hard189_crowns" to t("Korony", "Crowns", "Kronen", "Coronas", "Couronnes", "Corone", "Coroas", "Корони", "Kronen", "Taçlar"),
+    )
+
+    /** R10-03: znak „baza atakowana” przy lewej krawędzi pola (opis dla TalkBack). */
+    private fun part190(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "alert190_base_a11y" to t("Baza atakowana, %d%%. Dotknij, by pokazać bazę", "Base under attack, %d%%. Tap to show the base", "Basis wird angegriffen, %d %%. Tippen, um die Basis zu zeigen", "Base atacada, %d%%. Toca para ver la base", "Base attaquée, %d %%. Touchez pour afficher la base", "Base sotto attacco, %d%%. Tocca per mostrare la base", "Base sob ataque, %d%%. Toca para mostrar a base", "Базу атакують, %d%%. Торкнися, щоб показати базу", "Basis aangevallen, %d%%. Tik om de basis te tonen", "Üs saldırı altında, %%%d. Üssü göstermek için dokun"),
     )
 
     /** R2-04: „Raport dla testera”; tempo ×½ startuje bitwę także bez TalkBack (decyzja 3.11). */
