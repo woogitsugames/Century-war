@@ -523,9 +523,9 @@ def assign_day(r: Report, day_split: int):
     if which and any(w in which for w in ("problem", "inny", "other")):
         r.day = None
         return
-    m = re.search(r"(?:^|[^a-ząćęłńóśźż])(?:dzien|dzień|day|d)[-_ ]?(\d+)(?!\d)", Path(r.source.split(":")[0]).stem.lower())
+    m = DAY_TOKEN.search(Path(r.source.split(":")[0].split("#")[0]).stem.lower())
     if m:
-        r.day = int(m.group(1))
+        r.day = int(re.search(r"\d+", m.group()).group())
         return
     span = day_from_dates(r)
     if span is not None:
@@ -537,22 +537,39 @@ def norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").strip().lower())
 
 
+DAY_TOKEN = re.compile(r"(?:^|(?<=[^a-ząćęłńóśźż]))(?:dzien|dzień|day|d)[-_ ]?\d+(?!\d)")
+
+
+def file_identity(r: Report) -> str:
+    """Pseudonim z nazwy pliku: „kasia-dzien3.txt” → „kasia” (tylko dla plików, nie CSV)."""
+    if ":" in r.source:
+        return ""
+    stem = Path(r.source.split("#")[0]).stem.lower()
+    return re.sub(r"[-_ ]+$|^[-_ ]+", "", DAY_TOKEN.sub("", stem))
+
+
 def assign_keys(reports):
-    """Klucz osoby: kod testera (Raport v2) > pseudonim + model > sam model (niepewne)."""
+    """Klucz osoby: kod testera (Raport v2) > pseudonim (formularz albo nazwa pliku) + model >
+    brak tożsamości (model + pierwszy dzień — tylko do łączenia, nigdy do odrzucania duplikatów)."""
     for r in reports:
+        model = norm(r.get("device") or r.form.get("model", ""))
+        who = norm(r.form.get("tester", "")) or file_identity(r)
         if r.get("tester_code"):
             r.key = "kod:" + r.get("tester_code")
-        elif r.form.get("tester"):
-            r.key = "pseud:" + norm(r.form["tester"]) + "|" + norm(r.get("device") or r.form.get("model", ""))
+        elif who:
+            r.key = "pseud:" + who + "|" + model
         else:
-            r.key = "model:" + norm(r.get("device") or r.form.get("model", "")) + "|" + norm(r.get("first_day", ""))
+            r.key = "model:" + model + "|" + norm(r.get("first_day", ""))
 
 
 def dedupe(reports):
-    """Ten sam klucz i dzień: zostaje raport z największym czasem bitew (najnowszy stan)."""
+    """Ten sam tester i dzień: zostaje raport z największym czasem bitew (najnowszy stan).
+    Bez kodu i pseudonimu odrzucamy tylko identyczny tekst — dwie osoby z tym samym
+    telefonem i dniem startu to częsty przypadek."""
     best, dropped = {}, []
     for r in reports:
-        k = (r.key, r.day)
+        k = (r.key, r.day) if not r.key.startswith("model:") else ("text", r.text.strip())
+        r._dedupe_key = k
         cur = best.get(k)
         if cur is None:
             best[k] = r
@@ -560,7 +577,7 @@ def dedupe(reports):
             dropped.append(cur); best[k] = r
         else:
             dropped.append(r)
-    kept = [r for r in reports if best.get((r.key, r.day)) is r]
+    kept = [r for r in reports if best.get(r._dedupe_key) is r]
     return kept, dropped
 
 
@@ -633,7 +650,7 @@ def evaluate(day3, day10, base, external):
                         f"dzień 3 ≥ {g['reports_day3_min']}; dzień 10 ≥ {g['reports_day10_min']}",
                         verdict(n3 >= g["reports_day3_min"] and n10 >= g["reports_day10_min"]),
                         "" if has_code else "bez kodu testera liczone są raporty po odrzuceniu duplikatów "
-                        "(pseudonim + model), nie pewne osoby"))
+                        "(pseudonim z formularza/nazwy pliku + model), nie pewne osoby"))
 
     # 2.5 — z 10. dnia.
     src = day10
@@ -796,8 +813,8 @@ def build_markdown(reports, dropped, problem_count, notes, checks, wave, inputs,
 
     out.append("### Czego nie da się policzyć z obecnego raportu (format 1)\n")
     out.append("- **Łączenie dnia 3 i 10 tej samej osoby**: raport nie ma kodu testera. Narzędzie łączy po "
-               "pseudonimie z formularza + modelu (`Device:`), a bez pseudonimu tylko po modelu i dacie "
-               "pierwszego dnia — niepewne. Pole `Tester code:` (Raport v2, TOP 5 poz. 1) jest już obsłużone.")
+               "pseudonimie z formularza albo nazwy pliku + modelu (`Device:`); bez pseudonimu raporty "
+               "zostają osobno (dwie osoby mogą mieć ten sam telefon i dzień startu). Pole `Tester code:` (Raport v2, TOP 5 poz. 1) jest już obsłużone.")
     out.append("- **2.1, 2.3** — tylko Play Console (`--active-testers`, `--prelaunch-crashes`).")
     out.append("- **2.2** — raport nie liczy awarii/ANR; pola `Crashes:`/`ANRs:` z Raportu v2 są przygotowane, "
                "grupy z PC: `--crash-groups`.")

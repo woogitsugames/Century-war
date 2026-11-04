@@ -358,7 +358,29 @@ class PlaytestMergeTest(unittest.TestCase):
             self.assertEqual(days["b.txt"], (10, True))
             self.assertEqual(days["android15.txt"], (10, True))
             a, b = (next(r for r in reports if r.source == s) for s in ("a.txt", "b.txt"))
-            self.assertEqual(a.key, b.key, "ten sam telefon i pierwszy dzień = ta sama osoba (heurystyka)")
+            self.assertNotEqual(a.key, b.key, "inne nazwy plików = inne osoby")
+            # Pseudonim z nazwy pliku łączy dzień 3 i 10.
+            (d / "kasia-dzien3.txt").write_text(build_report(model="Pixel 8", last_day=20_438), encoding="utf-8")
+            (d / "kasia_d10.txt").write_text(build_report(model="Pixel 8", last_day=20_431), encoding="utf-8")
+            reports, dropped, *_ = pm.merge([d])
+            k3, k10 = (next(r for r in reports if r.source == s) for s in ("kasia-dzien3.txt", "kasia_d10.txt"))
+            self.assertEqual((k3.day, k10.day, k3.day_inferred), (3, 10, False), "dzień z nazwy pliku ma pierwszeństwo")
+            self.assertEqual(k3.key, k10.key)
+            self.assertEqual(k3.key, "pseud:kasia|pixel 8")
+
+    def test_no_identity_is_not_deduplicated(self):
+        """CSV bez pseudonimu: dwie osoby z tym samym telefonem i dniem startu zostają osobno."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "f.csv"
+            with path.open("w", encoding="utf-8", newline="") as fh:
+                w = csv.writer(fh)
+                w.writerow(["Timestamp", "Paste report"])
+                w.writerow(["1", build_report(sessions=10)])
+                w.writerow(["2", build_report(sessions=11)])
+                w.writerow(["3", build_report(sessions=11)])  # ten sam tekst wklejony drugi raz
+            reports, dropped, *_ = pm.merge([path])
+            self.assertEqual((len(reports), len(dropped)), (2, 1))
+            self.assertTrue(all(r.key.startswith("model:") for r in reports))
 
     def test_future_v2_fields(self):
         v2 = build_report().replace("Language: pl\n", "Language: pl\nReport format: 2\nTester code: K7QM\n"
