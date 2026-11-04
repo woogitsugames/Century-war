@@ -105,7 +105,14 @@ class CampaignScreen(
     /** R10-02: licznik koron Trudnego w nagłówku epoki. */
     private val crownLabels = Array(5) { it.toString() + "/4" }
     private val tileA11y = arrayOfNulls<String>(Campaign.stages.size)
-    private val tileA11yBase = arrayOfNulls<String>(Campaign.stages.size)
+    private val tileA11yKey = IntArray(Campaign.stages.size) { -1 }
+    private val eraA11y = Array(Defs.ERA_COUNT) { "" }
+    private val eraA11yKey = IntArray(Defs.ERA_COUNT) { -1 }
+    private var panelA11y = ""
+    private var panelA11yKey = -1
+    private var introA11ySource: EraIntroOverlay? = null
+    private var introA11y = ""
+    private val a11yRect = RectF()
     private var hardLine = ""
     private var hardLineWon = false
     private var hardLineKey = -1
@@ -137,6 +144,9 @@ class CampaignScreen(
             difficultyButtons[i].label = L[CampaignDifficulty.entries[i].key]
         eraIntro?.onLanguageChanged()
         tileA11y.fill(null)
+        eraA11yKey.fill(-1)
+        panelA11yKey = -1
+        introA11ySource = null
         hardLineKey = -1
     }
 
@@ -886,17 +896,167 @@ class CampaignScreen(
     /** R2-02: ✕ okna etapu nie ma podpisu; TalkBack czyta „Zamknij okno etapu”. */
     override fun accessibilityLabel(b: Button): String {
         if (b === close) return L["help180_close"]
-        val base = super.accessibilityLabel(b)
-        val stage = b.tag as? Stage ?: return base
+        val stage = b.tag as? Stage ?: return super.accessibilityLabel(b)
+        // R11-01: „Etap 7, Epoka brązu, 2 z 3 gwiazdek, następny do zdobycia” (+ korona R10-02);
+        // napis budujemy tylko po zmianie stanu węzła albo języka.
         val i = stage.index
-        if (!g.profile.hardWon(i)) return base
-        // R10-02: napis z koroną budujemy raz, przy zmianie podstawy (język, stan przycisku).
-        if (tileA11yBase[i] != base || tileA11y[i] == null) {
-            tileA11yBase[i] = base
-            val crown = L["hard189_a11y"]
-            tileA11y[i] = if (base.isBlank()) crown else "$base, $crown"
+        val key = accessibilityKey(b) or (if (b.enabled) 16 else 0) or (L.lang shl 5)
+        val cached = tileA11y[i]
+        if (cached != null && tileA11yKey[i] == key) return cached
+        val text = StringBuilder(L.f("a196_stage", i + 1, L[Defs.eraKeys[i / 4]]))
+        if (!b.enabled) text.append(", ").append(L["a196_locked"])
+        else {
+            text.append(", ").append(L.f("a196_stars", g.profile.stars[i]))
+            if (b.highlight) text.append(", ").append(L["a196_next"])
         }
-        return tileA11y[i]!!
+        if (g.profile.hardWon(i)) text.append(", ").append(L["hard189_a11y"])
+        tileA11yKey[i] = key
+        return text.toString().also { tileA11y[i] = it }
+    }
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = L["campaign"]
+
+    private val overlayOpen: Boolean get() = eraIntro?.active == true || hints.accessibilityOpen
+
+    override fun accessibilityEligible(b: Button): Boolean = when {
+        eraIntro?.active == true -> false
+        hints.accessibilityOpen -> b === hints.okBtn
+        b === hints.okBtn -> false
+        // Okno etapu jest modalne: mapa i Wstecz pod nim nie mają węzłów.
+        selected != null -> b === start || b === close || b.id in -12..-10
+        else -> b === back || b.tag is Stage
+    }
+
+    override fun accessibilityKey(b: Button): Int {
+        val stage = b.tag as? Stage ?: return 0
+        val i = stage.index
+        return g.profile.stars[i] or (if (g.profile.hardWon(i)) 4 else 0) or (if (b.highlight) 8 else 0)
+    }
+
+    /** Kolejność wzdłuż szlaku (nie według położenia na ekranie): nagłówek epoki, potem jej etapy. */
+    override fun accessibilityOrder(b: Button, index: Int): Float {
+        val stage = b.tag as? Stage
+        return when {
+            stage != null -> 10f + stage.index * 2f
+            b.id in -12..-10 -> 1f + (-10 - b.id)
+            b === start -> 4f
+            b === close -> 5f
+            else -> 0f
+        }
+    }
+
+    override fun accessibilityCheckable(b: Button): Boolean = b.id in -12..-10
+    override fun accessibilityChecked(b: Button): Boolean =
+        if (b.id in -12..-10) g.profile.campaignDifficulty == CampaignDifficulty.entries[-10 - b.id] else b.selected
+
+    /** Informacje 0..8: nagłówki widocznych epok; 9: okno (zapowiedź epoki, dymek albo panel etapu). */
+    override fun accessibilityInfoCount(): Int = Defs.ERA_COUNT + 1
+
+    override fun accessibilityInfoOrder(i: Int): Float =
+        if (i == Defs.ERA_COUNT) -1f else 10f + i * 8f - 1f
+
+    override fun accessibilityInfoDismiss(i: Int): Boolean = i == Defs.ERA_COUNT && eraIntro?.active == true
+
+    override fun accessibilityInfo(i: Int): String {
+        val intro = eraIntro
+        if (i == Defs.ERA_COUNT) {
+            val stage = selected
+            return when {
+                intro != null && intro.active -> {
+                    if (introA11ySource !== intro) {
+                        introA11ySource = intro
+                        introA11y = intro.accessibilityText
+                    }
+                    introA11y
+                }
+                hints.accessibilityOpen -> hints.accessibilityBody
+                stage != null -> panelText(stage)
+                else -> ""
+            }
+        }
+        if (overlayOpen || selected != null || !headingVisible(i)) return ""
+        return eraText(i)
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (i == Defs.ERA_COUNT) {
+            when {
+                eraIntro?.active == true -> out.setEmpty()
+                hints.accessibilityOpen -> hints.accessibilityBounds(out)
+                else -> out.set(info)
+            }
+            return
+        }
+        headingRect(i, out)
+        if (!out.intersect(viewportL, top, viewportR, bottom)) out.setEmpty()
+    }
+
+    private fun headingVisible(era: Int): Boolean {
+        headingRect(era, a11yRect)
+        return a11yRect.intersects(viewportL, top, viewportR, bottom)
+    }
+
+    private fun eraText(era: Int): String {
+        var earned = 0
+        for (k in era * 4 until era * 4 + 4) earned += g.profile.stars[k]
+        val crowns = if (showCrowns(era)) g.profile.hardWonInEra(era) else -1
+        val key = earned or ((crowns + 1) shl 4) or (L.lang shl 8)
+        if (eraA11yKey[era] != key) {
+            eraA11yKey[era] = key
+            val base = L.f("a196_era", L[Defs.eraKeys[era]], earned)
+            eraA11y[era] = if (crowns < 0) base else base + ", " + L.f("a196_crowns", crowns)
+        }
+        return eraA11y[era]
+    }
+
+    /** Jedno zdanie panelu etapu: gwiazdki, korona, epoki, siła wroga, pogoda, modyfikatory, poziom. */
+    private fun panelText(s: Stage): String {
+        val difficulty = g.profile.campaignDifficulty
+        val won = g.profile.hardWon(s.index)
+        val key = s.index or (difficulty.ordinal shl 6) or (g.profile.stars[s.index] shl 8) or
+            ((if (won) 1 else 0) shl 10) or (L.lang shl 11)
+        if (key == panelA11yKey) return panelA11y
+        panelA11yKey = key
+        refreshInfo(s)
+        val power = s.aiPower * difficulty.powerMultiplier
+        val enemy = L[when {
+            power > 1.02f -> "a196_enemy_stronger"
+            power < 0.98f -> "a196_enemy_weaker"
+            else -> "a196_enemy_equal"
+        }]
+        val line = hardInfoLine(s)
+        val text = StringBuilder(infoTitle).append(". ")
+            .append(L.f("a196_stars", g.profile.stars[s.index])).append(". ")
+        if (line.isNotEmpty()) text.append(line).append(". ")
+        text.append(infoRange).append(". ")
+            .append(infoPower).append(", ").append(enemy).append(". ")
+            .append(L.f("a196_weather", L[s.weather.key])).append(". ")
+            .append(infoModifiers).append(' ')
+            .append(if (s.modifiers.isEmpty()) L["none"] else s.modifiers.joinToString(", ") { L[it.key] })
+            .append(". ")
+            .append(L.f("a196_difficulty", L[difficulty.key]))
+        panelA11y = text.toString()
+        return panelA11y
+    }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean {
+        if (selected != null || overlayOpen) return false
+        return if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+    }
+
+    /** Ta sama droga co przeciągnięcie palcem: przesunięcie mapy w jej osi o ok. 80% widoku. */
+    override fun accessibilityScroll(direction: Int): Boolean {
+        if (!accessibilityCanScroll(direction)) return false
+        val moved = accessibilityStep(scroll, maxScroll, if (portraitMap) viewportH else viewportW, direction)
+        scroll = scrollResult
+        scrollTarget = scroll
+        autoScroll = false
+        velocity = 0f
+        moving = false
+        place()
+        return moved
     }
 
     /** Tura 9: ostatni komunikat po dotknięciu zablokowanego etapu (do testów). */
