@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R10-04: gra sama obsługuje tryb baterii (30 FPS, jakość ≤ średnia) i wydajności;
+     system nie skaluje rozdzielczości ani nie narzuca FPS. -->
+<game-mode-config xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsBatteryGameMode="true"
+    android:supportsPerformanceGameMode="true"
+    android:allowGameDownscaling="false"
+    android:allowGameFpsOverride="false" />

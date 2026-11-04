@@ -242,7 +242,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         discardedSteps = discarded
     }
 
-    val cpuBudgetMs: Float get() = QualityGovernor.budgetMs(profile.fpsCap)
+    val cpuBudgetMs: Float get() = QualityGovernor.budgetMs(effectiveFpsCap())
 
     private fun refreshOverlay(dt: Float) {
         overlayTimer -= dt
@@ -469,7 +469,25 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (profile.slowSpeedManual) profile.slowSpeedOption
         else profile.slowSpeedOption || touchExplorationActive
 
-    fun effectiveQualityLevel() = if (profile.quality == 0) detectedQuality else profile.quality
+    fun effectiveQualityLevel() = GameModes.effectiveQuality(
+        if (profile.quality == 0) detectedQuality else profile.quality, gameMode)
+
+    /**
+     * R10-04: tryb gry Androida ([GameModes]); ustawia MainActivity przy wznowieniu (API 31+).
+     * Tryb baterii ogranicza efektywne FPS i jakość bez zmiany wyboru gracza w profilu.
+     */
+    var gameMode = GameModes.UNSUPPORTED
+        private set
+
+    /** Wątek gry. Zmiana trybu przelicza jakość i limit klatek; ten sam tryb nic nie robi. */
+    fun applyGameMode(mode: Int) {
+        if (mode == gameMode) return
+        gameMode = mode
+        setQuality(effectiveQualityLevel())
+        applyFrameRate()
+    }
+
+    fun effectiveFpsCap(): Int = GameModes.effectiveFps(profile.fpsCap, gameMode)
 
     fun setQuality(level: Int) {
         if (profile.quality != 0) governor.reset()
@@ -482,7 +500,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         host.applyRenderScale(quality.renderScale(viewW, viewH))
     }
 
-    fun applyFrameRate() = host.applyFrameRate(profile.fpsCap)
+    fun applyFrameRate() = host.applyFrameRate(effectiveFpsCap())
 
     /** Density może się zmienić bez restartu Activity (Fold, ustawienia wyświetlacza). */
     fun updateDensity(value: Float) {
@@ -695,7 +713,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         frameAvg += (ms - frameAvg) * 0.05f
         fps = 1000f / frameAvg.coerceAtLeast(1f)
         if (governor.record(frameMetrics.avgCpuMs, dt, profile.quality == 0,
-                profile.fpsCap, quality.maxReductionSteps,
+                effectiveFpsCap(), quality.maxReductionSteps,
                 frameMetrics.avgFrameIntervalMs, frameMetrics.refreshHz,
                 QualityGovernor.thermalSignal(thermalStatus, thermalHeadroom))) {
             setQuality(effectiveQualityLevel())

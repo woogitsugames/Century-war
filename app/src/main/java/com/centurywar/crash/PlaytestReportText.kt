@@ -1,6 +1,7 @@
 package com.centurywar.crash
 
 import com.centurywar.engine.Game
+import com.centurywar.engine.GameModes
 import com.centurywar.engine.L
 import com.centurywar.game.Mode
 import com.centurywar.meta.BattleHistory
@@ -38,6 +39,8 @@ object PlaytestReportText {
         val maxReductionSteps: Int, val fpsCap: Int, val palette: Int, val textScale: Int,
         val leftHanded: Boolean, val talkBack: Boolean, val reduceShake: Boolean,
         val reduceFlash: Boolean, val slowSpeed: Boolean, val language: String,
+        /** R10-04: tryb gry Androida ([GameModes]). */
+        val gameMode: Int = GameModes.UNSUPPORTED,
     )
 
     /** Wątek gry: odczyt profilu, dziennika testu i historii (kopia listy). */
@@ -74,6 +77,7 @@ object PlaytestReportText {
             talkBack = g.touchExplorationActive, reduceShake = p.reduceShake,
             reduceFlash = p.reduceFlash, slowSpeed = g.slowSpeedEnabled(),
             language = L.CODES.getOrElse(L.lang) { "?" },
+            gameMode = g.gameMode,
         )
     }
 
@@ -171,6 +175,7 @@ object PlaytestReportText {
 
         out.append(SECTIONS[4]).append('\n')
         out.append("FPS cap: ").append(if (input.fpsCap == 0) "display" else input.fpsCap.toString()).append('\n')
+        out.append("Game mode: ").append(GameModes.reportName(input.gameMode)).append('\n')
         out.append("Palette: ").append(PALETTES.getOrElse(input.palette) { "?" }).append('\n')
         out.append("Text size: ").append(input.textScale).append("%\n")
         out.append("Left-handed HUD: ").append(yes(input.leftHanded)).append('\n')

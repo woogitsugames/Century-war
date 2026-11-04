@@ -3,6 +3,7 @@ package com.centurywar
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlertDialog
+import android.app.GameManager
 import android.app.TimePickerDialog
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -37,6 +38,7 @@ import com.centurywar.crash.CrashReports
 import com.centurywar.crash.PlaytestReportText
 import com.centurywar.engine.Game
 import com.centurywar.screens.BattleScreen
+import com.centurywar.engine.GameModes
 import com.centurywar.engine.GameView
 import com.centurywar.engine.HapticGate
 import com.centurywar.engine.HapticKind
@@ -311,7 +313,7 @@ class MainActivity : Activity(), Host {
             game.post { game.setInsets(l, t, r, b) }
             insets
         }
-        applyFrameRate(profile.fpsCap)
+        applyFrameRate(game.effectiveFpsCap())
         hideSystemBars()
         if (resumed) resumeGame()
         pendingReplayUri?.let { uri ->
@@ -447,6 +449,9 @@ class MainActivity : Activity(), Host {
         thermalWatch?.start()
         // TalkBack i animacje można przełączyć, gdy gra jest w tle (bez zmiany konfiguracji).
         postSystemAccessibility()
+        // R10-04: tryb gry (oszczędzanie baterii) też zmienia się, gdy gra jest w tle.
+        val mode = readGameMode()
+        game.post { game.applyGameMode(mode) }
         // Powrót z tła następnego dnia: seria logowań i nowe misje (na wątku gry).
         game.post {
             game.checkDailyLogin()
@@ -1058,6 +1063,16 @@ class MainActivity : Activity(), Host {
             if (game.profile.lang.isEmpty()) game.onLanguageChanged()
         }
         postSystemAccessibility()
+    }
+
+    /** R10-04: tryb gry z GameManager (API 31+); błąd albo starszy Android = brak wsparcia. */
+    private fun readGameMode(): Int {
+        if (Build.VERSION.SDK_INT < 31) return GameModes.UNSUPPORTED
+        return try {
+            getSystemService(GameManager::class.java)?.gameMode ?: GameModes.UNSUPPORTED
+        } catch (_: RuntimeException) {
+            GameModes.UNSUPPORTED
+        }
     }
 
     /** R2-03: odczyt na wątku UI, zastosowanie na wątku gry. */
