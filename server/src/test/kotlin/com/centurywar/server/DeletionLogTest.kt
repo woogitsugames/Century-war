@@ -123,10 +123,41 @@ class DeletionLogTest {
             assertEquals("replay-deletions", store.recentAdminLog(1).single().action)
 
             assertEquals(2, runAdmin(listOf("replay-deletions"), store, StringBuilder(), StringBuilder()))
+            assertEquals(2, runAdmin(listOf("replay-deletions", "--since", since, "--since", since), store,
+                StringBuilder(), StringBuilder()))
             assertEquals(2, runAdmin(listOf("replay-deletions", "--since", "wczoraj"), store,
                 StringBuilder(), StringBuilder()))
             assertEquals(1, runAdmin(listOf("replay-deletions", "--since", since, "--from",
                 directory.resolve("brak.db").toString()), store, StringBuilder(), StringBuilder()))
+        }
+    }
+
+    /** Pełna ścieżka z instrukcji: `admin restore` zostawia katalog ratunkowy, z którego czytamy dziennik. */
+    @Test fun replayFromRescueDirectoryLeftByAdminRestore() {
+        val db = directory.resolve("leaderboards.db")
+        val backup = directory.resolve("copy.sqlite")
+        val gone = UUID.randomUUID().toString()
+        val stays = UUID.randomUUID().toString()
+        SqliteStore("jdbc:sqlite:$db", PublicPlayerIds(key)).use { store ->
+            store.add(gone)
+            store.add(stays)
+            store.backupTo(backup)
+            assertTrue(store.deleteOwnedPlayer(gone, installSecretHash(playerSecret), now))
+        }
+        val restoreOut = StringBuilder()
+        assertEquals(0, runRestore(listOf("restore", backup.toString()), db, restoreOut, StringBuilder()))
+        val rescue = restoreOut.lines().first { it.startsWith("previous-files:") }
+            .substringAfter("previous-files: ").trim()
+        SqliteStore("jdbc:sqlite:$db", PublicPlayerIds(key)).use { store ->
+            assertTrue(store.publicIdFor(gone) != null)
+            val out = StringBuilder()
+            assertEquals(0, runAdmin(listOf(
+                "replay-deletions", "--since", LocalDate.ofEpochDay(todayUtc(now)).toString(),
+                "--from", Path.of(rescue).resolve("leaderboards.db").toString(),
+            ), store, out, StringBuilder()), out.toString())
+            assertTrue(out.contains("deleted_players: 1"))
+            assertEquals(null, store.publicIdFor(gone))
+            assertTrue(store.publicIdFor(stays) != null)
         }
     }
 }
