@@ -8,6 +8,7 @@
 - Drobne na później: `AchievementsScreen`/`ModeScreen` liczą dzień z zegara systemowego zamiast `g.clock()`.
 - Następne części tekstów: part204+ (part202 wolna, nieużyta).
 - **Decyzje właściciela 4.11 noc (właściciel śpi do 08:00 UTC, pracować autonomicznie, max 2 agentów opus, nie blokować):** etap 19 łagodzić 0,94 (PROTOCOL 0.8.9, agent `claude/dzien-35-etap-19`); koordynator SAM zatwierdza nowe zrzuty kampanii i wypycha na main po zielonych testach; dopisek „od premiery” przy 4 osiągnięciach zostaje; BEZ ostrzeżenia na etapie 19.
+- `claude/dzien-35-etap-19` GOTOWE poza Gradle: stageRamp 19 = 1.1891f (bitowo = M3 0,94), PROTOCOL 0.8.9, złote powtórki bez zmian (linia powodu dopisana ręcznie — po `regenerateGolden` usunąć duplikat), :sim 317 testów OK. Pomiar: medale 49→65%, medale-czas 71→76%, docelowy 60→72%. Uwaga dla właściciela: docelowy ma teraz etap 19 łatwiejszy niż 18 (60%) — skutek przeskoku badań profilu. W toku: d36 Fold, d37 balans 19–36.
 - **Kolejka nocna (po kolei, gdy wolny slot):** (a) `claude/dzien-36-fold-napisy` R12 poz. 8 — napisy < 10 sp na zewn. Foldzie; (b) `claude/dzien-37-balans-19-36` — symulacja etapów 19–36 i Endless poza Gradle po 0.8.9, raport + propozycje (bez zmian w sim bez decyzji); (c) `claude/dzien-38-serwer` — `docs/tasks/R5-server-hardening.md` (bez wdrożenia); (d) `claude/dzien-39-audyt` — przegląd kodu zmian 3–4.11 (zapis profilu, rozliczenia, ankieta, pętla testowa), poprawki tylko oczywistych błędów.
 
 # SESJA 3.11.2026 po południu (nowy koordynator)
