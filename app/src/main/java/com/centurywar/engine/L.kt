@@ -193,8 +193,16 @@ object L {
         putAll(part198())
         putAll(part196())
         putAll(part200())
+        putAll(part201())
         }
     }
+
+    /** R11 (pozycja 6): „Nowość na tym etapie” w panelu etapu i na mapie kampanii. */
+    private fun part201(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "nov201_new" to t("Nowość: %1\$s", "New: %1\$s", "Neu: %1\$s", "Novedad: %1\$s", "Nouveauté : %1\$s", "Novità: %1\$s", "Novidade: %1\$s", "Новинка: %1\$s", "Nieuw: %1\$s", "Yeni: %1\$s"),
+        "nov201_commander" to t("dowódca", "commander", "Kommandant", "comandante", "commandant", "comandante", "comandante", "командир", "commandant", "komutan"),
+        "nov201_era" to t("%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)", "%1\$s (%2\$s)"),
+    )
 
     /** R11 (pozycja 7): jednorazowa ankieta testera w menu (tylko wersje testowe). */
     private fun part200(): Array<Pair<String, Array<out String>>> = arrayOf(
