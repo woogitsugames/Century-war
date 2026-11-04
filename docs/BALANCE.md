@@ -1893,3 +1893,7 @@ medale; „przed” = stan PROTOCOL 0.8.7):
 
 Wybrane: etap 15 ×0,96 (`stageRamp` 1 → 0,96), etap 16 ×1,02 (0,86 → 0,877, nadal lżej niż
 przed turą 10: 0,93).
+
+Kontrola z korektą w kodzie (`stageRamp` 15 → 0,96, 16 → 0,877): etap 15 jak przy ×0,96
+(54 / 60 / 80%), etap 16 inaczej niż przy ×1,02 (65 / 59 / **92%**; zaokrąglenie aiPower
+zmienia przebieg seedów). Dalszy przegląd samej korekty etapu 16 niżej.
