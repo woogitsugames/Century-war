@@ -122,10 +122,38 @@ class NextGoalTest {
         assertEquals(1, silver.arg)
         assertEquals("Oblężenie tygodnia: 20 fal do progu Srebro", silver.text)
         p.claimWeekly(week, Weekly.threshold(2), week)
+        // R10-02: progi zdobyte, kampania ma komplet gwiazdek: korona Trudnego na etapie 1.
+        assertEquals(NextGoalKind.HARD_STAGE, NextGoals.pick(p, now, null).kind)
+        for (i in Campaign.stages.indices) p.recordHardVictory(i)
         // Wszystko zdobyte: brak celu.
         val none = NextGoals.pick(p, now, null)
         assertEquals(NextGoalKind.NONE, none.kind)
         assertEquals("", none.text)
+    }
+
+    @Test
+    fun hardStageOnlyAfterFullStarsAndWeeklyTiersPicksFirstWithoutCrown() {
+        val p = profile()
+        val week = Missions.utcWeek(now)
+        p.claimWeekly(week, Weekly.threshold(2), week)
+        // Bez kompletu gwiazdek: zwykły etap, nigdy korona.
+        for (i in 0 until Campaign.stages.size - 1) p.stars[i] = 3
+        p.recordHardVictory(0)
+        assertEquals(NextGoalKind.STAGE, NextGoals.pick(p, now, null).kind)
+        p.stars[Campaign.stages.lastIndex] = 1
+        // Próg tygodnia ma pierwszeństwo przed koroną (nowy tydzień, nic nie odebrane).
+        val nextWeek = now + 7 * Missions.DAY_MILLIS
+        assertEquals(NextGoalKind.WEEKLY_TIER, NextGoals.pick(p, nextWeek, null).kind)
+        // Progi zdobyte: pierwszy etap bez korony (etap 1 ma koronę, więc etap 2).
+        val goal = NextGoals.pick(p, now, null)
+        assertEquals(NextGoalKind.HARD_STAGE, goal.kind)
+        assertEquals(1, goal.arg)
+        assertEquals("Trudny: zdobądź koronę na etapie 2 (" + NextGoals.stageNovelty(1) + ")", goal.text)
+        for (i in 1 until 20) p.recordHardVictory(i)
+        assertEquals(20, NextGoals.pick(p, now, Mode.CAMPAIGN).arg)
+        for (i in Campaign.stages.indices) p.recordHardVictory(i)
+        assertEquals(36, p.hardStagesCleared())
+        assertEquals(NextGoalKind.NONE, NextGoals.pick(p, now, null).kind)
     }
 
     @Test
@@ -144,10 +172,22 @@ class NextGoalTest {
         p.medals = 10_000
         for (code in arrayOf("pl", "en", "de", "es", "fr", "it", "pt", "uk", "nl", "tr")) {
             L.setCode(code)
-            for (key in arrayOf("goal179_missions", "goal179_research", "goal179_stage", "goal179_weekly"))
+            for (key in arrayOf("goal179_missions", "goal179_research", "goal179_stage", "goal179_weekly",
+                    "hard189_won", "hard189_todo", "hard189_goal", "hard189_a11y", "hard189_crowns"))
                 assertTrue("$code $key", L[key].isNotBlank() && L[key] != key)
             val text = NextGoals.pick(p, now, null).text
             assertTrue("$code: $text", text.isNotBlank() && !text.contains('%'))
+        }
+        // R10-02: tekst celu korony we wszystkich językach.
+        val done = profile()
+        completeAll(done)
+        val week = Missions.utcWeek(now)
+        done.claimWeekly(week, Weekly.threshold(2), week)
+        for (code in arrayOf("pl", "en", "de", "es", "fr", "it", "pt", "uk", "nl", "tr")) {
+            L.setCode(code)
+            val goal = NextGoals.pick(done, now, null)
+            assertEquals(NextGoalKind.HARD_STAGE, goal.kind)
+            assertTrue("$code: ${goal.text}", goal.text.contains("1") && !goal.text.contains('%'))
         }
     }
 }

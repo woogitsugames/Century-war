@@ -95,6 +95,30 @@ class ProfileTest {
         assertEquals(2, loaded.hardStagesCleared())
     }
 
+    @Test
+    fun hardWonBitsSurviveJsonAndCloudSnapshot() {
+        val p = Profile(tmpFile())
+        assertFalse(p.hardWon(0))
+        for (i in 0 until 4) p.recordHardVictory(i)
+        p.recordHardVictory(9)
+        p.recordHardVictory(35)
+        assertTrue(p.hardWon(0) && p.hardWon(3) && p.hardWon(9) && p.hardWon(35))
+        assertFalse(p.hardWon(4) || p.hardWon(-1) || p.hardWon(36) || p.hardWon(70))
+        assertEquals(4, p.hardWonInEra(0))
+        assertEquals(1, p.hardWonInEra(2))
+        assertEquals(0, p.hardWonInEra(1))
+        assertEquals(1, p.hardWonInEra(8))
+        assertEquals(0, p.hardWonInEra(-1))
+        assertEquals(0, p.hardWonInEra(9))
+        // Odczyt zapisu lokalnego i migawki chmury zachowuje każdy bit.
+        for (json in listOf(p.toJson(), p.toCloudJson())) {
+            val loaded = Profile(tmpFile()).also { it.fromJson(json) }
+            for (i in p.stars.indices) assertEquals("etap $i", p.hardWon(i), loaded.hardWon(i))
+            assertEquals(4, loaded.hardWonInEra(0))
+            assertEquals(6, loaded.hardStagesCleared())
+        }
+    }
+
     private fun tmpFile(): File = File(Files.createTempDirectory("cw").toFile(), "profile.json")
 
     @Test
