@@ -168,6 +168,66 @@ class BannerScreen(g: Game) : Screen(g) {
 
     override fun isDragScreen(): Boolean = true
 
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    private val choiceA11y = arrayOfNulls<String>(BannerCatalog.COUNT)
+    private val choiceA11yKey = IntArray(BannerCatalog.COUNT) { -1 }
+    private var previewA11y = ""
+    private var previewA11yKey = -1
+
+    override fun accessibilityTitle(): String = L["banner_title"]
+
+    private fun stateKey(i: Int): Int =
+        (if (g.profile.bannerUnlocked(i)) 1 else 0) or (if (g.profile.selectedBanner == i) 2 else 0) or
+            (if (selected == i) 4 else 0) or (L.lang shl 3)
+
+    private fun status(i: Int): String = when {
+        i == g.profile.selectedBanner -> L["banner_equipped"]
+        g.profile.bannerUnlocked(i) -> L["banner_unlocked"]
+        else -> L["banner_locked"]
+    }
+
+    override fun accessibilityKey(b: Button): Int = if (b.id in 0 until BannerCatalog.COUNT) stateKey(b.id) else 0
+
+    override fun accessibilityCheckable(b: Button): Boolean = b.id in 0 until BannerCatalog.COUNT
+    override fun accessibilityChecked(b: Button): Boolean =
+        if (b.id in 0 until BannerCatalog.COUNT) selected == b.id else b.selected
+
+    /** Kafelek ma tylko rysunek i nazwę: czytnik dostaje nazwę, stan i warunek odblokowania. */
+    override fun accessibilityLabel(b: Button): String {
+        val i = b.id
+        if (i !in 0 until BannerCatalog.COUNT) return super.accessibilityLabel(b)
+        val key = stateKey(i)
+        val cached = choiceA11y[i]
+        if (cached != null && choiceA11yKey[i] == key) return cached
+        choiceA11yKey[i] = key
+        return (names[i] + ", " + status(i) + ", " + rules[i]).also { choiceA11y[i] = it }
+    }
+
+    override fun accessibilityInfoCount(): Int = 1
+
+    override fun accessibilityInfo(i: Int): String {
+        val key = stateKey(selected) or (selected shl 8)
+        if (key != previewA11yKey) {
+            previewA11yKey = key
+            previewA11y = accessibilitySentences(names[selected], status(selected), rules[selected])
+        }
+        return previewA11y
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) { out.set(preview) }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    override fun accessibilityScroll(direction: Int): Boolean {
+        val moved = accessibilityStep(scroll, maxScroll, gridBottom - gridTop, direction)
+        if (!moved) return false
+        scroll = scrollResult
+        layout()
+        return true
+    }
+
     override fun onDrag(dx: Float, dy: Float) {
         if (maxScroll <= 0f) return
         scroll = (scroll - dy).coerceIn(0f, maxScroll)

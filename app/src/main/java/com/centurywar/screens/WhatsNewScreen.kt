@@ -52,7 +52,8 @@ class WhatsNewScreen(
         }
     }
 
-    private data class Line(val text: String, val y: Float, val heading: Boolean, val bullet: Boolean)
+    /** [release]: indeks wydania w [versions] (−1 = brak wpisów); czytnik czyta całe wydanie naraz. */
+    private data class Line(val text: String, val y: Float, val heading: Boolean, val bullet: Boolean, val release: Int = -1)
     private val lines = ArrayList<Line>(24)
     private var contentTop = 0f
     private var contentBottom = 0f
@@ -103,17 +104,17 @@ class WhatsNewScreen(
         var y = 16 * dp
 
         if (versions.isEmpty()) {
-            lines.add(Line(L["wn_empty"], y, false, false))
+            lines.add(Line(L["wn_empty"], y, false, false, 0))
             y += 26 * dp * ui.textScale
         } else {
             val wrapped = arrayOfNulls<String>(20)
-            for (release in versions) {
-                lines.add(Line(release.version, y, true, false))
+            for ((index, release) in versions.withIndex()) {
+                lines.add(Line(release.version, y, true, false, index))
                 y += 32 * dp * ui.textScale
                 for (key in release.textKeys) {
                     val n = HintFrame.wrapHintInto(ui, L[key], lineWidth, 16f, wrapped)
                     for (i in 0 until n) {
-                        lines.add(Line(wrapped[i] ?: "", y, false, i == 0))
+                        lines.add(Line(wrapped[i] ?: "", y, false, i == 0, index))
                         y += 21 * dp * ui.textScale
                     }
                     y += 11 * dp
@@ -123,11 +124,69 @@ class WhatsNewScreen(
         }
 
         linesHeight = y
+        a11yLang = -1
         maxScroll = max(0f, y - (contentBottom - contentTop))
         scroll = scroll.coerceIn(0f, maxScroll)
     }
 
     override fun isDragScreen() = true
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    private var a11yLang = -1
+    private var a11yTexts = emptyArray<String>()
+
+    override fun accessibilityTitle(): String = L[if (automatic || fromMenu) "wn_title" else "wn_history"]
+
+    /** Jedna informacja na wydanie (numer wersji i jego punkty), gdy choć wiersz jest widoczny. */
+    override fun accessibilityInfoCount(): Int = if (versions.isEmpty()) 1 else versions.size
+
+    override fun accessibilityInfo(i: Int): String {
+        if (a11yLang != L.lang) {
+            a11yLang = L.lang
+            a11yTexts = if (versions.isEmpty()) arrayOf(L["wn_empty"])
+            else Array(versions.size) { r ->
+                val release = versions[r]
+                accessibilitySentences(release.version, *Array(release.textKeys.size) { L[release.textKeys[it]] })
+            }
+        }
+        if (i >= a11yTexts.size || !releaseBounds(i, a11yArea)) return ""
+        return a11yTexts[i]
+    }
+
+    private val a11yArea = RectF()
+
+    /** Obszar widocznych wierszy wydania [release]; false, gdy żaden wiersz nie jest widoczny. */
+    private fun releaseBounds(release: Int, out: RectF): Boolean {
+        var top = Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (k in lines.indices) {
+            val line = lines[k]
+            if (line.release != release) continue
+            val y = contentTop + line.y - scroll
+            val lineTop = y - 20 * dp
+            val lineBottom = y + 6 * dp
+            if (lineBottom <= contentTop || lineTop >= contentBottom) continue
+            if (lineTop < top) top = lineTop
+            if (lineBottom > bottom) bottom = lineBottom
+        }
+        if (top > bottom) return false
+        out.set(panel.left + 9 * dp, max(top, contentTop), panel.right - 9 * dp, min(bottom, contentBottom))
+        return true
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (!releaseBounds(i, out)) out.setEmpty()
+    }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    override fun accessibilityScroll(direction: Int): Boolean {
+        val moved = accessibilityStep(scroll, maxScroll, contentBottom - contentTop, direction)
+        if (moved) scroll = scrollResult
+        return moved
+    }
 
     override fun onDrag(dx: Float, dy: Float) {
         scroll = (scroll - dy).coerceIn(0f, maxScroll)

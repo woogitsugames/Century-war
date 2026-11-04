@@ -58,6 +58,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var dailyPower = ""
     private var dailyRanked = ""
     private var dailyBest = ""
+    private var dailyEventDesc = ""
+    /** R11-01: numer wersji danych karty; tekst dla czytnika powstaje dopiero przy zmianie. */
+    private var a11yVersion = 0
+    private var a11yBuiltVersion = -1
+    private var a11yBuiltWeekly = false
+    private var a11yBuiltLang = -1
+    private var a11yText = ""
     private var week = -1L
     private var weeklyCfg: BattleConfig? = null
     private var weeklyLang = -1
@@ -100,6 +107,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                     endlessKeyWave = pr.bestWave; endlessKeyScore = score; endlessKeyLang = L.lang
                     endlessBest = "${L["best"]}: ${L.f("wave", pr.bestWave)}"
                     endlessScore = if (best == null) "" else "${L["score"]}: ${best.score}"
+                    a11yVersion++
                 }
             }
             Mode.DAILY -> Unit // Karta dzienna i tygodniowa ma własną pamięć podręczną (rebuildDaily/rebuildWeekly).
@@ -108,6 +116,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                 skirmishPower = L.f("ai_power", (aiPower() * 100).toInt())
                 val best = pr.top(Profile.BOARD_SKIRMISH).firstOrNull()
                 skirmishScore = if (best == null) "" else "${L["best"]}: ${best.score}"
+                a11yVersion++
             }
         }
     }
@@ -216,6 +225,12 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         val rule = Daily.ruleSet(day)
         dailyInfoLines = if (event == null && rule == null)
             cachedWrap(L["daily_info"], full, 13f) else emptyArray()
+        dailyEventDesc = when {
+            event != null -> L[event.descriptionKey]
+            rule != null -> L[rule.descriptionKey]
+            else -> L["daily_info"]
+        }
+        a11yVersion++
         dailyEventTitle = when {
             event != null -> L[event.key]
             rule != null -> L[rule.key]
@@ -339,6 +354,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             (if (stackedColumns()) full else (full - 16 * dp) / 2f) - 23 * dp, 12f)
         val score = g.profile.top(Profile.weeklyBoard(week)).firstOrNull()?.score
         weeklyBest = L["best"] + ": " + (score?.toString() ?: L["no_scores"])
+        a11yVersion++
         for (i in 0 until Weekly.TIER_COUNT) {
             tierNames[i] = L.f("weekly_tier", L[when (i) {
                 0 -> "weekly_bronze"; 1 -> "weekly_silver"; else -> "weekly_gold"
@@ -474,6 +490,52 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     }
 
     private fun aiPower() = Skirmish.power(g.profile.skirmishDiff)
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = when (mode) {
+        Mode.ENDLESS -> L["endless"]
+        Mode.DAILY -> if (weeklySelected) L["weekly"] else L["daily"]
+        else -> L["skirmish"]
+    }
+
+    override fun accessibilityEligible(b: Button): Boolean =
+        if (hints.accessibilityOpen) b === hints.okBtn else b !== hints.okBtn
+
+    override fun accessibilityCheckable(b: Button): Boolean = b.id in 0..3 && mode == Mode.SKIRMISH
+
+    override fun accessibilityInfoCount(): Int = 1
+
+    override fun accessibilityInfo(i: Int): String {
+        if (hints.accessibilityOpen) return hints.accessibilityBody
+        if (a11yBuiltVersion == a11yVersion && a11yBuiltWeekly == weeklySelected && a11yBuiltLang == L.lang)
+            return a11yText
+        a11yBuiltVersion = a11yVersion
+        a11yBuiltWeekly = weeklySelected
+        a11yBuiltLang = L.lang
+        val text = when (mode) {
+            Mode.ENDLESS -> accessibilitySentences(L["endless_info"], endlessBest, endlessScore)
+            Mode.DAILY -> if (weeklySelected) {
+                val mask = weeklyClaimMask
+                accessibilitySentences(weeklyInfo, weeklyEras, weeklyCard, weeklyMods, weeklyBest,
+                    tierText(0, mask), tierText(1, mask), tierText(2, mask))
+            } else accessibilitySentences(
+                if (dailyEventTitle.isEmpty()) "" else "$dailyEventTitle:", dailyEventDesc,
+                dailyEras, dailyPower, if (dailyWeather.isEmpty()) "" else L.f("a196_weather", dailyWeather),
+                dailyMods, dailyBest, dailyRanked)
+            else -> accessibilitySentences(skirmishRange, skirmishPower, skirmishScore)
+        }
+        // Ten sam tekst (np. odświeżenie co sekundę) nie przebudowuje drzewa.
+        if (text != a11yText) a11yText = text
+        return a11yText
+    }
+
+    private fun tierText(i: Int, mask: Int): String =
+        if (mask and (1 shl i) != 0) tierNames[i] + ", " + L["a196_done"] else tierNames[i]
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (hints.accessibilityOpen) hints.accessibilityBounds(out) else out.set(panel)
+    }
 
 
     override fun onClick(b: Button) {

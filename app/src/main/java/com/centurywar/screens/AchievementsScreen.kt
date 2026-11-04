@@ -40,6 +40,9 @@ class AchievementsScreen(g: Game) : Screen(g) {
     private var maxScroll = 0f
     private var rowH = 90f
     private var dt = 0f
+    private val rowA11y = Array(defs.size) { "" }
+    private val rowA11yKey = LongArray(defs.size) { -1L }
+    private val a11yRow = RectF()
 
     override fun isDragScreen() = true
 
@@ -165,6 +168,57 @@ class AchievementsScreen(g: Game) : Screen(g) {
         Icons.draw(c, Icons.MEDAL, right, y + 30 * dp, 21 * dp, dp = dp)
         ui.textO(c, if (hidden) "?" else rewardText[i], right, y + 56 * dp,
             13f, Ui.GOLD, Paint.Align.CENTER)
+    }
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = L["records"]
+
+    /** Wiersze 0..n−1 (tylko widoczne), potem licznik zdobytych. */
+    override fun accessibilityInfoCount(): Int = defs.size + 1
+
+    private fun rowTop(i: Int) = panel.top + 12 * dp + i * (rowH + 8 * dp) - scroll
+
+    private fun rowVisible(i: Int): Boolean {
+        val y = rowTop(i)
+        return y + rowH > panel.top + 3 * dp && y < panel.bottom - 42 * dp
+    }
+
+    override fun accessibilityInfo(i: Int): String {
+        if (i == defs.size) return completeText
+        if (!rowVisible(i)) return ""
+        val a = defs[i]
+        val unlocked = Achievements.isUnlocked(g.profile, a.id)
+        val hidden = a.hidden && !unlocked
+        val key = lastProgress[i] * 64 + (if (unlocked) 32 else 0) + L.lang
+        if (rowA11yKey[i] != key) {
+            rowA11yKey[i] = key
+            rowA11y[i] = if (hidden) accessibilitySentences(L["achievement_hidden"], L["achievement_hidden_desc"])
+            else accessibilitySentences(names[i], descriptions[i],
+                if (unlocked) L["a196_unlocked"] else L.f("a196_progress", lastProgress[i], a.threshold),
+                L.f("a196_reward", L.plural("medals_n", a.medalReward.toLong())))
+        }
+        return rowA11y[i]
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (i == defs.size) {
+            out.set(panel.left, panel.bottom - 42 * dp, panel.right, panel.bottom)
+            return
+        }
+        val y = rowTop(i)
+        a11yRow.set(panel.left + 12 * dp, y, panel.right - 12 * dp, y + rowH)
+        out.set(a11yRow)
+        if (!out.intersect(panel.left, panel.top + 3 * dp, panel.right, panel.bottom - 42 * dp)) out.setEmpty()
+    }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    override fun accessibilityScroll(direction: Int): Boolean {
+        val moved = accessibilityStep(scroll, maxScroll, panel.height() - 46 * dp, direction)
+        if (moved) scroll = scrollResult
+        return moved
     }
 
     override fun onClick(b: Button) {

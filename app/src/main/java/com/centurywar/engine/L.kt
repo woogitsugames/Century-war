@@ -218,6 +218,8 @@ object L {
         "a196_medals" to t("Masz %1\$s", "You have %1\$s", "Du hast %1\$s", "Tienes %1\$s", "Tu as %1\$s", "Hai %1\$s", "Você tem %1\$s", "У тебе %1\$s", "Je hebt %1\$s", "Sahip olduğun: %1\$s"),
         "a196_progress" to t("postęp %1\$d z %2\$d", "progress %1\$d of %2\$d", "Fortschritt %1\$d von %2\$d", "progreso %1\$d de %2\$d", "progression %1\$d sur %2\$d", "progresso %1\$d di %2\$d", "progresso %1\$d de %2\$d", "прогрес %1\$d з %2\$d", "voortgang %1\$d van %2\$d", "ilerleme %1\$d/%2\$d"),
         "a196_reward" to t("nagroda %1\$s", "reward %1\$s", "Belohnung %1\$s", "recompensa %1\$s", "récompense %1\$s", "ricompensa %1\$s", "recompensa %1\$s", "нагорода %1\$s", "beloning %1\$s", "ödül %1\$s"),
+        "a196_power_down" to t("słabszy przeciwnik", "weaker enemy", "schwächerer Gegner", "enemigo más débil", "ennemi plus faible", "nemico più debole", "inimigo mais fraco", "слабший суперник", "zwakkere tegenstander", "daha zayıf rakip"),
+        "a196_power_up" to t("silniejszy przeciwnik", "stronger enemy", "stärkerer Gegner", "enemigo más fuerte", "ennemi plus fort", "nemico più forte", "inimigo mais forte", "сильніший суперник", "sterkere tegenstander", "daha güçlü rakip"),
         "a196_unlocked" to t("zdobyte", "unlocked", "freigeschaltet", "desbloqueado", "débloqué", "sbloccato", "desbloqueado", "здобуто", "ontgrendeld", "açıldı"),
     )
 

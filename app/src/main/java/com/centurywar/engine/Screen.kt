@@ -93,6 +93,22 @@ abstract class Screen(val g: Game) {
     }
     protected var scrollResult = 0f
 
+    /** Zdania dla czytnika: pomija puste części i nie podwaja kropki. Tylko przy przebudowie tekstu. */
+    protected fun accessibilitySentences(vararg parts: String): String {
+        val out = StringBuilder()
+        for (p in parts) {
+            val t = p.trim()
+            if (t.isEmpty()) continue
+            if (out.isNotEmpty()) {
+                val last = out[out.length - 1]
+                if (last != '.' && last != '!' && last != '?' && last != ':') out.append('.')
+                out.append(' ')
+            }
+            out.append(t)
+        }
+        return out.toString()
+    }
+
     /** Nadpisz dla dynamicznych opisów; domyślnie odczytuje opis przycisku. */
     open fun onLongPress(b: Button): Boolean {
         if (b.tooltipTitle.isEmpty()) return false
