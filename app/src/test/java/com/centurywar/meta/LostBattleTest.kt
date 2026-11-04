@@ -173,7 +173,7 @@ class LostBattleTest {
                 assertTrue(weekly[0].contains(L.f("lost188_weekly", 23)))
             }
             L.setCode("pl")
-            assertEquals("Gra została zaktualizowana. Przerwanej bitwy (Oblężenie bez końca, fala 23) nie da się wznowić.",
+            assertEquals("Gra zaktualizowana. Bitwy (Oblężenie bez końca, fala 23) nie da się wznowić.",
                 LostBattle.notices(meta(), LostBattle.Settlement(75, false))[0])
             assertEquals("Otrzymujesz 75 medali.", LostBattle.notices(meta(), LostBattle.Settlement(75, false))[1])
         } finally { L.lang = old }

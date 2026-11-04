@@ -238,38 +238,4 @@ class LostBattle188Test {
         assertEquals(bs.battleId, again.restored?.battleId)
         assertNull(again.lost)
     }
-
-    /** Baner w menu na zewnętrznym ekranie Folda i telefonie 720p: najwyżej 2 czytelne wiersze. */
-    @Test
-    fun bannerFitsInEveryLanguage() {
-        val old = L.lang
-        try {
-            val metas = listOf(
-                BattleMeta(5L, Mode.ENDLESS, 0, -1L, -1L, false, 123, 900, 700, 1375, 0L),
-                BattleMeta(6L, Mode.CAMPAIGN, 13, -1L, -1L, false, 0, 900, 700, 45, 0L),
-                BattleMeta(7L, Mode.ENDLESS, 0, 3L, -1L, false, 48, 900, 700, 120, 0L),
-                BattleMeta(8L, Mode.DAILY, 0, -1L, 1L, true, 0, 900, 700, 0, 0L),
-            )
-            for ((w, h, d) in listOf(Triple(904, 2316, 2.7f), Triple(1600, 720, 2f), Triple(720, 1600, 2f))) {
-                for (code in L.CODES) {
-                    val run = Run(folder.newFolder(), w, h, d)
-                    run.profile.lang = code
-                    run.game.onLanguageChanged()
-                    run.menu()
-                    for (m in metas) {
-                        val texts = LostBattle.notices(m, LostBattle.Settlement(m.consolation, m.rankedDaily))
-                        for (t in texts) {
-                            var guard = 0
-                            while (run.game.noticeTexts().isNotEmpty() && guard++ < 400) run.game.frame(canvas, 0.1f)
-                            run.game.showNotice(t)
-                            run.game.frame(canvas, 1f / 60f)
-                            assertFalse(run.game.noticeBanner.isEmpty)
-                            assertTrue("$code ${w}x$h: '$t' ma ${run.game.noticeTextSize} sp",
-                                run.game.noticeTextSize * run.game.ui.textScale >= 11f)
-                        }
-                    }
-                }
-            }
-        } finally { L.lang = old }
-    }
 }

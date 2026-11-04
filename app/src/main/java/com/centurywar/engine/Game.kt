@@ -349,6 +349,10 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     /** Do testów: bieżący i oczekujące teksty banerów. */
     internal fun noticeTexts(): List<String> =
         (if (achievementSeconds > 0f) listOf(achievementMessage) else emptyList()) + noticeQueue
+    /** Do testów: usuwa bieżący i oczekujące banery. */
+    internal fun clearNotices() {
+        noticeQueue.clear(); noticeIcons.clear(); achievementSeconds = 0f
+    }
 
     /** Górna krawędź banera: poniżej Wstecz (insetT + 58 dp) i wstęgi tytułu z jej końcówkami. */
     internal fun noticeTopBelowTitle(): Float {
