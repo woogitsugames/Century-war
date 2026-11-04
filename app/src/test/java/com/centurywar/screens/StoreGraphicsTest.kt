@@ -1048,6 +1048,8 @@ class StoreGraphicsTest {
             tune()
         }
         val g = Game(host, profile, Quality.HIGH)
+        // R12-05: zrzuty sklepu pokazują wersję produkcyjną, bez dopisków „od premiery”.
+        g.preReleaseNotesEnabled = false
         g.density = device.density
         g.resize(device.width, device.height, device.width, device.height)
         // Zniknie powiadomienie o premii logowania, zanim powstanie pierwszy kadr.

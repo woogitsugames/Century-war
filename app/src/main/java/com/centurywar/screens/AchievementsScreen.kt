@@ -8,9 +8,12 @@ import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
+import com.centurywar.engine.RowNote
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
+import com.centurywar.game.Daily
 import com.centurywar.meta.Achievements
+import com.centurywar.meta.PreReleaseRules
 import kotlin.math.max
 import kotlin.math.min
 
@@ -43,6 +46,13 @@ class AchievementsScreen(g: Game) : Screen(g) {
     private val rowA11y = Array(defs.size) { "" }
     private val rowA11yKey = LongArray(defs.size) { -1L }
     private val a11yRow = RectF()
+    /**
+     * R12 (pozycja 5): „Dostępne od premiery” w wierszu postępu (wersja testowa przed premierą).
+     * Stałe 11 sp, za długi tekst kończy się „…” (zewnętrzny Fold). Czytnik ekranu bez zmian.
+     */
+    private val noteText = Array(defs.size) { "" }
+    private val noteX = FloatArray(defs.size)
+    private var today = Daily.dayNumber()
 
     override fun isDragScreen() = true
 
@@ -73,6 +83,15 @@ class AchievementsScreen(g: Game) : Screen(g) {
                 }
             }
         }
+        val note = L["t203_ach_release"]
+        for (i in defs.indices) {
+            noteText[i] = ""
+            if (!PreReleaseRules.lockedBeforeRelease(defs[i].metric)) continue
+            val threshold = defs[i].threshold.toString()
+            noteX[i] = ui.measure("$threshold/$threshold", NOTE_SP, true) + 10 * dp
+            val avail = textWidth - noteX[i]
+            if (avail > 24 * dp) noteText[i] = RowNote.ellipsize(ui, note, NOTE_SP, avail)
+        }
         refreshProgress()
     }
 
@@ -100,6 +119,7 @@ class AchievementsScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
+        today = Daily.dayNumber()
         refreshProgress()
     }
 
@@ -163,6 +183,9 @@ class AchievementsScreen(g: Game) : Screen(g) {
             ui.bar(c, tx, y + (if (twoLines) 63 else 56) * dp, max(12 * dp, textWidth - 90 * dp), 7 * dp,
                 lastProgress[i].toFloat() / a.threshold.toFloat(), if (unlocked) Ui.GOOD else Ui.XP)
             ui.textO(c, progressText[i], tx, y + (if (twoLines) 81 else 78) * dp, 11f, Ui.DIM)
+            if (noteText[i].isNotEmpty() &&
+                PreReleaseRules.achievementNote(a, unlocked, g.preReleaseNotesEnabled, today))
+                ui.textO(c, noteText[i], tx + noteX[i], y + (if (twoLines) 81 else 78) * dp, NOTE_SP, Ui.GOLD)
         }
         val right = row.right - 23 * dp
         Icons.draw(c, Icons.MEDAL, right, y + 30 * dp, 21 * dp, dp = dp)
@@ -224,5 +247,10 @@ class AchievementsScreen(g: Game) : Screen(g) {
     override fun onClick(b: Button) {
         if (recordsTabs.onClick(b)) return
         if (b.id == -1) g.pop()
+    }
+
+    private companion object {
+        /** R12-05: dopisek nigdy mniejszy niż 11 sp; zamiast zmniejszania — wielokropek. */
+        const val NOTE_SP = 11f
     }
 }

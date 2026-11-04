@@ -8,6 +8,7 @@ import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
+import com.centurywar.engine.RowNote
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Skirmish
@@ -17,6 +18,7 @@ import com.centurywar.game.DailyEvent
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Weekly
+import com.centurywar.meta.PreReleaseRules
 import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
@@ -82,6 +84,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private val tierColors = intArrayOf(
         Color.rgb(191, 117, 62), Color.rgb(184, 194, 211), Color.rgb(236, 193, 62),
     )
+
+    /**
+     * R12 (pozycja 5): „Wersja testowa: pełne zasady wyzwań od premiery” pod przyciskiem Graj
+     * (wyzwanie dnia i tygodnia, wersja testowa przed premierą). Stałe 11 sp; na wąskim panelu
+     * krótsza wersja, a w ostateczności wielokropek. Czytnik ekranu bez zmian.
+     */
+    private var rulesNote = ""
 
     private var labelTimer = 0f
     private var endlessBest = ""
@@ -153,6 +162,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyTab.iconId = Icons.MEDAL
         dailyTab.visible = mode == Mode.DAILY
         weeklyTab.visible = mode == Mode.DAILY
+        rulesNote = ""
+        if (mode == Mode.DAILY) {
+            val noteW = pw - 32 * dp
+            val longNote = L["t203_rules_note"]
+            rulesNote = if (ui.measure(longNote, NOTE_SP, true) <= noteW) longNote
+                else RowNote.ellipsize(ui, L["t203_rules_note_short"], NOTE_SP, noteW)
+        }
         weeklyLang = -1 // Po zmianie rozmiaru ekranu przelicz szerokości tekstu.
         dailyLang = -1
         val gap = 8 * dp
@@ -447,6 +463,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         if (mode == Mode.DAILY) {
             if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
+            // Pas 24 dp pod przyciskiem Graj (start.r.bottom = panel.bottom − 24 dp) jest pusty.
+            if (rulesNote.isNotEmpty() && PreReleaseRules.active(g.preReleaseNotesEnabled, day))
+                ui.textO(c, rulesNote, panel.centerX(), panel.bottom - 8 * dp, NOTE_SP, Ui.DIM, Paint.Align.CENTER)
             for (bi in buttons.indices) { val b = buttons[bi]; if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f) }
             ui.button(c, start, 20f)
             hints.draw(c)
@@ -566,5 +585,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             10 -> weeklySelected = false
             11 -> weeklySelected = true
         }
+    }
+
+    private companion object {
+        /** R12-05: linia o zasadach od premiery nigdy mniejsza niż 11 sp. */
+        const val NOTE_SP = 11f
     }
 }
