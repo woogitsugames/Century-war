@@ -32,6 +32,7 @@ class Music internal constructor(
     companion object {
         const val MENU = MusicSynth.MENU
         private const val CHUNK_SAMPLES = 2048
+        private const val CHUNK_S = CHUNK_SAMPLES.toFloat() / MusicSynth.SAMPLE_RATE
         /** Sen, gdy bufor AudioTrack jest pełny (~1/3 porcji). */
         private const val FULL_SLEEP_MS = 15L
         /** R6-02 M6: pierwszy ponowny odczyt cudzej muzyki (wygaszanie innej aplikacji). */
@@ -48,6 +49,10 @@ class Music internal constructor(
     @Volatile private var volume = 0.5f
     private val duckPriority = DuckPriority()
     @Volatile private var duckSerial = 0
+    /** Oddech syntezy w bitwie (jak [RecordedMixer]); przeżywa pauzę wątku. */
+    internal val synthBreath = MusicBreath()
+    /** Wynik bitwy pokazany: do zmiany utworu synteza nie robi oddechu (jak nagrania po przerywniku). */
+    @Volatile private var resultShown = false
     private var foreground = false
     private var released = false
     /** Bieżący wątek; stary wątek kończy pracę, gdy przestaje być bieżącym. */
@@ -133,6 +138,7 @@ class Music internal constructor(
         val e = if (newEra == MENU) MENU else newEra.coerceIn(0, com.centurywar.game.Defs.ERA_COUNT - 1)
         if (e == era) return
         era = e
+        resultShown = false
         // Wołane co klatkę: źródło przeliczamy tylko przy zmianie i tylko, gdy są nagrania.
         if (recorded != null) refreshSource()
     }
@@ -168,6 +174,7 @@ class Music internal constructor(
      */
     @Synchronized
     fun playResultStinger(victory: Boolean): Boolean {
+        resultShown = true
         val rec = recorded ?: return false
         val name = if (victory) MusicCatalog.VICTORY_TRACK else MusicCatalog.DEFEAT_TRACK
         if (!catalog.has(name) || !rec.isActive) return false
@@ -324,7 +331,9 @@ class Music internal constructor(
                 synth.setSeed(themeSeed)
                 synth.setEra(era)
                 synth.setIntensity(intensity)
-                synth.renderPcm(pcm, pcm.size, volume)
+                synthBreath.update(CHUNK_S, era != MENU, RecordedMixer.battleWeight(intensity), resultShown)
+                // Krok co porcję (~0,09 s, ≤ 0,6 dB) wygładza jeszcze filtr głośności syntezy.
+                synth.renderPcm(pcm, pcm.size, volume * synthBreath.gain)
                 var written = 0
                 // Zapis nieblokujący: pauza nie czeka na zwolnienie bufora sprzętowego.
                 while (written < pcm.size && worker === me) {

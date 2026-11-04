@@ -31,6 +31,8 @@ internal class RecordedMixer(
     private val loopGain: Float = 1f,
     /** Mnożnik przerywnika względem suwaka (na urządzeniu [STINGER_GAIN]). */
     private val stingerGain: Float = 1f,
+    /** Oddech muzyki bitwy; na urządzeniu przeżywa pauzę (należy do [RecordedMusic]). */
+    val breath: MusicBreath = MusicBreath(),
 ) {
     companion object {
         const val NONE = Int.MIN_VALUE
@@ -177,8 +179,14 @@ internal class RecordedMixer(
             else loopProgress = (loopProgress + step / STINGER_RETURN_S).coerceAtMost(1f)
         }
 
+        // Oddech tylko w muzyce bitwy (epoka), nigdy w menu ani w trakcie przerywnika i powrotu po nim.
+        val battle = requested != NONE && requested != Music.MENU
+        val afterStinger = stinger != null || loopProgress < 1f || sinceStinger < STINGER_GAP_S
+        breath.update(step, battle, mix, afterStinger)
+
         val vol = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 0f
-        val base = vol * loopGain * duckLevel * loopLevel
+        // Sygnał (duck) i oddech się nie sumują: obowiązuje głębsze z dwóch ściszeń.
+        val base = vol * loopGain * minOf(duckLevel, breath.gain) * loopLevel
         current?.let { apply(it, base) }
         outgoing?.let { apply(it, base) }
         stinger?.setVolume(vol * stingerGain)

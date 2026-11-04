@@ -33,6 +33,8 @@ internal class RecordedMusic(
     private val stingerRequest = AtomicInteger(STINGER_NONE)
     private val trimRequest = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var worker: Thread? = null
+    /** Oddech muzyki bitwy przeżywa pauzę (nowy wątek dostaje ten sam stan, zegar stoi w tle). */
+    internal val breath = MusicBreath()
 
     val isActive: Boolean get() = worker != null
 
@@ -67,7 +69,7 @@ internal class RecordedMusic(
     private fun run() {
         val me = Thread.currentThread()
         try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) } catch (_: RuntimeException) { }
-        val mixer = RecordedMixer(catalogRef, factory, onBroken, RecordedMixer.LOOP_GAIN, RecordedMixer.STINGER_GAIN)
+        val mixer = RecordedMixer(catalogRef, factory, onBroken, RecordedMixer.LOOP_GAIN, RecordedMixer.STINGER_GAIN, breath)
         var last = System.nanoTime()
         try {
             while (worker === me) {
