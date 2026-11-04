@@ -107,4 +107,52 @@ class PlaytestReportTextTest {
         assertTrue(text.contains("Game mode: standard\n"))
         assertTrue(text.length <= PlaytestReportText.MAX_CHARS)
     }
+
+    /** D45: lejek kampanii — jedna linia na etap, od najwyższego, stały format po angielsku. */
+    @Test
+    fun campaignFunnelLines() {
+        val g = game()
+        assertTrue(build(g).contains("[Campaign stages]\n-\n\n[Play time]"))
+        val log = g.playtest!!
+        val now = 1_790_000_000_000L
+        log.battleSettled(true, false, false, 100L, true, now, stage = 18, battleSeconds = 600, commander = true)
+        log.battleSettled(true, false, true, 130L, true, now, stage = 18, battleSeconds = 30)
+        log.battleSettled(true, false, false, 300L, true, now, stage = 18, battleSeconds = 500, commander = true)
+        log.battleSettled(true, true, false, 900L, true, now, stage = 18, battleSeconds = 2_010, commander = true)
+        log.battleSettled(true, true, false, 1_000L, true, now, stage = 0, battleSeconds = 59)
+        val text = build(g)
+        assertTrue(text, text.contains("[Campaign stages]\nS19: 4 tries, 1 win, 1 surr, 52m, cmd 3\n" +
+            "S1: 1 try, 1 win, 0 surr, 0m, cmd 0\n\n[Play time]"))
+        // Ankieta zostaje pierwsza, lejek po postępie.
+        assertTrue(text.indexOf("[Tester survey]") < text.indexOf("[Progress]"))
+        assertTrue(text.indexOf("[Progress]") < text.indexOf("[Campaign stages]"))
+        assertFalse(text.contains("lower stages"))
+    }
+
+    /** D45: wszystkie 36 etapów z ogromnymi liczbami — 15 wierszy, reszta jednym wierszem, bez obcięcia. */
+    @Test
+    fun campaignFunnelStaysWithinLimit() {
+        val g = game()
+        g.profile.playSeconds = Long.MAX_VALUE / 2
+        val log = g.playtest!!
+        val now = 1_790_000_000_000L
+        for (i in 0 until 7) {
+            log.startSession(now + i * 86_400_000L, 0L)
+            log.perfSample(99999f, 99, Long.MAX_VALUE / 4, 9)
+        }
+        for (stage in 0 until PlaytestLog.STAGE_COUNT) repeat(3) {
+            log.battleSettled(true, it == 0, it == 1, 100L, true, now, stage = stage,
+                battleSeconds = Int.MAX_VALUE, commander = true)
+        }
+        repeat(30) { g.history!!.add(BattleHistory.Record(date = now, mode = Mode.CAMPAIGN.ordinal, stage = 35, seconds = Int.MAX_VALUE)) }
+        g.history!!.awaitWrites()
+        val text = build(g)
+        assertTrue(text.length <= PlaytestReportText.MAX_CHARS)
+        assertTrue("Raport nie jest obcięty", text.endsWith("Battle speed x1/2: no\n"))
+        for (section in PlaytestReportText.SECTIONS) assertTrue(section, text.contains(section))
+        val lines = Regex("(?m)^S(\\d+): 3 tries, 1 win, 1 surr, \\d+m, cmd 3$").findAll(text).map { it.groupValues[1].toInt() }.toList()
+        assertEquals(PlaytestReportText.MAX_STAGE_LINES, lines.size)
+        assertEquals("Od najwyższego etapu", (36 downTo 22).toList(), lines)
+        assertTrue(text.contains("S22: 3 tries, 1 win, 1 surr, 166666m, cmd 3\n(+21 lower stages)\n\n[Play time]"))
+    }
 }

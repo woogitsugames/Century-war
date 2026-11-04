@@ -70,7 +70,9 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
                  mode_battles=(12, 3, 3, 2), mode_wins=(9, 2, 2, 1), mode_s=(3600, 1200, 1200, 1200),
                  screens=0b11, recent=(), perf=((18.4, 2, 5, 1),), quality_setting=0, quality_level=2,
                  reduction=0, max_steps=4, gpu=0, fps_cap=0, game_mode="standard", palette=0, text_scale=100,
-                 left=False, talkback=False, shake=False, flash=False, slow=False, max_chars=6000):
+                 left=False, talkback=False, shake=False, flash=False, slow=False, max_chars=6000,
+                 stages=None):
+    """`stages=None` — raport sprzed d45 (bez lejka); inaczej lista (etap od 0, próby, wygrane, kap., s, dowódca)."""
     o = ["Century War - tester report\n", f"Version: {version}\n", f"Device: {model}\n",
          f"Android: {android}\n", f"Language: {language}\n\n", "[Tester survey]\n"]
     if survey == 1:
@@ -88,6 +90,17 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
     o.append(f"Win streak: {win_streak} (best {best_win_streak})\n")
     o.append(f"Campaign loss streak: {loss_streak} (max {max_loss_streak})\n")
     o.append(f"Login streak: {login_streak}\n\n")
+    if stages is not None:
+        o.append(pm.FUNNEL_SECTION + "\n")
+        tried = sorted((s for s in stages if s[1] > 0), key=lambda s: -s[0])
+        if not tried:
+            o.append("-\n")
+        for st, tries, wins, surr, sec, cmd in tried[:15]:
+            o.append(f"S{st + 1}: {tries} {'try' if tries == 1 else 'tries'}, {wins} {'win' if wins == 1 else 'wins'}, "
+                     f"{surr} surr, {max(sec, 0) // 60}m, cmd {cmd}\n")
+        if len(tried) > 15:
+            o.append(f"(+{len(tried) - 15} lower stages)\n")
+        o.append("\n")
     o.append("[Play time]\n")
     o.append(f"First day (UTC): {_day(first_day)}, last day: {_day(last_day)}\n")
     o.append(f"Days played: {days_played}, sessions: {sessions}\n")
@@ -170,6 +183,10 @@ class PlaytestMergeTest(unittest.TestCase):
                       "Left-handed HUD: ", "TalkBack: ", "Reduce shake/flash: ", pm.LAST_LABEL):
             self.assertIn(label.strip() if label.strip() else label, kt, label)
         self.assertIn("MAX_CHARS = 6_000", kt)
+        # Lejek kampanii (d45).
+        self.assertIn(f'"{pm.FUNNEL_SECTION}"', kt)
+        for label in ('" try, "', '" tries, "', '" win, "', '" wins, "', '" surr, "', '"m, cmd "', '" lower stages)', "MAX_STAGE_LINES = 15"):
+            self.assertIn(label, kt, label)
 
     def test_fixture_matches_builder_and_parses(self):
         text = FIXTURE.read_text(encoding="utf-8")
@@ -383,18 +400,47 @@ class PlaytestMergeTest(unittest.TestCase):
             self.assertTrue(all(r.key.startswith("model:") for r in reports))
 
     def test_future_v2_fields(self):
-        v2 = build_report().replace("Language: pl\n", "Language: pl\nReport format: 2\nTester code: K7QM\n"
-                                    "Crashes: 1\nANRs: 0\n")
-        v2 = v2.replace("Screens visited:", "S19: 4 tries, 1 win, 0 surr, 52m, cmd 3\nScreens visited:")
+        v2 = build_report(stages=[(18, 4, 1, 0, 52 * 60 + 59, 3)]).replace(
+            "Language: pl\n", "Language: pl\nReport format: 2\nTester code: K7QM\nCrashes: 1\nANRs: 0\n")
         r = pm.parse_report(v2, "v2")
         self.assertEqual((r.format, r.get("tester_code"), r.get("crashes")), (2, "K7QM", "1"))
-        self.assertEqual(r.stages[19], (4, 1, 0, 3))
+        self.assertEqual(r.stages[19], (4, 1, 0, 52, 3))
         self.assertEqual(r.status, "ok", r.problems)
         pm.assign_keys([r])
         self.assertEqual(r.key, "kod:K7QM")
         r.day = 10
         checks = pm.evaluate([], [r], [r], {})
         self.assertIn("suma w raportach: 1", next(c for c in checks if c.num == "2.2").value)
+
+    def test_campaign_funnel_section(self):
+        """d45: sekcja `[Campaign stages]` w formacie PlaytestReportText.appendStage."""
+        stages = [(i, 3, 1, 1, 10_000_000, 3) for i in range(36)]
+        text = build_report(stages=stages)
+        self.assertIn("S36: 3 tries, 1 win, 1 surr, 166666m, cmd 3\n", text)
+        self.assertIn("S22: 3 tries, 1 win, 1 surr, 166666m, cmd 3\n(+21 lower stages)\n\n[Play time]", text)
+        r = pm.parse_report(text, "f")
+        self.assertEqual(r.status, "ok", r.problems)
+        self.assertEqual(sorted(r.stages), list(range(22, 37)))
+        self.assertEqual(r.get("stages_hidden"), 21)
+        # Pusty lejek i liczba pojedyncza.
+        empty = pm.parse_report(build_report(stages=[]), "e")
+        self.assertEqual((empty.status, empty.stages), ("ok", {}), empty.problems)
+        one = pm.parse_report(build_report(stages=[(0, 1, 1, 0, 59, 0), (4, 2, 0, 2, 600, 1)]), "o")
+        self.assertEqual(one.stages, {1: (1, 1, 0, 0, 0), 5: (2, 0, 2, 10, 1)})
+        # Wklejone w pole jednowierszowe.
+        flat = pm.normalize(build_report(stages=[(18, 4, 1, 0, 3120, 3), (17, 1, 1, 0, 400, 0)]).replace("\n", " "))
+        r = pm.parse_report(flat, "flat")
+        self.assertEqual(r.stages, {19: (4, 1, 0, 52, 3), 18: (1, 1, 0, 6, 0)})
+        self.assertEqual(r.status, "ok", r.problems)
+        flat_empty = pm.parse_report(pm.normalize(build_report(stages=[]).replace("\n", " ")), "fe")
+        self.assertEqual(flat_empty.status, "ok", flat_empty.problems)
+        # 2.10: lejek i dowódca na S19 w uwadze.
+        a = pm.parse_report(build_report(stages=[(18, 5, 1, 1, 3000, 4)], max_loss_streak=6), "a")
+        b = pm.parse_report(build_report(stages=[(18, 2, 0, 0, 900, 0), (8, 1, 1, 0, 300, 0)]), "b")
+        a.day = b.day = 10
+        c210 = next(c for c in pm.evaluate([], [a, b], [a, b], {}) if c.num == "2.10")
+        self.assertIn("S19: 6 nieudanych z 7 prób (2 os.)", c210.note)
+        self.assertIn("dowódca na S19: 4/7 bitew", c210.note)
 
     def test_cli_writes_markdown_and_csv(self):
         with tempfile.TemporaryDirectory() as tmp:

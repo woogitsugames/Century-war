@@ -78,6 +78,8 @@ HEADER = "Century War - tester report"
 PROBLEM_HEADER = "Century War - raport techniczny"  # CrashReportText („Zgłoś problem”)
 SECTIONS = ("[Tester survey]", "[Progress]", "[Play time]", "[Modes]", "[Performance]", "[Settings]")
 LAST_LABEL = "Battle speed x1/2:"
+# Lejek kampanii (d45, R13 TOP 5 poz. 2): sekcja opcjonalna, raporty sprzed d45 jej nie mają.
+FUNNEL_SECTION = "[Campaign stages]"
 MODES = ("CAMPAIGN", "SKIRMISH", "ENDLESS", "DAILY")
 SCREEN_NAMES = ("Codex", "Research", "Missions", "Replays", "Accessibility",
                 "Skirmish", "Endless", "Daily", "Weekly")
@@ -115,7 +117,11 @@ FUTURE_FIELDS = {
     "day_map": (re.compile(r"^Day map[^:]*:\s*([01]+)"), ("2.5",)),
     "research_levels": (re.compile(r"^Research levels:\s*(\d+)"), ("2.10",)),
 }
-STAGE_LINE = re.compile(r"^S(\d+):\s*(\d+) tries?, (\d+) wins?, (\d+) surr, .*?cmd (\d+)")
+# Wiersz lejka z PlaytestReportText.appendStage: `S19: 4 tries, 1 win, 0 surr, 52m, cmd 3`
+# (etap od 1; „try/tries”, „win/wins”; czas bitew w pełnych minutach; cmd = bitwy z dowódcą).
+STAGE_LINE = re.compile(r"^S(\d+): (\d+) (?:try|tries), (\d+) wins?, (\d+) surr, (\d+)m, cmd (\d+)$")
+# Etapy ponad limit 15 wierszy (niższe): `(+21 lower stages)`.
+STAGE_MORE = re.compile(r"^\(\+(\d+) lower stages?\)$")
 
 DURATION = r"(?:(\d+)h (\d+)m|(\d+)m (\d+)s)"
 RE = {
@@ -156,7 +162,7 @@ RE = {
     "slow": re.compile(r"^Battle speed x1/2: (yes|no)"),
 }
 # Etykiety, przed którymi wstawiamy podział linii, gdy wklejony tekst stracił nowe linie.
-REFLOW_LABELS = list(SECTIONS) + [
+REFLOW_LABELS = list(SECTIONS) + [FUNNEL_SECTION] + [
     "Version:", "Device:", "Android:", "Language:", "Rating:", "Biggest issue:", "Not asked yet",
     "Campaign: stage", "Tutorial done:", "First win:", "Best Endless wave:", "Win streak:",
     "Campaign loss streak:", "Login streak:", "First day (UTC):", "Days played:", "Time in app:",
@@ -198,7 +204,7 @@ class Report:
     modes: dict = field(default_factory=dict)   # MODE -> (bitwy, wygrane, sekundy)
     recent: list = field(default_factory=list)
     perf: list = field(default_factory=list)    # (p95, reduction, dropped, thermal)
-    stages: dict = field(default_factory=dict)  # v2: etap -> (próby, wygrane, kap., dowódca)
+    stages: dict = field(default_factory=dict)  # etap (od 1) -> (próby, wygrane, kap., minuty, dowódca)
     sections: list = field(default_factory=list)
     day: int | None = None
     day_inferred: bool = False
@@ -216,7 +222,10 @@ def normalize(text: str) -> str:
         # Wklejone w pole jednowierszowe: odtwarzamy podział linii przed znanymi etykietami.
         for label in sorted(set(REFLOW_LABELS), key=len, reverse=True):
             text = re.sub(r"\s+(?=" + re.escape(label) + ")", "\n", text)
-        text = re.sub(r"(Recent battles \(newest first\):|30 s battle windows\):)\s+", "\\1\n", text)
+        text = re.sub(r"(Recent battles \(newest first\):|30 s battle windows\):|" + re.escape(FUNNEL_SECTION)
+                      + r")\s+", "\\1\n", text)
+        text = re.sub(r"\s+(?=S\d+: \d+ (?:try|tries), )", "\n", text)
+        text = re.sub(r"\s+(?=\(\+\d+ lower stages?\))", "\n", text)
         text = re.sub(r"\s+(?=#\d+: worst p95)", "\n", text)
         text = re.sub(r"\s+(?=(?:" + "|".join(MODES) + r")(?: stage \d+)?, (?:win|loss|surrender))", "\n", text)
     return text
@@ -279,7 +288,7 @@ def parse_report(body: str, source: str, subject_lang=None) -> Report:
         lines = lines[:-1]
     section = None
     for ln in lines:
-        if ln in SECTIONS:
+        if ln in SECTIONS or ln == FUNNEL_SECTION:
             section = ln
             continue
         if not ln or ln in (HEADER, "Recent battles (newest first):", "-") or ln.startswith("Last sessions"):
@@ -295,7 +304,11 @@ def parse_report(body: str, source: str, subject_lang=None) -> Report:
                 matched = True
         m = STAGE_LINE.match(ln)
         if m:
-            r.stages[int(m.group(1))] = tuple(int(m.group(i)) for i in range(2, 6))
+            r.stages[int(m.group(1))] = tuple(int(m.group(i)) for i in range(2, 7))
+            continue
+        m = STAGE_MORE.match(ln)
+        if m:
+            r.f["stages_hidden"] = int(m.group(1))
             continue
         if matched:
             continue
@@ -619,6 +632,24 @@ def verdict(cond):
     return NA if cond is None else (OK if cond else FAIL)
 
 
+def funnel_note(reports, top=3):
+    """2.10: etapy z największą liczbą nieudanych prób (suma lejków) i dowódca na 19 (d37)."""
+    tot = {}
+    for r in reports:
+        for st, (tries, wins, surr, mins, cmd) in r.stages.items():
+            a = tot.setdefault(st, [0, 0, 0, 0, 0, 0])
+            a[0] += tries; a[1] += wins; a[2] += surr; a[3] += mins; a[4] += cmd; a[5] += 1
+    walls = sorted(tot.items(), key=lambda kv: (-(kv[1][0] - kv[1][1]), -kv[0]))[:top]
+    parts = [f"S{st}: {a[0] - a[1]} nieudanych z {a[0]} prób ({a[5]} os.)" for st, a in walls]
+    s19 = tot.get(19)
+    if s19:
+        parts.append(f"dowódca na S19: {s19[4]}/{s19[0]} bitew")
+    hidden = sum(1 for r in reports if r.get("stages_hidden"))
+    if hidden:
+        parts.append(f"{hidden} raport(ów) z niższymi etapami poza limitem 15 wierszy")
+    return "lejek: " + "; ".join(parts)
+
+
 def evaluate(day3, day10, base, external):
     """day3/day10: raporty z dni 3 i 10; base: zbiór do kryteriów „n” (dzień 10, inaczej wszystkie)."""
     g = G2
@@ -706,7 +737,8 @@ def evaluate(day3, day10, base, external):
     stages_known = any(r.stages for r in base)
     checks.append(Check("2.10", "Ściany trudności", False, f"max seria ≥ 5: {pct(wall, len(ls))}",
                         "≤ 20% n", verdict(None if not ls else wall <= g["loss_wall_share_max"] * len(ls)),
-                        "" if stages_known else "przy których etapach — nie do policzenia (lejek etapów, TOP 5 poz. 2)"))
+                        funnel_note(base) if stages_known
+                        else "przy których etapach — nie do policzenia (lejek etapów, TOP 5 poz. 2)"))
     sb = [(r.get("surrenders"), r.get("battles")) for r in base if r.get("battles") is not None]
     s_sum, b_sum = sum(s for s, _ in sb), sum(b for _, b in sb)
     checks.append(Check("2.11", "Kapitulacje", False, pct(s_sum, b_sum) + " bitew", "≤ 10% bitew (suma)",
@@ -818,8 +850,8 @@ def build_markdown(reports, dropped, problem_count, notes, checks, wave, inputs,
     out.append("- **2.1, 2.3** — tylko Play Console (`--active-testers`, `--prelaunch-crashes`).")
     out.append("- **2.2** — raport nie liczy awarii/ANR; pola `Crashes:`/`ANRs:` z Raportu v2 są przygotowane, "
                "grupy z PC: `--crash-groups`.")
-    out.append("- **2.10 „przy których etapach”** — brak lejka etapów (TOP 5 poz. 2; wiersze `S19: … cmd N` "
-               "są przygotowane), więc też brak informacji o dowódcy na etapie 19 (d37).")
+    out.append("- **2.10 „przy których etapach”** — tylko z raportów z sekcją `[Campaign stages]` (gra od d45); "
+               "starsze raporty nie mają lejka ani dowódcy na etapie 19 (d37).")
     out.append("- **2.5 ciągłość** — tylko `Days played`, bez mapy dni (Raport v2).\n")
 
     out.append("## Mediany (wszystkie raporty)\n")
