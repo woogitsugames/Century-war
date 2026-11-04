@@ -363,7 +363,7 @@ abstract class FirstHourJourneyBase {
     // ------------------------------------------------------------------ samouczek
 
     /** [stop]: przerwij przed końcem samouczka (np. w kroku, w którym proces zostanie zabity). */
-    protected fun playTutorial(g: Game, bs: BattleScreen, stop: () -> Boolean = { false }) {
+    protected fun playTutorial(g: Game, bs: BattleScreen, stop: () -> Boolean = { false }, buyBetween: () -> Boolean = { true }) {
         val tut = requireNotNull(bs.tut) { "pierwsza bitwa bez samouczka" }
         val b = bs.battle
         val seen = HashSet<Int>()
@@ -415,7 +415,7 @@ abstract class FirstHourJourneyBase {
                 if (hints != null && hints.activeId >= 0) { multi++; problem("samouczek: dymek #${hints.activeId} w trakcie samouczka") }
                 val role = if (b.player.queueSize % 2 == 0) 0 else 1
                 val unit = bs.unitBtn[role]
-                if (unit.enabled && b.player.queueSize < 2 && tut.allows(unit)) tap(g, unit, "samouczek/kup") else tick(g, 0.3f)
+                if (buyBetween() && unit.enabled && b.player.queueSize < 2 && tut.allows(unit)) tap(g, unit, "samouczek/kup") else tick(g, 0.3f)
             }
         }
         if (stop()) return

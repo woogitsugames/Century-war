@@ -6,6 +6,8 @@ import com.centurywar.engine.GameAccessibility.Companion.BTN_BASE
 import com.centurywar.engine.GameAccessibility.Companion.INFO_TUTORIAL
 import com.centurywar.engine.GameView
 import com.centurywar.engine.L
+import com.centurywar.meta.Profile
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -31,9 +33,33 @@ class TutorialResumeTest : FirstHourJourneyBase() {
 
     @Test fun killedDuringTurretStep() = killAndResume(TutorialOverlay.S_TURRET, "wieza") { it.turretBtn }
 
-    /** Armia w Trzymaj w chwili zabicia: krok postawy wraca i prowadzi z powrotem do Naprzód. */
+    @Test fun killedDuringBarrageStep() = killAndResume(TutorialOverlay.S_BARRAGE, "ostrzal") { it.barrageBtn }
+
+    /**
+     * Armia w Trzymaj w chwili zabicia (gracz nacisnął postawę w kroku postawy, ale nie wrócił do
+     * Naprzód): krok postawy wraca i prowadzi z powrotem do Naprzód. Na tym ziarnie krok postawy
+     * nie doczekałby się wrogów, więc test ustawia Trzymaj zaraz po wejściu w krok.
+     */
     @Test fun killedDuringStanceStepWithArmyHolding() =
         killAndResume(TutorialOverlay.S_STANCE, "postawa", holding = true) { it.stanceBtn }
+
+    /** Krok jest zapisywany na dysk, nie idzie do chmury, a zapis z chmury go nie kasuje. */
+    @Test fun stepPersistsLocallyAndIgnoresCloud() {
+        val file = folder.newFile("p.json").apply { delete() }
+        val p = Profile(file)
+        assertEquals(0, p.tutorialResumeStep(42L))
+        p.rememberTutorialStep(42L, TutorialOverlay.S_TURRET)
+        Profile.awaitHintWrites()
+        val loaded = Profile(file).apply { load() }
+        assertEquals(TutorialOverlay.S_TURRET, loaded.tutorialResumeStep(42L))
+        assertEquals("inna bitwa zaczyna od pierwszego kroku", 0, loaded.tutorialResumeStep(43L))
+        assertEquals(0, loaded.tutorialResumeStep(0L))
+        val cloud = JSONObject(loaded.toCloudJson())
+        assertFalse(cloud.has("tutorialStep") || cloud.has("tutorialStepBattle"))
+        loaded.fromJson(cloud.put("tutorialStep", 1).put("tutorialStepBattle", 7L).toString())
+        assertEquals(TutorialOverlay.S_TURRET, loaded.tutorialResumeStep(42L))
+        assertEquals(0, loaded.tutorialResumeStep(7L))
+    }
 
     private fun killAndResume(step: Int, name: String, holding: Boolean = false, target: (BattleScreen) -> Button) {
         val old = L.lang
@@ -47,11 +73,12 @@ class TutorialResumeTest : FirstHourJourneyBase() {
             tap(g1, button(g1.current!!, 1), "graj")
             val bs = g1.current as BattleScreen
             val tut = requireNotNull(bs.tut)
-            playTutorial(g1, bs) {
-                tut.step > step || (tut.step == step && tut.showing && (!holding || bs.battle.player.hold))
-            }
-            assertEquals("samouczek nie doszedł do kroku $step jako pokazanego", step, tut.step)
-            assertTrue(tut.showing)
+            // Bez dokupowania między krokami: inaczej krok strzelca zalicza się sam, zanim się pokaże.
+            playTutorial(g1, bs, {
+                tut.step > step || (tut.step == step && (holding || tut.showing))
+            }, buyBetween = { tut.step >= TutorialOverlay.S_KILL })
+            assertEquals("samouczek nie doszedł do kroku $step", step, tut.step)
+            if (holding) bs.commands.stance(true) else assertTrue(tut.showing)
             assertEquals(holding, bs.battle.player.hold)
             val medals0 = g1.profile.medals
             bs.onPause()
