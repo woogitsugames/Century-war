@@ -218,6 +218,8 @@ class MainActivity : Activity(), Host {
     internal val gameReady: Boolean get() = ::game.isInitialized
     /** Testy D39: dziennik testu bieżącej gry (null przed startem). */
     internal val playtestLog: PlaytestLog? get() = if (::game.isInitialized) game.playtest else null
+    /** Testy D41: magazyn zrzutu bitwy bieżącej gry (null przed startem). */
+    internal val snapshotStore: SnapshotStore? get() = if (::game.isInitialized) game.snapshots else null
     /** Testy R11-04: zwykły start nigdy nie włącza trybu pętli testowej. */
     internal val testLoopActive: Boolean get() = ::game.isInitialized && game.testLoop
 
@@ -554,6 +556,9 @@ class MainActivity : Activity(), Host {
         // Dziennik testu ma własny wątek zapisu: bez zamknięcia każde ponowne otwarcie gry
         // w tym samym procesie zostawiałoby kolejny bezczynny wątek (D39).
         game.playtest?.close()
+        // Zrzut bitwy też ma własny wątek „snapshot-io” (D41). Zapisy z onPause kończą się
+        // mimo zamknięcia; późniejsze wywołania wykonują się na miejscu.
+        game.snapshots?.close()
         game.sound?.release()
         super.onDestroy()
     }

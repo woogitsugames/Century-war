@@ -215,6 +215,7 @@ class TestLoopActivity : Activity(), Host {
         if (::game.isInitialized) {
             music?.release()
             sound?.release()
+            game.snapshots?.close()
         }
         if (owner) running.set(false)
         super.onDestroy()

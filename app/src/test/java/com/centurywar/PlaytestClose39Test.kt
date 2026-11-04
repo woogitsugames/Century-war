@@ -38,8 +38,13 @@ class PlaytestClose39Test {
         val log = activity.playtestLog
         assertNotNull(log)
         assertFalse(log!!.closed)
+        val snapshots = activity.snapshotStore
+        assertNotNull(snapshots)
+        assertFalse(snapshots!!.isClosed)
         controller.pause().stop().destroy()
         assertTrue("onDestroy zamyka wątek dziennika", log.closed)
+        // D41: wątek zrzutu bitwy („snapshot-io”) zamykany tak samo.
+        assertTrue("onDestroy zamyka wątek zrzutu", snapshots.isClosed)
     }
 
     @Test fun closeKeepsQueuedWriteAndLaterCallsAreSafe() {
