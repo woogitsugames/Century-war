@@ -144,6 +144,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var historyLoaded = false
     /** R2-04: lokalny dziennik testu (files/playtest.json). Null w testach bez dziennika. */
     var playtest: PlaytestLog? = null
+    /** R11 (pozycja 7): ankieta testera w menu (tylko wersje testowe; testy mogą wyłączyć). */
+    var testerSurveyEnabled = BuildConfig.TESTER_SURVEY
     private var playtestBattleSeconds = 0f
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
@@ -384,6 +386,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     /** Do testów: bieżący i oczekujące teksty banerów. */
     internal fun noticeTexts(): List<String> =
         (if (achievementSeconds > 0f) listOf(achievementMessage) else emptyList()) + noticeQueue
+    /** Czy jest widoczny albo oczekuje jakikolwiek baner (bez alokacji). */
+    internal fun hasNotices(): Boolean = achievementSeconds > 0f || noticeQueue.isNotEmpty()
     /** Do testów: usuwa bieżący i oczekujące banery. */
     internal fun clearNotices() {
         noticeQueue.clear(); noticeIcons.clear(); achievementSeconds = 0f

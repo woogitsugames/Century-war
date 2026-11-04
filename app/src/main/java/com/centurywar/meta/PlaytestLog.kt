@@ -43,6 +43,15 @@ class PlaytestLog(private val file: File) {
         val SCREEN_NAMES = arrayOf("Codex", "Research", "Missions", "Replays", "Accessibility",
             "Skirmish", "Endless", "Daily", "Weekly")
         private val SCREEN_MASK = (1 shl SCREEN_NAMES.size) - 1
+
+        /** Ankieta testera (R11, pozycja 7): jeszcze nie pytano. */
+        const val SURVEY_NONE = 0
+        /** Gracz dał ocenę (pytanie o kłopot mógł pominąć). */
+        const val SURVEY_ANSWERED = 1
+        /** Gracz pominął ankietę: nie pytamy ponownie. */
+        const val SURVEY_SKIPPED = 2
+        /** Odpowiedzi „co najbardziej przeszkadza” do raportu (po angielsku, czyta je zespół). */
+        val SURVEY_ISSUES = arrayOf("too hard", "battles too long", "unclear rules", "nothing, it's good")
         private const val MAX_COUNT = 10_000_000
     }
 
@@ -70,6 +79,18 @@ class PlaytestLog(private val file: File) {
     var surrenders = 0
         private set
     var screensVisited = 0
+        private set
+    /** Ankieta testera: [SURVEY_NONE], [SURVEY_ANSWERED] albo [SURVEY_SKIPPED]. */
+    var surveyState = SURVEY_NONE
+        private set
+    /** Ocena 1–5; 0 = brak. */
+    var surveyRating = 0
+        private set
+    /** Indeks w [SURVEY_ISSUES]; −1 = brak odpowiedzi. */
+    var surveyIssue = -1
+        private set
+    /** Dzień UTC odpowiedzi albo pominięcia; −1 = brak. */
+    var surveyDay = -1L
         private set
 
     // Wydajność 5 ostatnich sesji; [perfHead] to bieżąca sesja.
@@ -114,6 +135,7 @@ class PlaytestLog(private val file: File) {
         firstDay = -1L; lastDay = -1L; daysPlayed = 0; sessions = 0; foregroundSeconds = 0L
         tutorialSeconds = NOT_YET; firstWinSeconds = NOT_YET
         lossStreak = 0; maxLossStreak = 0; surrenders = 0; screensVisited = 0
+        surveyState = SURVEY_NONE; surveyRating = 0; surveyIssue = -1; surveyDay = -1L
         perfReduction.fill(0); perfP95Tenths.fill(0); perfDropped.fill(0L); perfThermal.fill(0)
         perfHead = 0; perfCount = 0
         fresh = true
@@ -133,6 +155,12 @@ class PlaytestLog(private val file: File) {
         maxLossStreak = maxOf(count(o, "maxLossStreak"), lossStreak)
         surrenders = count(o, "surrenders")
         screensVisited = o.getInt("screens") and SCREEN_MASK
+        // Pola ankiety są opcjonalne: dziennik sprzed ankiety czyta się bez zmiany wersji.
+        surveyState = o.optInt("survey", SURVEY_NONE).let { if (it in SURVEY_NONE..SURVEY_SKIPPED) it else SURVEY_NONE }
+        surveyRating = o.optInt("surveyRating", 0).let { if (it in 1..5) it else 0 }
+        surveyIssue = o.optInt("surveyIssue", -1).let { if (it in SURVEY_ISSUES.indices) it else -1 }
+        surveyDay = o.optLong("surveyDay", -1L).coerceAtLeast(-1L)
+        if (surveyState == SURVEY_ANSWERED && surveyRating == 0) surveyState = SURVEY_SKIPPED
         val perf = o.getJSONArray("perf")
         // Zapis od najstarszej do najnowszej sesji; najnowsza staje się bieżącą głową.
         val n = minOf(perf.length(), PERF_SESSIONS)
@@ -250,6 +278,30 @@ class PlaytestLog(private val file: File) {
         perfDropped[i] = (droppedTotal - droppedBaseline).coerceAtLeast(0L)
     }
 
+    /** Ocena 1–5 z ankiety testera; po niej nie pytamy ponownie. */
+    @Synchronized
+    fun surveyRated(rating: Int, nowMs: Long) {
+        if (rating !in 1..5) return
+        surveyState = SURVEY_ANSWERED
+        surveyRating = rating
+        surveyDay = Missions.utcDay(nowMs.coerceAtLeast(0L))
+    }
+
+    /** Odpowiedź na pytanie „co najbardziej przeszkadza” (tylko po ocenie). */
+    @Synchronized
+    fun surveyIssueChosen(issue: Int) {
+        if (surveyState != SURVEY_ANSWERED || issue !in SURVEY_ISSUES.indices) return
+        surveyIssue = issue
+    }
+
+    /** Pominięcie ankiety przed oceną: nie pytamy ponownie. */
+    @Synchronized
+    fun surveySkipped(nowMs: Long) {
+        if (surveyState != SURVEY_NONE) return
+        surveyState = SURVEY_SKIPPED
+        surveyDay = Missions.utcDay(nowMs.coerceAtLeast(0L))
+    }
+
     /** Wydajność sesji od najnowszej; [index] 0 = bieżąca. */
     class PerfSession(val maxReduction: Int, val worstP95Ms: Float, val droppedSteps: Long, val maxThermal: Int)
 
@@ -272,6 +324,10 @@ class PlaytestLog(private val file: File) {
         o.put("tutorialSeconds", tutorialSeconds); o.put("firstWinSeconds", firstWinSeconds)
         o.put("lossStreak", lossStreak); o.put("maxLossStreak", maxLossStreak)
         o.put("surrenders", surrenders); o.put("screens", screensVisited)
+        if (surveyState != SURVEY_NONE) {
+            o.put("survey", surveyState); o.put("surveyRating", surveyRating)
+            o.put("surveyIssue", surveyIssue); o.put("surveyDay", surveyDay)
+        }
         val perf = JSONArray()
         for (k in perfCount - 1 downTo 0) {
             val i = ((perfHead - k) % PERF_SESSIONS + PERF_SESSIONS) % PERF_SESSIONS

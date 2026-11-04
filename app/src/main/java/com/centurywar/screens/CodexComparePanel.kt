@@ -78,7 +78,15 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     private val rect = RectF()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    val controlHeight get() = CONTROL_HEIGHT * dp
+    /**
+     * Dzień 26: na wąskim pionowym ekranie (zewnętrzny Fold) selektory obu stron leżą jeden pod
+     * drugim na pełną szerokość, więc nazwy epok i ról mają ≥ 10 sp zamiast 6–8 sp.
+     */
+    internal var stacked = false
+        private set
+    val controlHeight get() = CONTROL_HEIGHT * dp * (if (stacked) 2 else 1)
+    internal val selectorTop get() = y
+    internal fun selectorTextsForTest(): List<String> = eraTexts.toList() + roleTexts.toList()
     val contentHeight get() = CONTENT_HEIGHT * dp
 
     fun hide() {
@@ -86,20 +94,21 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     }
 
     /** Selektory epoki i roli pozostają widoczne, przewija się tylko zestaw wyników. */
-    fun layout(left: Float, top: Float, contentWidth: Float, withResearch: Boolean) {
+    fun layout(left: Float, top: Float, contentWidth: Float, withResearch: Boolean, stacked: Boolean = false) {
         x = left
         y = top
         width = contentWidth
-        val gap = 8 * dp
-        val half = (width - gap) / 2f
-        val arrow = min(43 * dp, half * 0.24f)
+        this.stacked = stacked
+        val selW = selectorWidth()
+        val arrow = min(43 * dp, selW * 0.24f)
         for (side in 0..1) {
-            val sx = x + side * (half + gap)
+            val sx = selectorX(side)
+            val sy = selectorY(side)
             for (row in 0..1) {
-                val by = y + (9 + row * 48) * dp
+                val by = sy + (9 + row * 48) * dp
                 val base = side * 4 + row * 2
                 buttons[base].set(sx + 4 * dp, by, arrow, 42 * dp)
-                buttons[base + 1].set(sx + half - arrow - 4 * dp, by, arrow, 42 * dp)
+                buttons[base + 1].set(sx + selW - arrow - 4 * dp, by, arrow, 42 * dp)
                 buttons[base].visible = true
                 buttons[base + 1].visible = true
             }
@@ -184,31 +193,36 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
         else -> String.format(Locale.ROOT, "%.1f", v)
     }
 
+    private fun selectorWidth(): Float = if (stacked) width else (width - 8 * dp) / 2f
+    private fun selectorX(side: Int): Float = if (stacked) x else x + side * (selectorWidth() + 8 * dp)
+    private fun selectorY(side: Int): Float = if (stacked) y + side * CONTROL_HEIGHT * dp else y
+
     fun drawSelectors(c: Canvas) {
-        val gap = 8 * dp
-        val half = (width - gap) / 2f
+        val selW = selectorWidth()
         for (side in 0..1) {
-            val sx = x + side * (half + gap)
-            rect.set(sx, y, sx + half, y + CONTROL_HEIGHT * dp - 2 * dp)
+            val sx = selectorX(side)
+            val sy = selectorY(side)
+            rect.set(sx, sy, sx + selW, sy + CONTROL_HEIGHT * dp - 2 * dp)
             ui.card(c, rect, PANEL_COLOR, 9f, Ui.OUTLINE)
-            val center = sx + half / 2
-            val available = max(24 * dp, half - 100 * dp)
-            ui.textO(c, eraTexts[side], center, y + 35 * dp,
-                ui.fit(eraTexts[side], 12.5f, available, 8f),
+            val center = sx + selW / 2
+            val available = max(24 * dp, selW - 100 * dp)
+            val minSize = if (stacked) 10f else 8f
+            ui.textO(c, eraTexts[side], center, sy + 35 * dp,
+                ui.fit(eraTexts[side], 12.5f, available, minSize),
                 Ui.TEXT, Paint.Align.CENTER)
-            ui.textO(c, roleTexts[side], center, y + 83 * dp,
-                ui.fit(roleTexts[side], 12.5f, available, 8f),
+            ui.textO(c, roleTexts[side], center, sy + 83 * dp,
+                ui.fit(roleTexts[side], 12.5f, available, minSize),
                 Ui.GOLD, Paint.Align.CENTER)
         }
         for (button in buttons) ui.button(c, button, 16f)
     }
 
     fun drawContent(c: Canvas, top: Float, bottom: Float) {
-        if (top + CONTENT_HEIGHT * dp < y + CONTROL_HEIGHT * dp || top > bottom) return
+        if (top + CONTENT_HEIGHT * dp < y + controlHeight || top > bottom) return
         ui.textO(c, heading, x + 7 * dp, top + 26 * dp, 18f, Ui.GOLD)
         drawUnits(c, top + CARD_TOP * dp, bottom)
         val legendY = top + (CARD_TOP + CARD_HEIGHT + 18f) * dp
-        if (legendY >= y + CONTROL_HEIGHT * dp && legendY <= bottom) {
+        if (legendY >= y + controlHeight && legendY <= bottom) {
             ui.text(c, legend, x + 8 * dp, legendY,
                 ui.fit(legend, 11f, width - 16 * dp, 8f), Ui.DIM)
         }
@@ -217,7 +231,7 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     }
 
     private fun drawUnits(c: Canvas, top: Float, bottom: Float) {
-        if (top > bottom || top + CARD_HEIGHT * dp < y + CONTROL_HEIGHT * dp) return
+        if (top > bottom || top + CARD_HEIGHT * dp < y + controlHeight) return
         val gap = 8 * dp
         val half = (width - gap) / 2f
         val rowsTop = top + 91 * dp
@@ -259,7 +273,7 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
 
     /** Mnożnik obrażeń: wiersz atakuje rolę wskazaną w kolumnie. */
     private fun drawCounters(c: Canvas, top: Float, bottom: Float) {
-        if (top > bottom || top + COUNTER_HEIGHT * dp < y + CONTROL_HEIGHT * dp) return
+        if (top > bottom || top + COUNTER_HEIGHT * dp < y + controlHeight) return
         rect.set(x, top, x + width, top + COUNTER_HEIGHT * dp)
         ui.card(c, rect, PANEL_COLOR, 11f, Ui.OUTLINE)
         ui.textO(c, matrixHeading, x + 12 * dp, top + 25 * dp, 16f, Ui.GOLD)
@@ -301,7 +315,7 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
 
     /** Słupki w skali liniowej, z dokładnym DPS nad każdym słupkiem. */
     private fun drawGrowth(c: Canvas, top: Float, bottom: Float) {
-        if (top > bottom || top + CHART_HEIGHT * dp < y + CONTROL_HEIGHT * dp) return
+        if (top > bottom || top + CHART_HEIGHT * dp < y + controlHeight) return
         rect.set(x, top, x + width, top + CHART_HEIGHT * dp)
         ui.card(c, rect, PANEL_COLOR, 11f, Ui.OUTLINE)
         ui.textO(c, chartHeading, x + 12 * dp, top + 25 * dp,

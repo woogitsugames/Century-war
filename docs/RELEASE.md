@@ -324,6 +324,24 @@ obejmuje tylko `profile.json` i `history.json` według reguł poniżej.
   Przy budowaniu z tagu pobierz pełną historię i tagi (`git fetch --tags`);
   job `release` w CI robi checkout z `fetch-depth: 0`.
 
+## Ankieta testera (tylko wersje testowe)
+
+Jednorazowa ankieta w menu (ocena 1–5 i pytanie „Co najbardziej przeszkadza?”, zawsze z „Pomiń”)
+pojawia się po samouczku i po 5 bitwach albo w 3. dniu gry. Odpowiedź zostaje w
+`files/playtest.json` i trafia tylko do „Raportu dla testera”; nic nie jest wysyłane, więc
+Data safety bez zmian. Włącza ją pole `BuildConfig.TESTER_SURVEY`:
+
+- **debug:** zawsze włączona (wyłącza ją tylko `-PtesterSurvey=false`);
+- **release bez flagi:** włączona dla wersji przedpremierowej — `versionName` zaczyna się od
+  `0.` (np. tag `v0.9.0` dla testów zamkniętych) albo ma sufiks (`1.0.0-rc1`, `0.1.0-dev`);
+  wyłączona dla wersji produkcyjnej `1.0.0` i nowszych bez sufiksu;
+- **wymuszenie:** `./gradlew bundleRelease -PtesterSurvey=false` (produkcja bez ankiety mimo
+  numeru 0.x) albo `-PtesterSurvey=true` (np. test zamknięty po premierze). Inne wartości
+  kończą konfigurację błędem.
+
+Przed wysłaniem produkcyjnego AAB sprawdź w `app/build/generated/source/buildConfig/release/`
+wartość `TESTER_SURVEY = false`.
+
 ## Podpisywanie
 
 Jeden schemat dla CI i lokalnie (szczegóły i generowanie klucza: [`docs/CI.md`](CI.md)):

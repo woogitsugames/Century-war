@@ -475,7 +475,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         return when (s) {
             is BattleScreen -> s.paused && !s.finished &&
                 (s.pauseMenu.contains(b) || b === s.pauseVibrationBtn || b === s.pauseSpeedBtn)
-            is MenuScreen -> !s.hasOpenModal || b.id == 20 || b.id == 21
+            is MenuScreen -> s.accessibilityEligibleButton(b)
             is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen, is AboutScreen -> true
             else -> s.accessibilityTitle() != null && s.accessibilityEligible(b)
         }
