@@ -159,3 +159,34 @@ szansę i długość bitwy, czyli to, ile minut gracz stoi w miejscu.
   w teście (zaokrąglenie `aiPower`), więc po zmianie trzeba zmierzyć stan z kodu. To osobne
   zadanie: PROTOCOL 0.8.8 → 0.8.9, regeneracja złotych powtórek, kontrola determinizmu
   w `SecondHourControlTest` przeniesiona z etapu 19 na 21 — i **przed** pierwszym AAB.
+
+## Wstępny wynik (poza Gradle, do potwierdzenia skryptem)
+
+Gradle nie działa, ale klasy `:sim` i `BalanceReport` dało się skompilować kompilatorem
+Kotlin z lokalnej dystrybucji Gradle (bez sieci) i uruchomić JUnit bezpośrednio, z zaślepką
+`meta.Profile` (tylko mapowanie poziomów na `Research.bonuses`, używane przez profile
+procentowe). Te same zmienne i tagi co w skrypcie, N=100. **Kontrola przeszła co do bitwy:**
+M1 powtarza liczby z `BALANCE.md` (medale 18: 81% / 10,4; 19: 49% / 13,5 / 26,6; 20: 72% / 13,4;
+docelowy 19: 60% / 10,1 / 15,9; docelowy z dowódcą 18: 62% / 10,2). Wiążący jest jednak przebieg
+`tools/measure_stage19.sh` przez Gradle.
+
+| Profil | Wygrane 18 → 19 | Oczek. 18 → 19 [min] | Iloraz | Ocena |
+|---|---:|---:|---:|---|
+| medale (33 poziomy na 19) | 81% → 49% | 12,9 → 26,6 | 2,1× | **ściana** |
+| docelowy | 60% → 60% | 15,5 → 15,9 | 1,0× | płynnie |
+| docelowy + dowódca | 62% → 61% | 15,3 → 15,4 | 1,0× | płynnie |
+| medale-czas, przed (40 poziomów) | 90% → 68% | 8,1 → 13,5 | 1,7× | ostrzegawcza |
+| medale-czas, teraz (39 poziomów) | 90% → 71% | 8,1 → 13,3 | 1,64× | ostrzegawcza |
+
+- **Klif jest, ale u realnego gracza to „strefa ostrzegawcza”, nie ściana:** −19 pp
+  i 1,64× czasu (etap 18 jest dla niego krótki, 7,8 min mediany). Etap 19 trwa 13,3 min
+  oczekiwanego czasu, czyli w paśmie etapów 13–18. Ściana (2,1×, −32 pp) jest u profilu
+  „medale”, który nie ma medali dziennych.
+- **Skrócenie 2–18 klifu nie pogłębiło:** M2 przed/teraz na 19–30 to −7…+19 pp bez wzoru
+  (etap 20 −7 pp, 21 +8, 28 +19 pp — szum ±7 pp), poziomy badań −0…2. Zgodnie z modelem R12.
+- **M3 (mnożnik tylko na etapie 19):** 0,94 (korekta 1,265 → 1,189) spełnia wszystkie cele:
+  medale 65% / 1,5×, medale-czas 76% / 1,5×, docelowy 72%, z dowódcą 73% (≤ 75%), etap 20
+  bez zmian. 0,90 przekracza 75% u docelowego (80%), 0,86 u docelowego z dowódcą (79%).
+- **Rekomendacja do decyzji właściciela:** jeśli łagodzić, to najmniejszą korektą 0,94
+  (`19 -> 1.189f`), po zmierzeniu stanu z kodu; alternatywnie nie ruszać etapu 19 (realny gracz
+  jest w strefie ostrzegawczej, nie na ścianie) i tylko opisać to w `BALANCE.md`.
