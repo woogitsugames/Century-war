@@ -42,7 +42,8 @@ class CodexFoldOuterLabelsTest {
     @After fun restoreLang() { L.lang = savedLang }
 
     private class Recorder(bmp: Bitmap) : Canvas(bmp) {
-        class Drawn(val s: String, val r: RectF, val sizePx: Float)
+        /** [r] w układzie rysowania, [sr] na ekranie (po obrocie/przesunięciu płótna, dzień 41). */
+        class Drawn(val s: String, val r: RectF, val sizePx: Float, val sr: RectF = r, val color: Int = 0)
         val texts = ArrayList<Drawn>()
         override fun drawText(text: String, x: Float, y: Float, paint: Paint) {
             if (paint.style == Paint.Style.FILL && text.isNotBlank()) {
@@ -53,7 +54,10 @@ class CodexFoldOuterLabelsTest {
                     else -> x
                 }
                 val fm = paint.fontMetrics
-                texts.add(Drawn(text, RectF(left, y + fm.ascent * 0.8f, left + w, y + fm.descent * 0.6f), paint.textSize))
+                val r = RectF(left, y + fm.ascent * 0.8f, left + w, y + fm.descent * 0.6f)
+                @Suppress("DEPRECATION") val m = matrix
+                val sr = RectF(r).also { m.mapRect(it) }
+                texts.add(Drawn(text, r, paint.textSize, sr, paint.color))
             }
             super.drawText(text, x, y, paint)
         }
@@ -281,6 +285,57 @@ class CodexFoldOuterLabelsTest {
         assertTrue(problems.toString(), problems.isEmpty())
     }
 
+    /**
+     * Dzień 41 (d36 „Zostało”): nazwy ról w macierzy kontr na zewnętrznym Foldzie mają ≥ 10 sp
+     * w 10 językach przy tekście 100% i 130% (nazwa roli wiersza nad komórkami, nagłówki kolumn
+     * poziomo albo obrócone), mieszczą się na ekranie i nie nachodzą na inne napisy.
+     */
+    @Test
+    fun counterRoleHeadersReadableOnFoldOuter() {
+        val problems = StringBuilder()
+        var rotatedSeen = 0
+        var flatSeen = 0
+        for (scale in floatArrayOf(1f, 1.3f)) for (lang in L.CODES) {
+            val g = game(lang, scale)
+            val cx = CodexScreen(g, 1)
+            g.setScreen(cx)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            cx.showCategory(10)
+            val dp = g.ui.dp
+            val tag = "$lang ${(scale * 100).toInt()}%"
+            val panel = cx.comparePanelForTest
+            if (!panel.counterNarrowForTest) problems.append("$tag: macierz kontr nie w układzie wąskim\n")
+            if (panel.counterRotatedForTest) rotatedSeen++ else flatSeen++
+            val roles = panel.roleNamesForTest()
+            val visibleTop = panel.selectorTop + panel.controlHeight
+            // Dla każdej roli: nagłówek kolumny (biały) i nazwa wiersza (złota).
+            val seen = HashSet<String>()
+            repeat(16) {
+                val rec = Recorder(Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888))
+                g.frame(rec, 1f / 30f)
+                val onScreen = rec.texts.filter { it.sr.top > visibleTop && it.sr.bottom < g.height - g.insetB }
+                // Napisy macierzy: nazwy ról pod podpisem osi, wewnątrz karty macierzy (karty
+                // jednostek wyżej też pokazują nazwę roli).
+                val matrixTop = panel.counterTopForTest + 52 * dp
+                val matrixBottom = panel.counterTopForTest + panel.counterHeightForTest
+                for (t in onScreen) if (t.s in roles && t.sr.top > matrixTop && t.sr.bottom < matrixBottom) {
+                    val kind = if (t.color == com.centurywar.engine.Ui.GOLD) "wiersz" else "kolumna"
+                    seen.add("${t.s}|$kind")
+                    if (sp(g, t) < 10f - 0.05f) problems.append("$tag $kind '${t.s}' ${"%.1f".format(sp(g, t))} sp\n")
+                    if (t.sr.left < 0f || t.sr.right > g.width - 8 * dp) problems.append("$tag $kind '${t.s}' poza ekranem\n")
+                    for (o in onScreen) if (o !== t && RectF.intersects(o.sr, t.sr))
+                        problems.append("$tag $kind '${t.s}' nachodzi na '${o.s}'\n")
+                }
+                cx.onDrag(0f, -150f * dp)
+            }
+            for (r in roles) for (kind in arrayOf("wiersz", "kolumna"))
+                if ("$r|$kind" !in seen) problems.append("$tag: nie narysowano ($kind) '$r'\n")
+        }
+        // Oba warianty nagłówków są sprawdzone (np. pl 100% poziomo, es obrócone).
+        if (rotatedSeen == 0 || flatSeen == 0) problems.append("obrócone: $rotatedSeen, poziome: $flatSeen\n")
+        assertTrue(problems.toString(), problems.isEmpty())
+    }
+
     /** Inne ekrany bez zmian: telefon i rozłożony Fold. */
     @Test
     fun otherScreensKeepLayout() {
@@ -293,6 +348,7 @@ class CodexFoldOuterLabelsTest {
             assertTrue("$w×$h", !cx.narrowStats)
             cx.showCategory(10)
             assertTrue("$w×$h", !cx.comparePanelForTest.stacked)
+            assertTrue("$w×$h macierz kontr", !cx.comparePanelForTest.counterNarrowForTest)
         }
     }
 }

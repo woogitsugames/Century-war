@@ -36,6 +36,10 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
         const val BUTTON_BASE = 300
         /** Dzień 36: najmniejsza legenda w jednym wierszu; mniejsza dzieli się na dwa. */
         const val MIN_LEGEND_SP = 10f
+        /** Dzień 41: najmniejsze nazwy ról w macierzy kontr na wąskim pionie. */
+        const val MIN_ROLE_SP = 10f
+        /** Wysokość rzędu komórek macierzy kontr [dp]. */
+        const val ROW_HEIGHT = 32f
         val PANEL_COLOR = Color.rgb(42, 52, 74)
     }
 
@@ -81,6 +85,19 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     private var legendShift = 0f
     private var legendBase1 = CARD_TOP + CARD_HEIGHT + 18f
     private var legendBase2 = 0f
+    /**
+     * Dzień 41 (d36 „Zostało”): na wąskim pionie (zewnętrzny Fold, [stacked]) nazwy ról w macierzy
+     * kontr miały ok. 52 dp i malały do 6–8 sp („Cuerpo a cuerpo”, „Nabijgevecht”). Tam nazwa roli
+     * wiersza stoi w osobnym wierszu na pełną szerokość nad komórkami, komórki zajmują 4 kolumny,
+     * a nagłówki kolumn, które nie mieszczą się poziomo w ≥ 10 sp, są obrócone o 90°. Macierz rośnie
+     * o [counterShift] dp, wykres przesuwa się niżej. Liczone w [layout], nie w klatce.
+     */
+    private var counterNarrow = false
+    private var counterRotated = false
+    private var counterHeaderH = 32f
+    private var counterLabelH = 0f
+    private var counterHeaderSize = 11f
+    private var counterShift = 0f
     private var matrixHeading = ""
     private var matrixAxis = ""
     private var chartHeading = ""
@@ -100,8 +117,16 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     val controlHeight get() = CONTROL_HEIGHT * dp * (if (stacked) 2 else 1)
     internal val selectorTop get() = y
     internal fun selectorTextsForTest(): List<String> = eraTexts.toList() + roleTexts.toList()
-    val contentHeight get() = (CONTENT_HEIGHT + legendShift) * dp
+    val contentHeight get() = (CONTENT_HEIGHT + legendShift + counterShift) * dp
     internal fun legendLinesForTest(): List<String> = listOf(legendFirst, legendSecond).filter { it.isNotEmpty() }
+    /** Testy D41: układ macierzy kontr na wąskim pionie i nazwy ról. */
+    internal val counterNarrowForTest get() = counterNarrow
+    internal val counterRotatedForTest get() = counterRotated
+    internal fun roleNamesForTest(): List<String> = roleNames.toList()
+    /** Testy D41: górna krawędź i wysokość macierzy kontr z ostatniej klatki [px]. */
+    internal var counterTopForTest = Float.NaN
+        private set
+    internal val counterHeightForTest get() = (COUNTER_HEIGHT + counterShift) * dp
 
     fun hide() {
         for (button in buttons) button.visible = false
@@ -129,6 +154,32 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
         }
         rebuild(withResearch)
         layoutLegend()
+        layoutCounters()
+    }
+
+    /** Dzień 41: macierz kontr na wąskim pionie (patrz [counterNarrow]). */
+    private fun layoutCounters() {
+        counterNarrow = stacked
+        counterRotated = false
+        counterHeaderH = 32f
+        counterLabelH = 0f
+        counterHeaderSize = 11f
+        counterShift = 0f
+        if (!counterNarrow) return
+        val colWidth = (width - 16 * dp) / Role.entries.size
+        val floor = MIN_ROLE_SP * ui.textScale
+        // Ui.fit nie schodzi poniżej progu, więc o obrocie decyduje pomiar w 10 sp.
+        counterRotated = roleNames.any { ui.measure(it, MIN_ROLE_SP, true) > colWidth - 5 * dp }
+        if (counterRotated) {
+            // Obrócone nagłówki mają pełne 11 sp; wysokość wiersza nagłówków = najdłuższa nazwa.
+            val longest = roleNames.maxOf { ui.measure(it, 11f, true) } / dp
+            counterHeaderH = longest + 14f
+        } else {
+            counterHeaderSize = roleNames.minOf { ui.fit(it, 11f, colWidth - 5 * dp, floor) }
+        }
+        counterLabelH = 11f * ui.textScale + 9f
+        val height = 59f + counterHeaderH + Role.entries.size * (counterLabelH + ROW_HEIGHT) + 10f
+        counterShift = max(0f, height - COUNTER_HEIGHT)
     }
 
     private fun layoutLegend() {
@@ -274,7 +325,7 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
             ui.text(c, legendSecond, x + 8 * dp, legendY2, legendSize, Ui.DIM)
         }
         drawCounters(c, top + (COUNTER_TOP + legendShift) * dp, bottom)
-        drawGrowth(c, top + (CHART_TOP + legendShift) * dp, bottom)
+        drawGrowth(c, top + (CHART_TOP + legendShift + counterShift) * dp, bottom)
     }
 
     private fun drawUnits(c: Canvas, top: Float, bottom: Float) {
@@ -320,12 +371,18 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
 
     /** Mnożnik obrażeń: wiersz atakuje rolę wskazaną w kolumnie. */
     private fun drawCounters(c: Canvas, top: Float, bottom: Float) {
-        if (top > bottom || top + COUNTER_HEIGHT * dp < y + controlHeight) return
-        rect.set(x, top, x + width, top + COUNTER_HEIGHT * dp)
+        val height = (COUNTER_HEIGHT + counterShift) * dp
+        counterTopForTest = top
+        if (top > bottom || top + height < y + controlHeight) return
+        rect.set(x, top, x + width, top + height)
         ui.card(c, rect, PANEL_COLOR, 11f, Ui.OUTLINE)
         ui.textO(c, matrixHeading, x + 12 * dp, top + 25 * dp, 16f, Ui.GOLD)
         ui.text(c, matrixAxis, x + 12 * dp, top + 47 * dp,
             ui.fit(matrixAxis, 11f, width - 24 * dp, 8f), Ui.DIM)
+        if (counterNarrow) {
+            drawCountersNarrow(c, top)
+            return
+        }
         val l = x + 8 * dp
         val colWidth = (width - 16 * dp) / 5f
         val rowHeight = 32 * dp
@@ -346,6 +403,54 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
             for (col in 0 until Role.entries.size) {
                 val m = CodexCompareModel.counter(Role.entries[row], Role.entries[col])
                 val cellX = l + (col + 1) * colWidth
+                val boosted = m > 1f
+                paint.color = if (boosted) Ui.blend(Palette.active.good, PANEL_COLOR, 0.68f)
+                    else Color.rgb(35, 43, 61)
+                c.drawRoundRect(cellX + 2 * dp, ry + 2 * dp,
+                    cellX + colWidth - 2 * dp, ry + rowHeight - 2 * dp,
+                    5 * dp, 5 * dp, paint)
+                val label = matrix[row][col]
+                ui.textO(c, label, cellX + colWidth / 2f, ry + 22 * dp,
+                    ui.fit(label, 12.5f, colWidth - 6 * dp, 8f),
+                    if (boosted) Palette.active.good else Ui.DIM, Paint.Align.CENTER)
+            }
+        }
+    }
+
+    /**
+     * Dzień 41: wąski pion. Nagłówki kolumn poziomo (≥ 10 sp) albo obrócone (11 sp, czytane od
+     * dołu), nad każdym rzędem komórek nazwa roli atakującej na pełną szerokość.
+     */
+    private fun drawCountersNarrow(c: Canvas, top: Float) {
+        val l = x + 8 * dp
+        val colWidth = (width - 16 * dp) / Role.entries.size
+        val tableTop = top + 59 * dp
+        val headerBottom = tableTop + counterHeaderH * dp
+        for (col in 0 until Role.entries.size) {
+            val title = roleNames[col]
+            val cx = l + (col + 0.5f) * colWidth
+            if (counterRotated) {
+                val em = 11f * dp * ui.textScale
+                c.save()
+                // Linia bazowa pionowo; litery (ok. 0,7 em nad linią, 0,2 em pod) wyśrodkowane w kolumnie.
+                c.translate(cx + em * 0.3f, headerBottom - 7 * dp)
+                c.rotate(-90f)
+                ui.textO(c, title, 0f, 0f, 11f, Ui.TEXT)
+                c.restore()
+            } else {
+                ui.textO(c, title, cx, tableTop + 20 * dp, counterHeaderSize, Ui.TEXT, Paint.Align.CENTER)
+            }
+        }
+        val rowHeight = ROW_HEIGHT * dp
+        for (row in 0 until Role.entries.size) {
+            val labelTop = headerBottom + row * (counterLabelH + ROW_HEIGHT) * dp
+            val title = roleNames[row]
+            ui.textO(c, title, l + 4 * dp, labelTop + (11f * ui.textScale + 3f) * dp,
+                ui.fit(title, 11f, width - 24 * dp, MIN_ROLE_SP * ui.textScale), Ui.GOLD)
+            val ry = labelTop + counterLabelH * dp
+            for (col in 0 until Role.entries.size) {
+                val m = CodexCompareModel.counter(Role.entries[row], Role.entries[col])
+                val cellX = l + col * colWidth
                 val boosted = m > 1f
                 paint.color = if (boosted) Ui.blend(Palette.active.good, PANEL_COLOR, 0.68f)
                     else Color.rgb(35, 43, 61)
