@@ -508,7 +508,7 @@ class CampaignScreen(
             g.profile.stars[i], 3, 0.95f)
         // R10-02: korona Trudnego w wolnym prawym dolnym rogu węzła.
         if (g.profile.hardWon(i)) {
-            val kx = x + r * CROWN_DX
+            val kx = x + r * CROWN_DX + CROWN_OUT_DP * dp
             val ky = y + r * CROWN_DY
             fill.color = Ui.OUTLINE; c.drawCircle(kx, ky, 12 * dp, fill)
             fill.color = CROWN_BG; c.drawCircle(kx, ky, 10 * dp, fill)
@@ -522,8 +522,8 @@ class CampaignScreen(
         val x = t.r.centerX()
         val y = t.r.top + nodeR * (if (i % 4 == 3) 1.12f else 1f) * 1.42f
         val r = nodeR * if (i % 4 == 3) 1.12f else 1f
-        out.set(x + r * CROWN_DX - 12 * dp, y + r * CROWN_DY - 12 * dp,
-            x + r * CROWN_DX + 12 * dp, y + r * CROWN_DY + 12 * dp)
+        val kx = x + r * CROWN_DX + CROWN_OUT_DP * dp
+        out.set(kx - 12 * dp, y + r * CROWN_DY - 12 * dp, kx + 12 * dp, y + r * CROWN_DY + 12 * dp)
         return out
     }
 
@@ -717,7 +717,7 @@ class CampaignScreen(
                 val left = info.centerX() - total / 2f
                 hardInfoRect.set(left, y - 6 * dp, left + total, y + 14 * dp)
                 drawHardLine(c, line, left, y + 4 * dp, sz)
-                y -= 8 * dp
+                y -= 4 * dp
             } else hardInfoRect.setEmpty()
         }
         if (line.isEmpty()) hardInfoRect.setEmpty()
@@ -897,9 +897,13 @@ class CampaignScreen(
     private companion object {
         /** Pas nagłówka epoki w pionie: medalion (7–53 dp) i gwiazdki, plus oddech. */
         const val HEADING_DP = 58f
-        /** R10-02: korona węzła w prawym dolnym rogu (wolnym od pogody, flagi i błyskawicy). */
-        const val CROWN_DX = 0.94f
-        const val CROWN_DY = 0.68f
+        /**
+         * R10-02: korona węzła w prawym dolnym rogu (wolnym od pogody, flagi i błyskawicy), nieco
+         * na zewnątrz: w punkcie (0,94 r; 0,68 r) kółko 12 dp zachodziło na trzecią gwiazdkę.
+         */
+        const val CROWN_DX = 1.02f
+        const val CROWN_OUT_DP = 4f
+        const val CROWN_DY = 0.5f
         val CROWN_BG = Color.rgb(176, 124, 36)
     }
 }

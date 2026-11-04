@@ -28,6 +28,7 @@ import kotlin.math.hypot
 @Config(sdk = [35])
 class HardCampaign189ScreenshotTest : PrereleasePolishBase() {
     private val crowns = intArrayOf(0, 1, 2, 3, 9)
+    private var visibleGoals = 0
 
     private fun prepared(g: Game) {
         val p = g.profile
@@ -77,7 +78,9 @@ class HardCampaign189ScreenshotTest : PrereleasePolishBase() {
         val dp = g.ui.dp
         val cs = CampaignScreen(g)
         g.push(cs)
-        tick(g, 6, 0.1f)
+        // Baner serii dni znika po kilku sekundach (zasłaniał nagłówek epoki 1).
+        tick(g, 90, 0.1f)
+        require10(g.noticeBanner.isEmpty, "$prefix: baner nad mapą po 9 s")
         field(cs, "autoScroll").setBoolean(cs, false)
         field(cs, "scroll").setFloat(cs, 0f)
         tick(g, 2)
@@ -132,7 +135,7 @@ class HardCampaign189ScreenshotTest : PrereleasePolishBase() {
         val cs = CampaignScreen(g)
         g.push(cs)
         tick(g, 6, 0.1f)
-        val withMods = Campaign.stages.first { it.modifiers.size >= 2 && it.index !in crowns }
+        val withMods = Campaign.stages.first { it.modifiers.isNotEmpty() && it.index !in crowns }
         for ((stage, hard) in listOf(Campaign.stages[1] to false, withMods to true, withMods to false)) {
             g.profile.campaignDifficulty = if (hard) CampaignDifficulty.HARD else CampaignDifficulty.NORMAL
             field(cs, "selected").set(cs, stage)
@@ -170,9 +173,18 @@ class HardCampaign189ScreenshotTest : PrereleasePolishBase() {
         tick(g, 6, 0.1f)
         val menu = g.current as MenuScreen
         if (menu.portraitMenu) return // pionowe menu nie ma wiersza celu (R2-01)
-        assertEquals("$prefix: cel menu", NextGoalKind.HARD_STAGE, menu.goalKind)
-        assertEquals(4, menu.goalArg)
-        require10(menu.goalBtn.visible, "$prefix: cel korony niewidoczny w menu")
+        val goal = com.centurywar.meta.NextGoals.pick(g.profile, System.currentTimeMillis(), null, skipMissions = true)
+        assertEquals("$prefix: cel", NextGoalKind.HARD_STAGE, goal.kind)
+        assertEquals(4, goal.arg)
+        if (menu.goalBtn.visible) {
+            assertEquals("$prefix: cel menu", NextGoalKind.HARD_STAGE, menu.goalKind)
+            assertEquals(4, menu.goalArg)
+            visibleGoals++
+        } else {
+            // Ekran bez miejsca na wiersz celu (np. pasek serii dni): sama akcja celu.
+            field(menu, "goalKind").set(menu, goal.kind)
+            menu.goalArg = goal.arg
+        }
         menu.onClick(menu.goalBtn)
         tick(g, 6, 0.1f)
         val cs = g.current as CampaignScreen

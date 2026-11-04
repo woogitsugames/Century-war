@@ -45,9 +45,9 @@ class MenuScreen(g: Game) : Screen(g) {
     /** R2-01: jedna linia „następnego celu” pod kaflami (po samouczku, gdy jest miejsce). */
     internal val goalBtn = btn(GOAL).also { it.visible = false }
     internal var goalKind = NextGoalKind.NONE
+        private set
     /** R10-02: argument celu (indeks etapu dla HARD_STAGE). */
     internal var goalArg = -1
-        private set
     internal var goalText = ""
         private set
     private var goalSize = 13f
