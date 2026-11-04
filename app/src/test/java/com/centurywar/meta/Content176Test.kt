@@ -76,7 +76,7 @@ class Content176Test {
         // Nowe metryki są dopisane na końcu enumu (zapis po nazwie i kolejność w JSON).
         val metrics = AchievementMetric.values().map { it.name }
         assertEquals(listOf("COMMANDER_SUMMONED", "COMMANDER_SURVIVOR", "COMMANDER_PULSES",
-            "COMMANDER_WINS", "TURRET_TIER_FOUR", "LATE_NO_TURRET_WINS"), metrics.takeLast(6))
+            "COMMANDER_WINS", "TURRET_TIER_FOUR", "LATE_NO_TURRET_WINS", "WAGER_40"), metrics.takeLast(7))
         for (key in listOf("cx176_tiers", "cx176_tiers_d", "cx176_commander_tips",
             "cx176_commander_tips_d", "wn_176_content")) assertEquals(key, 10, L.raw(key)?.size)
         assertTrue("wn_176_content" in WhatsNewCatalog.releases.first().textKeys)

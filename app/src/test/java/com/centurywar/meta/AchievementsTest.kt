@@ -275,8 +275,8 @@ class AchievementsTest {
             listOf("first_research", AchievementMetric.RESEARCH_LEVELS, 1L, 10, AchievementCategory.RESEARCH),
             listOf("stages_3", AchievementMetric.STAGES, 3L, 20, AchievementCategory.CAMPAIGN),
         )
-        // Dopisane na końcu katalogu, w ustalonej kolejności.
-        assertEquals(expected.map { it[0] }, Achievements.all.takeLast(4).map { it.id })
+        // Dopisane na końcu katalogu R6-01, w ustalonej kolejności (po nich tylko wager_40 z 4.11).
+        assertEquals(expected.map { it[0] } + "wager_40", Achievements.all.takeLast(5).map { it.id })
         for (row in expected) {
             val a = Achievements.byId(row[0] as String)!!
             assertEquals(row[1], a.metric)
