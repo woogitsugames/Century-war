@@ -210,7 +210,7 @@ Rekomendacja: Backblaze B2 (10 GB za darmo, baza ma kilka MB) albo Hetzner
 Storage Box. U dostawcy zaakceptuj umowę powierzenia danych (DPA).
 
 1. Na VPS: `sudo apt install -y rclone` (albo instalator z rclone.org).
-2. U dostawcy utwórz **osobny kubełek** (np. `century-war-backup`) i klucz
+2. U dostawcy utwórz **osobny kubełek w regionie UE** (np. `century-war-backup`; B2: region „EU Central”) i klucz
    dostępu ograniczony do tego jednego kubełka.
 3. `sudo rclone config` (konfiguracja trafi do `/root/.config/rclone/rclone.conf`):
    - `n` → nazwa `b2` → typ `b2` (albo `sftp` dla Storage Box) → podaj klucz;
