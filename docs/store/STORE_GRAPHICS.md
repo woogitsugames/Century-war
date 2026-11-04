@@ -14,8 +14,8 @@ podpowiedzi, banerów i „Co nowego”; sceny bitwy mają stały seed. Jedyna n
 | 01 | `01-commander.png` | Bitwa z Wodzem i aurą, pełny HUD z przyciskiem dowódcy | Wódz i aura bojowa |
 | 02 | `02-turret-tiers.png` | Panel wież: stopień 2 i 3 kupione przez `BattleController` | Wieże do 3. stopnia |
 | 03 | `03-campaign.png` | Mapa kampanii, profil z 10 etapami (gwiazdki w dwóch epokach), przewinięta do bieżącego etapu | Kampania przez epoki |
-| 04 | `04-endless-cards.png` | Wybór 3 kart Endless przy fali 10 z bossem (najnowsza karta każdej rzadkości) | Karty i bossowie Endless |
-| 05 | `05-results.png` | Zwycięstwo etapu 11: gwiazdki, „Za bitwę” i „Za osiągnięcia” osobno, „Następny cel”; zakładka **Wynik** (na telefonie czytelniejsza niż wykres) | Medale i następny cel |
+| 04 | `04-endless-cards.png` | Wybór 3 kart Endless przy fali 10 z bossem: karty z D6 Mur tarcz, Saperzy, Zakład (wybór na stałe w teście) | Karty i bossowie Endless |
+| 05 | `05-results.png` | Zwycięstwo etapu 11 po prawdziwej symulacji 7:45 (3 gwiazdki, kilkadziesiąt zabitych, +131 za bitwę, +130 za osiągnięcia 25 bitew i 1000 zabitych), „Następny cel”; zakładka **Wynik** (na telefonie czytelniejsza niż wykres) | Medale i następny cel |
 | 06 | `06-missions.png` | Misje: seria 4 dni, misje dzienne, jedna do odebrania, jedna odebrana (stały dzień 18.11.2026) | Misje dzienne |
 | 07 | `07-accessibility.png` | Bitwa w palecie „wysoki kontrast”, znaczniki drużyn, tekst 115% (prawdziwe ustawienia profilu) | Wysoki kontrast i znaczniki |
 | 08 | `08-weekly-siege.png` | Oblężenie tygodnia z progami Brąz/Srebro/Złoto | Oblężenie tygodnia: Brąz–Złoto |
@@ -53,9 +53,12 @@ python3 scripts/validate_store_d7.py app/build/storeD7
 - Partie językowe: `STORE_LANGUAGES=pl,en,de` (walidator: `--languages pl,en,de`).
 - Tylko wybrane urządzenia (podgląd): `STORE_D7_DEVICES=phone,tablet10` — wtedy manifest nie
   jest nadpisywany; do uploadu zawsze pełny eksport.
-- Karty Endless (kadr 04): domyślnie najnowsza karta każdej rzadkości z końca `EndlessCard`.
-  Po scaleniu D6 (nowe karty dopisane na końcu enumu) **wystarczy ponowić eksport**. Ręczny
-  wybór: `STORE_D7_CARDS=QUARTERMASTER,MASTER_MASONS,BOSS_RECALL`.
+- Karty Endless (kadr 04): na stałe `SHIELD_WALL, SAPPERS, WAGER` (karty z D6 trzech rzadkości),
+  żeby kolejne karty w enumie nie zmieniały kadru. Inny wybór:
+  `STORE_D7_CARDS=QUARTERMASTER,MASTER_MASONS,BOSS_RECALL`.
+- Kadr 05 sprawdza w teście realne liczby: czas 7–10 min, 30–99 zabitych, 3 gwiazdki,
+  medale za osiągnięcia równe sumie dwóch odblokowanych (`battles_25`, `kills_1000`).
+- Sceny bitwy sprawdzają, że znak „baza atakowana” (R10-03) jest niewidoczny.
 - Pełny eksport 10 języków trwa kilkanaście minut; wynik w `app/build/storeD7/<język>/`.
 
 `d7CaptionsComplete` (zwykły zestaw testów) sprawdza w 10 plikach `graphics_*.properties`

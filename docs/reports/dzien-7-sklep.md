@@ -47,7 +47,7 @@ Znane drobiazgi (do decyzji):
 - Kadr 08 zasłania podpisem licznik medali w prawym górnym rogu (jak w zestawie 117).
 - Kadr 08 pokazuje odliczanie i zestaw zasad bieżącego tygodnia, więc przed uploadem trzeba
   wygenerować go ponownie (zmienia się z datą). Kadr 06 ma stały dzień (zegar ekranu misji).
-- Kadr 05: „Czas 0:40” (etap rozstrzygnięty po 40 s symulacji). Wiarygodne, ale krótkie.
+- Kadr 05 (dzień 19): poprawiony, patrz niżej.
 
 ## Propozycja wyboru do Play
 
@@ -62,7 +62,21 @@ Znane drobiazgi (do decyzji):
 `MissionsScreen.clock` (internal, domyślnie `System.currentTimeMillis()`): stały zegar dla
 powtarzalnego kadru 06. Zachowanie gry bez zmian.
 
-## Karty Endless po D6
+## Odświeżenie po D6 (dzień 19)
+
+- **Kadr 04**: karty z D6 na stałe — Mur tarcz (zwykła), Saperzy (niepospolita), Zakład
+  (rzadka). Nazwy i opisy mieszczą się w kartach we wszystkich 10 językach (najdłuższy opis
+  „Zakładu” w es/fr/it/uk: 4 wiersze, z zapasem w karcie). Wybór automatyczny (najnowsza karta każdej rzadkości)
+  dawał ten sam zestaw, ale jest zastąpiony stałą listą, żeby przyszłe karty nie zmieniały kadru.
+- **Kadr 05**: wcześniej niemożliwa bitwa (3 gwiazdki w 0:40, 9 zabitych, +620 medali za
+  osiągnięcia z pustego profilu). Teraz etap 11 po prawdziwej symulacji 7:45 (przed presją
+  oblężniczą), 3 gwiazdki, kilkadziesiąt zabitych, +131 za bitwę (wzór kampanii) i +130 za
+  dwa osiągnięcia (`battles_25` 35 + `kills_1000` 95) na profilu po 24 bitwach; „Następny cel”
+  widoczny. Test pilnuje przedziałów (czas 7–10 min, 30–99 zabitych, suma osiągnięć).
+- **Sygnały R10-03**: sceny bitwy sprawdzają, że znak „baza atakowana” jest niewidoczny; w
+  żadnym kadrze go nie ma. Zewnętrzny Fold (QA) pokazuje przybliżone pole bitwy — zgodnie z D17.
+
+## Karty Endless po D6 (archiwalne)
 
 Kadr 04 bierze najnowszą kartę każdej rzadkości z końca `EndlessCard`. D6 dopisuje karty na
 końcu enumu, więc po scaleniu wystarczy ponowić eksport (ewentualnie
