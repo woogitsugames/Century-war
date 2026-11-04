@@ -370,7 +370,11 @@ Przykładowy wpis cron po dostosowaniu `/srv/century-war` do katalogu wdrożenia
 ~~~
 
 Utrzymuj też **kopię poza VPS**: backup na tym samym dysku nie zabezpiecza
-przed awarią dysku. Rotacja dotyczy tylko plików `cw-backup-*.sqlite`
+przed awarią dysku. Skrypt wysyła ją sam, gdy ustawisz `CW_BACKUP_RCLONE_REMOTE`
+(np. `b2crypt:century-war`, rclone z `crypt` na hoście; rotacja zdalna
+`CW_BACKUP_REMOTE_RETENTION_DAYS`, domyślnie 30), a `CW_BACKUP_PING_URL`
+(np. Healthchecks.io) dostaje ping po sukcesie i `…/fail` po każdym błędzie;
+szczegóły w `docs/SERVER_DEPLOY.md` §6a i §10. Rotacja dotyczy tylko plików `cw-backup-*.sqlite`
 w katalogu `CW_BACKUP_DIR`; katalog `cw-data` nie jest miejscem docelowym
 trwałych kopii. Kopię można wykonać także przy aktywnym trybie WAL.
 
@@ -406,37 +410,55 @@ nowej bazy usuń je ręcznie, a jeśli potrzebujesz starszego stanu, skopiuj go
 poza wolumen przed kolejnym przywróceniem.
 
 **Przywrócenie a usunięcia danych graczy.** Przywrócenie cofa wszystkie
-operacje wykonane po momencie utworzenia kopii, w tym usunięcia danych
-(`/v1/player/delete`, `admin delete-score`). Serwer **nie prowadzi dziennika
-usunięć** (celowo nie przechowuje UUID osób, które usunęły dane), więc
-usunięć nie da się odtworzyć automatycznie. Po każdym przywróceniu, przed
-ponownym udostępnieniem rankingu:
+operacje wykonane po momencie utworzenia kopii, w tym usunięcia danych.
+Od schematu 3 serwer prowadzi **dziennik usunięć** `deletion_log`: przy każdym
+usunięciu (`/v1/player/delete`, `admin delete-player`, retencja nieaktywnych)
+zapisuje skrót HMAC identyfikatora (klucz `CW_PUBLIC_ID_KEY`, osobna domena,
+**nie surowy UUID** i nie publiczne ID), czas i źródło. Dziennik jest w tej samej
+bazie, więc trafia do kopii i ma retencję `CW_RETENTION_LOG_DAYS` (400 dni).
+Po przywróceniu, przed ponownym udostępnieniem rankingu, powtórz usunięcia
+z bazy sprzed odtworzenia (katalog ratunkowy z linii `previous-files:`):
 
-1. Odnotuj datę kopii i datę przywrócenia.
-2. Zbierz UUID graczy, którzy po dacie kopii zażądali usunięcia danych
-   kanałami poza aplikacją (e-mail, zgłoszenia prywatności, notatki
-   moderacji z `delete-score`/`block`).
-3. Dla każdego UUID znajdź jego wyniki:
-   `docker compose run --rm --no-deps -T leaderboard admin export-csv | grep '^UUID,'`
-   i usuń każdy wiersz poleceniem
-   `admin delete-score UUID board day` (kolumny `board` i `day` z CSV).
-   Usunięcie ostatniego wyniku gracza usuwa też jego nick i zgłoszenia.
-   Ponów także `admin block UUID` dla blokad nadanych po dacie kopii.
-4. Sprawdź `admin export-csv`, że UUID nie występuje w wynikach.
-5. Usunięć wykonanych w aplikacji po dacie kopii serwer nie zna; dlatego
-   przywracaj możliwie najnowszą kopię i opisz zdarzenie w rejestrze
-   incydentów (skutki dla retencji i żądań usunięcia danych).
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin replay-deletions \
+  --since RRRR-MM-DD --from /var/lib/cw/cw-pre-restore-…/leaderboards.db
+docker compose up -d leaderboard
+~~~
+
+`--since` to dzień UTC utworzenia kopii. Bez `--from` komenda czyta dziennik
+bieżącej bazy (po odtworzeniu zwykle nic nie usuwa). Gdy poprzednia baza
+przepadła razem z dyskiem, usunięcia od ostatniej kopii zdalnej są stracone:
+powtórz ręcznie `delete-player` dla próśb e-mailowych z tego okresu i opisz
+zdarzenie w rejestrze incydentów. `delete-score` nie trafia do `deletion_log`
+(jest w `admin_log`); ponów je ręcznie, podobnie jak blokady nadane po dacie kopii.
+
 
 ## Moderacja administracyjna
 
-Bez panelu WWW: polecenia w tym samym programie `server admin ...` to
-`recent [limit]`, `reports [limit]`, `delete-score UUID board day`, `block UUID`,
-`unblock UUID` i `export-csv` (stdout). Na VPS uruchom je przez
+Bez panelu WWW: polecenia w tym samym programie `server admin ...`:
+`recent [limit]`, `reports [--all] [limit]` (domyślnie nierozpatrzone),
+`resolve-report <id>`, `find-nick <tekst>`, `delete-player <UUID> [--keep-block]`,
+`delete-score UUID board day`, `block UUID`, `unblock UUID`, `purge [--dry-run]`,
+`replay-deletions --since RRRR-MM-DD [--from plik]`, `log [limit]`,
+`backup`, `restore` i `export-csv` (stdout). Na VPS uruchom je przez
 `docker compose run --rm --no-deps -T leaderboard admin ...`.
 Blokady ukrywają istniejące wyniki i zatrzymują nowe zgłoszenia, bez
 zmiany schematu API. Usunięcie danych z `/v1/player/delete` usuwa
-wyniki i nick, **nie usuwa rekordu blokady UUID**. Pełne przykłady, kopie i uprawnienia
-w instrukcji dla właściciela poniżej.
+wyniki i nick, **nie usuwa rekordu blokady UUID**; `admin delete-player`
+(prośba e-mailowa, bez sekretu instalacji, tylko z CLI na serwerze) domyślnie
+usuwa też blokadę, chyba że podasz `--keep-block`. Działania operatora trafiają
+do `admin_log` (skrót gracza, bez UUID). `delete-player` z osobnego kontenera
+CLI nie zna biletów zgłoszeń w toku procesu serwera; wynik weryfikowany w tej
+chwili i tak zostanie odrzucony (`player_deleted`), bo serwer sprawdza w bazie,
+czy właściciel nadal istnieje.
+
+**Retencja:** `CW_RETENTION_PERIOD_DAYS` (90; `daily`, `weekly_<n>`),
+`CW_RETENTION_REPORT_DAYS` (180), `CW_RETENTION_INACTIVE_DAYS` (730; gracz
+usuwany w całości), `CW_RETENTION_LOG_DAYS` (400); `0` wyłącza krok. Serwer
+czyści przy starcie i raz na dobę; `admin purge --dry-run` pokazuje liczby bez
+usuwania. Pełny opis i procedury: [docs/SERVER_DEPLOY.md](../docs/SERVER_DEPLOY.md)
+§6a, §7, §8a, §10, §13.
+
 
 ## Wdrożenie: Docker Compose / VPS
 
