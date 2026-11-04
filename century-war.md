@@ -24,7 +24,7 @@ Jesteś koordynatorem projektu Century War — oryginalnej strategii na Androida
 **Zrobione w sesji 3–4.11 (wszystko na main):** dni 4–9 (zegar pod minimapą na Foldzie, TalkBack w HUD bitwy, dostępność z ustawień telefonu i tempo ×½, stabilność na tanich telefonach, Raport dla testera, „Następny cel”, pomoc po 2 porażkach), poprawki z przeglądów R6/R10, tłumaczenia R7, ściąga właściciela `docs/OWNER_CHECKLIST.md`, arkusz/import Play Games, grafiki sklepu D7 (odświeżone po D6), D6 nowa zawartość (zewnętrzna sesja, PR 153), osiągnięcia pierwszej godziny + ikony, osiągnięcia po D6, korony za Trudny, tryb gry/oszczędzanie baterii, utracona bitwa po aktualizacji (komunikat + zwrot próby + medale), sygnały dźwiękowe i znak „baza atakowana”, przybliżenie pola bitwy na zewnętrznym Foldzie (flaga `BattleRenderer.NARROW_ZOOM`), powitanie po 3+ dniach przerwy (+30 medali), samouczek wraca po zabiciu procesu, kamienie milowe Endless, TalkBack na ekranach poza bitwą (mapa, tryby, Badania, Misje, listy), pętla testowa Play (`TestLoopActivity`, proces `:testloop`), „oddech” muzyki w bitwie (`MusicBreath`), etapy 8–12 krótsze (~9 min).
 
 **W toku w chwili zamknięcia (sprawdź gałęzie, dokończ albo scal):**
-- `claude/dzien-26-ankieta` — ankieta testera (tylko w wersjach testowych, flaga `TESTER_SURVEY`, part200) + drobne napisy Kodeksu na zewnętrznym Foldzie.
+- [SCALONE na integ/tura10 4.11 ~18:30 UTC; pełne testy po scaleniu uruchomione — jeśli `main` != `integ/tura10`, uruchom pełne testy i wypchnij] `claude/dzien-26-ankieta` — ankieta testera (tylko w wersjach testowych, flaga `TESTER_SURVEY`, part200) + drobne napisy Kodeksu na zewnętrznym Foldzie.
 - `claude/dzien-27-etapy-13-18` — etapy 13–18 krótsze (cel 9,5–11 min, PROTOCOL 0.8.8, wpis w `docs/BALANCE.md`).
 Jeśli gałąź ma raport/pełne testy w commitach — scal na `integ/tura10`, uruchom pełne testy, wypchnij. Jeśli niedokończona — zleć agentowi dokończenie od ostatniego commita (najpierw `git merge origin/integ/tura10`).
 
@@ -36,6 +36,8 @@ Jeśli gałąź ma raport/pełne testy w commitach — scal na `integ/tura10`, u
 - Etapy 8–12 i 13–18 krótsze; muzyka: oddech co ~2,5 min; ankieta tylko w testach; pętla testowa włączona.
 - Polityka prywatności: zatwierdzone dopiski o raportach zawieszeń, dzienniku testu i ustawieniach dostępności w raporcie.
 - `Daily.RELEASE_DAY` = 2027-12-01 — nie zmieniać bez decyzji.
+
+**Ankieta testera:** w produkcji wyłączyć `-PtesterSurvey=false`, jeśli pierwsze wydanie produkcyjne ma numer 0.x (zob. `docs/RELEASE.md`). Drobne napisy < 10 sp na zewnętrznym Foldzie zostały: „Wymaga: Doktryna elit”, legenda porównania jednostek, zakładki przy 130%.
 
 **Otwarte u właściciela:** dane wydawcy, konto Play (D-U-N-S, weryfikacja), podpis upload, polityka prywatności na stronie, testerzy (lista w `docs/OWNER_CHECKLIST.md`); serwer rankingu — 6 decyzji w `docs/research/R5-server.md` (rekomendacja: testy bez serwera, VPS w UE przy premierze; zlecenie `docs/tasks/R5-server-hardening.md`); Game Stats (Data safety).
 
