@@ -259,7 +259,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
         if (page == PAGE_COMPARE) {
             for (button in variantBtn) button.visible = false
-            compare.layout(left, viewTop, contentW, withResearch)
+            compare.layout(left, viewTop, contentW, withResearch,
+                stacked = w - g.insetL - g.insetR < 420 * dp && h > w)
             viewTop += compare.controlHeight
             activeCards = 0
             val compactToggle = w - g.insetL - g.insetR < 700 * dp
@@ -917,6 +918,17 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         c.restore()
     }
+
+    /** Do testów: napisy siatki statystyk aktywnych kart (etykiety i wartości). */
+    internal fun statTextsForTest(): Set<String> {
+        val out = HashSet<String>()
+        for (i in 0 until CARDS) for (k in 0 until statN[i]) {
+            statLabel[i][k]?.let { out.add(it) }
+            statVal[i][k]?.let { out.add(it) }
+        }
+        return out
+    }
+    internal val comparePanelForTest get() = compare
 
     /** Zastany renderer sylwetek jest używany też przez widok porównania. */
     internal fun drawCompareIcon(c: Canvas, unit: UnitDef, x: Float, y: Float, size: Float) {
