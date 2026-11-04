@@ -34,6 +34,16 @@ val releaseTag = runCatching {
 val releaseVersionName = releaseTag?.removePrefix("v")
     ?: providers.gradleProperty("releaseVersionName").getOrElse("0.1.0-dev")
 
+// Ankieta testera (R11, pozycja 7): tylko w wersjach testowych. -PtesterSurvey=true|false
+// wymusza wartość; bez niej wydanie ma ankietę, gdy wersja jest przedpremierowa (0.x.y albo
+// sufiks, np. 1.0.0-rc1), a produkcja 1.0.0 i nowsze bez sufiksu jej nie mają. Debug: zawsze.
+val testerSurveyOverride = providers.gradleProperty("testerSurvey").orNull?.trim()?.lowercase()
+check(testerSurveyOverride == null || testerSurveyOverride in setOf("true", "false")) {
+    "-PtesterSurvey przyjmuje tylko true albo false"
+}
+val testerSurveyRelease = testerSurveyOverride?.toBoolean()
+    ?: (releaseVersionName.startsWith("0.") || releaseVersionName.contains('-'))
+
 // Konfiguracja rankingu tylko z lokalnego pliku lub zmiennych CI; bez wartości domyślnych.
 val localSettings = Properties().apply {
     val settings = rootProject.file("local.properties")
@@ -97,6 +107,7 @@ android {
         buildConfigField("String", "CW_HMAC_KEY", quotedBuildValue(scoreHmacKey))
         buildConfigField("String", "CW_PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
         buildConfigField("String", "PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
+        buildConfigField("boolean", "TESTER_SURVEY", testerSurveyRelease.toString())
     }
 
     buildFeatures { buildConfig = true }
@@ -119,6 +130,8 @@ android {
         debug {
             // W debug zawsze jest dostępny wbudowany skrót polityki.
             buildConfigField("String", "PRIVACY_URL", "\"\"")
+            // Ankieta testera zawsze w debug (chyba że jawnie -PtesterSurvey=false).
+            buildConfigField("boolean", "TESTER_SURVEY", (testerSurveyOverride != "false").toString())
         }
         release {
             isMinifyEnabled = true

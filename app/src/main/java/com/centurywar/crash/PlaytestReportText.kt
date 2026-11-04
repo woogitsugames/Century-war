@@ -16,7 +16,7 @@ import java.time.LocalDate
  */
 object PlaytestReportText {
     const val MAX_CHARS = 6_000
-    val SECTIONS = arrayOf("[Progress]", "[Play time]", "[Modes]", "[Performance]", "[Settings]")
+    val SECTIONS = arrayOf("[Tester survey]", "[Progress]", "[Play time]", "[Modes]", "[Performance]", "[Settings]")
     private val QUALITY = arrayOf("auto", "low", "medium", "high")
     private val PALETTES = arrayOf("standard", "deutan/protan", "tritan", "high contrast")
     private val RESULTS = arrayOf("win", "loss", "surrender")
@@ -41,6 +41,11 @@ object PlaytestReportText {
         val reduceFlash: Boolean, val slowSpeed: Boolean, val language: String,
         /** R10-04: tryb gry Androida ([GameModes]). */
         val gameMode: Int = GameModes.UNSUPPORTED,
+        /** R11 (pozycja 7): ankieta testera z [PlaytestLog]. */
+        val surveyState: Int = PlaytestLog.SURVEY_NONE,
+        val surveyRating: Int = 0,
+        val surveyIssue: Int = -1,
+        val surveyDay: Long = -1L,
     )
 
     /** Wątek gry: odczyt profilu, dziennika testu i historii (kopia listy). */
@@ -78,6 +83,10 @@ object PlaytestReportText {
             reduceFlash = p.reduceFlash, slowSpeed = g.slowSpeedEnabled(),
             language = L.CODES.getOrElse(L.lang) { "?" },
             gameMode = g.gameMode,
+            surveyState = log?.surveyState ?: PlaytestLog.SURVEY_NONE,
+            surveyRating = log?.surveyRating ?: 0,
+            surveyIssue = log?.surveyIssue ?: -1,
+            surveyDay = log?.surveyDay ?: -1L,
         )
     }
 
@@ -109,7 +118,20 @@ object PlaytestReportText {
         out.append("Android: ").append(android).append('\n')
         out.append("Language: ").append(input.language).append("\n\n")
 
+        // Ankieta na początku: krótka, a przy obcięciu raportu do MAX_CHARS nie może zniknąć.
         out.append(SECTIONS[0]).append('\n')
+        when (input.surveyState) {
+            PlaytestLog.SURVEY_ANSWERED -> {
+                out.append("Rating: ").append(input.surveyRating).append("/5 (").append(day(input.surveyDay)).append(")\n")
+                out.append("Biggest issue: ")
+                    .append(PlaytestLog.SURVEY_ISSUES.getOrElse(input.surveyIssue) { "skipped" }).append('\n')
+            }
+            PlaytestLog.SURVEY_SKIPPED -> out.append("Skipped (").append(day(input.surveyDay)).append(")\n")
+            else -> out.append("Not asked yet\n")
+        }
+        out.append('\n')
+
+        out.append(SECTIONS[1]).append('\n')
         out.append("Campaign: stage ").append(input.unlockedStage + 1).append(" of ").append(input.stageCount)
             .append(", stars ").append(input.totalStars).append(" of ").append(input.stageCount * 3)
             .append(", difficulty ").append(input.campaignDifficulty).append('\n')
@@ -122,7 +144,7 @@ object PlaytestReportText {
             .append(" (max ").append(input.maxLossStreak).append(")\n")
         out.append("Login streak: ").append(input.loginStreak).append("\n\n")
 
-        out.append(SECTIONS[1]).append('\n')
+        out.append(SECTIONS[2]).append('\n')
         out.append("First day (UTC): ").append(day(input.firstDay))
             .append(", last day: ").append(day(input.lastDay)).append('\n')
         out.append("Days played: ").append(input.daysPlayed).append(", sessions: ").append(input.sessions).append('\n')
@@ -131,7 +153,7 @@ object PlaytestReportText {
         out.append("Battles: ").append(input.battles).append(", wins: ").append(input.wins)
             .append(", surrenders: ").append(input.surrenders).append("\n\n")
 
-        out.append(SECTIONS[2]).append('\n')
+        out.append(SECTIONS[3]).append('\n')
         for (i in Mode.entries.indices) {
             out.append(Mode.entries[i].name).append(": battles ").append(input.modeBattles.getOrElse(i) { 0 })
                 .append(", wins ").append(input.modeWins.getOrElse(i) { 0 })
@@ -158,7 +180,7 @@ object PlaytestReportText {
         }
         out.append('\n')
 
-        out.append(SECTIONS[3]).append('\n')
+        out.append(SECTIONS[4]).append('\n')
         out.append("Quality: ").append(QUALITY.getOrElse(input.qualitySetting) { "?" })
             .append(" (level ").append(input.qualityLevel)
             .append(", reduction now ").append(input.reduction).append('/').append(input.maxReductionSteps)
@@ -173,7 +195,7 @@ object PlaytestReportText {
         }
         out.append('\n')
 
-        out.append(SECTIONS[4]).append('\n')
+        out.append(SECTIONS[5]).append('\n')
         out.append("FPS cap: ").append(if (input.fpsCap == 0) "display" else input.fpsCap.toString()).append('\n')
         out.append("Game mode: ").append(GameModes.reportName(input.gameMode)).append('\n')
         out.append("Palette: ").append(PALETTES.getOrElse(input.palette) { "?" }).append('\n')
