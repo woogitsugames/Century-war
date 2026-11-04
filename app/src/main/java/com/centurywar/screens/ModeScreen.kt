@@ -45,8 +45,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
 
     init { buttons.add(0, hints.okBtn) }
     private var dt = 0f
-    /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
-    private var day = previewDailyDay ?: Daily.dayNumber()
+    /**
+     * Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania.
+     * D41: z zegara gry (`g.clock()`), jak menu i misje, nie z zegara systemowego.
+     */
+    private var day = previewDailyDay ?: Daily.dayNumber(g.clock())
+    /** Testy D41. */
+    internal val dayForTests: Long get() = day
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
     private var dailyWeather = ""
@@ -192,14 +197,14 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     override fun update(dt: Float) {
         hints.update(dt)
         this.dt = dt
-        val today = previewDailyDay ?: Daily.dayNumber()
+        val today = previewDailyDay ?: Daily.dayNumber(g.clock())
         if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
         labelTimer -= dt
         if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
         if (mode == Mode.DAILY) {
             if (dailyCfg == null || dailyLang != L.lang) rebuildDaily()
             if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
-            val second = System.currentTimeMillis() / 1000L
+            val second = g.clock() / 1000L
             if (second != weeklySecond) {
                 weeklySecond = second
                 val remaining = ((week * 7L + 4L) * 86_400L - second).coerceAtLeast(0L)
@@ -569,10 +574,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                     Mode.ENDLESS -> g.setScreen(BattleScreen(g, BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = pr.bonuses())))
                     Mode.DAILY -> {
                         if (weeklySelected) {
-                            val currentWeek = Weekly.weekNumber(Daily.dayNumber())
+                            val currentWeek = Weekly.weekNumber(Daily.dayNumber(g.clock()))
                             g.setScreen(BattleScreen(g, Weekly.config(currentWeek)))
                         } else {
-                            val today = Daily.dayNumber()
+                            val today = Daily.dayNumber(g.clock())
                             val ranked = pr.lastRankedDaily != today
                             if (ranked) { pr.lastRankedDaily = today; pr.save() }
                             g.setScreen(BattleScreen(g, Daily.config(today, pr.bonuses()), ranked))
