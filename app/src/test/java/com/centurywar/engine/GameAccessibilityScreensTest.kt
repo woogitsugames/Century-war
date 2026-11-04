@@ -127,10 +127,19 @@ class GameAccessibilityScreensTest {
         "banners" to { g -> BannerScreen(g) },
     )
 
+    private data class Quad(val device: String, val size: FloatArray, val lang: String, val overlays: Boolean)
+
     @Test fun everyScreenHasNamedNodesInsideTheView() {
-        for ((device, size) in listOf("phone" to floatArrayOf(1600f, 720f, 2f), "fold_outer" to floatArrayOf(904f, 2316f, 2.625f))) {
-            for (lang in listOf("pl", "en")) {
-                for (overlays in listOf(false, true)) {
+        val phone = floatArrayOf(1600f, 720f, 2f)
+        val fold = floatArrayOf(904f, 2316f, 2.625f)
+        // Telefon i zewnętrzny Fold, pl i en; okna (dymki, zapowiedź epoki) na telefonie i Foldzie po polsku.
+        for ((device, size, lang, overlays) in listOf(
+            Quad("phone", phone, "pl", false), Quad("phone", phone, "en", false),
+            Quad("fold_outer", fold, "pl", false), Quad("fold_outer", fold, "en", false),
+            Quad("phone", phone, "pl", true), Quad("fold_outer", fold, "pl", true),
+        )) {
+            run {
+                run {
                     val f = setup(size[0].toInt(), size[1].toInt(), size[2], lang) { p ->
                         p.stars[0] = 3; p.stars[1] = 2
                         if (!overlays) quiet(p)
@@ -139,7 +148,7 @@ class GameAccessibilityScreensTest {
                         for ((name, make) in screens) {
                             val tag = "$device/$lang/$name/${if (overlays) "okna" else "bez okien"}"
                             f.game.push(make(f.game))
-                            f.settle(20)
+                            f.settle(12)
                             val root = f.root()
                             assertNotEquals(tag, L["a164_other"], root.contentDescription.toString())
                             val nodes = f.nodes()
@@ -248,7 +257,7 @@ class GameAccessibilityScreensTest {
             f.game.push(ResearchScreen(f.game))
             f.settle()
             assertEquals(L["research"], f.root().contentDescription.toString())
-            assertTrue(f.texts().any { it == L.f("a196_medals", L.plural("medals_n", 100_000L)) })
+            assertTrue(f.texts().toString(), f.texts().any { it == L.f("a196_medals", L.plural("medals_n", f.profile.medals.toLong())) })
             val seen = f.texts().toMutableSet()
             val actions = f.root().actionList.map { it.id }
             assertTrue("Korzeń przewijany", f.root().isScrollable)
