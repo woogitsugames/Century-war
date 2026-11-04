@@ -192,6 +192,8 @@ object Campaign {
         // Tura 10: etapy 16-18 i 34-36 lżejsze (gracz z dowódcą, docs/BALANCE.md).
         // Dzień 1: etap 7 lżejszy o 5% po skróceniu etapów 2-7 (mniej gwiazdek i medali).
         // R11-02: etap 12 lżejszy o 2% (0,828 → 0,811) po skróceniu etapów 8-12.
+        // Etapy 13-18 (4.11): po skróceniu etap 15 lżejszy o 4% (1 → 0,96), etap 16
+        // trudniejszy o 1% (0,86 → 0,87); wygrane wracają do pasma ±5 pp (docs/BALANCE.md).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -202,7 +204,8 @@ object Campaign {
             7 -> 0.95f
             11 -> 0.97f
             12 -> 0.811f
-            16 -> 0.86f
+            15 -> 0.96f
+            16 -> 0.87f
             17 -> 0.92f
             18 -> 0.85f
             19 -> 1.265f
@@ -261,25 +264,41 @@ object Campaign {
     const val SECOND_SIEGE_RAMP = 0.5f
     val SECOND_SIEGE_STAGES = 7..11
 
+    /**
+     * Etapy 13–18 (indeksy 12–17, decyzja właściciela 4.11): po R11-02 profil „medale” grał
+     * je ok. 14 min, a 8–12 już ok. 9,5 min. Presja startuje po 6 minutach i rośnie o 40%/min,
+     * czyli łagodniej niż w 8–12 (bez skoku po etapie 12). Pomiar: docs/BALANCE.md,
+     * sekcja „Etapy 13–18”; nie zależy od poziomu.
+     */
+    const val THIRD_SIEGE_START = 360f
+    const val THIRD_SIEGE_RAMP = 0.4f
+    val THIRD_SIEGE_STAGES = 12..17
+
     private fun campaignStage(cfg: BattleConfig, stages: IntRange) =
         cfg.mode == Mode.CAMPAIGN && !cfg.tutorial && cfg.stageIndex in stages
 
     fun siegeStart(cfg: BattleConfig): Float = when {
         campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_START
         campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_START
+        campaignStage(cfg, THIRD_SIEGE_STAGES) -> THIRD_SIEGE_START
         else -> Battle.SIEGE_START
     }
 
-    /** R11-02: zwrot gwiazdek z przyspieszonej presji; etapy 8–12 wyżej niż dzień 2 (0,6). */
+    /**
+     * R11-02: zwrot gwiazdek z przyspieszonej presji; etapy 8–12 wyżej niż dzień 2 (0,6).
+     * Ten sam zwrot w etapach 13–18.
+     */
     const val SECOND_SIEGE_STAR_FORGIVENESS = 1.0f
 
     fun siegeStarForgiveness(cfg: BattleConfig): Float =
-        if (campaignStage(cfg, SECOND_SIEGE_STAGES)) SECOND_SIEGE_STAR_FORGIVENESS
+        if (campaignStage(cfg, SECOND_SIEGE_STAGES) || campaignStage(cfg, THIRD_SIEGE_STAGES))
+            SECOND_SIEGE_STAR_FORGIVENESS
         else Battle.SIEGE_STAR_FORGIVENESS
 
     fun siegeRamp(cfg: BattleConfig): Float = when {
         campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_RAMP
         campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_RAMP
+        campaignStage(cfg, THIRD_SIEGE_STAGES) -> THIRD_SIEGE_RAMP
         else -> Battle.SIEGE_RAMP
     }
 

@@ -3,11 +3,12 @@ package com.centurywar.game
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** R11-02: łagodniej przyspieszona presja oblężnicza w etapach 8–12 kampanii. */
+/** R11-02 i etapy 13–18: łagodniej przyspieszona presja oblężnicza w etapach 8–18 kampanii. */
 class SecondHourSiegeTest {
     private fun expected(stage: Int): Pair<Float, Float> = when (stage) {
         in 2..7 -> 240f to 0.8f
         in 8..12 -> Campaign.SECOND_SIEGE_START to Campaign.SECOND_SIEGE_RAMP
+        in 13..18 -> Campaign.THIRD_SIEGE_START to Campaign.THIRD_SIEGE_RAMP
         else -> Battle.SIEGE_START to Battle.SIEGE_RAMP
     }
 
@@ -19,7 +20,7 @@ class SecondHourSiegeTest {
                 val b = Battle(Campaign.config(Campaign.stages[index], Bonuses(), 7L, difficulty = difficulty))
                 assertEquals("etap ${index + 1} $difficulty", start, b.siegeStart)
                 assertEquals("etap ${index + 1} $difficulty", ramp, b.siegeRamp)
-                val forgiveness = if (index + 1 in 8..12) Campaign.SECOND_SIEGE_STAR_FORGIVENESS
+                val forgiveness = if (index + 1 in 8..18) Campaign.SECOND_SIEGE_STAR_FORGIVENESS
                     else Battle.SIEGE_STAR_FORGIVENESS
                 assertEquals("etap ${index + 1} $difficulty", forgiveness, b.siegeStarForgiveness)
             }
@@ -38,12 +39,23 @@ class SecondHourSiegeTest {
     }
 
     @Test
+    fun stagesThirteenToEighteenPressureCurve() {
+        for (index in 12..17) {
+            val b = Battle(Campaign.config(Campaign.stages[index], Bonuses(), 7L))
+            b.time = Campaign.THIRD_SIEGE_START - 1f
+            assertEquals(1f, b.siegePressure())
+            b.time = Campaign.THIRD_SIEGE_START + 60f
+            assertEquals(1f + Campaign.THIRD_SIEGE_RAMP, b.siegePressure(), 1e-4f)
+        }
+    }
+
+    @Test
     fun tutorialAndOtherModesUnchanged() {
         val tutorial = Battle(Campaign.config(Campaign.stages[8], Bonuses(), 7L, tutorial = true))
         assertEquals(Battle.SIEGE_START, tutorial.siegeStart)
         assertEquals(Battle.SIEGE_RAMP, tutorial.siegeRamp)
         for (mode in listOf(Mode.SKIRMISH, Mode.ENDLESS, Mode.DAILY)) {
-            for (index in 7..11) {
+            for (index in 7..17) {
                 val b = Battle(BattleConfig(mode, 11L, 1f, stageIndex = index))
                 assertEquals("$mode $index", Battle.SIEGE_START, b.siegeStart)
                 assertEquals("$mode $index", Battle.SIEGE_RAMP, b.siegeRamp)
