@@ -397,6 +397,7 @@ class PlayGamesLeaderboards(
                     game.profile.save()
                     game.snapshots?.deleteAsync()
                     game.resumeOffer = null
+                    game.lostBattle = null
                     game.applyLoadedProfile()
                     appliedCloud = true
                     Achievements.syncUnlocked(game.profile, this@PlayGamesLeaderboards)

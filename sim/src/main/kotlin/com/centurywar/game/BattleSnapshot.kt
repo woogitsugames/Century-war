@@ -17,6 +17,73 @@ import java.util.zip.CRC32
 class RestoredBattle(val battle: Battle, val rankedDaily: Boolean, val camX: Float, val battleId: Long = 0L)
 
 /**
+ * R10-01: krótki opis przerwanej bitwy zapisywany obok zrzutu (filesDir/battle.meta).
+ * Format jest stały i niezależny od [BattleSnapshot.VERSION] oraz od odcisku balansu, więc
+ * po aktualizacji gry, która odrzuca stary zrzut, nadal wiadomo, jaka bitwa przepadła
+ * i jaką rekompensatę przyznać. Nie wpływa na symulację ani na wynik bitwy.
+ * [consolation] to medale, jakie gra dałaby w chwili zapisu za porażkę.
+ */
+class BattleMeta(
+    val battleId: Long, val mode: Mode, val stageIndex: Int, val weekly: Long,
+    val dailyDay: Long, val rankedDaily: Boolean, val wave: Int, val timeS: Int,
+    val kills: Int, val consolation: Int, val savedAtMillis: Long,
+) {
+    fun encode(): ByteArray {
+        val bo = ByteArrayOutputStream(64)
+        DataOutputStream(bo).apply {
+            writeLong(battleId); writeUTF(mode.name); writeInt(stageIndex); writeLong(weekly)
+            writeLong(dailyDay); writeBoolean(rankedDaily); writeInt(wave); writeInt(timeS)
+            writeInt(kills); writeInt(consolation); writeLong(savedAtMillis); flush()
+        }
+        val payload = bo.toByteArray()
+        val crc = CRC32().apply { update(payload) }.value.toInt()
+        val out = ByteArrayOutputStream(payload.size + 16)
+        DataOutputStream(out).apply {
+            writeInt(MAGIC); writeInt(META_VERSION); writeInt(payload.size); writeInt(crc); write(payload); flush()
+        }
+        return out.toByteArray()
+    }
+
+    companion object {
+        /** „CWBM”. */
+        const val MAGIC = 0x4357424D
+        /** Wersja tego pliku; nigdy nie zależy od wersji zrzutu bitwy. */
+        const val META_VERSION = 1
+        private const val MAX_BYTES = 256
+
+        /** Null, gdy plik jest uszkodzony, nieznany albo opisuje nieznany tryb. */
+        fun decode(bytes: ByteArray): BattleMeta? = try {
+            if (bytes.size < 16 || bytes.size > MAX_BYTES) null else {
+                val h = DataInputStream(ByteArrayInputStream(bytes))
+                val magic = h.readInt()
+                val version = h.readInt()
+                val len = h.readInt()
+                val crc = h.readInt()
+                if (magic != MAGIC || version != META_VERSION || len != bytes.size - 16 ||
+                    CRC32().apply { update(bytes, 16, len) }.value.toInt() != crc) null
+                else {
+                    val data = ByteArrayInputStream(bytes, 16, len)
+                    val i = DataInputStream(data)
+                    val battleId = i.readLong()
+                    val modeName = i.readUTF()
+                    val mode = Mode.entries.firstOrNull { it.name == modeName }
+                    val meta = BattleMeta(battleId, mode ?: Mode.CAMPAIGN, i.readInt(), i.readLong(),
+                        i.readLong(), i.readBoolean(), i.readInt(), i.readInt(), i.readInt(),
+                        i.readInt(), i.readLong())
+                    meta.takeIf { mode != null && data.available() == 0 && it.battleId != 0L &&
+                        it.consolation >= 0 && it.wave >= 0 && it.timeS >= 0 && it.kills >= 0 }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+/** R10-01: dlaczego zrzutu nie da się wznowić ([BattleSnapshot.probe]). */
+enum class SnapshotReject { OK, CORRUPT, OLDER_FORMAT, NEWER_FORMAT, BALANCE_CHANGED }
+
+/**
  * Zrzut całego stanu bitwy do zwartego formatu binarnego (Android potrafi zabić aplikację
  * w tle, a bitwa trwa kilkanaście minut). Odtworzenie jest bit w bit deterministyczne:
  * po [decode] dalsza symulacja daje dokładnie ten sam przebieg co oryginał.
@@ -254,8 +321,7 @@ object BattleSnapshot {
             val h = DataInputStream(ByteArrayInputStream(bytes))
             if (h.readInt() != MAGIC) return null
             val version = h.readInt()
-            if (version != VERSION && version != 19 && version != 18 && version != 17 &&
-                version != LEGACY_VERSION_WITHOUT_ID) return null
+            if (!supported(version)) return null
             val len = h.readInt()
             val crc = h.readInt()
             if (len != bytes.size - 16) return null
@@ -265,6 +331,56 @@ object BattleSnapshot {
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun supported(version: Int): Boolean =
+        version == VERSION || version == 19 || version == 18 || version == 17 ||
+            version == LEGACY_VERSION_WITHOUT_ID
+
+    /**
+     * R10-01: powód odrzucenia zrzutu, ta sama kolejność sprawdzeń co [decode] i [read],
+     * ale bez budowania bitwy. [SnapshotReject.OK] oznacza tylko zgodny nagłówek, wersję
+     * i odcisk balansu; pełną poprawność danych sprawdza dopiero [decode].
+     */
+    fun probe(bytes: ByteArray): SnapshotReject = try {
+        if (bytes.size < 16 || bytes.size > MAX_BYTES) SnapshotReject.CORRUPT else {
+            val h = DataInputStream(ByteArrayInputStream(bytes))
+            if (h.readInt() != MAGIC) SnapshotReject.CORRUPT else {
+                val version = h.readInt()
+                val len = h.readInt()
+                val crc = h.readInt()
+                when {
+                    // Nowsza wersja mogła zmienić nawet układ nagłówka: nic więcej nie czytamy.
+                    version > VERSION -> SnapshotReject.NEWER_FORMAT
+                    len != bytes.size - 16 -> SnapshotReject.CORRUPT
+                    CRC32().apply { update(bytes, 16, len) }.value.toInt() != crc -> SnapshotReject.CORRUPT
+                    !supported(version) -> SnapshotReject.OLDER_FORMAT
+                    len < 4 -> SnapshotReject.CORRUPT
+                    h.readInt() != defsFingerprint -> SnapshotReject.BALANCE_CHANGED
+                    else -> SnapshotReject.OK
+                }
+            }
+        }
+    } catch (_: Exception) {
+        SnapshotReject.CORRUPT
+    }
+
+    /**
+     * Identyfikator rozliczenia z końca danych zrzutu (wersje >= 17) bez odczytu bitwy;
+     * null, gdy wersja go nie zapisywała albo nagłówek jest niepoprawny. Służy do
+     * dopasowania opisu [BattleMeta] do zrzutu, którego nie da się już wczytać.
+     */
+    fun storedBattleId(bytes: ByteArray): Long? = try {
+        if (bytes.size < 16 + 8 || bytes.size > MAX_BYTES) null else {
+            val h = DataInputStream(ByteArrayInputStream(bytes))
+            val magic = h.readInt()
+            val version = h.readInt()
+            val len = h.readInt()
+            if (magic != MAGIC || version < 17 || version > VERSION || len != bytes.size - 16) null
+            else DataInputStream(ByteArrayInputStream(bytes, bytes.size - 8, 8)).readLong()
+        }
+    } catch (_: Exception) {
+        null
     }
 
     private fun read(i: DataInputStream, version: Int): RestoredBattle? {
@@ -487,6 +603,9 @@ class SnapshotStore(private val file: File) {
     private val tmp = File(file.parentFile, file.name + ".tmp")
     private val backup = File(file.parentFile, file.name + ".bak")
     private val backupTmp = File(file.parentFile, file.name + ".bak.tmp")
+    /** R10-01: opis bitwy obok zrzutu (battle.snap -> battle.meta), poza kopią zapasową. */
+    internal val metaFile = File(file.parentFile, file.name.substringBeforeLast('.') + ".meta")
+    private val metaTmp = File(file.parentFile, metaFile.name + ".tmp")
     private val lock = Any()
     private var seq = 0L
     private var written = 0L
@@ -496,22 +615,32 @@ class SnapshotStore(private val file: File) {
         Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
     }
 
-    /** Zapis w tle. Zamek chroni tylko numerację, nigdy fsync. */
-    fun saveAsync(bytes: ByteArray, battleId: Long = 0L) {
+    /**
+     * R10-01: bitwa, której zrzutu nie dało się wznowić po aktualizacji gry (inna wersja
+     * formatu albo balans), opisana przez [BattleMeta]. Ustawiane przez [loadBattle].
+     */
+    @Volatile var lostByUpdate: BattleMeta? = null
+        private set
+
+    /**
+     * Zapis w tle. Zamek chroni tylko numerację, nigdy fsync. [meta] (R10-01) trafia na dysk
+     * w tym samym zadaniu, dopiero po udanym zapisie zrzutu.
+     */
+    fun saveAsync(bytes: ByteArray, battleId: Long = 0L, meta: ByteArray? = null) {
         val my = synchronized(lock) { owner = battleId; ++seq }
         io.execute {
             if (synchronized(lock) { my != seq || my <= written }) return@execute
-            if (writeAtomic(bytes)) synchronized(lock) { written = my }
+            if (writeAtomic(bytes, meta)) synchronized(lock) { written = my }
         }
     }
 
     /** Do narzędzi i testów; gra używa wyłącznie saveAsync. */
-    fun saveNow(bytes: ByteArray, battleId: Long = 0L): Boolean {
+    fun saveNow(bytes: ByteArray, battleId: Long = 0L, meta: ByteArray? = null): Boolean {
         val my = synchronized(lock) { owner = battleId; ++seq }
         return try {
             io.submit<Boolean> {
                 if (synchronized(lock) { my != seq || my <= written }) false
-                else writeAtomic(bytes).also { if (it) synchronized(lock) { written = my } }
+                else writeAtomic(bytes, meta).also { if (it) synchronized(lock) { written = my } }
             }.get(10, TimeUnit.SECONDS)
         } catch (e: Exception) {
             SaveGuard.report("snapshot-save", e)
@@ -577,7 +706,7 @@ class SnapshotStore(private val file: File) {
 
     private fun removeFiles() {
         GameIoCounter.diskAccess()
-        for (candidate in arrayOf(file, tmp, backup, backupTmp))
+        for (candidate in arrayOf(file, tmp, backup, backupTmp, metaFile, metaTmp))
             if (candidate.exists() && !candidate.delete()) SaveGuard.report("snapshot-delete")
     }
 
@@ -600,6 +729,10 @@ class SnapshotStore(private val file: File) {
      */
     fun loadBattle(settledBattleId: Long = 0L): RestoredBattle? {
         GameIoCounter.diskAccess()
+        lostByUpdate = null
+        // R10-01: czy któryś kandydat był poprawnym zrzutem starszej wersji gry lub balansu.
+        var lostByUpgrade = false
+        var lostSnapshotId: Long? = null
         val originals = if (tmp.lastModified() >= file.lastModified()) arrayOf(tmp, file)
             else arrayOf(file, tmp)
         val backups = if (backupTmp.lastModified() >= backup.lastModified()) arrayOf(backupTmp, backup)
@@ -624,6 +757,12 @@ class SnapshotStore(private val file: File) {
             val restored = BattleSnapshot.decode(bytes)
             if (restored == null) {
                 SaveGuard.report("snapshot-format")
+                val reason = BattleSnapshot.probe(bytes)
+                if (!lostByUpgrade && (reason == SnapshotReject.OLDER_FORMAT ||
+                        reason == SnapshotReject.BALANCE_CHANGED)) {
+                    lostByUpgrade = true
+                    lostSnapshotId = BattleSnapshot.storedBattleId(bytes)
+                }
                 continue
             }
             if (restored.battle.over ||
@@ -641,17 +780,46 @@ class SnapshotStore(private val file: File) {
             synchronized(lock) { owner = restored.battleId }
             return restored
         }
+        if (lostByUpgrade) {
+            val meta = readMeta()
+            if (meta != null && (lostSnapshotId == null || lostSnapshotId == meta.battleId)) {
+                if (settledBattleId != 0L && meta.battleId == settledBattleId) {
+                    // Rekompensata już w profilu (proces zginął przed usunięciem plików).
+                    delete()
+                    return null
+                }
+                lostByUpdate = meta
+                synchronized(lock) { owner = meta.battleId }
+                return null
+            }
+        }
         // Zapis niekompatybilny zostaje do diagnostyki / migracji, profil nie jest dotykany.
         return null
     }
 
-    private fun writeAtomic(bytes: ByteArray): Boolean = try {
+    /** Opis bitwy z battle.meta albo null (brak, uszkodzony, nieznany format). */
+    fun readMeta(): BattleMeta? = try {
+        if (!metaFile.isFile || metaFile.length() > 4096) null
+        else BattleMeta.decode(metaFile.readBytes())
+    } catch (e: Exception) {
+        SaveGuard.report("snapshot-meta-read", e)
+        null
+    }
+
+    private fun writeAtomic(bytes: ByteArray, meta: ByteArray? = null): Boolean = try {
         GameIoCounter.diskAccess()
         SaveGuard.atomicWrite(file, bytes)
         try {
             SaveGuard.writeBackup(file, bytes)
         } catch (e: Exception) {
             SaveGuard.report("snapshot-backup", e)
+        }
+        // R10-01: opis zawsze po zrzucie; bez opisu stary plik nie może opisywać nowej bitwy.
+        try {
+            if (meta != null) SaveGuard.atomicWrite(metaFile, meta)
+            else if (metaFile.exists() && !metaFile.delete()) SaveGuard.report("snapshot-meta-delete")
+        } catch (e: Exception) {
+            SaveGuard.report("snapshot-meta-write", e)
         }
         true
     } catch (e: Exception) {

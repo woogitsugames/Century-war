@@ -7,12 +7,15 @@ import android.graphics.RectF
 import android.os.SystemClock
 import com.centurywar.BuildConfig
 import com.centurywar.crash.CrashReports
+import com.centurywar.game.BattleMeta
+import com.centurywar.game.Daily
 import com.centurywar.game.Mode
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.SnapshotStore
 import com.centurywar.meta.AchievementDef
 import com.centurywar.meta.OnlineAchievements
 import com.centurywar.meta.OnlineLeaderboards
+import com.centurywar.meta.LostBattle
 import com.centurywar.meta.Profile
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
@@ -126,11 +129,37 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     private var playtestBattleSeconds = 0f
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
+    /**
+     * R10-01: bitwa, której zrzutu nie da się wznowić po aktualizacji gry. Rozliczana raz,
+     * przy pierwszym [MenuScreen.update] ([settleLostBattle]). Nigdy razem z [resumeOffer].
+     */
+    var lostBattle: BattleMeta? = null
+
+    /**
+     * R10-01: medale jak za kapitulację i zwrot dzisiejszej próby wyzwania dnia, dokładnie raz
+     * (identyfikator bitwy w profilu). Pliki zrzutu i opisu znikają po trwałym zapisie profilu.
+     * Komunikat idzie zwykłą kolejką banerów (bez okna, nigdy nad bitwą i wynikami).
+     */
+    fun settleLostBattle(today: Long = Daily.dayNumber()) {
+        val meta = lostBattle ?: return
+        lostBattle = null
+        val store = snapshots
+        val result = LostBattle.settle(profile, meta, today,
+            onPersisted = { store?.deleteSettledAsync(meta.battleId) })
+        if (result == null) {
+            store?.deleteSettledAsync(meta.battleId)
+            return
+        }
+        val texts = LostBattle.notices(meta, result)
+        showNotice(texts[0], Icons.CLOSE)
+        if (texts.size > 1) showNotice(texts[1], if (result.dailyRestored) Icons.CHECK else Icons.MEDAL)
+    }
 
     /** Jedna operacja resetu na wątku gry: unieważnia też kolejkę snapshotów. */
     fun resetProgress() {
         snapshots?.deleteAsync()
         resumeOffer = null
+        lostBattle = null
         profile.reset()
         history?.clear()
     }
@@ -317,6 +346,13 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
 
     /** Ostatnio narysowany baner powiadomienia (pusty, gdy brak); do testów zasłaniania. */
     internal val noticeBanner: RectF get() = achievementBanner
+    /** Do testów: bieżący i oczekujące teksty banerów. */
+    internal fun noticeTexts(): List<String> =
+        (if (achievementSeconds > 0f) listOf(achievementMessage) else emptyList()) + noticeQueue
+    /** Do testów: usuwa bieżący i oczekujące banery. */
+    internal fun clearNotices() {
+        noticeQueue.clear(); noticeIcons.clear(); achievementSeconds = 0f
+    }
 
     /** Górna krawędź banera: poniżej Wstecz (insetT + 58 dp) i wstęgi tytułu z jej końcówkami. */
     internal fun noticeTopBelowTitle(): Float {
