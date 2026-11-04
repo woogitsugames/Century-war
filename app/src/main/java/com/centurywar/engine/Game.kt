@@ -84,9 +84,25 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var bitmapCacheMemoryClassMb = 128
     var quality = Quality(Quality.HIGH)
         private set
+    /**
+     * R11-04: gra działa w pętli testowej (raport przedpremierowy Play, Test Lab). Jedno miejsce
+     * blokady: bez rankingu online, wysyłki wyników i Play Games, nawet gdyby ktoś je ustawił.
+     */
+    var testLoop = false
+        set(value) {
+            field = value
+            if (value) {
+                online = OnlineLeaderboards.Local
+                scores = null
+                onlineAchievements = OnlineAchievements.NoOp
+            }
+        }
     var online: OnlineLeaderboards = OnlineLeaderboards.Local
+        set(value) { field = if (testLoop) OnlineLeaderboards.Local else value }
     var scores: ScoreClient? = null
+        set(value) { field = if (testLoop) null else value }
     var onlineAchievements: OnlineAchievements = OnlineAchievements.NoOp
+        set(value) { field = if (testLoop) OnlineAchievements.NoOp else value }
     /** Null w testach; na urządzeniu ustawia MainActivity. */
     @Volatile var sound: Sound? = null
     /** Muzyka działa niezależnie od efektów SoundPool. */

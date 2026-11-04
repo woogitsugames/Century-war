@@ -2,6 +2,8 @@
 # AGP generuje reguly manifestu, ale zachowujemy je jawnie dla kontroli DEX.
 -keep class com.centurywar.CenturyWarApp { public <init>(); }
 -keep class com.centurywar.MainActivity { public <init>(); }
+# R11-04: petla gry (intencja TEST_LOOP z raportu przedpremierowego Play).
+-keep class com.centurywar.testloop.TestLoopActivity { public <init>(); }
 -keep class com.centurywar.meta.ReplayShareProvider { public <init>(); }
 -keep class com.centurywar.notifications.DailyReminderReceiver { public <init>(); }
 
