@@ -42,6 +42,7 @@ import com.centurywar.game.Weather
 import com.centurywar.meta.Achievements
 import com.centurywar.meta.AchievementBattleTracker
 import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.LostBattle
 import com.centurywar.meta.Profile
 import com.centurywar.meta.SkirmishSetup
 import com.centurywar.meta.Missions
@@ -388,7 +389,7 @@ class BattleScreen(
         // Stary zrzut bez identyfikatora od razu zastępujemy zrzutem z nowym, inaczej po
         // rozliczeniu nie dałoby się go rozpoznać i usunąć (A156-10).
         if (restored != null && restored.battleId == 0L && !battle.over)
-            g.snapshots?.saveAsync(snapshotBytes(), battleId)
+            g.snapshots?.saveAsync(snapshotBytes(), battleId, metaBytes())
     }
 
     /** Interaktywny samouczek (tylko etap 1 kampanii, dopóki gracz go nie ukończy/pominie). */
@@ -667,7 +668,7 @@ class BattleScreen(
             else if (battle.time - lastAutosave >= AUTOSAVE_EVERY) {
                 // Bajty powstają tu, na wątku gry (spójny stan); plik zapisuje wątek w tle.
                 lastAutosave = battle.time
-                g.snapshots?.saveAsync(snapshotBytes(), battleId)
+                g.snapshots?.saveAsync(snapshotBytes(), battleId, metaBytes())
             }
         }
         maybeShowEraIntro()
@@ -1281,10 +1282,14 @@ class BattleScreen(
         clearHeldTooltip()
         if (finished || closed || battle.over) return
         paused = true
-        g.snapshots?.saveAsync(snapshotBytes(), battleId)
+        g.snapshots?.saveAsync(snapshotBytes(), battleId, metaBytes())
     }
 
     private fun snapshotBytes(): ByteArray = BattleSnapshot.encode(battle, rankedDaily, r.camX, battleId)
+
+    /** R10-01: opis bitwy obok zrzutu (ta sama klatka co [snapshotBytes]). */
+    private fun metaBytes(): ByteArray =
+        LostBattle.meta(cfg, battle, rankedDaily, battleId, System.currentTimeMillis()).encode()
 
     // ---------------------------------------------------------------- koniec bitwy
 
@@ -1349,8 +1354,8 @@ class BattleScreen(
         }
         var earnedStars = 0
         // Nagroda bazowa za porażkę/trening rośnie z czasem bitwy (pełna po 4 min symulacji),
-        // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale.
-        val effort = (battle.time / 240f).coerceIn(0f, 1f)
+        // inaczej natychmiastowa kapitulacja w pętli byłaby najszybszym sposobem na medale
+        // ([LostBattle.lossReward]).
         when (cfg.mode) {
             Mode.CAMPAIGN -> {
                 val stage = cfg.stageIndex
@@ -1358,9 +1363,10 @@ class BattleScreen(
                 val difficulty = Campaign.difficulty(cfg)
                 val old = pr.stars[stage]
                 val st = battle.stars()
-                val baseReward = if (won) 20 + stage * 6 + st * 5 + max(0, st - old) * 12
-                    else ((5 + stage * 2) * effort).toInt() + min(20, battle.player.kills / 8)
-                reward = (baseReward * (difficulty?.medalMultiplier ?: 1f)).toInt()
+                // R10-01: gałąź porażki wspólna z rekompensatą za bitwę utraconą przy aktualizacji.
+                reward = if (won) ((20 + stage * 6 + st * 5 + max(0, st - old) * 12) *
+                    (difficulty?.medalMultiplier ?: 1f)).toInt()
+                    else LostBattle.lossReward(cfg, battle, rankedDaily)
                 if (st > old) {
                     earnedStars = st - old
                     pr.stars[stage] = st
@@ -1378,7 +1384,8 @@ class BattleScreen(
             }
             Mode.SKIRMISH -> {
                 pr.recordSkirmish(cfg, score, day, won)
-                reward = SkirmishSetup.reward(cfg, won, battle.time, battle.player.kills)
+                reward = if (won) SkirmishSetup.reward(cfg, true, battle.time, battle.player.kills)
+                    else LostBattle.lossReward(cfg, battle, rankedDaily)
                 if (won && SkirmishSetup.isRanked(cfg)) {
                     newRecord = pr.submit(Profile.BOARD_SKIRMISH, score, day, replayId)
                     g.online.submit(Profile.BOARD_SKIRMISH, score)
@@ -1389,7 +1396,7 @@ class BattleScreen(
                     val currentWeek = Weekly.weekNumber(day)
                     // Tydzień wyniku pochodzi z konfiguracji, nie z chwili zakończenia.
                     val bonus = pr.claimWeekly(cfg.weekly, battle.wave, currentWeek)
-                    reward = (battle.wave * 3 + battle.player.kills / 10) / 2 + bonus
+                    reward = LostBattle.lossReward(cfg, battle, rankedDaily) + bonus
                     newRecord = pr.submit(Profile.weeklyBoard(cfg.weekly), score, day, replayId)
                     pr.syncWeekly(currentWeek)
                     weeklyResultKey = when {
@@ -1399,7 +1406,7 @@ class BattleScreen(
                         else -> "weekly_no_tier"
                     }
                 } else {
-                    reward = battle.wave * 3 + battle.player.kills / 10
+                    reward = LostBattle.lossReward(cfg, battle, rankedDaily)
                     if (battle.wave > pr.bestWave) pr.bestWave = battle.wave
                     newRecord = pr.submit(Profile.BOARD_ENDLESS, score, day, replayId)
                     g.online.submit(Profile.BOARD_ENDLESS, score)
@@ -1410,7 +1417,7 @@ class BattleScreen(
                     reward = min(90, (score / 350).toInt()) + 10
                     newRecord = pr.submit(Profile.dailyBoard(cfg.seed), score, day, replayId)
                     g.online.submit("daily", score)
-                } else reward = (5 * effort).toInt()
+                } else reward = LostBattle.lossReward(cfg, battle, rankedDaily)
             }
         }
         // Przypinamy tylko wynik, który pozostał w lokalnym TOP 20.

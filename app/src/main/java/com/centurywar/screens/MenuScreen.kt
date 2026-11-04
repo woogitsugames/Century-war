@@ -432,6 +432,8 @@ class MenuScreen(g: Game) : Screen(g) {
     override fun update(dt: Float) {
         this.dt = dt
         if (SaveGuard.takeWarning()) g.showNotice(L["save154_problem"], Icons.CLOSE)
+        // R10-01: bitwa przerwana aktualizacją gry (rozliczenie raz, potem baner).
+        if (g.lostBattle != null) g.settleLostBattle()
         missionBadgePoll -= dt
         if (missionBadgePoll <= 0f) {
             missionBadgePoll = 10f

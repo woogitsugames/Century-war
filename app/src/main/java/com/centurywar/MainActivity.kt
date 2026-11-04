@@ -49,6 +49,7 @@ import com.centurywar.engine.StartupTimings
 import com.centurywar.engine.SystemAccessibility
 import com.centurywar.engine.ThermalWatch
 import com.centurywar.engine.Music
+import com.centurywar.game.BattleMeta
 import com.centurywar.game.SnapshotStore
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Daily
@@ -146,6 +147,8 @@ class MainActivity : Activity(), Host {
             val snapshots = SnapshotStore(File(root, "battle.snap"))
             // Zrzut już rozliczonej bitwy (proces zginął po zapisie profilu) jest odrzucany.
             val restored = snapshots.loadBattle(profile.lastSettledBattle)
+            // R10-01: zrzut z poprzedniej wersji gry, którego nie da się wznowić.
+            val lost = snapshots.lostByUpdate
             startup.record(StartupTimings.Phase.SNAPSHOT, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
             // R10-04 L1: tylko szybka część (awaria Javy już w dzienniku). Ślad ANR czytamy
@@ -162,7 +165,7 @@ class MainActivity : Activity(), Host {
             startup.record(StartupTimings.Phase.LANGUAGES, start, SystemClock.elapsedRealtimeNanos())
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
-                    finishStartup(root, profile, snapshots, restored, detectedQuality, memoryClassMb, playtest)
+                    finishStartup(root, profile, snapshots, restored, lost, detectedQuality, memoryClassMb, playtest)
                     if (pendingFatal != null) {
                         crashOffers.offeredAtStartup()
                         offerCrashReport(pendingFatal)
@@ -216,7 +219,7 @@ class MainActivity : Activity(), Host {
 
     private fun finishStartup(
         root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?,
-        detectedQuality: Int, memoryClassMb: Int, playtest: PlaytestLog
+        lost: BattleMeta?, detectedQuality: Int, memoryClassMb: Int, playtest: PlaytestLog
     ) {
         var start = SystemClock.elapsedRealtimeNanos()
         game = Game(this, profile, detectedQuality)
@@ -267,6 +270,7 @@ class MainActivity : Activity(), Host {
             }
         }
         game.resumeOffer = restored
+        game.lostBattle = lost
         start = SystemClock.elapsedRealtimeNanos()
         view = GameView(this, game)
         view.onFirstFrame = {
@@ -821,6 +825,7 @@ class MainActivity : Activity(), Host {
                                     // Przerwana bitwa należała do poprzedniego profilu.
                                     game.snapshots?.deleteAsync()
                                     game.resumeOffer = null
+                                    game.lostBattle = null
                                     game.applyLoadedProfile()
                                     game.showNotice(L["profile_import_ok"], Icons.CHECK)
                                 } else {

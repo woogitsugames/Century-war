@@ -32,6 +32,23 @@ class LTest {
         assertTrue("Brak przekładów: $missing", missing.isEmpty())
     }
 
+    /** R10-01: teksty bitwy przerwanej aktualizacją mają 10 przekładów i te same argumenty. */
+    @Test
+    fun lostBattleKeysHaveTenLanguages() {
+        val keys = listOf("lost188_title", "lost188_body", "lost188_medals", "lost188_daily",
+            "lost188_campaign", "lost188_endless", "lost188_weekly")
+        for (k in keys) {
+            val e = L.raw(k)
+            assertTrue("$k: brak klucza", e != null)
+            assertEquals("$k: liczba języków", L.CODES.size, e!!.size)
+            val args = spec.findAll(e[0]).map { it.value }.sorted().toList()
+            for (i in e.indices) {
+                assertTrue("$k/${L.CODES[i]} pusty", e[i].isNotBlank())
+                assertEquals("$k/${L.CODES[i]} argumenty", args, spec.findAll(e[i]).map { it.value }.sorted().toList())
+            }
+        }
+    }
+
     /** hashMapOf po cichu nadpisuje powtórzony klucz (np. po scaleniu), więc sprawdzamy źródło. */
     @Test
     fun noDuplicateKeysInSource() {
