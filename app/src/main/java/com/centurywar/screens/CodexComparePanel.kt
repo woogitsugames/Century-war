@@ -34,6 +34,8 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
         const val CHART_HEIGHT = 216f
         const val CONTENT_HEIGHT = 824f
         const val BUTTON_BASE = 300
+        /** Dzień 36: najmniejsza legenda w jednym wierszu; mniejsza dzieli się na dwa. */
+        const val MIN_LEGEND_SP = 10f
         val PANEL_COLOR = Color.rgb(42, 52, 74)
     }
 
@@ -68,6 +70,17 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
 
     private var heading = ""
     private var legend = ""
+    /**
+     * Dzień 36 (R12, poz. 8): legenda, która w jednym wierszu zmalałaby poniżej 10 sp (zewnętrzny
+     * Fold: de 8,9 sp, przy tekście 130% ok. 7 sp), dzieli się na dwa wiersze. Macierz kontr
+     * i wykres przesuwają się wtedy o [legendShift] dp. Liczone w [layout], nie w klatce.
+     */
+    private var legendFirst = ""
+    private var legendSecond = ""
+    private var legendSize = 11f
+    private var legendShift = 0f
+    private var legendBase1 = CARD_TOP + CARD_HEIGHT + 18f
+    private var legendBase2 = 0f
     private var matrixHeading = ""
     private var matrixAxis = ""
     private var chartHeading = ""
@@ -87,7 +100,8 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     val controlHeight get() = CONTROL_HEIGHT * dp * (if (stacked) 2 else 1)
     internal val selectorTop get() = y
     internal fun selectorTextsForTest(): List<String> = eraTexts.toList() + roleTexts.toList()
-    val contentHeight get() = CONTENT_HEIGHT * dp
+    val contentHeight get() = (CONTENT_HEIGHT + legendShift) * dp
+    internal fun legendLinesForTest(): List<String> = listOf(legendFirst, legendSecond).filter { it.isNotEmpty() }
 
     fun hide() {
         for (button in buttons) button.visible = false
@@ -114,6 +128,36 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
             }
         }
         rebuild(withResearch)
+        layoutLegend()
+    }
+
+    private fun layoutLegend() {
+        val avail = width - 16 * dp
+        legendFirst = legend
+        legendSecond = ""
+        legendShift = 0f
+        legendBase1 = CARD_TOP + CARD_HEIGHT + 18f
+        legendBase2 = 0f
+        legendSize = ui.fit(legend, 11f, avail, 8f)
+        if (legendSize >= MIN_LEGEND_SP || legend.indexOf(' ') < 0) return
+        // Dwa wiersze: podział na spacji, przy którym dłuższy wiersz jest najkrótszy (jak RowNote).
+        var best = -1
+        var bestW = Float.MAX_VALUE
+        var i = legend.indexOf(' ')
+        while (i > 0) {
+            val w = max(ui.measure(legend.substring(0, i), 11f, true),
+                ui.measure(legend.substring(i + 1), 11f, true))
+            if (w < bestW) { bestW = w; best = i }
+            i = legend.indexOf(' ', i + 1)
+        }
+        legendFirst = legend.substring(0, best)
+        legendSecond = legend.substring(best + 1)
+        val floor = MIN_LEGEND_SP * ui.textScale
+        legendSize = min(ui.fit(legendFirst, 11f, avail, floor), ui.fit(legendSecond, 11f, avail, floor))
+        val em = legendSize * ui.textScale
+        legendBase1 = CARD_TOP + CARD_HEIGHT + 4f + em
+        legendBase2 = legendBase1 + em * 1.25f
+        legendShift = max(0f, legendBase2 + em * 0.3f + 4f - COUNTER_TOP)
     }
 
     fun onClick(button: Button): Boolean {
@@ -218,16 +262,19 @@ internal class CodexComparePanel(private val screen: CodexScreen, startEra: Int)
     }
 
     fun drawContent(c: Canvas, top: Float, bottom: Float) {
-        if (top + CONTENT_HEIGHT * dp < y + controlHeight || top > bottom) return
+        if (top + contentHeight < y + controlHeight || top > bottom) return
         ui.textO(c, heading, x + 7 * dp, top + 26 * dp, 18f, Ui.GOLD)
         drawUnits(c, top + CARD_TOP * dp, bottom)
-        val legendY = top + (CARD_TOP + CARD_HEIGHT + 18f) * dp
+        val legendY = top + legendBase1 * dp
         if (legendY >= y + controlHeight && legendY <= bottom) {
-            ui.text(c, legend, x + 8 * dp, legendY,
-                ui.fit(legend, 11f, width - 16 * dp, 8f), Ui.DIM)
+            ui.text(c, legendFirst, x + 8 * dp, legendY, legendSize, Ui.DIM)
         }
-        drawCounters(c, top + COUNTER_TOP * dp, bottom)
-        drawGrowth(c, top + CHART_TOP * dp, bottom)
+        val legendY2 = top + legendBase2 * dp
+        if (legendSecond.isNotEmpty() && legendY2 >= y + controlHeight && legendY2 <= bottom) {
+            ui.text(c, legendSecond, x + 8 * dp, legendY2, legendSize, Ui.DIM)
+        }
+        drawCounters(c, top + (COUNTER_TOP + legendShift) * dp, bottom)
+        drawGrowth(c, top + (CHART_TOP + legendShift) * dp, bottom)
     }
 
     private fun drawUnits(c: Canvas, top: Float, bottom: Float) {

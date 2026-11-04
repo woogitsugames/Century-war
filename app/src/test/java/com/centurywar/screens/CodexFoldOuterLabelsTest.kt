@@ -144,6 +144,143 @@ class CodexFoldOuterLabelsTest {
         assertTrue("strzałki listew: $cues", cues >= 2)
     }
 
+    private fun sp(g: Game, t: Recorder.Drawn) = t.sizePx / g.ui.dp / g.ui.textScale
+
+    /**
+     * Dzień 36 (R12, poz. 8): „Wymaga: Doktryna elit” na karcie elity stoi w osobnych wierszach
+     * (≥ 10 sp, cały tekst, bez nakładania), legenda porównania ma ≥ 10 sp (w razie potrzeby dwa
+     * wiersze nad macierzą kontr), a zakładki listew Kodeksu przy tekście 130% nie maleją.
+     */
+    @Test
+    fun eliteTagLegendAndRailsReadableOnFoldOuter() {
+        val problems = StringBuilder()
+        for (scale in floatArrayOf(1f, 1.3f)) for (lang in L.CODES) {
+            val g = game(lang, scale)
+            val cx = CodexScreen(g, 1)
+            g.setScreen(cx)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            val dp = g.ui.dp
+            val tag = "$lang ${(scale * 100).toInt()}%"
+
+            // Zakładki kategorii i epok (także przy 130%).
+            val first = Recorder(Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888))
+            g.frame(first, 1f / 30f)
+            val rails = cx.buttons.filter { it.id in 100..299 }
+            var railSeen = 0
+            for (t in first.texts) if (rails.any { it.label == t.s && t.r.centerY() in it.r.top..it.r.bottom }) {
+                railSeen++
+                if (sp(g, t) < 11.5f - 0.05f) problems.append("$tag zakładka '${t.s}' ${"%.1f".format(sp(g, t))} sp\n")
+            }
+            if (railSeen < 2) problems.append("$tag: narysowano $railSeen zakładek\n")
+
+            // Nagłówek epoki: nazwa, numer i plakietka awansu (≥ 10 sp, bez nakładania).
+            val headerTexts = cx.eraHeaderTextsForTest()
+            // Najwyższe wystąpienie każdego napisu poza listwami (nazwa epoki bywa też zakładką).
+            val header = headerTexts.distinct().mapNotNull { s ->
+                first.texts.filter { t ->
+                    t.s == s && rails.none { it.label == t.s && t.r.centerY() in it.r.top..it.r.bottom }
+                }.minByOrNull { it.r.top }
+            }
+            if (header.map { it.s }.toSet() != headerTexts.toSet()) problems.append("$tag: nagłówek epoki ${header.map { it.s }}\n")
+            for ((i, t) in header.withIndex()) {
+                if (sp(g, t) < 10f - 0.05f) problems.append("$tag nagłówek '${t.s}' ${"%.1f".format(sp(g, t))} sp\n")
+                if (t.r.right > g.width - 10 * dp) problems.append("$tag nagłówek '${t.s}' poza ekranem\n")
+                for (j in 0 until i) if (RectF.intersects(t.r, header[j].r))
+                    problems.append("$tag nagłówek '${t.s}' nachodzi na '${header[j].s}'\n")
+            }
+
+            // Wymaganie elity na karcie elity (strona Jednostki).
+            cx.showCategory(1)
+            val full = L.f("cx_needs", L["r_elite"])
+            val lines = cx.eliteTagLinesForTest()
+            if (lines.isEmpty()) problems.append("$tag: wymaganie elity nie ma własnych wierszy\n")
+            if (lines.joinToString(" ") != full) problems.append("$tag: wymaganie elity niepełne: $lines\n")
+            val seen = HashSet<String>()
+            // Tekst przewinięty pod listwy jest przycięty, ale płótno testowe i tak go zapisuje.
+            val railBottom = rails.maxOf { it.r.bottom }
+            repeat(14) {
+                val rec = Recorder(Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888))
+                g.frame(rec, 1f / 30f)
+                for (t in rec.texts) if (t.s in lines && t.s !in seen && t.r.top > railBottom && t.r.bottom < g.height) {
+                    seen.add(t.s)
+                    if (sp(g, t) < 10f - 0.05f) problems.append("$tag elita '${t.s}' ${"%.1f".format(sp(g, t))} sp\n")
+                    if (t.r.left < 0f || t.r.right > g.width - 10 * dp)
+                        problems.append("$tag elita '${t.s}' poza kartą\n")
+                    for (o in rec.texts) if (o !== t && o.s != t.s && RectF.intersects(o.r, t.r))
+                        problems.append("$tag elita '${t.s}' nachodzi na '${o.s}'\n")
+                }
+                cx.onDrag(0f, -200f * dp)
+            }
+            if (seen.size != lines.toSet().size) problems.append("$tag: narysowano ${seen.size}/${lines.size} wierszy elity\n")
+
+            // Legenda porównania jednostek.
+            cx.showCategory(10)
+            val legend = cx.comparePanelForTest.legendLinesForTest()
+            if (legend.joinToString(" ") != L["cx134_legend"]) problems.append("$tag: legenda niepełna: $legend\n")
+            val legendSeen = HashSet<String>()
+            repeat(8) {
+                val rec = Recorder(Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888))
+                g.frame(rec, 1f / 30f)
+                val heading = rec.texts.filter { it.s == L["cx134_counter"] || it.s == L["cx134_axis"] }
+                for (t in rec.texts) if (t.s in legend) {
+                    legendSeen.add(t.s)
+                    if (sp(g, t) < 10f - 0.05f) problems.append("$tag legenda '${t.s}' ${"%.1f".format(sp(g, t))} sp\n")
+                    if (t.r.left < 0f || t.r.right > g.width - 10 * dp) problems.append("$tag legenda '${t.s}' poza ekranem\n")
+                    for (o in heading) if (RectF.intersects(o.r, t.r)) problems.append("$tag legenda nachodzi na '${o.s}'\n")
+                    for (o in rec.texts) if (o !== t && o.s in legend && o.s != t.s && RectF.intersects(o.r, t.r))
+                        problems.append("$tag wiersze legendy nachodzą na siebie\n")
+                }
+                if (legendSeen.size == legend.size) return@repeat
+                cx.onDrag(0f, -120f * dp)
+            }
+            if (legendSeen.size != legend.size) problems.append("$tag: narysowano ${legendSeen.size}/${legend.size} wierszy legendy\n")
+        }
+        assertTrue(problems.toString(), problems.isEmpty())
+    }
+
+    /**
+     * Dzień 36: zakładki Rekordów na zewnętrznym Foldzie mają podpis ≥ 10 sp w 10 językach przy
+     * tekście 100% i 130% (siatka 2 × 2, gdy podpis pod ikoną byłby mniejszy) i nie nachodzą na
+     * zakładki tablic rankingu. Telefon i rozłożony Fold zostają w jednym rzędzie.
+     */
+    @Test
+    fun recordsTabsReadableOnFoldOuter() {
+        val problems = StringBuilder()
+        val keys = listOf("rankings", "stats", "replay_list", "achievements")
+        for (scale in floatArrayOf(1f, 1.3f)) for (lang in L.CODES) {
+            val g = game(lang, scale)
+            val rs = RankingsScreen(g)
+            g.setScreen(rs)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            val tag = "$lang ${(scale * 100).toInt()}%"
+            val rec = Recorder(Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888))
+            g.frame(rec, 1f / 30f)
+            val recTabs = rs.buttons.filter { it.id in 200..203 }
+            val boardTabs = rs.buttons.filter { it.id in 0..4 }
+            if (recTabs.size != 4) problems.append("$tag: ${recTabs.size} zakładek Rekordów\n")
+            for ((i, b) in recTabs.withIndex()) {
+                val name = L[keys[i]]
+                if (b.label != name) { problems.append("$tag: zakładka '${b.label}' zamiast '$name'\n"); continue }
+                val t = rec.texts.firstOrNull { it.s == name && RectF.intersects(it.r, b.r) }
+                if (t == null) { problems.append("$tag: nie narysowano '$name'\n"); continue }
+                if (sp(g, t) < 10f - 0.05f) problems.append("$tag '$name' ${"%.1f".format(sp(g, t))} sp\n")
+                if (t.r.left < b.r.left - 0.5f || t.r.right > b.r.right + 0.5f) problems.append("$tag '$name' wychodzi poza zakładkę\n")
+                for (o in recTabs) if (o !== b && RectF.intersects(o.r, b.r)) problems.append("$tag zakładki Rekordów nachodzą na siebie\n")
+                for (o in boardTabs) if (o.visible && RectF.intersects(o.r, b.r))
+                    problems.append("$tag '$name' nachodzi na zakładkę tablicy #${o.id}\n")
+            }
+        }
+        for ((w, h, t) in listOf(Triple(1600, 720, 0), Triple(2184, 1968, 70))) {
+            val g = game("de", 1.3f, w, h, t)
+            val rs = RankingsScreen(g)
+            g.setScreen(rs)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            val tops = rs.buttons.filter { it.id in 200..203 }.map { it.r.top }.toSet()
+            if (tops.size != 1) problems.append("$w×$h: zakładki Rekordów nie w jednym rzędzie\n")
+        }
+        assertTrue(problems.toString(), problems.isEmpty())
+    }
+
     /** Inne ekrany bez zmian: telefon i rozłożony Fold. */
     @Test
     fun otherScreensKeepLayout() {
