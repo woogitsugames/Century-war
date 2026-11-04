@@ -198,6 +198,17 @@ class Profile(private val file: File) {
     @Volatile var lastSettledBattle = 0L
         private set
 
+    /**
+     * Backlog R10 poz. 6: bitwa samouczka ([tutorialStepBattle]) i krok, do którego doszedł
+     * w niej gracz ([tutorialStep]). Po zabiciu procesu „Wznów” odtwarza nakładkę od tego
+     * kroku. Zapis jest poza zrzutem symulacji (bez zmiany formatu zrzutu i protokołu)
+     * i, jak sam zrzut, pozostaje lokalny: nie idzie do chmury.
+     */
+    @Volatile var tutorialStepBattle = 0L
+        private set
+    @Volatile var tutorialStep = 0
+        private set
+
     fun bannerUnlocked(id: Int): Boolean =
         id in 0 until BannerCatalog.COUNT && unlockedBanners and (1 shl id) != 0
 
@@ -419,6 +430,21 @@ class Profile(private val file: File) {
     /** Samouczek odpali się ponownie przy następnym starcie etapu 1 kampanii. */
     fun replayTutorial() { tutorialDone = false; save() }
 
+    /** Zapamiętuje krok samouczka bitwy [battleId]; zapis tylko przy zmianie. */
+    fun rememberTutorialStep(battleId: Long, step: Int) {
+        if (battleId == 0L) return
+        synchronized(this) {
+            if (tutorialStepBattle == battleId && tutorialStep == step) return
+            tutorialStepBattle = battleId
+            tutorialStep = step.coerceAtLeast(0)
+        }
+        save()
+    }
+
+    /** Krok, od którego wznowić samouczek bitwy [battleId]; 0, gdy profil jej nie zna. */
+    fun tutorialResumeStep(battleId: Long): Int =
+        if (battleId != 0L && battleId == tutorialStepBattle) tutorialStep else 0
+
     /** Znacznik zmieniamy na wątku gry, zapis wykonuje pojedynczy wątek I/O. */
     fun markHintSeen(id: Int): Boolean {
         if (!hintsEnabled || id !in 0 until HINT_COUNT) return false
@@ -582,6 +608,8 @@ class Profile(private val file: File) {
         o.put("bestDailyChallengeStreak", bestDailyChallengeStreak)
         o.put("lastDailyChallengeStreakDay", lastDailyChallengeStreakDay)
         o.put("lastSettledBattle", lastSettledBattle)
+        o.put("tutorialStepBattle", tutorialStepBattle)
+        o.put("tutorialStep", tutorialStep)
         o.put("campaignLossStreakStage", campaignLossStreakStage)
         o.put("campaignLossStreak", campaignLossStreak)
         o.put("bestWave", bestWave)
@@ -678,6 +706,8 @@ class Profile(private val file: File) {
         val localConsent = globalRanking
         val localWhatsNewVersion = whatsNewSeenVersion
         val localSettled = lastSettledBattle
+        val localTutorialBattle = tutorialStepBattle
+        val localTutorialStep = tutorialStep
         val localLossStage = campaignLossStreakStage
         val localLossStreak = campaignLossStreak
         val localPlayDay = lastPlayDay
@@ -692,6 +722,8 @@ class Profile(private val file: File) {
         whatsNewSeenVersion = localWhatsNewVersion
         // Zrzut bitwy jest lokalny, więc i znacznik jej rozliczenia pozostaje lokalny.
         lastSettledBattle = localSettled
+        tutorialStepBattle = localTutorialBattle
+        tutorialStep = localTutorialStep
         campaignLossStreakStage = localLossStage
         campaignLossStreak = localLossStreak
         // R10-07: późniejsza wizyta i premia wygrywają, więc zapis z chmury (lub import)
@@ -710,6 +742,8 @@ class Profile(private val file: File) {
         remove("globalRanking")
         remove("whatsNewSeenVersion")
         remove("lastSettledBattle")
+        remove("tutorialStepBattle")
+        remove("tutorialStep")
         remove("campaignLossStreakStage")
         remove("campaignLossStreak")
     }.toString()
@@ -1155,6 +1189,8 @@ class Profile(private val file: File) {
         lastDailyChallengeStreakDay = json.optLong("lastDailyChallengeStreakDay", -1L)
             .coerceIn(-1L, 100_000L)
         lastSettledBattle = json.optLong("lastSettledBattle", 0L)
+        tutorialStepBattle = json.optLong("tutorialStepBattle", 0L)
+        tutorialStep = json.optInt("tutorialStep", 0).coerceIn(0, 1000)
         campaignLossStreakStage = json.optInt("campaignLossStreakStage", -1).coerceIn(-1, stars.size - 1)
         campaignLossStreak = if (campaignLossStreakStage < 0) 0
             else json.optInt("campaignLossStreak", 0).coerceIn(0, 1000)
@@ -1181,6 +1217,7 @@ class Profile(private val file: File) {
         whatsNewSeenVersion = ""; hasExistingSave = false
         lastPlayDay = -1L; welcomeBackDay = -1L
         lastSettledBattle = 0L
+        tutorialStepBattle = 0L; tutorialStep = 0
         campaignLossStreakStage = -1; campaignLossStreak = 0
         quality = 0; fpsCap = 0; vibrationLevel = 2; screenShake = 2; sound = true
         hintsSeen = 0L; hintsEnabled = true

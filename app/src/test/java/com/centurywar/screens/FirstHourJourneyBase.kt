@@ -362,14 +362,15 @@ abstract class FirstHourJourneyBase {
 
     // ------------------------------------------------------------------ samouczek
 
-    protected fun playTutorial(g: Game, bs: BattleScreen) {
+    /** [stop]: przerwij przed końcem samouczka (np. w kroku, w którym proces zostanie zabity). */
+    protected fun playTutorial(g: Game, bs: BattleScreen, stop: () -> Boolean = { false }, buyBetween: () -> Boolean = { true }) {
         val tut = requireNotNull(bs.tut) { "pierwsza bitwa bez samouczka" }
         val b = bs.battle
         val seen = HashSet<Int>()
         var guard = 0
         var lastShown = -1
         var multi = 0
-        while (!tut.finished && !b.over && guard++ < 20000) {
+        while (!tut.finished && !b.over && !stop() && guard++ < 20000) {
             checkBattle(g, bs, "samouczek")
             val intro = eraIntro(bs)
             if (intro?.active == true) {
@@ -414,9 +415,10 @@ abstract class FirstHourJourneyBase {
                 if (hints != null && hints.activeId >= 0) { multi++; problem("samouczek: dymek #${hints.activeId} w trakcie samouczka") }
                 val role = if (b.player.queueSize % 2 == 0) 0 else 1
                 val unit = bs.unitBtn[role]
-                if (unit.enabled && b.player.queueSize < 2 && tut.allows(unit)) tap(g, unit, "samouczek/kup") else tick(g, 0.3f)
+                if (buyBetween() && unit.enabled && b.player.queueSize < 2 && tut.allows(unit)) tap(g, unit, "samouczek/kup") else tick(g, 0.3f)
             }
         }
+        if (stop()) return
         assertTrue("$tag: samouczek nie skończył się (krok ${tut.step}, ${b.time}s)", tut.finished || b.over)
         tutorialEnd = b.time
         note(g, "samouczek ukończony po ${"%.1f".format(b.time / 60f)} min bitwy (kroki: ${seen.filter { it < 100 }.sorted()})")
