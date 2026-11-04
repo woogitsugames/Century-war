@@ -22,6 +22,11 @@ import kotlin.math.roundToInt
  * domyślnie zwykłe zasady trybu — w kampanii tylko w odpowiedzi na dowódcę wroga).
  * BALANCE_PROFILE=medale|medale-elita: realistyczny nowy gracz z medalami tylko z kampanii
  * (tura 8, docs/BALANCE.md).
+ * BALANCE_PROFILE=medale-czas: medale kampanii z realnych ★ plus medale zależne od czasu gry
+ * (R12, pomiar M2); parametry BALANCE_PACE=before|now, BALANCE_DAILY_MEDALS,
+ * BALANCE_MINUTES_PER_DAY, BALANCE_BREAK_MINUTES (opis w docs/reports/d33-pomiar-19.md).
+ * BALANCE_POWER_SCALE (mnożnik siły AI) i BALANCE_POWER_SCALE_STAGES (tylko te etapy).
+ * Wszystkie te zmienne działają tylko przy BALANCE_RUN=true; bez nich wynik jak dotąd.
  */
 class BalanceReport {
     @Before fun onlyOnRequest() = assumeTrue(System.getenv("BALANCE_RUN") == "true")
@@ -116,12 +121,18 @@ class BalanceReport {
      * następny poziom. [eliteFirst]: pierwszym zakupem jest `r_elite`.
      */
     private fun medalLevels(stageIndex: Int, eliteFirst: Boolean): IntArray {
-        val defs = Research.defs
         var medals = 0
         for (i in 0 until stageIndex) {
             medals += 20 + 6 * i + 2 * 5 + 2 * 12
             if (i >= 6) medals += 5 + 2 * i + 10
         }
+        return spendCheapest(medals, eliteFirst)
+    }
+
+    /** Wydaje [budget] medali na najtańszy następny poziom (wspólne dla profili „medale*”). */
+    private fun spendCheapest(budget: Int, eliteFirst: Boolean): IntArray {
+        val defs = Research.defs
+        var medals = budget
         val levels = IntArray(defs.size)
         if (eliteFirst) {
             if (medals < defs[0].cost(0)) return levels
@@ -139,9 +150,107 @@ class BalanceReport {
         return levels
     }
 
+    /**
+     * Profil `medale-czas` (R12, pomiar M2; docs/reports/d33-pomiar-19.md): medale kampanii
+     * z rzeczywistych średnich ★ profilu „medale” (pierwsza wygrana: 20 + 6·i + 17·★, od etapu 7
+     * jedna porażka jak w [medalLevels]) plus medale zależne od czasu gry:
+     * BALANCE_DAILY_MEDALS (domyślnie 140) × dni, gdzie dni = suma oczekiwanych czasów etapów
+     * przed danym etapem (+ BALANCE_BREAK_MINUTES przerwy po każdej bitwie, domyślnie 1,5)
+     * / BALANCE_MINUTES_PER_DAY (domyślnie 45). Tempo etapów 1–18: BALANCE_PACE=before
+     * (PROTOCOL 0.8.4, przed skróceniem 2–18) albo now (0.8.8, domyślnie). Etapy 19+ biorą
+     * czas i ★ z bieżącego przebiegu (pomiar idzie rosnąco), a gdy etapu nie zmierzono —
+     * z [PACE_LATE_FALLBACK] (liczby z docs/BALANCE.md, PROTOCOL 0.8.7) albo 18 min / 1,6 ★.
+     */
+    private object MedalPace {
+        /** Oczekiwany czas przejścia etapów 1–18 [min], profil docelowy, PROTOCOL 0.8.4. */
+        val minutesBefore = doubleArrayOf(
+            15.9, 15.2, 14.7, 15.6, 14.3, 12.5, 18.2, // 1–7 (dzień 1, „przed”)
+            19.3, 14.7, 18.2, 19.4, 16.4, // 8–12 (R11-02, „przed”)
+            13.3, 20.5, 22.8, 20.4, 18.5, 17.8, // 13–18 (pomiar 0.8.7 = 0.8.4)
+        )
+        /**
+         * To samo po skróceniu (PROTOCOL 0.8.8). Etapy 13–18: BALANCE.md podaje tylko sumę
+         * (93,4 min), więc rozkład = mediana / odsetek wygranych „po”, przeskalowany do tej sumy.
+         */
+        val minutesNow = doubleArrayOf(
+            15.9, 8.8, 8.8, 9.2, 8.8, 8.7, 10.2, // 1–7 (dzień 1, „po”)
+            13.5, 11.8, 12.4, 13.5, 13.1, // 8–12 (R11-02, „po”)
+            11.5, 17.0, 18.4, 15.7, 15.2, 15.6, // 13–18 (Σ 93,4)
+        )
+        /** Średnie ★ wygranych profilu „medale”, etapy 1–18, przed dniem 1 (0.8.4). */
+        val starsBefore = doubleArrayOf(
+            1.37, 1.47, 1.33, 1.63, 1.94, 2.05, 1.11,
+            1.12, 1.33, 1.19, 1.49, 1.27,
+            1.29, 1.27, 1.14, 1.16, 1.41, 1.70,
+        )
+        /** Średnie ★ wygranych profilu „medale” po dniu 2, R11-02 i etapach 13–18 (0.8.8). */
+        val starsNow = doubleArrayOf(
+            1.37, 1.53, 1.63, 1.77, 1.71, 1.88, 1.39,
+            1.50, 1.70, 1.79, 1.83, 1.76,
+            1.62, 1.48, 1.51, 1.47, 1.78, 1.93,
+        )
+        /** Etapy 19 i 20 profilu „medale” (0.8.7): oczekiwany czas [min] i ★, gdy nie zmierzono. */
+        val PACE_LATE_FALLBACK = mapOf(18 to (26.6 to 1.51), 19 to (18.0 to 1.60))
+        const val FALLBACK_MINUTES = 18.0
+        const val FALLBACK_STARS = 1.6
+        /** Górna granica czasu etapu bez wygranych (oczekiwany = ∞). */
+        const val MAX_STAGE_MINUTES = 60.0
+    }
+
+    private class Pace(
+        val levels: IntArray,
+        val campaignMedals: Double,
+        val timedMedals: Double,
+        val minutesBefore: Double,
+        val fallbackStages: Int,
+    )
+
+    private fun envDouble(name: String, default: Double): Double =
+        System.getenv(name)?.trim()?.toDoubleOrNull() ?: default
+
+    private val paceName: String = System.getenv("BALANCE_PACE")?.trim()?.ifEmpty { null } ?: "now"
+    private val dailyMedals = envDouble("BALANCE_DAILY_MEDALS", 140.0).coerceAtLeast(0.0)
+    private val minutesPerDay = envDouble("BALANCE_MINUTES_PER_DAY", 45.0).coerceAtLeast(1.0)
+    private val breakMinutes = envDouble("BALANCE_BREAK_MINUTES", 1.5).coerceAtLeast(0.0)
+
+    /** Wyniki `medale-czas` z bieżącego przebiegu (indeks etapu → podsumowanie). */
+    private val pacedResults = HashMap<Int, Summary>()
+
+    private fun paceLevels(stageIndex: Int): Pace {
+        require(paceName == "before" || paceName == "now") { "BALANCE_PACE=before|now, jest: $paceName" }
+        val minutes = if (paceName == "before") MedalPace.minutesBefore else MedalPace.minutesNow
+        val stars = if (paceName == "before") MedalPace.starsBefore else MedalPace.starsNow
+        var campaign = 0.0
+        var played = 0.0
+        var fallbacks = 0
+        for (i in 0 until stageIndex) {
+            val (stageMinutes, stageStars) = when {
+                i < minutes.size -> minutes[i] to stars[i]
+                pacedResults[i] != null -> {
+                    val r = pacedResults.getValue(i)
+                    val exp = r.expectedMinutes
+                    val m = if (exp.isNaN() || exp.isInfinite()) MedalPace.MAX_STAGE_MINUTES
+                        else exp.coerceAtMost(MedalPace.MAX_STAGE_MINUTES)
+                    m to (if (r.meanWinStars.isNaN()) MedalPace.FALLBACK_STARS else r.meanWinStars)
+                }
+                else -> {
+                    fallbacks++
+                    MedalPace.PACE_LATE_FALLBACK[i] ?: (MedalPace.FALLBACK_MINUTES to MedalPace.FALLBACK_STARS)
+                }
+            }
+            campaign += 20 + 6 * i + 17 * stageStars
+            if (i >= 6) campaign += 5 + 2 * i + 10
+            played += stageMinutes + breakMinutes
+        }
+        val timed = dailyMedals * played / minutesPerDay
+        val levels = spendCheapest(floor(campaign + timed).toInt(), false)
+        return Pace(levels, campaign, timed, played, fallbacks)
+    }
+
     private fun bonusFor(profile: ResearchProfile, stageIndex: Int): Bonuses = when (profile.name) {
         "medale" -> Research.bonuses(medalLevels(stageIndex, false))
         "medale-elita" -> Research.bonuses(medalLevels(stageIndex, true))
+        "medale-czas" -> Research.bonuses(paceLevels(stageIndex).levels)
         else -> bonuses(profile.progress)
     }
 
@@ -155,12 +264,23 @@ class BalanceReport {
     /** BALANCE_POWER_SCALE: mnożnik siły AI etapu (przegląd wartości przy strojeniu). */
     private val powerScale = System.getenv("BALANCE_POWER_SCALE")?.toFloatOrNull() ?: 1f
 
+    /**
+     * BALANCE_POWER_SCALE_STAGES="19" (numery etapów od 1, po przecinku): mnożnik działa tylko
+     * na te etapy (M3: korekta etapu 19 przy pomiarze sąsiadów). Brak = wszystkie etapy.
+     */
+    private val powerScaleStages: Set<Int>? = System.getenv("BALANCE_POWER_SCALE_STAGES")
+        ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()?.ifEmpty { null }
+
+    private fun scaleFor(stage: Stage): Float =
+        if (powerScaleStages == null || stage.index + 1 in powerScaleStages) powerScale else 1f
+
     private fun run(
         stage: Stage, bonus: Bonuses, seed: Long,
         difficulty: CampaignDifficulty = CampaignDifficulty.NORMAL,
     ): Result {
         val base = Campaign.config(stage, bonus, seed, difficulty = difficulty)
-        val battle = Battle(if (powerScale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * powerScale,
+        val scale = scaleFor(stage)
+        val battle = Battle(if (scale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * scale,
             base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.variantsEnabled, base.weather))
         battle.playerAi = Ai(battle, 0).also { it.commanderOverride = commanderOverride }
         val maxSteps = (30f * 60f / Battle.STEP).toInt()
@@ -313,10 +433,20 @@ class BalanceReport {
         val runs = (System.getenv("BALANCE_RUNS")?.toIntOrNull() ?: 20).coerceAtLeast(1)
         val filter = System.getenv("BALANCE_PROFILE")
         // BALANCE_PROFILE=target: tylko profil docelowy każdego etapu.
-        val medal = filter == "medale" || filter == "medale-elita"
+        // BALANCE_PROFILE=medale-czas: badania z medali kampanii i czasu gry (R12, M2; BALANCE_PACE).
+        val medal = filter == "medale" || filter == "medale-elita" || filter == "medale-czas"
+        val paced = filter == "medale-czas"
         val selected = if (medal) listOf(ResearchProfile(filter!!, -1f))
             else profiles.filter { filter == null || filter == "target" || it.name == filter }
         require(selected.isNotEmpty()) { "Nieznany profil: $filter" }
+        if (paced) {
+            require(paceName == "before" || paceName == "now") { "BALANCE_PACE=before|now, jest: $paceName" }
+            pacedResults.clear()
+        }
+        val scaleNote = if (powerScale == 1f) "" else " powerScale=${fmt(powerScale.toDouble())}" +
+            (powerScaleStages?.let { "@" + it.sorted().joinToString(",") } ?: "")
+        val levelsByStage = HashMap<Int, Int>()
+        val paceByStage = HashMap<Int, Pace>()
 
         val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
         dir.mkdirs()
@@ -328,10 +458,25 @@ class BalanceReport {
             val stage = Campaign.stages[index]
             for (profile in selected) {
                 if (filter == "target" && profile.name != targetProfile(index)) continue
-                val result = measure(stage, profile.name, bonusFor(profile, index), runs)
+                val pace = if (paced) paceLevels(index) else null
+                val bonus = if (pace != null) Research.bonuses(pace.levels) else bonusFor(profile, index)
+                val result = measure(stage, profile.name, bonus, runs)
                 stats.add(result)
-                val levels = if (medal) " levels=${medalLevels(index, filter == "medale-elita").sum()}" else ""
-                println("BALANCE stage=${stage.index + 1} profile=${profile.name}$levels" +
+                var levels = ""
+                if (pace != null) {
+                    pacedResults[index] = result
+                    paceByStage[index] = pace
+                    levelsByStage[index] = pace.levels.sum()
+                    levels = " levels=${pace.levels.sum()} pace=$paceName" +
+                        " medals=${fmt(pace.campaignMedals)}+${fmt(pace.timedMedals)}" +
+                        " playMinutes=${fmt(pace.minutesBefore)}" +
+                        (if (pace.fallbackStages > 0) " fallbackStages=${pace.fallbackStages}" else "")
+                } else if (medal) {
+                    val sum = medalLevels(index, filter == "medale-elita").sum()
+                    levelsByStage[index] = sum
+                    levels = " levels=$sum"
+                }
+                println("BALANCE stage=${stage.index + 1} profile=${profile.name}$levels$scaleNote" +
                     " commander=${System.getenv("BALANCE_COMMANDER") ?: "auto"}" +
                     " win=${fmt(result.winPct)}% median=${fmt(result.medianMinutes)}m" +
                     " timeout=${fmt(result.timeoutPct)}% era=${fmt(result.avgEra)}" +
@@ -342,17 +487,26 @@ class BalanceReport {
         }
 
         val name = "${from}-$to" + (System.getenv("BALANCE_TAG")?.let { "-$it" } ?: "")
-        val csv = StringBuilder("stage,profile,ai_power,start_era,max_era,modifiers,n,wins,win_rate_pct,median_minutes,timeouts,timeout_pct,avg_era,avg_player_era,avg_enemy_era,player_commander_battles,enemy_commander_battles\n")
+        // Kolumny od win_mean_minutes dopisane na końcu (d33): DictReader-y dalej działają.
+        val csv = StringBuilder("stage,profile,ai_power,start_era,max_era,modifiers,n,wins,win_rate_pct,median_minutes,timeouts,timeout_pct,avg_era,avg_player_era,avg_enemy_era,player_commander_battles,enemy_commander_battles," +
+            "win_mean_minutes,loss_mean_minutes,expected_minutes,mean_win_stars,research_levels,power_scale,commander,pace,campaign_medals,timed_medals,play_minutes_before\n")
         val md = StringBuilder("# Raport balansu: $name\n\n")
             .append("${to - from + 1} etapów, 3 profile badań (0%, 40%, 80%), domyślnie N=20 seedów na kombinację. ")
-            .append("Czas do 30 min; timeout to niedokończona bitwa; epoka = średnia dwóch stron, indeksowana od 0.\n\n")
-            .append("| Etap | Profil | AI | Epoki | Wygrane | Mediana [min] | Timeout | Śr. epoka |\n")
-            .append("|---:|---|---:|---|---:|---:|---:|---:|\n")
+            .append("Czas do 30 min; timeout to niedokończona bitwa; epoka = średnia dwóch stron, indeksowana od 0. ")
+            .append("Oczek. = oczekiwany czas przejścia przy powtórkach do skutku; ★ = średnia gwiazdek wygranych.\n\n")
+            .append("| Etap | Profil | AI | Epoki | Wygrane | Mediana [min] | Oczek. [min] | ★ | Timeout | Śr. epoka |\n")
+            .append("|---:|---|---:|---|---:|---:|---:|---:|---:|---:|\n")
+        val commander = System.getenv("BALANCE_COMMANDER") ?: "auto"
         for (r in stats) {
             val s = r.stage
             val mods = s.modifiers.joinToString("+") { it.name }
-            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower.toDouble())},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)},${r.playerCommanders},${r.enemyCommanders}\n")
-            md.append("| ${s.index + 1} | ${r.profile} | ${fmt(s.aiPower.toDouble())} | ${s.startEra}–${s.maxEra} | ${fmt(r.winPct)}% | ${fmt(r.medianMinutes)} | ${fmt(r.timeoutPct)}% | ${fmt(r.avgEra)} |\n")
+            val pace = paceByStage[s.index]
+            csv.append("${s.index + 1},${r.profile},${fmt(s.aiPower.toDouble())},${s.startEra},${s.maxEra},$mods,${r.count},${r.wins},${fmt(r.winPct)},${fmt(r.medianMinutes)},${r.timeouts},${fmt(r.timeoutPct)},${fmt(r.avgEra)},${fmt(r.avgPlayerEra)},${fmt(r.avgEnemyEra)},${r.playerCommanders},${r.enemyCommanders}," +
+                "${fmt(r.meanWinMinutes)},${fmt(r.meanLossMinutes)},${fmt(r.expectedMinutes)},${fmt(r.meanWinStars)}," +
+                "${levelsByStage[s.index] ?: ""},${fmt(scaleFor(s).toDouble())},$commander," +
+                "${if (pace != null) paceName else ""},${pace?.let { fmt(it.campaignMedals) } ?: ""}," +
+                "${pace?.let { fmt(it.timedMedals) } ?: ""},${pace?.let { fmt(it.minutesBefore) } ?: ""}\n")
+            md.append("| ${s.index + 1} | ${r.profile} | ${fmt(s.aiPower.toDouble())} | ${s.startEra}–${s.maxEra} | ${fmt(r.winPct)}% | ${fmt(r.medianMinutes)} | ${fmt(r.expectedMinutes)} | ${fmt(r.meanWinStars)} | ${fmt(r.timeoutPct)}% | ${fmt(r.avgEra)} |\n")
         }
         File(dir, "report-$name.csv").writeText(csv.toString())
         File(dir, "report-$name.md").writeText(md.toString())
