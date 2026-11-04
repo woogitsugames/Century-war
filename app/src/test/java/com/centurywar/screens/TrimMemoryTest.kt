@@ -63,21 +63,50 @@ class TrimMemoryTest {
         g.setScreen(s)
         g.finishScreenTransition()
         val field = CampaignScreen::class.java.getDeclaredField("regionPictures").apply { isAccessible = true }
+        val scrollField = CampaignScreen::class.java.getDeclaredField("scroll").apply { isAccessible = true }
+        val maxField = CampaignScreen::class.java.getDeclaredField("maxScroll").apply { isAccessible = true }
         fun pictures() = field.get(s) as Array<*>
+        pixels(s, g)
         val before = pixels(s, g)
-        val original = pictures()[0] as Picture
+        val visible = pictures().indexOfFirst { it != null }
+        val original = pictures()[visible] as Picture
 
         g.trimMemory(Game.TRIM_UI_HIDDEN)
         assertTrue("Obrazy epok zwolnione", pictures().all { it == null })
 
-        val after = pixels(s, g)
-        assertTrue("Obrazy epok odbudowane przy render()", pictures().all { it != null })
-        assertNotSame(original, pictures()[0])
-        assertArrayEquals("Mapa po powrocie z tła taka sama jak przed", before, after)
-        // Kolejne klatki nie nagrywają obrazów ponownie.
-        val rebuilt = pictures()[0]
+        // R10-04 L4: pierwsza klatka nagrywa najwyżej 2 obrazy epok, nie wszystkie 9.
+        val recorded = s.recordedRegions
         pixels(s, g)
-        assertSame(rebuilt, pictures()[0])
+        val first = s.recordedRegions - recorded
+        assertTrue("Pierwsza klatka nagrała $first obrazów", first in 1..2)
+        assertTrue("Niewidoczne epoki czekają", pictures().any { it == null })
+        assertNotSame(original, pictures()[visible])
+        val after = pixels(s, g)
+        assertArrayEquals("Mapa po powrocie z tła taka sama jak przed", before, after)
+
+        // Przewijanie przez całą mapę nagrywa resztę po kolei, po ≤ 2 na klatkę.
+        val start = scrollField.getFloat(s)
+        val max = maxField.getFloat(s)
+        var pos = 0f
+        while (pos <= max) {
+            scrollField.setFloat(s, pos)
+            val n = s.recordedRegions
+            pixels(s, g)
+            assertTrue(s.recordedRegions - n <= 2)
+            pos += 200f
+        }
+        scrollField.setFloat(s, max)
+        pixels(s, g)
+        pixels(s, g)
+        assertTrue("Po przewinięciu wszystkie obrazy epok są nagrane", pictures().all { it != null })
+        scrollField.setFloat(s, start)
+        assertArrayEquals("Po przewinięciu mapa wygląda jak przed", before, pixels(s, g))
+        // Kolejne klatki nie nagrywają obrazów ponownie.
+        val rebuilt = pictures()[visible]
+        val n = s.recordedRegions
+        pixels(s, g)
+        assertSame(rebuilt, pictures()[visible])
+        assertEquals(n, s.recordedRegions)
     }
 
     @Test
@@ -86,10 +115,11 @@ class TrimMemoryTest {
         val s = CampaignScreen(g)
         g.setScreen(s)
         val field = CampaignScreen::class.java.getDeclaredField("regionPictures").apply { isAccessible = true }
+        pixels(s, g)
         g.trimMemory(10) // TRIM_MEMORY_RUNNING_LOW (Android 13 i starsze)
         assertTrue((field.get(s) as Array<*>).all { it == null })
         pixels(s, g)
-        assertTrue((field.get(s) as Array<*>).all { it != null })
+        assertTrue((field.get(s) as Array<*>).any { it != null })
     }
 
     @Test

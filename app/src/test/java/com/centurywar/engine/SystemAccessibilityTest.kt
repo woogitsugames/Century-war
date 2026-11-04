@@ -238,4 +238,107 @@ class SystemAccessibilityTest {
         assertEquals(normal.battle.time, slow.battle.time, 0f)
         assertArrayEquals(BattleSnapshot.encode(normal.battle), BattleSnapshot.encode(slow.battle))
     }
+
+    /** R10-04 L3: ograniczenia ruchu włączone przez telefon wracają razem z animacjami. */
+    @Test
+    fun autoMotionReturnsWithSystemAnimations() {
+        val g = game()
+        g.applySystemAccessibility(snapshot(animOff = true))
+        assertTrue(g.profile.reduceShake)
+        assertTrue(g.profile.reduceFlash)
+        assertTrue(g.profile.motionAuto)
+        assertFalse(g.profile.motionManual)
+        // Zapis i odczyt zachowują flagę automatu.
+        g.profile.save()
+        val file = g.profile.javaClass.getDeclaredField("file").apply { isAccessible = true }.get(g.profile) as File
+        val reloaded = game(Profile(file).also { it.load() })
+        assertTrue(reloaded.profile.motionAuto)
+        reloaded.applySystemAccessibility(snapshot(animOff = false))
+        assertFalse(reloaded.profile.reduceShake)
+        assertFalse(reloaded.profile.reduceFlash)
+        assertFalse(reloaded.profile.motionAuto)
+
+        g.applySystemAccessibility(snapshot(animOff = false))
+        assertFalse(g.profile.reduceShake)
+        assertFalse(g.profile.reduceFlash)
+        assertFalse(g.profile.motionAuto)
+        // Bez automatu animacje włączone nic nie zmieniają.
+        g.profile.reduceShake = true
+        g.applySystemAccessibility(snapshot(animOff = false))
+        assertTrue(g.profile.reduceShake)
+    }
+
+    @Test
+    fun manualMotionChoiceIsNotUndoneWhenAnimationsReturn() {
+        val g = game()
+        g.applySystemAccessibility(snapshot(animOff = true))
+        val screen = AccessibilityScreen(g)
+        g.setScreen(screen)
+        screen.onClick(screen.buttons.first { it.id == 41 })
+        assertTrue(g.profile.motionManual)
+        assertFalse(g.profile.motionAuto)
+        assertFalse(g.profile.reduceShake)
+        assertTrue(g.profile.reduceFlash)
+        g.applySystemAccessibility(snapshot(animOff = false))
+        assertFalse(g.profile.reduceShake)
+        assertTrue("Ręczny wybór zostaje", g.profile.reduceFlash)
+    }
+
+    @Test
+    fun oldProfileWithoutMotionAutoLoads() {
+        val base = JSONObject(Profile(tmpFile()).toJson()).apply { remove("motionAuto") }
+        val plain = Profile(tmpFile().apply { writeText(base.toString()) }).also { it.load() }
+        assertFalse(plain.motionAuto)
+        // Wcześniejsza wersja włączyła oba ograniczenia bez ręcznego wyboru: to był automat.
+        val auto = JSONObject(base.toString()).put("reduceShake", true).put("reduceFlash", true)
+            .put("motionManual", false)
+        val autoProfile = Profile(tmpFile().apply { writeText(auto.toString()) }).also { it.load() }
+        assertTrue(autoProfile.motionAuto)
+        val manual = JSONObject(auto.toString()).put("motionManual", true)
+        assertFalse(Profile(tmpFile().apply { writeText(manual.toString()) }).also { it.load() }.motionAuto)
+    }
+
+    /** R10-04 L2: TalkBack włączony w trakcie bitwy daje ×½, o ile gracz nie wybrał tempa. */
+    @Test
+    fun talkBackToggledDuringBattleChangesSpeedUnlessChosen() {
+        val g = game()
+        g.applySystemAccessibility(snapshot())
+        val cfg = BattleConfig(Mode.SKIRMISH, 185L, 1f)
+        val s = BattleScreen(g, cfg)
+        g.setScreen(s)
+        assertEquals(1, s.speed)
+        g.applySystemAccessibility(snapshot(talkBack = true))
+        assertTrue(g.touchExplorationActive)
+        assertEquals("TalkBack w trakcie bitwy: od razu ×½", 0, s.speed)
+        g.applySystemAccessibility(snapshot(talkBack = false))
+        assertEquals("TalkBack wyłączony: wraca ×1", 1, s.speed)
+
+        // Ręczny wybór tempa w tej bitwie wygrywa.
+        val chosen = BattleScreen(g, cfg)
+        g.setScreen(chosen)
+        val speedBtn = chosen.buttons.first { it.id == BattleScreen.SPEED }
+        chosen.onClick(speedBtn)
+        val picked = chosen.speed
+        g.applySystemAccessibility(snapshot(talkBack = true))
+        assertEquals(picked, chosen.speed)
+        // Następna bitwa startuje w ×½.
+        assertEquals(0, BattleScreen(g, cfg).speed)
+    }
+
+    /** R10-04 L2: odczyt systemu po zmianie stanu menedżera (jak listener w MainActivity). */
+    @Test
+    fun touchExplorationShadowChangeIsReadBySystemAccessibility() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        var calls = 0
+        val listener = AccessibilityManager.TouchExplorationStateChangeListener { calls++ }
+        manager.addTouchExplorationStateChangeListener(listener)
+        shadowOf(manager).setTouchExplorationEnabled(true)
+        val g = game()
+        g.applySystemAccessibility(SystemAccessibility.read(context))
+        assertTrue(g.touchExplorationActive)
+        assertEquals(0, BattleScreen(g, BattleConfig(Mode.SKIRMISH, 186L, 1f)).speed)
+        manager.removeTouchExplorationStateChangeListener(listener)
+        shadowOf(manager).setTouchExplorationEnabled(false)
+    }
 }

@@ -13,6 +13,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.accessibility.AccessibilityManager
 import android.os.StrictMode
 import android.os.SystemClock
 import android.util.Log
@@ -31,9 +32,11 @@ import android.widget.TextView
 import android.graphics.Color
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import com.centurywar.crash.CrashOfferGate
 import com.centurywar.crash.CrashReports
 import com.centurywar.crash.PlaytestReportText
 import com.centurywar.engine.Game
+import com.centurywar.screens.BattleScreen
 import com.centurywar.engine.GameView
 import com.centurywar.engine.HapticGate
 import com.centurywar.engine.HapticKind
@@ -79,6 +82,8 @@ class MainActivity : Activity(), Host {
         const val LARGE_SCREEN_DP = 600
         private const val REQUEST_PROFILE_EXPORT = 1071
         private const val REQUEST_PROFILE_IMPORT = 1072
+        /** R10-04 L1: odczyt przyczyn zakończenia (testy podmieniają go na wolny/udawany). */
+        @Volatile internal var exitReasonCollector: (Context) -> Unit = { CrashReports.collectExitReasons(it) }
     }
 
     private lateinit var game: Game
@@ -141,7 +146,8 @@ class MainActivity : Activity(), Host {
             val restored = snapshots.loadBattle(profile.lastSettledBattle)
             startup.record(StartupTimings.Phase.SNAPSHOT, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
-            CrashReports.collectExitReasons(app)
+            // R10-04 L1: tylko szybka część (awaria Javy już w dzienniku). Ślad ANR czytamy
+            // w tle po pierwszym ekranie ([collectExitReasonsLater]).
             val pendingFatal = CrashReports.pendingFatal(app)
             startup.record(StartupTimings.Phase.CRASH, start, SystemClock.elapsedRealtimeNanos())
             start = SystemClock.elapsedRealtimeNanos()
@@ -155,11 +161,56 @@ class MainActivity : Activity(), Host {
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
                     finishStartup(root, profile, snapshots, restored, detectedQuality, memoryClassMb, playtest)
-                    if (pendingFatal != null) offerCrashReport(pendingFatal)
+                    if (pendingFatal != null) {
+                        crashOffers.offeredAtStartup()
+                        offerCrashReport(pendingFatal)
+                    }
                 }
+                collectExitReasonsLater(app)
             }
         }, "startup-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
     }
+
+    /** R10-04 L1: pytanie o raport z odczytu w tle; nigdy nad bitwą. */
+    private val crashOffers = CrashOfferGate()
+
+    /**
+     * R10-04 L1: przyczyny poprzedniego zakończenia (ślad ANR do 2 mln znaków) czytamy po
+     * pierwszym ekranie, na osobnym wątku o niskim priorytecie.
+     */
+    private fun collectExitReasonsLater(app: Context) {
+        Thread({
+            exitReasonCollector(app)
+            val pending = CrashReports.pendingFatal(app)
+            exitReasonsCollected = true
+            if (pending == null) return@Thread
+            runOnUiThread {
+                if (isFinishing || isDestroyed || !::game.isInitialized) return@runOnUiThread
+                // Stan ekranu odczytuje wątek gry; dialog pokazuje wątek UI.
+                game.post {
+                    val inBattle = game.current is BattleScreen
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        crashOffers.collected(pending, inBattle)?.let { offerCrashReport(it) }
+                    }
+                }
+            }
+        }, "crash-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    /** Odłożone pytanie o raport (było nad bitwą) przy następnym menu. */
+    override fun onMenuShown() {
+        if (!crashOffers.hasDeferred) return
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            crashOffers.takeAtMenu()?.let { offerCrashReport(it) }
+        }
+    }
+
+    /** Testy: czy odczyt przyczyn zakończenia w tle już się skończył. */
+    @Volatile internal var exitReasonsCollected = false
+        private set
+    internal val gameReady: Boolean get() = ::game.isInitialized
 
     private fun finishStartup(
         root: File, profile: Profile, snapshots: SnapshotStore, restored: RestoredBattle?,
@@ -369,7 +420,26 @@ class MainActivity : Activity(), Host {
         super.onResume()
         resumed = true
         CrashReports.resumed()
+        registerAccessibilityListeners()
         if (::game.isInitialized) resumeGame()
+    }
+
+    // R10-04 L2: TalkBack włączony skrótem w trakcie gry (bez zmiany konfiguracji i bez pauzy).
+    private val touchExplorationListener =
+        AccessibilityManager.TouchExplorationStateChangeListener { postSystemAccessibility() }
+    private val accessibilityStateListener =
+        AccessibilityManager.AccessibilityStateChangeListener { postSystemAccessibility() }
+
+    private fun registerAccessibilityListeners() {
+        val manager = getSystemService(AccessibilityManager::class.java) ?: return
+        manager.addTouchExplorationStateChangeListener(touchExplorationListener)
+        manager.addAccessibilityStateChangeListener(accessibilityStateListener)
+    }
+
+    private fun unregisterAccessibilityListeners() {
+        val manager = getSystemService(AccessibilityManager::class.java) ?: return
+        manager.removeTouchExplorationStateChangeListener(touchExplorationListener)
+        manager.removeAccessibilityStateChangeListener(accessibilityStateListener)
     }
 
     private fun resumeGame() {
@@ -395,6 +465,7 @@ class MainActivity : Activity(), Host {
     override fun onPause() {
         resumed = false
         CrashReports.paused()
+        unregisterAccessibilityListeners()
         if (!::game.isInitialized) {
             super.onPause()
             return

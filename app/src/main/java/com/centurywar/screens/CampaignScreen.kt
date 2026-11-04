@@ -81,6 +81,9 @@ class CampaignScreen(
     private var pictureHeight = -1
     private var pictureDp = -1f
     private var picturePortrait = false
+    /** Licznik nagrań obrazów epok (testy L4). */
+    internal var recordedRegions = 0
+        private set
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -332,19 +335,34 @@ class CampaignScreen(
         c.clipRect(viewportL, top, viewportR, bottom)
         c.translate(if (portraitMap) 0f else -scroll, if (portraitMap) -scroll else 0f)
 
-        // R2-05: po onTrimMemory obrazy epok nagrywamy ponownie (raz, przy pierwszej klatce).
+        // R2-05/R10-04 L4: po onTrimMemory ustalamy tylko geometrię, a brakujące obrazy
+        // widocznych epok nagrywamy na miejscu, najwyżej REGION_RECORDS_PER_FRAME na klatkę.
         if (pictureWidth < 0) rebuildPictures()
+        var recordBudget = REGION_RECORDS_PER_FRAME
         for (e in 0 until Defs.ERA_COUNT) {
             val begin = e * regionSpan - scroll
             val span = if (portraitMap) viewportH else viewportW
             if (begin + regionSpan < 0f || begin > span) continue
             val x = if (portraitMap) viewportL else viewportL + e * regionSpan
             val y = if (portraitMap) top + e * regionSpan else top
+            if (regionPictures[e] == null && recordBudget > 0) {
+                recordRegion(e)
+                recordBudget--
+            }
             val picture = regionPictures[e] ?: continue
             c.save()
             c.translate(x, y)
             c.drawPicture(picture)
             c.restore()
+        }
+        // Pozostały budżet: niewidoczne epoki w kolejnych klatkach, zanim gracz do nich dojdzie.
+        if (recordBudget > 0) {
+            for (e in 0 until Defs.ERA_COUNT) {
+                if (recordBudget == 0) break
+                if (regionPictures[e] != null) continue
+                recordRegion(e)
+                recordBudget--
+            }
         }
         // Najpierw cały szlak, potem punkty etapu, aby drogę zawsze zasłaniała tarcza.
         for (i in 0 until tiles.lastIndex) {
@@ -464,26 +482,35 @@ class CampaignScreen(
         eraIntro?.trimMemory()
     }
 
-    /** Każdy obraz epoki jest wektorowy i tworzony tylko przy zmianie geometrii. */
+    /**
+     * Każdy obraz epoki jest wektorowy i tworzony tylko przy zmianie geometrii. R10-04 L4:
+     * tu tylko geometria; obrazy nagrywa [recordRegion] z render() dla widocznych epok.
+     */
     private fun rebuildPictures() {
         val rw = if (portraitMap) viewportW else regionSpan
         val rh = if (portraitMap) regionSpan else viewportH
         val wi = ceil(rw.toDouble()).toInt().coerceAtLeast(1)
         val hi = ceil(rh.toDouble()).toInt().coerceAtLeast(1)
-        // Powrót z bitwy wywołuje layout bez zmiany mapy; nie nagrywamy 9 Picture ponownie.
+        // Powrót z bitwy wywołuje layout bez zmiany mapy; zostawiamy nagrane Picture.
         if (wi == pictureWidth && hi == pictureHeight && dp == pictureDp &&
-            portraitMap == picturePortrait && regionPictures.all { it != null }) return
-        for (era in regionPictures.indices) {
-            val picture = Picture()
-            val art = picture.beginRecording(wi, hi)
-            drawRegionArt(art, era, rw, rh)
-            picture.endRecording()
-            regionPictures[era] = picture
-        }
+            portraitMap == picturePortrait) return
+        regionPictures.fill(null)
         pictureWidth = wi
         pictureHeight = hi
         pictureDp = dp
         picturePortrait = portraitMap
+    }
+
+    /** Nagrywa obraz jednej epoki dla bieżącej geometrii. */
+    private fun recordRegion(era: Int) {
+        val rw = if (portraitMap) viewportW else regionSpan
+        val rh = if (portraitMap) regionSpan else viewportH
+        val picture = Picture()
+        val art = picture.beginRecording(pictureWidth, pictureHeight)
+        drawRegionArt(art, era, rw, rh)
+        picture.endRecording()
+        regionPictures[era] = picture
+        recordedRegions++
     }
 
     private fun triangle(c: Canvas, x: Float, y: Float, radius: Float, height: Float, color: Int) {
@@ -749,5 +776,7 @@ class CampaignScreen(
     private companion object {
         /** Pas nagłówka epoki w pionie: medalion (7–53 dp) i gwiazdki, plus oddech. */
         const val HEADING_DP = 58f
+        /** R10-04 L4: najwyżej tyle obrazów epok nagrywa jedna klatka. */
+        const val REGION_RECORDS_PER_FRAME = 2
     }
 }

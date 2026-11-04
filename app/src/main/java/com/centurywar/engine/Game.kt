@@ -41,6 +41,8 @@ interface Host {
     fun exit()
     fun onWantsBackChanged(wantsBack: Boolean) {}
     fun onBattleWon() {}
+    /** R10-04 L1 (wątek gry): wejście do menu, np. odłożone pytanie o raport awarii. */
+    fun onMenuShown() {}
     fun onNotificationSettingsChanged() {}
     fun requestNotifyHour(current: Int, onResult: (Int) -> Unit) {}
     fun requestGlobalRankingConsent(onAccepted: () -> Unit) {}
@@ -429,7 +431,13 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
      */
     internal fun applySystemAccessibility(s: SystemA11y) {
         systemA11y = s
+        val talkBackChanged = touchExplorationActive != s.touchExploration
         touchExplorationActive = s.touchExploration
+        // R10-04 L2: TalkBack przełączony w trakcie bitwy zmienia tempo od razu (bez ręcznego wyboru).
+        if (talkBackChanged) {
+            (screen as? BattleScreen)?.onSystemAccessibilityChanged()
+            for (i in stack.indices) (stack[i] as? BattleScreen)?.onSystemAccessibilityChanged()
+        }
         var changed = false
         if (!profile.textScaleManual) {
             val target = SystemAccessibility.textScaleFor(s.fontScale)
@@ -438,6 +446,13 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (!profile.motionManual && s.animationsOff && (!profile.reduceShake || !profile.reduceFlash)) {
             profile.reduceShake = true
             profile.reduceFlash = true
+            profile.motionAuto = true
+            changed = true
+        } else if (!profile.motionManual && !s.animationsOff && profile.motionAuto) {
+            // R10-04 L3: animacje telefonu wróciły, więc wraca wybór gracza sprzed automatu.
+            profile.reduceShake = false
+            profile.reduceFlash = false
+            profile.motionAuto = false
             changed = true
         }
         if (changed) {
@@ -538,6 +553,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         stack.clear()
         screen = s
         CrashReports.screenChanged(s.crashName)
+        if (s is MenuScreen) host.onMenuShown()
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -551,6 +567,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         previous?.let { stack.add(it) }
         screen = s
         CrashReports.screenChanged(s.crashName)
+        if (s is MenuScreen) host.onMenuShown()
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -565,6 +582,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         previous?.resetTouch()
         screen = s
         CrashReports.screenChanged(s.crashName)
+        if (s is MenuScreen) host.onMenuShown()
         syncMusicScreen(s)
         s.layout()
         startScreenTransition(previous, s, 1f)
@@ -580,6 +598,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         restored.resetTouch()
         screen = restored
         CrashReports.screenChanged(restored.crashName)
+        if (restored is MenuScreen) host.onMenuShown()
         syncMusicScreen(restored)
         restored.layout()
         startScreenTransition(previous, restored, -1f)
