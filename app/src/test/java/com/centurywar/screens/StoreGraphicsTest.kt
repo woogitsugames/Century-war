@@ -29,6 +29,7 @@ import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Weather
+import com.centurywar.meta.Achievements
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.Missions
 import com.centurywar.meta.Profile
@@ -302,6 +303,9 @@ class StoreGraphicsTest {
     /** Ok. 10 ukończonych etapów kampanii z gwiazdkami w kilku epokach (kadr 03). */
     private val d7Stars = intArrayOf(3, 3, 2, 3, 3, 2, 3, 1, 2, 3)
 
+    /** Kadr 05: czas zwycięstwa (7:45) w przedziale 7–10 min etapu 11, przed presją oblężniczą (8:00). */
+    private val D7_RESULT_SECONDS = 465
+
     /** Stały dzień misji (UTC), żeby kadr 06 był powtarzalny: 18.11.2026, 10:00. */
     private val d7NowMillis = 1_794_996_000_000L
 
@@ -432,8 +436,8 @@ class StoreGraphicsTest {
     }
 
     /**
-     * Najnowsza karta każdej rzadkości (od końca enumu). Karty z D6 dopisywane są na końcu,
-     * więc po scaleniu D6 wystarczy ponowić eksport. STORE_D7_CARDS=A,B,C wymusza wybór.
+     * Trzy karty z dnia 6 (różne rzadkości): Mur tarcz, Saperzy, Zakład. Wybór na stałe,
+     * żeby kolejne karty dopisane do enumu nie zmieniały kadru. STORE_D7_CARDS=A,B,C wymusza inny.
      */
     private fun d7Cards(): Array<EndlessCard> {
         System.getenv("STORE_D7_CARDS")?.takeIf { it.isNotBlank() }?.let { list ->
@@ -441,12 +445,7 @@ class StoreGraphicsTest {
             require(forced.size == 3) { "STORE_D7_CARDS: trzy karty" }
             return forced.toTypedArray()
         }
-        val picked = ArrayList<EndlessCard>(3)
-        for (card in EndlessCard.values().reversed()) {
-            if (picked.size == 3) break
-            if (picked.none { it.rarity == card.rarity }) picked.add(card)
-        }
-        return picked.sortedBy { it.rarity.ordinal }.toTypedArray()
+        return arrayOf(EndlessCard.SHIELD_WALL, EndlessCard.SAPPERS, EndlessCard.WAGER)
     }
 
     /** Mapa po dojechaniu animacji przewijania do bieżącego etapu (bez niej kadr stoi na starcie). */
@@ -474,6 +473,10 @@ class StoreGraphicsTest {
     /**
      * Zwycięstwo etapu 11 kampanii: gwiazdki, „Za bitwę” i „Za osiągnięcia” osobno oraz
      * „Następny cel”. Zakładka Statystyki (na telefonie czytelniejsza niż wykres).
+     * Liczby jak w typowej bitwie tego etapu: rzeczywista symulacja ok. 7:45 (baza gracza
+     * trzymana przy 90% dla 3 gwiazdek, baza wroga pada dopiero w finale), kilkadziesiąt
+     * zabitych i dokładnie dwa osiągnięcia z [Achievements] (25 bitew, 1000 zabitych) na
+     * profilu gracza, który ma za sobą 24 bitwy (10 etapów z powtórkami).
      */
     private fun drawD7Results(c: Canvas, g: Game) {
         g.history = BattleHistory(File.createTempFile("d7h", ".json").apply { delete() })
@@ -488,18 +491,30 @@ class StoreGraphicsTest {
         g.finishScreenTransition()
         val battle = screen.battle
         battle.player.gold = 4000f
-        for (step in 0 until 40 * 60) {
-            if (battle.over) break
+        val finale = D7_RESULT_SECONDS / Battle.STEP
+        var step = 0
+        while (step < finale) {
+            check(!battle.over) { "Etap rozstrzygnięty przed finałem kadru (${battle.time} s)" }
             if (step % 150 == 0) {
                 screen.commands.queue(Role.MELEE)
                 screen.commands.queue(Role.RANGED)
             }
             battle.player.baseHp = maxOf(battle.player.baseHp, battle.player.baseMaxHp * 0.9f)
+            battle.enemy.baseHp = maxOf(battle.enemy.baseHp, battle.enemy.baseMaxHp * 0.25f)
             battle.step()
             screen.battleSummary.capture(battle)
+            step++
         }
         check(!battle.over) { "Etap rozstrzygnięty przed finałem kadru" }
-        battle.time = maxOf(battle.time, 200f)
+        // Profil po 10 etapach: 24 bitwy, 17 zwycięstw; zdobyte osiągnięcia oprócz dwóch,
+        // które ta bitwa odblokowuje (25. bitwa i 1000. zabity).
+        val profile = g.profile
+        val pending = setOf("battles_25", "kills_1000")
+        profile.unlockedAchievements.clear()
+        for (a in Achievements.all) if (a.id !in pending) profile.unlockedAchievements.add(a.id)
+        profile.battles = 24
+        profile.wins = 17
+        profile.totalKills = 1000L - battle.player.kills + 7L
         battle.enemy.baseHp = 0f
         val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
         try {
@@ -508,13 +523,19 @@ class StoreGraphicsTest {
             tiny.recycle()
         }
         check(battle.over && battle.winner == 0) { "Kadr 05 wymaga zwycięstwa" }
-        check(screen.reward > 0 && screen.achievementMedals > 0) {
-            "Kadr 05: brak osobnych medali za bitwę (${screen.reward}) i osiągnięcia (${screen.achievementMedals})"
+        check(battle.stars() == 3) { "Kadr 05: ${battle.stars()} gwiazdki" }
+        check(battle.time in 420f..600f) { "Kadr 05: czas ${battle.time} s poza 7–10 min" }
+        check(battle.player.kills in 30..99) { "Kadr 05: ${battle.player.kills} zabitych" }
+        val expected = pending.sumOf { Achievements.byId(it)!!.medalReward }
+        check(screen.reward > 0 && screen.achievementMedals == expected) {
+            "Kadr 05: medale za bitwę ${screen.reward}, za osiągnięcia ${screen.achievementMedals} (oczekiwane $expected)"
         }
         screen.showResultChart = false
         g.frame(c, 0f)
         check(screen.resultRowsClipped == 0) { "Kadr 05: obcięte wiersze wyników" }
         check(screen.resultGoalDrawn) { "Kadr 05: brak „Następnego celu”" }
+        println("D7 kadr 05: czas ${battle.time.toInt()} s, zabici ${battle.player.kills}, " +
+            "za bitwę ${screen.reward}, za osiągnięcia ${screen.achievementMedals}")
     }
 
     /** Misje ze stałego dnia: seria 4 dni, jedna misja do odebrania, jedna odebrana. */
@@ -771,6 +792,8 @@ class StoreGraphicsTest {
         check(!screen.paused)
         if (turrets) screen.showTurrets = true
         g.frame(c, 0f)
+        // R10-03: znak „baza atakowana” nie może trafić do zrzutów sklepu.
+        check(!screen.baseAlertBtn.visible) { "Znak „baza atakowana” w kadrze" }
         if (turrets) {
             check(screen.slotTier[0].visible && screen.slotTier[1].visible)
             for (button in screen.slotTier) if (button.visible) {
