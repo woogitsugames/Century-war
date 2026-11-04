@@ -296,10 +296,12 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
     var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
-    /** Sekunda startu presji oblężniczej: [SIEGE_START] poza etapami 2–7 kampanii (Dzień 1). */
+    /** Sekunda startu presji oblężniczej: [SIEGE_START] poza etapami 2–12 kampanii (Dzień 1, R11-02). */
     val siegeStart: Float = Campaign.siegeStart(cfg)
-    /** Przyrost presji na minutę: [SIEGE_RAMP] poza etapami 2–7 kampanii. */
+    /** Przyrost presji na minutę: [SIEGE_RAMP] poza etapami 2–12 kampanii. */
     val siegeRamp: Float = Campaign.siegeRamp(cfg)
+    /** Część [Side.siegeDamageTaken] zwracana do gwiazdek ([stars]); R11-02: wyższa w etapach 8–12. */
+    val siegeStarForgiveness: Float = Campaign.siegeStarForgiveness(cfg)
     /** Poprzednie powtórki odtwarzają stare reguły bitwy bez dowódcy. */
     val commanderAvailable = commanderEnabled && when (cfg.mode) {
         Mode.CAMPAIGN -> cfg.stageIndex >= 7
@@ -1834,7 +1836,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
      */
     fun stars(): Int {
         if (winner != 0) return 0
-        val hp = (player.baseHp + player.siegeDamageTaken * SIEGE_STAR_FORGIVENESS)
+        val hp = (player.baseHp + player.siegeDamageTaken * siegeStarForgiveness)
             .coerceAtMost(player.baseMaxHp)
         val r = hp / player.baseMaxHp
         return when {
