@@ -9,6 +9,7 @@ import com.centurywar.engine.Quality
 import com.centurywar.game.BattleMeta
 import com.centurywar.game.Daily
 import com.centurywar.game.Mode
+import com.centurywar.game.SaveGuard
 import com.centurywar.meta.LostBattle
 import com.centurywar.meta.Profile
 import com.centurywar.meta.WelcomeBack
@@ -27,8 +28,10 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * R10-07: powitanie po przerwie w menu. Zegar powitania jest wstrzykiwany ([Game.clock]);
- * „start gry” to nowe Profile/Game na tym samym katalogu, jak w MainActivity.
+ * R10-07: powitanie po przerwie w menu. Zegar gry jest wstrzykiwany w konstruktorze
+ * ([Game.clock]) i stały, więc seria logowań, rozliczenie bitwy i powitanie liczą ten sam
+ * dzień niezależnie od północy UTC i daty przebiegu. „Start gry” to nowe Profile/Game na
+ * tym samym katalogu, jak w MainActivity.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -45,12 +48,21 @@ class WelcomeBack193Test {
         override fun exit() {}
     }
     private val day = 86_400_000L
-    private val now = System.currentTimeMillis()
+    /** Stały „teraz”: 4.11.2026, 12:00 UTC (dzień 20761), z dala od północy UTC. */
+    private val now = 1_793_793_600_000L
     private val today = Daily.dayNumber(now)
     private var savedLang = 0
 
-    @Before fun saveLang() { savedLang = L.lang }
-    @After fun restoreLang() { L.lang = savedLang }
+    @Before fun setUp() {
+        savedLang = L.lang
+        // Ostrzeżenie o zapisie jest globalne na proces: inna klasa testów w tym samym
+        // forku mogła je zgłosić, a menu pokazałoby wtedy baner save154_problem.
+        SaveGuard.resetWarningForTests()
+    }
+    @After fun tearDown() {
+        L.lang = savedLang
+        SaveGuard.resetWarningForTests()
+    }
 
     /** Profil, którego ostatnia wizyta w menu była [daysAgo] dni temu (zapisany na dysku). */
     private fun seed(dir: File, daysAgo: Long, tutorial: Boolean = true, medals: Int = 40) {
@@ -69,8 +81,7 @@ class WelcomeBack193Test {
     private inner class Run(val dir: File, w: Int = 1600, h: Int = 720, d: Float = 2f,
                             lang: String = "pl", lost: BattleMeta? = null) {
         val profile = Profile(File(dir, "profile.json")).also { it.load(); it.lang = lang }
-        val game = Game(host, profile, Quality.LOW).also { g ->
-            g.clock = { now }
+        val game = Game(host, profile, Quality.LOW, clock = { now }).also { g ->
             g.density = d
             g.resize(w, h, w, h)
             g.lostBattle = lost
