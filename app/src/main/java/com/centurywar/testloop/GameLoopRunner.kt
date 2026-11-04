@@ -7,7 +7,6 @@ import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
 import com.centurywar.game.Mode
 import com.centurywar.game.RestoredBattle
-import com.centurywar.game.SnapshotStore
 import com.centurywar.screens.BattleScreen
 import com.centurywar.screens.CampaignScreen
 import com.centurywar.screens.CodexScreen
@@ -70,12 +69,11 @@ internal class GameLoopReport(val scenario: Int) {
  * R11-04: scenariusz pętli gry wykonywany na wątku gry. Uruchamiany przez [start]; potem sam
  * dokłada się do kolejki [Game.post], więc działa raz na klatkę (początek klatki) i mierzy
  * rzeczywiste odstępy między klatkami. Nie dotyka plików ani sieci: zrzut bitwy idzie do
- * [snapshots] w katalogu pętli, wynik oddaje przez [onDone] (zapis robi Activity).
+ * [Game.snapshots] (w pętli: katalog pętli), wynik oddaje przez [onDone] (zapis robi Activity).
  */
 internal class GameLoopRunner(
     private val game: Game,
     val scenario: Int,
-    private val snapshots: SnapshotStore?,
     private val timing: GameLoopTiming = GameLoopTiming(),
     private val clock: () -> Long = System::nanoTime,
     private val pssKb: () -> Long = { 0L },
@@ -264,7 +262,7 @@ internal class GameLoopRunner(
     /** Ta sama ścieżka co MainActivity.onPause: zrzut z ekranu bitwy, profil, potem odczyt w tle. */
     private fun pauseAndReload() {
         val bs = battle
-        val store = snapshots
+        val store = game.snapshots
         if (bs == null || store == null || bs.finished) {
             report.snapshotSaved = false
             loadDone = true

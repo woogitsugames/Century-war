@@ -6,7 +6,7 @@ import android.graphics.Canvas
 import android.net.Uri
 import android.os.Looper
 import com.centurywar.MainActivity
-import com.centurywar.engine.OnlineLeaderboards
+import com.centurywar.meta.OnlineLeaderboards
 import com.centurywar.meta.Profile
 import java.io.File
 import java.security.MessageDigest

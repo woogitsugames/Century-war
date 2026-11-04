@@ -142,7 +142,7 @@ class TestLoopActivity : Activity(), Host {
         setContentView(view)
         hideSystemBars()
         val r = GameLoopRunner(
-            game, scenario, game.snapshots, timing,
+            game, scenario, timing,
             pssKb = { runCatching { Debug.getPss() }.getOrDefault(0L) },
             startupMs = { SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime() },
             onDone = { report(it, it.result) },

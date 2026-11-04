@@ -54,13 +54,13 @@ class GameLoopRunnerTest {
         }
     }
 
-    /** Wszystkie fazy skrócone 30×: bitwa 6 s zamiast 3 min. */
-    private fun run(scenario: Int, scale: Float = 1f / 30f, limitS: Float = GameLoopTiming.LIMIT_S): GameLoopReport {
+    /** Wszystkie fazy skrócone 90×: bitwa 2 s zamiast 3 min (rysowanie w Robolectric jest wolne). */
+    private fun run(scenario: Int, scale: Float = 1f / 90f, limitS: Float = GameLoopTiming.LIMIT_S): GameLoopReport {
         game = newGame()
-        val store = SnapshotStore(File(folder.root, "battle.snap"))
+        game.snapshots = SnapshotStore(File(folder.root, "battle.snap"))
         var report: GameLoopReport? = null
         runner = GameLoopRunner(
-            game, scenario, store, GameLoopTiming(scale, limitS),
+            game, scenario, GameLoopTiming(scale, limitS),
             clock = { now }, pssKb = { 1234L }, startupMs = { 777L },
             io = { it.run() }, onDone = { report = it },
         )
@@ -105,8 +105,8 @@ class GameLoopRunnerTest {
         val bs = game.current as BattleScreen
         assertEquals(3, bs.speed)
         assertNotNull(bs.battle.playerAi)
-        assertTrue("Bitwa stoi: ${r.battleTimeS}", r.battleTimeS > 6f)
-        assertTrue(r.frames.count > 100)
+        assertTrue("Bitwa stoi: ${r.battleTimeS}", r.battleTimeS > 2f)
+        assertTrue(r.frames.count >= 55)
         val o = json(r)
         assertTrue(o.getJSONObject("frames").getDouble("p95") > 0.0)
         assertTrue(o.has("battleTimeS"))
@@ -122,12 +122,12 @@ class GameLoopRunnerTest {
         assertEquals(GameLoopTiming.ENDLESS_START_ERA, bs.battle.cfg.startEra)
         assertTrue(bs.battle.player.era >= GameLoopTiming.ENDLESS_START_ERA)
         assertTrue(r.wave >= 0)
-        assertTrue(r.battleTimeS > 6f)
+        assertTrue(r.battleTimeS > 2f)
     }
 
     @Test fun pauseSavesSnapshotAndResumedBattleContinues() {
-        val r = run(4)
-        assertEquals("ok", r.result)
+        val r = run(4, scale = 1f / 30f)
+        assertEquals(r.reason, "ok", r.result)
         assertEquals(true, r.snapshotSaved)
         assertEquals(true, r.snapshotLoaded)
         assertTrue(r.snapshotLoadMs >= 0)
@@ -147,8 +147,8 @@ class GameLoopRunnerTest {
     }
 
     @Test fun hardLimitEndsWithTimeout() {
-        val r = run(2, scale = 1f, limitS = 2f)
+        val r = run(2, scale = 1f, limitS = 0.5f)
         assertEquals("timeout", r.result)
-        assertTrue(r.elapsedS in 2f..3f)
+        assertTrue(r.elapsedS in 0.5f..0.6f)
     }
 }
