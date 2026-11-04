@@ -1,0 +1,52 @@
+Century War - tester report
+Version: 0.1.0 (1)
+Device: Acme Phone
+Android: 15 (API 35)
+Language: pl
+
+[Tester survey]
+Rating: 4/5 (2025-12-08)
+Biggest issue: nothing, it's good
+
+[Progress]
+Campaign: stage 8 of 36, stars 20 of 108, difficulty NORMAL
+Tutorial done: yes (after 12m 0s of battle time)
+First win: after 15m 0s of battle time
+Best Endless wave: 12
+Win streak: 1 (best 3)
+Campaign loss streak: 0 (max 2)
+Login streak: 3
+
+[Play time]
+First day (UTC): 2025-12-07, last day: 2025-12-16
+Days played: 7, sessions: 10
+Time in app: 3h 0m
+Battle time: 2h 0m
+Battles: 20, wins: 14, surrenders: 1
+
+[Modes]
+CAMPAIGN: battles 12, wins 9, time 1h 0m
+SKIRMISH: battles 3, wins 2, time 20m 0s
+ENDLESS: battles 3, wins 2, time 20m 0s
+DAILY: battles 2, wins 1, time 20m 0s
+Screens visited: Codex, Research, Daily
+Recent battles (newest first):
+  CAMPAIGN stage 8, win, 5m 3s, era 2, AI 100%
+  ENDLESS, loss, 14m 5s, era 4, AI 110%
+  CAMPAIGN stage 8, surrender, 2m 0s, era 2, AI 100%
+
+[Performance]
+Quality: auto (level 2, reduction now 0/4, GPU 0)
+Last sessions (newest first, 30 s battle windows):
+  #1: worst p95 18.4 ms, max reduction 2, dropped steps 5, thermal 1
+  #2: worst p95 25.0 ms, max reduction 0, dropped steps 0, thermal 0
+
+[Settings]
+FPS cap: display
+Game mode: standard
+Palette: standard
+Text size: 100%
+Left-handed HUD: no
+TalkBack: no
+Reduce shake/flash: no/no
+Battle speed x1/2: no
