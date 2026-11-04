@@ -1882,3 +1882,14 @@ Wariant B: od 390 s, +35%/min (bez dowódcy).
 
 B daje medianę „medali” 11,2–11,6 min (powyżej 11) i nie usuwa skoku wygranych „medali”
 na etapie 16 (83% → 94–95% w obu wariantach), więc dalej wariant A.
+
+Przegląd `BALANCE_POWER_SCALE` przy wariancie A (wygrane: docelowy / docelowy z dowódcą /
+medale; „przed” = stan PROTOCOL 0.8.7):
+
+| Etap | Przed | A bez korekty | ×0,98 | ×0,96 | ×1,02 | ×1,04 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 15 | 49 / 58 / 83% | 53 / 55 / 75% | 56 / 63 / 73% | **54 / 60 / 80%** | — | — |
+| 16 | 65 / 62 / 83% | 63 / 59 / 95% | — | — | **60 / 65 / 85%** | 66 / 56 / 81% |
+
+Wybrane: etap 15 ×0,96 (`stageRamp` 1 → 0,96), etap 16 ×1,02 (0,86 → 0,877, nadal lżej niż
+przed turą 10: 0,93).
