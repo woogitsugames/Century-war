@@ -159,6 +159,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private var eraNum = ""
     private var evolveText = ""
     private var eliteTag = ""
+    /**
+     * Dzień 36 (R12, poz. 8): na zewnętrznym Foldzie „Wymaga: Doktryna elit” obok plakietki roli
+     * malało do ok. 7 sp. Tam napis stoi w osobnych wierszach nad opisem karty elity.
+     */
+    private val eliteTagLines = arrayOfNulls<String>(3)
+    private var eliteTagLineCount = 0
     private val weatherNames = Array(Weather.entries.size) { "" }
     private val weatherDescriptions = Array(Weather.entries.size) { "" }
     private var eliteLocked = false
@@ -292,7 +298,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
         rebuild()
         var longest = 3
-        for (i in 0 until CARDS) longest = max(longest, lineCount[i])
+        for (i in 0 until CARDS) longest = max(longest, lineCount[i] + if (i == 3) eliteTagLineCount else 0)
         descriptionExtra = (longest - 3) * descLineDp * dp
         ch = 10 * dp + previewH + 36 * dp + descriptionExtra + unitRows * rowH + 12 * dp
         val gridH = ((activeCards + cols - 1) / cols) * (ch + gap)
@@ -383,6 +389,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 Role.ELITE -> "cx_counter_elite"
             }]
             wrapInto(i, L[u.nameKey + "_fl"], textW)
+            if (i == 3) eliteTagLineCount = if (eliteLocked && narrowStats)
+                wrapWords(eliteTag, textW, 11.5f, eliteTagLines, bold = true) else 0
             val hp = u.hp * b.unitHpMul
             val dmg = u.dmg * b.unitDmgMul
             var n = 0
@@ -570,14 +578,15 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     }
 
     /** Łamanie wyrazów tylko podczas przebudowania ekranu, także przy skali 130%. */
-    private fun wrapWords(value: String, width: Float, font: Float, target: Array<String?>): Int {
+    private fun wrapWords(value: String, width: Float, font: Float, target: Array<String?>,
+                          bold: Boolean = false): Int {
         target.fill(null)
         val words = value.split(' ')
         val buffer = StringBuilder()
         var n = 0
         for (word in words) {
             val attempt = if (buffer.isEmpty()) word else "$buffer $word"
-            if (buffer.isNotEmpty() && ui.measure(attempt, font) > width &&
+            if (buffer.isNotEmpty() && ui.measure(attempt, font, bold) > width &&
                 n < target.size - 1) {
                 target[n++] = buffer.toString()
                 buffer.setLength(0)
@@ -794,14 +803,31 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         }
     }
 
+    /** Szerokość [Ui.badge] (ten sam wzór), bez rysowania. */
+    private fun badgeWidth(s: String, sizeDp: Float): Float {
+        val bh = sizeDp * dp * 1.9f * ui.textScale.coerceAtMost(1.15f)
+        return bh * 1.1f + ui.measure(s, sizeDp, true) + 6 * dp
+    }
+
     private fun drawEraHeader(c: Canvas, y: Float) {
         val cy = y + 25 * dp
         val col = Ui.ERA[era]
         ui.medallion(c, left + 18 * dp, cy, 18 * dp, col, Icons.CODEX)
         val tx = left + 44 * dp
-        val nameSize = ui.fit(eraName, 21f, contentW - 240 * dp, 12f)
+        // Dzień 36: na zewnętrznym Foldzie nazwa epoki miała obok plakietki awansu ok. 63 dp
+        // (przy 130% ok. 9 sp i wchodziła na plakietkę). Tam plakietka stoi w wierszu numeru epoki.
+        val nameW = if (narrowStats) contentW - 52 * dp else contentW - 240 * dp
+        val nameSize = ui.fit(eraName, 21f, nameW, 12f)
         ui.textO(c, eraName, tx, cy + 2 * dp, nameSize, Ui.GOLD)
-        ui.badge(c, left + contentW, cy, Icons.XP, evolveText, 14f, Ui.XP, alignRight = true)
+        if (narrowStats) {
+            // Plakietka obok „Epoka 1/9”: zmniejszana co 0,5 sp (najwyżej do 10 sp), by nie wchodzić na numer.
+            val room = contentW - 18 * dp - ui.measure(eraNum, 12f)
+            var size = 14f
+            while (size > 10f && badgeWidth(evolveText, size) > room) size -= 0.5f
+            ui.badge(c, left + contentW, y + 54 * dp, Icons.XP, evolveText, size, Ui.XP, alignRight = true)
+        } else {
+            ui.badge(c, left + contentW, cy, Icons.XP, evolveText, 14f, Ui.XP, alignRight = true)
+        }
         ui.text(c, eraNum, left + 8 * dp, y + 58 * dp, 12f, Ui.DIM)
         if (page == PAGE_VARIANTS) {
             ui.textO(c, variantTitle, left + 8 * dp, y + 85 * dp, 15f, Ui.GOLD)
@@ -840,11 +866,20 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             val lx = box.right + 10 * dp
             val la = card.right - pad - lx - 18 * dp
             Icons.draw(c, Icons.LOCK, lx + 7 * dp, box.centerY(), 15 * dp, dp = dp)
-            ui.textO(c, eliteTag, lx + 17 * dp, box.centerY() + 4 * dp, ui.fit(eliteTag, 11.5f, la, 7f), Ui.BAD, Paint.Align.LEFT, 1.6f)
+            if (eliteTagLineCount == 0) {
+                ui.textO(c, eliteTag, lx + 17 * dp, box.centerY() + 4 * dp, ui.fit(eliteTag, 11.5f, la, 7f), Ui.BAD, Paint.Align.LEFT, 1.6f)
+            }
+        }
+        // Dzień 36: na zewnętrznym Foldzie wymaganie elity zajmuje pierwsze wiersze opisu (≥ 10 sp).
+        val tagLines = if (i == 3 && eliteLocked) eliteTagLineCount else 0
+        for (k in 0 until tagLines) {
+            val line = eliteTagLines[k] ?: ""
+            ui.textO(c, line, tx, card.top + (80 + k * descLineDp) * dp,
+                ui.fit(line, 11.5f, tw, 10f * ui.textScale), Ui.BAD, Paint.Align.LEFT, 1.6f)
         }
         val ln = lines[i]
         for (k in 0 until lineCount[i]) {
-            ui.text(c, ln[k] ?: "", tx, card.top + (80 + k * descLineDp) * dp, 12.5f, Color.rgb(214, 218, 228))
+            ui.text(c, ln[k] ?: "", tx, card.top + (80 + (k + tagLines) * descLineDp) * dp, 12.5f, Color.rgb(214, 218, 228))
         }
 
         // statystyki
@@ -929,6 +964,10 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         return out
     }
     internal val comparePanelForTest get() = compare
+    /** Do testów (dzień 36): napisy nagłówka epoki (nazwa, numer, awans). */
+    internal fun eraHeaderTextsForTest(): List<String> = listOf(eraName, eraNum, evolveText)
+    /** Do testów (dzień 36): wiersze „Wymaga: Doktryna elit” na wąskim ekranie (puste obok plakietki). */
+    internal fun eliteTagLinesForTest(): List<String> = (0 until eliteTagLineCount).map { eliteTagLines[it] ?: "" }
 
     /** Zastany renderer sylwetek jest używany też przez widok porównania. */
     internal fun drawCompareIcon(c: Canvas, unit: UnitDef, x: Float, y: Float, size: Float) {

@@ -52,7 +52,10 @@ class AchievementsScreen(g: Game) : Screen(g) {
      */
     private val noteText = Array(defs.size) { "" }
     private val noteX = FloatArray(defs.size)
-    private var today = Daily.dayNumber()
+    /** Dzień UTC z zegara gry (D41: `g.clock()`, jak menu i misje, nie zegar systemowy). */
+    private var today = Daily.dayNumber(g.clock())
+    /** Testy D41. */
+    internal val dayForTests: Long get() = today
 
     override fun isDragScreen() = true
 
@@ -119,7 +122,7 @@ class AchievementsScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
-        today = Daily.dayNumber()
+        today = Daily.dayNumber(g.clock())
         refreshProgress()
     }
 

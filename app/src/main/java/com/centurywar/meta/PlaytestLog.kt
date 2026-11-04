@@ -366,4 +366,7 @@ class PlaytestLog(private val file: File) {
     }
 
     fun close() { writer.shutdown() }
+
+    /** Testy: czy wątek zapisu został zamknięty ([close]). */
+    internal val closed: Boolean get() = writer.isShutdown
 }
