@@ -132,6 +132,10 @@ class HintOverlay(
     private var body = ""
     /** Dzień 5: treść dymka dla czytnika ekranu (odczyt na wątku gry). */
     internal val accessibilityBody: String get() = body
+    /** R11-01: dymek jest otwarty; czytnik widzi wtedy tylko jego tekst i OK. */
+    internal val accessibilityOpen: Boolean get() = activeId >= 0 && okBtn.visible && g.profile.hintsEnabled
+    /** R11-01: obszar dymka (pusty przed pierwszym rysowaniem). */
+    internal fun accessibilityBounds(out: RectF) { out.set(panel) }
     private val lines = arrayOfNulls<String>(24)
     private var lineCount = 0
     private var compact = false

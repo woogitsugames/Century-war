@@ -191,8 +191,35 @@ object L {
         putAll(part184())
         putAll(part193())
         putAll(part198())
+        putAll(part196())
         }
     }
+
+    /** R11-01: TalkBack i robot Play na ekranach poza bitwą (mapa kampanii, badania, misje, listy). */
+    private fun part196(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a196_stage" to t("Etap %1\$d, %2\$s", "Stage %1\$d, %2\$s", "Etappe %1\$d, %2\$s", "Etapa %1\$d, %2\$s", "Étape %1\$d, %2\$s", "Tappa %1\$d, %2\$s", "Etapa %1\$d, %2\$s", "Етап %1\$d, %2\$s", "Etappe %1\$d, %2\$s", "Aşama %1\$d, %2\$s"),
+        "a196_stars" to t("%1\$d z 3 gwiazdek", "%1\$d of 3 stars", "%1\$d von 3 Sternen", "%1\$d de 3 estrellas", "%1\$d étoiles sur 3", "%1\$d stelle su 3", "%1\$d de 3 estrelas", "%1\$d з 3 зірок", "%1\$d van 3 sterren", "3 yıldızdan %1\$d"),
+        "a196_locked" to t("zablokowany", "locked", "gesperrt", "bloqueada", "verrouillée", "bloccata", "bloqueada", "заблоковано", "vergrendeld", "kilitli"),
+        "a196_next" to t("następny do zdobycia", "next to conquer", "als Nächstes zu erobern", "la siguiente por conquistar", "prochaine à conquérir", "la prossima da conquistare", "a próxima a conquistar", "наступний для здобуття", "volgende om te veroveren", "sıradaki hedef"),
+        "a196_enemy_weaker" to t("wróg słabszy", "weaker enemy", "schwächerer Gegner", "enemigo más débil", "ennemi plus faible", "nemico più debole", "inimigo mais fraco", "слабший ворог", "zwakkere vijand", "daha zayıf düşman"),
+        "a196_enemy_equal" to t("wróg równy", "evenly matched enemy", "gleich starker Gegner", "enemigo igualado", "ennemi de force égale", "nemico alla pari", "inimigo equilibrado", "рівний ворог", "even sterke vijand", "denk düşman"),
+        "a196_enemy_stronger" to t("wróg silniejszy", "stronger enemy", "stärkerer Gegner", "enemigo más fuerte", "ennemi plus fort", "nemico più forte", "inimigo mais forte", "сильніший ворог", "sterkere vijand", "daha güçlü düşman"),
+        "a196_afford" to t("stać cię", "you can afford it", "bezahlbar", "puedes pagarlo", "à ta portée", "puoi permettertelo", "você pode pagar", "тобі вистачає", "je kunt het betalen", "alabilirsin"),
+        "a196_no_medals" to t("za mało medali", "not enough medals", "zu wenige Medaillen", "no hay suficientes medallas", "pas assez de médailles", "medaglie insufficienti", "medalhas insuficientes", "замало медалей", "te weinig medailles", "yetersiz madalya"),
+        "a196_level" to t("poziom %1\$d z %2\$d", "level %1\$d of %2\$d", "Stufe %1\$d von %2\$d", "nivel %1\$d de %2\$d", "niveau %1\$d sur %2\$d", "livello %1\$d di %2\$d", "nível %1\$d de %2\$d", "рівень %1\$d з %2\$d", "niveau %1\$d van %2\$d", "seviye %1\$d/%2\$d"),
+        "a196_maxed" to t("poziom maksymalny", "maximum level", "Höchststufe", "nivel máximo", "niveau maximum", "livello massimo", "nível máximo", "максимальний рівень", "maximaal niveau", "en yüksek seviye"),
+        "a196_cost" to t("koszt %1\$s", "costs %1\$s", "kostet %1\$s", "cuesta %1\$s", "coûte %1\$s", "costa %1\$s", "custa %1\$s", "коштує %1\$s", "kost %1\$s", "bedeli %1\$s"),
+        "a196_claim" to t("Odbierz: %1\$s, %2\$s", "Claim: %1\$s, %2\$s", "Abholen: %1\$s, %2\$s", "Reclamar: %1\$s, %2\$s", "Récupérer : %1\$s, %2\$s", "Riscuoti: %1\$s, %2\$s", "Resgatar: %1\$s, %2\$s", "Отримати: %1\$s, %2\$s", "Ophalen: %1\$s, %2\$s", "Al: %1\$s, %2\$s"),
+        "a196_done" to t("zaliczone", "reached", "erreicht", "conseguido", "atteint", "raggiunto", "alcançado", "досягнуто", "behaald", "ulaşıldı"),
+        "a196_era" to t("%1\$s, %2\$d z 12 gwiazdek", "%1\$s, %2\$d of 12 stars", "%1\$s, %2\$d von 12 Sternen", "%1\$s, %2\$d de 12 estrellas", "%1\$s, %2\$d étoiles sur 12", "%1\$s, %2\$d stelle su 12", "%1\$s, %2\$d de 12 estrelas", "%1\$s, %2\$d з 12 зірок", "%1\$s, %2\$d van 12 sterren", "%1\$s, 12 yıldızdan %2\$d"),
+        "a196_crowns" to t("korony Trudnego: %1\$d z 4", "Hard crowns: %1\$d of 4", "Schwer-Kronen: %1\$d von 4", "coronas de Difícil: %1\$d de 4", "couronnes Difficile : %1\$d sur 4", "corone Difficile: %1\$d su 4", "coroas do Difícil: %1\$d de 4", "корони Складного: %1\$d з 4", "kronen op Moeilijk: %1\$d van 4", "Zor tacı: 4'te %1\$d"),
+        "a196_difficulty" to t("Poziom trudności: %1\$s", "Difficulty: %1\$s", "Schwierigkeit: %1\$s", "Dificultad: %1\$s", "Difficulté : %1\$s", "Difficoltà: %1\$s", "Dificuldade: %1\$s", "Складність: %1\$s", "Moeilijkheid: %1\$s", "Zorluk: %1\$s"),
+        "a196_weather" to t("Pogoda: %1\$s", "Weather: %1\$s", "Wetter: %1\$s", "Clima: %1\$s", "Météo : %1\$s", "Meteo: %1\$s", "Clima: %1\$s", "Погода: %1\$s", "Weer: %1\$s", "Hava: %1\$s"),
+        "a196_medals" to t("Masz %1\$s", "You have %1\$s", "Du hast %1\$s", "Tienes %1\$s", "Tu as %1\$s", "Hai %1\$s", "Você tem %1\$s", "У тебе %1\$s", "Je hebt %1\$s", "Sahip olduğun: %1\$s"),
+        "a196_progress" to t("postęp %1\$d z %2\$d", "progress %1\$d of %2\$d", "Fortschritt %1\$d von %2\$d", "progreso %1\$d de %2\$d", "progression %1\$d sur %2\$d", "progresso %1\$d di %2\$d", "progresso %1\$d de %2\$d", "прогрес %1\$d з %2\$d", "voortgang %1\$d van %2\$d", "ilerleme %1\$d/%2\$d"),
+        "a196_reward" to t("nagroda %1\$s", "reward %1\$s", "Belohnung %1\$s", "recompensa %1\$s", "récompense %1\$s", "ricompensa %1\$s", "recompensa %1\$s", "нагорода %1\$s", "beloning %1\$s", "ödül %1\$s"),
+        "a196_unlocked" to t("zdobyte", "unlocked", "freigeschaltet", "desbloqueado", "débloqué", "sbloccato", "desbloqueado", "здобуто", "ontgrendeld", "açıldı"),
+    )
 
     /** Zlecenie 184 (dzień 6): cztery karty Endless, trzy zestawy tygodnia, dwa wydarzenia dnia. */
     private fun part184(): Array<Pair<String, Array<out String>>> = arrayOf(
