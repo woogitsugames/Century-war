@@ -2033,3 +2033,48 @@ przejścia [min]; „realny gracz” = `medale-czas`, `BALANCE_PACE=now` (54 poz
   mediana 53; fala 20 100/100 — identycznie jak po D6, w celu (5–15, 45–55).
 - **Oblężenie tygodnia** (tygodnie 3022–3073, AI na zasadach tygodnia): mediana fali 12, progi
   10 / 20 / 30 fal w 31 / 5 / 2 z 52 tygodni; fala 60 tylko w 2 tygodniach z Podwójnym dochodem.
+
+## Etapy 28 i 30–33 — wariant K1 z D37 (dzień 40, 4.11.2026) — DO DECYZJI WŁAŚCICIELA
+
+**Status: gałąź `claude/dzien-40-k1-etapy-28-33`, niescalona.** Wpisuje rekomendację K1 z D37
+(`docs/reports/d37-balans-19-36.md`, pytanie 1) do gry; scalić tylko po zgodzie właściciela.
+Raport: `docs/reports/d40-k1.md`.
+
+### Zmiana
+
+- `Campaign.stageRamp`, korekty: 28 **1 → 0,9**; 30 **0,989 → 0,90988004**; 31 **0,97 → 0,8536**;
+  32 **0,97 → 0,8924001**; 33 **1 → 0,92** (= dotychczasowa korekta × 0,90 / 0,92 / 0,88 / 0,92 / 0,92).
+  Wartości dobrane programem tak, żeby `aiPower` był bitowo równy (stary `aiPower` × mnożnik K1),
+  czyli temu, co mierzył D37 (`BALANCE_POWER_SCALE_MAP`). 30 i 32 mają „brzydkie” literały, bo
+  0,90988f i 0,8924f dają inny Float `aiPower`.
+- `aiPower` 28 / 30 / 31 / 32 / 33: 2,1372 → **1,92348**; 2,3732967 → **2,183433**;
+  2,5541394 → **2,2476428**; 2,790617 → **2,5673678**; 2,9010668 → **2,6689816**. Pozostałe 31 etapów
+  bez zmian (sprawdzone porównaniem `Campaign.stages` przed/po).
+- `SimVersion.PROTOCOL` 0.8.9 → **0.8.10** (`RANKED_REPLAY_FORMATS` i `Replay.VERSION` bez zmian);
+  literały wersji w testach serwera, `ReleaseConfigTest`, `server/README.md`.
+- Złote powtórki po regeneracji bez zmian (kampania: etapy 1 i 29). Testy `:sim` (poza Gradle)
+  przed i po: OK 317. `SecondHourControlTest` (etap 21) bez zmian.
+
+### Pomiar z kodu, N=100, Normalny, etapy 16–36
+
+Wynik **identyczny co do bitwy z K1 z D37** we wszystkich sześciu profilach (etapy 19–36);
+etapy 16–27, 29 i 34–36 identyczne jak przed zmianą (w `medale-czas` 29 i 34–36 różnią się tylko
+licznikiem minut gry; z dowódcą etap 35 o 1 poziom badań mniej: 47 → 44%).
+Wygrane / oczekiwany czas przejścia [min].
+
+| Etap | Realny gracz (`medale-czas`) przed → po | „medale” | „medale” + dowódca | `medale-czas` + dowódca | Docelowy | Docelowy + dowódca |
+|---:|---:|---:|---:|---:|---:|---:|
+| 28 | 58% / 21,6 → **65% / 18,1** | 40 → 55% | 40 → 42% | 46 → 62% | 70 → 78% | 68 → 74% |
+| 30 | 43% / 20,1 → **54% / 15,9** | 46 → 50% | 49 → 59% | 45 → 50% | 69 → 68% | 66 → 77% |
+| 31 | 41% / 24,6 → **52% / 19,4** | 33 → 49% | 41 → 54% | 41 → 52% | 53 → 66% | 71 → 76% |
+| 32 | 40% / 27,4 → **50% / 21,9** | 38 → 53% | 34 → 47% | 38 → 52% | 65 → 78% | 73 → 72% |
+| 33 | 45% / 15,1 → **52% / 14,4** | 37 → 46% | 37 → 45% | 47 → 43% | 59 → 70% | 60 → 75% |
+| Σ 28–36 (oczek.) | 179 → **160 min** | 207 → 174 | 204 → 182 | 190 → 169 | 111 → 100 | 110 → 102 |
+| śr. wygrane 28–36 | 48,1 → **53,2%** | 43,4 → 50,0% | 43,7 → 48,8% | 46,3 → 50,7% | 66,8 → 71,7% | 67,6 → 71,6% |
+
+Ocena (kryterium d33): realny gracz — etap 28 ostrzegawcza → **płynnie** (80 → 65%, −15 pp,
+1,41×), 30–33 ≥ 50% (bez stref); „medale” bez ściany (28: 2,02× → 0,77× przy 29; 31–33 ≥ 46%);
+„medale” + dowódca na 28 nadal **ściana** (69 → 42%, 1,95×). Docelowy najwyżej 78% (28, 32; cel
+tury 10 „≤ ok. 75%”, +3 pp w szumie). Etapy 19–27 bez zmian (klif 19 z dowódcą jak w D37).
+
+- 2026-11-04 — regeneracja złotych powtórek: K1: stageRamp 28 x0,90, 30 x0,92, 31 x0,88, 32 x0,92, 33 x0,92, PROTOCOL 0.8.10 (do decyzji właściciela); powtórki bez zmian.
