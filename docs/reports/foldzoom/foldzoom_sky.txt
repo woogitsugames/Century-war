@@ -1,0 +1,3 @@
+1_start: puste niebo 68% → 51% pola
+2_mid: puste niebo 82% → 61% pola
+4_boss: puste niebo 30% → 17% pola
