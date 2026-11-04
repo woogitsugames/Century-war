@@ -94,8 +94,9 @@ class BattleScreenAllocationTest {
             manual.setFloat(screen, 30f)
             screen.r.camX = 1e6f
             screen.r.clampCam()
-            p.baseHp -= p.baseMaxHp * 0.001f
-            if (p.baseHp < p.baseMaxHp * 0.3f) p.baseHp = p.baseMaxHp * 0.45f
+            // Stałe HP (napisy HUD bez zmian); trafienie odświeżane jak przez detektor.
+            p.baseHp = p.baseMaxHp * 0.45f
+            screen.alerts.baseHitAt = f.battle.time
             screen.update(1f / 60f)
             screen.render(f.canvas)
         }

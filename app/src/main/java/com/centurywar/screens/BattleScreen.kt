@@ -225,6 +225,8 @@ class BattleScreen(
         const val RESULT_GOAL = 204
         /** R10-03: znak „baza atakowana” przy lewej krawędzi pola. */
         const val BASE_ALERT = 205
+        /** Napisy „0%”…„100%” przy znaku bazy, przygotowane raz (bez alokacji w klatce). */
+        private val PERCENT_TEXT = Array(101) { "$it%" }
         const val HELP_NONE = 0
         const val HELP_RESEARCH = 1
         const val HELP_EASY = 2
@@ -301,8 +303,7 @@ class BattleScreen(
     internal val alerts = BattleAlerts()
     private var lastBossSfxAt = BattleAlerts.NEVER
     private var alertPulse = 0f
-    private var alertPctShown = -1
-    private var alertPctText = ""
+    private var alertPctShown = 100
     internal val doctrineBtn = Array(3) { btn(DOCTRINE0 + it) }
     internal val variantBtn = Array(2) { btn(VARIANT0 + it) }
     internal val slotBuy = Array(Defs.MAX_TURRET_SLOTS) { btn(SLOT_BUY0 + it) }
@@ -1167,10 +1168,7 @@ class BattleScreen(
             r.screenX(p.baseFront) < fieldRect.left
         var pct = if (p.baseMaxHp > 0f) kotlin.math.round(p.baseHp / p.baseMaxHp * 100f).toInt().coerceIn(0, 100) else 100
         if (pct == 0 && p.baseHp > 0f) pct = 1
-        if (pct != alertPctShown) {
-            alertPctShown = pct
-            alertPctText = "$pct%"
-        }
+        alertPctShown = pct
     }
 
     /** Czerwona plakietka: tarcza i strzałka w lewo, obok HP bazy w %, gdy ≤ 50%. Bez alokacji. */
@@ -1193,7 +1191,7 @@ class BattleScreen(
         val cy = b.r.centerY()
         Icons.draw(c, Icons.BACK, b.r.left + 11 * dp, cy, 14 * dp, dp = dp)
         Icons.draw(c, Icons.SHIELD, b.r.left + 27 * dp, cy, 24 * dp, dp = dp)
-        if (alertPctShown <= 50) ui.textO(c, alertPctText, b.r.right + 6 * dp, cy + 5 * dp, 14f, Ui.TEXT)
+        if (alertPctShown <= 50) ui.textO(c, PERCENT_TEXT[alertPctShown], b.r.right + 6 * dp, cy + 5 * dp, 14f, Ui.TEXT)
     }
 
     override fun onDrag(dx: Float, dy: Float) {

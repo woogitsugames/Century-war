@@ -133,11 +133,14 @@ class BattleAlerts190ScreenshotTest : PrereleasePolishBase() {
 
                 // Dymek HintOverlay ma pierwszeństwo.
                 val hints = field(s, "hints").get(s) as HintOverlay
+                g.profile.hintsEnabled = true
                 hitOffscreen(g, s, 0.02f)
                 HintOverlay::class.java.getDeclaredMethod("activate", Int::class.javaPrimitiveType, String::class.java)
                     .apply { isAccessible = true }.invoke(hints, HintOverlay.UPGRADE, "hint_upgrade")
                 hitOffscreen(g, s, 0.02f)
-                require10(hints.activeId >= 0 && !b.visible, "$where: znak razem z dymkiem")
+                require10(hints.activeId >= 0, "$where: dymek się nie pokazał")
+                require10(!b.visible, "$where: znak razem z dymkiem")
+                if (device == "phone720" && lang == "pl" && !left) save(g, "${where}_dymek")
                 g.history?.close()
             }
         } finally { L.lang = old }

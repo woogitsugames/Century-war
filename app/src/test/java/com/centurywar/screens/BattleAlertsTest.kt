@@ -1,6 +1,9 @@
 package com.centurywar.screens
 
+import com.centurywar.game.Ai
 import com.centurywar.game.Battle
+import com.centurywar.game.Bonuses
+import com.centurywar.game.Campaign
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Mode
 import org.junit.Assert.assertEquals
@@ -129,5 +132,32 @@ class BattleAlertsTest {
             d.step(c, i * 2f)
         }
         assertTrue(d.baseHitAt < 0f)
+    }
+
+    /** Kryterium odbioru: etap 8 z AI po obu stronach — alarm bazy ≤ 2 razy, gotowość co ≥ 8 s. */
+    @Test fun stage8AiBattleKeepsSignalsSparse() {
+        for (seed in 801L..804L) {
+            val b = Battle(Campaign.config(Campaign.stages[7], Bonuses(), seed))
+            b.playerAi = Ai(b, 0)
+            val a = BattleAlerts()
+            var baseAlarms = 0
+            var lastReady = -100f
+            var readyCount = 0
+            var steps = 0
+            a.step(b, b.time)
+            while (!b.over && steps < (20f * 60f / Battle.STEP).toInt()) {
+                b.step()
+                b.fx.count = 0
+                val m = a.step(b, b.time)
+                if (m and (BattleAlerts.BASE_HALF or BattleAlerts.BASE_LOW) != 0) baseAlarms++
+                if (m and BattleAlerts.ABILITY_READY != 0) {
+                    assertTrue("seed $seed: gotowość co ${b.time - lastReady} s", b.time - lastReady >= 8f)
+                    lastReady = b.time
+                    readyCount++
+                }
+                steps++
+            }
+            assertTrue("seed $seed: alarm bazy $baseAlarms razy", baseAlarms <= 2)
+        }
     }
 }
