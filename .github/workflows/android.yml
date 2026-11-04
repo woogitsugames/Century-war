@@ -9,7 +9,17 @@ on:
   pull_request:
     branches:
       - main
+  # Ręcznie: pełne CI; z test_release=true dodatkowo zadanie test-release (R12 poz. 2a).
   workflow_dispatch:
+    inputs:
+      test_release:
+        description: 'Wydanie testowe dla Google Play (podpisany AAB i APK, bez serwera rankingu)'
+        type: boolean
+        default: false
+      version_name:
+        description: 'Numer wersji wydania testowego (np. 0.1.0; versionCode z gradle.properties)'
+        type: string
+        default: '0.1.0'
 permissions:
   contents: read
 
@@ -475,6 +485,128 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: century-war-release-mapping
+          path: |
+            app/build/outputs/mapping/release/mapping.txt
+            app/build/outputs/mapping/release/usage.txt
+          if-no-files-found: warn
+          retention-days: 90
+
+  # Wydanie testowe (R12 poz. 2a, decyzja właściciela 4.11.2026: testy zamknięte bez serwera
+  # rankingu). Tylko ręcznie (Actions -> Android CI -> Run workflow, test_release zaznaczone),
+  # nigdy z tagu. Jedyne miejsce, gdzie podpisany build pomija kontrole: releaseDay, serverUrl,
+  # hmacKey. Podpis wyłącznie kluczem upload; dane wydawcy (OWNER_INPUT.md), playGames, privacyUrl i versionCode
+  # obowiązują. Gradle dodatkowo odrzuca inne wyjątki (ReleaseChecklist.ciSkipProblem).
+  test-release:
+    name: Wydanie testowe AAB i APK (ręczne, bez serwera rankingu)
+    needs: [build, fast-tests, screenshot-tests, balance-tests]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_release == true && !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Sprawdź numer wersji i brak trybu smoke
+        shell: bash
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version_name musi mieć postać X.Y.Z (np. 0.1.0), podano: $VERSION_NAME"
+            exit 1
+          fi
+          if [[ -n "${CW_RELEASE_SMOKE:-}" ]]; then
+            echo "::error::Wydanie testowe nie może działać w trybie smoke (podpis debug)."
+            exit 1
+          fi
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        uses: android-actions/setup-android@v4
+      - name: Zainstaluj Android SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Odtworz keystore z sekretow
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Brak sekretu ${name}; wydanie testowe nie moze byc podpisane kluczem debug."
+              exit 1
+            fi
+          done
+          if [[ "${KEY_ALIAS,,}" == "androiddebugkey" ]]; then
+            echo "::error::KEY_ALIAS wskazuje klucz debug; potrzebny klucz upload."
+            exit 1
+          fi
+          keystore="$RUNNER_TEMP/century-war-release.jks"
+          (umask 077; printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore")
+          echo "RELEASE_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
+      - name: Zbuduj i podpisz testowe APK i AAB
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          # Testy zamknięte bez serwera rankingu: puste wartości, ranking globalny wyłączony.
+          CW_SERVER_URL: ''
+          CW_HMAC_KEY: ''
+          CW_PRIVACY_URL: ${{ vars.CW_PRIVACY_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CW_PRIVACY_URL:-}" ]]; then
+            echo "::error::Brak zmiennej CW_PRIVACY_URL (Settings -> Secrets and variables -> Actions -> Variables)."
+            exit 1
+          fi
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease :app:bundleRelease --console=plain \
+            -PskipCheck=releaseDay,serverUrl,hmacKey \
+            -PtesterSurvey=true \
+            -PreleaseVersionName="$VERSION_NAME"
+          version_code=$(sed -n 's/^releaseVersionCode=//p' gradle.properties)
+          {
+            echo '# Wydanie testowe'
+            echo
+            echo "- versionName: **$VERSION_NAME** (jeśli commit ma tag SemVer, Gradle bierze numer z tagu)"
+            echo "- versionCode: **$version_code**"
+            echo "- commit: \`$GITHUB_SHA\` (gałąź \`$GITHUB_REF_NAME\`)"
+            echo '- pominięte kontrole: releaseDay, serverUrl, hmacKey (bez serwera rankingu)'
+            echo '- ankieta testera: włączona'
+            echo
+            echo 'Plik do Google Play: artefakt `century-war-test-release-aab` (najpierw test wewnętrzny).'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Zapisz testowe APK
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-test-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 90
+      - name: Zapisz testowe AAB
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-test-release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 90
+      - name: Zapisz mapowanie R8 wydania testowego
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: century-war-test-release-mapping
           path: |
             app/build/outputs/mapping/release/mapping.txt
             app/build/outputs/mapping/release/usage.txt
