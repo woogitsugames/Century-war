@@ -38,6 +38,10 @@
         <meta-data
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/game_services_project_id" />
+        <!-- R10-04: tryb gry Androida (API 33+): gra sama reaguje na oszczędzanie baterii. -->
+        <meta-data
+            android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
 
         <activity
             android:name=".MainActivity"

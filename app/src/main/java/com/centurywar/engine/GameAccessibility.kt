@@ -6,12 +6,14 @@ import android.graphics.RectF
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
+import com.centurywar.BuildConfig
 import com.centurywar.R
 import com.centurywar.game.Defs
 import com.centurywar.screens.AboutScreen
@@ -208,6 +210,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
                         return true
                     }
                     val button = node.button ?: return false
+                    // R10-04 L6: false tylko, gdy przycisk zniknął albo jest wyłączony.
+                    if (!button.visible || !button.enabled) return false
                     // Nie kieruj spóźnionego kliknięcia do nowego ekranu.
                     game.post(Runnable {
                         if (!stillValid(snapshot, button)) return@Runnable
@@ -266,8 +270,11 @@ internal class GameAccessibility(private val view: GameView, private val game: G
     /**
      * Identyczna ścieżka DOWN/UP jak po dotknięciu przycisku. Punkt leży w obszarze dotyku
      * przycisku i nie jest przykryty przez wcześniejszy przycisk (np. strzałkę ulepszenia).
+     * R10-04 L6: gdy cały obszar dotyku jest przykryty, ostatecznie [Screen.onClick], żeby
+     * kliknięcie z czytnika nie przepadło. Zwraca false tylko dla niewidocznego lub wyłączonego.
      */
-    private fun tap(screen: Screen, button: Button) {
+    internal fun tap(screen: Screen, button: Button): Boolean {
+        if (!button.visible || !button.enabled) return false
         val l = button.r.left - button.hitSlop + button.hitOffsetX
         val t = button.r.top - button.hitSlop + button.hitOffsetY
         val w = button.r.width() + 2 * button.hitSlop
@@ -277,9 +284,14 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             val y = t + h * TAP_FY[i]
             if (firstHit(screen, x, y) === button) {
                 tapAt(screen, x, y)
-                return
+                return true
             }
         }
+        if (BuildConfig.DEBUG) Log.d("CWAccess", "Przycisk ${button.id} przykryty, onClick bez dotyku")
+        game.haptic()
+        game.sfx(Sound.CLICK, 0.6f)
+        screen.onClick(button)
+        return true
     }
 
     private fun firstHit(screen: Screen, x: Float, y: Float): Button? {

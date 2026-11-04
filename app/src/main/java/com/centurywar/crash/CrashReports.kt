@@ -74,7 +74,8 @@ object CrashReports {
 
     /**
      * R2-05: przyczyny poprzedniego zakończenia procesu (ANR, błąd natywny, brak pamięci; API 30+)
-     * do lokalnego dziennika. Wołane na wątku I/O przy uruchamianiu, przed [pendingFatal].
+     * do lokalnego dziennika. R10-04 L1: wołane na wątku `crash-io` po pierwszym ekranie
+     * (ślad ANR bywa długi), potem [pendingFatal].
      */
     fun collectExitReasons(context: Context) {
         val log = store ?: return

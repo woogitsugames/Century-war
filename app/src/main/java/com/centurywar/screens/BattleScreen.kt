@@ -90,6 +90,8 @@ class BattleScreen(
      * gracza albo domyślnie przy TalkBack, chyba że gracz sam ją wyłączył (decyzja właściciela 3.11).
      */
     internal var speed = if (g.slowSpeedEnabled()) 0 else 1
+    /** R10-04 L2: gracz sam zmienił tempo w tej bitwie; zmiana TalkBack go nie nadpisuje. */
+    private var speedChosen = false
     /** Tempo wyświetlania; nie wchodzi do stanu bitwy ani powtórki. */
     internal var effectiveSpeed = 1f
     private var avgStepNs = 0f
@@ -788,6 +790,17 @@ class BattleScreen(
     }
 
     /** R2-03: cykl tempa ×1 → ×3 → ×5, z opcją ×½: ×½ → ×1 → ×3 → ×5 → ×½. */
+    /**
+     * R10-04 L2 (wątek gry): TalkBack włączony albo wyłączony w trakcie bitwy. Bez ręcznego
+     * wyboru tempa w tej bitwie tempo startowe jest liczone od nowa (×½ albo ×1).
+     */
+    internal fun onSystemAccessibilityChanged() {
+        if (speedChosen) return
+        val slow = g.slowSpeedEnabled()
+        if (slow && speed == 1) speed = 0
+        else if (!slow && speed == 0) speed = 1
+    }
+
     internal fun nextSpeed(current: Int, slow: Boolean): Int = when (current) {
         0 -> 1
         1 -> 3
@@ -950,7 +963,10 @@ class BattleScreen(
             RALLY -> commands.rally()
             COMMANDER -> commands.summonCommander()
             STANCE -> commands.stance(!p.hold)
-            SPEED, PAUSE_SPEED -> speed = nextSpeed(speed, g.slowSpeedEnabled())
+            SPEED, PAUSE_SPEED -> {
+                speed = nextSpeed(speed, g.slowSpeedEnabled())
+                speedChosen = true
+            }
             PAUSE_VIBRATION -> {
                 g.profile.vibrationLevel = (g.profile.vibrationLevel + 1) % 3
                 g.profile.save()

@@ -151,11 +151,12 @@ class ScreenshotTestMenus : ScreenshotTestBase() {
             g.setScreen(screen)
             val pictures = field(screen, "regionPictures").get(screen) as Array<*>
             assertTrue("Dziewięć buforowanych regionów", pictures.size == Defs.ERA_COUNT)
-            assertTrue("Każde tło nagrane", pictures.all { it != null })
             // Przycisk "OK" wskazówki (HintOverlay.OK_ID) też ma nieujemne id, więc liczymy kafelki etapów.
             assertTrue("Wszystkie etapy obecne", screen.buttons.count { it.tag is Stage } == 36)
             assertTrue("Orientacja mapy", field(screen, "portraitMap").getBoolean(screen) == (g.height > g.width))
             shot(g, tag + "_campaign_journey", 90)
+            // R10-04 L4: obrazy epok nagrywa render(), po ≤ 2 na klatkę.
+            assertTrue("Każde tło nagrane", pictures.all { it != null })
 
             // Przesunięcie palcem ma działać na właściwej osi.
             val before = field(screen, "scroll").getFloat(screen)

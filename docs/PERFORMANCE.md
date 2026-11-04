@@ -124,7 +124,15 @@ na gorącą ścieżkę renderowania.
   zapowiedź epoki swoje `Picture`, gdy jest nieaktywna. Od 40 wątek nagrań zwalnia
   odtwarzacze, które nie grają. Stan bitwy i `SoundPool` zostają. Gdy pętla stoi (gra w tle),
   zwalnianie wykonuje się od razu na UI, jak migawka w `onPause`. Odbudowa po powrocie
-  może raz przyciąć klatkę.
+  może raz przyciąć klatkę. **R10-04 L4:** kampania nagrywa najwyżej 2 obrazy epok na
+  klatkę (najpierw widoczne, potem pozostałe), więc powrót z tła nie nagrywa 9 naraz.
+- **Tryb gry Androida (R10-04):** `res/xml/game_mode_config.xml` (API 33+) zgłasza obsługę
+  trybów baterii i wydajności bez skalowania i bez narzucania FPS przez system. MainActivity
+  czyta `GameManager.gameMode` (API 31+) przy każdym wznowieniu i przekazuje go do
+  `Game.applyGameMode`; w trybie baterii efektywny limit to 30 FPS (także budżet
+  `QualityGovernor`), a jakość najwyżej średnia, bez zmiany `profile.fpsCap` i `profile.quality`.
+  Po powrocie do trybu standardowego lub wydajności wracają ustawienia gracza; raport testera
+  ma wiersz `Game mode`.
 
 ### Testy lokalne i pomiar na urządzeniu
 

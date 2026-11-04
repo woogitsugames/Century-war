@@ -254,8 +254,8 @@ class AccessibilityScreen(g: Game) : Screen(g) {
             31 -> { g.profile.textScale = 115; g.profile.textScaleManual = true }
             32 -> { g.profile.textScale = 130; g.profile.textScaleManual = true }
             40 -> g.profile.teamMarkers = !g.profile.teamMarkers
-            41 -> { g.profile.reduceShake = !g.profile.reduceShake; g.profile.motionManual = true }
-            42 -> { g.profile.reduceFlash = !g.profile.reduceFlash; g.profile.motionManual = true }
+            41 -> { g.profile.reduceShake = !g.profile.reduceShake; g.profile.motionManual = true; g.profile.motionAuto = false }
+            42 -> { g.profile.reduceFlash = !g.profile.reduceFlash; g.profile.motionManual = true; g.profile.motionAuto = false }
             43 -> g.profile.leftHandedHud = !g.profile.leftHandedHud
             44 -> {
                 g.profile.slowSpeedOption = !g.slowSpeedEnabled()

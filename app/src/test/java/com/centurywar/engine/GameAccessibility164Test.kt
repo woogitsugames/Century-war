@@ -269,4 +269,36 @@ class GameAccessibility164Test {
             assertTrue(f.game.current is MenuScreen)
         } finally { f.finish() }
     }
+
+    /** R10-04 L6: przycisk przykryty w całym obszarze dotyku i tak dostaje kliknięcie z czytnika. */
+    @Test fun coveredButtonStillClicksAndHiddenReturnsFalse() {
+        val f = setup()
+        try {
+            val screen = f.game.current as MenuScreen
+            val settingsId = f.buttonId(7)
+            val settings = screen.buttons[settingsId - 1]
+            val cover = Button(9999).apply {
+                r.set(settings.r)
+                r.inset(-settings.hitSlop - 4 * f.game.density, -settings.hitSlop - 4 * f.game.density)
+                r.offset(settings.hitOffsetX, settings.hitOffsetY)
+            }
+            screen.buttons.add(0, cover)
+            assertTrue(f.provider.performAction(settingsId, AccessibilityNodeInfo.ACTION_CLICK, null))
+            f.game.frame(Canvas(f.bitmap), 0f)
+            assertTrue(f.game.current is SettingsScreen)
+        } finally { f.finish() }
+    }
+
+    @Test fun hiddenButtonClickReturnsFalse() {
+        val f = setup()
+        try {
+            val screen = f.game.current as MenuScreen
+            val settingsId = f.buttonId(7)
+            screen.buttons[settingsId - 1].visible = false
+            assertFalse(f.provider.performAction(settingsId, AccessibilityNodeInfo.ACTION_CLICK, null))
+            screen.buttons[settingsId - 1].visible = true
+            screen.buttons[settingsId - 1].enabled = false
+            assertFalse(f.provider.performAction(settingsId, AccessibilityNodeInfo.ACTION_CLICK, null))
+        } finally { f.finish() }
+    }
 }

@@ -124,10 +124,16 @@ class LowEndScreensPerformanceTest {
             isAccessible = true
         }
         fun first(): Picture = (field.get(s) as Array<*>)[0] as Picture
+        // R10-04 L4: obrazy epok nagrywa render() (≤ 2 na klatkę).
+        val c = canvas()
+        repeat(6) { s.render(c) }
         val original = first()
         s.layout()
         assertSame("Nie wolno nagrywać Picture ponownie przy powrocie", original, first())
+        repeat(6) { s.render(c) }
+        assertSame(original, first())
         g.resize(720, 1600, 720, 1600)
+        repeat(6) { s.render(c) }
         assertNotSame("Zmiana orientacji wymaga nowej geometrii", original, first())
     }
 

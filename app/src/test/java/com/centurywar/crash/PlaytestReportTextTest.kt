@@ -1,6 +1,7 @@
 package com.centurywar.crash
 
 import com.centurywar.engine.Game
+import com.centurywar.engine.GameModes
 import com.centurywar.engine.Host
 import com.centurywar.engine.Quality
 import com.centurywar.game.Mode
@@ -90,5 +91,20 @@ class PlaytestReportTextTest {
         val text = build(g)
         assertTrue(text.length <= PlaytestReportText.MAX_CHARS)
         for (section in PlaytestReportText.SECTIONS) assertTrue(section, text.contains(section))
+    }
+
+    /** R10-04: wiersz trybu gry Androida (stała etykieta po angielsku). */
+    @Test
+    fun gameModeRow() {
+        val g = game()
+        assertTrue(build(g).contains("Game mode: unsupported\n"))
+        g.applyGameMode(GameModes.BATTERY)
+        assertTrue(build(g).contains("Game mode: battery\n"))
+        g.applyGameMode(GameModes.PERFORMANCE)
+        assertTrue(build(g).contains("Game mode: performance\n"))
+        g.applyGameMode(GameModes.STANDARD)
+        val text = build(g)
+        assertTrue(text.contains("Game mode: standard\n"))
+        assertTrue(text.length <= PlaytestReportText.MAX_CHARS)
     }
 }

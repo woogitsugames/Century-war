@@ -323,6 +323,11 @@ class Profile(private val file: File) {
     var textScaleManual = false
     /** R2-03: gracz sam przełączył „Ogranicz potrząsanie” albo „Ogranicz błyski”. */
     var motionManual = false
+    /**
+     * R10-04 L3: ograniczenia ruchu włączyła gra, bo telefon wyłączył animacje. Gdy animacje
+     * wrócą, gra wyłącza je z powrotem (tylko bez ręcznego wyboru gracza).
+     */
+    var motionAuto = false
     /** R2-03: tempo ×½ w cyklu tempa bitwy (×½ → ×1 → ×3 → ×5). */
     var slowSpeedOption = false
     /** R2-03: gracz sam przełączył tempo ×½ (ważniejsze niż domyślne ×½ przy TalkBack). */
@@ -572,6 +577,7 @@ class Profile(private val file: File) {
         o.put("leftHandedHud", leftHandedHud)
         o.put("textScaleManual", textScaleManual)
         o.put("motionManual", motionManual)
+        o.put("motionAuto", motionAuto)
         o.put("slowSpeedOption", slowSpeedOption)
         o.put("slowSpeedManual", slowSpeedManual)
         o.put("sound", sound)
@@ -1059,6 +1065,10 @@ class Profile(private val file: File) {
             else textScale != 100
         motionManual = if (json.has("motionManual")) json.opt("motionManual") == true
             else reduceShake || reduceFlash
+        // R10-04 L3: wcześniejsze wersje włączały oba ograniczenia bez flagi; bez ręcznego
+        // wyboru tylko telefon mógł je włączyć, więc traktujemy je jak automatyczne.
+        motionAuto = if (json.has("motionAuto")) json.opt("motionAuto") == true
+            else json.has("motionManual") && !motionManual && reduceShake && reduceFlash
         slowSpeedOption = json.opt("slowSpeedOption") == true
         slowSpeedManual = json.opt("slowSpeedManual") == true
         sound = json.optBoolean("sound", true)
@@ -1132,7 +1142,7 @@ class Profile(private val file: File) {
         quality = 0; fpsCap = 0; vibrationLevel = 2; sound = true
         palette = 0; teamMarkers = false; textScale = 100
         reduceShake = false; reduceFlash = false; leftHandedHud = false
-        textScaleManual = false; motionManual = false; slowSpeedOption = false; slowSpeedManual = false
+        textScaleManual = false; motionManual = false; motionAuto = false; slowSpeedOption = false; slowSpeedManual = false
         showFps = false; lang = ""; skirmishDiff = 1; skirmishSetup = SkirmishSetup.defaults()
         battles = 0; wins = 0; totalKills = 0L; playSeconds = 0L
         modeBattles.fill(0); modeWins.fill(0); modeSeconds.fill(0L)
