@@ -1953,3 +1953,52 @@ Złote powtórki po regeneracji bez zmian (kampania: etapy 1 i 29, żadna nie do
 kontrola determinizmu).
 
 - 2026-11-04 — regeneracja złotych powtórek: Etapy 13-18.
+
+## Etap 19 — łagodniejszy klif 18 → 19 (dzień 35, 4.11.2026)
+
+**Decyzja właściciela:** lekko złagodzić etap 19 mnożnikiem 0,94 (pomiar wstępny i kryterium
+„ściany”: `docs/reports/d33-pomiar-19.md`; raport zmiany: `docs/reports/d35-etap-19.md`).
+
+### Zmiana
+
+- `Campaign.stageRamp`: etap 19 (`i + 1 == 19`, indeks 18) **1,265 → 1,1891** (= 1,265 × 0,94).
+  `aiPower` etapu 19: 1,611728 → **1,5150243**, bitowo to samo co `BALANCE_POWER_SCALE=0.94`
+  z `BALANCE_POWER_SCALE_STAGES=19` w pomiarze d33 (M3), więc wyniki M3 0,94 powtarzają się
+  co do bitwy. (1,189 dałoby 1,5148969 — inna wartość Float, inne bitwy.)
+- `SimVersion.PROTOCOL` 0.8.8 → **0.8.9** (`RANKED_REPLAY_FORMATS` i `Replay.VERSION` bez zmian).
+- Kontrola determinizmu w `SecondHourControlTest` przeniesiona z etapu 19 na **etap 21**
+  (seed 91021, wynik zapisany przy 0.8.8; po zmianie identyczny).
+- Złote powtórki po regeneracji bez zmian (kampania: etapy 1 i 29, żadna nie dotyczy etapu 19).
+
+### Pomiar przed/po, 100 seedów na etap, Normalny, etapy 16–24
+
+Stan z kodu (nie mnożnikiem), `:sim` i `BalanceReport` skompilowane poza Gradle (jak w d33).
+Wygrane / mediana [min] / oczekiwany czas [min] / ★ wygranych; w nawiasie poziomy badań.
+Etapy 16–18 i 20–24 identyczne co do bitwy przed i po we wszystkich profilach (kontrola);
+w `medale-czas` etap 20+ liczy czas etapu 19 z przebiegu, ale poziomy badań się nie zmieniły.
+
+| Profil | Etap 18 | Etap 19 przed (0.8.8) | Etap 19 po (0.8.9) | Etap 20 |
+|---|---:|---:|---:|---:|
+| medale | 81% / 10,4 / 12,9 / 1,93 (31) | 49% / 13,5 / 26,6 / 1,51 (33) | **65%** / 13,4 / **19,7** / 1,68 | 72% / 13,4 / 18,0 / 1,60 (35) |
+| medale-czas, teraz | 90% / 7,8 / 8,1 / 2,68 (37) | 71% / 9,8 / 13,3 / 2,54 (39) | **76%** / 10,1 / **12,1** / 2,37 | 79% / 13,2 / 16,1 / 1,66 (40) |
+| docelowy | 60% / 9,9 / 15,5 / 2,17 | 60% / 10,1 / 15,9 / 2,53 | **72%** / 9,1 / **12,0** / 2,67 | 77% / 13,2 / 16,7 / 1,65 |
+| docelowy z dowódcą | 62% / 10,2 / 15,3 / 2,08 | 61% / 10,1 / 15,4 / 2,51 | **73%** / 9,6 / **12,2** / 2,63 | 74% / 13,3 / 16,9 / 1,89 |
+
+| Profil | Spadek wygranych 18 → 19 przed → po | Iloraz oczek. 19/18 przed → po | Ocena (kryterium d33) przed → po |
+|---|---:|---:|---|
+| medale | −32 → **−16 pp** | 2,06× → **1,53×** | ściana → ostrzegawcza (spadek > 15 pp) |
+| medale-czas, teraz | −19 → **−14 pp** | 1,63× → **1,49×** | ostrzegawcza → **płynnie** |
+| docelowy | 0 → +12 pp | 1,03× → 0,78× | płynnie |
+| docelowy z dowódcą | −1 → +11 pp | 1,01× → 0,80× | płynnie |
+
+Etapy 21–24 (bez zmian): medale 70 / 64 / 69 / 74%, medale-czas 88 / 68 / 67 / 59%,
+docelowy 72 / 64 / 52 / 63%, z dowódcą 68 / 68 / 53 / 57%.
+
+Cele z d33: „medale” na 19 ≥ 60% — **65%** ✓; iloraz `medale-czas` ≤ 1,6× — **1,49×** ✓;
+docelowy na 19 ≤ 75% — **72%** ✓, z dowódcą **73%** ✓. Uwaga: profil docelowy jest teraz na
+etapie 19 **łatwiejszy niż na 18** (72% vs 60%, oczek. 12,0 vs 15,5 min). To skutek przeskoku
+profilu z 10% na 40% badań na etapie 19, a nie realnego gracza (profile medalowe mają +2 poziomy
+na etap); warunek R12 „docelowy nie łatwiejszy niż na 18” jest więc formalnie niespełniony,
+w granicy 75%. Przebieg „medale-czas”: suma oczekiwanych czasów 16–24 −1,2 min, „medale” −6,9 min.
+
+- 2026-11-04 — regeneracja złotych powtórek: Etap 19: stageRamp 1,265 -> 1,1891 (x0,94), PROTOCOL 0.8.9; powtórki bez zmian.

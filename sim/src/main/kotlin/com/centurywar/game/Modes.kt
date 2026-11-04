@@ -195,7 +195,7 @@ object Campaign {
         // Etapy 13-18 (4.11): po skróceniu etap 15 lżejszy o 4% (1 → 0,96), etap 16
         // trudniejszy o 1% (0,86 → 0,87); wygrane wracają do pasma ±5 pp (docs/BALANCE.md).
         // Dzień 35: etap 19 lżejszy o 6% (1,265 × 0,94 = 1,1891; ten sam aiPower co mnożnik
-        // 0,94 w pomiarze d33), klif 18 → 19 z „ostrzegawczego” do płynnego.
+        // 0,94 w pomiarze d33); klif 18 → 19 profilu medale-czas 1,63× → 1,49× (docs/BALANCE.md).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
