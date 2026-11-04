@@ -1897,3 +1897,59 @@ przed turą 10: 0,93).
 Kontrola z korektą w kodzie (`stageRamp` 15 → 0,96, 16 → 0,877): etap 15 jak przy ×0,96
 (54 / 60 / 80%), etap 16 inaczej niż przy ×1,02 (65 / 59 / **92%**; zaokrąglenie aiPower
 zmienia przebieg seedów). Dalszy przegląd samej korekty etapu 16 niżej.
+
+Przegląd korekty etapu 16 w kodzie (docelowy / z dowódcą / medale): 0,87 → 65 / 63 / 85%,
+0,877 → 65 / 59 / 92%, 0,88 → 56 / 60 / 87%, 0,885 → 61 / 59 / 89%, 0,89 → 61 / 54 / 86%.
+Odpowiedź jest w granicach szumu 100 seedów; wybrano 0,87 (najmniejsza zmiana, wszystkie
+trzy w paśmie ±5 pp).
+
+### Zmiana
+
+- Etapy 13–18 (indeksy 12–17, każdy poziom trudności, bez samouczka): presja oblężnicza od
+  **360 s** (6 min) zamiast 480 s, przyrost **+40%/min** zamiast +20%/min
+  (`Campaign.THIRD_SIEGE_*`). Łagodniej niż 8–12 (300 s, +50%/min), więc bez skoku po 12.
+- Zwrot gwiazdek z przyspieszonej presji 1,0 jak w 8–12 (`Campaign.siegeStarForgiveness`).
+- `stageRamp`: etap 15 1 → **0,96**, etap 16 0,86 → **0,87**. Etapy 17 i 18 bez zmian
+  (0,92 / 0,85, strojenie tury 10).
+- `SimVersion.PROTOCOL` 0.8.7 → **0.8.8** (`RANKED_REPLAY_FORMATS` i `Replay.VERSION` bez
+  zmian). Odcisk `BattleSnapshot.defsFingerprint` nie obejmuje presji kampanii, więc przerwana
+  bitwa 13–18 wznawia się na nowych zasadach (jak w R11-02). Kontrola determinizmu przeniesiona
+  z etapu 13 na etap 19 (`SecondHourControlTest`, wynik zapisany przy 0.8.7).
+
+### Pomiar przed/po, 100 seedów na etap, Normalny
+
+Mediana [min] / wygrane / ★ wygranych. „Po” = stan w kodzie (etap 16: przegląd 0,87).
+
+| Etap | Docelowy przed → po | Medale przed → po | Docelowy z dowódcą przed → po |
+|---:|---:|---:|---:|
+| 7 | 7,8 / 75% / 1,55 → identycznie | 7,9 / 75% / 1,39 → identycznie | — |
+| 12 | 9,1 / 67% / 1,93 → identycznie | 9,4 / 87% / 1,76 → identycznie | 9,3 / 72% / 1,92 → identycznie |
+| 13 | 9,3 / 67% / 2,51 → **8,2** / 67% / 2,51 | 13,9 / 76% / 1,29 → **10,8** / 78% / 1,62 | 9,6 / 60% / 2,47 → 8,4 / 64% / 2,27 |
+| 14 | 12,2 / 57% / 2,04 → **10,3** / 57% / 1,89 | 13,9 / 75% / 1,27 → **10,8** / 73% / 1,48 | 13,0 / 56% / 1,80 → 10,6 / 56% / 1,71 |
+| 15 | 12,2 / 49% / 1,96 → **10,6** / 54% / 1,98 | 14,0 / 83% / 1,14 → **10,8** / 80% / 1,51 | 13,3 / 58% / 1,79 → 10,5 / 60% / 1,95 |
+| 16 | 13,7 / 65% / 1,32 → **10,9** / 65% / 1,49 | 13,8 / 83% / 1,16 → **10,8** / 85% / 1,47 | 13,8 / 62% / 1,35 → 10,9 / 63% / 1,43 |
+| 17 | 12,6 / 65% / 1,89 → **10,2** / 63% / 1,92 | 13,6 / 87% / 1,41 → **10,6** / 83% / 1,78 | 12,8 / 64% / 1,77 → 10,5 / 65% / 1,86 |
+| 18 | 11,8 / 63% / 2,16 → **10,0** / 60% / 2,17 | 13,4 / 84% / 1,70 → **10,4** / 81% / 1,93 | 12,4 / 65% / 2,05 → 10,2 / 62% / 2,08 |
+| 19 | 10,1 / 60% / 2,53 → identycznie | 13,5 / 49% / 1,51 → identycznie | — |
+| 20 | 13,2 / 77% / 1,65 → identycznie | 13,4 / 72% / 1,60 → identycznie | — |
+| **13–18** | **9,3–13,7 → 8,2–10,9**, Σ oczek. 113,4 → 93,4 min | **13,4–14,0 → 10,4–10,8**, Σ 101,2 → 80,2 min | Σ oczek. 116,1 → 94,2 min |
+
+Etapy 7, 12, 19 i 20 identyczne (kontrola). 0 patów. Wygrane: docelowy −3…+5 pp, medale
+−4…+2 pp, z dowódcą −3…+4 pp. ★ docelowego: najgorzej etap 14 −7,4% (próg 10%), z dowódcą
+etap 13 −8,1%, etap 14 −5,0%; „medale” +13…+33%. Strojenie tury 10 (16–18 z dowódcą
+55–70%) zachowane: 63 / 65 / 62%.
+
+Etap 13 profilu docelowego (8,2 min) jest krótszy niż cel 9,5 min: już przed zmianą był
+najkrótszy z 13–18 (9,3 min, stare zasady), a każda wcześniejsza presja go skraca.
+Mieści się między etapem 7 (7,8) a 12 (9,1), więc nie robi skoku; pozostałe 13–18 mają
+10,0–10,9 min, a „medale” 10,4–10,8 min. Wariant B (390 s, +35%/min) dawał etap 13
+8,5 min, ale „medale” 11,2–11,6 min.
+
+Przebieg kampanii po dowódcy (profil docelowy, suma oczekiwanych czasów + 1,5 min przerwy):
+etapy 8–18 po R11-02 64,3 + 113,4 + 16,5 = 194 min → **174 min** (−20 min); „medale”
+62,8 + 101,2 + 16,5 = 181 min → **160 min**.
+
+Złote powtórki po regeneracji bez zmian (kampania: etapy 1 i 29, żadna nie dotyczy 13–18;
+kontrola determinizmu).
+
+- 2026-11-04 — regeneracja złotych powtórek: Etapy 13-18.
