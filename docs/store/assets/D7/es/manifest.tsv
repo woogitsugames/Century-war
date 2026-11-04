@@ -1,0 +1,42 @@
+file	width	height	alt	play_upload
+phone/01-commander.png	1920	1080	Batalla con el comandante del ejército azul y su aura, interfaz completa con el botón del comandante.	true
+phone/02-turret-tiers.png	1920	1080	Batalla con el panel de torretas abierto: defensas mejoradas a los niveles 2 y 3.	true
+phone/03-campaign.png	1920	1080	Mapa de campaña con unas diez etapas completadas y estrellas obtenidas en varias eras.	true
+phone/04-endless-cards.png	1920	1080	Elección entre tres cartas del Asedio sin fin durante una oleada con jefe, sobre la batalla en curso.	true
+phone/05-results.png	1920	1080	Pantalla de victoria con estrellas, medallas separadas por la batalla y por logros, y el próximo objetivo.	true
+phone/06-missions.png	1920	1080	Pantalla de misiones: racha de cuatro días, misiones diarias y una misión lista para reclamar.	true
+phone/07-accessibility.png	1920	1080	Batalla con la paleta de alto contraste, marcadores de equipo sobre las unidades y texto al 115 %.	true
+phone/08-weekly-siege.png	1920	1080	Pantalla del Asedio semanal con reglas, recompensas y umbrales de Bronce, Plata y Oro.	true
+tablet7/01-commander.png	1920	1080	Batalla con el comandante del ejército azul y su aura, interfaz completa con el botón del comandante.	true
+tablet7/02-turret-tiers.png	1920	1080	Batalla con el panel de torretas abierto: defensas mejoradas a los niveles 2 y 3.	true
+tablet7/03-campaign.png	1920	1080	Mapa de campaña con unas diez etapas completadas y estrellas obtenidas en varias eras.	true
+tablet7/04-endless-cards.png	1920	1080	Elección entre tres cartas del Asedio sin fin durante una oleada con jefe, sobre la batalla en curso.	true
+tablet7/05-results.png	1920	1080	Pantalla de victoria con estrellas, medallas separadas por la batalla y por logros, y el próximo objetivo.	true
+tablet7/06-missions.png	1920	1080	Pantalla de misiones: racha de cuatro días, misiones diarias y una misión lista para reclamar.	true
+tablet7/07-accessibility.png	1920	1080	Batalla con la paleta de alto contraste, marcadores de equipo sobre las unidades y texto al 115 %.	true
+tablet7/08-weekly-siege.png	1920	1080	Pantalla del Asedio semanal con reglas, recompensas y umbrales de Bronce, Plata y Oro.	true
+tablet10/01-commander.png	2560	1440	Batalla con el comandante del ejército azul y su aura, interfaz completa con el botón del comandante.	true
+tablet10/02-turret-tiers.png	2560	1440	Batalla con el panel de torretas abierto: defensas mejoradas a los niveles 2 y 3.	true
+tablet10/03-campaign.png	2560	1440	Mapa de campaña con unas diez etapas completadas y estrellas obtenidas en varias eras.	true
+tablet10/04-endless-cards.png	2560	1440	Elección entre tres cartas del Asedio sin fin durante una oleada con jefe, sobre la batalla en curso.	true
+tablet10/05-results.png	2560	1440	Pantalla de victoria con estrellas, medallas separadas por la batalla y por logros, y el próximo objetivo.	true
+tablet10/06-missions.png	2560	1440	Pantalla de misiones: racha de cuatro días, misiones diarias y una misión lista para reclamar.	true
+tablet10/07-accessibility.png	2560	1440	Batalla con la paleta de alto contraste, marcadores de equipo sobre las unidades y texto al 115 %.	true
+tablet10/08-weekly-siege.png	2560	1440	Pantalla del Asedio semanal con reglas, recompensas y umbrales de Bronce, Plata y Oro.	true
+fold/01-commander.png	2184	1968	Batalla con el comandante del ejército azul y su aura, interfaz completa con el botón del comandante.	false
+fold/02-turret-tiers.png	2184	1968	Batalla con el panel de torretas abierto: defensas mejoradas a los niveles 2 y 3.	false
+fold/03-campaign.png	2184	1968	Mapa de campaña con unas diez etapas completadas y estrellas obtenidas en varias eras.	false
+fold/04-endless-cards.png	2184	1968	Elección entre tres cartas del Asedio sin fin durante una oleada con jefe, sobre la batalla en curso.	false
+fold/05-results.png	2184	1968	Pantalla de victoria con estrellas, medallas separadas por la batalla y por logros, y el próximo objetivo.	false
+fold/06-missions.png	2184	1968	Pantalla de misiones: racha de cuatro días, misiones diarias y una misión lista para reclamar.	false
+fold/07-accessibility.png	2184	1968	Batalla con la paleta de alto contraste, marcadores de equipo sobre las unidades y texto al 115 %.	false
+fold/08-weekly-siege.png	2184	1968	Pantalla del Asedio semanal con reglas, recompensas y umbrales de Bronce, Plata y Oro.	false
+phone20x9_qa/01-commander.png	2400	1080	Batalla con el comandante del ejército azul y su aura, interfaz completa con el botón del comandante.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Batalla con el panel de torretas abierto: defensas mejoradas a los niveles 2 y 3.	false
+phone20x9_qa/03-campaign.png	2400	1080	Mapa de campaña con unas diez etapas completadas y estrellas obtenidas en varias eras.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Elección entre tres cartas del Asedio sin fin durante una oleada con jefe, sobre la batalla en curso.	false
+phone20x9_qa/05-results.png	2400	1080	Pantalla de victoria con estrellas, medallas separadas por la batalla y por logros, y el próximo objetivo.	false
+phone20x9_qa/06-missions.png	2400	1080	Pantalla de misiones: racha de cuatro días, misiones diarias y una misión lista para reclamar.	false
+phone20x9_qa/07-accessibility.png	2400	1080	Batalla con la paleta de alto contraste, marcadores de equipo sobre las unidades y texto al 115 %.	false
+phone20x9_qa/08-weekly-siege.png	2400	1080	Pantalla del Asedio semanal con reglas, recompensas y umbrales de Bronce, Plata y Oro.	false
+feature_1024x500.png	1024	500	Logotipo de Century War y un comandante al frente del ejército azul en el campo de batalla.	true

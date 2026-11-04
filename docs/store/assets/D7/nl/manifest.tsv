@@ -1,0 +1,42 @@
+file	width	height	alt	play_upload
+phone/01-commander.png	1920	1080	Gevecht met de commandant van het blauwe leger en zijn aura, volledige balk met de commandantknop.	true
+phone/02-turret-tiers.png	1920	1080	Gevecht met het torenpaneel open: verdediging verbeterd tot torenniveau 2 en 3.	true
+phone/03-campaign.png	1920	1080	Campagnekaart met ongeveer tien voltooide etappes en sterren in meerdere tijdperken.	true
+phone/04-endless-cards.png	1920	1080	Keuze uit drie kaarten van Eindeloos beleg tijdens een baasgolf, boven het lopende gevecht.	true
+phone/05-results.png	1920	1080	Overwinningsscherm met sterren, aparte medailles voor het gevecht en voor prestaties, en het volgende doel.	true
+phone/06-missions.png	1920	1080	Missiescherm: een reeks van vier dagen, dagelijkse missies en één missie klaar om op te halen.	true
+phone/07-accessibility.png	1920	1080	Gevecht in het palet met hoog contrast, teammarkeringen boven eenheden en tekst op 115%.	true
+phone/08-weekly-siege.png	1920	1080	Scherm van Wekelijks beleg met regels, beloningen en de drempels brons, zilver en goud.	true
+tablet7/01-commander.png	1920	1080	Gevecht met de commandant van het blauwe leger en zijn aura, volledige balk met de commandantknop.	true
+tablet7/02-turret-tiers.png	1920	1080	Gevecht met het torenpaneel open: verdediging verbeterd tot torenniveau 2 en 3.	true
+tablet7/03-campaign.png	1920	1080	Campagnekaart met ongeveer tien voltooide etappes en sterren in meerdere tijdperken.	true
+tablet7/04-endless-cards.png	1920	1080	Keuze uit drie kaarten van Eindeloos beleg tijdens een baasgolf, boven het lopende gevecht.	true
+tablet7/05-results.png	1920	1080	Overwinningsscherm met sterren, aparte medailles voor het gevecht en voor prestaties, en het volgende doel.	true
+tablet7/06-missions.png	1920	1080	Missiescherm: een reeks van vier dagen, dagelijkse missies en één missie klaar om op te halen.	true
+tablet7/07-accessibility.png	1920	1080	Gevecht in het palet met hoog contrast, teammarkeringen boven eenheden en tekst op 115%.	true
+tablet7/08-weekly-siege.png	1920	1080	Scherm van Wekelijks beleg met regels, beloningen en de drempels brons, zilver en goud.	true
+tablet10/01-commander.png	2560	1440	Gevecht met de commandant van het blauwe leger en zijn aura, volledige balk met de commandantknop.	true
+tablet10/02-turret-tiers.png	2560	1440	Gevecht met het torenpaneel open: verdediging verbeterd tot torenniveau 2 en 3.	true
+tablet10/03-campaign.png	2560	1440	Campagnekaart met ongeveer tien voltooide etappes en sterren in meerdere tijdperken.	true
+tablet10/04-endless-cards.png	2560	1440	Keuze uit drie kaarten van Eindeloos beleg tijdens een baasgolf, boven het lopende gevecht.	true
+tablet10/05-results.png	2560	1440	Overwinningsscherm met sterren, aparte medailles voor het gevecht en voor prestaties, en het volgende doel.	true
+tablet10/06-missions.png	2560	1440	Missiescherm: een reeks van vier dagen, dagelijkse missies en één missie klaar om op te halen.	true
+tablet10/07-accessibility.png	2560	1440	Gevecht in het palet met hoog contrast, teammarkeringen boven eenheden en tekst op 115%.	true
+tablet10/08-weekly-siege.png	2560	1440	Scherm van Wekelijks beleg met regels, beloningen en de drempels brons, zilver en goud.	true
+fold/01-commander.png	2184	1968	Gevecht met de commandant van het blauwe leger en zijn aura, volledige balk met de commandantknop.	false
+fold/02-turret-tiers.png	2184	1968	Gevecht met het torenpaneel open: verdediging verbeterd tot torenniveau 2 en 3.	false
+fold/03-campaign.png	2184	1968	Campagnekaart met ongeveer tien voltooide etappes en sterren in meerdere tijdperken.	false
+fold/04-endless-cards.png	2184	1968	Keuze uit drie kaarten van Eindeloos beleg tijdens een baasgolf, boven het lopende gevecht.	false
+fold/05-results.png	2184	1968	Overwinningsscherm met sterren, aparte medailles voor het gevecht en voor prestaties, en het volgende doel.	false
+fold/06-missions.png	2184	1968	Missiescherm: een reeks van vier dagen, dagelijkse missies en één missie klaar om op te halen.	false
+fold/07-accessibility.png	2184	1968	Gevecht in het palet met hoog contrast, teammarkeringen boven eenheden en tekst op 115%.	false
+fold/08-weekly-siege.png	2184	1968	Scherm van Wekelijks beleg met regels, beloningen en de drempels brons, zilver en goud.	false
+phone20x9_qa/01-commander.png	2400	1080	Gevecht met de commandant van het blauwe leger en zijn aura, volledige balk met de commandantknop.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Gevecht met het torenpaneel open: verdediging verbeterd tot torenniveau 2 en 3.	false
+phone20x9_qa/03-campaign.png	2400	1080	Campagnekaart met ongeveer tien voltooide etappes en sterren in meerdere tijdperken.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Keuze uit drie kaarten van Eindeloos beleg tijdens een baasgolf, boven het lopende gevecht.	false
+phone20x9_qa/05-results.png	2400	1080	Overwinningsscherm met sterren, aparte medailles voor het gevecht en voor prestaties, en het volgende doel.	false
+phone20x9_qa/06-missions.png	2400	1080	Missiescherm: een reeks van vier dagen, dagelijkse missies en één missie klaar om op te halen.	false
+phone20x9_qa/07-accessibility.png	2400	1080	Gevecht in het palet met hoog contrast, teammarkeringen boven eenheden en tekst op 115%.	false
+phone20x9_qa/08-weekly-siege.png	2400	1080	Scherm van Wekelijks beleg met regels, beloningen en de drempels brons, zilver en goud.	false
+feature_1024x500.png	1024	500	Century War-logo en een commandant die het blauwe leger het slagveld op leidt.	true

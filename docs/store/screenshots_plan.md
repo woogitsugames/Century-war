@@ -1,4 +1,11 @@
-# Century War — plan zrzutów Google Play (zlecenie 117)
+# Century War — plan zrzutów Google Play
+
+> **Obowiązuje zestaw premierowy D7** (`StoreGraphicsTest.generateD7`, 8 kadrów × 10 języków:
+> Wódz, stopnie wież, kampania, karty Endless, wyniki z medalami, misje, dostępność, Oblężenie
+> tygodnia). Opis, urządzenia i polecenia: `docs/store/STORE_GRAPHICS.md`, sekcja „Zestaw
+> premierowy D7”. Plan 117 poniżej i zestaw 153 są **archiwalne** — nie uploadować.
+
+## Archiwum: zlecenie 117
 
 Wykorzystujemy osiem aktualnych, autentycznych kadrów na typ urządzenia, w 10 wersjach językowych: `pl,en,de,es,fr,it,pt,uk,nl,tr`. Nie kopiujemy innych gier ani elementów spoza Century War. Hasła są osobne dla każdego języka i nie udają elementów gry.
 

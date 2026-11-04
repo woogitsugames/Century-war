@@ -387,6 +387,13 @@ class StoreGraphicsTest {
                     val ratio = captionScaleD7(caption, d.width.toFloat(), d.height.toFloat())
                     assertTrue("$language/${d.name} captionD7.$scene zmniejszony do $ratio",
                         ratio >= 0.7f)
+                    // Kadr misji: podpis nad „Wstecz” nie może sięgać wstęgi tytułu.
+                    if (scene == 6 && d.width > d.height) {
+                        val p = captionPaintD7(d.width.toFloat(), d.height.toFloat())
+                        val box = p.measureText(caption) * ratio + 72f
+                        assertTrue("$language/${d.name}: podpis misji za szeroki ($box)",
+                            box <= d.width * 0.33f)
+                    }
                 }
             }
         }
@@ -415,7 +422,7 @@ class StoreGraphicsTest {
         when (scene) {
             1 -> draw153Commander(c, g)
             2 -> draw153TurretTiers(c, g)
-            3 -> renderScreen(c, g, CampaignScreen(g))
+            3 -> drawD7Campaign(c, g)
             4 -> drawD7EndlessCards(c, g)
             5 -> drawD7Results(c, gameD7(device, language))
             6 -> drawD7Missions(c, gameD7(device, language))
@@ -442,10 +449,24 @@ class StoreGraphicsTest {
         return picked.sortedBy { it.rarity.ordinal }.toTypedArray()
     }
 
+    /** Mapa po dojechaniu animacji przewijania do bieżącego etapu (bez niej kadr stoi na starcie). */
+    private fun drawD7Campaign(c: Canvas, g: Game) {
+        g.setScreen(CampaignScreen(g))
+        g.finishScreenTransition()
+        val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+        try {
+            repeat(150) { g.frame(Canvas(tiny), 1f / 60f) }
+        } finally {
+            tiny.recycle()
+        }
+        g.frame(c, 0f)
+    }
+
     /** Wybór kart przy fali 10 z żywym bossem (ten sam stan co kadr 153). */
     private fun drawD7EndlessCards(c: Canvas, g: Game) {
         val battle = sceneBattle(3)
         check(battle.currentBoss() != null) { "Kadr 04 wymaga bossa" }
+        stage153Hud(battle, 563, 0.74f, 0.61f, 1650f)
         battle.pendingCards = d7Cards()
         render153Battle(c, g, battle)
     }
@@ -544,8 +565,8 @@ class StoreGraphicsTest {
     /** Pozycje podpisów dobrane po przeglądzie kadrów: poza paskiem HUD i przyciskami. */
     private fun d7Anchor(scene: Int): D7Anchor = when (scene) {
         3 -> D7Anchor.BOTTOM_LEFT
-        5 -> D7Anchor.TOP_LEFT
-        6 -> D7Anchor.BOTTOM_LEFT
+        // Misje: lista wypełnia ekran, więc krótki podpis zasłania tylko przycisk „Wstecz”.
+        6 -> D7Anchor.TOP_LEFT
         8 -> D7Anchor.TOP_RIGHT
         else -> D7Anchor.TOP_LEFT
     }
@@ -572,16 +593,24 @@ class StoreGraphicsTest {
         val labelWidth = p.measureText(caption) + 72f
         val boxHeight = p.textSize * 1.65f
         val anchor = d7Anchor(scene)
-        val margin = width * 0.047f
+        // Wyniki i misje: podpis w lewym górnym rogu, nad wstęgą tytułu panelu.
+        val corner = scene == 5 || scene == 6
+        val margin = width * (if (corner) 0.012f else 0.047f)
         val left = when (anchor) {
             D7Anchor.TOP_RIGHT, D7Anchor.BOTTOM_RIGHT -> width - labelWidth - margin
             else -> margin
         }
         val portrait = height > width
+        // Bitwa: pod paskiem HUD; na prawie kwadratowym Foldzie pasek ma dwa rzędy.
+        val underHud = when {
+            portrait -> 0.16f
+            height > width * 0.7f -> 0.215f
+            else -> 0.125f
+        }
         val top = when (anchor) {
             D7Anchor.TOP_LEFT, D7Anchor.TOP_RIGHT ->
-                if (scene in 1..2 || scene == 4 || scene == 7) height * (if (portrait) 0.08f else 0.125f)
-                else height * 0.015f
+                if (scene in 1..2 || scene == 4 || scene == 7) height * underHud
+                else height * (if (corner) 0.006f else 0.015f)
             else -> height * (if (portrait) 0.9f else 0.84f)
         }
         val rect = RectF(left, top, left + labelWidth, top + boxHeight)

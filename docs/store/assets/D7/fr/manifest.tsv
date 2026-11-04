@@ -1,0 +1,42 @@
+file	width	height	alt	play_upload
+phone/01-commander.png	1920	1080	Bataille avec le commandant de l'armée bleue et son aura, interface complète avec le bouton du commandant.	true
+phone/02-turret-tiers.png	1920	1080	Bataille avec le panneau des tourelles ouvert : défenses améliorées aux niveaux 2 et 3.	true
+phone/03-campaign.png	1920	1080	Carte de campagne avec une dizaine d'étapes terminées et des étoiles gagnées sur plusieurs époques.	true
+phone/04-endless-cards.png	1920	1080	Choix parmi trois cartes du Siège sans fin pendant une vague de boss, sur la bataille en cours.	true
+phone/05-results.png	1920	1080	Écran de victoire avec étoiles, médailles séparées pour la bataille et les succès, et prochain objectif.	true
+phone/06-missions.png	1920	1080	Écran des missions : série de connexion de quatre jours, missions quotidiennes et une mission à récupérer.	true
+phone/07-accessibility.png	1920	1080	Bataille en palette à contraste élevé, marqueurs d'équipe au-dessus des unités et texte agrandi à 115 %.	true
+phone/08-weekly-siege.png	1920	1080	Écran du Siège hebdomadaire avec règles, récompenses et paliers Bronze, Argent et Or.	true
+tablet7/01-commander.png	1920	1080	Bataille avec le commandant de l'armée bleue et son aura, interface complète avec le bouton du commandant.	true
+tablet7/02-turret-tiers.png	1920	1080	Bataille avec le panneau des tourelles ouvert : défenses améliorées aux niveaux 2 et 3.	true
+tablet7/03-campaign.png	1920	1080	Carte de campagne avec une dizaine d'étapes terminées et des étoiles gagnées sur plusieurs époques.	true
+tablet7/04-endless-cards.png	1920	1080	Choix parmi trois cartes du Siège sans fin pendant une vague de boss, sur la bataille en cours.	true
+tablet7/05-results.png	1920	1080	Écran de victoire avec étoiles, médailles séparées pour la bataille et les succès, et prochain objectif.	true
+tablet7/06-missions.png	1920	1080	Écran des missions : série de connexion de quatre jours, missions quotidiennes et une mission à récupérer.	true
+tablet7/07-accessibility.png	1920	1080	Bataille en palette à contraste élevé, marqueurs d'équipe au-dessus des unités et texte agrandi à 115 %.	true
+tablet7/08-weekly-siege.png	1920	1080	Écran du Siège hebdomadaire avec règles, récompenses et paliers Bronze, Argent et Or.	true
+tablet10/01-commander.png	2560	1440	Bataille avec le commandant de l'armée bleue et son aura, interface complète avec le bouton du commandant.	true
+tablet10/02-turret-tiers.png	2560	1440	Bataille avec le panneau des tourelles ouvert : défenses améliorées aux niveaux 2 et 3.	true
+tablet10/03-campaign.png	2560	1440	Carte de campagne avec une dizaine d'étapes terminées et des étoiles gagnées sur plusieurs époques.	true
+tablet10/04-endless-cards.png	2560	1440	Choix parmi trois cartes du Siège sans fin pendant une vague de boss, sur la bataille en cours.	true
+tablet10/05-results.png	2560	1440	Écran de victoire avec étoiles, médailles séparées pour la bataille et les succès, et prochain objectif.	true
+tablet10/06-missions.png	2560	1440	Écran des missions : série de connexion de quatre jours, missions quotidiennes et une mission à récupérer.	true
+tablet10/07-accessibility.png	2560	1440	Bataille en palette à contraste élevé, marqueurs d'équipe au-dessus des unités et texte agrandi à 115 %.	true
+tablet10/08-weekly-siege.png	2560	1440	Écran du Siège hebdomadaire avec règles, récompenses et paliers Bronze, Argent et Or.	true
+fold/01-commander.png	2184	1968	Bataille avec le commandant de l'armée bleue et son aura, interface complète avec le bouton du commandant.	false
+fold/02-turret-tiers.png	2184	1968	Bataille avec le panneau des tourelles ouvert : défenses améliorées aux niveaux 2 et 3.	false
+fold/03-campaign.png	2184	1968	Carte de campagne avec une dizaine d'étapes terminées et des étoiles gagnées sur plusieurs époques.	false
+fold/04-endless-cards.png	2184	1968	Choix parmi trois cartes du Siège sans fin pendant une vague de boss, sur la bataille en cours.	false
+fold/05-results.png	2184	1968	Écran de victoire avec étoiles, médailles séparées pour la bataille et les succès, et prochain objectif.	false
+fold/06-missions.png	2184	1968	Écran des missions : série de connexion de quatre jours, missions quotidiennes et une mission à récupérer.	false
+fold/07-accessibility.png	2184	1968	Bataille en palette à contraste élevé, marqueurs d'équipe au-dessus des unités et texte agrandi à 115 %.	false
+fold/08-weekly-siege.png	2184	1968	Écran du Siège hebdomadaire avec règles, récompenses et paliers Bronze, Argent et Or.	false
+phone20x9_qa/01-commander.png	2400	1080	Bataille avec le commandant de l'armée bleue et son aura, interface complète avec le bouton du commandant.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Bataille avec le panneau des tourelles ouvert : défenses améliorées aux niveaux 2 et 3.	false
+phone20x9_qa/03-campaign.png	2400	1080	Carte de campagne avec une dizaine d'étapes terminées et des étoiles gagnées sur plusieurs époques.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Choix parmi trois cartes du Siège sans fin pendant une vague de boss, sur la bataille en cours.	false
+phone20x9_qa/05-results.png	2400	1080	Écran de victoire avec étoiles, médailles séparées pour la bataille et les succès, et prochain objectif.	false
+phone20x9_qa/06-missions.png	2400	1080	Écran des missions : série de connexion de quatre jours, missions quotidiennes et une mission à récupérer.	false
+phone20x9_qa/07-accessibility.png	2400	1080	Bataille en palette à contraste élevé, marqueurs d'équipe au-dessus des unités et texte agrandi à 115 %.	false
+phone20x9_qa/08-weekly-siege.png	2400	1080	Écran du Siège hebdomadaire avec règles, récompenses et paliers Bronze, Argent et Or.	false
+feature_1024x500.png	1024	500	Logo Century War et un commandant menant l'armée bleue sur le champ de bataille.	true

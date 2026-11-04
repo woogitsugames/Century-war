@@ -1,0 +1,42 @@
+file	width	height	alt	play_upload
+phone/01-commander.png	1920	1080	Mavi ordunun komutanı ve aurasıyla savaş, komutan düğmeli tam savaş arayüzü ve kırmızı rakip.	true
+phone/02-turret-tiers.png	1920	1080	Kule paneli açık savaş: savunma kuleleri 2. ve 3. kule seviyelerine yükseltilmiş.	true
+phone/03-campaign.png	1920	1080	Yaklaşık on aşaması tamamlanmış, birkaç çağda yıldız kazanılmış sefer haritası.	true
+phone/04-endless-cards.png	1920	1080	Boss dalgası sırasında, süren savaşın üzerinde üç Sonsuz Kuşatma kartından birini seçme.	true
+phone/05-results.png	1920	1080	Yıldızlar, savaş ve başarımlar için ayrı madalyalar ve sıradaki hedefle zafer ekranı.	true
+phone/06-missions.png	1920	1080	Görevler ekranı: dört günlük giriş serisi, günlük görevler ve alınmaya hazır bir görev.	true
+phone/07-accessibility.png	1920	1080	Yüksek kontrast paletinde, birimlerin üstünde takım işaretleri ve %115 metinle savaş.	true
+phone/08-weekly-siege.png	1920	1080	Kurallar, ödüller ve Bronz, Gümüş, Altın eşikleriyle Haftalık Kuşatma ekranı.	true
+tablet7/01-commander.png	1920	1080	Mavi ordunun komutanı ve aurasıyla savaş, komutan düğmeli tam savaş arayüzü ve kırmızı rakip.	true
+tablet7/02-turret-tiers.png	1920	1080	Kule paneli açık savaş: savunma kuleleri 2. ve 3. kule seviyelerine yükseltilmiş.	true
+tablet7/03-campaign.png	1920	1080	Yaklaşık on aşaması tamamlanmış, birkaç çağda yıldız kazanılmış sefer haritası.	true
+tablet7/04-endless-cards.png	1920	1080	Boss dalgası sırasında, süren savaşın üzerinde üç Sonsuz Kuşatma kartından birini seçme.	true
+tablet7/05-results.png	1920	1080	Yıldızlar, savaş ve başarımlar için ayrı madalyalar ve sıradaki hedefle zafer ekranı.	true
+tablet7/06-missions.png	1920	1080	Görevler ekranı: dört günlük giriş serisi, günlük görevler ve alınmaya hazır bir görev.	true
+tablet7/07-accessibility.png	1920	1080	Yüksek kontrast paletinde, birimlerin üstünde takım işaretleri ve %115 metinle savaş.	true
+tablet7/08-weekly-siege.png	1920	1080	Kurallar, ödüller ve Bronz, Gümüş, Altın eşikleriyle Haftalık Kuşatma ekranı.	true
+tablet10/01-commander.png	2560	1440	Mavi ordunun komutanı ve aurasıyla savaş, komutan düğmeli tam savaş arayüzü ve kırmızı rakip.	true
+tablet10/02-turret-tiers.png	2560	1440	Kule paneli açık savaş: savunma kuleleri 2. ve 3. kule seviyelerine yükseltilmiş.	true
+tablet10/03-campaign.png	2560	1440	Yaklaşık on aşaması tamamlanmış, birkaç çağda yıldız kazanılmış sefer haritası.	true
+tablet10/04-endless-cards.png	2560	1440	Boss dalgası sırasında, süren savaşın üzerinde üç Sonsuz Kuşatma kartından birini seçme.	true
+tablet10/05-results.png	2560	1440	Yıldızlar, savaş ve başarımlar için ayrı madalyalar ve sıradaki hedefle zafer ekranı.	true
+tablet10/06-missions.png	2560	1440	Görevler ekranı: dört günlük giriş serisi, günlük görevler ve alınmaya hazır bir görev.	true
+tablet10/07-accessibility.png	2560	1440	Yüksek kontrast paletinde, birimlerin üstünde takım işaretleri ve %115 metinle savaş.	true
+tablet10/08-weekly-siege.png	2560	1440	Kurallar, ödüller ve Bronz, Gümüş, Altın eşikleriyle Haftalık Kuşatma ekranı.	true
+fold/01-commander.png	2184	1968	Mavi ordunun komutanı ve aurasıyla savaş, komutan düğmeli tam savaş arayüzü ve kırmızı rakip.	false
+fold/02-turret-tiers.png	2184	1968	Kule paneli açık savaş: savunma kuleleri 2. ve 3. kule seviyelerine yükseltilmiş.	false
+fold/03-campaign.png	2184	1968	Yaklaşık on aşaması tamamlanmış, birkaç çağda yıldız kazanılmış sefer haritası.	false
+fold/04-endless-cards.png	2184	1968	Boss dalgası sırasında, süren savaşın üzerinde üç Sonsuz Kuşatma kartından birini seçme.	false
+fold/05-results.png	2184	1968	Yıldızlar, savaş ve başarımlar için ayrı madalyalar ve sıradaki hedefle zafer ekranı.	false
+fold/06-missions.png	2184	1968	Görevler ekranı: dört günlük giriş serisi, günlük görevler ve alınmaya hazır bir görev.	false
+fold/07-accessibility.png	2184	1968	Yüksek kontrast paletinde, birimlerin üstünde takım işaretleri ve %115 metinle savaş.	false
+fold/08-weekly-siege.png	2184	1968	Kurallar, ödüller ve Bronz, Gümüş, Altın eşikleriyle Haftalık Kuşatma ekranı.	false
+phone20x9_qa/01-commander.png	2400	1080	Mavi ordunun komutanı ve aurasıyla savaş, komutan düğmeli tam savaş arayüzü ve kırmızı rakip.	false
+phone20x9_qa/02-turret-tiers.png	2400	1080	Kule paneli açık savaş: savunma kuleleri 2. ve 3. kule seviyelerine yükseltilmiş.	false
+phone20x9_qa/03-campaign.png	2400	1080	Yaklaşık on aşaması tamamlanmış, birkaç çağda yıldız kazanılmış sefer haritası.	false
+phone20x9_qa/04-endless-cards.png	2400	1080	Boss dalgası sırasında, süren savaşın üzerinde üç Sonsuz Kuşatma kartından birini seçme.	false
+phone20x9_qa/05-results.png	2400	1080	Yıldızlar, savaş ve başarımlar için ayrı madalyalar ve sıradaki hedefle zafer ekranı.	false
+phone20x9_qa/06-missions.png	2400	1080	Görevler ekranı: dört günlük giriş serisi, günlük görevler ve alınmaya hazır bir görev.	false
+phone20x9_qa/07-accessibility.png	2400	1080	Yüksek kontrast paletinde, birimlerin üstünde takım işaretleri ve %115 metinle savaş.	false
+phone20x9_qa/08-weekly-siege.png	2400	1080	Kurallar, ödüller ve Bronz, Gümüş, Altın eşikleriyle Haftalık Kuşatma ekranı.	false
+feature_1024x500.png	1024	500	Century War logosu ve mavi orduyu savaş alanında yöneten bir komutan.	true

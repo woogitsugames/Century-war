@@ -1,4 +1,80 @@
-# Grafiki Google Play — zlecenie 117 (10 języków)
+# Grafiki Google Play — zestaw premierowy D7 (obowiązujący) oraz archiwum 117/153
+
+## Zestaw premierowy D7 (2026-11-04) — **ten zestaw uploadujemy**
+
+Jeden zestaw 8 kadrów na typ urządzenia, w 10 językach. Zestawy 117 i 153 niżej zostają jako
+archiwum (ich generatory `generate()`/`generate153()` działają bez zmian). Generator:
+`StoreGraphicsTest.generateD7` (`STORE_GRAPHICS_D7=true`). Wszystkie kadry to prawdziwe ekrany
+gry (`BattleScreen`, `CampaignScreen`, `MissionsScreen`, `ModeScreen`) na profilu bez samouczka,
+podpowiedzi, banerów i „Co nowego”; sceny bitwy mają stały seed. Jedyna nakładka to podpis
+(`captionD7.N`) w stylu zestawu 117.
+
+| Nr | Plik | Ujęcie | Podpis (pl) |
+| --- | --- | --- | --- |
+| 01 | `01-commander.png` | Bitwa z Wodzem i aurą, pełny HUD z przyciskiem dowódcy | Wódz i aura bojowa |
+| 02 | `02-turret-tiers.png` | Panel wież: stopień 2 i 3 kupione przez `BattleController` | Wieże do 3. stopnia |
+| 03 | `03-campaign.png` | Mapa kampanii, profil z 10 etapami (gwiazdki w dwóch epokach), przewinięta do bieżącego etapu | Kampania przez epoki |
+| 04 | `04-endless-cards.png` | Wybór 3 kart Endless przy fali 10 z bossem (najnowsza karta każdej rzadkości) | Karty i bossowie Endless |
+| 05 | `05-results.png` | Zwycięstwo etapu 11: gwiazdki, „Za bitwę” i „Za osiągnięcia” osobno, „Następny cel”; zakładka **Wynik** (na telefonie czytelniejsza niż wykres) | Medale i następny cel |
+| 06 | `06-missions.png` | Misje: seria 4 dni, misje dzienne, jedna do odebrania, jedna odebrana (stały dzień 18.11.2026) | Misje dzienne |
+| 07 | `07-accessibility.png` | Bitwa w palecie „wysoki kontrast”, znaczniki drużyn, tekst 115% (prawdziwe ustawienia profilu) | Wysoki kontrast i znaczniki |
+| 08 | `08-weekly-siege.png` | Oblężenie tygodnia z progami Brąz/Srebro/Złoto | Oblężenie tygodnia: Brąz–Złoto |
+
+Muzyki nie da się pokazać na zrzucie — mówi o niej opis sklepu. Misje tygodniowe są na
+ekranie niżej (lista przewijana), więc kadr 06 i jego podpis mówią o misjach dziennych i serii.
+
+### Urządzenia
+
+| Katalog | Wymiary | `play_upload` |
+| --- | --- | --- |
+| `phone` | 1920×1080, d=2 | **true** — telefon |
+| `tablet7` | 1920×1080, d=1,8 | **true** — tablet 7″ |
+| `tablet10` | 2560×1440, d=2 | **true** — tablet 10″ |
+| `fold` | 2184×1968, d=2,7 | false — do przeglądu; do Play (jako tablet) dopiero po akceptacji |
+| `phone20x9_qa` | 2400×1080 | false — tylko QA (proporcje > 2:1) |
+| `preview_foldOuter_qa.png` | stykówka 8 kadrów 904×2316 | brak w manifeście — tylko QA (pion) |
+
+Na język: 24 zrzuty do Play + 8 Fold + 8 QA 20:9, grafika promocyjna `feature_1024x500.png`
+(Wódz + logo, jak w 153; alt `altD7.feature`), `manifest.tsv` (`file, width, height, alt,
+play_upload`), `preview_contact.png` (8 miniatur telefonu) i stykówka pionu Folda.
+Razem 10 języków × 40 zrzutów = 400 PNG (240 do Play) + 10 grafik promocyjnych. Ikona bez zmian
+(zestaw 117).
+
+### Polecenia
+
+```bash
+STORE_GRAPHICS_D7=true flock /tmp/claude-0/gradle.lock ./gradlew :app:testDebugUnitTest \
+  --tests '*StoreGraphicsTest.generateD7*' --tests '*StoreGraphicsTest.d7CaptionsComplete*' \
+  --tests '*StoreGraphicsTest.listingLimits*' --tests '*StoreGraphicsTest.storeAssetRequirements*' \
+  --rerun --no-configuration-cache --console=plain
+python3 scripts/validate_store_d7.py app/build/storeD7
+```
+
+- Partie językowe: `STORE_LANGUAGES=pl,en,de` (walidator: `--languages pl,en,de`).
+- Tylko wybrane urządzenia (podgląd): `STORE_D7_DEVICES=phone,tablet10` — wtedy manifest nie
+  jest nadpisywany; do uploadu zawsze pełny eksport.
+- Karty Endless (kadr 04): domyślnie najnowsza karta każdej rzadkości z końca `EndlessCard`.
+  Po scaleniu D6 (nowe karty dopisane na końcu enumu) **wystarczy ponowić eksport**. Ręczny
+  wybór: `STORE_D7_CARDS=QUARTERMASTER,MASTER_MASONS,BOSS_RECALL`.
+- Pełny eksport 10 języków trwa kilkanaście minut; wynik w `app/build/storeD7/<język>/`.
+
+`d7CaptionsComplete` (zwykły zestaw testów) sprawdza w 10 plikach `graphics_*.properties`
+komplet `captionD7.1..8` (≤ 32 znaki, bez wykrzykników i superlatywów), `altD7.1..8` i
+`altD7.feature` (≤ 140 znaków) oraz to, że żaden podpis nie zmniejsza się poniżej 70% rozmiaru
+na żadnym urządzeniu.
+
+### Co uploadować
+
+Dla każdego języka w Play Console: telefon — 8 plików z `phone/`, tablet 7″ — `tablet7/`,
+tablet 10″ — `tablet10/` (wpisy `play_upload=true` w `manifest.tsv`, teksty alternatywne z
+kolumny `alt`), grafika promocyjna `feature_1024x500.png`. W repo (`docs/store/assets/D7/`) są
+tylko manifesty i stykówki wszystkich języków oraz pełne PNG `pl` i `en` (telefon i tablet 10″)
+do przeglądu; resztę generuje się lokalnie przed uploadem. Raport z przeglądu:
+`docs/reports/dzien-7-sklep.md`.
+
+---
+
+# Archiwum: zlecenie 117 (10 języków)
 
 ## Odświeżenie po Wodzu i stopniach wież — zlecenie 153 (2026-11-02)
 
