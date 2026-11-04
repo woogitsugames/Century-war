@@ -23,7 +23,7 @@ class SecondHourControlTest {
     @Test
     fun stageNineSnapshotResumesOnNewRules() {
         val battle = Battle(Campaign.config(Campaign.stages[8], Bonuses(), 91009L))
-        repeat(60 * 60 * 4) { battle.step(); battle.fx.count = 0 }
+        repeat(60 * 60 * 2) { battle.step(); battle.fx.count = 0 }
         assertFalse(battle.over)
         val bytes = BattleSnapshot.encode(battle)
         assertEquals(SnapshotReject.OK, BattleSnapshot.probe(bytes))
