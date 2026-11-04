@@ -16,7 +16,7 @@ Supera 36 etapas de campaña con dificultad ajustable, resiste oleadas en el ase
 
 Consulta repeticiones y el gráfico tras la batalla, desbloquea estandartes y guarda tu perfil en un archivo. Ajusta los colores y activa el modo zurdo. La campaña y el progreso local funcionan sin conexión.
 
-Cada era tiene su propia música grabada: un tema tranquilo y otro de batalla que se funden con suavidad durante el combate. 78 logros y misiones diarias y semanales te dan siempre nuevos objetivos.
+Cada era tiene su propia música grabada: un tema tranquilo y otro de batalla que se funden con suavidad durante el combate. 79 logros y misiones diarias y semanales te dan siempre nuevos objetivos.
 
 Accesibilidad: paletas para daltonismo y alto contraste, texto más grande, menos destellos y sacudidas de pantalla, y compatibilidad con lector de pantalla en menús y ajustes.
 

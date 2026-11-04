@@ -48,7 +48,7 @@ class Achievement130Test {
             "card_new_50", "weekly_rules_3", "weekly_rules_6", "hard_perfect",
             "daily_events_6", "modifier_victories_10", "doctrine_victories_13")
         assertEquals(11, ids.size)
-        assertEquals(78, Achievements.all.size)
+        assertEquals(79, Achievements.all.size)
         for (id in ids) {
             assertEquals("cw_" + id, Achievements.byId(id)?.pgsKey)
             assertEquals(10, L.raw("ach_" + id)?.size)
@@ -168,13 +168,15 @@ class Achievement130Test {
         for (metric in listOf(AchievementMetric.WEEKLY_RULESETS,
             AchievementMetric.DAILY_EVENTS, AchievementMetric.MODIFIER_VICTORIES,
             AchievementMetric.DOCTRINE_VICTORIES, AchievementMetric.CARD_NEW_50,
-            AchievementMetric.HARD_PERFECT)) {
+            AchievementMetric.HARD_PERFECT, AchievementMetric.WAGER_40)) {
             p.achievementCounters[metric.name] = Long.MAX_VALUE
         }
         p.save()
         Profile.awaitHintWrites()
         val restored = Profile(file).apply { load() }
-        assertEquals(63L, restored.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name])
+        // Po D6: dziewięć zestawów tygodnia (maska 511 zamiast 63).
+        assertEquals(511L, restored.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name])
+        assertEquals(1L, restored.achievementCounters[AchievementMetric.WAGER_40.name])
         assertEquals((1L shl DailyEvent.entries.size) - 1L,
             restored.achievementCounters[AchievementMetric.DAILY_EVENTS.name])
         assertEquals((1L shl Modifier.values().size) - 1L,
@@ -200,5 +202,53 @@ class Achievement130Test {
         val masons = finished(BattleConfig(Mode.ENDLESS, 612L, 1f), false, wave = 30)
         masons.player.cardStacks[EndlessCard.MASTER_MASONS.ordinal] = 1
         assertTrue("card_tools_30" in record(p, masons))
+    }
+
+    /** Po D6: „Sześć oblicz wojny” liczy dowolne 6 z 9 zestawów, także trzy nowe. */
+    @Test fun anySixOfNineWeeklyRuleSetsUnlock() {
+        val p = Profile(profileFile())
+        val start = Weekly.firstRuleSetWeek()
+        // Zestawy 3–8: trzy stare i trzy dodane w D6 (Nocna straż, Żołd i łupy, Kruchy bastion).
+        for (i in 3 until 9) {
+            record(p, finished(Weekly.config(start + i * Weekly.RULE_SET_EVERY), false, Weekly.threshold(1)))
+        }
+        assertEquals(6L, Achievements.progress(p, Achievements.byId("weekly_rules_6")!!))
+        assertTrue(Achievements.isUnlocked(p, "weekly_rules_6"))
+        // Wszystkie dziewięć: postęp 9, osiągnięcie nadal jedno.
+        for (i in 0 until 3) {
+            record(p, finished(Weekly.config(start + i * Weekly.RULE_SET_EVERY), false, Weekly.threshold(1)))
+        }
+        assertEquals(9L, Achievements.progress(p, Achievements.byId("weekly_rules_6")!!))
+    }
+
+    /** Gracz z sześcioma starymi zestawami (maska 63 z dawnego zapisu) nic nie traci. */
+    @Test fun oldSixRuleSetMaskStillCountsAfterUpdate() {
+        val file = profileFile()
+        val p = Profile(file)
+        p.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name] = 63L
+        p.unlockedAchievements.add("weekly_rules_6")
+        p.save()
+        Profile.awaitHintWrites()
+        val restored = Profile(file).apply { load() }
+        assertEquals(6L, Achievements.progress(restored, Achievements.byId("weekly_rules_6")!!))
+        assertTrue(Achievements.isUnlocked(restored, "weekly_rules_6"))
+    }
+
+    /** „Wygrany zakład”: fala 40 z kartą Zakład; bez karty albo przed falą 40 nic. */
+    @Test fun wagerWonNeedsWagerCardAndWave40() {
+        assertEquals(40, Achievements.WAGER_WAVE)
+        val p = Profile(profileFile())
+        val early = finished(BattleConfig(Mode.ENDLESS, 701L, 1f), false, wave = 39)
+        early.player.cardStacks[EndlessCard.WAGER.ordinal] = 1
+        assertFalse("wager_40" in record(p, early))
+        val plain = finished(BattleConfig(Mode.ENDLESS, 702L, 1f), false, wave = 45)
+        assertFalse("wager_40" in record(p, plain))
+        val won = finished(BattleConfig(Mode.ENDLESS, 703L, 1f), false, wave = 40)
+        won.player.cardStacks[EndlessCard.WAGER.ordinal] = 1
+        assertTrue("wager_40" in record(p, won))
+        assertEquals(1L, Achievements.progress(p, Achievements.byId("wager_40")!!))
+        assertFalse("wager_40" in record(p, won))
+        assertEquals(10, L.raw("ach_wager_40")?.size)
+        assertEquals(10, L.raw("ach_wager_40_d")?.size)
     }
 }

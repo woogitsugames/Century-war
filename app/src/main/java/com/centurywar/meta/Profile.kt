@@ -1010,7 +1010,7 @@ class Profile(private val file: File) {
                     newCounters[key] = when (key) {
                         AchievementMetric.STEAM_VARIANTS.name,
                         AchievementMetric.SILICON_VARIANTS.name -> value and 3L
-                        AchievementMetric.WEEKLY_RULESETS.name -> value and 63L
+                        AchievementMetric.WEEKLY_RULESETS.name -> value and Achievements.WEEKLY_RULESET_MASK
                         AchievementMetric.DAILY_EVENTS.name -> value and Achievements.DAILY_EVENT_MASK
                         AchievementMetric.MODIFIER_VICTORIES.name ->
                             value and ((1L shl com.centurywar.game.Modifier.values().size) - 1L)
@@ -1035,7 +1035,8 @@ class Profile(private val file: File) {
                         AchievementMetric.COMMANDER_SUMMONED.name,
                         AchievementMetric.COMMANDER_SURVIVOR.name,
                         AchievementMetric.TURRET_TIER_FOUR.name,
-                        AchievementMetric.LATE_NO_TURRET_WINS.name -> value.coerceAtMost(1L)
+                        AchievementMetric.LATE_NO_TURRET_WINS.name,
+                        AchievementMetric.WAGER_40.name -> value.coerceAtMost(1L)
                         AchievementMetric.RAIN_WINS.name,
                         AchievementMetric.WIND_WINS.name,
                         AchievementMetric.NIGHT_WINS.name -> value.coerceAtMost(10_000_000L)
