@@ -2002,3 +2002,34 @@ na etap); warunek R12 „docelowy nie łatwiejszy niż na 18” jest więc forma
 w granicy 75%. Przebieg „medale-czas”: suma oczekiwanych czasów 16–24 −1,2 min, „medale” −6,9 min.
 
 - 2026-11-04 — regeneracja złotych powtórek: Etap 19: stageRamp 1,265 -> 1,1891 (x0,94), PROTOCOL 0.8.9; powtórki bez zmian.
+
+## D37 — przegląd etapów 19–36, Endless i tygodnia po 0.8.9 (pomiar, bez zmian w grze; 4.11.2026)
+
+Pełny raport, tabele i warianty: `docs/reports/d37-balans-19-36.md`. N=100, Normalny, poza
+Gradle (jak d33/d35); etapy 16–24 powtarzają d35 co do bitwy, 0 patów. Wygrane / oczekiwany czas
+przejścia [min]; „realny gracz” = `medale-czas`, `BALANCE_PACE=now` (54 poziomy na etapie 28,
+66 na 36), docelowy 28–36 = weteran 80%.
+
+| Etapy | Realny gracz | „medale” | Docelowy | Docelowy + dowódca |
+|---|---|---|---|---|
+| 19–27 (śr. / Σ oczek.) | 72,2% / 129 min | 70,6% / 137 min | 65,6% / 143 min | 64,7% / 146 min |
+| 28–36 (śr. / Σ oczek.) | 48,1% / 179 min | 43,4% / 207 min | 66,8% / 111 min | 67,6% / 110 min |
+| 27 → 28 | 80 → 58% (12,8 → 21,6) | 69 → 40% (15,8 → 31,9) | 66 → 70% | 63 → 68% |
+| 30 / 31 / 32 / 33 | 43 / 41 / 40 / 45% | 46 / 33 / 38 / 37% | 69 / 53 / 65 / 59% | 66 / 71 / 73 / 60% |
+| 34 / 35 / 36 | 52 / 50 / 53% | 55 / 50 / 47% | 70 / 67 / 76% | 62 / 66 / 62% |
+
+- **Klify (kryterium d33):** etap **28** — realny gracz strefa ostrzegawcza (−22 pp, 1,70×),
+  „medale” ściana (−29 pp, 2,0×); przyczyna: aiPower 1,63 → 2,14 (+31%) na początku trzeciej
+  części. Etapy **30–33** — realny gracz < 50% przez 4 etapy, „medale” 31–33 < 40%; etap 33
+  (aiPower 2,90) trudniejszy niż 34–36 po korekcie tury 10. **Etap 19 z aktywnym dowódcą**
+  (`BALANCE_COMMANDER=on`): realny gracz 88 → 57% (−31 pp), „medale” 86 → 53% — bez dowódcy płynnie.
+- **Za łatwe / za krótkie:** etap 29 dla docelowego mediana 3,7 min (z dowódcą 2,0; znane od tury 9),
+  realny gracz 8,1 min; docelowy 34–36 67–76% (powyżej pasma 25–55%, skutek tury 10 i profilu 80%).
+- **Propozycja K1 (mnożnikiem, nie wpisana):** 28 ×0,90, 30 ×0,92, 31 ×0,88, 32 ×0,92, 33 ×0,92 →
+  realny gracz 28 / 30 / 31 / 32 / 33: 65 / 54 / 52 / 50 / 52%, Σ 28–36 179 → 160 min; „medale”
+  28–36 ≥ 45%; docelowy najwyżej 78%. Etap 19 dodatkowo ×0,96: z dowódcą 57 → 70%, ale docelowy 79%
+  — wstrzymane do danych z gry.
+- **Endless (weteran, do fali 60):** 1001–1100 fala 60 **9/100**, mediana 53; 2001–2100 **6/100**,
+  mediana 53; fala 20 100/100 — identycznie jak po D6, w celu (5–15, 45–55).
+- **Oblężenie tygodnia** (tygodnie 3022–3073, AI na zasadach tygodnia): mediana fali 12, progi
+  10 / 20 / 30 fal w 31 / 5 / 2 z 52 tygodni; fala 60 tylko w 2 tygodniach z Podwójnym dochodem.
