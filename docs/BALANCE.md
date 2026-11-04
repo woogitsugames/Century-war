@@ -1831,3 +1831,27 @@ w krótszym czasie, plus więcej ★), więc badania przed etapem 19 rosną szyb
 obserwacji przy pomiarze etapów 19+.
 
 - 2026-11-04 — regeneracja złotych powtórek: R11-02: krotsza presja etapow 8-12.
+
+## Etapy 13–18 — krótsze bitwy po R11-02 (4.11.2026)
+
+**Decyzja właściciela (4.11):** po R11-02 etapy 8–12 trwają ok. 9–9,5 min, ale etapy 13–18
+wracają do starej presji (profil „medale” ok. 13,4–14 min). Cel: mediana 13–18 ok. 9,5–11 min
+dla profilu docelowego i „medale”, wygrane ±5 pp, ★ bez spadku > 10% na etap.
+
+### Pomiar „przed” (PROTOCOL 0.8.7), 100 seedów, Normalny
+
+`BALANCE_RUN=true BALANCE_RUNS=100 BALANCE_PROFILE=target|medale BALANCE_STAGE_FROM=7
+BALANCE_STAGE_TO=20 BALANCE_STAGES=7,12,13,14,15,16,17,18,19,20`.
+
+| Etap | Docelowy: wygrane / mediana / oczek. / ★ | Medale: wygrane / mediana / oczek. / ★ | Docelowy z dowódcą: wygrane / mediana / ★ |
+|---:|---:|---:|---:|
+| 7 | 75% / 7,8 / 10,2 / 1,55 | 75% / 7,9 / 10,4 / 1,39 | — |
+| 12 | 67% / 9,1 / 13,1 / 1,93 | 87% / 9,4 / 10,8 / 1,76 | 72% / 9,3 / 1,92 |
+| 13 | 67% / 9,3 / 13,3 / 2,51 | 76% / 13,9 / 17,9 / 1,29 | 60% / 9,6 / 2,47 |
+| 14 | 57% / 12,2 / 20,5 / 2,04 | 75% / 13,9 / 18,4 / 1,27 | 56% / 13,0 / 1,80 |
+| 15 | 49% / 12,2 / 22,8 / 1,96 | 83% / 14,0 / 16,7 / 1,14 | 58% / 13,3 / 1,79 |
+| 16 | 65% / 13,7 / 20,4 / 1,32 | 83% / 13,8 / 16,6 / 1,16 | 62% / 13,8 / 1,35 |
+| 17 | 65% / 12,6 / 18,5 / 1,89 | 87% / 13,6 / 15,6 / 1,41 | 64% / 12,8 / 1,77 |
+| 18 | 63% / 11,8 / 17,8 / 2,16 | 84% / 13,4 / 15,9 / 1,70 | 65% / 12,4 / 2,05 |
+| 19 | 60% / 10,1 / 15,9 / 2,53 | 49% / 13,5 / 26,6 / 1,51 | — |
+| 20 | 77% / 13,2 / 16,7 / 1,65 | 72% / 13,4 / 18,0 / 1,60 | — |
