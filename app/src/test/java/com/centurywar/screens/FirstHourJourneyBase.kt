@@ -478,9 +478,10 @@ abstract class FirstHourJourneyBase {
                 val bs = startStage(g, index, where) ?: return
                 battleHintsSeen.clear()
                 if (bs.battle.commanderAvailable) note(g, "$where: Wódz dostępny w HUD")
-                // Wariant ostrożny: pierwsza próba etapu 2 kończy się kapitulacją po 30 s.
+                // Wariant ostrożny: pierwsza próba etapu 2 kończy się kapitulacją po 75 s
+                // (kapitulacja przed 60 s nie liczy się do serii porażek R2-02).
                 val forcedLoss = cautious && index == 1 && attempt == 1
-                val o = playWithAi(g, bs, where, if (forcedLoss) 30f else 18 * 60f)
+                val o = playWithAi(g, bs, where, if (forcedLoss) 75f else 18 * 60f)
                 stageLogs.add(StageLog(index, attempt, o))
                 note(g, "$where: ${if (o.won) "WYGRANA" else "porażka"} ${"%.1f".format(o.minutes)} min, " +
                     "${o.stars}★, nagroda ${o.reward}, łącznie +${o.medals}; dymki ${battleHintsSeen}")
@@ -791,7 +792,7 @@ abstract class FirstHourJourneyBase {
     }
 
     /**
-     * R6-01, wariant ostrożny: gracz pomija samouczek, raz przegrywa etap 2 (kapitulacja po 30 s)
+     * R6-01, wariant ostrożny: gracz pomija samouczek, raz przegrywa etap 2 (kapitulacja po 75 s)
      * i nie kupuje badań przed 30. minutą. Nadal ≥ 4 osiągnięcia z puli przed 60:00.
      */
     protected fun cautiousJourney(d: Device, lang: String) {
