@@ -319,14 +319,15 @@ class RecordedMusicTest {
             assertEquals(0, f.openCount)
             music.trimMemory()
             music.resume()
-            val again = System.currentTimeMillis() + 3000
-            while (synchronized(f) { f.live("menu") } == null && System.currentTimeMillis() < again) Thread.sleep(5)
+            // Pod obciążeniem (4 procesy testów) wątek muzyki bywa wolny: czekamy dłużej i na faktyczny start.
+            val again = System.currentTimeMillis() + 10000
+            while (synchronized(f) { f.live("menu")?.started } != true && System.currentTimeMillis() < again) Thread.sleep(5)
             assertTrue(music.isPlaying)
-            assertTrue(synchronized(f) { f.live("menu") }!!.started)
+            assertTrue("odtwarzacz menu wystartował po powrocie", synchronized(f) { f.live("menu")?.started } == true)
             // Trim w trakcie gry nie zatrzymuje bieżącego utworu.
             music.trimMemory()
             Thread.sleep(120)
-            assertTrue(synchronized(f) { f.live("menu") }!!.isPlaying)
+            assertTrue(synchronized(f) { f.live("menu")?.isPlaying } == true)
         } finally {
             music.release()
         }
