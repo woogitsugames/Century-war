@@ -25,7 +25,7 @@ Jesteś koordynatorem projektu Century War — oryginalnej strategii na Androida
 
 **W toku w chwili zamknięcia (sprawdź gałęzie, dokończ albo scal):**
 - [SCALONE na integ/tura10 4.11 ~18:30 UTC; pełne testy po scaleniu uruchomione — jeśli `main` != `integ/tura10`, uruchom pełne testy i wypchnij] `claude/dzien-26-ankieta` — ankieta testera (tylko w wersjach testowych, flaga `TESTER_SURVEY`, part200) + drobne napisy Kodeksu na zewnętrznym Foldzie.
-- `claude/dzien-27-etapy-13-18` — etapy 13–18 krótsze (cel 9,5–11 min, PROTOCOL 0.8.8, wpis w `docs/BALANCE.md`).
+- [SCALONE na integ/tura10 4.11 wieczorem, PROTOCOL 0.8.8; pełne testy po scaleniu uruchomione — jeśli `main` != `integ/tura10`, uruchom pełne testy i wypchnij] `claude/dzien-27-etapy-13-18` — etapy 13–18 krótsze (cel 9,5–11 min, PROTOCOL 0.8.8, wpis w `docs/BALANCE.md`).
 Jeśli gałąź ma raport/pełne testy w commitach — scal na `integ/tura10`, uruchom pełne testy, wypchnij. Jeśli niedokończona — zleć agentowi dokończenie od ostatniego commita (najpierw `git merge origin/integ/tura10`).
 
 **Decyzje właściciela (obowiązujące, nowe z 3–4.11):**
@@ -40,6 +40,8 @@ Jeśli gałąź ma raport/pełne testy w commitach — scal na `integ/tura10`, u
 **Ankieta testera:** w produkcji wyłączyć `-PtesterSurvey=false`, jeśli pierwsze wydanie produkcyjne ma numer 0.x (zob. `docs/RELEASE.md`). Drobne napisy < 10 sp na zewnętrznym Foldzie zostały: „Wymaga: Doktryna elit”, legenda porównania jednostek, zakładki przy 130%.
 
 **Otwarte u właściciela:** dane wydawcy, konto Play (D-U-N-S, weryfikacja), podpis upload, polityka prywatności na stronie, testerzy (lista w `docs/OWNER_CHECKLIST.md`); serwer rankingu — 6 decyzji w `docs/research/R5-server.md` (rekomendacja: testy bez serwera, VPS w UE przy premierze; zlecenie `docs/tasks/R5-server-hardening.md`); Game Stats (Data safety).
+
+**Uwaga:** `WelcomeBack193Test.noWelcomeAfterTwoDaysOrBeforeTutorial` bywa niestabilny w pełnym przebiegu (prawdziwy zegar) — do ustabilizowania (wstrzyknąć zegar). Etap 13 u profilu docelowego ma teraz medianę 8,2 min (bez skoku po etapie 12).
 
 **Kolejka na następną sesję (propozycja, potwierdź z właścicielem):**
 1. Dokończyć/scalić dwie gałęzie w toku (wyżej), APK dla właściciela.
