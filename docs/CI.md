@@ -227,6 +227,33 @@ git push origin v0.1.0
 
 Przed tagowaniem upewnij sie, ze commit zawiera workflow i przechodzi CI. Job **przerywa prace**, jesli brakuje choc jednego z czterech sekretow; nie wolno publikowac buildow produkcyjnych podpisanych kluczem debug. Po udanym buildzie dostepne sa artefakty `century-war-release-apk` i `century-war-release-aab`. To sa artefakty GitHub Actions, a nie automatyczna publikacja w Google Play.
 
+## Wydanie testowe (ręcznie, bez serwera rankingu)
+
+R12 poz. 2a, decyzja właściciela 4.11.2026: testy zamknięte Play bez serwera rankingu,
+pierwsze wydanie `0.1.0` / `versionCode 1`. Tag `v*` wymaga `CW_SERVER_URL` i `CW_HMAC_KEY`
+oraz `Daily.RELEASE_DAY` w oknie 60 dni, więc do testów służy osobne zadanie:
+
+- **Uruchomienie:** Actions → **Android CI** → **Run workflow** → gałąź `main`, zaznacz
+  `test_release`, `version_name` (domyślnie `0.1.0`, format `X.Y.Z`). Bez zaznaczenia
+  `test_release` ręczne uruchomienie działa jak dotąd (samo CI, bez podpisanego builda).
+- **Zadanie `test-release`:** `needs` jak `release` (`build`, `fast-tests`, `screenshot-tests`,
+  `balance-tests`); warunek `workflow_dispatch && inputs.test_release == true` i ref inny niż tag.
+- **Podpis:** te same cztery sekrety co tag (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
+  `KEY_ALIAS`, `KEY_PASSWORD`); brak któregokolwiek albo alias `androiddebugkey` przerywa
+  zadanie. Nie ma ścieżki z podpisem debug.
+- **Konfiguracja:** `CW_PRIVACY_URL` (Variable) wymagane; `CW_SERVER_URL` i `CW_HMAC_KEY`
+  jawnie puste (ranking globalny wyłączony, nie trzeba ich zakładać).
+- **Gradle:** `./gradlew :app:assembleRelease :app:bundleRelease
+  -PskipCheck=releaseDay,serverUrl,hmacKey -PtesterSurvey=true -PreleaseVersionName=<version_name>`.
+  Gradle (`ReleaseChecklist.ciSkipProblem`) odrzuca w CI każdy inny wyjątek przy podpisie upload
+  i każdy wyjątek przy zdarzeniu `push`; szczegóły w `docs/RELEASE.md`
+  („Automatyczna blokada Gradle i świadome wyjątki”).
+- **Artefakty (90 dni):** `century-war-test-release-aab`, `century-war-test-release-apk`,
+  `century-war-test-release-mapping`. Podsumowanie przebiegu podaje `versionName`,
+  `versionCode`, SHA i pominięte kontrole.
+- **Minuty CI:** jedno pełne CI + ok. 10–15 min builda release, tylko na kliknięcie. Brak nowych
+  wyzwalaczy push.
+
 ## Lokalny release
 
 Bez czterech zmiennych srodowiskowych `:app:assembleRelease` i `:app:bundleRelease` kończą się błędem; nie ma już automatycznego podpisu debug. Do lokalnego builda produkcyjnego ustaw wszystkie cztery zmienne (najlepiej w menedżerze sekretów, poza repo):
@@ -244,13 +271,13 @@ Przy częściowo ustawionych zmiennych konfiguracja Gradle zwróci błąd. Plik 
 
 - Kod buduje sie na JDK 17 i Android SDK z `platforms;android-36` oraz `build-tools;36.0.0`.
 - Testy symulacji, reguł, zrzutów bitwy i lokalizacji dzialaja w JVM; nie wymagaja emulatora. Testy Robolectric (SDK 35) pobieraja przy pierwszym uruchomieniu duze artefakty; kolejne korzystaja z cache.
-- Artefakty z jobow debug/lint/robolectric sa przechowywane przez 14 dni, a release przez 90 dni.
+- Artefakty z jobow debug/lint/robolectric sa przechowywane przez 14 dni, a release i wydania testowego przez 90 dni.
 - Raport z nieudanego kroku oraz diagnostyka `lint` znajduja sie na stronie uruchomienia workflow w zakladce **Actions**.
 
 ## Oszczędność minut CI (3.11.2026, decyzja właściciela)
 
 Limit minut GitHub Actions: workflowy **nie uruchamiają się przy zwykłym wypchnięciu** na `main`, `claude/**` ani `gpt/**`.
-- `android.yml`: tylko tag `v*` (wydanie: testy + podpisany build w jednym przebiegu), PR do `main` i ręcznie (*Run workflow*).
+- `android.yml`: tylko tag `v*` (wydanie: testy + podpisany build w jednym przebiegu), PR do `main` i ręcznie (*Run workflow*; z `test_release` dodatkowo podpisane wydanie testowe, 4.11.2026).
 - `server.yml`, `sim.yml`, `endless-balance.yml`, `release-check.yml`: tylko PR do `main` i ręcznie.
 - Dawne workflowy gałęzi GPT (`campaign-balance`, `play-games-check`, `store-graphics`): tylko ręcznie.
 - Wszędzie `concurrency` z `cancel-in-progress`.
