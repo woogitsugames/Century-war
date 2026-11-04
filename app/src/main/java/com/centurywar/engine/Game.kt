@@ -22,6 +22,7 @@ import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.ScoreClient
 import com.centurywar.meta.Missions
 import com.centurywar.meta.PlaytestLog
+import com.centurywar.meta.WelcomeBack
 import com.centurywar.meta.WhatsNewCatalog
 import com.centurywar.screens.AccessibilityScreen
 import com.centurywar.screens.BattleScreen
@@ -31,6 +32,7 @@ import com.centurywar.screens.MissionsScreen
 import com.centurywar.screens.ReplayListScreen
 import com.centurywar.screens.ResearchScreen
 import com.centurywar.screens.SkirmishSetupScreen
+import com.centurywar.screens.WhatsNewScreen
 import com.centurywar.screens.ReplayScreen
 
 /** Rzeczy, których wątek gry potrzebuje od Activity (wątek UI). */
@@ -153,6 +155,23 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         val texts = LostBattle.notices(meta, result)
         showNotice(texts[0], Icons.CLOSE)
         if (texts.size > 1) showNotice(texts[1], if (result.dailyRestored) Icons.CHECK else Icons.MEDAL)
+    }
+
+    /** R10-07: zegar powitania po przerwie (testy podstawiają własny). */
+    internal var clock: () -> Long = { System.currentTimeMillis() }
+
+    /**
+     * R10-07: powitanie po przerwie. Wołane z [MenuScreen.update] po rozliczeniu bitwy
+     * utraconej przy aktualizacji (najpierw jej banery, potem powitanie) i nigdy przy ofercie
+     * wznowienia bitwy. Tani test dnia w każdej klatce; zapis profilu raz na dzień UTC.
+     */
+    fun checkWelcomeBack(nowMillis: Long = clock()) {
+        if (resumeOffer != null || lostBattle != null) return
+        val today = Daily.dayNumber(nowMillis)
+        if (today <= profile.lastPlayDay) return
+        if (!profile.claimWelcomeBack(today, WelcomeBack.MIN_GAP_DAYS, WelcomeBack.BONUS)) return
+        if (width > 1) celebrateReward(width * 0.5f, height * 0.6f, WelcomeBack.BONUS, Sound.MEDALS)
+        for (n in WelcomeBack.notices(profile, nowMillis, WhatsNewScreen.unread(this))) showNotice(n.text, n.icon)
     }
 
     /** Jedna operacja resetu na wątku gry: unieważnia też kolejkę snapshotów. */

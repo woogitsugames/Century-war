@@ -434,6 +434,8 @@ class MenuScreen(g: Game) : Screen(g) {
         if (SaveGuard.takeWarning()) g.showNotice(L["save154_problem"], Icons.CLOSE)
         // R10-01: bitwa przerwana aktualizacją gry (rozliczenie raz, potem baner).
         if (g.lostBattle != null) g.settleLostBattle()
+        // R10-07: powitanie po przerwie, zawsze po banerach R10-01.
+        g.checkWelcomeBack()
         missionBadgePoll -= dt
         if (missionBadgePoll <= 0f) {
             missionBadgePoll = 10f

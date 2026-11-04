@@ -106,7 +106,10 @@ object DailyReminders {
         createChannel(context, profile.lang)
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val cfg = Daily.config(Daily.dayNumber(now), Bonuses())
-        val text = DailyReminderTexts.body(cfg.modifiers, profile.lang)
+        // R10-07: konkretny cel gracza (misje, badanie, etap...); bez celu tekst domyślny.
+        val goal = DailyReminderGoal.text(java.io.File(context.filesDir, "profile.json"), profile.lang, now)
+        val text = DailyReminderTexts.shortBody(cfg.modifiers, profile.lang, goal)
+        val longText = DailyReminderTexts.longBody(cfg.modifiers, profile.lang, goal)
         val launch = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -117,7 +120,7 @@ object DailyReminders {
             .setSmallIcon(R.drawable.ic_daily_notification)
             .setContentTitle(DailyReminderTexts.title(profile.lang))
             .setContentText(text)
-            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setStyle(Notification.BigTextStyle().bigText(longText))
             .setContentIntent(contentIntent)
             .setCategory(Notification.CATEGORY_REMINDER)
             .setAutoCancel(true)

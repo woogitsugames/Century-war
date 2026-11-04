@@ -52,6 +52,52 @@ class ProfileTest {
         assertTrue(other.slowSpeedOption); assertTrue(other.slowSpeedManual); assertTrue(other.motionManual)
     }
 
+    /**
+     * R10-07: lastPlayDay i welcomeBackDay są opcjonalne. Stary profil bierze ostatnią wizytę
+     * z dnia widzianego przez misje; chmura i import nie cofają późniejszej wizyty ani premii.
+     */
+    @Test
+    fun welcomeBackFieldsMigrateAndCloudKeepsLaterDay() {
+        val source = Profile(tmpFile())
+        source.missionState.lastSeenDay = 20_400L
+        val old = JSONObject(source.toJson()).apply { remove("lastPlayDay"); remove("welcomeBackDay") }
+        val migrated = Profile(tmpFile())
+        migrated.fromJson(old.toString())
+        assertEquals(20_400L, migrated.lastPlayDay)
+        assertEquals(-1L, migrated.welcomeBackDay)
+        // Profil bez misji i bez pola: dzień nieznany (bez powitania, tylko zapis dnia).
+        val fresh = Profile(tmpFile())
+        fresh.fromJson(JSONObject(Profile(tmpFile()).toJson()).apply { remove("lastPlayDay") }.toString())
+        assertEquals(-1L, fresh.lastPlayDay)
+        // Uszkodzone wartości są odrzucane.
+        val bad = Profile(tmpFile())
+        bad.fromJson(JSONObject(old.toString()).put("lastPlayDay", -7L).put("welcomeBackDay", 9_999_999L).toString())
+        assertEquals(-1L, bad.lastPlayDay); assertEquals(-1L, bad.welcomeBackDay)
+
+        // Zapis lokalny i chmura przenoszą oba pola.
+        val file = tmpFile()
+        val p = Profile(file)
+        p.tutorialDone = true
+        assertFalse(p.claimWelcomeBack(20_400L, 3L, 30))
+        assertTrue(p.claimWelcomeBack(20_410L, 3L, 30))
+        val cloud = JSONObject(p.toCloudJson())
+        assertEquals(20_410L, cloud.getLong("lastPlayDay"))
+        assertEquals(20_410L, cloud.getLong("welcomeBackDay"))
+        val other = Profile(tmpFile())
+        other.fromJson(cloud.toString())
+        assertEquals(20_410L, other.lastPlayDay); assertEquals(20_410L, other.welcomeBackDay)
+
+        // Starszy zapis z chmury (sprzed premii) nie odtwarza przerwy.
+        val stale = JSONObject(cloud.toString()).put("lastPlayDay", 20_400L).put("welcomeBackDay", -1L)
+        p.fromJson(stale.toString())
+        assertEquals(20_410L, p.lastPlayDay); assertEquals(20_410L, p.welcomeBackDay)
+
+        // Plik na dysku: oba pola przetrwają load().
+        p.save(); p.awaitWrites(5_000L)
+        val reloaded = Profile(file).apply { load() }
+        assertEquals(20_410L, reloaded.lastPlayDay); assertEquals(20_410L, reloaded.welcomeBackDay)
+    }
+
     @Test
     fun campaignDifficultyUsesLegacyStarsAndClampsCorruptData() {
         val source = Profile(tmpFile())

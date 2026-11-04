@@ -22,4 +22,17 @@ object DailyReminderTexts {
             .joinToString(", ") { L.text(it.key, index) }
         return String.format(Locale.ROOT, L.text("notification_body", index), names)
     }
+
+    /**
+     * R10-07: krótki tekst z celem z „Następnego celu”, a bez celu dotychczasowy tekst
+     * o wyzwaniu dnia (bezpieczny tekst domyślny).
+     */
+    fun shortBody(modifiers: Set<Modifier>, lang: String, goal: String?): String =
+        if (goal.isNullOrBlank()) body(modifiers, lang)
+        else String.format(Locale.ROOT, L.text("rem193_goal", languageIndex(lang)), goal)
+
+    /** Rozwinięte powiadomienie: cel, a pod nim wyzwanie dnia. */
+    fun longBody(modifiers: Set<Modifier>, lang: String, goal: String?): String =
+        if (goal.isNullOrBlank()) body(modifiers, lang)
+        else shortBody(modifiers, lang, goal) + "\n" + body(modifiers, lang)
 }
