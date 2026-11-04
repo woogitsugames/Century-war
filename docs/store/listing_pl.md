@@ -29,7 +29,7 @@ ODKRYJ SWOJĄ STRATEGIĘ
 - Poziomy trudności kampanii, sztandary do odblokowania i wykres po bitwie.
 - Eksport i import profilu, ustawienia kolorów oraz układ leworęczny.
 - Samouczek, kodeks, 79 osiągnięć, misje dzienne i tygodniowe oraz lokalne rekordy.
-- Dostępność — palety barw przyjazne daltonistom i wysoki kontrast, większy tekst, mniej błysków i wstrząsów, czytnik ekranu w menu i ustawieniach.
+- Dostępność — palety barw przyjazne daltonistom i wysoki kontrast, większy tekst, tempo bitwy ×½, mniej błysków i wstrząsów, czytnik ekranu w menu i ustawieniach.
 - 10 języków, w tym polski i angielski.
 
 GRAJ RÓWNIEŻ BEZ INTERNETU
@@ -43,7 +43,7 @@ Bez reklam, zakupów w aplikacji i rozgrywki wieloosobowej.
 Zbuduj armię. Wybierz epokę. Utrzymaj front.
 
 ## Co nowego (wydanie testowe)
-Wersja testowa. Nowości: wódz (od 8. etapu) i stopnie wież, nagrana muzyka dla każdej epoki, nowe osiągnięcia i misje, krótsze pierwsze etapy kampanii (ok. 8 min), czytelniejsze wyniki bitwy i poprawki dla Galaxy Fold. Dostępność: palety barw, większy tekst, TalkBack w menu i ustawieniach (bitwa w przygotowaniu). Błędy zgłaszaj w: Ustawienia → O grze → Zgłoś problem.
+Wersja testowa. Nowości: wódz (od 8. etapu) i stopnie wież, nagrana muzyka każdej epoki, krótsze bitwy kampanii w etapach 2–18 (ok. 8–11 min), cele w oblężeniu bez końca, premia za powrót po przerwie, nowe osiągnięcia i misje, poprawki dla Galaxy Fold. Dostępność: palety dla daltonistów, wysoki kontrast, większy tekst, tempo bitwy ×½, czytnik ekranu w menu. Błędy zgłaszaj w: Ustawienia → O grze → Zgłoś problem.
 
 ## ASO — pięć propozycji fraz
 - strategia offline
@@ -54,7 +54,8 @@ Wersja testowa. Nowości: wódz (od 8. etapu) i stopnie wież, nagrana muzyka dl
 
 ## Kontrola przed publikacją
 - Limity Play: tytuł maks. 30 znaków, krótki opis maks. 80 znaków, pełny opis maks. 4000 znaków. „Co nowego” maks. 500 znaków na język (w plikach DE–TR sekcja `## What's new (test release)`).
-- Po scaleniu dnia 5 (TalkBack w bitwie) zmień w „Dostępności” i „Co nowego” zapis „czytnik ekranu w menu i ustawieniach” na pełną obsługę bitwy we wszystkich 10 plikach. Sekcje ASO i kontrolna nie należą do opisu publicznego.
+- Dostępność: wymieniamy tylko palety dla daltonistów, wysoki kontrast, większy tekst, mniej błysków i wstrząsów, tempo bitwy ×½ i czytnik ekranu w menu i ustawieniach. Nie obiecujemy gry dla niewidomych ani obsługi bitwy czytnikiem ekranu (decyzja właściciela 4.11; dotyczy wszystkich 10 plików). Sekcje ASO i kontrolna nie należą do opisu publicznego.
+- „Co nowego”: czasy bitew (ok. 8–11 min) dotyczą etapów 2–18; dla etapów 19+ nie podajemy liczb. Długość sprawdź skryptem po każdej zmianie (maks. 500 znaków na język).
 - Skontroluj liczbę epok, jednostek i etapów w finalnym AAB.
 - Powtórki są lokalne. Wyników sieciowych i synchronizacji Play Games nie obiecujemy: wymagają poprawnie skonfigurowanego wydania oraz usług.
 - Cotygodniowe oblężenie jest zakładką trybu wyzwań, nie osobnym trybem multiplayer.

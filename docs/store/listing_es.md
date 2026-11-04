@@ -18,7 +18,7 @@ Consulta repeticiones y el gráfico tras la batalla, desbloquea estandartes y gu
 
 Cada era tiene su propia música grabada: un tema tranquilo y otro de batalla que se funden con suavidad durante el combate. 79 logros y misiones diarias y semanales te dan siempre nuevos objetivos.
 
-Accesibilidad: paletas para daltonismo y alto contraste, texto más grande, menos destellos y sacudidas de pantalla, y compatibilidad con lector de pantalla en menús y ajustes.
+Accesibilidad: paletas para daltonismo y alto contraste, texto más grande, batallas a ×½, menos destellos y sacudidas de pantalla, y compatibilidad con lector de pantalla en menús y ajustes.
 
 ## What's new (test release)
-Versión de prueba. Novedades: comandante (desde la etapa 8) y niveles de torretas, música grabada para cada era, nuevos logros y misiones, primeras etapas de campaña más cortas (unos 8 min), resultados de batalla más claros y mejoras para Galaxy Fold. Accesibilidad: paletas de color, texto más grande, TalkBack en menús y ajustes (la batalla llegará pronto). Informa de errores en: Ajustes → Acerca del juego → Avisar de un fallo.
+Versión de prueba. Novedades: comandante (desde la etapa 8) y niveles de torretas, música grabada para cada era, batallas de campaña más cortas en las etapas 2–18 (unos 8–11 min), objetivos en el asedio sin fin, premio por volver tras una pausa, nuevos logros y misiones, mejoras para Galaxy Fold. Accesibilidad: paletas para daltonismo, alto contraste, texto más grande, batalla a ×½, lector de pantalla en menús. Informa de errores en: Ajustes → Acerca del juego → Avisar de un fallo.
