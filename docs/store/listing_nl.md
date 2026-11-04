@@ -18,7 +18,7 @@ Bekijk herhalingen en de grafiek na het gevecht, speel vaandels vrij en sla je p
 
 Elk tijdperk heeft eigen opgenomen muziek: een rustig thema en een gevechtsthema die tijdens het gevecht vloeiend in elkaar overgaan. 79 prestaties en dagelijkse en wekelijkse missies geven steeds nieuwe doelen.
 
-Toegankelijkheid: kleurenpaletten voor kleurenblindheid en hoog contrast, grotere tekst, minder flitsen en schermschudden, en ondersteuning voor schermlezers in menu’s en instellingen.
+Toegankelijkheid: kleurenpaletten voor kleurenblindheid en hoog contrast, grotere tekst, gevechtssnelheid ×½, minder flitsen en schermschudden, en ondersteuning voor schermlezers in menu’s en instellingen.
 
 ## What's new (test release)
-Testversie. Nieuw: commandant (vanaf niveau 8) en torenniveaus, opgenomen muziek voor elk tijdperk, nieuwe prestaties en missies, kortere eerste campagneniveaus (ca. 8 min), duidelijkere gevechtsresultaten en verbeteringen voor Galaxy Fold. Toegankelijkheid: kleurenpaletten, grotere tekst, TalkBack in menu’s en instellingen (gevecht volgt). Meld problemen via: Instellingen → Over het spel → Probleem melden.
+Testversie. Nieuw: commandant (vanaf niveau 8) en torenniveaus, opgenomen muziek voor elk tijdperk, kortere campagnegevechten in niveau 2–18 (ca. 8–11 min), doelen in de eindeloze belegering, terugkeerbonus na een pauze, nieuwe prestaties en missies, verbeteringen voor Galaxy Fold. Toegankelijkheid: paletten voor kleurenblindheid, hoog contrast, grotere tekst, gevechtssnelheid ×½, schermlezer in menu’s. Meld problemen via: Instellingen → Over het spel → Probleem melden.

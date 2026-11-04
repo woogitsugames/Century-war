@@ -29,7 +29,7 @@ CHOOSE YOUR STRATEGY
 - Campaign difficulty levels, unlockable banners and a post-battle chart.
 - Export or import your profile; adjust colour options and use a left-handed layout.
 - Tutorial, codex, 79 achievements, daily and weekly missions, and local records.
-- Accessibility — colour-blind-friendly palettes and high contrast, larger text, fewer flashes and less screen shake, screen reader support in menus and settings.
+- Accessibility — colour-blind-friendly palettes and high contrast, larger text, ×½ battle speed, fewer flashes and less screen shake, screen reader support in menus and settings.
 - 10 supported languages, including English and Polish.
 
 PLAY OFFLINE
@@ -43,7 +43,7 @@ No ads, in-app purchases or multiplayer.
 Build your army. Advance through the eras. Hold the line.
 
 ## What's new (test release)
-Test build. New: commander (from stage 8) and tower tiers, a recorded soundtrack for every era, new achievements and missions, shorter early campaign stages (about 8 min), clearer battle results and Galaxy Fold improvements. Accessibility: colour palettes, larger text, TalkBack in menus and settings (battle support coming). Report problems via Settings → About → Report a problem.
+Test build. New: commander (from stage 8) and tower tiers, recorded music for every era, shorter campaign battles in stages 2–18 (about 8–11 min), goals in Endless Siege, a welcome-back bonus after a break, new achievements and missions, Galaxy Fold improvements. Accessibility: colour-blind palettes, high contrast, larger text, ×½ battle speed, screen reader in menus. Report problems via Settings → About → Report a problem.
 
 ## ASO — five suggested search phrases
 - offline strategy
@@ -54,7 +54,8 @@ Test build. New: commander (from stage 8) and tower tiers, a recorded soundtrack
 
 ## Pre-release checklist
 - Google Play limits: title max. 30 characters, short description max. 80 characters, full description max. 4,000 characters. Release notes ("What's new") max. 500 characters per language.
-- After day 5 (TalkBack in battle) is merged, update the accessibility line and release notes in all 10 files. ASO candidates and this checklist are not part of the public listing.
+- Accessibility: list only colour-blind palettes, high contrast, larger text, fewer flashes and less shake, ×½ battle speed and screen reader support in menus and settings. Do not promise a game for blind players or screen reader support in battle (owner decision, 4 Nov; applies to all 10 files). ASO candidates and this checklist are not part of the public listing.
+- Release notes: battle times (about 8–11 min) apply to stages 2–18; give no numbers for stages 19+. Re-count the length with a script after every edit (max. 500 characters per language).
 - Verify era, unit and stage counts against the final AAB.
 - Replays are local. Do not advertise network rankings or Play Games cloud sync until the release is configured and verified.
 - Weekly Siege is a tab within the challenge screen, not multiplayer.

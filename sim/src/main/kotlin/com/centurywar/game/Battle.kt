@@ -296,9 +296,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /** Chroni przed ponownym rozliczeniem wyniku tej samej bitwy. */
     var achievementsRecorded = false
     val endless = cfg.mode == Mode.ENDLESS
-    /** Sekunda startu presji oblężniczej: [SIEGE_START] poza etapami 2–12 kampanii (Dzień 1, R11-02). */
+    /** Sekunda startu presji oblężniczej: [SIEGE_START] poza etapami 2–18 kampanii (Dzień 1, R11-02, etapy 13–18). */
     val siegeStart: Float = Campaign.siegeStart(cfg)
-    /** Przyrost presji na minutę: [SIEGE_RAMP] poza etapami 2–12 kampanii. */
+    /** Przyrost presji na minutę: [SIEGE_RAMP] poza etapami 2–18 kampanii. */
     val siegeRamp: Float = Campaign.siegeRamp(cfg)
     /** Część [Side.siegeDamageTaken] zwracana do gwiazdek ([stars]); R11-02: wyższa w etapach 8–18. */
     val siegeStarForgiveness: Float = Campaign.siegeStarForgiveness(cfg)

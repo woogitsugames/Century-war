@@ -18,7 +18,7 @@ Consultez les replays et le graphique après bataille, débloquez des bannières
 
 Chaque époque a sa propre musique enregistrée : un thème calme et un thème de combat qui s’enchaînent en douceur pendant la bataille. 79 succès et des missions quotidiennes et hebdomadaires offrent sans cesse de nouveaux objectifs.
 
-Accessibilité : palettes adaptées au daltonisme et contraste élevé, texte plus grand, moins de flashs et de secousses d’écran, et prise en charge du lecteur d’écran dans les menus et les paramètres.
+Accessibilité : palettes adaptées au daltonisme et contraste élevé, texte plus grand, bataille à ×½, moins de flashs et de secousses d’écran, et prise en charge du lecteur d’écran dans les menus et les paramètres.
 
 ## What's new (test release)
-Version de test. Nouveautés : commandant (dès l’étape 8) et niveaux des tourelles, musique enregistrée pour chaque époque, nouveaux succès et missions, premières étapes de campagne plus courtes (environ 8 min), résultats de bataille plus lisibles et améliorations pour Galaxy Fold. Accessibilité : palettes de couleurs, texte plus grand, TalkBack dans les menus et les paramètres (la bataille suivra). Signalez les problèmes : Paramètres → À propos → Signaler un bug.
+Version de test. Nouveautés : commandant (dès l’étape 8) et niveaux des tourelles, musique enregistrée par époque, batailles de campagne plus courtes aux étapes 2–18 (env. 8–11 min), objectifs dans le siège sans fin, bonus de retour après une pause, nouveaux succès et missions, Galaxy Fold amélioré. Accessibilité : palettes pour daltoniens, contraste élevé, texte plus grand, bataille à ×½, lecteur d’écran dans les menus. Signalez les problèmes : Paramètres → À propos → Signaler un bug.

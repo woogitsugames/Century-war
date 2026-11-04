@@ -18,7 +18,7 @@ Sieh dir Wiederholungen und das Diagramm nach dem Kampf an, schalte Banner frei 
 
 Jede Epoche hat eigene aufgenommene Musik: ein ruhiges und ein Kampfthema, die im Gefecht fließend ineinander übergehen. 79 Erfolge sowie tägliche und wöchentliche Missionen setzen immer neue Ziele.
 
-Barrierefreiheit: Farbpaletten für Farbsehschwächen und hoher Kontrast, größere Schrift, weniger Blitze und Bildschirmwackeln sowie Screenreader-Unterstützung in Menüs und Einstellungen.
+Barrierefreiheit: Farbpaletten für Farbsehschwächen und hoher Kontrast, größere Schrift, Kampftempo ×½, weniger Blitze und Bildschirmwackeln sowie Screenreader-Unterstützung in Menüs und Einstellungen.
 
 ## What's new (test release)
-Testversion. Neu: Kommandant (ab Stufe 8) und Turmstufen, aufgenommene Musik für jede Epoche, neue Erfolge und Missionen, kürzere erste Kampagnenstufen (ca. 8 Min.), übersichtlichere Ergebnisse nach dem Kampf und Verbesserungen für Galaxy Fold. Barrierefreiheit: Farbpaletten, größere Schrift, TalkBack in Menüs und Einstellungen (Kampf folgt). Fehler bitte melden: Einstellungen → Über das Spiel → Problem melden.
+Testversion. Neu: Kommandant (ab Stufe 8) und Turmstufen, aufgenommene Musik für jede Epoche, kürzere Kampagnenschlachten in Stufe 2–18 (ca. 8–11 Min.), Ziele in der endlosen Belagerung, Rückkehrbonus nach einer Pause, neue Erfolge und Missionen, Verbesserungen für Galaxy Fold. Barrierefreiheit: Farbpaletten für Farbsehschwächen, hoher Kontrast, größere Schrift, Kampftempo ×½, Screenreader in Menüs. Fehler bitte melden: Einstellungen → Über das Spiel → Problem melden.
