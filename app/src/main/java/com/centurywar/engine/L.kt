@@ -193,8 +193,19 @@ object L {
         putAll(part198())
         putAll(part196())
         putAll(part200())
+        putAll(part203())
         }
     }
+
+    /**
+     * R12 (pozycja 5): wersje testowe przed premierą — dopisek przy osiągnięciach nie do zdobycia
+     * i jedna linia w wyzwaniu dnia/tygodnia ([com.centurywar.meta.PreReleaseRules]).
+     */
+    private fun part203(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "t203_ach_release" to t("Dostępne od premiery", "Available from launch", "Ab dem Start verfügbar", "Disponible desde el lanzamiento", "Disponible dès la sortie", "Disponibile dal lancio", "Disponível a partir do lançamento", "Доступно з прем'єри", "Beschikbaar vanaf de lancering", "Çıkışla birlikte açılır"),
+        "t203_rules_note" to t("Wersja testowa: pełne zasady wyzwań od premiery", "Test version: full challenge rules from launch", "Testversion: volle Regeln der Herausforderungen ab dem Start", "Versión de prueba: reglas completas de los desafíos desde el lanzamiento", "Version de test : règles complètes des défis dès la sortie", "Versione di prova: regole complete delle sfide dal lancio", "Versão de teste: regras completas dos desafios a partir do lançamento", "Тестова версія: повні правила викликів з прем'єри", "Testversie: volledige uitdagingsregels vanaf de lancering", "Test sürümü: tam meydan okuma kuralları çıkışla birlikte"),
+        "t203_rules_note_short" to t("Pełne zasady od premiery", "Full rules from launch", "Volle Regeln ab dem Start", "Reglas completas desde el lanzamiento", "Règles complètes dès la sortie", "Regole complete dal lancio", "Regras completas no lançamento", "Повні правила з прем'єри", "Volledige regels vanaf lancering", "Tam kurallar çıkışla birlikte"),
+    )
 
     /** R11 (pozycja 7): jednorazowa ankieta testera w menu (tylko wersje testowe). */
     private fun part200(): Array<Pair<String, Array<out String>>> = arrayOf(
