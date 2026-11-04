@@ -141,6 +141,8 @@ class BattleScreen(
     internal var tipText = ""
     /** R2-01: cel z wiersza wskazówki (dotknięcie prowadzi do ekranu celu); NONE = brak. */
     internal var resultGoalKind = com.centurywar.meta.NextGoalKind.NONE
+    /** R10-02: argument celu (indeks etapu dla HARD_STAGE). */
+    internal var resultGoalArg = -1
     /** R2-01: wiersz wskazówki narysowany w ostatniej klatce (cel dotyku nad nim). */
     internal var resultGoalDrawn = false
     /** R2-01/R2-02: opis TalkBack celu dotyku (tekst celu albo propozycji pomocy). */
@@ -1022,6 +1024,7 @@ class BattleScreen(
         com.centurywar.meta.NextGoalKind.STAGE -> CampaignScreen(g)
         com.centurywar.meta.NextGoalKind.WEEKLY_TIER -> ModeScreen(g, Mode.DAILY, true)
         com.centurywar.meta.NextGoalKind.NONE -> null
+        com.centurywar.meta.NextGoalKind.HARD_STAGE -> CampaignScreen(g, resultGoalArg, suggestHard = true)
     }
 
     /**

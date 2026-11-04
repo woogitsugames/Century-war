@@ -10,7 +10,8 @@ import com.centurywar.game.Weather
 import com.centurywar.game.Weekly
 
 /** R2-01: rodzaj „następnego celu” (wyniki bitwy i menu). */
-internal enum class NextGoalKind { MISSIONS, RESEARCH, STAGE, WEEKLY_TIER, NONE }
+// R10-02: HARD_STAGE dopisany na końcu (ikony celu są indeksowane przez ordinal).
+internal enum class NextGoalKind { MISSIONS, RESEARCH, STAGE, WEEKLY_TIER, NONE, HARD_STAGE }
 
 /** Cel z gotowym tekstem; [arg] to liczba misji, indeks badania, etapu albo progu (−1 = brak). */
 internal class NextGoal(val kind: NextGoalKind, val text: String, val arg: Int = -1)
@@ -18,7 +19,8 @@ internal class NextGoal(val kind: NextGoalKind, val text: String, val arg: Int =
 /**
  * R2-01: jeden najbliższy, konkretny cel gracza. Czysta logika bez Androida; wołana przy
  * rozliczeniu bitwy, przy layout(), po zmianie języka i co 10 s w menu, nigdy w każdej klatce.
- * Kolejność: odbiór misji → badanie, na które stać → następny etap → próg Oblężenia tygodnia.
+ * Kolejność: odbiór misji → badanie, na które stać → następny etap → próg Oblężenia tygodnia
+ * → (R10-02, po komplecie gwiazdek) pierwszy etap bez korony Trudnego.
  */
 internal object NextGoals {
     val NONE = NextGoal(NextGoalKind.NONE, "")
@@ -51,6 +53,12 @@ internal object NextGoals {
                 if (mask and (1 shl i) != 0) continue
                 return NextGoal(NextGoalKind.WEEKLY_TIER,
                     L.f("goal179_weekly", Weekly.threshold(i), L[TIER_KEYS[i]]), i)
+            }
+        }
+        if (campaignDone) {
+            for (i in p.stars.indices) {
+                if (p.hardWon(i)) continue
+                return NextGoal(NextGoalKind.HARD_STAGE, L.f("hard189_goal", i + 1, stageNovelty(i)), i)
             }
         }
         return NONE

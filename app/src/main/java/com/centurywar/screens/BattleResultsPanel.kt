@@ -59,7 +59,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         /** Noc 8: najmniejszy podpis przycisku wyników. */
         const val MIN_LABEL_SP = 10f
         /** R2-01: ikony celu według [NextGoalKind.ordinal]. */
-        val GOAL_ICONS = intArrayOf(Icons.MISSIONS, Icons.FLASK, Icons.MAP, Icons.TOWER, Icons.BOLT)
+        val GOAL_ICONS = intArrayOf(Icons.MISSIONS, Icons.FLASK, Icons.MAP, Icons.TOWER, Icons.BOLT, Icons.CROWN)
     }
 
     /**
@@ -173,6 +173,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             tipText = if (tipKey.isEmpty()) "" else L["why_lost"] + ": " + L[tipKey]
         }
         resultGoalKind = NextGoalKind.NONE
+        resultGoalArg = -1
         resultGoalText = ""
         // R2-02: od 2. porażki z rzędu na etapie propozycja pomocy przed powodem porażki:
         // najpierw badanie, na które stać (decyzja 3.11), dopiero potem poziom Łatwy.
@@ -206,6 +207,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
                 if (cfg.mode == Mode.ENDLESS && cfg.weekly < 0L) null else cfg.mode)
             tipText = goal.text
             resultGoalKind = goal.kind
+            resultGoalArg = goal.arg
             resultGoalText = goal.text
         }
         prepareResultTipLines()

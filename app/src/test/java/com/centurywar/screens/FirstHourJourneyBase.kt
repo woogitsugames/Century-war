@@ -555,6 +555,7 @@ abstract class FirstHourJourneyBase {
             com.centurywar.meta.NextGoalKind.STAGE -> CampaignScreen::class.java
             com.centurywar.meta.NextGoalKind.WEEKLY_TIER -> ModeScreen::class.java
             com.centurywar.meta.NextGoalKind.NONE -> null
+            com.centurywar.meta.NextGoalKind.HARD_STAGE -> CampaignScreen::class.java
         }
         if (g.current?.javaClass != expected) problem("$where: cel $kind otwiera ${name(g.current)}")
         dwell(g, "$where/ekran celu", 1f)

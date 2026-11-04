@@ -34,6 +34,8 @@ class CampaignScreen(
     private val focusStage: Int = -1,
     /** R2-02: wyróżnij Łatwy w oknie [focusStage] (propozycja po porażkach; wybór należy do gracza). */
     internal val suggestEasy: Boolean = false,
+    /** R10-02: obwódka wokół Trudnego w oknie [focusStage] („Następny cel” po kampanii). */
+    internal val suggestHard: Boolean = false,
 ) : Screen(g) {
     override val crashName get() = "CampaignScreen"
     /** Tura 9: baner powiadomień nie przykrywa tytułu planszy nowej epoki (okno modalne). */
@@ -97,6 +99,13 @@ class CampaignScreen(
     private val eraNumbers = Array(Defs.ERA_COUNT) { (it + 1).toString() }
     private val stageNumbers = Array(Campaign.stages.size) { (it + 1).toString() }
     private val starLabels = Array(13) { it.toString() + "/12" }
+    /** R10-02: licznik koron Trudnego w nagłówku epoki. */
+    private val crownLabels = Array(5) { it.toString() + "/4" }
+    private val tileA11y = arrayOfNulls<String>(Campaign.stages.size)
+    private val tileA11yBase = arrayOfNulls<String>(Campaign.stages.size)
+    private var hardLine = ""
+    private var hardLineWon = false
+    private var hardLineKey = -1
     private var infoIndex = -1
     private var infoLanguage = -1
     private var infoTitle = ""
@@ -124,6 +133,8 @@ class CampaignScreen(
         for (i in difficultyButtons.indices)
             difficultyButtons[i].label = L[CampaignDifficulty.entries[i].key]
         eraIntro?.onLanguageChanged()
+        tileA11y.fill(null)
+        hardLineKey = -1
     }
 
     /** Wysokość zarezerwowana na nagłówek epoki na początku regionu (tylko w pionie). */
@@ -141,6 +152,37 @@ class CampaignScreen(
         val available = if (portraitMap) viewportW - 110 * dp else regionSpan - 118 * dp
         val tw = ui.measure(name, ui.fit(name, 17f, available.coerceAtLeast(75 * dp)), true)
         out.set(x + 11 * dp, y + 7 * dp, x + 68 * dp + max(tw, 60 * dp), y + 53 * dp)
+        if (showCrowns(era)) {
+            crownCounter(era, x, y, tmp)
+            out.union(tmp)
+        }
+        return out
+    }
+
+    /** R10-02: licznik koron w nagłówku, gdy epoka ma koronę albo kampania ma komplet gwiazdek. */
+    internal fun showCrowns(era: Int): Boolean {
+        val p = g.profile
+        if (p.hardWonInEra(era) > 0) return true
+        for (s in p.stars) if (s <= 0) return false
+        return true
+    }
+
+    /**
+     * R10-02: prostokąt korony i „X/4” w nagłówku epoki: obok gwiazdek, a gdy wiersz się nie
+     * mieści w regionie (wąski ekran w pionie), w drugim wierszu pod gwiazdkami.
+     */
+    internal fun crownCounter(era: Int, x: Float, y: Float, out: RectF): RectF {
+        val ox = x + 34 * dp
+        val oy = y + 30 * dp
+        var earned = 0
+        for (i in era * 4 until era * 4 + 4) earned += g.profile.stars[i]
+        val starsRight = ox + 56 * dp + ui.measure(starLabels[earned.coerceIn(0, 12)], 13f, true)
+        val label = crownLabels[g.profile.hardWonInEra(era).coerceIn(0, 4)]
+        val width = 18 * dp + ui.measure(label, 13f, true)
+        val limit = x + (if (portraitMap) viewportW else regionSpan) - 8 * dp
+        val left = starsRight + 12 * dp
+        if (left + width <= limit) out.set(left, oy + 8 * dp, left + width, oy + 24 * dp)
+        else out.set(ox + 36 * dp, oy + 26 * dp, ox + 36 * dp + width, oy + 42 * dp)
         return out
     }
 
@@ -192,7 +234,8 @@ class CampaignScreen(
 
         if (!laidOut) {
             // Wjazd z sąsiedniego fragmentu szlaku: bez długiego przelotu przez 36 etapów.
-            val last = g.profile.unlockedStage().coerceIn(0, tiles.lastIndex)
+            val last = (if (focusStage in tiles.indices) focusStage else g.profile.unlockedStage())
+                .coerceIn(0, tiles.lastIndex)
             val position = progressOf(last / 4, last % 4)
             scrollTarget = (position - visibleSpan * 0.53f).coerceIn(0f, maxScroll)
             scroll = (scrollTarget - visibleSpan * 0.72f).coerceAtLeast(0f)
@@ -399,6 +442,14 @@ class CampaignScreen(
         Icons.draw(c, Icons.STAR, ox + 44 * dp, oy + 16 * dp, 16 * dp, dp = dp)
         ui.textO(c, starLabels[earned.coerceIn(0, 12)], ox + 56 * dp, oy + 21 * dp,
             13f, if (earned == 12) Ui.GOLD else Ui.TEXT)
+        if (showCrowns(era)) {
+            val r = crownCounter(era, x, y, tmp)
+            val crowns = g.profile.hardWonInEra(era).coerceIn(0, 4)
+            Icons.draw(c, Icons.CROWN, r.left + 8 * dp, r.centerY(), 16 * dp,
+                alpha = if (crowns > 0) 255 else 140, dp = dp)
+            ui.textO(c, crownLabels[crowns], r.left + 18 * dp, r.bottom - 3 * dp,
+                13f, if (crowns == 4) Ui.GOLD else Ui.TEXT)
+        }
     }
 
     private fun drawNode(c: Canvas, t: Button, unlocked: Int) {
@@ -455,6 +506,25 @@ class CampaignScreen(
         }
         if (!locked) ui.stars(c, x, y + r + 5 * dp, r * 0.58f,
             g.profile.stars[i], 3, 0.95f)
+        // R10-02: korona Trudnego w wolnym prawym dolnym rogu węzła.
+        if (g.profile.hardWon(i)) {
+            val kx = x + r * CROWN_DX
+            val ky = y + r * CROWN_DY
+            fill.color = Ui.OUTLINE; c.drawCircle(kx, ky, 12 * dp, fill)
+            fill.color = CROWN_BG; c.drawCircle(kx, ky, 10 * dp, fill)
+            Icons.draw(c, Icons.CROWN, kx, ky, 16 * dp, dp = dp)
+        }
+    }
+
+    /** R10-02: środek korony węzła [i] na ekranie (do testów nachodzenia). */
+    internal fun crownCenter(i: Int, out: RectF): RectF {
+        val t = tiles[i]
+        val x = t.r.centerX()
+        val y = t.r.top + nodeR * (if (i % 4 == 3) 1.12f else 1f) * 1.42f
+        val r = nodeR * if (i % 4 == 3) 1.12f else 1f
+        out.set(x + r * CROWN_DX - 12 * dp, y + r * CROWN_DY - 12 * dp,
+            x + r * CROWN_DX + 12 * dp, y + r * CROWN_DY + 12 * dp)
+        return out
     }
 
     /** R2-05: obrazy epok odbudują się przy najbliższym render(). */
@@ -626,7 +696,31 @@ class CampaignScreen(
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
         // gwiazdki
-        ui.stars(c, info.centerX(), y + 4 * dp, 30 * dp, g.profile.stars[s.index], 3, 1.05f)
+        val line = hardInfoLine(s)
+        if (line.isNotEmpty() && row < 28 * dp) {
+            // R10-02: niski panel (720p): korona i napis w jednym wierszu z gwiazdkami.
+            val starSize = 26 * dp
+            val starsW = starSize * 1.05f * 2f + starSize
+            val textMax = tw - starsW - 30 * dp
+            val sz = ui.fit(line, 13f, textMax, 11f)
+            val total = starsW + 30 * dp + ui.measure(line, sz, true)
+            val left = info.centerX() - total / 2f
+            ui.stars(c, left + starsW / 2f, y + 4 * dp, starSize, g.profile.stars[s.index], 3, 1.05f)
+            hardInfoRect.set(left + starsW + 8 * dp, y - 6 * dp, left + total, y + 14 * dp)
+            drawHardLine(c, line, hardInfoRect.left, y + 4 * dp, sz)
+        } else {
+            ui.stars(c, info.centerX(), y + 4 * dp, 30 * dp, g.profile.stars[s.index], 3, 1.05f)
+            if (line.isNotEmpty()) {
+                y += 30 * dp
+                val sz = ui.fit(line, 13f, tw - 24 * dp, 11f)
+                val total = 22 * dp + ui.measure(line, sz, true)
+                val left = info.centerX() - total / 2f
+                hardInfoRect.set(left, y - 6 * dp, left + total, y + 14 * dp)
+                drawHardLine(c, line, left, y + 4 * dp, sz)
+                y -= 8 * dp
+            } else hardInfoRect.setEmpty()
+        }
+        if (line.isEmpty()) hardInfoRect.setEmpty()
         y += 34 * dp
         val isz = 20 * dp
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
@@ -653,6 +747,7 @@ class CampaignScreen(
             12f, Ui.GOLD)
         for (b in difficultyButtons) ui.button(c, b, 13f)
         drawEasySuggestion(c)
+        drawHardSuggestion(c)
         ui.button(c, start, 18f)
         ui.closeButton(c, close)
     }
@@ -665,6 +760,47 @@ class CampaignScreen(
     private fun drawEasySuggestion(c: Canvas) {
         if (!easySuggested) return
         val r = difficultyButtons[0].r
+        val pulse = 0.5f + 0.5f * sin(time * 4f)
+        pathPaint.strokeWidth = 3 * dp
+        pathPaint.color = Color.argb((150 + 105 * pulse).toInt(), 255, 214, 90)
+        tmp.set(r.left - 3 * dp, r.top - 3 * dp, r.right + 3 * dp, r.bottom + 3 * dp)
+        c.drawRoundRect(tmp, 12 * dp, 12 * dp, pathPaint)
+    }
+
+    /** R10-02: obszar wiersza korony w panelu etapu (pusty = brak wiersza); do testów. */
+    internal val hardInfoRect = RectF()
+
+    /** Napis wiersza korony; przeliczany tylko po zmianie etapu, języka, poziomu albo korony. */
+    private fun hardInfoLine(s: Stage): String {
+        val won = g.profile.hardWon(s.index)
+        val hard = g.profile.campaignDifficulty == CampaignDifficulty.HARD
+        val key = (s.index shl 8) or (L.lang shl 2) or (if (won) 2 else 0) or (if (hard) 1 else 0)
+        if (key != hardLineKey) {
+            hardLineKey = key
+            hardLineWon = won
+            hardLine = when {
+                won -> L["hard189_won"]
+                hard -> L["hard189_todo"]
+                else -> ""
+            }
+        }
+        return hardLine
+    }
+
+    private fun drawHardLine(c: Canvas, line: String, left: Float, cy: Float, size: Float) {
+        Icons.draw(c, Icons.CROWN, left + 9 * dp, cy, 18 * dp, alpha = if (hardLineWon) 255 else 140, dp = dp)
+        ui.textO(c, line, left + 22 * dp, cy + size * dp * ui.textScale * 0.36f, size,
+            if (hardLineWon) Ui.GOLD else Ui.DIM)
+    }
+
+    /** R10-02: obwódka wokół Trudnego, gdy okno otworzył cel „korona na etapie”. */
+    internal val hardSuggested: Boolean
+        get() = suggestHard && selected?.index == focusStage &&
+            g.profile.campaignDifficulty != CampaignDifficulty.HARD
+
+    private fun drawHardSuggestion(c: Canvas) {
+        if (!hardSuggested) return
+        val r = difficultyButtons[2].r
         val pulse = 0.5f + 0.5f * sin(time * 4f)
         pathPaint.strokeWidth = 3 * dp
         pathPaint.color = Color.argb((150 + 105 * pulse).toInt(), 255, 214, 90)
@@ -721,8 +857,20 @@ class CampaignScreen(
     }
 
     /** R2-02: ✕ okna etapu nie ma podpisu; TalkBack czyta „Zamknij okno etapu”. */
-    override fun accessibilityLabel(b: Button): String =
-        if (b === close) L["help180_close"] else super.accessibilityLabel(b)
+    override fun accessibilityLabel(b: Button): String {
+        if (b === close) return L["help180_close"]
+        val base = super.accessibilityLabel(b)
+        val stage = b.tag as? Stage ?: return base
+        val i = stage.index
+        if (!g.profile.hardWon(i)) return base
+        // R10-02: napis z koroną budujemy raz, przy zmianie podstawy (język, stan przycisku).
+        if (tileA11yBase[i] != base || tileA11y[i] == null) {
+            tileA11yBase[i] = base
+            val crown = L["hard189_a11y"]
+            tileA11y[i] = if (base.isBlank()) crown else "$base, $crown"
+        }
+        return tileA11y[i]!!
+    }
 
     /** Tura 9: ostatni komunikat po dotknięciu zablokowanego etapu (do testów). */
     internal var lastNotice = ""
@@ -749,5 +897,9 @@ class CampaignScreen(
     private companion object {
         /** Pas nagłówka epoki w pionie: medalion (7–53 dp) i gwiazdki, plus oddech. */
         const val HEADING_DP = 58f
+        /** R10-02: korona węzła w prawym dolnym rogu (wolnym od pogody, flagi i błyskawicy). */
+        const val CROWN_DX = 0.94f
+        const val CROWN_DY = 0.68f
+        val CROWN_BG = Color.rgb(176, 124, 36)
     }
 }

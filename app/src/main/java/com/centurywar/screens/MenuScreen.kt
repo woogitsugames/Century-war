@@ -45,6 +45,8 @@ class MenuScreen(g: Game) : Screen(g) {
     /** R2-01: jedna linia „następnego celu” pod kaflami (po samouczku, gdy jest miejsce). */
     internal val goalBtn = btn(GOAL).also { it.visible = false }
     internal var goalKind = NextGoalKind.NONE
+    /** R10-02: argument celu (indeks etapu dla HARD_STAGE). */
+    internal var goalArg = -1
         private set
     internal var goalText = ""
         private set
@@ -258,6 +260,7 @@ class MenuScreen(g: Game) : Screen(g) {
         if (size * ui.textScale < GOAL_MIN_SP) return
         goalText = goal.text
         goalKind = goal.kind
+        goalArg = goal.arg
         goalSize = size
         b.label = ""
         b.set(missions.r.left, top, bw, bh)
@@ -446,12 +449,17 @@ class MenuScreen(g: Game) : Screen(g) {
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
         // Podpisy budujemy tylko po zmianie wartości (bez nowych Stringów w każdej klatce).
-        val key = (pr.medals.toLong() shl 32) xor (pr.totalStars().toLong() shl 20) xor pr.bestWave.toLong() xor (L.lang.toLong() shl 56)
+        val key = (pr.medals.toLong() shl 32) xor (pr.totalStars().toLong() shl 20) xor pr.bestWave.toLong() xor (L.lang.toLong() shl 56) xor
+            (pr.hardStagesCleared().toLong() shl 44)
         if (key != subKey || research.sub.isEmpty()) {
             subKey = key
             research.sub = L.plural("medals_n", pr.medals.toLong())
             campaign.sub = if (firstTutorialReady()) L["first_goal"] else
                 "${pr.totalStars()}/${pr.stars.size * 3}"
+            // R10-02: po komplecie gwiazdek drugi licznik: korony Trudnego.
+            val crowns = !firstTutorialReady() && pr.stars.isNotEmpty() && pr.stars.all { it > 0 }
+            campaign.sub2 = if (crowns) "${pr.hardStagesCleared()}/${pr.stars.size}" else ""
+            campaign.subIcon2 = if (crowns) Icons.CROWN else -1
             endless.sub = if (pr.bestWave > 0) "${L["best"]}: ${pr.bestWave}" else ""
         }
     }
@@ -641,6 +649,9 @@ class MenuScreen(g: Game) : Screen(g) {
         codex -> L["codex"]
         whatsNew -> L["menu175_whats_new_desc"]
         goalBtn -> goalText
+        // R10-02: TalkBack czyta też drugi licznik kafla Kampanii („Korony 5/36”).
+        campaign -> if (b.sub2.isEmpty()) super.accessibilityLabel(b)
+            else super.accessibilityLabel(b) + ", " + L["hard189_crowns"] + " " + b.sub2
         else -> super.accessibilityLabel(b)
     }
 
@@ -683,6 +694,7 @@ class MenuScreen(g: Game) : Screen(g) {
                 NextGoalKind.STAGE -> g.push(CampaignScreen(g))
                 NextGoalKind.WEEKLY_TIER -> g.push(ModeScreen(g, Mode.DAILY, true))
                 NextGoalKind.NONE -> Unit
+                NextGoalKind.HARD_STAGE -> g.push(CampaignScreen(g, goalArg, suggestHard = true))
             }
         }
     }

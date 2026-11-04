@@ -31,6 +31,9 @@ class Button(val id: Int) {
     var iconTint = 0
     /** Mała ikona przed podpisem [sub] (np. moneta przy koszcie, gwiazdka). */
     var subIcon = -1
+    /** R10-02: drugi podpis z ikoną po [sub] (np. „gwiazdki · korony”); −1/pusty = brak. */
+    var subIcon2 = -1
+    var sub2 = ""
     /** Kolor podpisu [sub] (0 = złoty). */
     var subColor = 0
     /** Tekst opisu przytrzymania (może zostać ustawiony dopiero przy otwieraniu dymka). */
@@ -106,6 +109,8 @@ class Ui {
         val BTN_HI = Color.rgb(226, 162, 44)
         /** Odległość złotej lamówki od krawędzi panelu (6,5 + 1,4 + 2,5 dp). */
         const val PANEL_TRIM_INSET = 10.4f
+        /** R10-02: odstęp między [Button.sub] a drugim podpisem [Button.sub2]. */
+        const val SUB2_GAP_DP = 9f
         /** Odstęp przycisków od lamówki (cień przycisku sięga 3,5 dp poniżej). */
         const val PANEL_BUTTON_MARGIN = 12f
         val BTN_GREEN: Int get() = Palette.active.buttonGood
@@ -741,18 +746,26 @@ class Ui {
     internal fun subTextSize(b: Button, sizeDp: Float, maxW: Float): Float {
         if (maxW <= 0f || b.sub.isEmpty()) return sizeDp
         val icon = b.subIcon >= 0
-        val gap = if (icon) 3 * dp else 0f
+        val second = b.sub2.isNotEmpty()
+        val gap = (if (icon) 3 * dp else 0f) + (if (second) SUB2_GAP_DP * dp + 3 * dp else 0f)
         val room = (maxW - gap).coerceAtLeast(1f)
-        val full = measure(b.sub, sizeDp, true) + (if (icon) sizeDp * dp * 1.25f else 0f)
+        val full = subWidth(b, sizeDp)
         if (full <= room) return sizeDp
         var fitted = sizeDp * room / full
         // Dopasowujemy wspólnie cyfrę i monetę, bez minimalnego progu psującego wąski HUD.
         var tries = 0
-        while (tries++ < 6 &&
-            measure(b.sub, fitted, true) + (if (icon) fitted * dp * 1.25f else 0f) > room) {
+        while (tries++ < 6 && subWidth(b, fitted) > room) {
             fitted *= 0.97f
         }
         return fitted
+    }
+
+    /** Szerokość podpisów i ikon bez odstępów (stałych w dp). */
+    private fun subWidth(b: Button, sizeDp: Float): Float {
+        var full = measure(b.sub, sizeDp, true) + (if (b.subIcon >= 0) sizeDp * dp * 1.25f else 0f)
+        if (b.sub2.isNotEmpty())
+            full += measure(b.sub2, sizeDp, true) + (if (b.subIcon2 >= 0) sizeDp * dp * 1.25f else 0f)
+        return full
     }
 
     /** Podpis z opcjonalną ikoną (wyśrodkowany albo od lewej). */
@@ -763,13 +776,24 @@ class Ui {
         val isz = sz * dp * 1.25f
         val tw = if (b.sub.isEmpty()) 0f else measure(b.sub, sz, true)
         val gap = if (hasIcon && tw > 0f) 3 * dp else 0f
-        val total = (if (hasIcon) isz else 0f) + gap + tw
+        val second = b.sub2.isNotEmpty() && tw > 0f
+        val hasIcon2 = second && b.subIcon2 >= 0
+        val tw2 = if (second) measure(b.sub2, sz, true) else 0f
+        val total = (if (hasIcon) isz else 0f) + gap + tw +
+            (if (second) SUB2_GAP_DP * dp + (if (hasIcon2) isz + 3 * dp else 0f) + tw2 else 0f)
         var xx = if (left) x else x - total / 2
         if (hasIcon) {
             Icons.draw(c, b.subIcon, xx + isz / 2, baseY - sz * dp * 0.36f, isz, dp = dp)
             xx += isz + gap
         }
         if (tw > 0f) textO(c, b.sub, xx, baseY, sz, color)
+        if (!second) return
+        xx += tw + SUB2_GAP_DP * dp
+        if (hasIcon2) {
+            Icons.draw(c, b.subIcon2, xx + isz / 2, baseY - sz * dp * 0.36f, isz, dp = dp)
+            xx += isz + 3 * dp
+        }
+        textO(c, b.sub2, xx, baseY, sz, color)
     }
 
     /** Mała plakietka w rogu przycisku (np. poziom Zbrojowni). */

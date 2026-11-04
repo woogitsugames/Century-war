@@ -159,6 +159,16 @@ class Profile(private val file: File) {
 
     fun normalStarTotal(): Int = normalStars.sum()
     fun hardStagesCleared(): Int = java.lang.Long.bitCount(hardStageWins)
+    /** R10-02: czy etap [index] wygrano na Trudnym (korona na mapie). */
+    fun hardWon(index: Int): Boolean =
+        index in stars.indices && index < 63 && (hardStageWins shr index) and 1L != 0L
+    /** R10-02: korony Trudnego w epoce [era] (0–4). */
+    fun hardWonInEra(era: Int): Int {
+        if (era < 0) return 0
+        var n = 0
+        for (i in era * 4 until era * 4 + 4) if (hardWon(i)) n++
+        return n
+    }
     fun recordHardVictory(index: Int) {
         if (index in stars.indices && index < 63) hardStageWins = hardStageWins or (1L shl index)
     }
