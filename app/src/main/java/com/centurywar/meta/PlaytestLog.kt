@@ -1,5 +1,6 @@
 package com.centurywar.meta
 
+import com.centurywar.game.Campaign
 import com.centurywar.game.GameIoCounter
 import com.centurywar.game.SaveGuard
 import org.json.JSONArray
@@ -14,6 +15,10 @@ import java.util.concurrent.TimeUnit
  * odwiedzone ekrany i wydajność ostatnich 5 sesji. Plik nie należy do profilu, kopii Androida
  * ani Saved Games i nigdy nie jest wysyłany sam: trafia tylko do „Raportu dla testera”, który
  * gracz udostępnia ręcznie.
+ *
+ * D45 (R13 TOP 5 poz. 2): lejek kampanii, czyli dla każdego etapu próby, wygrane, kapitulacje,
+ * łączny czas bitew i liczba bitew z przywołanym dowódcą. Pole `stages` jest opcjonalne: starszy
+ * dziennik wczytuje się bez zmiany [VERSION], a uszkodzony lejek zeruje tylko lejek.
  *
  * Mutacje wykonuje wątek gry (albo UI w onPause, gdy pętla stoi); bez alokacji poza zapisem.
  * Zapis pliku robi osobny wątek I/O. Uszkodzony plik oznacza start od zera, bez ostrzeżenia.
@@ -53,6 +58,8 @@ class PlaytestLog(private val file: File) {
         /** Odpowiedzi „co najbardziej przeszkadza” do raportu (po angielsku, czyta je zespół). */
         val SURVEY_ISSUES = arrayOf("too hard", "battles too long", "unclear rules", "nothing, it's good")
         private const val MAX_COUNT = 10_000_000
+        /** Liczba etapów kampanii w lejku (stała tablica, bez alokacji przy rozliczeniu). */
+        val STAGE_COUNT = Campaign.stages.size
     }
 
     var firstDay = -1L
@@ -92,6 +99,13 @@ class PlaytestLog(private val file: File) {
     /** Dzień UTC odpowiedzi albo pominięcia; −1 = brak. */
     var surveyDay = -1L
         private set
+
+    // Lejek kampanii: indeks = etap (0 = etap 1). Czas w sekundach bitwy.
+    private val stageTries = IntArray(STAGE_COUNT)
+    private val stageWins = IntArray(STAGE_COUNT)
+    private val stageSurrenders = IntArray(STAGE_COUNT)
+    private val stageSeconds = IntArray(STAGE_COUNT)
+    private val stageCommander = IntArray(STAGE_COUNT)
 
     // Wydajność 5 ostatnich sesji; [perfHead] to bieżąca sesja.
     private val perfReduction = IntArray(PERF_SESSIONS)
@@ -138,7 +152,12 @@ class PlaytestLog(private val file: File) {
         surveyState = SURVEY_NONE; surveyRating = 0; surveyIssue = -1; surveyDay = -1L
         perfReduction.fill(0); perfP95Tenths.fill(0); perfDropped.fill(0L); perfThermal.fill(0)
         perfHead = 0; perfCount = 0
+        resetStages()
         fresh = true
+    }
+
+    private fun resetStages() {
+        stageTries.fill(0); stageWins.fill(0); stageSurrenders.fill(0); stageSeconds.fill(0); stageCommander.fill(0)
     }
 
     private fun parse(o: JSONObject) {
@@ -174,7 +193,33 @@ class PlaytestLog(private val file: File) {
         }
         perfCount = n
         perfHead = if (n == 0) 0 else n - 1
+        parseStages(o)
     }
+
+    /**
+     * Lejek jest opcjonalny (dziennik sprzed d45 go nie ma). Uszkodzony lejek nie unieważnia
+     * reszty dziennika: zerujemy tylko lejek. Wpis: `[etap, próby, wygrane, kapitulacje, sekundy, dowódca]`.
+     */
+    private fun parseStages(o: JSONObject) {
+        val arr = o.optJSONArray("stages") ?: return
+        try {
+            for (k in 0 until arr.length()) {
+                val e = arr.getJSONArray(k)
+                val i = e.getInt(0)
+                if (i !in 0 until STAGE_COUNT) continue
+                val tries = clampCount(e.getLong(1))
+                stageTries[i] = tries
+                stageWins[i] = clampCount(e.getLong(2)).coerceAtMost(tries)
+                stageSurrenders[i] = clampCount(e.getLong(3)).coerceAtMost(tries - stageWins[i])
+                stageSeconds[i] = clampCount(e.getLong(4))
+                stageCommander[i] = clampCount(e.getLong(5)).coerceAtMost(tries)
+            }
+        } catch (_: Exception) {
+            resetStages()
+        }
+    }
+
+    private fun clampCount(v: Long): Int = v.coerceIn(0L, MAX_COUNT.toLong()).toInt()
 
     private fun count(o: JSONObject, key: String): Int =
         o.getLong(key).coerceIn(0L, MAX_COUNT.toLong()).toInt()
@@ -249,11 +294,24 @@ class PlaytestLog(private val file: File) {
         if (tutorialDone && tutorialSeconds == NOT_YET) tutorialSeconds = playSeconds.coerceAtLeast(0L)
     }
 
-    /** Rozliczenie bitwy (raz, z `settleRewards`). */
+    /**
+     * Rozliczenie bitwy (raz, z `settleRewards`). [stage] (indeks etapu kampanii, −1 = brak),
+     * [battleSeconds] i [commander] (dowódca gracza przywołany w tej bitwie) zasilają lejek
+     * kampanii; bez alokacji.
+     */
     @Synchronized
     fun battleSettled(campaign: Boolean, won: Boolean, surrendered: Boolean,
-                      playSeconds: Long, tutorialDone: Boolean, nowMs: Long) {
+                      playSeconds: Long, tutorialDone: Boolean, nowMs: Long,
+                      stage: Int = -1, battleSeconds: Int = 0, commander: Boolean = false) {
         if (surrendered) surrenders = (surrenders + 1).coerceAtMost(MAX_COUNT)
+        if (campaign && stage in 0 until STAGE_COUNT) {
+            stageTries[stage] = (stageTries[stage] + 1).coerceAtMost(MAX_COUNT)
+            if (won) stageWins[stage] = (stageWins[stage] + 1).coerceAtMost(stageTries[stage])
+            else if (surrendered) stageSurrenders[stage] = (stageSurrenders[stage] + 1).coerceAtMost(MAX_COUNT)
+            stageSeconds[stage] = (stageSeconds[stage].toLong() + battleSeconds.coerceAtLeast(0))
+                .coerceAtMost(MAX_COUNT.toLong()).toInt()
+            if (commander) stageCommander[stage] = (stageCommander[stage] + 1).coerceAtMost(stageTries[stage])
+        }
         if (campaign) {
             if (won) lossStreak = 0
             else {
@@ -315,6 +373,21 @@ class PlaytestLog(private val file: File) {
         return out
     }
 
+    /** Lejek jednego etapu kampanii; [stage] 0 = etap 1. */
+    class StageStats(val stage: Int, val tries: Int, val wins: Int, val surrenders: Int,
+                     val seconds: Int, val commander: Int)
+
+    /** Etapy z co najmniej jedną próbą, rosnąco (kopia do raportu; alokuje, nie dla pętli gry). */
+    @Synchronized
+    fun stageStats(): List<StageStats> {
+        val out = ArrayList<StageStats>()
+        for (i in 0 until STAGE_COUNT) {
+            if (stageTries[i] == 0) continue
+            out.add(StageStats(i, stageTries[i], stageWins[i], stageSurrenders[i], stageSeconds[i], stageCommander[i]))
+        }
+        return out
+    }
+
     @Synchronized
     fun toJson(): String {
         val o = JSONObject()
@@ -335,6 +408,13 @@ class PlaytestLog(private val file: File) {
                 .put("dropped", perfDropped[i]).put("thermal", perfThermal[i]))
         }
         o.put("perf", perf)
+        val stages = JSONArray()
+        for (i in 0 until STAGE_COUNT) {
+            if (stageTries[i] == 0) continue
+            stages.put(JSONArray().put(i).put(stageTries[i]).put(stageWins[i]).put(stageSurrenders[i])
+                .put(stageSeconds[i]).put(stageCommander[i]))
+        }
+        if (stages.length() > 0) o.put("stages", stages)
         return o.toString()
     }
 
