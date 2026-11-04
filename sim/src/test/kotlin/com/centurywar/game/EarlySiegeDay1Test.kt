@@ -26,7 +26,7 @@ class EarlySiegeDay1Test {
 
     @Test
     fun otherStagesAndModesKeepEightMinutes() {
-        val others = listOf(campaign(0), campaign(0, tutorial = true), campaign(12), campaign(35)) +
+        val others = listOf(campaign(0), campaign(0, tutorial = true), campaign(18), campaign(35)) +
             listOf(Mode.SKIRMISH, Mode.ENDLESS, Mode.DAILY).map { Battle(BattleConfig(it, 11L, 1f, stageIndex = 3)) } +
             Battle(Daily.config(Daily.RELEASE_DAY, Bonuses()))
         for (b in others) {
