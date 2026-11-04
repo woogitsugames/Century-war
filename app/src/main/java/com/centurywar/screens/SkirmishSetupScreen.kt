@@ -65,6 +65,10 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     private var description = ""
     private var summary = ""
     private var rankingText = ""
+    /** R11-01: wersja napisów (rebuildLabels); tekst dla czytnika powstaje dopiero po zmianie. */
+    private var labelsVersion = 0
+    private var a11yVersion = -1
+    private var a11yText = ""
 
     private val personIcons = intArrayOf(
         Icons.CROSSED_SWORDS, Icons.WRENCH, Icons.COIN, Icons.TOWER, Icons.SHIELD,
@@ -207,6 +211,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         summary = L.f("eras_range", L[Defs.eraKeys[setup.startEra]], L[Defs.eraKeys[setup.maxEra]]) +
             "   " + L.f("ai_power", setup.powerPercent)
         rankingText = L[if (setup.isRanked()) "sk_ranked" else "sk_unranked"]
+        labelsVersion++
         for (i in 0 until historyCount) {
             val r = g.profile.skirmishHistory.getOrNull(i)
             historyLines[i] = if (r == null) L["sk_history_empty"] else {
@@ -330,7 +335,45 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         eraButtons[1] -> fromName + ", " + L["fh173_era_later"]
         eraButtons[2] -> toName + ", " + L["fh173_era_earlier"]
         eraButtons[3] -> toName + ", " + L["fh173_era_later"]
+        // R11-01: strzałki siły też mają same ikony.
+        powerButtons[0] -> powerName + ", " + L["a196_power_down"]
+        powerButtons[1] -> powerName + ", " + L["a196_power_up"]
         else -> super.accessibilityLabel(b)
+    }
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = L["sk_setup"]
+
+    /** Strzałki epok czytają nazwę epoki, więc ich etykieta zmienia się razem z napisami. */
+    override fun accessibilityKey(b: Button): Int = if (b.id in 10..13 || b.id in 220..221) labelsVersion else 0
+
+    override fun accessibilityCheckable(b: Button): Boolean =
+        b.id in 100..105 || b.id in 200..203 || b.id in 300 until 300 + mods.size
+
+    override fun accessibilityInfoCount(): Int = 1
+
+    /** Podsumowanie z dolnego paska i opis przeciwnika (jest w przewijanej części). */
+    override fun accessibilityInfo(i: Int): String {
+        if (a11yVersion != labelsVersion) {
+            a11yVersion = labelsVersion
+            val text = accessibilitySentences(summary, rankingText, L["sk_opponent"] + ": " + description)
+            if (text != a11yText) a11yText = text
+        }
+        return a11yText
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) { out.set(footer) }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    override fun accessibilityScroll(direction: Int): Boolean {
+        val moved = accessibilityStep(scroll, maxScroll, contentBottom - contentTop, direction)
+        if (!moved) return false
+        scroll = scrollResult
+        layout()
+        return true
     }
 
     override fun onClick(b: Button) {

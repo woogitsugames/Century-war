@@ -44,6 +44,10 @@ class ResearchScreen(g: Game) : Screen(g) {
     private val levelTexts = Array(cards.size) { "" }
     private val descKeys = Array(cards.size) { i -> (cards[i].tag as ResearchDef).key + "_d" }
     private var labelLanguage = -1
+    private val cardA11y = arrayOfNulls<String>(cards.size)
+    private val cardA11yKey = IntArray(cards.size) { -1 }
+    private var medalsA11y = ""
+    private var medalsA11yKey = -1L
 
     private fun iconFor(key: String) = when (key) {
         "r_elite" -> Icons.CROWN
@@ -189,6 +193,68 @@ class ResearchScreen(g: Game) : Screen(g) {
             Icons.draw(c, Icons.MEDAL, pl + 15 * dp, cy, 18 * dp, dp = dp)
         }
         ui.textO(c, cost, pl + 27 * dp, cy + 5 * dp, 14f, if (maxed || can) Ui.TEXT else Ui.DIM)
+    }
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = L["research"]
+
+    override fun accessibilityEligible(b: Button): Boolean =
+        if (hints.accessibilityOpen) b === hints.okBtn else b !== hints.okBtn
+
+    override fun accessibilityKey(b: Button): Int {
+        val d = b.tag as? ResearchDef ?: return 0
+        return g.profile.level(d.key) * 2 + if (b.enabled) 1 else 0
+    }
+
+    /** „Skarbiec, poziom 2 z 5, koszt 120 medali, stać cię, <opis>”. */
+    override fun accessibilityLabel(b: Button): String {
+        val d = b.tag as? ResearchDef ?: return super.accessibilityLabel(b)
+        val i = b.id
+        val lv = g.profile.level(d.key)
+        val key = accessibilityKey(b) or (L.lang shl 10)
+        val cached = cardA11y[i]
+        if (cached != null && cardA11yKey[i] == key) return cached
+        cardA11yKey[i] = key
+        val price = if (lv >= d.max) L["a196_maxed"] else L.f("a196_cost", L.plural("medals_n", d.cost(lv).toLong()))
+        val state = when {
+            lv >= d.max -> ""
+            b.enabled -> L["a196_afford"]
+            else -> L["a196_no_medals"]
+        }
+        val text = StringBuilder(L[d.key]).append(", ").append(L.f("a196_level", lv, d.max))
+            .append(", ").append(price)
+        if (state.isNotEmpty()) text.append(", ").append(state)
+        text.append(". ").append(L[descKeys[i]])
+        return text.toString().also { cardA11y[i] = it }
+    }
+
+    override fun accessibilityInfoCount(): Int = 1
+
+    override fun accessibilityInfo(i: Int): String {
+        if (hints.accessibilityOpen) return hints.accessibilityBody
+        val key = g.profile.medals.toLong() * 16 + L.lang
+        if (key != medalsA11yKey) {
+            medalsA11yKey = key
+            medalsA11y = L.f("a196_medals", L.plural("medals_n", g.profile.medals.toLong()))
+        }
+        return medalsA11y
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (hints.accessibilityOpen) hints.accessibilityBounds(out) else out.set(hintMedalsRect)
+    }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        !hints.accessibilityOpen && if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    /** Karty częściowo widoczne są poza drzewem, więc czytnik przewija o ok. 80% wysokości listy. */
+    override fun accessibilityScroll(direction: Int): Boolean {
+        if (!accessibilityCanScroll(direction)) return false
+        val moved = accessibilityStep(scroll, maxScroll, h - g.insetB - top, direction)
+        scroll = scrollResult
+        place()
+        return moved
     }
 
     /** Tura 9: ostatni komunikat po dotknięciu badania, na które gracza nie stać (do testów). */

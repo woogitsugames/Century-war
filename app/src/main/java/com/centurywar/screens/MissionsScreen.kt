@@ -38,6 +38,13 @@ class MissionsScreen(g: Game) : Screen(g) {
     private val streakDayTexts = Array(7) { "" }
     private val streakRewardTexts = Array(7) { "" }
     private val hints = HintOverlay(g)
+    /** R11-01: wersja danych misji; teksty dla czytnika powstają dopiero po zmianie. */
+    private var dataVersion = 0
+    private val missionA11y = Array(6) { "" }
+    private val claimA11y = Array(6) { "" }
+    private val a11yKeys = IntArray(6) { -1 }
+    private var loginA11y = ""
+    private var loginA11yKey = -1
 
     init { buttons.add(0, hints.okBtn) }
     private var left = 0f
@@ -111,6 +118,7 @@ class MissionsScreen(g: Game) : Screen(g) {
             claimButtons[i].iconId = if (item.claimed) Icons.CHECK else Icons.MEDAL
             claimButtons[i].highlight = item.completed && !item.claimed
         }
+        dataVersion++
         streakText = L.f("ms_login_day", missions.state.loginStreak)
         loginText = L.f("ms_login_paid",
             L.plural("medals_n", missions.state.loginRewardToday.toLong()))
@@ -245,6 +253,85 @@ class MissionsScreen(g: Game) : Screen(g) {
         chrome.badges(c, g.profile.medals)
         chrome.titleBounds(L["ms_missions"], hints.titleRect)
         hints.draw(c)
+    }
+
+    // ------------------------------------------------ R11-01: czytnik ekranu
+
+    override fun accessibilityTitle(): String = L["ms_missions"]
+
+    override fun accessibilityEligible(b: Button): Boolean =
+        if (hints.accessibilityOpen) b === hints.okBtn else b !== hints.okBtn
+
+    override fun accessibilityKey(b: Button): Int = if (b.id in 100..105) dataVersion else 0
+
+    /** Wiersz misji czytany przed jej przyciskiem; seria logowań na początku. */
+    override fun accessibilityOrder(b: Button, index: Int): Float =
+        if (b.id in 100..105) 2f + (b.id - 100) * 2f + 1f else 0f
+
+    override fun accessibilityInfoOrder(i: Int): Float = if (i == 0) 1f else 2f + (i - 1) * 2f
+
+    /** „Odbierz: Wygraj 3 bitwy, 40 medali”; odebrana albo niezaliczona misja ma własny opis. */
+    override fun accessibilityLabel(b: Button): String {
+        val index = b.id - 100
+        if (index !in 0..5 || index >= items.size) return super.accessibilityLabel(b)
+        refreshMissionText(index)
+        return claimA11y[index]
+    }
+
+    private fun refreshMissionText(index: Int) {
+        val key = dataVersion * 16 + L.lang
+        if (a11yKeys[index] == key) return
+        a11yKeys[index] = key
+        val item = items[index]
+        val reward = L.plural("medals_n", item.reward.toLong())
+        claimA11y[index] = when {
+            item.claimed -> titles[index] + ", " + L["ms_claimed"]
+            item.completed -> L.f("a196_claim", titles[index], reward)
+            else -> L["ms_claim"] + ": " + titles[index]
+        }
+        missionA11y[index] = accessibilitySentences(
+            L[if (index < 3) "ms_daily" else "ms_weekly"] + ": " + titles[index],
+            L.f("a196_progress", item.progress, item.target) + ", " + L.f("a196_reward", reward),
+            if (item.claimed) L["ms_claimed"] else if (item.completed) L["a196_done"] else "")
+    }
+
+    /** 0: seria logowań; 1..6: widoczne misje. */
+    override fun accessibilityInfoCount(): Int = if (hints.accessibilityOpen) 1 else 1 + items.size.coerceAtMost(6)
+
+    override fun accessibilityInfo(i: Int): String {
+        if (hints.accessibilityOpen) return if (i == 0) hints.accessibilityBody else ""
+        if (i == 0) {
+            if (loginRect.bottom <= contentTop || loginRect.top >= bottom) return ""
+            val key = dataVersion * 16 + L.lang
+            if (loginA11yKey != key) {
+                loginA11yKey = key
+                loginA11y = accessibilitySentences(L["ms_streak"], streakText, loginText, L["ms_streak_info"])
+            }
+            return loginA11y
+        }
+        val index = i - 1
+        if (index >= items.size) return ""
+        val r = rects[index]
+        if (r.bottom <= contentTop || r.top >= bottom) return ""
+        refreshMissionText(index)
+        return missionA11y[index]
+    }
+
+    override fun accessibilityInfoBounds(i: Int, out: RectF) {
+        if (hints.accessibilityOpen) { hints.accessibilityBounds(out); return }
+        out.set(if (i == 0) loginRect else rects[i - 1])
+        if (!out.intersect(left, contentTop, left + cardWidth, bottom)) out.setEmpty()
+    }
+
+    override fun accessibilityCanScroll(direction: Int): Boolean =
+        !hints.accessibilityOpen && if (direction > 0) scroll < maxScroll - 0.5f else scroll > 0.5f
+
+    override fun accessibilityScroll(direction: Int): Boolean {
+        if (!accessibilityCanScroll(direction)) return false
+        val moved = accessibilityStep(scroll, maxScroll, bottom - contentTop, direction)
+        scroll = scrollResult
+        place()
+        return moved
     }
 
     override fun onClick(b: Button) {

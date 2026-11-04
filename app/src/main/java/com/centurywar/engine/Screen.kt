@@ -1,6 +1,7 @@
 package com.centurywar.engine
 
 import android.graphics.Canvas
+import android.graphics.RectF
 
 /** Bazowa klasa ekranu. Wszystkie metody wywołuje wątek gry, nigdy wątek UI. */
 abstract class Screen(val g: Game) {
@@ -49,6 +50,64 @@ abstract class Screen(val g: Game) {
     }
     open fun accessibilityCheckable(b: Button): Boolean = false
     open fun accessibilityChecked(b: Button): Boolean = b.selected
+
+    // ------------------------------------------------ R11-01: czytnik ekranu poza menu i bitwą
+
+    /**
+     * Tytuł ekranu dla czytnika. null = ekran bez własnych węzłów (jeden węzeł „Ekran gry”).
+     * Ekrany z tytułem mają węzły przycisków, węzły informacyjne i przewijanie z czytnika.
+     * Wszystkie metody poniżej woła wyłącznie wątek gry i tylko przy włączonym czytniku.
+     */
+    open fun accessibilityTitle(): String? = null
+    /** Czy przycisk ma osobny węzeł (okno nad ekranem, np. dymek, ukrywa przyciski pod spodem). */
+    open fun accessibilityEligible(b: Button): Boolean = true
+    /**
+     * Liczba zmieniająca się razem z [accessibilityLabel], gdy etykieta nie wynika z label/sub
+     * (np. stan karty badania). Porównanie bez budowania tekstu, więc bez alokacji.
+     */
+    open fun accessibilityKey(b: Button): Int = 0
+    /** Kolejność czytania przycisku [index] z [buttons] (mniejsza = wcześniej). */
+    open fun accessibilityOrder(b: Button, index: Int): Float = index.toFloat()
+
+    /** Teksty do przeczytania, których nie ma na przyciskach (opis trybu, panel etapu). */
+    open fun accessibilityInfoCount(): Int = 0
+    /** Tekst informacji [i]; pusty = brak węzła. Ekran buforuje tekst i zmienia go tylko po zmianie stanu. */
+    open fun accessibilityInfo(i: Int): String = ""
+    /** Obszar informacji [i] w pikselach bufora; pusty = cały widok. */
+    open fun accessibilityInfoBounds(i: Int, out: RectF) {}
+    /** Kolejność czytania informacji [i] względem [accessibilityOrder]; domyślnie przed przyciskami. */
+    open fun accessibilityInfoOrder(i: Int): Float = -1f
+    /** true: ACTION_CLICK na informacji [i] zamyka okno (zapowiedź epoki) dotknięciem środka ekranu. */
+    open fun accessibilityInfoDismiss(i: Int): Boolean = false
+
+    /** Czy przewinięcie w kierunku [direction] (+1 dalej, −1 wstecz) coś przesunie. */
+    open fun accessibilityCanScroll(direction: Int): Boolean = false
+    /** +1 dalej, −1 wstecz; true, gdy coś się przesunęło. Domyślnie brak przewijania. */
+    open fun accessibilityScroll(direction: Int): Boolean = false
+
+    /** Przewinięcie listy o ok. 80% widocznej części; wynik w [scrollResult], zwraca, czy się przesunęło. */
+    protected fun accessibilityStep(current: Float, max: Float, visible: Float, direction: Int): Boolean {
+        val next = (current + direction * visible * 0.8f).coerceIn(0f, max)
+        scrollResult = next
+        return kotlin.math.abs(next - current) > 0.5f
+    }
+    protected var scrollResult = 0f
+
+    /** Zdania dla czytnika: pomija puste części i nie podwaja kropki. Tylko przy przebudowie tekstu. */
+    protected fun accessibilitySentences(vararg parts: String): String {
+        val out = StringBuilder()
+        for (p in parts) {
+            val t = p.trim()
+            if (t.isEmpty()) continue
+            if (out.isNotEmpty()) {
+                val last = out[out.length - 1]
+                if (last != '.' && last != '!' && last != '?' && last != ':') out.append('.')
+                out.append(' ')
+            }
+            out.append(t)
+        }
+        return out.toString()
+    }
 
     /** Nadpisz dla dynamicznych opisów; domyślnie odczytuje opis przycisku. */
     open fun onLongPress(b: Button): Boolean {

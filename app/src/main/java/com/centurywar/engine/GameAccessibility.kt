@@ -46,6 +46,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         const val TURRETS = 8
         const val UPGRADE = 9
         const val BATTLE_HUD = 10
+        /** R11-01: ekran z [Screen.accessibilityTitle]: przyciski, informacje, przewijanie. */
+        const val SCREEN = 11
         const val ACCESS_POINTER = 164
 
         /** Węzeł przycisku bitwy = BTN_BASE + Button.id (stałe, niezależne od kolejności przycisków). */
@@ -61,6 +63,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         const val INFO_ERA = 20_009
         /** Żywy region z komunikatami bitwy. */
         const val STATUS = 20_100
+        /** R11-01: informacja [i] ekranu = INFO_SCREEN_BASE + i (stałe id). */
+        const val INFO_SCREEN_BASE = 30_000
 
         const val TEXT_INTERVAL_MS = 1000L
         const val STATUS_INTERVAL_MS = 3000L
@@ -116,6 +120,8 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         val paneTitle: String? = null,
         val status: String = "",
         val builtAt: Long = 0L,
+        val scrollForward: Boolean = false,
+        val scrollBackward: Boolean = false,
     )
 
     private val manager = view.context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
@@ -137,6 +143,12 @@ internal class GameAccessibility(private val view: GameView, private val game: G
                     contentDescription = snapshot?.title ?: L["a164_loading"]
                     isFocusable = false
                     if (Build.VERSION.SDK_INT >= 28 && snapshot?.paneTitle != null) paneTitle = snapshot.paneTitle
+                    // R11-01: listy i mapa kampanii przewijają się akcjami czytnika.
+                    if (snapshot != null && (snapshot.scrollForward || snapshot.scrollBackward)) {
+                        isScrollable = true
+                        if (snapshot.scrollForward) addAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                        if (snapshot.scrollBackward) addAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                    }
                     snapshot?.nodes?.forEach { addChild(view, it.id) }
                 }
             }
@@ -184,6 +196,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
 
         override fun performAction(virtualViewId: Int, action: Int, arguments: Bundle?): Boolean {
             val snapshot = tree ?: return false
+            if (virtualViewId == View.NO_ID) return scroll(snapshot, action)
             val node = snapshot.nodes.firstOrNull { it.id == virtualViewId } ?: return false
             return when (action) {
                 AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS -> {
@@ -229,6 +242,20 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         }
     }
 
+    /** R11-01: przewijanie z węzła głównego; samo przesunięcie odbywa się na wątku gry. */
+    private fun scroll(snapshot: Tree, action: Int): Boolean {
+        val direction = when (action) {
+            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> if (snapshot.scrollForward) 1 else return false
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> if (snapshot.scrollBackward) -1 else return false
+            else -> return false
+        }
+        game.post(Runnable {
+            val screen = snapshot.screen
+            if (game.current === screen && screen.accessibilityCanScroll(direction)) screen.accessibilityScroll(direction)
+        })
+        return true
+    }
+
     private fun classNameOf(node: Node): String = when {
         node.info -> "android.widget.TextView"
         node.clickable -> "android.widget.Button"
@@ -264,7 +291,9 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             if (snapshot.kind == PAUSE) return button == null || eligible(screen, button)
             return button == null || battleEligible(screen, button)
         }
-        return button != null && eligible(screen, button)
+        // R11-01: informacja zamykająca okno (zapowiedź epoki) nie ma przycisku.
+        if (button == null) return snapshot.kind == SCREEN
+        return eligible(screen, button)
     }
 
     /**
@@ -329,7 +358,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         val kind = when (screen) {
             // R2-04: O grze (z „Raportem dla testera”) też ma węzły przycisków.
             is MenuScreen, is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen, is AboutScreen -> BUTTONS
-            else -> OTHER
+            else -> if (screen.accessibilityTitle() != null) SCREEN else OTHER
         }
         val title = when (screen) {
             is MenuScreen -> L["a164_menu"]
@@ -337,7 +366,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
             is AccessibilityScreen -> L["accessibility"]
             is HintSettingsScreen -> L["hint_settings"]
             is AboutScreen -> L["about"]
-            else -> L["a164_other"]
+            else -> screen.accessibilityTitle() ?: L["a164_other"]
         }
         refreshList(screen, kind, title, vw, vh)
     }
@@ -361,11 +390,63 @@ internal class GameAccessibility(private val view: GameView, private val game: G
                     b.selected, b.enabled, boundsFor(b, sx, sy, vw, vh)
                 ))
             }
+        } else if (kind == SCREEN) {
+            buildScreen(screen, nodes, vw, vh)
         } else {
             nodes.add(Node(FALLBACK_ID, null, title, "", "", "", false, false, false, true, Rect(0, 0, vw, vh)))
         }
-        publish(Tree(screen, kind, title, L.lang, vw, vh, game.width, game.height, nodes, builtAt = clock()),
+        val scrollable = kind == SCREEN
+        publish(Tree(screen, kind, title, L.lang, vw, vh, game.width, game.height, nodes, builtAt = clock(),
+            scrollForward = scrollable && screen.accessibilityCanScroll(1),
+            scrollBackward = scrollable && screen.accessibilityCanScroll(-1)),
             before, structural = true, changed = null)
+    }
+
+    private val infoArea = RectF()
+
+    /** Prostokąt informacji [i] w pikselach widoku (pusty obszar = cały widok); wynik w [infoArea]. */
+    private fun infoRect(s: Screen, i: Int, sx: Float, sy: Float, vw: Int, vh: Int) {
+        infoArea.setEmpty()
+        s.accessibilityInfoBounds(i, infoArea)
+        if (infoArea.width() <= 0f || infoArea.height() <= 0f) {
+            infoArea.set(0f, 0f, vw.toFloat(), vh.toFloat())
+            return
+        }
+        infoArea.set(
+            (infoArea.left * sx).toInt().coerceIn(0, vw).toFloat(),
+            (infoArea.top * sy).toInt().coerceIn(0, vh).toFloat(),
+            (infoArea.right * sx).toInt().coerceIn(0, vw).toFloat(),
+            (infoArea.bottom * sy).toInt().coerceIn(0, vh).toFloat())
+    }
+
+    /** R11-01: informacje i przyciski ekranu w kolejności czytania. */
+    private fun buildScreen(s: Screen, nodes: ArrayList<Node>, vw: Int, vh: Int) {
+        val sx = vw.toFloat() / game.width
+        val sy = vh.toFloat() / game.height
+        val ordered = ArrayList<Pair<Float, Node>>()
+        for (i in 0 until s.accessibilityInfoCount()) {
+            val text = s.accessibilityInfo(i)
+            if (text.isEmpty()) continue
+            infoRect(s, i, sx, sy, vw, vh)
+            val bounds = Rect(infoArea.left.toInt(), infoArea.top.toInt(), infoArea.right.toInt(), infoArea.bottom.toInt())
+            val node = if (s.accessibilityInfoDismiss(i))
+                Node(INFO_SCREEN_BASE + i, null, text, "", "", "", false, false, false, true, bounds,
+                    click = Action(AccessibilityNodeInfo.ACTION_CLICK, L["tut_next"], ACT_DISMISS, 0))
+            else Node(INFO_SCREEN_BASE + i, null, text, "", "", "", false, false, false, true, bounds, info = true)
+            ordered.add(s.accessibilityInfoOrder(i) to node)
+        }
+        for (i in s.buttons.indices) {
+            val b = s.buttons[i]
+            if (!eligible(s, b)) continue
+            ordered.add(s.accessibilityOrder(b, i) to Node(
+                i + 1, b, s.accessibilityLabel(b),
+                b.label, b.sub, b.tooltipTitle,
+                s.accessibilityCheckable(b), s.accessibilityChecked(b),
+                b.selected, b.enabled, boundsFor(b, sx, sy, vw, vh), key = s.accessibilityKey(b)
+            ))
+        }
+        ordered.sortBy { it.first }
+        for (p in ordered) nodes.add(p.second)
     }
 
     private fun publish(next: Tree, before: Tree?, structural: Boolean, changed: IntArray?) {
@@ -396,7 +477,7 @@ internal class GameAccessibility(private val view: GameView, private val game: G
                 (s.pauseMenu.contains(b) || b === s.pauseVibrationBtn || b === s.pauseSpeedBtn)
             is MenuScreen -> !s.hasOpenModal || b.id == 20 || b.id == 21
             is SettingsScreen, is AccessibilityScreen, is HintSettingsScreen, is AboutScreen -> true
-            else -> false
+            else -> s.accessibilityTitle() != null && s.accessibilityEligible(b)
         }
     }
 
@@ -414,23 +495,58 @@ internal class GameAccessibility(private val view: GameView, private val game: G
         if (kind == OTHER) return t.nodes.size == 1 && t.nodes[0].button == null
         val sx = vw.toFloat() / game.width
         val sy = vh.toFloat() / game.height
+        if (kind == SCREEN) return screenMatches(t, s, sx, sy, vw, vh)
         var count = 0
         for (i in s.buttons.indices) {
             val b = s.buttons[i]
             if (!eligible(s, b)) continue
             if (count >= t.nodes.size) return false
             val n = t.nodes[count++]
-            if (n.id != i + 1 || n.button !== b ||
-                n.rawLabel != b.label || n.rawSub != b.sub || n.rawTooltip != b.tooltipTitle ||
-                n.checkable != s.accessibilityCheckable(b) ||
-                n.checked != s.accessibilityChecked(b) ||
-                n.selected != b.selected || n.enabled != b.enabled ||
-                n.bounds.left != (b.r.left * sx).toInt().coerceIn(0, vw) ||
-                n.bounds.top != (b.r.top * sy).toInt().coerceIn(0, vh) ||
-                n.bounds.right != (b.r.right * sx).toInt().coerceIn(0, vw) ||
-                n.bounds.bottom != (b.r.bottom * sy).toInt().coerceIn(0, vh)) return false
+            if (n.id != i + 1 || !buttonMatches(n, s, b, sx, sy, vw, vh)) return false
         }
         return count == t.nodes.size
+    }
+
+    private fun buttonMatches(n: Node, s: Screen, b: Button, sx: Float, sy: Float, vw: Int, vh: Int): Boolean =
+        n.button === b &&
+            n.rawLabel == b.label && n.rawSub == b.sub && n.rawTooltip == b.tooltipTitle &&
+            n.checkable == s.accessibilityCheckable(b) &&
+            n.checked == s.accessibilityChecked(b) &&
+            n.selected == b.selected && n.enabled == b.enabled &&
+            n.bounds.left == (b.r.left * sx).toInt().coerceIn(0, vw) &&
+            n.bounds.top == (b.r.top * sy).toInt().coerceIn(0, vh) &&
+            n.bounds.right == (b.r.right * sx).toInt().coerceIn(0, vw) &&
+            n.bounds.bottom == (b.r.bottom * sy).toInt().coerceIn(0, vh)
+
+    /** R11-01: porównanie drzewa ekranu bez kolekcji (kolejność węzłów nie ma znaczenia). */
+    private fun screenMatches(t: Tree, s: Screen, sx: Float, sy: Float, vw: Int, vh: Int): Boolean {
+        if (t.scrollForward != s.accessibilityCanScroll(1) || t.scrollBackward != s.accessibilityCanScroll(-1)) return false
+        val infoCount = s.accessibilityInfoCount()
+        var infos = 0
+        var buttonNodes = 0
+        for (k in t.nodes.indices) {
+            val n = t.nodes[k]
+            val b = n.button
+            if (b == null) {
+                val i = n.id - INFO_SCREEN_BASE
+                if (i < 0 || i >= infoCount || s.accessibilityInfo(i) != n.description) return false
+                infoRect(s, i, sx, sy, vw, vh)
+                if (n.bounds.left != infoArea.left.toInt() || n.bounds.top != infoArea.top.toInt() ||
+                    n.bounds.right != infoArea.right.toInt() || n.bounds.bottom != infoArea.bottom.toInt()) return false
+                infos++
+            } else {
+                val index = n.id - 1
+                if (index < 0 || index >= s.buttons.size || s.buttons[index] !== b || !eligible(s, b) ||
+                    n.key != s.accessibilityKey(b) || !buttonMatches(n, s, b, sx, sy, vw, vh)) return false
+                buttonNodes++
+            }
+        }
+        var expectedInfos = 0
+        for (i in 0 until infoCount) if (s.accessibilityInfo(i).isNotEmpty()) expectedInfos++
+        if (expectedInfos != infos) return false
+        var expectedButtons = 0
+        for (i in s.buttons.indices) if (eligible(s, s.buttons[i])) expectedButtons++
+        return expectedButtons == buttonNodes
     }
 
     // ---------------------------------------------------------------- bitwa (Dzień 5)
