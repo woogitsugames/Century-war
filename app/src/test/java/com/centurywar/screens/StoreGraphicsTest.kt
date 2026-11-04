@@ -13,12 +13,15 @@ import com.centurywar.R
 import com.centurywar.engine.Game
 import com.centurywar.engine.Host
 import com.centurywar.engine.L
+import com.centurywar.engine.Palette
 import com.centurywar.engine.Quality
 import com.centurywar.engine.Screen
 import com.centurywar.game.Battle
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.BattleController
 import com.centurywar.game.BattleRenderer
+import com.centurywar.game.Bonuses
+import com.centurywar.game.Campaign
 import com.centurywar.game.Defs
 import com.centurywar.game.EndlessCard
 import com.centurywar.game.FxBuffer
@@ -26,7 +29,10 @@ import com.centurywar.game.Mode
 import com.centurywar.game.Role
 import com.centurywar.game.RestoredBattle
 import com.centurywar.game.Weather
+import com.centurywar.meta.BattleHistory
+import com.centurywar.meta.Missions
 import com.centurywar.meta.Profile
+import com.centurywar.meta.ReplayStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -249,17 +255,7 @@ class StoreGraphicsTest {
                 // Jedna grafika promocyjna wspólna dla języków: oryginalny Wódz i emblemat.
                 val feature = File(languageDir, "feature_1024x500.png")
                 val featureGame = game(Device("feature153", 1024, 500, 1f), language)
-                writePng(feature, 1024, 500, false) { c ->
-                    val battle = commander153Battle(forFeature = true)
-                    battle.fx.count = 0
-                    val renderer = BattleRenderer(featureGame, battle)
-                    renderer.layout(1024f, 500f, 12f, 10f)
-                    renderer.camX = Defs.LANE * 0.5f - renderer.worldVisible * 0.5f
-                    renderer.clampCam()
-                    renderer.lerp = 1f
-                    repeat(3) { renderer.render(c, 1f / 60f, 1024f, 500f) }
-                    drawFeatureTitle(c)
-                }
+                writePng(feature, 1024, 500, false) { c -> drawCommanderFeature(c, featureGame) }
                 checkPng(feature, 1024, 500, false)
                 manifest.append("feature_1024x500.png\t1024\t500\t")
                     .append(strings.getProperty("alt153.feature")).append("\ttrue\n")
@@ -281,6 +277,405 @@ class StoreGraphicsTest {
         val feature = commander153Battle(forFeature = true)
         assertEquals(0f, feature.time, 0.01f)
         assertEquals(feature.player.baseMaxHp, feature.player.baseHp, 0.01f)
+    }
+
+    // D7: jeden premierowy zestaw 8 kadrów do Play Console (10 języków); 117 i 153 to archiwum.
+    private enum class D7Anchor { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+
+    /** [play]: zrzut trafia do Play Console; [sheetOnly]: tylko stykówka QA (pion Folda). */
+    private class D7Device(val device: Device, val play: Boolean, val sheetOnly: Boolean = false)
+
+    private val d7Names = arrayOf(
+        "commander", "turret-tiers", "campaign", "endless-cards",
+        "results", "missions", "accessibility", "weekly-siege",
+    )
+    private val d7Devices = listOf(
+        D7Device(Device("phone", 1920, 1080, 2f), true),
+        D7Device(Device("tablet7", 1920, 1080, 1.8f), true),
+        D7Device(Device("tablet10", 2560, 1440, 2f), true),
+        // Rozłożony Fold do Play dopiero po przeglądzie kadrów; 20:9 i pion zewnętrzny tylko do QA.
+        D7Device(Device("fold", 2184, 1968, 2.7f), false),
+        D7Device(Device("phone20x9_qa", 2400, 1080, 2f), false),
+        D7Device(Device("foldOuter_qa", 904, 2316, 2.7f), false, sheetOnly = true),
+    )
+
+    /** Ok. 10 ukończonych etapów kampanii z gwiazdkami w kilku epokach (kadr 03). */
+    private val d7Stars = intArrayOf(3, 3, 2, 3, 3, 2, 3, 1, 2, 3)
+
+    /** Stały dzień misji (UTC), żeby kadr 06 był powtarzalny: 18.11.2026, 10:00. */
+    private val d7NowMillis = 1_794_996_000_000L
+
+    @Test
+    fun generateD7() {
+        assumeTrue("Eksport tylko przy STORE_GRAPHICS_D7=true",
+            System.getenv("STORE_GRAPHICS_D7") == "true")
+        val previousLanguage = L.lang
+        val only = System.getenv("STORE_D7_DEVICES")?.takeIf { it.isNotBlank() }
+            ?.split(',')?.map { it.trim() }?.toSet()
+        try {
+            val root = File("build/storeD7").apply { mkdirs() }
+            for (language in selectedLanguages()) {
+                val strings = captionsD7(language)
+                val languageDir = File(root, language).apply { mkdirs() }
+                val manifest = StringBuilder("file\twidth\theight\talt\tplay_upload\n")
+                for (target in d7Devices) {
+                    val device = target.device
+                    if (only != null && device.name !in only) continue
+                    if (target.sheetOnly) {
+                        sheetD7Portrait(languageDir, device, language, strings)
+                        continue
+                    }
+                    val directory = File(languageDir, device.name).apply { mkdirs() }
+                    val g = gameD7(device, language)
+                    for (scene in 1..8) {
+                        val filename = d7File(scene)
+                        val png = File(directory, filename)
+                        writePng(png, device.width, device.height, false) { canvas ->
+                            drawD7Scene(canvas, g, device, language, scene)
+                            drawD7Caption(canvas, strings.getProperty("captionD7.$scene"), scene,
+                                device.width.toFloat(), device.height.toFloat())
+                        }
+                        checkPng(png, device.width, device.height, false)
+                        manifest.append(device.name).append('/').append(filename)
+                            .append('\t').append(device.width).append('\t')
+                            .append(device.height).append('\t')
+                            .append(strings.getProperty("altD7.$scene"))
+                            .append('\t').append(target.play).append('\n')
+                    }
+                }
+                val feature = File(languageDir, "feature_1024x500.png")
+                val featureGame = game(Device("featureD7", 1024, 500, 1f), language)
+                writePng(feature, 1024, 500, false) { c -> drawCommanderFeature(c, featureGame) }
+                checkPng(feature, 1024, 500, false)
+                manifest.append("feature_1024x500.png\t1024\t500\t")
+                    .append(strings.getProperty("altD7.feature")).append("\ttrue\n")
+                // Częściowy eksport (STORE_D7_DEVICES) nie nadpisuje pełnego manifestu.
+                if (only == null) {
+                    File(languageDir, "manifest.tsv").writeText(manifest.toString(), Charsets.UTF_8)
+                }
+                if (only == null || "phone" in only) contactSheetD7(languageDir, strings)
+            }
+        } finally {
+            L.lang = previousLanguage
+            Palette.select(0)
+        }
+    }
+
+    /** Szybki test bez eksportu: komplet podpisów D7 w 10 językach i czytelny rozmiar. */
+    @Test
+    fun d7CaptionsComplete() {
+        assertEquals(10, L.CODES.size)
+        assertEquals(8, d7Names.size)
+        assertEquals(setOf("phone", "tablet7", "tablet10"),
+            d7Devices.filter { it.play }.map { it.device.name }.toSet())
+        for (target in d7Devices) if (target.play) {
+            val d = target.device
+            assertTrue("Proporcje Play: ${d.name}",
+                maxOf(d.width, d.height) <= 2 * minOf(d.width, d.height))
+        }
+        val superlatives = listOf("!", "najlepsz", "best ", "beste", "mejor", "meilleur", "miglior",
+            "melhor", "найкращ", "en iyi")
+        for (language in L.CODES) {
+            val strings = captionsD7(language)
+            for (scene in 1..8) {
+                val caption = strings.getProperty("captionD7.$scene")
+                assertTrue("$language captionD7.$scene > 32 znaki: $caption", caption.length <= 32)
+                for (word in superlatives) assertTrue("$language: superlatyw w '$caption'",
+                    !caption.lowercase().contains(word))
+                for (target in d7Devices) {
+                    val d = target.device
+                    val ratio = captionScaleD7(caption, d.width.toFloat(), d.height.toFloat())
+                    assertTrue("$language/${d.name} captionD7.$scene zmniejszony do $ratio",
+                        ratio >= 0.7f)
+                }
+            }
+        }
+    }
+
+    private fun d7File(scene: Int) = scene.toString().padStart(2, '0') + "-" + d7Names[scene - 1] + ".png"
+
+    private fun captionsD7(language: String): Properties {
+        val props = captions(language)
+        for (i in 1..8) {
+            check(!props.getProperty("captionD7.$i").isNullOrBlank()) { "$language: brak captionD7.$i" }
+            val alt = props.getProperty("altD7.$i")
+            check(!alt.isNullOrBlank() && alt.length <= 140) { "$language: altD7.$i" }
+        }
+        check(props.getProperty("altD7.feature")?.let { it.length in 1..140 } == true) {
+            "$language: altD7.feature"
+        }
+        return props
+    }
+
+    /** Profil premierowy: jak [game], ale ok. 10 etapów kampanii za sobą. */
+    private fun gameD7(device: Device, language: String, tune: Profile.() -> Unit = {}): Game =
+        game(device, language, d7Stars, tune)
+
+    private fun drawD7Scene(c: Canvas, g: Game, device: Device, language: String, scene: Int) {
+        when (scene) {
+            1 -> draw153Commander(c, g)
+            2 -> draw153TurretTiers(c, g)
+            3 -> renderScreen(c, g, CampaignScreen(g))
+            4 -> drawD7EndlessCards(c, g)
+            5 -> drawD7Results(c, gameD7(device, language))
+            6 -> drawD7Missions(c, gameD7(device, language))
+            7 -> drawD7Accessibility(c, device, language)
+            else -> renderScreen(c, g, ModeScreen(g, Mode.DAILY, true))
+        }
+    }
+
+    /**
+     * Najnowsza karta każdej rzadkości (od końca enumu). Karty z D6 dopisywane są na końcu,
+     * więc po scaleniu D6 wystarczy ponowić eksport. STORE_D7_CARDS=A,B,C wymusza wybór.
+     */
+    private fun d7Cards(): Array<EndlessCard> {
+        System.getenv("STORE_D7_CARDS")?.takeIf { it.isNotBlank() }?.let { list ->
+            val forced = list.split(',').map { EndlessCard.valueOf(it.trim()) }
+            require(forced.size == 3) { "STORE_D7_CARDS: trzy karty" }
+            return forced.toTypedArray()
+        }
+        val picked = ArrayList<EndlessCard>(3)
+        for (card in EndlessCard.values().reversed()) {
+            if (picked.size == 3) break
+            if (picked.none { it.rarity == card.rarity }) picked.add(card)
+        }
+        return picked.sortedBy { it.rarity.ordinal }.toTypedArray()
+    }
+
+    /** Wybór kart przy fali 10 z żywym bossem (ten sam stan co kadr 153). */
+    private fun drawD7EndlessCards(c: Canvas, g: Game) {
+        val battle = sceneBattle(3)
+        check(battle.currentBoss() != null) { "Kadr 04 wymaga bossa" }
+        battle.pendingCards = d7Cards()
+        render153Battle(c, g, battle)
+    }
+
+    /**
+     * Zwycięstwo etapu 11 kampanii: gwiazdki, „Za bitwę” i „Za osiągnięcia” osobno oraz
+     * „Następny cel”. Zakładka Statystyki (na telefonie czytelniejsza niż wykres).
+     */
+    private fun drawD7Results(c: Canvas, g: Game) {
+        g.history = BattleHistory(File.createTempFile("d7h", ".json").apply { delete() })
+        g.historyLoaded = true
+        g.replays = ReplayStore(File.createTempFile("d7r", "").apply { delete(); mkdirs() })
+        // Misje z dnia uruchomienia nie mogą zmienić celu: wszystkie już odebrane.
+        for (item in g.profile.missionState.daily) item.claimed = true
+        for (item in g.profile.missionState.weekly) item.claimed = true
+        val stage = d7Stars.size
+        val screen = BattleScreen(g, Campaign.config(Campaign.stages[stage], Bonuses(), 70005L))
+        g.setScreen(screen)
+        g.finishScreenTransition()
+        val battle = screen.battle
+        battle.player.gold = 4000f
+        for (step in 0 until 40 * 60) {
+            if (battle.over) break
+            if (step % 150 == 0) {
+                screen.commands.queue(Role.MELEE)
+                screen.commands.queue(Role.RANGED)
+            }
+            battle.player.baseHp = maxOf(battle.player.baseHp, battle.player.baseMaxHp * 0.9f)
+            battle.step()
+            screen.battleSummary.capture(battle)
+        }
+        check(!battle.over) { "Etap rozstrzygnięty przed finałem kadru" }
+        battle.time = maxOf(battle.time, 200f)
+        battle.enemy.baseHp = 0f
+        val tiny = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+        try {
+            repeat(40) { g.frame(Canvas(tiny), 1f / 30f) }
+        } finally {
+            tiny.recycle()
+        }
+        check(battle.over && battle.winner == 0) { "Kadr 05 wymaga zwycięstwa" }
+        check(screen.reward > 0 && screen.achievementMedals > 0) {
+            "Kadr 05: brak osobnych medali za bitwę (${screen.reward}) i osiągnięcia (${screen.achievementMedals})"
+        }
+        screen.showResultChart = false
+        g.frame(c, 0f)
+        check(screen.resultRowsClipped == 0) { "Kadr 05: obcięte wiersze wyników" }
+        check(screen.resultGoalDrawn) { "Kadr 05: brak „Następnego celu”" }
+    }
+
+    /** Misje ze stałego dnia: seria 4 dni, jedna misja do odebrania, jedna odebrana. */
+    private fun drawD7Missions(c: Canvas, g: Game) {
+        val profile = g.profile
+        val state = profile.missionState
+        state.reset()
+        val day = Missions.utcDay(d7NowMillis)
+        // Seria: trzy dni wcześniej, dziś czwarty dzień.
+        state.loginDay = day - 1
+        state.lastSeenDay = day - 1
+        state.loginClaimedDay = day - 1
+        state.loginStreak = 3
+        val missions = Missions(profile)
+        missions.refresh(d7NowMillis)
+        missions.claimLogin(d7NowMillis)
+        check(state.loginStreak == 4 && state.daily.size == 3 && state.weekly.size == 3)
+        state.daily[0].progress = state.daily[0].target
+        state.daily[1].progress = state.daily[1].target
+        state.daily[1].claimed = true
+        state.daily[2].progress = state.daily[2].target / 2
+        for ((i, item) in state.weekly.withIndex())
+            item.progress = item.target * (i + 1) / 4
+        check(Missions.pendingClaims(state) == 1)
+        val screen = MissionsScreen(g)
+        screen.clock = { d7NowMillis }
+        renderScreen(c, g, screen)
+    }
+
+    /** Prawdziwe ustawienia Dostępności: wysoki kontrast, znaczniki drużyn i tekst 115%. */
+    private fun drawD7Accessibility(c: Canvas, device: Device, language: String) {
+        val g = gameD7(device, language) {
+            palette = 3
+            teamMarkers = true
+            textScale = 115
+            textScaleManual = true
+        }
+        try {
+            check(g.ui.textScale > 1.1f)
+            val battle = sceneBattle(7)
+            stage153Hud(battle, 312, 0.81f, 0.47f, 960f)
+            render153Battle(c, g, battle)
+        } finally {
+            Palette.select(0)
+        }
+    }
+
+    /** Pozycje podpisów dobrane po przeglądzie kadrów: poza paskiem HUD i przyciskami. */
+    private fun d7Anchor(scene: Int): D7Anchor = when (scene) {
+        3 -> D7Anchor.BOTTOM_LEFT
+        5 -> D7Anchor.TOP_LEFT
+        6 -> D7Anchor.BOTTOM_LEFT
+        8 -> D7Anchor.TOP_RIGHT
+        else -> D7Anchor.TOP_LEFT
+    }
+
+    private fun captionPaintD7(width: Float, height: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+        textSize = minOf(52f, width * 0.032f, height * 0.077f)
+    }
+
+    /** Ułamek bazowego rozmiaru podpisu po dopasowaniu do szerokości (wymagane ≥ 0,7). */
+    private fun captionScaleD7(caption: String, width: Float, height: Float): Float {
+        val p = captionPaintD7(width, height)
+        val maxWidth = width * 0.79f
+        val measured = p.measureText(caption)
+        return if (measured > maxWidth) maxWidth / measured else 1f
+    }
+
+    /** Ten sam wygląd podpisu co w zestawie 117; własne kotwice dla nowych ujęć. */
+    private fun drawD7Caption(c: Canvas, caption: String, scene: Int, width: Float, height: Float) {
+        val p = captionPaintD7(width, height)
+        val scale = captionScaleD7(caption, width, height)
+        check(scale >= 0.7f) { "Podpis za długi: $caption" }
+        p.textSize *= scale
+        val labelWidth = p.measureText(caption) + 72f
+        val boxHeight = p.textSize * 1.65f
+        val anchor = d7Anchor(scene)
+        val margin = width * 0.047f
+        val left = when (anchor) {
+            D7Anchor.TOP_RIGHT, D7Anchor.BOTTOM_RIGHT -> width - labelWidth - margin
+            else -> margin
+        }
+        val portrait = height > width
+        val top = when (anchor) {
+            D7Anchor.TOP_LEFT, D7Anchor.TOP_RIGHT ->
+                if (scene in 1..2 || scene == 4 || scene == 7) height * (if (portrait) 0.08f else 0.125f)
+                else height * 0.015f
+            else -> height * (if (portrait) 0.9f else 0.84f)
+        }
+        val rect = RectF(left, top, left + labelWidth, top + boxHeight)
+        val panel = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(226, 23, 34, 52) }
+        c.drawRoundRect(rect, 15f, 15f, panel)
+        panel.style = Paint.Style.STROKE
+        panel.strokeWidth = 3f
+        panel.color = Color.rgb(225, 168, 67)
+        c.drawRoundRect(rect, 15f, 15f, panel)
+        panel.style = Paint.Style.FILL
+        c.drawRect(rect.left + 17f, rect.top + 13f, rect.left + 23f, rect.bottom - 13f, panel)
+        p.color = Color.rgb(252, 247, 233)
+        c.drawText(caption, rect.left + 36f, rect.centerY() + p.textSize * 0.34f, p)
+    }
+
+    /** Osiem miniaturek telefonu z podpisami: przegląd zestawu, nie do Play. */
+    private fun contactSheetD7(languageDir: File, strings: Properties) {
+        val file = File(languageDir, "preview_contact.png")
+        writePng(file, 1600, 960, false) { c ->
+            c.drawColor(Color.rgb(18, 27, 43))
+            val heading = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(244, 202, 103)
+                textSize = 37f
+                typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+            }
+            c.drawText("CENTURY WAR D7 - " + languageDir.name.uppercase(), 24f, 52f, heading)
+            val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(248, 245, 231)
+                typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            }
+            val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(230, 170, 75)
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+            }
+            val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            for (i in d7Names.indices) {
+                val x = 18f + i.rem(4) * 395f
+                val y = 84f + (i / 4) * 415f
+                val bitmap = BitmapFactory.decodeFile(File(languageDir, "phone/" + d7File(i + 1)).absolutePath)
+                    ?: error("Brak miniatury: " + d7File(i + 1))
+                val area = RectF(x, y, x + 376f, y + 211.5f)
+                try { c.drawBitmap(bitmap, null, area, bmpPaint) } finally { bitmap.recycle() }
+                c.drawRect(area, border)
+                val label = (i + 1).toString().padStart(2, '0') + "  " +
+                    strings.getProperty("captionD7." + (i + 1))
+                text.textSize = 25f
+                if (text.measureText(label) > 376f) text.textSize *= 376f / text.measureText(label)
+                c.drawText(label, x, y + 249f, text)
+            }
+        }
+        checkPng(file, 1600, 960, false)
+    }
+
+    /** Pion zewnętrznego Folda: tylko stykówka QA (8 kadrów obok siebie), bez plików do Play. */
+    private fun sheetD7Portrait(languageDir: File, device: Device, language: String, strings: Properties) {
+        val g = gameD7(device, language)
+        val thumbW = 190f
+        val thumbH = thumbW * device.height / device.width
+        val sheet = File(languageDir, "preview_${device.name}.png")
+        val sheetW = (16 + 8 * (thumbW + 10)).toInt()
+        val sheetH = (thumbH + 40).toInt()
+        val frame = Bitmap.createBitmap(device.width, device.height, Bitmap.Config.ARGB_8888)
+        try {
+            writePng(sheet, sheetW, sheetH, false) { c ->
+                c.drawColor(Color.rgb(18, 27, 43))
+                val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+                for (scene in 1..8) {
+                    frame.eraseColor(Color.rgb(27, 42, 65))
+                    val canvas = Canvas(frame)
+                    drawD7Scene(canvas, g, device, language, scene)
+                    drawD7Caption(canvas, strings.getProperty("captionD7.$scene"), scene,
+                        device.width.toFloat(), device.height.toFloat())
+                    val x = 16f + (scene - 1) * (thumbW + 10f)
+                    c.drawBitmap(frame, null, RectF(x, 20f, x + thumbW, 20f + thumbH), bmpPaint)
+                }
+            }
+        } finally {
+            frame.recycle()
+        }
+        checkPng(sheet, sheetW, sheetH, false)
+    }
+
+    /** Grafika promocyjna 1024×500 z 153: Wódz na polu bitwy i emblemat z logo. */
+    private fun drawCommanderFeature(c: Canvas, featureGame: Game) {
+        val battle = commander153Battle(forFeature = true)
+        battle.fx.count = 0
+        val renderer = BattleRenderer(featureGame, battle)
+        renderer.layout(1024f, 500f, 12f, 10f)
+        renderer.camX = Defs.LANE * 0.5f - renderer.worldVisible * 0.5f
+        renderer.clampCam()
+        renderer.lerp = 1f
+        repeat(3) { renderer.render(c, 1f / 60f, 1024f, 500f) }
+        drawFeatureTitle(c)
     }
 
     /** Stan przygotowany tylko dla zrzutów HUD; nie zmienia grafiki promocyjnej. */
@@ -571,7 +966,10 @@ class StoreGraphicsTest {
         return codes
     }
 
-    private fun game(device: Device, language: String): Game {
+    private fun game(
+        device: Device, language: String,
+        progress: IntArray = intArrayOf(3, 3, 2, 3, 2, 1), tune: Profile.() -> Unit = {},
+    ): Game {
         val host = object : Host {
             override fun vibrate(ms: Long) {}
             override fun requestText(title: String, current: String, onResult: (String) -> Unit) {}
@@ -588,7 +986,6 @@ class StoreGraphicsTest {
             showFps = false
             quality = Quality.HIGH
             medals = 2400
-            val progress = intArrayOf(3, 3, 2, 3, 2, 1)
             for (i in progress.indices) stars[i] = progress[i]
             levels["r_unitDmg"] = 4
             levels["r_unitHp"] = 3
@@ -596,6 +993,7 @@ class StoreGraphicsTest {
             levels["r_train"] = 2
             // Kadr kampanii ma pokazać mapę 36 etapów, nie zapowiedź odblokowanej epoki.
             for (era in 0 until Defs.ERA_COUNT) markEraIntroSeen(era)
+            tune()
         }
         val g = Game(host, profile, Quality.HIGH)
         g.density = device.density

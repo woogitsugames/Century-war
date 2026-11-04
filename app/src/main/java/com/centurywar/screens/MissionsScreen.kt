@@ -59,6 +59,9 @@ class MissionsScreen(g: Game) : Screen(g) {
     internal var weeklyResetText = ""
         private set
 
+    /** D7: stały zegar dla powtarzalnych zrzutów sklepu; w grze zawsze czas systemowy. */
+    internal var clock: () -> Long = { System.currentTimeMillis() }
+
     private fun refreshResetTexts(now: Long) {
         val sec = Math.floorDiv(now, 1000L)
         val dayLeft = (Missions.utcDay(now) + 1L) * 86_400L - sec
@@ -85,7 +88,7 @@ class MissionsScreen(g: Game) : Screen(g) {
     }
 
     private fun updateData() {
-        val now = System.currentTimeMillis()
+        val now = clock()
         missions.refresh(now)
         val loginReward = missions.claimLogin(now)
         shownDay = Missions.utcDay(now)
@@ -172,7 +175,7 @@ class MissionsScreen(g: Game) : Screen(g) {
         elapsed += dt
         if (elapsed >= 30f) {
             elapsed = 0f
-            val now = System.currentTimeMillis()
+            val now = clock()
             if (Missions.utcDay(now) != shownDay) updateData() else refreshResetTexts(now)
         }
     }
