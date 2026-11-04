@@ -157,6 +157,11 @@ class Game(
     var playtest: PlaytestLog? = null
     /** R11 (pozycja 7): ankieta testera w menu (tylko wersje testowe; testy mogą wyłączyć). */
     var testerSurveyEnabled = BuildConfig.TESTER_SURVEY
+    /**
+     * R12 (pozycja 5): dopiski „od premiery” w osiągnięciach i wyzwaniu ([com.centurywar.meta.PreReleaseRules]).
+     * Ten sam warunek co ankieta testera; zrzuty sklepu go wyłączają.
+     */
+    var preReleaseNotesEnabled = BuildConfig.TESTER_SURVEY
     private var playtestBattleSeconds = 0f
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
