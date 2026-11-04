@@ -361,6 +361,13 @@ val skippedReleaseChecks = providers.gradleProperty("skipCheck").getOrElse("")
 check("ownerInput" !in ReleaseChecklist.parseSkips(skippedReleaseChecks) || ciDebugSigningAllowed) {
     "-PskipCheck=ownerInput jest dozwolone wyłącznie w smoke-teście CI."
 }
+// Tag v* nie pomija niczego; podpisane wydanie testowe w CI tylko releaseDay,serverUrl,hmacKey.
+ReleaseChecklist.ciSkipProblem(
+    providers.environmentVariable("GITHUB_ACTIONS").orNull,
+    providers.environmentVariable("GITHUB_EVENT_NAME").orNull,
+    ReleaseChecklist.parseSkips(skippedReleaseChecks),
+    validReleaseSigning,
+)?.let { throw GradleException(it) }
 val releaseHasHmacKey = scoreHmacKey.isNotBlank()
 
 val releaseChecklist = tasks.register("releaseChecklist") {

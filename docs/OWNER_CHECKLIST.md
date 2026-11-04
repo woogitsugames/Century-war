@@ -1,6 +1,6 @@
 # Ściąga właściciela: co trzeba zrobić, żeby ruszyły testy zamknięte w Google Play
 
-Stan na 3.11.2026. Ta ściąga jest dla właściciela, bez wiedzy programistycznej. Każdy krok podaje:
+Stan na 4.11.2026. Ta ściąga jest dla właściciela, bez wiedzy programistycznej. Każdy krok podaje:
 ile trwa, ile kosztuje, co przekazać koordynatorowi i czy **blokuje testy** (bez niego testów
 nie da się zacząć). Szczegóły są w `docs/store/PLAY_CONSOLE.md` i `docs/RELEASE.md`. Linki
 prowadzą tylko do stron Google.
@@ -164,7 +164,7 @@ kliknąć link tym samym kontem Google i zainstalować grę ze Sklepu Play.
 | 14 dni testu + zbieranie ludzi | 0 | liczba zapisanych testerów (nie ich adresy), raporty z 3. i 10. dnia | **TAK** (ktoś musi testować) |
 
 ### 9. Serwer rankingu globalnego
-Na testach **można go pominąć**. Gra działa bez niego, a rankingi zapewnia Play Games.
+**Decyzja 4.11.2026: testy zamknięte bez serwera.** Na testach **można go pominąć**. Gra działa bez niego, a rankingi zapewnia Play Games.
 Włączymy go później, przed premierą: koszt ok. 5–7 EUR/mies. (`docs/research/R5-server.md`).
 
 | Czas | Koszt | Przekaż koordynatorowi | Blokuje testy |
@@ -181,9 +181,70 @@ wersję testową zbudujemy ze świadomym wyjątkiem i ustawimy datę bliżej pre
 |---|---|---|---|
 | 5 min (decyzja) | 0 | data premiery albo „jeszcze nieznana” | **NIE** |
 
+### 11. Zbudowanie wersji testowej 0.1.0 i wgranie na test wewnętrzny
+Gdy kroki 1–8 są zrobione, a koordynator potwierdzi, że wpisał 84 ID i dane wydawcy, wersję
+do sklepu budujesz **jednym kliknięciem w GitHubie**. Decyzje z 4.11: pierwsza wersja `0.1.0`,
+najpierw test wewnętrzny, potem ten sam plik na test zamknięty, bez serwera rankingu.
+
+**A. Sekrety w GitHubie (raz, ok. 15 min).** Repozytorium na github.com → **Settings** →
+**Secrets and variables** → **Actions**.
+- Zakładka **Secrets** → **New repository secret**, cztery razy (nazwa dokładnie jak niżej):
+
+  | Nazwa | Co wpisać |
+  |---|---|
+  | `KEYSTORE_BASE64` | plik klucza `.jks` zamieniony na tekst (niżej jak) |
+  | `KEYSTORE_PASSWORD` | hasło do pliku klucza |
+  | `KEY_ALIAS` | nazwa klucza, np. `century-war-upload` |
+  | `KEY_PASSWORD` | hasło klucza (często to samo co wyżej) |
+
+  Zamiana pliku na tekst, w folderze z plikiem `.jks` (wynik trafia do schowka, wklej go
+  w pole „Secret”):
+  - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\century-war-upload.jks")) | Set-Clipboard`
+  - macOS (Terminal): `base64 -i century-war-upload.jks | pbcopy`
+- Zakładka **Variables** → **New repository variable**: nazwa `CW_PRIVACY_URL`, wartość to
+  adres polityki prywatności z kroku 4 (`https://…`).
+- **Nie** zakładaj `CW_SERVER_URL` ani `CW_HMAC_KEY`: testy są bez serwera.
+
+GitHub nie pokaże już wpisanych sekretów nikomu, także Tobie; w razie pomyłki wpisz je od nowa
+(„Update”). Nie wklejaj ich nigdzie indziej.
+
+**B. Uruchomienie (ok. 1–1,5 h czekania, bez Twojej pracy).** Repozytorium → zakładka
+**Actions** → po lewej **Android CI** → po prawej przycisk **Run workflow**:
+- **Use workflow from:** `main`;
+- zaznacz **Wydanie testowe dla Google Play** (`test_release`);
+- numer wersji zostaw `0.1.0`;
+- zielony przycisk **Run workflow**.
+
+Nie twórz żadnego „taga” ani „release” w GitHubie: to ścieżka premierowa i bez serwera się
+zatrzyma. Najpierw biegną testy, potem „Wydanie testowe AAB i APK”. Zielony znaczek = gotowe.
+Czerwony krzyżyk: wyślij koordynatorowi **link do tego uruchomienia** (w logach nie ma haseł).
+
+**C. Pobranie pliku.** Kliknij zakończone uruchomienie, przewiń na dół do **Artifacts** i pobierz
+**`century-war-test-release-aab`**. To plik `.zip`: rozpakuj go, w środku jest
+`app-release.aab`. Plik jest dostępny przez **90 dni**. (`…-apk` służy do ręcznej instalacji,
+`…-mapping` do raportów awarii; w razie potrzeby koordynator powie, co z nimi zrobić.)
+
+**D. Test wewnętrzny w Play Console.** Twoja gra → **Testowanie → Testy wewnętrzne**:
+1. zakładka **Testerzy**: utwórz listę e-mail (Ty i ewentualnie kilka osób, do 100), skopiuj
+   **link do zapisu**;
+2. **Utwórz nową wersję** → przy pierwszym razie zostaw włączone **Play App Signing** →
+   **Prześlij** plik `app-release.aab`;
+3. nazwa wersji podpowie się sama (`1 (0.1.0)`); w „Informacjach o wersji” wpisz krótko, co
+   testujemy → **Dalej** → **Zapisz** → **Opublikuj** (lub „Rozpocznij wdrażanie”);
+4. otwórz link do zapisu na swoim telefonie (i Foldzie), zainstaluj grę ze Sklepu Play,
+   pograj 1–2 dni. Raport przedpremierowy pojawi się w konsoli sam po kilku godzinach.
+
+Gdy wszystko działa: **Testy wewnętrzne → Awansuj wersję → Testy zamknięte**. To ten sam plik,
+nic nie budujemy od nowa. Dalej jak w kroku 8.
+
+| Czas | Koszt | Przekaż koordynatorowi | Blokuje testy |
+|---|---|---|---|
+| 15 min sekrety + 1–1,5 h czekania + 30 min w konsoli | 0 | „AAB 0.1.0 wgrany na test wewnętrzny” (koordynator zapisze numer wersji 1) i uwagi z telefonu | **TAK** |
+
 ## Kolejność w skrócie
 
 D-U-N-S → konto i weryfikacja → strona firmy z polityką → utworzenie gry → klucz podpisu →
-Play Games (84 ID) → deklaracje i karta sklepu → koordynator buduje wersję i wgrywa ją na
-testy wewnętrzne → sprawdzenie na Twoim telefonie → testy zamknięte z testerami.
+Play Games (84 ID) → deklaracje i karta sklepu → Ty klikasz „Run workflow” z wydaniem testowym
+(krok 11) i wgrywasz AAB na testy wewnętrzne → sprawdzenie na Twoim telefonie → ten sam AAB na
+testy zamknięte z testerami.
 Realnie: **2–5 tygodni** od zera, głównie przez D-U-N-S i weryfikację w Google.

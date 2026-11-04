@@ -105,6 +105,34 @@ object ReleaseChecklist {
     ): Boolean = flag && githubActions == "true" && smokeMarker == "true" &&
         eventName in setOf("pull_request", "workflow_dispatch")
 
+    /** Jedyne wyjątki dozwolone dla prawdziwie podpisanego wydania testowego w CI (R12 poz. 2). */
+    val testReleaseSkips = setOf("releaseDay", "serverUrl", "hmacKey")
+
+    /**
+     * Wyjątki listy kontrolnej w GitHub Actions. Wyzwalacz push (tag v*, produkcja) nie pomija
+     * niczego. Build podpisany kluczem upload może pominąć wyłącznie [testReleaseSkips] i tylko
+     * przy ręcznym uruchomieniu (workflow_dispatch, zadanie test-release w android.yml).
+     * Smoke-test z podpisem debug (artefakty nie do publikacji) i buildy bez podpisu nie są tu
+     * ograniczane, bo i tak nie dadzą pliku do wgrania w Play. Lokalnie (bez GITHUB_ACTIONS)
+     * wyjątki zostają świadomą decyzją, opisaną w docs/RELEASE.md. Zwraca opis błędu albo null.
+     */
+    fun ciSkipProblem(
+        githubActions: String?, eventName: String?, skips: Set<String>, uploadSigned: Boolean,
+    ): String? {
+        if (githubActions != "true" || skips.isEmpty()) return null
+        val listed = skips.sorted().joinToString(",")
+        if (eventName == "push") {
+            return "Wydanie z tagu v* (push) nie może pomijać kontroli (-PskipCheck=$listed)."
+        }
+        if (!uploadSigned) return null
+        if (eventName != "workflow_dispatch" || !testReleaseSkips.containsAll(skips)) {
+            return "Podpisany release w CI może pominąć tylko " +
+                testReleaseSkips.sorted().joinToString(",") +
+                " i tylko w ręcznym wydaniu testowym (zdarzenie: $eventName, -PskipCheck=$listed)."
+        }
+        return null
+    }
+
     /** Pliki sklepu: żadnych nierozstrzygniętych znaczników poza danymi właściciela. */
     fun storeDocumentProblems(documents: Map<String, String>): List<String> {
         val errors = mutableListOf<String>()

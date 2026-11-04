@@ -42,6 +42,37 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertIn("for name in CW_SERVER_URL CW_HMAC_KEY CW_PRIVACY_URL;", release)
         self.assertIn('"${!name:-}"', release)
 
+    def test_no_push_trigger_except_tags(self):
+        # Limit minut CI: push tylko dla tagów v*, poza tym PR do main i ręcznie.
+        on = re.search(r"(?ms)^on:\n(.*?)^permissions:", self.workflow).group(1)
+        push = re.search(r"(?ms)^  push:\n(.*?)(?=^  [a-z_]+:)", on).group(1)
+        self.assertNotIn("branches", push)
+        self.assertIn("- 'v*'", push)
+        self.assertIn("test_release:", on)
+        self.assertIn("type: boolean", on)
+        self.assertIn("default: false", on)
+
+    def test_skip_flags_only_in_manual_test_release(self):
+        test_release = self.job("test-release")
+        self.assertIn("github.event_name == 'workflow_dispatch'", test_release)
+        self.assertIn("inputs.test_release == true", test_release)
+        self.assertIn("!startsWith(github.ref, 'refs/tags/')", test_release)
+        self.assertIn(
+            "needs: [build, fast-tests, screenshot-tests, balance-tests]", test_release
+        )
+        skips = re.findall(r"-PskipCheck=(\S+)", self.workflow)
+        self.assertEqual(["releaseDay,serverUrl,hmacKey"], skips)
+        self.assertNotIn("skipCheck", self.job("release"))
+        for forbidden in ("ciTestDebugSigning", "CW_RELEASE_SMOKE: ", "ownerInput"):
+            with self.subTest(flag=forbidden):
+                self.assertNotIn(forbidden, self.workflow)
+        for secret in ("KEYSTORE_BASE64", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD"):
+            self.assertIn(f"secrets.{secret}", test_release)
+        self.assertIn("CW_PRIVACY_URL: ${{ vars.CW_PRIVACY_URL }}", test_release)
+        self.assertIn("-PtesterSurvey=true", test_release)
+        self.assertEqual(3, test_release.count("retention-days: 90"))
+        self.assertIn("ReleaseChecklist.ciSkipProblem(", self.gradle)
+
     def test_debug_only_test_graph_is_checked(self):
         self.assertIn("gradle.projectsEvaluated {", self.gradle)
         self.assertIn('setDependsOn(listOf(tasks.named("testDebugUnitTest")))', self.gradle)

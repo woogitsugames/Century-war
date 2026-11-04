@@ -134,6 +134,28 @@ class ReleaseChecklistTest {
         assertFalse(ReleaseChecklist.canUseCiDebugSigning(false, "true", "pull_request", "true"))
     }
 
+    @Test fun ciSkipsAreLimitedToManualTestRelease() {
+        val test = ReleaseChecklist.testReleaseSkips
+        assertEquals(setOf("releaseDay", "serverUrl", "hmacKey"), test)
+        // Ręczne wydanie testowe z kluczem upload: dokładnie te trzy wyjątki.
+        assertNull(ReleaseChecklist.ciSkipProblem("true", "workflow_dispatch", test, true))
+        assertNull(ReleaseChecklist.ciSkipProblem("true", "workflow_dispatch", emptySet(), true))
+        // Tag v* (push) nie pomija niczego, niezależnie od podpisu.
+        assertTrue(ReleaseChecklist.ciSkipProblem("true", "push", test, true)!!.contains("tagu"))
+        assertTrue(ReleaseChecklist.ciSkipProblem("true", "push", setOf("releaseDay"), false) != null)
+        assertNull(ReleaseChecklist.ciSkipProblem("true", "push", emptySet(), true))
+        // Żaden inny wyjątek w podpisanym buildzie CI, w tym ownerInput i playGames.
+        for (extra in ReleaseChecklist.allowedSkips - test) {
+            assertTrue(extra, ReleaseChecklist.ciSkipProblem(
+                "true", "workflow_dispatch", test + extra, true) != null)
+        }
+        assertTrue(ReleaseChecklist.ciSkipProblem("true", "pull_request", test, true) != null)
+        // Smoke-test bez klucza upload i build lokalny bez ograniczeń tej reguły.
+        assertNull(ReleaseChecklist.ciSkipProblem(
+            "true", "pull_request", ReleaseChecklist.allowedSkips, false))
+        assertNull(ReleaseChecklist.ciSkipProblem(null, null, ReleaseChecklist.allowedSkips, true))
+    }
+
     @Test fun ownerInputDoesNotDuplicatePlayGamesId() {
         assertTrue(ReleaseChecklist.ownerInputProblems(validOwner()).isEmpty())
         assertFalse(ReleaseChecklist.ownerFields(validOwner()).containsKey("play_games_project_id"))
