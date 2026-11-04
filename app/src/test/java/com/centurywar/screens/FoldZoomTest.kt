@@ -112,7 +112,9 @@ class FoldZoomTest {
             b.spawn(b.enemy, Defs.unit(4, roles[(i + 2) % roles.size]))
             repeat(70) { b.step() }
         }
-        repeat(240) { b.step() }
+        repeat(840) { b.step() }
+        println("foldzoom mid: gracz ${b.player.front} wróg ${b.enemy.front} baza ${b.player.baseFront} " +
+            "wrogów w zasięgu ${b.units.count { it.alive && it.side == 1 && it.x < b.player.baseFront + 1370f }}")
         val r = rendererOf(s)
         r.camX = r.followTarget()
         r.clampCam()
@@ -170,11 +172,14 @@ class FoldZoomTest {
         }
     }
 
+    /** Najliczniejsze skupisko wrogów w zasięgu ostrzału (jak przyciąganie celownika). */
     private fun enemyCluster(b: Battle): Float {
-        var best = 0f
-        var bestN = -1
+        var best = b.player.baseFront + 700f
+        var bestN = 0
+        val near = b.player.baseFront + 220f
+        val far = b.player.baseFront + 1370f
         for (u in b.units) {
-            if (!u.alive || u.side != 1) continue
+            if (!u.alive || u.side != 1 || u.x < near || u.x > far) continue
             val n = b.units.count { it.alive && it.side == 1 && abs(it.x - u.x) < 120f }
             if (n > bestN) { bestN = n; best = u.x }
         }
@@ -209,7 +214,48 @@ class FoldZoomTest {
                 bmp.recycle()
             }
         }
+        // Puste niebo: wiersze pola bitwy (nad ziemią) bez żadnego rysunku poza gradientem nieba.
+        val report = StringBuilder()
+        for (n in arrayOf("1_start", "2_mid", "4_boss")) {
+            val before = emptySkyShare(File(out, "foldzoom_before_$n.png"))
+            val after = emptySkyShare(File(out, "foldzoom_after_$n.png"))
+            report.append("$n: puste niebo ${(before * 100).toInt()}% → ${(after * 100).toInt()}% pola\n")
+            assertTrue("$n: niebo $before → $after", after < before * 0.8f)
+        }
+        File(out, "foldzoom_sky.txt").writeText(report.toString())
+        println(report)
         File(out, "foldzoom_compare.png").outputStream().use { check(sheet.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+    }
+
+    /**
+     * Udział pustego nieba w polu bitwy (między górnym a dolnym HUD): wiersze, w których kolor
+     * zmienia się najwyżej o kilka poziomów na całej szerokości (sam gradient, bez krajobrazu,
+     * jednostek i ziemi). Chmury liczone jako niebo (jasne, bez treści).
+     */
+    private fun emptySkyShare(f: File): Float {
+        val g = game(foldOuter)
+        val s = open(g, BattleConfig(Mode.SKIRMISH, 5L, 1f))
+        val field = field(s, "fieldRect").get(s) as android.graphics.RectF
+        val bmp = BitmapFactory.decodeFile(f.path)
+        val row = IntArray(bmp.width)
+        var sky = 0
+        var total = 0
+        // Pomijamy 70 dp pod paskiem (wstęga podpowiedzi, pasek bossa).
+        for (y in (field.top + 70f * g.ui.dp).toInt() until field.bottom.toInt()) {
+            bmp.getPixels(row, 0, bmp.width, 0, y, bmp.width, 1)
+            total++
+            var minL = 255; var maxL = 0; var white = 0
+            for (x in row.indices step 2) {
+                val c = row[x]
+                val l = (Color.red(c) * 3 + Color.green(c) * 6 + Color.blue(c)) / 10
+                if (l > 236) { white++; continue }
+                if (l < minL) minL = l
+                if (l > maxL) maxL = l
+            }
+            if (maxL - minL <= 10 || white * 2 >= row.size / 2) sky++
+        }
+        bmp.recycle()
+        return sky.toFloat() / total
     }
 
     private class Geo(val k: Float, val groundY: Float, val worldVisible: Float, val fieldTop: Float,
@@ -246,12 +292,10 @@ class FoldZoomTest {
         assertTrue(after.groundY < after.fieldBottom - 20f * foldOuter.density)
         // Znak „baza atakowana” w polu bitwy, nie na HUD.
         assertTrue(after.alertTop >= after.fieldTop && after.alertBottom <= after.fieldBottom)
-        // Mniej pustego nieba: pas nad najwyższą zwykłą jednostką (120 j.) mniejszy niż przed zmianą.
-        val skyBefore = before.groundY - 120f * before.k - before.fieldTop
-        val skyAfter = after.groundY - 120f * after.k - after.fieldTop
-        assertTrue("niebo $skyBefore → $skyAfter", skyAfter < skyBefore * 0.8f)
+        // Linia ziemi niżej niż przed zmianą (bliżej dolnego HUD), puste niebo mierzy [beforeAfterShots].
+        assertTrue("ziemia ${before.groundY} → ${after.groundY}", after.groundY > before.groundY)
         println("foldzoom: k ${before.k} → ${after.k}, widok ${before.worldVisible} → ${after.worldVisible}, " +
-            "ziemia ${before.groundY} → ${after.groundY}, niebo ${skyBefore} → ${skyAfter}, " +
+            "ziemia ${before.groundY} → ${after.groundY}, pole ${after.fieldTop}..${after.fieldBottom}, " +
             "fizycznie ${physFold / physPhone * 100f}% telefonu 720p")
     }
 

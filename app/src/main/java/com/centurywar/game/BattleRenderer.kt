@@ -231,7 +231,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         /** Widoczna szerokość świata przy przybliżeniu (bez niego 880 j.). */
         const val NARROW_WORLD_W = 600f
         /** Część nadmiaru wysokości oddana ziemi pod jednostkami (bez przybliżenia 0,4). */
-        const val NARROW_GROUND_SHARE = 0.4f
+        const val NARROW_GROUND_SHARE = 0.3f
+        /** Powiększenie dalekich warstw krajobrazu przy przybliżeniu (wypełniają niebo). */
+        const val NARROW_FAR_SCALE = 1.7f
     }
 
     fun clampCam() {
@@ -381,7 +383,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         backdrops.drawSky(c, w, h, groundY, time)
         c.save()
         c.translate(shakeX, shakeY)
-        backdrops.drawLandscape(c, w, groundY, camX, k)
+        backdrops.drawLandscape(c, w, groundY, camX, k, if (narrowZoomActive) NARROW_FAR_SCALE else 1f)
         backdrops.drawGround(c, w, h, groundY, camX, k)
         if (b.weather == Weather.NIGHT) drawNight(c, w)
         drawScars(c, dt)

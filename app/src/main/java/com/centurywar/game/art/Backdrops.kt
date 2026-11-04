@@ -177,11 +177,15 @@ class Backdrops(private val g: Game, private val b: Battle) {
         cacheBuilds++
     }
 
-    fun drawLandscape(c: Canvas, w: Float, groundY: Float, camX: Float, k: Float) {
+    /**
+     * [farScale] > 1 powiększa dwie dalekie warstwy (wąski, wysoki ekran: mniej pustego nieba);
+     * bliska warstwa zawsze w skali świata [k].
+     */
+    fun drawLandscape(c: Canvas, w: Float, groundY: Float, camX: Float, k: Float, farScale: Float = 1f) {
         ensure(w, groundY)
         lastDrawnLayers = 0
-        if (cachedLayers == 3) drawLayer(c, pictures[0], w, groundY, camX, k, 0.14f)
-        if (cachedLayers >= 2) drawLayer(c, pictures[1], w, groundY, camX, k, 0.36f)
+        if (cachedLayers == 3) drawLayer(c, pictures[0], w, groundY, camX, k * farScale, 0.14f)
+        if (cachedLayers >= 2) drawLayer(c, pictures[1], w, groundY, camX, k * farScale, 0.36f)
         drawLayer(c, pictures[2], w, groundY, camX, k, 0.70f)
     }
 
