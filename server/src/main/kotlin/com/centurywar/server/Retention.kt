@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Okresy przechowywania danych rankingu w dniach (R5, luka L1); `0` wyłącza dany krok.
- * Wartości domyślne są propozycją do zatwierdzenia przez właściciela (`docs/SERVER_DEPLOY.md` §11).
+ * Wartości domyślne są propozycją do zatwierdzenia przez właściciela (`docs/SERVER_DEPLOY.md` §13).
  */
 data class RetentionPolicy(
     /** Wyniki tablic dnia (`daily`, liczone od dnia wyzwania) i tygodnia (`weekly_<n>`, od końca tygodnia). */
