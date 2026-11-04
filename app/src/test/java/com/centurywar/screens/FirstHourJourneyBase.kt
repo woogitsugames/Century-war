@@ -114,7 +114,40 @@ abstract class FirstHourJourneyBase {
         g.frame(tiny, dt)
         // W bitwie liczy się czas symulacji (gracz gra na ×1), poza nią czas klatek.
         clock += if (bs != null && !bs.finished && bs.battle.time > t0) bs.battle.time - t0 else dt
+        recordAchievements(g)
     }
+
+    // ------------------------------------------------------------------ R6-01: osiągnięcia
+
+    /** Czas gracza (s) pierwszego zauważenia każdego odblokowanego osiągnięcia. */
+    protected val achievementTimes = LinkedHashMap<String, Float>()
+
+    protected fun recordAchievements(g: Game) {
+        val unlocked = g.profile.unlockedAchievements
+        if (unlocked.size == achievementTimes.size) return
+        for (id in com.centurywar.meta.Achievements.all) if (id.id in unlocked && id.id !in achievementTimes) {
+            achievementTimes[id.id] = clock
+            note(g, "osiągnięcie: ${id.id} „${L["ach_" + id.id]}” (+${id.medalReward})")
+        }
+    }
+
+    /**
+     * R6-01 (Play Games LU-AC-GAC): co najmniej 4 osiągnięcia z puli pierwszej godziny przed 60:00.
+     * Zwraca tabelę „osiągnięcie;minuta” do osi czasu.
+     */
+    protected fun checkFirstHourAchievements(where: String): String {
+        val within = FIRST_HOUR_POOL.filter { (achievementTimes[it] ?: Float.MAX_VALUE) < 60f * 60f }
+        if (within.size < 4) problem("$where: przed 60:00 tylko ${within.size} osiągnięcia z puli " +
+            "pierwszej godziny ($within; wszystkie: $achievementTimes)")
+        val sb = StringBuilder("\nosiągnięcie;czas odblokowania (mm:ss)\n")
+        for ((id, t) in achievementTimes) sb.append(id).append(';')
+            .append(String.format(Locale.ROOT, "%02d:%02d", (t / 60f).toInt(), (t % 60f).toInt()))
+            .append(if (id in FIRST_HOUR_POOL) ";pula 1. godziny" else "").append('\n')
+        sb.append("przed 60:00 z puli: ${within.size} ($within)\n")
+        return sb.toString()
+    }
+
+    protected val FIRST_HOUR_POOL = listOf("win_1", "kills_100", "first_evolve", "first_turret", "first_research", "stages_3")
 
     protected fun tap(g: Game, b: Button, where: String) {
         if (!b.visible || b.r.isEmpty) { problem("$where: przycisk #${b.id} '${b.label}' niewidoczny"); tick(g); return }
@@ -436,6 +469,7 @@ abstract class FirstHourJourneyBase {
 
     protected fun campaign(g: Game, lastStage: Int) {
         for (index in 1..lastStage) {
+            if (clock >= stopAtClock) { note(g, "koniec ścieżki po ${"%.1f".format(clock / 60f)} min"); return }
             var won = false
             var attempt = 0
             while (!won && attempt < 3) {
@@ -444,7 +478,10 @@ abstract class FirstHourJourneyBase {
                 val bs = startStage(g, index, where) ?: return
                 battleHintsSeen.clear()
                 if (bs.battle.commanderAvailable) note(g, "$where: Wódz dostępny w HUD")
-                val o = playWithAi(g, bs, where)
+                // Wariant ostrożny: pierwsza próba etapu 2 kończy się kapitulacją po 75 s
+                // (kapitulacja przed 60 s nie liczy się do serii porażek R2-02).
+                val forcedLoss = cautious && index == 1 && attempt == 1
+                val o = playWithAi(g, bs, where, if (forcedLoss) 75f else 18 * 60f)
                 stageLogs.add(StageLog(index, attempt, o))
                 note(g, "$where: ${if (o.won) "WYGRANA" else "porażka"} ${"%.1f".format(o.minutes)} min, " +
                     "${o.stars}★, nagroda ${o.reward}, łącznie +${o.medals}; dymki ${battleHintsSeen}")
@@ -474,7 +511,8 @@ abstract class FirstHourJourneyBase {
                 }
                 if (g.current !is CampaignScreen) problem("$where: „Dalej” nie prowadzi na mapę (${name(g.current)})")
                 dwell(g, "$where/mapa po bitwie", 3.5f)
-                if (index == 1 && attempt == 1) firstResearch(g, "po etapie 2")
+                if (!cautious && index == 1 && attempt == 1) firstResearch(g, "po etapie 2")
+                if (cautious && researchBought == 0 && clock >= 30f * 60f) firstResearch(g, "po 30. minucie")
             }
             if (!won) { note(g, "etap ${index + 1}: 3 porażki z rzędu — gracz utknął"); audit.append("etap ${index + 1}: 3 porażki\n"); return }
         }
@@ -695,6 +733,7 @@ abstract class FirstHourJourneyBase {
         researchBought = 0
         goalTapped = false
         timeline.setLength(0)
+        achievementTimes.clear()
         val g = game(d, lang)
         L.setCode(lang)
         assertEquals("$tag: pierwsze uruchomienie bez menu", MenuScreen::class.java, g.current?.javaClass)
@@ -747,8 +786,73 @@ abstract class FirstHourJourneyBase {
         val table = StringBuilder("\netap;podejście;wynik;min;gwiazdki;nagroda;medale łącznie\n")
         for (l in stageLogs) table.append("${l.stage + 1};${l.attempt};${if (l.o.won) "W" else "P"};" +
             "${"%.1f".format(l.o.minutes)};${l.o.stars};${l.o.reward};${l.o.medals}\n")
-        File(out, "fh_${tag}_os_czasu.txt").writeText(timeline.toString() + table)
+        val achievements = checkFirstHourAchievements("pierwsza godzina")
+        File(out, "fh_${tag}_os_czasu.txt").writeText(timeline.toString() + table + achievements)
         g.history?.close()
+    }
+
+    /**
+     * R6-01, wariant ostrożny: gracz pomija samouczek, raz przegrywa etap 2 (kapitulacja po 75 s)
+     * i nie kupuje badań przed 30. minutą. Nadal ≥ 4 osiągnięcia z puli przed 60:00.
+     */
+    protected fun cautiousJourney(d: Device, lang: String) {
+        clock = 0f
+        stageLogs.clear()
+        researchBought = 0
+        goalTapped = true // bez dotykania celu: ścieżka ostrożna idzie zawsze przez „Dalej”
+        cautious = true
+        timeline.setLength(0)
+        achievementTimes.clear()
+        try {
+            val g = game(d, lang)
+            L.setCode(lang)
+            tick(g, 0.1f, 5)
+            tap(g, button(g.current!!, 1), "graj")
+            val bs = g.current as? BattleScreen ?: error("$tag: „Graj” nie otwiera bitwy")
+            val tut = requireNotNull(bs.tut) { "pierwsza bitwa bez samouczka" }
+            var guard = 0
+            while (!tut.showing && guard++ < 600) tick(g, 0.1f)
+            tap(g, tut.skipBtn, "samouczek/pomiń")
+            if (!tut.finished && tut.skipBtn.visible) tap(g, tut.skipBtn, "samouczek/pomiń — potwierdź")
+            if (!tut.finished) problem("„Pomiń samouczek” nie kończy samouczka")
+            note(g, "samouczek pominięty po ${"%.1f".format(bs.battle.time)} s")
+            tutorialEnd = bs.battle.time
+            battleHintsSeen.clear()
+            val o = playWithAi(g, bs, "etap 1 (pominięty samouczek)")
+            stageLogs.add(StageLog(0, 1, o))
+            note(g, "etap 1: ${if (o.won) "WYGRANA" else "porażka"} ${"%.1f".format(o.minutes)} min, nagroda ${o.reward}")
+            tap(g, bs.continueBtn, "etap 1/dalej")
+            tick(g, 0.2f, 6)
+            dwell(g, "mapa po etapie 1", 3.5f)
+            stopAtClock = 62f * 60f
+            campaign(g, lastStage = 7)
+            val achievements = checkFirstHourAchievements("wariant ostrożny")
+            if (achievementTimes.containsKey("first_research") && achievementTimes.getValue("first_research") < 30f * 60f)
+                problem("wariant ostrożny: badanie kupione przed 30. minutą")
+            note(g, "koniec wariantu ostrożnego: ${g.profile.battles} bitew, badań kupionych $researchBought")
+            File(out, "fh_${tag}_os_czasu.txt").writeText(timeline.toString() + achievements)
+            g.history?.close()
+        } finally {
+            cautious = false
+            stopAtClock = Float.MAX_VALUE
+        }
+    }
+
+    /** Wariant ostrożny: pierwsza próba etapu 2 to porażka, badania dopiero po 30. minucie. */
+    protected var cautious = false
+    protected var stopAtClock = Float.MAX_VALUE
+
+    protected fun cautiousFirstHourOn(device: String, lang: String) {
+        val old = L.lang
+        try {
+            tag = "${device}_${lang}_ostrozny"
+            reported.clear()
+            cautiousJourney(devices.getValue(device), lang)
+        } finally {
+            L.lang = old
+            File(out, "fh_audit_${device}_${lang}_ostrozny.txt").writeText(audit.toString() + "\n--- PROBLEMY ---\n" + problems)
+        }
+        assertTrue("Pierwsza godzina (wariant ostrożny) — problemy:\n$problems", problems.isEmpty())
     }
 
     /**

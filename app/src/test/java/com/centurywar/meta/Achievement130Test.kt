@@ -48,7 +48,7 @@ class Achievement130Test {
             "card_new_50", "weekly_rules_3", "weekly_rules_6", "hard_perfect",
             "daily_events_6", "modifier_victories_10", "doctrine_victories_13")
         assertEquals(11, ids.size)
-        assertEquals(74, Achievements.all.size)
+        assertEquals(78, Achievements.all.size)
         for (id in ids) {
             assertEquals("cw_" + id, Achievements.byId(id)?.pgsKey)
             assertEquals(10, L.raw("ach_" + id)?.size)

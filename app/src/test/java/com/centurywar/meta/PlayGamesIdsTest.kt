@@ -14,7 +14,7 @@ class PlayGamesIdsTest {
 
     @Test fun everyAchievementHasMapEntryAndTemplateKey() {
         val keys = Achievements.all.map { it.pgsKey }.toSet()
-        assertEquals(74, keys.size)
+        assertEquals(78, keys.size)
         assertEquals(keys, PlayGamesIds.achievementResources.keys)
         val file = sequenceOf(
             File("../docs/store/play_games_ids.properties"),
@@ -29,7 +29,7 @@ class PlayGamesIdsTest {
 
     @Test fun isConfiguredRequiresEveryValidAndUniqueId() {
         val boards = ids(4)
-        val achievements = ids(74).mapIndexed { i, s ->
+        val achievements = ids(78).mapIndexed { i, s ->
             if (i < 4) "CgkI" + (i + 100).toString().padStart(12, '0') + "EAIQAg" else s
         }
         assertTrue(PlayGamesIds.isConfiguredValues("123456789012", boards, achievements))

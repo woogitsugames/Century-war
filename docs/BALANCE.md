@@ -1670,3 +1670,6 @@ ok. 35), przy powtórkach +5/★. Wygrane, czasy i przebieg kampanii bez zmian.
   misji). Liczone po bitwie z obserwacji `AchievementBattleTracker` i logu komend gracza; bez
   zmian w `sim/`, PROTOCOL i złotych powtórkach. Misje dowódcy losują się dopiero od etapu 8,
   misje stopni wież od etapu 3, więc nowy gracz ma tę samą rotację co wcześniej.
+- 2026-11-03 — R6-01 (osiągnięcia pierwszej godziny): `first_evolve` 10, `first_turret` 10,
+  `first_research` 10, `stages_3` 20 medali (razem 50 jednorazowo); przy 196–356 medalach
+  zdobytych w pierwszej godzinie (noc 5) to ok. +10–15% medali na start, bez strojenia nagród.

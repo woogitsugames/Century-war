@@ -8,6 +8,7 @@
 - 3.11 ~21:00: arkusz i import Play Games gotowe (`docs/store/play_games_sheet.*`, `pgs_import/`, `tools/pgs_sheet.py` — po scaleniu R6-01 uruchomić ponownie). Właściciel: osiągnięcia zwykłe (bez paska postępu). Do rozważenia: ranking dzienny Google zeruje o północy UTC−7, wyzwanie dnia o północy UTC. W toku: `claude/dzien-9-cele` (R2-01/02), `claude/dzien-10-poprawki` (R6-02, part186). Potem: R6-01 (part185) → R9 ikony → D6 → D7.
 - 3.11 ~21:45: **D6 (nowa zawartość) zlecona zewnętrznej sesji Claude (inne konto)** — gałąź `claude/d6-tresc`, PR do `integ/tura10`, part184, PROTOCOL 0.8.6, snapshot v20. Nie uruchamiać własnego agenta na D6; przejrzeć PR, scalić, pełne testy. Właściciel: pracuj autonomicznie, scalaj do main. Limit 5 h: reset 4.11 00:50 UTC, budzenia :07/:37 wyłączone do tego czasu (trig_01A2twQarQL9ynXdRBLemsmY wznawia). R6-01+R9 (`claude/dzien-11-osiagniecia`, 1d0ab0a) przerwane przed testami — wznowić.
 - Następne części tekstów: part177 zajęte przez dzień 4; kolejna wolna 178.
+- 4.11: `claude/dzien-11-osiagniecia` = R6-01 + R9 (part185). **78 osiągnięć / 83 ID PGS** (REPLACE_ME). Pierwsza godzina: 6 z 6 osiągnięć puli przed 60:00 we wszystkich przejściach, także w wariancie ostrożnym (`docs/reports/r6-01-osiagniecia.md`). Ikony PGS: `PgsIconsTest` (`PGS_ICONS=true`), stykówka `docs/store/assets/pgs/contact.png` (`docs/reports/r9-ikony.md`).
 
 # PRZEKAZANIE 3.11.2026 ok. 13:50 UTC (koniec limitu tygodniowego starej sesji)
 

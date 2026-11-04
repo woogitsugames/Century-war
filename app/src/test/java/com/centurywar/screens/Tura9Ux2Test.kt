@@ -122,6 +122,8 @@ class Tura9Ux2Test {
                 val rs = ResearchScreen(g)
                 g.setScreen(rs)
                 g.frame(tiny, 0.1f)
+                // R6-01: przy dymku podpowiedzi Badań baner czeka; tu sprawdzamy sam baner.
+                (rs.javaClass.getDeclaredField("hints").apply { isAccessible = true }.get(rs) as HintOverlay).dismiss()
                 g.showNotice(L["pgs144_why"])
                 g.frame(tiny, 0.1f)
                 val banner = RectF(g.noticeBanner)

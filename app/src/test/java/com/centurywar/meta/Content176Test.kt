@@ -60,7 +60,7 @@ class Content176Test {
         Achievements.onBattleEnd(p, b, b.cfg, b.winner == 0, events = tracker).map { it.id }.toSet()
 
     @Test fun definitionsHaveKeysTranslationsAndRewardsInExistingScale() {
-        assertEquals(74, Achievements.all.size)
+        assertEquals(78, Achievements.all.size)
         val rewards = Achievements.all.map { it.medalReward }
         for (id in newIds) {
             val def = Achievements.byId(id)!!

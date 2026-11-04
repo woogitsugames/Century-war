@@ -277,8 +277,19 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
             val earned = unlocked.sumOf { it.medalReward }
             celebrateReward(width * 0.5f, height * 0.6f, earned, Sound.ACHIEVEMENT)
         }
-        for (a in unlocked) showNotice(L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")", Icons.CROWN)
+        // R6-01: po pierwszej bitwie wpada naraz do 4 osiągnięć; ponad dwa banery (ok. 6 s)
+        // łączymy: pierwsze z nazwą, reszta w jednym banerze z liczbą i medalami.
+        if (unlocked.size <= 2) {
+            for (a in unlocked) showNotice(achievementNotice(a), Icons.CROWN)
+        } else {
+            showNotice(achievementNotice(unlocked[0]), Icons.CROWN)
+            val rest = unlocked.subList(1, unlocked.size)
+            showNotice(L.f("ach185_more", rest.size, rest.sumOf { it.medalReward }), Icons.CROWN)
+        }
     }
+
+    private fun achievementNotice(a: AchievementDef): String =
+        L["achievement_unlocked"] + ": " + L["ach_" + a.id] + " (+" + a.medalReward + ")"
 
     fun showNotice(message: String, icon: Int = Icons.MEDAL) {
         if (noticeQueue.size >= 8) return // zalew powiadomień: resztę widać na ekranie osiągnięć

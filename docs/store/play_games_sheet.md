@@ -37,9 +37,8 @@ odblokowane osiągnięcia na górze. Ukryte jest 6 osiągnięć, tak jak w grze.
   usunąć. Jeśli chcemy przyrostowe, np. dla `win_*`, `battles_*`, `kills_*`, `research_*`,
   `daily_7/30` czy `turrets_50`, kod musi to obsłużyć **przed** publikacją. `kills_100000`
   przekracza limit 10 000 kroków, więc trzeba by go skalować. To decyzja koordynatora.
-- **4 osiągnięcia z R6-01** (`first_evolve`, `first_turret`, `first_research`, `stages_3`) mają
-  w arkuszu teksty pl/en ze zlecenia (kolumna `zrodlo_tekstu` = „R6-01”). Po scaleniu R6-01
-  uruchom skrypt ponownie: weźmie końcowe teksty i 10 języków z `part185()` w L.kt.
+- **4 osiągnięcia z R6-01** (`first_evolve`, `first_turret`, `first_research`, `stages_3`) są
+  już w grze; arkusz i import mają ich końcowe teksty w 10 językach z `part185()` w L.kt.
 - **Ranking dzienny:** Google zeruje dzienne rankingi o północy czasu UTC−7, a wyzwanie dnia
   w grze zmienia się o północy UTC. Wyniki z godzin 00:00–07:00 UTC trafiają więc do
   „wczorajszej” tablicy Google. Do oceny przez koordynatora: zostawić i opisać albo pokazywać
@@ -65,7 +64,7 @@ jako `app_id`.
 - **Larger is better** (tego nie da się zmienić po publikacji);
 - kolejność z `kolejnosc`;
 - ochrona przed oszustwami zostaje włączona (domyślnie);
-- ikona 512×512, gdy będzie gotowa.
+- ikona 512×512 z `app/build/pgs-icons/lb_<tryb>.png` (generator w kroku 3).
 
 Po zapisaniu kliknij kartę każdego języka i wpisz tłumaczenie nazwy z L.kt
 (`board_endless`, `board_campaign`, `board_skirmish`, `board_daily`; kolumny w kolejności pl,
@@ -74,9 +73,20 @@ en, de, es, fr, it, pt, uk, nl, tr). Skopiuj ID każdego rankingu do `id_z_konso
 ## Krok 3: osiągnięcia (78, najlepiej importem)
 
 **Szybko (ok. 10 minut):**
-1. Spakuj do jednego ZIP-a, bez podkatalogów, pliki `docs/store/pgs_import/AchievementsMetadata.csv`
-   i `AchievementsLocalizations.csv`. Gdy będą ikony, dołącz też `AchievementsIconsMappings.csv`
-   i pliki PNG.
+1. Wygeneruj ikony 512×512 (R9, rysowane kodem; w repo jest tylko stykówka
+   `docs/store/assets/pgs/contact.png` i mapowanie) i spakuj ZIP importu, bez podkatalogów
+   (`AchievementsMetadata.csv`, `AchievementsLocalizations.csv`, `AchievementsIconsMappings.csv`
+   i 78 PNG `ach_*.png`; razem 81 plików, limit 403):
+
+   ```
+   PGS_ICONS=true flock /tmp/claude-0/gradle.lock ./gradlew :app:testDebugUnitTest --tests '*PgsIconsTest*' --rerun
+   rm -f build/pgs-achievements.zip
+   zip -j build/pgs-achievements.zip docs/store/pgs_import/AchievementsMetadata.csv \
+       docs/store/pgs_import/AchievementsLocalizations.csv \
+       app/build/pgs-icons/AchievementsIconsMappings.csv app/build/pgs-icons/ach_*.png
+   ```
+
+   Ikony rankingów (`app/build/pgs-icons/lb_*.png`) wgraj ręcznie w kroku 2.
 2. Wybierz **Achievements → Import achievements → Upload**, wskaż ZIP i kliknij **Save as draft**.
 
 Pliki są w formacie Google: bez nagłówka, 7 pól, `False` = standardowe, `Hidden`/`Revealed`,
@@ -109,9 +119,8 @@ Jak build czyta ten plik (`buildSrc/.../PlayGamesIdsGenerator.kt`):
 - to zwykły plik `klucz=wartość`. Gradle generuje z niego `games_ids.xml`; nie edytuj XML;
 - `app_id` to same cyfry. Pozostałe ID zaczynają się literą i mają 12–128 znaków
   (litery, cyfry, `_`, `-`). Zły format oznacza błąd builda;
-- **nieznany klucz to błąd builda.** Dlatego 4 klucze z R6-01 (`achievement_first_evolve`,
-  `achievement_first_turret`, `achievement_first_research`, `achievement_stages_3`) wpisuj
-  dopiero po scaleniu R6-01, które dopisze je do generatora i do pliku;
+- **nieznany klucz to błąd builda**: plik ma dokładnie 83 klucze (projekt, 4 rankingi,
+  78 osiągnięć, w tym 4 z R6-01);
 - ID nie mogą się powtarzać;
 - jeśli brakuje choć jednego ID albo zostaje `REPLACE_ME`, wersja debug działa tylko lokalnie,
   a wersja do sklepu (release) się nie zbuduje.

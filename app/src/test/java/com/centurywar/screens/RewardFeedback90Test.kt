@@ -92,6 +92,21 @@ class RewardFeedback90Test {
         assertTrue(g.rewardFeedback.activeCount > 0)
     }
 
+    /** R6-01: cztery osiągnięcia po pierwszej bitwie to dwa banery (ok. 6 s), nie cztery. */
+    @Test fun manyAchievementsShareOneBanner() {
+        val (g, _) = game()
+        val queue = Game::class.java.getDeclaredField("noticeQueue").apply { isAccessible = true }
+            .get(g) as MutableCollection<*>
+        queue.clear()
+        val four = listOf("win_1", "kills_100", "first_evolve", "first_turret").map { Achievements.byId(it)!! }
+        g.showAchievements(four)
+        assertEquals(2, queue.size)
+        assertTrue(queue.last().toString().contains("3") && queue.last().toString().contains("+45"))
+        queue.clear()
+        g.showAchievements(four.take(2))
+        assertEquals(2, queue.size)
+    }
+
     @Test fun endlessLinesReusedBetweenFramesAndInvalidatedOnLayout() {
         val (g, _) = game()
         val screen = ModeScreen(g, Mode.ENDLESS)

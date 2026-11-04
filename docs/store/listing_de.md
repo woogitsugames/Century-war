@@ -16,7 +16,7 @@ Spiele 36 Kampagnenstufen mit wählbarem Schwierigkeitsgrad, überlebe Wellen in
 
 Sieh dir Wiederholungen und das Diagramm nach dem Kampf an, schalte Banner frei und sichere dein Profil in einer Datei. Farboptionen und ein Linkshändermodus passen die Steuerung an. Kampagne und lokale Fortschritte funktionieren offline.
 
-Jede Epoche hat eigene aufgenommene Musik: ein ruhiges und ein Kampfthema, die im Gefecht fließend ineinander übergehen. 74 Erfolge sowie tägliche und wöchentliche Missionen setzen immer neue Ziele.
+Jede Epoche hat eigene aufgenommene Musik: ein ruhiges und ein Kampfthema, die im Gefecht fließend ineinander übergehen. 78 Erfolge sowie tägliche und wöchentliche Missionen setzen immer neue Ziele.
 
 Barrierefreiheit: Farbpaletten für Farbsehschwächen und hoher Kontrast, größere Schrift, weniger Blitze und Bildschirmwackeln sowie Screenreader-Unterstützung in Menüs und Einstellungen.
 

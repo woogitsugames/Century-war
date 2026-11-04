@@ -64,7 +64,7 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
     w kampanii);
   - **wyniki bitwy**: medale „Za bitwę” i „Za osiągnięcia” osobno;
   - **„Co nowego”** jako przycisk w menu (z kropką po aktualizacji) i strzałka przewijania listy;
-  - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 74 osiągnięcia), wpisy w Kodeksie;
+  - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 78 osiągnięć), wpisy w Kodeksie;
   - **zewnętrzny ekran Folda**: zegar bitwy pod minimapą także przy presji oblężniczej,
     górny pasek bez nachodzenia napisów.
 - [ ] **W toku:** dzień 5 — TalkBack dla przycisków w bitwie (`docs/tasks/D5-talkback-hud.md`).
@@ -87,7 +87,7 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       przechowywania danych — albo decyzja „na start bez rankingu globalnego”.
 - [ ] **Sekrety tylko w CI** (nigdy w repozytorium): klucz upload do podpisu, `CW_HMAC_KEY`,
       `CW_SERVER_URL`, `CW_PRIVACY_URL`.
-- [ ] **Google Play Games:** 79 identyfikatorów (1 projekt, 4 rankingi, 74 osiągnięcia) z Play
+- [ ] **Google Play Games:** 83 identyfikatory (1 projekt, 4 rankingi, 78 osiągnięć) z Play
       Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
 - [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
       IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.
@@ -769,7 +769,7 @@ Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 **Jedynym źródłem identyfikatorów jest `docs/store/play_games_ids.properties`.**
 Nie edytuj ręcznie XML. Gradle generuje `games_ids.xml` osobno dla każdego wariantu
 w `app/build/generated/res/playGames/<wariant>/values/games_ids.xml`.
-Plik zawiera 79 kluczy: ID projektu, 4 rankingi i 74 osiągnięcia.
+Plik zawiera 83 klucze: ID projektu, 4 rankingi i 78 osiągnięć.
 
 1. Otwórz Google Play Console → **Century War** (`com.centurywar.game`) →
    **Play Games Services → Setup and management → Configuration**. Utwórz usługę
@@ -780,7 +780,7 @@ Plik zawiera 79 kluczy: ID projektu, 4 rankingi i 74 osiągnięcia.
    `leaderboard_endless` (oblężenie), `leaderboard_campaign` (gwiazdki),
    `leaderboard_skirmish` (potyczka) i `leaderboard_daily` (wyzwanie dnia).
    Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
-3. W **Play Games Services → Achievements** utwórz 74 osiągnięcia standardowe.
+3. W **Play Games Services → Achievements** utwórz 78 osiągnięć standardowych.
    Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego
    identyfikatora katalogu `id` skopiuj ID przyznane przez Play Console do
    `achievement_<id>`, np. `achievement_win_1`. Wszystkie klucze z szablonu
@@ -837,7 +837,7 @@ Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
    kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
    [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
    Nie publikuj APK/AAB podpisanych kluczem debug.
-4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 74
+4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 78
    osiągnięć w Play Console. Ich ID wpisz wyłącznie w
    `docs/store/play_games_ids.properties` (bez ręcznego XML).
    Skonfiguruj testerów, OAuth i Saved Games; zweryfikuj logowanie,

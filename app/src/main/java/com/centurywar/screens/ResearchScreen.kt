@@ -36,6 +36,9 @@ class ResearchScreen(g: Game) : Screen(g) {
     private val hints = HintOverlay(g)
 
     init { buttons.add(0, hints.okBtn) }
+
+    /** R6-01: baner „Pierwsze badanie” czeka w kolejce, aż gracz zamknie dymek podpowiedzi. */
+    override val blocksNotices: Boolean get() = hints.activeId >= 0
     private val costs = arrayOfNulls<String>(cards.size)
     private val costLv = IntArray(cards.size) { -1 }
     private val levelTexts = Array(cards.size) { "" }

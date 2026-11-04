@@ -2,9 +2,7 @@
 """Arkusz Play Games i pliki importu osiągnięć z kodu gry.
 
 Źródła: kolejność, progi, nagrody i ukrycie z meta/Achievements.kt; nazwy i opisy
-z engine/L.kt (ach_<id>, ach_<id>_d, board_*). Cztery osiągnięcia z R6-01, których
-jeszcze nie ma w kodzie, mają teksty z PENDING (do podmiany po scaleniu R6-01:
-skrypt sam weźmie wtedy teksty z L.kt).
+z engine/L.kt (ach_<id>, ach_<id>_d, board_*), w tym cztery osiągnięcia R6-01 (part185).
 
 Użycie (z katalogu głównego repo):
     python3 tools/pgs_sheet.py            # zapisuje pliki
@@ -36,19 +34,6 @@ NAME_MAX, DESC_MAX = 100, 500
 POINTS_TOTAL_MAX, POINTS_ONE_MAX = 2000, 200
 # Proponowany budżet: zostawiamy zapas na przyszłe osiągnięcia.
 POINTS_BUDGET = 1500
-
-# R6-01 (zatwierdzone 3.11): id, metryka, próg, medale, ukryte. Teksty pl z R6-01, reszta
-# języków dopiero w part185(); do tego czasu en jako propozycja, inne puste.
-PENDING = [
-    ("first_evolve", 1, 10, False, "Nowa epoka", "Awansuj do następnej epoki.",
-     "New Era", "Advance to the next era."),
-    ("first_turret", 1, 10, False, "Pierwsza wieża", "Zbuduj wieżę.",
-     "First Turret", "Build a turret."),
-    ("first_research", 1, 10, False, "Pierwsze badanie", "Kup dowolne badanie.",
-     "First Research", "Buy any research."),
-    ("stages_3", 3, 20, False, "Trzy etapy", "Ukończ 3 etapy kampanii.",
-     "Three Stages", "Complete 3 campaign stages."),
-]
 
 LEADERBOARDS = [  # klucz w properties, klucz nazwy w L.kt, uwaga
     ("leaderboard_endless", "board_endless", "punkty Oblężenia (Endless)"),
@@ -108,12 +93,6 @@ def main():
     check_only = "--check" in sys.argv
     L = l_table()
     rows = achievements()
-    known = {r["id"] for r in rows}
-    for pid, thr, med, hid, pln, pld, enn, end in PENDING:
-        if pid in known:
-            continue
-        rows.append(dict(id=pid, threshold=thr, medals=med, category="", hidden=hid,
-                         pending=(pln, pld, enn, end)))
     # Kolejność wyświetlania: od najłatwiejszych (nagroda w medalach), remis wg kolejności w kodzie.
     order = sorted(range(len(rows)), key=lambda i: (rows[i]["medals"], i))
     for pos, i in enumerate(order, 1):
@@ -122,15 +101,9 @@ def main():
     problems = []
     total = 0
     for r in rows:
-        if "pending" in r:
-            pln, pld, enn, end = r["pending"]
-            r["names"] = [pln, enn] + [""] * 8
-            r["descs"] = [pld, end] + [""] * 8
-            r["source"] = "R6-01 (jeszcze nie w L.kt)"
-        else:
-            r["names"] = L["ach_" + r["id"]]
-            r["descs"] = L["ach_" + r["id"] + "_d"]
-            r["source"] = "L.kt"
+        r["names"] = L["ach_" + r["id"]]
+        r["descs"] = L["ach_" + r["id"] + "_d"]
+        r["source"] = "L.kt"
         r["points"] = points(r["medals"])
         total += r["points"]
         for lang, n, d in zip(LANGS, r["names"], r["descs"]):

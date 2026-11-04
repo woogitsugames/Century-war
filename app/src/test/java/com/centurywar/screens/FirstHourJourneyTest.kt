@@ -44,6 +44,10 @@ class FirstHourJourneyTest : FirstHourJourneyBase() {
     @Test
     fun firstHour() = firstHourOn("phone", 0)
 
+    /** R6-01: pominięty samouczek, porażka w etapie 2, badania dopiero po 30. minucie. */
+    @Test
+    fun firstHourCautious() = cautiousFirstHourOn("phone", "pl")
+
     /**
      * Aplikacja zabita w tle w połowie samouczka: po ponownym uruchomieniu menu pyta o wznowienie,
      * bitwa kończy się bez nakładki samouczka i rozlicza raz; kolejny start nie oferuje jej znowu.
