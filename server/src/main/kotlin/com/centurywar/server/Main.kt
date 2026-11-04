@@ -1,5 +1,6 @@
 package com.centurywar.server
 
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import com.centurywar.game.SimVersion
@@ -16,6 +17,7 @@ fun main(args: Array<String>) {
         "CW_PUBLIC_ID_KEY must contain 64 hex characters"
     }
     val ids = PublicPlayerIds(idKeyText.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
+    val retention = RetentionPolicy.fromEnv()
     if (args.firstOrNull() == "admin") {
         if (args.getOrNull(1) == "restore") {
             val code = runRestore(args.drop(1), Path.of(dbPath))
@@ -24,7 +26,7 @@ fun main(args: Array<String>) {
         }
         require(File(dbPath).isFile) { "Nie znaleziono bazy rankingu: $dbPath" }
         SqliteStore("jdbc:sqlite:" + dbPath, ids).use { store ->
-            val code = runAdmin(args.drop(1), store)
+            val code = runAdmin(args.drop(1), store, retention = retention)
             if (code != 0) exitProcess(code)
         }
         return
@@ -57,11 +59,15 @@ fun main(args: Array<String>) {
     }
     DatabaseMaintenance.acquireLock(Path.of(dbPath)).use { processLock ->
         SqliteStore("jdbc:sqlite:" + dbPath, ids).use { store ->
+            // Retencja przy starcie i raz na dobę (CW_RETENTION_*; 0 wyłącza krok).
+            val retentionTask = RetentionScheduler(store, retention).start()
             Runtime.getRuntime().addShutdownHook(Thread {
+                runCatching { retentionTask.close() }
                 runCatching { store.close() }
                 runCatching { processLock.close() }
             })
             embeddedServer(Netty, port = port, host = "0.0.0.0") {
+                monitor.subscribe(ApplicationStopped) { retentionTask.close() }
                 leaderboardModule(store, secret, supportedVersion = gameVersion,
                     trustedProxies = trustedProxies, limits = rateLimits, metricsToken = metricsToken)
             }.start(wait = true)

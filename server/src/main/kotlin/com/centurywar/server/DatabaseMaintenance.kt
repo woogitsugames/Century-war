@@ -151,6 +151,28 @@ internal object DatabaseMaintenance {
         }
     }
 
+    /**
+     * Czyta `deletion_log` z innej bazy (np. katalogu ratunkowego `cw-pre-restore-*` albo
+     * nowszej kopii) tylko do odczytu, bez tworzenia pliku z literówki w ścieżce.
+     */
+    fun readDeletionLog(file: Path, sinceSeconds: Long): List<DeletionLogEntry> {
+        val source = file.toAbsolutePath().normalize()
+        require(Files.isRegularFile(source)) { "Nie znaleziono bazy z dziennikiem: $source" }
+        val url = "jdbc:sqlite:file:${source.toUri().rawPath}?mode=ro"
+        DriverManager.getConnection(url).use { db ->
+            db.createStatement().use { st ->
+                st.execute("PRAGMA busy_timeout=5000")
+                st.executeQuery("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'deletion_log'")
+                    .use { rs ->
+                        check(rs.next() && rs.getInt(1) == 1) {
+                            "Baza nie ma dziennika usunięć (schemat starszy niż 3): $source"
+                        }
+                    }
+            }
+            return SqliteStore.readDeletionLog(db, sinceSeconds)
+        }
+    }
+
     private fun validateSnapshot(file: Path) {
         // mode=ro chroni przed utworzeniem pustej bazy z literówki w ścieżce.
         val url = "jdbc:sqlite:file:${file.toUri().rawPath}?mode=ro"

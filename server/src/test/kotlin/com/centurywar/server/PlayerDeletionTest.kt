@@ -133,7 +133,7 @@ class PlayerDeletionTest {
                 c.createStatement().use { s ->
                     s.executeQuery("SELECT version FROM schema_version WHERE id=1").use { rs ->
                         assertTrue(rs.next())
-                        assertEquals(2, rs.getInt(1))
+                        assertEquals(3, rs.getInt(1))
                     }
                 }
             }

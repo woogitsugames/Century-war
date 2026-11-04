@@ -7,7 +7,9 @@ import java.security.MessageDigest
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 import java.util.TreeMap
+import com.centurywar.game.Weekly
 
 data class SavedScore(val inserted: Boolean, val bestScore: Long)
 
@@ -44,8 +46,22 @@ class ScoreClaim internal constructor(
 
 data class NickReportRow(
     val id: Long, val player: String, val publicId: String, val nick: String,
-    val reason: String, val reportedAt: Long,
+    val reason: String, val reportedAt: Long, val resolvedAt: Long? = null,
 )
+
+/** Wpis dziennika usunięć: skrót HMAC identyfikatora gracza, nigdy surowy UUID. */
+data class DeletionLogEntry(val playerIdHash: String, val deletedAt: Long, val source: String)
+
+/** Gracz znaleziony po nicku (`admin find-nick`); [lastActivity] w sekundach UTC. */
+data class PlayerMatch(
+    val player: String, val publicId: String?, val nick: String,
+    val scores: Int, val lastActivity: Long,
+)
+
+data class AdminLogRow(val at: Long, val action: String, val targetHash: String?, val detail: String)
+
+/** Wynik usunięcia gracza przez operatora. */
+data class OperatorDeletion(val found: Boolean, val blockRemoved: Boolean)
 
 /** Jeden uchwyt JDBC, wszystkie operacje szeregowane; nadaje się dla jednej instancji. */
 class SqliteStore(
@@ -136,7 +152,7 @@ class SqliteStore(
                         check(rs.next()) { "missing_schema_version" }
                         rs.getInt(1)
                     }
-                    check(version in 0..2) { "unsupported_schema_version" }
+                    check(version in 0..SCHEMA_VERSION) { "unsupported_schema_version" }
                     if (version == 0) {
                         // Dwa kroki zapobiegają kolizji klucza 8->12, 12->16 itd.
                         val oldBoards = (8..31).joinToString(",") { "'campaign_" + it + "'" }
@@ -180,6 +196,30 @@ class SqliteStore(
                     """.trimIndent())
                     s.execute("CREATE INDEX IF NOT EXISTS idx_reports_time ON nick_reports(reported_at)")
                     if (version < 2) s.execute("UPDATE schema_version SET version = 2 WHERE id = 1")
+                    // Wersja 3 (R5): status zgłoszeń, dziennik usunięć i dziennik działań operatora.
+                    val reportColumns = mutableSetOf<String>()
+                    s.executeQuery("PRAGMA table_info(nick_reports)").use { rs ->
+                        while (rs.next()) reportColumns.add(rs.getString("name"))
+                    }
+                    if ("resolved_at" !in reportColumns) s.execute("ALTER TABLE nick_reports ADD COLUMN resolved_at INTEGER")
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS deletion_log (
+                            player_id_hash TEXT NOT NULL,
+                            deleted_at INTEGER NOT NULL,
+                            source TEXT NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("CREATE INDEX IF NOT EXISTS idx_deletion_log_time ON deletion_log(deleted_at)")
+                    s.execute("""
+                        CREATE TABLE IF NOT EXISTS admin_log (
+                            at INTEGER NOT NULL,
+                            action TEXT NOT NULL,
+                            target_hash TEXT,
+                            detail TEXT NOT NULL
+                        )
+                    """.trimIndent())
+                    s.execute("CREATE INDEX IF NOT EXISTS idx_admin_log_time ON admin_log(at)")
+                    if (version < 3) s.execute("UPDATE schema_version SET version = 3 WHERE id = 1")
                 }
                 connection.commit()
             } catch (e: Exception) {
@@ -250,34 +290,96 @@ class SqliteStore(
     }
 
     /** Usuwanie przez API wymaga klucza przypisanego do UUID. */
-    fun deleteOwnedPlayer(player: String, hash: String): Boolean = synchronized(lock) {
-        if (!hasCredentialUnsafe(player, hash, allowMissing = true, allowLegacy = false)) return@synchronized false
-        deletePlayer(player)
-        true
-    }
+    fun deleteOwnedPlayer(player: String, hash: String, nowMillis: Long = System.currentTimeMillis()): Boolean =
+        synchronized(lock) {
+            if (!hasCredentialUnsafe(player, hash, allowMissing = true, allowLegacy = false)) return@synchronized false
+            deletePlayer(player, SOURCE_API, nowMillis)
+            true
+        }
 
-    /** Usuwa rekordy i pseudonim gracza (blokada zostaje); brak gracza nie jest błędem. */
-    fun deletePlayer(player: String) = synchronized(lock) {
-        connection.autoCommit = false
-        try {
-            connection.prepareStatement("DELETE FROM nick_reports WHERE player_id = ?").use {
-                it.setString(1, player)
-                it.executeUpdate()
-            }
-            connection.prepareStatement("DELETE FROM scores WHERE player_id = ?").use {
-                it.setString(1, player)
-                it.executeUpdate()
-            }
-            connection.prepareStatement("DELETE FROM players WHERE player_id = ?").use {
-                it.setString(1, player)
-                it.executeUpdate()
-            }
+    /**
+     * Usuwa rekordy i pseudonim gracza (blokada zostaje); brak gracza nie jest błędem.
+     * Gdy coś usunięto, zapisuje skrót identyfikatora w `deletion_log` (do powtórzenia po
+     * odtworzeniu kopii, `admin replay-deletions`). Zwraca, czy gracz miał dane.
+     */
+    fun deletePlayer(
+        player: String, source: String = SOURCE_API, nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean = synchronized(lock) {
+        transaction {
+            val existed = deletePlayerRowsUnsafe(player)
             // Blokady nie kasujemy: klucz HMAC jest w APK, więc usunięcie konta nie może
             // posłużyć zablokowanemu graczowi do zdjęcia blokady. Zdejmuje ją tylko moderator.
+            if (existed) logDeletionUnsafe(player, source, Math.floorDiv(nowMillis, 1000L))
+            existed
+        }.also { markDeletedUnsafe(player) }
+    }
+
+    /**
+     * Usunięcie przez operatora (prośba e-mailowa), bez sekretu instalacji: dostępne wyłącznie
+     * z CLI na serwerze. Domyślnie zdejmuje też blokadę, aby nie zostawiać UUID w bazie.
+     */
+    fun deletePlayerByOperator(
+        player: String, keepBlock: Boolean, nowMillis: Long = System.currentTimeMillis(),
+    ): OperatorDeletion = synchronized(lock) {
+        transaction {
+            val existed = deletePlayerRowsUnsafe(player)
+            val blockRemoved = !keepBlock && connection.prepareStatement(
+                "DELETE FROM blocked_players WHERE player_id = ?"
+            ).use {
+                it.setString(1, player)
+                it.executeUpdate() > 0
+            }
+            if (existed || blockRemoved) logDeletionUnsafe(player, SOURCE_OPERATOR, Math.floorDiv(nowMillis, 1000L))
+            OperatorDeletion(existed || blockRemoved, blockRemoved)
+        }.also { markDeletedUnsafe(player) }
+    }
+
+    /** Usuwa zgłoszenia, wyniki i wiersz gracza w bieżącej transakcji; zwraca, czy coś było. */
+    private fun deletePlayerRowsUnsafe(player: String): Boolean {
+        var changed = 0
+        for (sql in listOf(
+            "DELETE FROM nick_reports WHERE player_id = ?",
+            "DELETE FROM scores WHERE player_id = ?",
+            "DELETE FROM players WHERE player_id = ?",
+        )) {
+            changed += connection.prepareStatement(sql).use {
+                it.setString(1, player)
+                it.executeUpdate()
+            }
+        }
+        return changed > 0
+    }
+
+    /** Nowa epoka unieważnia bilety wydane przed usunięciem (zgłoszenia w toku). Po commit. */
+    private fun markDeletedUnsafe(player: String) {
+        deletionEpoch++
+        if (activeClaims.isNotEmpty()) deletedAtEpoch[player] = deletionEpoch
+    }
+
+    private fun logDeletionUnsafe(player: String, source: String, atSeconds: Long) {
+        connection.prepareStatement(
+            "INSERT INTO deletion_log(player_id_hash, deleted_at, source) VALUES (?, ?, ?)"
+        ).use {
+            it.setString(1, subjectHash(player))
+            it.setLong(2, atSeconds)
+            it.setString(3, source)
+            it.executeUpdate()
+        }
+    }
+
+    /**
+     * Skrót HMAC (klucz `CW_PUBLIC_ID_KEY`) identyfikatora do dzienników. Osobna domena
+     * sprawia, że skrót nie jest równy publicznemu ID widocznemu w rankingu.
+     */
+    fun subjectHash(player: String): String = publicIds.of("subject:$player")
+
+    /** Transakcja na wspólnym połączeniu; wołać wewnątrz synchronized(lock). */
+    private inline fun <T> transaction(block: () -> T): T {
+        connection.autoCommit = false
+        try {
+            val result = block()
             connection.commit()
-            // Nowa epoka unieważnia bilety wydane przed usunięciem (zgłoszenia w toku).
-            deletionEpoch++
-            if (activeClaims.isNotEmpty()) deletedAtEpoch[player] = deletionEpoch
+            return result
         } catch (e: Exception) {
             connection.rollback()
             throw e
@@ -574,19 +676,241 @@ class SqliteStore(
         true
     }
 
-    fun recentReports(limit: Int = 50): List<NickReportRow> = synchronized(lock) {
+    /** Ostatnie zgłoszenia; [unresolvedOnly] pomija rozpatrzone (`admin resolve-report`). */
+    fun recentReports(limit: Int = 50, unresolvedOnly: Boolean = false): List<NickReportRow> = synchronized(lock) {
         require(limit in 1..200) { "invalid_limit" }
+        val filter = if (unresolvedOnly) "WHERE resolved_at IS NULL" else ""
         connection.prepareStatement("""
-            SELECT report_id, player_id, public_id, reported_nick, reason, reported_at
-            FROM nick_reports ORDER BY reported_at DESC, report_id DESC LIMIT ?
+            SELECT report_id, player_id, public_id, reported_nick, reason, reported_at, resolved_at
+            FROM nick_reports $filter ORDER BY reported_at DESC, report_id DESC LIMIT ?
         """.trimIndent()).use { st ->
             st.setInt(1, limit)
             st.executeQuery().use { rs ->
                 val rows = ArrayList<NickReportRow>()
-                while (rs.next()) rows.add(NickReportRow(
-                    rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
-                    rs.getString(5), rs.getLong(6)
-                ))
+                while (rs.next()) {
+                    val base = NickReportRow(
+                        rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
+                        rs.getString(5), rs.getLong(6),
+                    )
+                    val resolved = rs.getLong(7)
+                    rows.add(if (rs.wasNull()) base else base.copy(resolvedAt = resolved))
+                }
+                rows
+            }
+        }
+    }
+
+    /** null: brak zgłoszenia; false: już rozpatrzone; true: oznaczone teraz. */
+    fun resolveReport(id: Long, nowMillis: Long = System.currentTimeMillis()): Boolean? = synchronized(lock) {
+        val updated = connection.prepareStatement(
+            "UPDATE nick_reports SET resolved_at = ? WHERE report_id = ? AND resolved_at IS NULL"
+        ).use {
+            it.setLong(1, Math.floorDiv(nowMillis, 1000L))
+            it.setLong(2, id)
+            it.executeUpdate() > 0
+        }
+        if (updated) return@synchronized true
+        val exists = connection.prepareStatement("SELECT 1 FROM nick_reports WHERE report_id = ?").use {
+            it.setLong(1, id)
+            it.executeQuery().use { rs -> rs.next() }
+        }
+        if (exists) false else null
+    }
+
+    /**
+     * Gracze, których nick zawiera [query] bez względu na wielkość liter, także po
+     * normalizacji [NickModeration.normalize] (diakrytyki, cyfry zamiast liter).
+     * Porównuje nick zapisany i nick pokazywany w rankingu (po filtrze).
+     */
+    fun findPlayersByNick(query: String, limit: Int = 50): List<PlayerMatch> = synchronized(lock) {
+        require(query.isNotBlank()) { "empty_query" }
+        val lower = query.trim().lowercase(Locale.ROOT)
+        val normalized = NickModeration.normalize(query).replace(" ", "")
+        val result = ArrayList<PlayerMatch>()
+        connection.createStatement().use { st ->
+            st.executeQuery("""
+                SELECT p.player_id, p.public_id, p.nick,
+                       (SELECT COUNT(*) FROM scores s WHERE s.player_id = p.player_id),
+                       MAX(p.updated_at, COALESCE((SELECT MAX(verified_at) FROM scores s
+                                                   WHERE s.player_id = p.player_id), 0))
+                FROM players p ORDER BY p.updated_at DESC, p.player_id ASC
+            """.trimIndent()).use { rs ->
+                while (rs.next() && result.size < limit) {
+                    val player = rs.getString(1)
+                    val stored = rs.getString(3)
+                    val shown = NickModeration.publicNick(stored, player)
+                    val match = listOf(stored, shown).any { nick ->
+                        nick.lowercase(Locale.ROOT).contains(lower) ||
+                            (normalized.isNotEmpty() &&
+                                NickModeration.normalize(nick).replace(" ", "").contains(normalized))
+                    }
+                    if (match) result.add(PlayerMatch(player, rs.getString(2), shown, rs.getInt(4), rs.getLong(5)))
+                }
+            }
+        }
+        result
+    }
+
+    /** Wpisy dziennika usunięć od [sinceSeconds] (włącznie). */
+    fun deletionLogSince(sinceSeconds: Long): List<DeletionLogEntry> = synchronized(lock) {
+        readDeletionLog(connection, sinceSeconds)
+    }
+
+    /**
+     * Powtarza usunięcia z dziennika (np. z nowszej bazy po odtworzeniu starszej kopii).
+     * Porównuje skróty [subjectHash] wszystkich znanych UUID; brakujące wpisy dopisuje do
+     * dziennika tej bazy. Blokady zostają jak w odtworzonej kopii. Zwraca liczbę usuniętych graczy.
+     */
+    fun replayDeletions(entries: List<DeletionLogEntry>): Int = synchronized(lock) {
+        if (entries.isEmpty()) return@synchronized 0
+        val wanted = entries.map { it.playerIdHash }.toSet()
+        val known = LinkedHashSet<String>()
+        connection.createStatement().use { st ->
+            st.executeQuery(
+                "SELECT player_id FROM players UNION SELECT player_id FROM scores " +
+                    "UNION SELECT player_id FROM nick_reports"
+            ).use { rs -> while (rs.next()) known.add(rs.getString(1)) }
+        }
+        val targets = known.filter { subjectHash(it) in wanted }
+        transaction {
+            for (player in targets) deletePlayerRowsUnsafe(player)
+            connection.prepareStatement("""
+                INSERT INTO deletion_log(player_id_hash, deleted_at, source)
+                SELECT ?, ?, ? WHERE NOT EXISTS (
+                    SELECT 1 FROM deletion_log WHERE player_id_hash = ? AND deleted_at = ? AND source = ?
+                )
+            """.trimIndent()).use {
+                for (entry in entries) {
+                    for (offset in listOf(0, 3)) {
+                        it.setString(1 + offset, entry.playerIdHash)
+                        it.setLong(2 + offset, entry.deletedAt)
+                        it.setString(3 + offset, entry.source)
+                    }
+                    it.executeUpdate()
+                }
+            }
+        }
+        targets.forEach { markDeletedUnsafe(it) }
+        targets.size
+    }
+
+    /**
+     * Retencja (R5, luka L1) w jednej transakcji: tablice dnia i tygodnia starsze niż
+     * [RetentionPolicy.periodDays], zgłoszenia, dzienniki, nieaktywni gracze w całości
+     * (z wpisem w `deletion_log`), stare limity dzienne i zużyte `nonce`. Tablice stałe
+     * (`endless`, `skirmish`, `campaign_*`) znikają tylko razem z nieaktywnym graczem.
+     * [dryRun] wykonuje te same polecenia i wycofuje transakcję, więc liczby są dokładne.
+     */
+    fun purgeExpired(nowMillis: Long, policy: RetentionPolicy, dryRun: Boolean = false): PurgeResult =
+        synchronized(lock) {
+            val nowSeconds = Math.floorDiv(nowMillis, 1000L)
+            val today = todayUtc(nowMillis)
+            fun cutoffSeconds(days: Int) = nowSeconds - days * 86_400L
+            fun update(sql: String, value: Any): Int = connection.prepareStatement(sql).use { st ->
+                when (value) {
+                    is Long -> st.setLong(1, value)
+                    is String -> st.setString(1, value)
+                    else -> error("unsupported_parameter")
+                }
+                st.executeUpdate()
+            }
+            val deletedPlayers = ArrayList<String>()
+            connection.autoCommit = false
+            try {
+                var daily = 0
+                var weekly = 0
+                if (policy.periodDays > 0) {
+                    val cutoffDay = today - policy.periodDays
+                    daily = update("DELETE FROM scores WHERE board = 'daily' AND day < ?", cutoffDay)
+                    // Tydzień jest przeterminowany, gdy jego ostatni dzień < cutoffDay, czyli gdy jego
+                    // numer jest mniejszy niż numer tygodnia zawierającego cutoffDay (wzór z :sim).
+                    val firstKeptWeek = Weekly.weekNumber(cutoffDay)
+                    val boards = ArrayList<String>()
+                    connection.createStatement().use { st ->
+                        st.executeQuery("SELECT DISTINCT board FROM scores WHERE substr(board, 1, 7) = 'weekly_'")
+                            .use { rs -> while (rs.next()) boards.add(rs.getString(1)) }
+                    }
+                    for (board in boards) {
+                        val week = board.removePrefix("weekly_").toLongOrNull() ?: continue
+                        if (week < firstKeptWeek) weekly += update("DELETE FROM scores WHERE board = ?", board)
+                    }
+                }
+                val reports = if (policy.reportDays > 0) {
+                    update("DELETE FROM nick_reports WHERE reported_at < ?", cutoffSeconds(policy.reportDays))
+                } else 0
+                var expiredBlocks = 0
+                if (policy.inactiveDays > 0) {
+                    val cutoff = cutoffSeconds(policy.inactiveDays)
+                    connection.prepareStatement("""
+                        SELECT p.player_id FROM players p
+                        WHERE p.updated_at < ?
+                          AND COALESCE((SELECT MAX(verified_at) FROM scores s WHERE s.player_id = p.player_id), 0) < ?
+                        ORDER BY p.player_id
+                    """.trimIndent()).use { st ->
+                        st.setLong(1, cutoff)
+                        st.setLong(2, cutoff)
+                        st.executeQuery().use { rs -> while (rs.next()) deletedPlayers.add(rs.getString(1)) }
+                    }
+                    for (player in deletedPlayers) {
+                        deletePlayerRowsUnsafe(player)
+                        logDeletionUnsafe(player, SOURCE_RETENTION, nowSeconds)
+                    }
+                    // Blokada bez konta, starsza niż okres nieaktywności, wygasa: nie trzymamy UUID bez końca.
+                    expiredBlocks = update("""
+                        DELETE FROM blocked_players WHERE blocked_at < ?
+                          AND NOT EXISTS (SELECT 1 FROM players p WHERE p.player_id = blocked_players.player_id)
+                    """.trimIndent(), cutoff)
+                }
+                var deletionLog = 0
+                var adminLog = 0
+                if (policy.logDays > 0) {
+                    deletionLog = update("DELETE FROM deletion_log WHERE deleted_at < ?", cutoffSeconds(policy.logDays))
+                    adminLog = update("DELETE FROM admin_log WHERE at < ?", cutoffSeconds(policy.logDays))
+                }
+                // Skróty IP do dziennego limitu znikają następnego dnia także bez nowych zgłoszeń.
+                val quotas = update("DELETE FROM score_submit_quotas WHERE day < ?", today)
+                val nonces = update("DELETE FROM used_nonces WHERE expires_at <= ?", nowSeconds)
+                val result = PurgeResult(
+                    dailyScores = daily, weeklyScores = weekly, nickReports = reports,
+                    inactivePlayers = deletedPlayers.size, expiredBlocks = expiredBlocks,
+                    deletionLog = deletionLog, adminLog = adminLog, quotas = quotas, nonces = nonces,
+                    dryRun = dryRun,
+                )
+                if (dryRun) connection.rollback() else connection.commit()
+                if (!dryRun) deletedPlayers.forEach { markDeletedUnsafe(it) }
+                result
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+
+    /** Dziennik działań operatora; [player] zapisywany wyłącznie jako skrót [subjectHash]. */
+    fun logAdmin(action: String, player: String?, detail: String, nowMillis: Long = System.currentTimeMillis()) {
+        synchronized(lock) {
+            connection.prepareStatement(
+                "INSERT INTO admin_log(at, action, target_hash, detail) VALUES (?, ?, ?, ?)"
+            ).use {
+                it.setLong(1, Math.floorDiv(nowMillis, 1000L))
+                it.setString(2, action)
+                it.setString(3, player?.let(::subjectHash))
+                it.setString(4, detail)
+                it.executeUpdate()
+            }
+        }
+    }
+
+    fun recentAdminLog(limit: Int = 20): List<AdminLogRow> = synchronized(lock) {
+        require(limit in 1..200) { "invalid_limit" }
+        connection.prepareStatement(
+            "SELECT at, action, target_hash, detail FROM admin_log ORDER BY at DESC, rowid DESC LIMIT ?"
+        ).use { st ->
+            st.setInt(1, limit)
+            st.executeQuery().use { rs ->
+                val rows = ArrayList<AdminLogRow>()
+                while (rs.next()) rows.add(AdminLogRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4)))
                 rows
             }
         }
@@ -717,6 +1041,26 @@ class SqliteStore(
     override fun close() = synchronized(lock) { connection.close() }
 
     companion object {
+        /** Wersja schematu tej wersji serwera; starszy serwer odmówi otwarcia nowszej bazy. */
+        const val SCHEMA_VERSION = 3
+        const val SOURCE_API = "api"
+        const val SOURCE_OPERATOR = "operator"
+        const val SOURCE_RETENTION = "retention"
+
+        /** Odczyt `deletion_log` z dowolnego połączenia (bieżąca baza albo inna kopia). */
+        internal fun readDeletionLog(connection: Connection, sinceSeconds: Long): List<DeletionLogEntry> =
+            connection.prepareStatement(
+                "SELECT player_id_hash, deleted_at, source FROM deletion_log WHERE deleted_at >= ? " +
+                    "ORDER BY deleted_at, rowid"
+            ).use { st ->
+                st.setLong(1, sinceSeconds)
+                st.executeQuery().use { rs ->
+                    val rows = ArrayList<DeletionLogEntry>()
+                    while (rs.next()) rows.add(DeletionLogEntry(rs.getString(1), rs.getLong(2), rs.getString(3)))
+                    rows
+                }
+            }
+
         private fun firstSecond(period: String, nowMillis: Long): Long {
             val day = LocalDate.ofEpochDay(todayUtc(nowMillis))
             val start = when (period) {
