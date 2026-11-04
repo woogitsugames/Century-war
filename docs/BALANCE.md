@@ -1829,3 +1829,5 @@ Suma oczekiwanych czasów 8–12 plus 1,5 min przerwy po każdej bitwie: profil 
 w 57 min). Medale za wygrane etapów 8–12 przychodzą ok. 1,35× szybciej (te same nagrody
 w krótszym czasie, plus więcej ★), więc badania przed etapem 19 rosną szybciej; do
 obserwacji przy pomiarze etapów 19+.
+
+- 2026-11-04 — regeneracja złotych powtórek: R11-02: krotsza presja etapow 8-12.
