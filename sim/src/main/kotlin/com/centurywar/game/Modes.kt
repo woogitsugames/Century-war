@@ -196,6 +196,10 @@ object Campaign {
         // trudniejszy o 1% (0,86 → 0,87); wygrane wracają do pasma ±5 pp (docs/BALANCE.md).
         // Dzień 35: etap 19 lżejszy o 6% (1,265 × 0,94 = 1,1891; ten sam aiPower co mnożnik
         // 0,94 w pomiarze d33); klif 18 → 19 profilu medale-czas 1,63× → 1,49× (docs/BALANCE.md).
+        // Dzień 40 (K1 z d37): etapy 28 i 30-33 lżejsze (×0,90 / 0,92 / 0,88 / 0,92 / 0,92).
+        // Wartości to najbliższe Floaty dające aiPower bitowo równy (stary aiPower × mnożnik),
+        // czyli dokładnie to, co mierzył d37: 1 → 0,9; 0,989 → 0,90988004; 0,97 → 0,8536;
+        // 0,97 → 0,8924001 (0,8924f daje inny aiPower); 1 → 0,92 (docs/reports/d40-k1.md).
         val correction = when (i + 1) {
             1 -> 0.799f
             2 -> 0.708f
@@ -217,10 +221,12 @@ object Campaign {
             24 -> 0.94f
             25 -> 0.97f
             27 -> 0.846f
+            28 -> 0.9f
             29 -> 1.053f
-            30 -> 0.989f
-            31 -> 0.97f
-            32 -> 0.97f
+            30 -> 0.90988004f
+            31 -> 0.8536f
+            32 -> 0.8924001f
+            33 -> 0.92f
             34 -> 0.727f
             35 -> 0.778f
             36 -> 0.6075f
