@@ -197,15 +197,42 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         // na telefonie, ale wciąż pokazuje sporą część pola. Nadmiar wysokości oddajemy
         // ziemi (pas przedpola pod jednostkami) zamiast pustemu niebu.
         val aspect = w / h
-        val worldW = if (aspect < 1.5f) 880f else 1100f
+        // Dzień 17: wąski, wysoki ekran (zewnętrzny Fold w pionie) pokazuje węższy wycinek pola,
+        // więc żołnierze są fizycznie prawie tak duzi jak na telefonie 720p, a pustego nieba
+        // jest mniej. Tylko wygląd: symulacja, kamera (camX w świecie) i celowanie bez zmian.
+        narrowZoomActive = NARROW_ZOOM && h > w * NARROW_ASPECT
+        val worldW = when {
+            narrowZoomActive -> NARROW_WORLD_W
+            aspect < 1.5f -> 880f
+            else -> 1100f
+        }
         k = min(visibleH / 360f, w / worldW).coerceAtLeast(0.1f)
         val excess = visibleH - 360f * k
-        if (excess > 0f) groundY -= excess * 0.4f
+        if (excess > 0f) groundY -= excess * (if (narrowZoomActive) NARROW_GROUND_SHARE else 0.4f)
         backdrops.invalidate()
         clampCam()
     }
 
     val worldVisible get() = viewW / k
+
+    /** Czy ostatni [layout] użył przybliżenia wąskiego ekranu ([NARROW_ZOOM]). */
+    var narrowZoomActive = false
+        private set
+
+    companion object {
+        /**
+         * Przybliżenie pola bitwy na wąskich, wysokich ekranach (zewnętrzny Fold w pionie).
+         * false przywraca wygląd sprzed dnia 17 (widok 880 j. świata). Telefon poziomo,
+         * rozłożony Fold i tablety nigdy nie są przybliżane.
+         */
+        @JvmField var NARROW_ZOOM = true
+        /** Ekran jest „wąski i wysoki”, gdy wysokość > 1,3 × szerokość. */
+        const val NARROW_ASPECT = 1.3f
+        /** Widoczna szerokość świata przy przybliżeniu (bez niego 880 j.). */
+        const val NARROW_WORLD_W = 600f
+        /** Część nadmiaru wysokości oddana ziemi pod jednostkami (bez przybliżenia 0,4). */
+        const val NARROW_GROUND_SHARE = 0.4f
+    }
 
     fun clampCam() {
         val maxCam = Defs.LANE + 120f - worldVisible
