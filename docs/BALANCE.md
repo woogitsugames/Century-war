@@ -2034,10 +2034,10 @@ przejścia [min]; „realny gracz” = `medale-czas`, `BALANCE_PACE=now` (54 poz
 - **Oblężenie tygodnia** (tygodnie 3022–3073, AI na zasadach tygodnia): mediana fali 12, progi
   10 / 20 / 30 fal w 31 / 5 / 2 z 52 tygodni; fala 60 tylko w 2 tygodniach z Podwójnym dochodem.
 
-## Etapy 28 i 30–33 — wariant K1 z D37 (dzień 40, 4.11.2026) — DO DECYZJI WŁAŚCICIELA
+## Etapy 28 i 30–33 — wariant K1 z D37 (dzień 40, 4.11.2026) — ZATWIERDZONE PRZEZ WŁAŚCICIELA 5.11
 
-**Status: gałąź `claude/dzien-40-k1-etapy-28-33`, niescalona.** Wpisuje rekomendację K1 z D37
-(`docs/reports/d37-balans-19-36.md`, pytanie 1) do gry; scalić tylko po zgodzie właściciela.
+**Status: zatwierdzone przez właściciela 5.11.2026, scalone na gałęzi `claude/dzien-47-k1`** (z `integ/tura10`,
+PROTOCOL 0.8.10). Wpisuje rekomendację K1 z D37 (`docs/reports/d37-balans-19-36.md`, pytanie 1) do gry.
 Raport: `docs/reports/d40-k1.md`.
 
 ### Zmiana
