@@ -71,9 +71,11 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
                  screens=0b11, recent=(), perf=((18.4, 2, 5, 1),), quality_setting=0, quality_level=2,
                  reduction=0, max_steps=4, gpu=0, fps_cap=0, game_mode="standard", palette=0, text_scale=100,
                  left=False, talkback=False, shake=False, flash=False, slow=False, max_chars=6000,
-                 stages=None, v2=None):
+                 stages=None, v2=None, final=None):
     """`stages=None` — raport sprzed d45 (bez lejka); inaczej lista (etap od 0, próby, wygrane, kap., s, dowódca).
-    `v2` — format 2 (d48, wersje testowe): dict z `code`, `crashes`, `anrs`, `day_map`, `research`, `research_max`, `medals`."""
+    `v2` — format 2 (d48, wersje testowe): dict z `code`, `crashes`, `anrs`, `day_map`, `research`, `research_max`, `medals`.
+    `final` — ankieta końcowa (d57, tylko z `v2`): dict ze `state` (0/1/2), `nps`, `liked`, `issue`, `day`;
+    None przy `v2` = raport v2 sprzed d57 (bez sekcji)."""
     o = ["Century War - tester report\n", f"Version: {version}\n", f"Device: {model}\n",
          f"Android: {android}\n", f"Language: {language}\n"]
     if v2 is not None:
@@ -87,6 +89,18 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
         o.append(f"Skipped ({_day(survey_day)})\n")
     else:
         o.append("Not asked yet\n")
+    if v2 is not None and final is not None:
+        o.append("\n" + pm.FINAL_SECTION + "\n")
+        st = final.get("state", 0)
+        if st == 1:
+            o.append(f"Recommend (0-10): {final['nps']} ({_day(final.get('day', 20_439))})\n")
+            li, ii = final.get("liked", -1), final.get("issue", -1)
+            o.append("Liked most: " + (pm.FINAL_LIKED[li] if 0 <= li < 6 else "skipped") + "\n")
+            o.append("Bothered most: " + (pm.FINAL_ISSUES[ii] if 0 <= ii < 6 else "skipped") + "\n")
+        elif st == 2:
+            o.append(f"Skipped ({_day(final.get('day', 20_439))})\n")
+        else:
+            o.append("Not asked yet\n")
     o.append("\n[Progress]\n")
     o.append(f"Campaign: stage {stage} of {stage_count}, stars {stars} of {stage_count * 3}, difficulty {difficulty}\n")
     o.append(f"Tutorial done: {_yes(tutorial_done)} ({_milestone(tutorial_s)})\n")
@@ -202,6 +216,13 @@ class PlaytestMergeTest(unittest.TestCase):
                       '"Research levels: "', '", medals "', '"Day map (28 days, oldest first, 1 = played): "'):
             self.assertIn(label, kt, label)
         self.assertIn('TESTER_CODE_CHARS = "', log)
+        # Ankieta końcowa (d57): sekcja, etykiety i odpowiedzi w tej samej kolejności co w grze.
+        self.assertIn(f'FINAL_SECTION = "{pm.FINAL_SECTION}"', kt)
+        for label in ('"Recommend (0-10): "', '"Liked most: "', '"Bothered most: "'):
+            self.assertIn(label, kt, label)
+        for name, values in (("FINAL_LIKED", pm.FINAL_LIKED), ("FINAL_ISSUES", pm.FINAL_ISSUES)):
+            arr = re.search(r"val " + name + r" = arrayOf\(([^)]*)\)", log).group(1)
+            self.assertEqual(tuple(re.findall(r'"([^"]+)"', arr)), values, name)
 
     def test_fixture_matches_builder_and_parses(self):
         text = FIXTURE.read_text(encoding="utf-8")
@@ -432,6 +453,60 @@ class PlaytestMergeTest(unittest.TestCase):
         r.day = 10
         checks = pm.evaluate([], [r], [r], {})
         self.assertIn("suma w raportach: 1", next(c for c in checks if c.num == "2.2").value)
+
+    def test_final_survey_section(self):
+        """d57: `[Final survey]` po `[Tester survey]`; „Not asked yet” w niej nie psuje pierwszej ankiety."""
+        v2 = {"code": "K7QM"}
+        r = pm.parse_report(build_report(v2=v2, final={"state": 1, "nps": 9, "liked": 0, "issue": 2}), "f1")
+        self.assertEqual(r.status, "ok", r.problems)
+        self.assertEqual((r.get("final"), r.get("final_nps"), r.get("final_liked"), r.get("final_issue"),
+                          r.get("final_day")), ("answered", 9, "campaign", "battles too long", "2025-12-17"))
+        self.assertEqual((r.get("survey"), r.get("rating")), ("answered", 4))
+        r = pm.parse_report(build_report(v2=v2, final={"state": 1, "nps": 0}), "f2")
+        self.assertEqual((r.get("final_nps"), r.get("final_liked"), r.get("final_issue")), (0, "skipped", "skipped"))
+        r = pm.parse_report(build_report(v2=v2, final={"state": 2}), "f3")
+        self.assertEqual((r.get("final"), r.get("survey")), ("skipped", "answered"))
+        r = pm.parse_report(build_report(survey=1, v2=v2, final={"state": 0}), "f4")
+        self.assertEqual((r.get("final"), r.get("survey"), r.status), ("not asked", "answered", "ok"))
+        old = pm.parse_report(build_report(v2=v2), "v2-d48")
+        self.assertIsNone(old.get("final"))
+        self.assertEqual(old.status, "ok", old.problems)
+        bad = pm.parse_report(build_report(v2=v2, final={"state": 1, "nps": 11}), "bad")
+        self.assertEqual(bad.status, "uszkodzony")
+        # Wklejone w jedną linię: sekcja i etykiety wracają na swoje miejsca.
+        flat = pm.parse_report(pm.normalize(build_report(v2=v2, final={"state": 1, "nps": 7, "liked": 4,
+                                                                       "issue": 5}).replace("\n", " ")), "flat")
+        self.assertEqual((flat.get("final_nps"), flat.get("final_liked"), flat.get("final_issue")),
+                         (7, "graphics and sound", "nothing, it's good"))
+        self.assertEqual(pm.nps_score([10, 9, 8, 6]), 25)
+        self.assertEqual(pm.nps_score([0, 1]), -100)
+        self.assertIsNone(pm.nps_score([]))
+
+    def test_final_survey_markdown_and_csv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "in").mkdir()
+            for i, (nps, liked, issue) in enumerate(((10, 0, 5), (9, 1, 2), (3, 0, 0))):
+                (d / f"in/t{i}-d10.txt").write_text(
+                    build_report(model=f"Phone {i}", v2={"code": f"K7Q{'ACD'[i]}"}, first_day=20_429, last_day=20_438,
+                                 final={"state": 1, "nps": nps, "liked": liked, "issue": issue}), encoding="utf-8")
+            (d / "in/t3-d10.txt").write_text(build_report(model="Phone 3", v2={"code": "K7QE"}, final={"state": 2}),
+                                             encoding="utf-8")
+            out, out_csv = d / "fala.md", d / "fala.csv"
+            self.assertEqual(pm.main([str(d / "in"), "-o", str(out), "--csv-out", str(out_csv)]), 0)
+            md = out.read_text(encoding="utf-8")
+            self.assertIn("## Ankieta końcowa (10. dzień)", md)
+            self.assertIn("9: 1, 10: 1; pominięte: 1", md)
+            self.assertIn("NPS (9–10 minus 0–6, % odpowiedzi): +33", md)
+            self.assertIn("„campaign”: 2", md)
+            self.assertIn("„too hard”: 1", md)
+            with out_csv.open(encoding="utf-8") as fh:
+                rows = {r["tester_code"]: r for r in csv.DictReader(fh)}
+            self.assertEqual((rows["K7QA"]["final_nps"], rows["K7QA"]["final_liked"], rows["K7QA"]["final_issue"]),
+                             ("10", "campaign", "nothing, it's good"))
+            self.assertEqual(rows["K7QE"]["final_nps"], "")
+        # Bez ankiety końcowej w żadnym raporcie: brak sekcji.
+        self.assertNotIn("Ankieta końcowa", pm.build_markdown([], [], 0, [], [], None, [], "x"))
 
     def test_campaign_funnel_section(self):
         """d45: sekcja `[Campaign stages]` w formacie PlaytestReportText.appendStage."""

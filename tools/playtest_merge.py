@@ -13,7 +13,9 @@ bramka G2 z R13 §1: twarde i miękkie) oraz opcjonalnie CSV „tester × dzień
 Format raportu to dokładnie `app/.../crash/PlaytestReportText.kt`: format 1 (bez linii
 `Report format`, wersje bez ankiety testera) albo format 2 (d48, wersje testowe:
 `Report format: 2`, `Tester code:`, `Crashes:`, `ANRs:` w nagłówku, `Research levels:` w
-`[Progress]`, `Day map (...):` w `[Play time]`). Etykiety treści są stałe, po angielsku; po lokalizacji gry zmienia się
+`[Progress]`, `Day map (...):` w `[Play time]`). Od d57 format 2 ma też sekcję `[Final survey]`
+(ankieta końcowa z 10. dnia: `Recommend (0-10):`, `Liked most:`, `Bothered most:`) zaraz po
+`[Tester survey]`; sekcja jest opcjonalna (starsze raporty v2 jej nie mają). Etykiety treści są stałe, po angielsku; po lokalizacji gry zmienia się
 tylko temat e-maila (`pt182_subject` w 10 językach) i kod w linii `Language:`. Temat
 rozpoznajemy jako początek raportu, gdy tester wkleił e-mail razem z tematem.
 
@@ -82,6 +84,11 @@ SECTIONS = ("[Tester survey]", "[Progress]", "[Play time]", "[Modes]", "[Perform
 LAST_LABEL = "Battle speed x1/2:"
 # Lejek kampanii (d45, R13 TOP 5 poz. 2): sekcja opcjonalna, raporty sprzed d45 jej nie mają.
 FUNNEL_SECTION = "[Campaign stages]"
+# Ankieta końcowa z 10. dnia (d57; R13 TOP 5 poz. 5) — tylko format 2, opcjonalna.
+FINAL_SECTION = "[Final survey]"
+FINAL_LIKED = ("campaign", "battles and units", "eras and research", "daily challenges",
+               "graphics and sound", "nothing special")
+FINAL_ISSUES = ("too hard", "too easy", "battles too long", "unclear rules", "slow progress", "nothing, it's good")
 MODES = ("CAMPAIGN", "SKIRMISH", "ENDLESS", "DAILY")
 SCREEN_NAMES = ("Codex", "Research", "Missions", "Replays", "Accessibility",
                 "Skirmish", "Endless", "Daily", "Weekly")
@@ -134,6 +141,9 @@ RE = {
     "rating": re.compile(r"^Rating:\s*([1-5])/5(?:\s*\(([^)]*)\))?"),
     "issue": re.compile(r"^Biggest issue:\s*(.+)$"),
     "skipped": re.compile(r"^Skipped(?:\s*\(([^)]*)\))?"),
+    "final_nps": re.compile(r"^Recommend \(0-10\):\s*(\d{1,2})(?:\s*\(([^)]*)\))?$"),
+    "final_liked": re.compile(r"^Liked most:\s*(.+)$"),
+    "final_issue": re.compile(r"^Bothered most:\s*(.+)$"),
     "not_asked": re.compile(r"^Not asked yet"),
     "campaign": re.compile(r"^Campaign: stage (\d+) of (\d+), stars (\d+) of (\d+), difficulty (\w+)"),
     "tutorial": re.compile(r"^Tutorial done: (yes|no) \((.+)\)"),
@@ -164,7 +174,8 @@ RE = {
     "slow": re.compile(r"^Battle speed x1/2: (yes|no)"),
 }
 # Etykiety, przed którymi wstawiamy podział linii, gdy wklejony tekst stracił nowe linie.
-REFLOW_LABELS = list(SECTIONS) + [FUNNEL_SECTION] + [
+REFLOW_LABELS = list(SECTIONS) + [FUNNEL_SECTION, FINAL_SECTION, "Recommend (0-10):", "Liked most:",
+                                   "Bothered most:"] + [
     "Version:", "Device:", "Android:", "Language:", "Rating:", "Biggest issue:", "Not asked yet",
     "Campaign: stage", "Tutorial done:", "First win:", "Best Endless wave:", "Win streak:",
     "Campaign loss streak:", "Login streak:", "First day (UTC):", "Days played:", "Time in app:",
@@ -290,7 +301,7 @@ def parse_report(body: str, source: str, subject_lang=None) -> Report:
         lines = lines[:-1]
     section = None
     for ln in lines:
-        if ln in SECTIONS or ln == FUNNEL_SECTION:
+        if ln in SECTIONS or ln in (FUNNEL_SECTION, FINAL_SECTION):
             section = ln
             continue
         if not ln or ln in (HEADER, "Recent battles (newest first):", "-") or ln.startswith("Last sessions"):
@@ -330,8 +341,23 @@ def parse_report(body: str, source: str, subject_lang=None) -> Report:
             elif key == "skipped" and section == "[Tester survey]":
                 r.f["survey"] = "skipped"
                 r.f["survey_day"] = m.group(1)
+            elif key == "skipped" and section == FINAL_SECTION:
+                r.f["final"] = "skipped"
+                r.f["final_day"] = m.group(1)
+            elif key == "not_asked" and section == FINAL_SECTION:
+                r.f["final"] = "not asked"
             elif key == "not_asked":
                 r.f["survey"] = "not asked"
+            elif key == "final_nps":
+                v = int(m.group(1))
+                if v > 10:
+                    r.problems.append("polecenie spoza 0–10: " + ln)
+                    continue
+                r.f["final"] = "answered"
+                r.f["final_nps"] = v
+                r.f["final_day"] = m.group(2)
+            elif key in ("final_liked", "final_issue"):
+                r.f[key] = m.group(1).strip()
             elif key == "campaign":
                 r.f["stage"], r.f["stage_count"], r.f["stars"], r.f["stars_max"] = (int(m.group(i)) for i in range(1, 5))
                 r.f["difficulty"] = m.group(5)
@@ -797,6 +823,14 @@ def evaluate(day3, day10, base, external):
     return checks
 
 
+def nps_score(values):
+    """NPS z ocen 0–10: % polecających (9–10) minus % krytyków (0–6), zaokrąglone; None bez danych."""
+    values = [v for v in values if v is not None]
+    if not values:
+        return None
+    return round(100.0 * (sum(1 for v in values if v >= 9) - sum(1 for v in values if v <= 6)) / len(values))
+
+
 def gate_summary(checks):
     hard = [c for c in checks if c.hard]
     if any(c.verdict == FAIL for c in hard):
@@ -905,6 +939,22 @@ def build_markdown(reports, dropped, problem_count, notes, checks, wave, inputs,
     out.append("Biggest issue: " + ", ".join(
         f"„{name}”: {sum(1 for r in reports if r.get('issue') == name)}" for name in SURVEY_ISSUES + ("skipped",)) + ".\n")
 
+    finals = [r for r in reports if r.get("final")]
+    if finals:
+        out.append("## Ankieta końcowa (10. dzień)\n")
+        nps = [r.get("final_nps") for r in finals if r.get("final_nps") is not None]
+        out.append("Polecenie 0–10: " + ", ".join(f"{k}: {nps.count(k)}" for k in range(11))
+                   + f"; pominięte: {sum(1 for r in finals if r.get('final') == 'skipped')}; "
+                   f"nie pytano: {sum(1 for r in finals if r.get('final') == 'not asked')}.\n")
+        score = nps_score(nps)
+        if score is not None:
+            out.append(f"Mediana {fmt_num(median(nps))}; NPS (9–10 minus 0–6, % odpowiedzi): {score:+d} "
+                       f"przy {len(nps)} odpowiedziach — przy kilkunastu osobach to tylko orientacja.\n")
+        out.append("Liked most: " + ", ".join(
+            f"„{name}”: {sum(1 for r in finals if r.get('final_liked') == name)}" for name in FINAL_LIKED + ("skipped",)) + ".\n")
+        out.append("Bothered most: " + ", ".join(
+            f"„{name}”: {sum(1 for r in finals if r.get('final_issue') == name)}" for name in FINAL_ISSUES + ("skipped",)) + ".\n")
+
     out.append("## Wydajność według telefonu\n")
     out.append("| Telefon | Raporty | Sesje z bitwą | Najgorsze p95 (ms) | Mediana p95 | Max redukcja | Max dropped | Max thermal |")
     out.append("|---|---:|---:|---:|---:|---:|---:|---:|")
@@ -946,7 +996,8 @@ CSV_COLUMNS = ("id", "source", "tester", "key", "day", "day_inferred", "status",
                "android", "language", "days_played", "sessions", "battle_min", "app_min", "battles", "wins",
                "surrenders", "stage", "stars", "difficulty", "tutorial_done", "tutorial_min", "first_win_min",
                "max_loss_streak", "rating", "issue", "worst_p95_ms", "max_thermal", "endless_battles",
-               "daily_battles", "tester_code", "crashes", "anrs", "day_map", "research_levels")
+               "daily_battles", "tester_code", "crashes", "anrs", "day_map", "research_levels",
+               "final_nps", "final_liked", "final_issue")
 
 
 def write_csv(path: Path, reports):
@@ -964,7 +1015,8 @@ def write_csv(path: Path, reports):
                         r.get("rating", ""), r.get("issue", ""), max((p[0] for p in r.perf), default=""),
                         max((p[3] for p in r.perf), default=""), r.modes.get("ENDLESS", ("",))[0],
                         r.modes.get("DAILY", ("",))[0], r.get("tester_code", ""), r.get("crashes", ""), r.get("anrs", ""),
-                        r.get("day_map", ""), r.get("research_levels", "")])
+                        r.get("day_map", ""), r.get("research_levels", ""),
+                        r.get("final_nps", ""), r.get("final_liked", ""), r.get("final_issue", "")])
 
 
 def merge(inputs, overrides=None, external=None, day_split=7):
