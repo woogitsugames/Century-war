@@ -35,6 +35,14 @@ class RankingsScreen(g: Game) : Screen(g) {
     private val periodToggle = btn(104)
     private val tabs = Array(5) { btn(it) }
     private var tab = 0
+    private companion object {
+        /** Dzień 51: najmniejszy podpis zakładki tablicy na wąskim pionie. */
+        const val MIN_TAB_LABEL_SP = 10f
+    }
+    /** Dzień 51: liczba kolumn zakładek tablic (5 = jeden rząd z ikonami; 3 lub 2 = siatka na wąskim pionie). */
+    internal var tabCols = 5
+        private set
+    internal val panelTopForTest: Float get() = panel.top
     private val panel = RectF()
     private val row = RectF()
     private val titleRect = RectF()
@@ -99,12 +107,40 @@ class RankingsScreen(g: Game) : Screen(g) {
         val gap = 6 * dp
         val tw = (pw - gap * 4) / 5
         val l = (w + g.insetL - g.insetR - pw) / 2f
-        for (i in 0..4) {
+        // Dzień 51 (d36 „Zostało”): na wąskim pionie (zewnętrzny Fold) pięć zakładek po ok. 56 dp
+        // miało podpis pod ikoną < 10 sp (przy 130% albo samą ikonę). Gdy którykolwiek podpis nie
+        // mieści się tam w 10 sp (z zapasem jednego kroku Ui.fit, jak w RecordsTabs), zakładki
+        // stoją w siatce bez ikon: 3 + 2, a gdy i to za mało, 2 + 2 + 1. Podpis nigdy nie jest
+        // pusty, więc TalkBack zachowuje etykietę (zakładki nie mają tooltipTitle).
+        val narrowPortrait = w - g.insetL - g.insetR < 420 * dp && h > w
+        val minLabel = MIN_TAB_LABEL_SP / 0.96f
+        tabCols = 5
+        if (narrowPortrait) {
+            fun ok(label: String, avail: Float) = label.isNotEmpty() && ui.measure(label, minLabel, true) <= avail
+            val oneRow = (0..4).all { ok(chrome.tabLabel(L[keys[it]], L[shortKeys[it]], tw, 48 * dp), tw - 8 * dp) }
+            if (!oneRow) {
+                fun fits(cols: Int): Boolean {
+                    val avail = (pw - gap * (cols - 1)) / cols - 12 * dp
+                    return (0..4).all { ok(L[keys[it]], avail) || ok(L[shortKeys[it]], avail) }
+                }
+                tabCols = if (fits(3)) 3 else 2
+            }
+        }
+        if (tabCols == 5) for (i in 0..4) {
             tabs[i].label = chrome.tabLabel(L[keys[i]], L[shortKeys[i]], tw, 48 * dp)
             tabs[i].iconId = tabIcons[i]
             tabs[i].set(l + i * (tw + gap), recordsTabs.contentTop + 4 * dp, tw, 48 * dp)
+        } else for (i in 0..4) {
+            val row = i / tabCols
+            val inRow = min(tabCols, 5 - row * tabCols)
+            val cw = (pw - gap * (inRow - 1)) / inRow
+            val full = L[keys[i]]
+            tabs[i].label = if (ui.measure(full, minLabel, true) <= cw - 12 * dp) full else L[shortKeys[i]]
+            tabs[i].iconId = -1
+            tabs[i].set(l + (i % tabCols) * (cw + gap), recordsTabs.contentTop + (4 + row * 54) * dp, cw, 48 * dp)
         }
-        panel.set(l, recordsTabs.contentTop + 60 * dp, l + pw, h - g.insetB - 12 * dp)
+        val tabRows = if (tabCols == 5) 1 else (4 + tabCols) / tabCols
+        panel.set(l, recordsTabs.contentTop + (6 + tabRows * 54) * dp, l + pw, h - g.insetB - 12 * dp)
         periodToggle.set(panel.left + 12 * dp, panel.top + 44 * dp,
             min(174 * dp, pw * 0.50f), 48 * dp)
         periodToggle.iconId = Icons.CALENDAR

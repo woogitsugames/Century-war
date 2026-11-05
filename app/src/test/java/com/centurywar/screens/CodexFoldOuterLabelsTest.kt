@@ -286,6 +286,62 @@ class CodexFoldOuterLabelsTest {
     }
 
     /**
+     * Dzień 51 (d36 „Zostało”): pięć zakładek tablic Rankingów na zewnętrznym Foldzie ma podpis
+     * ≥ 10 sp w 10 językach przy tekście 100% i 130%, zakładki nie nachodzą na siebie, na zakładki
+     * Rekordów ani na panel, a każda ma niepustą etykietę dla TalkBack. Telefon i rozłożony Fold
+     * zostają w jednym rzędzie z ikonami. Ustawiony CW_SHOT_DIR zapisuje zrzuty de/tr 130%.
+     */
+    @Test
+    fun boardTabsReadableOnFoldOuter() {
+        val problems = StringBuilder()
+        var gridSeen = 0
+        val shotDir = System.getenv("CW_SHOT_DIR")
+        for (scale in floatArrayOf(1f, 1.3f)) for (lang in L.CODES) {
+            val g = game(lang, scale)
+            val rs = RankingsScreen(g)
+            g.setScreen(rs)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            val tag = "$lang ${(scale * 100).toInt()}%"
+            val bmp = Bitmap.createBitmap(g.width, g.height, Bitmap.Config.ARGB_8888)
+            val rec = Recorder(bmp)
+            g.frame(rec, 1f / 30f)
+            if (shotDir != null && scale == 1.3f && (lang == "de" || lang == "tr")) {
+                File(shotDir).mkdirs()
+                File(shotDir, "d51_rankingi_foldOuter_${lang}130.png").outputStream().use {
+                    bmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+            }
+            if (rs.tabCols != 5) gridSeen++
+            val boardTabs = rs.buttons.filter { it.id in 0..4 }
+            val recTabs = rs.buttons.filter { it.id in 200..203 }
+            if (boardTabs.size != 5) problems.append("$tag: ${boardTabs.size} zakładek tablic\n")
+            for (b in boardTabs) {
+                if (rs.accessibilityLabel(b).isBlank()) problems.append("$tag: zakładka #${b.id} bez etykiety TalkBack\n")
+                if (b.label.isBlank()) { problems.append("$tag: zakładka #${b.id} bez podpisu\n"); continue }
+                val t = rec.texts.firstOrNull { it.s == b.label && RectF.intersects(it.r, b.r) }
+                if (t == null) { problems.append("$tag: nie narysowano '${b.label}'\n"); continue }
+                if (sp(g, t) < 10f - 0.05f) problems.append("$tag '${b.label}' ${"%.1f".format(sp(g, t))} sp\n")
+                if (t.r.left < b.r.left - 0.5f || t.r.right > b.r.right + 0.5f) problems.append("$tag '${b.label}' wychodzi poza zakładkę\n")
+                if (b.r.left < 0f || b.r.right > g.width) problems.append("$tag zakładka #${b.id} poza ekranem\n")
+                for (o in boardTabs) if (o !== b && RectF.intersects(o.r, b.r)) problems.append("$tag zakładki tablic #${b.id}/#${o.id} nachodzą\n")
+                for (o in recTabs) if (RectF.intersects(o.r, b.r)) problems.append("$tag zakładka #${b.id} na zakładce Rekordów\n")
+                if (b.r.bottom > rs.panelTopForTest) problems.append("$tag zakładka #${b.id} na panelu\n")
+            }
+        }
+        if (gridSeen == 0) problems.append("Siatka zakładek tablic nie zadziałała w żadnym wariancie\n")
+        for ((w, h, t) in listOf(Triple(1600, 720, 0), Triple(2184, 1968, 70))) {
+            val g = game("de", 1.3f, w, h, t)
+            val rs = RankingsScreen(g)
+            g.setScreen(rs)
+            repeat(3) { g.frame(tiny, 1f / 30f) }
+            val tabs = rs.buttons.filter { it.id in 0..4 }
+            if (rs.tabCols != 5 || tabs.map { it.r.top }.toSet().size != 1) problems.append("$w×$h: zakładki tablic nie w jednym rzędzie\n")
+            if (tabs.any { it.iconId < 0 }) problems.append("$w×$h: zakładki tablic bez ikon\n")
+        }
+        assertTrue(problems.toString(), problems.isEmpty())
+    }
+
+    /**
      * Dzień 41 (d36 „Zostało”): nazwy ról w macierzy kontr na zewnętrznym Foldzie mają ≥ 10 sp
      * w 10 językach przy tekście 100% i 130% (nazwa roli wiersza nad komórkami, nagłówki kolumn
      * poziomo albo obrócone), mieszczą się na ekranie i nie nachodzą na inne napisy.
