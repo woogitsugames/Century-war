@@ -46,7 +46,10 @@ internal class RecordsTabs(private val owner: Screen, private val active: Int) {
         val narrow = owner.w - owner.g.insetL - owner.g.insetR < 420 * d && owner.h > owner.w
         grid = false
         // Podpis pod ikoną ma szerokość przycisku minus 8 dp (Ui.button, ikona wyśrodkowana).
-        if (narrow) for (key in keys) if (owner.ui.measure(L[key], MIN_LABEL_SP, true) > tw - 8 * d) grid = true
+        // D43: Ui.fit zaczyna od 12 × 0,86 sp i zmniejsza krokami po 4 %, a szerokość napisu nie
+        // skaluje się liniowo. Podpis mieszczący się „na styk” w 10 sp kończył więc z 9,8 sp
+        // („İstatistikler”, tr, 130%). Siatka wchodzi, gdy podpis nie ma zapasu jednego kroku.
+        if (narrow) for (key in keys) if (owner.ui.measure(L[key], MIN_LABEL_SP / 0.96f, true) > tw - 8 * d) grid = true
         val cellW = (width - gap) / 2f
         for (i in tabs.indices) {
             val b = tabs[i]
