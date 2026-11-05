@@ -1,5 +1,6 @@
 - **5.11 ~11:40 UTC: dl.google.com ODBLOKOWANY. SDK zainstalowane, `assembleDebug` OK, pełne testy Gradle: :app 912 (1 niestabilny `RecordedMusicTest.musicResumesAfterTrimMemoryInBackground` — osobno zielony), :sim i :server zielone. `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` = 6dc6441f. APK wysłane właścicielowi.** Dalej: lint, `assembleRelease` próba R8 (R12 poz. 2b), eksport grafik sklepu 10 języków, `-PtesterFeedback` gdy właściciel poda adres.
 
+- 5.11 ~12:40 UTC: main = e09abb4b — d54 (lint 0 błędów; próba release R8 OK: zapisy w DEX, brak .so, AAB 20,9 MiB; r8-sim-smoke na v20; złote bez zmian), d55 (grafiki D7 10 języków), d56 (ostatnie fr „vous”, bez ptaków tła przy siatce Rankingów na foldOuter). Pełne testy Gradle zielone (22 min). APK wysłane. Czeka: adres `-PtesterFeedback` od właściciela; dane właściciela do pierwszego AAB (OWNER_CHECKLIST krok 11).
 # SESJA 4.11.2026 wieczór (nowy koordynator, session_01Xqzfc6jFDk5i9HM8BK82vV)
 - **BLOKADA:** sieć środowiska blokuje `dl.google.com` (SDK i AGP) — Gradle nie działa, brak testów i APK. Poproszono właściciela o dopisanie hosta w ustawieniach sieci. `main` nadal = 210f868 (za `integ/tura10`): po odblokowaniu najpierw pełne testy integ i wypchnięcie.
 - Budzenie: trig_01XahRKetEe53pBuzDCyR8zq (:07), trig_01Y3WGdM7Xqiwj2kbkDwuhYS (:37).
