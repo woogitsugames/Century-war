@@ -72,6 +72,12 @@ enum class EndlessCard(val rarity: EndlessRarity, val doctrine: Doctrine? = null
     WAR_CHEST(EndlessRarity.RARE),
     /** Jednorazowe ryzyko: twardsze fale wroga za wyższy wynik za fale. */
     WAGER(EndlessRarity.RARE),
+
+    // Dzień 58 (paczka 206): dopisane na końcu.
+    PIKE_SQUARE(EndlessRarity.COMMON),
+    VANGUARD(EndlessRarity.UNCOMMON),
+    BOSS_BOUNTY(EndlessRarity.RARE),
+    WAR_HORNS(EndlessRarity.UNCOMMON),
     ;
     val textKey: String = doctrine?.key ?: "ec_${name.lowercase()}"
 }
@@ -119,6 +125,18 @@ object EndlessCards {
      */
     const val WAGER_ENEMY_HP_MUL = 1.10f
     const val WAGER_WAVE_SCORE = 287L
+
+    // Dzień 58 (paczka 206): stałe nowych kart.
+    /** Szyk pik: piechota gracza otrzymuje od ciężkich wroga (wręcz) -20% za pełny stos, najwyżej -40%. */
+    const val PIKE_SQUARE_REDUCTION = 0.20f
+    const val PIKE_SQUARE_MIN_MUL = 0.60f
+    /** Straż przednia: piechota gracza zadaje strzelcom wroga +30% za pełny stos. */
+    const val VANGUARD_BONUS = 0.30f
+    /** Nagroda za głowę: złoto za pokonanego bossa (× skala kosztów epoki, × moc stosów). */
+    const val BOSS_BOUNTY_GOLD = 120f
+    /** Rogi wojenne: przez pierwsze [WAR_HORNS_SECONDS] s fali jednostki gracza +20% za pełny stos. */
+    const val WAR_HORNS_BONUS = 0.20f
+    const val WAR_HORNS_SECONDS = 10f
 
     // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
     private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)

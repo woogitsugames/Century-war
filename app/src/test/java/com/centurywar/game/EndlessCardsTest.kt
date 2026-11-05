@@ -60,6 +60,17 @@ class EndlessCardsTest {
         assertTrue(!EndlessCards.canOffer(EndlessCard.WAGER, p))
         assertEquals(b.wave * com.centurywar.game.EndlessCards.WAGER_WAVE_SCORE, b.score() - (p.kills * 12L + (b.time / 2f).toLong() +
             b.bossesDefeated * 1500L))
+
+        // Dzień 58 (paczka 206): też tylko stosy (szczegóły w :sim Content206Test).
+        val dmg = p.dmgMul
+        for (card in arrayOf(EndlessCard.PIKE_SQUARE, EndlessCard.VANGUARD,
+                EndlessCard.BOSS_BOUNTY, EndlessCard.WAR_HORNS)) {
+            assertTrue(card.name, EndlessCards.canOffer(card, p))
+            b.applyEndlessCard(p, card)
+            assertEquals(card.name, 1, p.cardStacks[card.ordinal])
+        }
+        assertEquals("Nowe karty nie zmieniają ogólnych obrażeń", dmg, p.dmgMul, 0f)
+        assertEquals(income, p.incomeMul, 0f)
     }
 
     @Test

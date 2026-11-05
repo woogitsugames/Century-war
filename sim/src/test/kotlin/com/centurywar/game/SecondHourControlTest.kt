@@ -18,7 +18,10 @@ class SecondHourControlTest {
         return GoldenFixtures.render(scenario).lines().first { "\"expected\"" in it }.trim()
     }
 
-    /** Wynik zapisany przy PROTOCOL 0.8.8: etap 21 ma nadal stare zasady presji i siłę AI. */
+    /**
+     * Wynik zapisany przy PROTOCOL 0.8.8: etap 21 ma nadal stare zasady presji i siłę AI.
+     * Dzień 58: tylko skrót zrzutu zmieniony (format v21 z 4 nowymi stosami kart), reszta bez zmian.
+     */
     @Test
     fun stageTwentyOneUnchanged() {
         assertEquals(STAGE_21_BEFORE, expectedLine(21, 91021L, 60 * 60 * 25))
@@ -41,6 +44,6 @@ class SecondHourControlTest {
     companion object {
         const val STAGE_21_BEFORE = "\"expected\": {\"score\":23482,\"winner\":1,\"wave\":0,\"steps\":36436," +
             "\"kills\":149,\"enemyKills\":297,\"timeBits\":1142411538," +
-            "\"snapshotSha256\":\"28751cca4072d2d5be17b8bda3d5f78ba3189328ce07398dcc9596a6ce34bb4e\"}"
+            "\"snapshotSha256\":\"f6809af571960b9d6ecbc1721a8f5aabb7a2a551a25e7ae8f325bbcbbb7fe82c\"}"
     }
 }

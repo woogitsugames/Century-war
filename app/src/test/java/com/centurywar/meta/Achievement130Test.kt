@@ -174,8 +174,9 @@ class Achievement130Test {
         p.save()
         Profile.awaitHintWrites()
         val restored = Profile(file).apply { load() }
-        // Po D6: dziewięć zestawów tygodnia (maska 511 zamiast 63).
-        assertEquals(511L, restored.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name])
+        // Po D6 dziewięć zestawów tygodnia (511), po dniu 58 jedenaście (2047).
+        assertEquals(2047L, (1L shl com.centurywar.game.ChallengeRuleSets.COUNT) - 1L)
+        assertEquals(2047L, restored.achievementCounters[AchievementMetric.WEEKLY_RULESETS.name])
         assertEquals(1L, restored.achievementCounters[AchievementMetric.WAGER_40.name])
         assertEquals((1L shl DailyEvent.entries.size) - 1L,
             restored.achievementCounters[AchievementMetric.DAILY_EVENTS.name])

@@ -99,21 +99,24 @@ enum class SnapshotReject { OK, CORRUPT, OLDER_FORMAT, NEWER_FORMAT, BALANCE_CHA
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 20
+    const val VERSION = 21
     /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
     private const val FIRST_WITH_SIEGE_DAMAGE = 19
     /** Wersje 16–17 zapisywały karty Endless sprzed zlecenia 170 (bez dwóch ostatnich kart). */
     private const val CARDS_BEFORE_170 = 2
     /** Wersje 16–19 nie znały czterech kart zlecenia 184 (Saperzy, Mur tarcz, Skarbiec, Zakład). */
     private const val CARDS_BEFORE_184 = 4
+    /** Wersje 16–20 nie znały czterech kart dnia 58 (Szyk pik, Straż przednia, Nagroda, Rogi). */
+    private const val CARDS_BEFORE_206 = 4
 
     /** Liczba stosów kart zapisana w danej wersji formatu (nowe karty zawsze na końcu enuma). */
     private fun storedCards(version: Int): Int {
         val all = EndlessCard.entries.size
         return when {
-            version >= 20 -> all
-            version >= 18 -> all - CARDS_BEFORE_184
-            else -> all - CARDS_BEFORE_184 - CARDS_BEFORE_170
+            version >= 21 -> all
+            version >= 20 -> all - CARDS_BEFORE_206
+            version >= 18 -> all - CARDS_BEFORE_206 - CARDS_BEFORE_184
+            else -> all - CARDS_BEFORE_206 - CARDS_BEFORE_184 - CARDS_BEFORE_170
         }
     }
     /**
@@ -336,7 +339,7 @@ object BattleSnapshot {
     }
 
     private fun supported(version: Int): Boolean =
-        version == VERSION || version == 19 || version == 18 || version == 17 ||
+        version == VERSION || version == 20 || version == 19 || version == 18 || version == 17 ||
             version == LEGACY_VERSION_WITHOUT_ID
 
     /**

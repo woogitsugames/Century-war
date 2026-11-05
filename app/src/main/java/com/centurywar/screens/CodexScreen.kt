@@ -542,6 +542,10 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                     com.centurywar.game.EndlessCard.SHIELD_WALL -> Icons.SHIELD
                     com.centurywar.game.EndlessCard.WAR_CHEST -> Icons.CHEST
                     com.centurywar.game.EndlessCard.WAGER -> Icons.DICE
+                    com.centurywar.game.EndlessCard.PIKE_SQUARE -> Icons.HELMET
+                    com.centurywar.game.EndlessCard.VANGUARD -> Icons.SWORD
+                    com.centurywar.game.EndlessCard.BOSS_BOUNTY -> Icons.CROWN
+                    com.centurywar.game.EndlessCard.WAR_HORNS -> Icons.ADVANCE
                     else -> Icons.CODEX
                 }
                 addGuide(icon, L[entry.textKey], L[entry.textKey + "_d"], rarity)

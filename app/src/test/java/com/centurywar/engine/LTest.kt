@@ -90,6 +90,27 @@ class LTest {
         }
     }
 
+    /** Dzień 58 (paczka 206): nowe karty, zestawy tygodnia i wydarzenia dnia w 10 językach. */
+    @Test
+    fun content206KeysHaveAllLanguages() {
+        val keys = listOf("ec_pike_square", "ec_vanguard", "ec_boss_bounty", "ec_war_horns",
+            "week206_blitz", "week206_pikes", "day206_lore", "day206_fury")
+            .flatMap { listOf(it, it + "_d") } + "wn_206_content"
+        for (k in keys) {
+            val entry = L.raw(k)
+            assertTrue("brak $k", entry != null)
+            assertEquals(k, L.CODES.size, entry!!.size)
+            for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
+        }
+        // Liczby z opisów kart zgadzają się z :sim we wszystkich językach.
+        val numbers = mapOf("ec_pike_square_d" to listOf("20", "40"), "ec_vanguard_d" to listOf("30"),
+            "ec_war_horns_d" to listOf("10", "20"), "day206_lore_d" to listOf("50"),
+            "day206_fury_d" to listOf("20"))
+        for ((k, values) in numbers) for (text in L.raw(k)!!) {
+            for (v in values) assertTrue("$k: $text", text.contains(v))
+        }
+    }
+
     @Test
     fun placeholderRegexSupportsPositionalArguments() {
         val samples = "%1\$s %2\$d %.1f %%"

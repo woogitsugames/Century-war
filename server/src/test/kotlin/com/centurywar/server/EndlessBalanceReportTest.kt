@@ -85,8 +85,13 @@ class EndlessBalanceReportTest {
         var scoreTotal = 0L
         var wagerRuns = 0
         var wagerBonus = 0L
+        val cardRuns = IntArray(com.centurywar.game.EndlessCard.entries.size)
+        val cardStacks = IntArray(com.centurywar.game.EndlessCard.entries.size)
         val maxSteps = 90_000
-        for (seed in 1001L..1100L) {
+        // Dzień 58: próba kontrolna bez edycji testu (ENDLESS100_FIRST_SEED=2001).
+        val firstSeed = System.getenv("ENDLESS100_FIRST_SEED")?.toLongOrNull() ?: 1001L
+        println("ENDLESS100_SEEDS=$firstSeed..${firstSeed + 99}")
+        for (seed in firstSeed until firstSeed + 100L) {
             val b = Battle(BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonus))
             b.playerAi = Ai(b, 0)
             var steps = 0
@@ -104,6 +109,12 @@ class EndlessBalanceReportTest {
                 wagerBonus += b.wave * (com.centurywar.game.EndlessCards.WAGER_WAVE_SCORE - 250L)
             }
             if (b.over) defeats.add(b.wave)
+            // Dzień 58: jak często AI bierze nowe karty (przebiegi z kartą i suma stosów).
+            for (card in CARDS_206) {
+                val n = b.player.cardStacks[card.ordinal]
+                if (n > 0) cardRuns[card.ordinal]++
+                cardStacks[card.ordinal] += n
+            }
             for (i in thresholds.indices) {
                 if (b.wave > thresholds[i] || (b.wave == thresholds[i] && !b.over)) survived[i]++
             }
@@ -137,6 +148,10 @@ class EndlessBalanceReportTest {
             println("ENDLESS100_SURVIVE_${thresholds[i]}=${survived[i]}/100")
         }
         println("ENDLESS100_DISTRIBUTION=${buckets.joinToString(",")}")
+        for (card in CARDS_206) {
+            println("ENDLESS100_CARD206 ${card.name} RUNS=${cardRuns[card.ordinal]}/100 " +
+                "STACKS=${cardStacks[card.ordinal]}")
+        }
         // Stała próba seedów wykrywa regresję po kolejnych zmianach silnika i kart.
         // Cele strojenia (fala 60: 5–15%, mediana 45–55) tylko raportujemy, bo kolejne
         // zmiany kart i AI je przesuwają; twardo pilnujemy wczesnych fal i rzędu mediany.
@@ -284,5 +299,56 @@ class EndlessBalanceReportTest {
             "GAIN=${"%.1f".format(java.util.Locale.US, (scoreWith.toDouble() / scoreWithout - 1.0) * 100.0)}% " +
             "WAVE_WITH=${waveWith / n} WAVE_WITHOUT=${waveWithout / n} " +
             "SURVIVE60_WITH=$survivedWith SURVIVE60_WITHOUT=$survivedWithout")
+    }
+
+    /**
+     * Dzień 58 (paczka 206): siła pojedynczej karty. Ten sam seed z kartą dokładaną
+     * trzykrotnie przy pierwszej ofercie (fala 5) i bez niej; dla porównania starsze karty
+     * o podobnej roli. Karta nie jest dominująca, gdy jej przyrost średniej fali i przeżyć
+     * fali 60 mieści się w rozrzucie kart porównawczych.
+     */
+    @Test fun newCardsEffect206() {
+        val bonus = veteranBonuses()
+        val variants: List<com.centurywar.game.EndlessCard?> = listOf(null) + CARDS_206 + listOf(
+            com.centurywar.game.EndlessCard.SHIELD_WALL, com.centurywar.game.EndlessCard.SAPPERS,
+            com.centurywar.game.EndlessCard.FRONTLINE_PLATE, com.centurywar.game.EndlessCard.WAR_CHEST,
+            com.centurywar.game.EndlessCard.WAR_DRUMS,
+        )
+        val first = System.getenv("ENDLESS100_FIRST_SEED")?.toLongOrNull() ?: 1001L
+        val seeds = first until first + 50L
+        for (card in variants) {
+            var waves = 0
+            var survived = 0
+            var score = 0L
+            for (seed in seeds) {
+                val b = Battle(BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonus))
+                b.playerAi = Ai(b, 0)
+                var steps = 0
+                var placed = card == null
+                while (!b.over && b.wave < 60 && steps < 90_000) {
+                    b.step()
+                    b.fx.count = 0
+                    steps++
+                    if (!placed && b.wave >= 5) {
+                        repeat(3) { b.applyEndlessCard(b.player, card!!) }
+                        placed = true
+                    }
+                }
+                assertTrue(steps < 90_000, "Timeout pomiaru karty: seed=$seed")
+                waves += b.wave
+                score += b.score()
+                if (!b.over) survived++
+            }
+            val n = (seeds.last - seeds.first + 1).toDouble()
+            println("CARD206 CARD=${card?.name ?: "BRAK"} N=${n.toInt()} WAVE_MEAN=${waves / n} " +
+                "SURVIVE60=$survived SCORE_MEAN=${score / n}")
+        }
+    }
+
+    private companion object {
+        val CARDS_206 = listOf(
+            com.centurywar.game.EndlessCard.PIKE_SQUARE, com.centurywar.game.EndlessCard.VANGUARD,
+            com.centurywar.game.EndlessCard.BOSS_BOUNTY, com.centurywar.game.EndlessCard.WAR_HORNS,
+        )
     }
 }

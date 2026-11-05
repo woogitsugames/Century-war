@@ -49,10 +49,10 @@ data class AchievementDef(
  * Kolejność definicji jest stała, a ponowne rozliczenie tej samej bitwy jest ignorowane.
  */
 object Achievements {
-    /** Maska wszystkich wydarzeń dnia (9 po zleceniu 170). */
+    /** Maska wszystkich wydarzeń dnia (13 po dniu 58). */
     val DAILY_EVENT_MASK: Long = (1L shl com.centurywar.game.DailyEvent.entries.size) - 1L
 
-    /** Maska zestawów Oblężenia tygodnia: dowolne 6 z 9 po D6 (wcześniej tylko 6 pierwszych). */
+    /** Maska zestawów Oblężenia tygodnia: dowolne 6 z 11 po dniu 58 (po D6 z 9, wcześniej 6 pierwszych). */
     val WEEKLY_RULESET_MASK: Long = (1L shl ChallengeRuleSets.COUNT) - 1L
 
     private fun def(

@@ -399,6 +399,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                 s.trainMul *= 1.2f
             }
             if (cfg.dailyEvent == DailyEvent.SPOILS_OF_WAR) s.killGoldMul *= 1.75f
+            // Dzień 58 (paczka 206): symetryczne wydarzenia od Daily.EVENTS_V4_DAY.
+            if (cfg.dailyEvent == DailyEvent.SCHOLARS_DAY) s.xpMul *= 1.5f
+            if (cfg.dailyEvent == DailyEvent.FURY_DAY) s.dmgMul *= 1.2f
             if (cfg.dailyEvent == DailyEvent.RAPID_ABILITIES)
                 s.abilityCdMul = max(MIN_ABILITY_CD_MUL, s.abilityCdMul * 0.5f)
             if (cfg.dailyEvent == DailyEvent.FREE_BARRAGE) {
@@ -713,6 +716,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             // Zlecenie 184: działają przez stosy w damageUnit, startWave i score().
             EndlessCard.SAPPERS, EndlessCard.SHIELD_WALL, EndlessCard.WAR_CHEST,
             EndlessCard.WAGER -> Unit
+            // Dzień 58 (paczka 206): działają przez stosy w damageUnit i przy śmierci bossa.
+            EndlessCard.PIKE_SQUARE, EndlessCard.VANGUARD, EndlessCard.BOSS_BOUNTY,
+            EndlessCard.WAR_HORNS -> Unit
             else -> Unit
         }
         applyCard71Synergies(side, card, power)
@@ -1548,6 +1554,37 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         u.burnLeft = 4f
     }
 
+    /** Czas od początku bieżącej fali Endless (z [waveTimer]; bez osobnego pola w zrzucie). */
+    internal fun waveElapsed(): Float =
+        if (wave <= 0) -1f else max(16f, 28f - wave * 0.25f) - waveTimer
+
+    /**
+     * Dzień 58 (paczka 206): Szyk pik, Straż przednia i Rogi wojenne. Wszystko wynika
+     * ze stosów kart gracza i stanu fali, więc zrzut nie potrzebuje nowych pól.
+     */
+    private fun card206Mul(u: Fighter, attacker: Int, shooterRole: Role?, projectile: Boolean): Float {
+        val stacks = sides[0].cardStacks
+        var mul = 1f
+        if (u.side == 0 && attacker == 1 && !projectile && shooterRole == Role.HEAVY &&
+            u.def.role == Role.MELEE) {
+            val pikes = stacks[EndlessCard.PIKE_SQUARE.ordinal]
+            if (pikes > 0) mul *= max(EndlessCards.PIKE_SQUARE_MIN_MUL,
+                1f - EndlessCards.PIKE_SQUARE_REDUCTION * EndlessCards.totalStackPower(pikes))
+        }
+        if (attacker == 0 && shooterRole != null) {
+            val vanguard = stacks[EndlessCard.VANGUARD.ordinal]
+            if (vanguard > 0 && shooterRole == Role.MELEE && u.def.role == Role.RANGED)
+                mul *= 1f + EndlessCards.VANGUARD_BONUS * EndlessCards.totalStackPower(vanguard)
+            val horns = stacks[EndlessCard.WAR_HORNS.ordinal]
+            if (horns > 0) {
+                val t = waveElapsed()
+                if (t >= 0f && t < EndlessCards.WAR_HORNS_SECONDS)
+                    mul *= 1f + EndlessCards.WAR_HORNS_BONUS * EndlessCards.totalStackPower(horns)
+            }
+        }
+        return mul
+    }
+
     /** Bez roli strzelca i epoki wieży (podpalenie, odrzut bossa) mnożnik kontr wynosi 1. */
     private fun damageUnit(u: Fighter, d: Float, attacker: Int, shooterRole: Role? = null,
                            turretEra: Int = -1, direct: Boolean = true, projectile: Boolean = false) {
@@ -1571,6 +1608,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             max(EndlessCards.SHIELD_WALL_MIN_MUL, 1f - EndlessCards.SHIELD_WALL_REDUCTION *
                 EndlessCards.totalStackPower(sides[0].cardStacks[EndlessCard.SHIELD_WALL.ordinal])) else 1f
         val dealt = d * multiplier * rallyArmor * firstGuard * sappers * shieldWall *
+            (if (endless) card206Mul(u, attacker, shooterRole, projectile) else 1f) *
             (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
         if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
@@ -1607,6 +1645,15 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             if (endless && u.isBoss && attacker == 0) {
                 bossesDefeated++
                 bossRewardsPending++
+                // Dzień 58: Nagroda za głowę, złoto zależne od epoki gracza.
+                val bounty = k.cardStacks[EndlessCard.BOSS_BOUNTY.ordinal]
+                if (bounty > 0) {
+                    val g = EndlessCards.BOSS_BOUNTY_GOLD * Defs.costScale(k.era) *
+                        EndlessCards.totalStackPower(bounty)
+                    k.gold += g
+                    k.goldEarned += g
+                    fx.add(FxBuffer.GOLD, u.x, 90f * u.def.size, 0, g)
+                }
                 // Po pokonaniu bossa oba rozkazy gracza są znów dostępne.
                 if (k.cardStacks[EndlessCard.BOSS_RECALL.ordinal] > 0) {
                     k.abilityCd[0] = 0f

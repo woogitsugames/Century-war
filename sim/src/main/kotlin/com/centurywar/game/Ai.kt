@@ -463,7 +463,8 @@ class Ai(
             AiPersonality.ASSAULT -> when (card) {
                 EndlessCard.BERSERK, EndlessCard.MARCH, EndlessCard.WAR_DRUMS,
                 EndlessCard.LAST_STAND, EndlessCard.DRILL_SERGEANT,
-                EndlessCard.FINAL_SPARK -> 24f
+                EndlessCard.FINAL_SPARK, EndlessCard.WAR_HORNS,
+                EndlessCard.VANGUARD -> 24f
                 else -> 0f
             }
             AiPersonality.ENGINEER -> when (card) {
@@ -478,7 +479,8 @@ class Ai(
                 EndlessCard.EXTRA_GOLD, EndlessCard.BLOOD_GOLD,
                 EndlessCard.SCAVENGER, EndlessCard.SUPPLY_LINE,
                 EndlessCard.MOBILIZATION, EndlessCard.FIELD_MEDICS,
-                EndlessCard.QUARTERMASTER, EndlessCard.WAR_CHEST -> 24f
+                EndlessCard.QUARTERMASTER, EndlessCard.WAR_CHEST,
+                EndlessCard.BOSS_BOUNTY -> 24f
                 else -> 0f
             }
             AiPersonality.SIEGER -> when (card) {
@@ -491,7 +493,8 @@ class Ai(
             AiPersonality.BALANCED -> when (card) {
                 EndlessCard.FRONTLINE_PLATE, EndlessCard.DRILL_SERGEANT,
                 EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE,
-                EndlessCard.FIELD_MEDICS, EndlessCard.SHIELD_WALL -> 12f
+                EndlessCard.FIELD_MEDICS, EndlessCard.SHIELD_WALL,
+                EndlessCard.PIKE_SQUARE -> 12f
                 else -> 0f
             }
         }
