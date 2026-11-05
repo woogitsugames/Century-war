@@ -43,6 +43,12 @@ class RankingsScreen(g: Game) : Screen(g) {
     internal var tabCols = 5
         private set
     internal val panelTopForTest: Float get() = panel.top
+    /**
+     * Dzień 56: przy siatce zakładek (Rekordów albo tablic) niebo zasłaniają gęste rzędy
+     * przycisków, a ptaki tła widać tylko w szczelinach między nimi jako drobne „⌄” i „—”,
+     * które wyglądają jak wskaźnik przewijania. Wtedy tło rysujemy bez ptaków.
+     */
+    internal val bgBirds: Boolean get() = tabCols == 5 && !recordsTabs.grid
     private val panel = RectF()
     private val row = RectF()
     private val titleRect = RectF()
@@ -189,7 +195,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     }
 
     override fun render(c: Canvas) {
-        bg.draw(c, w, h, dt)
+        bg.draw(c, w, h, dt, birds = bgBirds)
         chrome.dim(c, 120)
         ui.panel(c, panel)
         for (b in tabs) ui.button(c, b, 13f)
