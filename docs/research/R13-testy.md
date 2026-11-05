@@ -10,6 +10,13 @@ Dokument nie zmienia kodu gry.
 - `Daily.RELEASE_DAY` = **2027-12-01** zostaje bez zmian;
 - prace specjalnie dla niewidomych są zakończone: istniejący TalkBack zostaje, nowych zadań TalkBack nie ma.
 
+**Aktualizacja 5.11.2026 (decyzje właściciela):** konto Play **firmowe** — wymóg 12 testerów ×
+14 dni i wniosek o produkcję **nas nie dotyczą**. Plan zostaje (fala 1 ok. 14 dni z 18–20
+osobami), ale tydzień 3 („wniosek”) odpada, a próg 2.1 jest celem jakości, nie warunkiem Google.
+Zrobione: TOP 5 poz. 1 (Raport v2, kod testera), poz. 2 (lejek, d45), poz. 3 (przypomnienie
+w 3./10. dniu + `-PtesterFeedback`) — `docs/reports/d48-raport-v2.md`; K1 (etapy 28, 30–33)
+i etap 19 złagodzone (PROTOCOL 0.8.10).
+
 **Skąd liczby:**
 - dane lokalne: kod `meta/PlaytestLog.kt`, `crash/PlaytestReportText.kt`, `meta/TesterSurvey.kt`,
   `meta/BattleHistory.kt`, `crash/CrashStore.kt`;
@@ -47,9 +54,8 @@ liczby osób, a nie procenty z dużej próby.
   - potem wniosek o produkcję, który Google rozpatruje zwykle do 7 dni.
 
   Dotyczy kont osobistych założonych po 13.11.2023. Konto organizacji (D-U-N-S) jest zwolnione.
-  Uwaga: `OWNER_CHECKLIST.md` zakłada konto **organizacji**, a zlecenie mówi o koncie
-  osobistym. To pytanie 1 do właściciela. Plan działa w obu wariantach, bo 14 dni z ≥ 12
-  osobami i tak się przyda.
+  **Decyzja 5.11: konto organizacji (firmowe) — wymóg nas nie dotyczy.** 14 dni z ≥ 12
+  osobami robimy i tak, dla jakości.
 - **Android vitals przy 15 testerach niewiele powiedzą.** Progi Google (1,09% awarii, 0,47% ANR)
   dotyczą odsetka użytkowników z 28 dni. Przy kilkunastu osobach jedna awaria to kilka procent,
   a konsola może pokazywać „za mało danych”. W teście zamkniętym liczymy więc **pojedyncze
@@ -73,7 +79,7 @@ tygodnie 0–6. Daty od fazy F (październik 2027) **nie zależą od T0**.
 | 0 (7–13.12) | **Test wewnętrzny** | właściciel + 2–5 zaufanych osób (limit 100, bez przeglądu Google) | raport przedpremierowy (pętla 4 scenariuszy); scenariusz testera A–E na telefonie i Foldzie; Play Games z prawdziwymi ID; aktualizacja na `versionCode 2`, jeśli była poprawka | **bramka G1** |
 | 1 (14–20.12) | **Test zamknięty, fala 1, dni 1–7** | 18–20 zapisanych, cel ≥ 12 do końca | ten sam AAB awansowany na tor zamknięty (pierwsza wersja zamknięta przechodzi przegląd Google: od kilku godzin do kilku dni); link opt-in; dzień 3: raport + ankieta | raporty z 3. dnia: przegląd w dniu 4–5 |
 | 2 (21–27.12) | Fala 1, dni 8–14 | ci sami | poprawka tylko przy P0 (awaria, utrata postępu); dzień 10: raport; dzień 14: liczba aktywnych testerów w konsoli | **bramka G2** |
-| 3 (28.12–3.01) | Wniosek o produkcję | właściciel (odpowiedzi przygotowuje koordynator) | tylko konto osobiste: „Złóż wniosek o dostęp do wersji produkcyjnej”; **tor zamknięty dalej aktywny** (nie wstrzymywać) | dostęp produkcyjny albo prośba Google o dalsze testy |
+| 3 (28.12–3.01) | ~~Wniosek o produkcję~~ — **odpada (konto firmowe, 5.11)** | — | tor zamknięty dalej aktywny; od razu prace nad 0.2 | — |
 | 4–6 | Wersja 0.2 | koordynator | zadania z fali 1 (P1); pomiar balansu po danych (etap 19 z dowódcą, 28–33) | AAB 0.2 |
 | co 4–6 tyg. do 09.2027 | **Fale 2…n testu zamkniętego** | fala 1 + nowi (cel 30–50 osób) | każda fala: nowa wersja 0.x, 14 dni, raport w 3. i 10. dniu, ta sama bramka G2 (bez wniosku) | **bramka G3** przed testem otwartym |
 | ok. 22.09–24.11.2027 (8–10 tyg.) | **Test otwarty** (opcjonalnie) | każdy z linku/karty sklepu | wersja RC z serwerem rankingu (R5, d38), vitals z większej próby, ostatnie tłumaczenia | **bramka G4** |
@@ -108,13 +114,13 @@ otrzymanych raportów danego dnia.
 | 1.9 | Play Games | telefon | logowanie OK, co najmniej 1 osiągnięcie odblokowane na koncie testera |
 | 1.10 | Aktualizacja | telefon (jeśli był `versionCode 2`) | profil, medale i przerwana bitwa przetrwały aktualizację ze sklepu |
 
-#### G2: koniec fali testu zamkniętego (dzień 14) → wniosek o produkcję (fala 1) / następna wersja (fale 2+)
+#### G2: koniec fali testu zamkniętego (dzień 14) → następna wersja (konto firmowe: bez wniosku o produkcję)
 
-Twarde (bez nich nie składamy wniosku):
+Twarde (bez nich nie idziemy dalej):
 
 | # | Kryterium | Źródło | Próg |
 |---|---|---|---|
-| 2.1 | Testerzy z nieprzerwanym opt-in | PC → Testy zamknięte → Testerzy | **≥ 12 przez 14 dni** (konto osobiste); rekrutować **18–20** (odpada zwykle 20–30%) |
+| 2.1 | Testerzy z nieprzerwanym opt-in | PC → Testy zamknięte → Testerzy | **≥ 12 przez 14 dni** — przy koncie firmowym cel jakości, nie wymóg Google; rekrutować **18–20** (odpada zwykle 20–30%) |
 | 2.2 | Powtarzalne awarie i ANR | PC Awarie i ANR + lokalny licznik (TOP 5 poz. 1) | **0 otwartych** grup awarii, które dotknęły ≥ 2 testerów albo powtarzają się u jednego |
 | 2.3 | Raport przedpremierowy ostatniej wersji | PC | 0 awarii i ANR |
 | 2.4 | Zwrot raportów | skrzynka/formularz (sekcja 3) | dzień 3: **n ≥ 10**; dzień 10: **n ≥ 10** |
@@ -403,6 +409,7 @@ poza `app/`). Poz. 5 może wejść do fali 1 jako aktualizacja.
    przez 14 dni bez przerwy.
    **Rekomendacja:** jeśli firma nie ma jeszcze D-U-N-S, konto osobiste. Do premiery jest
    rok, a 14 dni testu i tak robimy.
+   **Decyzja 5.11: konto firmowe.**
 2. **Ilu testerów zebrać na pierwszą falę?** Google liczy tylko osoby, które zostaną do końca;
    zwykle co czwarta odpada.
    **Rekomendacja:** 18–20 osób z telefonem z Androidem 8+, w tym 1–2 z dużym ekranem lub Foldem.
