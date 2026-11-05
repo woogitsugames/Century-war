@@ -527,7 +527,14 @@ class PlaytestLog(private val file: File) {
         return o.toString()
     }
 
-    /** Migawka JSON na wątku wywołującym, zapis pliku w tle. */
+    /**
+     * Migawka JSON na wątku wywołującym, zapis pliku w tle.
+     *
+     * D49: migawka i kolejkowanie zapisu pod jedną blokadą. Od d48 zapis woła też wątek
+     * `crash-io` (liczniki awarii) równolegle z wątkiem gry; bez blokady starsza migawka mogła
+     * trafić do kolejki po nowszej i nadpisać plik (np. utracony znacznik przypomnienia).
+     */
+    @Synchronized
     fun saveAsync() {
         val bytes = toJson().toByteArray(Charsets.UTF_8)
         try {
