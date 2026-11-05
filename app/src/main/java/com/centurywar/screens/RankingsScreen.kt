@@ -42,6 +42,7 @@ class RankingsScreen(g: Game) : Screen(g) {
     /** Dzień 51: liczba kolumn zakładek tablic (5 = jeden rząd z ikonami; 3 lub 2 = siatka na wąskim pionie). */
     internal var tabCols = 5
         private set
+    internal val panelTopForTest: Float get() = panel.top
     private val panel = RectF()
     private val row = RectF()
     private val titleRect = RectF()
@@ -111,10 +112,10 @@ class RankingsScreen(g: Game) : Screen(g) {
         // mieści się tam w 10 sp (z zapasem jednego kroku Ui.fit, jak w RecordsTabs), zakładki
         // stoją w siatce bez ikon: 3 + 2, a gdy i to za mało, 2 + 2 + 1. Podpis nigdy nie jest
         // pusty, więc TalkBack zachowuje etykietę (zakładki nie mają tooltipTitle).
-        val narrow = w - g.insetL - g.insetR < 420 * dp && h > w
+        val narrowPortrait = w - g.insetL - g.insetR < 420 * dp && h > w
         val minLabel = MIN_TAB_LABEL_SP / 0.96f
         tabCols = 5
-        if (narrow) {
+        if (narrowPortrait) {
             fun ok(label: String, avail: Float) = label.isNotEmpty() && ui.measure(label, minLabel, true) <= avail
             val oneRow = (0..4).all { ok(chrome.tabLabel(L[keys[it]], L[shortKeys[it]], tw, 48 * dp), tw - 8 * dp) }
             if (!oneRow) {
