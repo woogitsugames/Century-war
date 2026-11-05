@@ -71,10 +71,15 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
                  screens=0b11, recent=(), perf=((18.4, 2, 5, 1),), quality_setting=0, quality_level=2,
                  reduction=0, max_steps=4, gpu=0, fps_cap=0, game_mode="standard", palette=0, text_scale=100,
                  left=False, talkback=False, shake=False, flash=False, slow=False, max_chars=6000,
-                 stages=None):
-    """`stages=None` — raport sprzed d45 (bez lejka); inaczej lista (etap od 0, próby, wygrane, kap., s, dowódca)."""
+                 stages=None, v2=None):
+    """`stages=None` — raport sprzed d45 (bez lejka); inaczej lista (etap od 0, próby, wygrane, kap., s, dowódca).
+    `v2` — format 2 (d48, wersje testowe): dict z `code`, `crashes`, `anrs`, `day_map`, `research`, `research_max`, `medals`."""
     o = ["Century War - tester report\n", f"Version: {version}\n", f"Device: {model}\n",
-         f"Android: {android}\n", f"Language: {language}\n\n", "[Tester survey]\n"]
+         f"Android: {android}\n", f"Language: {language}\n"]
+    if v2 is not None:
+        o.append(f"Report format: 2\nTester code: {v2.get('code') or '-'}\nCrashes: {v2.get('crashes', 0)}\n"
+                 f"ANRs: {v2.get('anrs', 0)}\n")
+    o.append("\n[Tester survey]\n")
     if survey == 1:
         o.append(f"Rating: {rating}/5 ({_day(survey_day)})\n")
         o.append("Biggest issue: " + (pm.SURVEY_ISSUES[issue] if 0 <= issue < 4 else "skipped") + "\n")
@@ -89,7 +94,10 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
     o.append(f"Best Endless wave: {best_wave}\n")
     o.append(f"Win streak: {win_streak} (best {best_win_streak})\n")
     o.append(f"Campaign loss streak: {loss_streak} (max {max_loss_streak})\n")
-    o.append(f"Login streak: {login_streak}\n\n")
+    o.append(f"Login streak: {login_streak}\n")
+    if v2 is not None:
+        o.append(f"Research levels: {v2.get('research', 0)} of {v2.get('research_max', 110)}, medals {v2.get('medals', 0)}\n")
+    o.append("\n")
     if stages is not None:
         o.append(pm.FUNNEL_SECTION + "\n")
         tried = sorted((s for s in stages if s[1] > 0), key=lambda s: -s[0])
@@ -104,6 +112,8 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
     o.append("[Play time]\n")
     o.append(f"First day (UTC): {_day(first_day)}, last day: {_day(last_day)}\n")
     o.append(f"Days played: {days_played}, sessions: {sessions}\n")
+    if v2 is not None:
+        o.append(f"Day map (28 days, oldest first, 1 = played): {v2.get('day_map') or '-'}\n")
     o.append(f"Time in app: {_duration(foreground_s)}\n")
     o.append(f"Battle time: {_duration(play_s)}\n")
     o.append(f"Battles: {battles}, wins: {wins}, surrenders: {surrenders}\n\n")
@@ -187,6 +197,11 @@ class PlaytestMergeTest(unittest.TestCase):
         self.assertIn(f'"{pm.FUNNEL_SECTION}"', kt)
         for label in ('" try, "', '" tries, "', '" win, "', '" wins, "', '" surr, "', '"m, cmd "', '" lower stages)', "MAX_STAGE_LINES = 15"):
             self.assertIn(label, kt, label)
+        # Raport v2 (d48): etykiety formatu 2.
+        for label in ('"Report format: "', "FORMAT = 2", '"Tester code: "', '"Crashes: "', '"ANRs: "',
+                      '"Research levels: "', '", medals "', '"Day map (28 days, oldest first, 1 = played): "'):
+            self.assertIn(label, kt, label)
+        self.assertIn('TESTER_CODE_CHARS = "', log)
 
     def test_fixture_matches_builder_and_parses(self):
         text = FIXTURE.read_text(encoding="utf-8")
@@ -400,9 +415,15 @@ class PlaytestMergeTest(unittest.TestCase):
             self.assertTrue(all(r.key.startswith("model:") for r in reports))
 
     def test_future_v2_fields(self):
-        v2 = build_report(stages=[(18, 4, 1, 0, 52 * 60 + 59, 3)]).replace(
-            "Language: pl\n", "Language: pl\nReport format: 2\nTester code: K7QM\nCrashes: 1\nANRs: 0\n")
+        v2 = build_report(stages=[(18, 4, 1, 0, 52 * 60 + 59, 3)],
+                          v2={"code": "K7QM", "crashes": 1, "anrs": 0, "day_map": "0" * 20 + "11011111",
+                              "research": 12, "medals": 340})
         r = pm.parse_report(v2, "v2")
+        self.assertEqual((r.get("day_map"), r.get("research_levels"), r.get("anrs")), ("0" * 20 + "11011111", "12", "0"))
+        empty = pm.parse_report(build_report(v2={}), "v2-empty")
+        self.assertEqual(empty.status, "ok", empty.problems)
+        self.assertIsNone(empty.get("tester_code"))
+        self.assertIsNone(empty.get("day_map"))
         self.assertEqual((r.format, r.get("tester_code"), r.get("crashes")), (2, "K7QM", "1"))
         self.assertEqual(r.stages[19], (4, 1, 0, 52, 3))
         self.assertEqual(r.status, "ok", r.problems)

@@ -186,6 +186,7 @@ class MainActivity : Activity(), Host {
     private fun collectExitReasonsLater(app: Context) {
         Thread({
             exitReasonCollector(app)
+            countPlaytestCrashes()
             val pending = CrashReports.pendingFatal(app)
             exitReasonsCollected = true
             if (pending == null) return@Thread
@@ -201,6 +202,16 @@ class MainActivity : Activity(), Host {
                 }
             }
         }, "crash-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    /**
+     * D48 (Raport v2, tylko wersje testowe): liczba awarii i ANR z lokalnego dziennika awarii
+     * do dziennika testu. Tylko odczyt plików; nic nie jest wysyłane. Wątek `crash-io`.
+     */
+    private fun countPlaytestCrashes() {
+        if (!::game.isInitialized || !game.testerSurveyEnabled) return
+        val log = game.playtest ?: return
+        if (log.countCrashes(CrashReports.fatalEvents())) log.saveAsync()
     }
 
     /** Odłożone pytanie o raport (było nad bitwą) przy następnym menu. */
@@ -898,7 +909,9 @@ class MainActivity : Activity(), Host {
             if (isFinishing || isDestroyed) return@runOnUiThread
             AlertDialog.Builder(this)
                 .setTitle(L["pt182_button"])
-                .setMessage(L["pt186_desc"])
+                // D48: wersja testowa dopisuje kod testera i pozostałe pola Raportu v2.
+                .setMessage(if (::game.isInitialized && game.testerSurveyEnabled)
+                    L["pt186_desc"] + "\n\n" + L["tr204_code_note"] else L["pt186_desc"])
                 .setPositiveButton(L["report_send"]) { _, _ -> sendPlaytestReport() }
                 .setNegativeButton(L["report_cancel"], null)
                 .setOnDismissListener { hideSystemBars() }

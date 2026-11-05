@@ -195,6 +195,7 @@ object L {
         putAll(part200())
         putAll(part201())
         putAll(part203())
+        putAll(part204())
         }
     }
 
@@ -202,6 +203,13 @@ object L {
      * R12 (pozycja 5): wersje testowe przed premierą — dopisek przy osiągnięciach nie do zdobycia
      * i jedna linia w wyzwaniu dnia/tygodnia ([com.centurywar.meta.PreReleaseRules]).
      */
+    /** D48 (R13 TOP 5 poz. 1 i 3): Raport v2 i przypomnienie o raporcie w wersjach testowych. */
+    private fun part204(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "tr204_code_note" to t("Wersja testowa: raport zawiera też losowy kod testera (niepowiązany z kontem ani telefonem), liczbę awarii i ANR, mapę dni gry i poziomy badań.", "Test version: the report also includes a random tester code (not linked to your account or phone), the number of crashes and ANRs, a map of days played and research levels.", "Testversion: Der Bericht enthält außerdem einen zufälligen Testercode (nicht mit Konto oder Gerät verknüpft), die Zahl der Abstürze und ANRs, eine Karte der Spieltage und die Forschungsstufen.", "Versión de prueba: el informe incluye también un código de prueba aleatorio (no vinculado a tu cuenta ni a tu teléfono), el número de cierres y ANR, un mapa de días jugados y los niveles de investigación.", "Version de test : le rapport contient aussi un code testeur aléatoire (non lié à votre compte ni à votre téléphone), le nombre de plantages et d'ANR, une carte des jours joués et les niveaux de recherche.", "Versione di prova: il rapporto include anche un codice tester casuale (non collegato all'account né al telefono), il numero di arresti anomali e ANR, una mappa dei giorni di gioco e i livelli di ricerca.", "Versão de teste: o relatório inclui também um código de teste aleatório (não ligado à conta nem ao telemóvel), o número de falhas e ANR, um mapa dos dias jogados e os níveis de pesquisa.", "Тестова версія: звіт також містить випадковий код тестувальника (не пов'язаний з акаунтом чи телефоном), кількість збоїв і ANR, карту днів гри та рівні досліджень.", "Testversie: het rapport bevat ook een willekeurige testercode (niet gekoppeld aan je account of telefoon), het aantal crashes en ANR's, een kaart van gespeelde dagen en de onderzoeksniveaus.", "Test sürümü: rapor ayrıca rastgele bir test kodu (hesabına veya telefonuna bağlı değil), çökme ve ANR sayısı, oynanan günlerin haritası ve araştırma seviyelerini içerir."),
+        "tr204_banner" to t("Dzień %1\$s testu: wyślij Raport dla testera", "Test day %1\$s: send the Tester report", "Testtag %1\$s: Testerbericht senden", "Día %1\$s de prueba: envía el Informe de prueba", "Jour %1\$s du test : envoyez le Rapport de test", "Giorno %1\$s del test: invia il Rapporto tester", "Dia %1\$s de teste: envia o Relatório de teste", "День тесту %1\$s: надішли Звіт тестувальника", "Testdag %1\$s: stuur het Testrapport", "Test günü %1\$s: Test raporunu gönder"),
+        "tr204_form" to t("Kopiuj i otwórz formularz", "Copy and open form", "Kopieren und Formular öffnen", "Copiar y abrir formulario", "Copier et ouvrir le formulaire", "Copia e apri il modulo", "Copiar e abrir formulário", "Скопіювати й відкрити форму", "Kopiëren en formulier openen", "Kopyala ve formu aç"),
+    )
+
     private fun part203(): Array<Pair<String, Array<out String>>> = arrayOf(
         "t203_ach_release" to t("Dostępne od premiery", "Available from launch", "Ab dem Release verfügbar", "Disponible en el lanzamiento", "Disponible dès la sortie", "Disponibile dal lancio", "Disponível no lançamento", "Доступно з прем'єри", "Beschikbaar bij de lancering", "Çıkışla birlikte açılır"),
         "t203_rules_note" to t("Wersja testowa: pełne zasady wyzwań od premiery", "Test version: full challenge rules from launch", "Testversion: volle Challenge-Regeln ab dem Release", "Versión de prueba: reglas completas de los desafíos desde el lanzamiento", "Version de test : règles complètes des défis dès la sortie", "Versione di prova: regole complete delle sfide dal lancio", "Versão de teste: regras completas dos desafios no lançamento", "Тестова версія: повні правила викликів з прем'єри", "Testversie: volledige uitdagingsregels vanaf de lancering", "Test sürümü: tam mücadele kuralları çıkışla birlikte"),

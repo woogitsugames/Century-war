@@ -11,13 +11,19 @@ import java.time.LocalDate
 /**
  * R2-04: „Raport dla testera” jako zwykły tekst. Etykiety po angielsku (czyta je zespół).
  * Bez nicku, bez UUID i sekretu rankingu, bez konta Play Games: tylko liczniki, tryby,
- * wydajność i ustawienia. Gra nic nie wysyła sama; tekst trafia do systemowego okna
+ * wydajność i ustawienia.
+ *
+ * D48 (R13 TOP 5 poz. 1): w wersjach testowych ([Input.testBuild], ten sam warunek co ankieta)
+ * format 2: `Report format: 2`, losowy kod testera z [PlaytestLog] (niepowiązany z kontem ani
+ * urządzeniem), liczba awarii i ANR z lokalnego dziennika awarii, mapa 28 dni gry i poziomy
+ * badań. Wersja bez ankiety zostaje przy formacie 1 (bez tych linii). Gra nic nie wysyła sama; tekst trafia do systemowego okna
  * udostępniania dopiero po działaniu gracza.
  */
 object PlaytestReportText {
     const val MAX_CHARS = 6_000
     val SECTIONS = arrayOf("[Tester survey]", "[Progress]", "[Campaign stages]", "[Play time]", "[Modes]",
         "[Performance]", "[Settings]")
+    const val FORMAT = 2
     /** D45: najwyżej tyle wierszy lejka (od najwyższego etapu), reszta jako „(+N lower stages)”. */
     const val MAX_STAGE_LINES = 15
     private val QUALITY = arrayOf("auto", "low", "medium", "high")
@@ -51,6 +57,16 @@ object PlaytestReportText {
         val surveyDay: Long = -1L,
         /** D45 (R13 TOP 5 poz. 2): lejek kampanii z [PlaytestLog], etapy z próbami. */
         val stages: List<PlaytestLog.StageStats> = emptyList(),
+        /** D48: wersja testowa (`BuildConfig.TESTER_SURVEY`): format 2 z polami poniżej. */
+        val testBuild: Boolean = false,
+        val testerCode: String = "",
+        val crashes: Int = 0,
+        val anrs: Int = 0,
+        /** 28 znaków `0`/`1`, od najstarszego dnia UTC do dnia raportu. */
+        val dayMap: String = "",
+        val researchLevels: Int = 0,
+        val researchMax: Int = 0,
+        val medals: Int = 0,
     )
 
     /** Wątek gry: odczyt profilu, dziennika testu i historii (kopia listy). */
@@ -93,6 +109,13 @@ object PlaytestReportText {
             surveyIssue = log?.surveyIssue ?: -1,
             surveyDay = log?.surveyDay ?: -1L,
             stages = log?.stageStats() ?: emptyList(),
+            testBuild = g.testerSurveyEnabled,
+            testerCode = if (g.testerSurveyEnabled) log?.ensureTesterCode() ?: "" else "",
+            crashes = log?.crashes ?: 0, anrs = log?.anrs ?: 0,
+            dayMap = log?.dayMap(com.centurywar.meta.Missions.utcDay(g.nowMillis())) ?: "",
+            researchLevels = p.researchLevels().sum(),
+            researchMax = com.centurywar.game.Research.defs.sumOf { it.max },
+            medals = p.medals,
         )
     }
 
@@ -132,7 +155,15 @@ object PlaytestReportText {
         out.append("Version: ").append(version).append('\n')
         out.append("Device: ").append(model).append('\n')
         out.append("Android: ").append(android).append('\n')
-        out.append("Language: ").append(input.language).append("\n\n")
+        out.append("Language: ").append(input.language).append('\n')
+        if (input.testBuild) {
+            // D48: format 2 w nagłówku (przy obcięciu raportu zostaje).
+            out.append("Report format: ").append(FORMAT).append('\n')
+            out.append("Tester code: ").append(input.testerCode.ifEmpty { "-" }).append('\n')
+            out.append("Crashes: ").append(input.crashes).append('\n')
+            out.append("ANRs: ").append(input.anrs).append('\n')
+        }
+        out.append('\n')
 
         // Ankieta na początku: krótka, a przy obcięciu raportu do MAX_CHARS nie może zniknąć.
         out.append(SECTIONS[0]).append('\n')
@@ -158,7 +189,10 @@ object PlaytestReportText {
         out.append("Win streak: ").append(input.winStreak).append(" (best ").append(input.bestWinStreak).append(")\n")
         out.append("Campaign loss streak: ").append(input.lossStreak)
             .append(" (max ").append(input.maxLossStreak).append(")\n")
-        out.append("Login streak: ").append(input.loginStreak).append("\n\n")
+        out.append("Login streak: ").append(input.loginStreak).append('\n')
+        if (input.testBuild) out.append("Research levels: ").append(input.researchLevels).append(" of ")
+            .append(input.researchMax).append(", medals ").append(input.medals).append('\n')
+        out.append('\n')
 
         // D45: lejek kampanii, od najwyższego etapu, najwyżej MAX_STAGE_LINES wierszy.
         out.append(SECTIONS[2]).append('\n')
@@ -172,6 +206,8 @@ object PlaytestReportText {
         out.append("First day (UTC): ").append(day(input.firstDay))
             .append(", last day: ").append(day(input.lastDay)).append('\n')
         out.append("Days played: ").append(input.daysPlayed).append(", sessions: ").append(input.sessions).append('\n')
+        if (input.testBuild) out.append("Day map (28 days, oldest first, 1 = played): ")
+            .append(input.dayMap.ifEmpty { "-" }).append('\n')
         out.append("Time in app: ").append(duration(input.foregroundSeconds)).append('\n')
         out.append("Battle time: ").append(duration(input.playSeconds)).append('\n')
         out.append("Battles: ").append(input.battles).append(", wins: ").append(input.wins)

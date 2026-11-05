@@ -23,6 +23,8 @@ class CrashStore(private val directory: File) {
         private val FILE_NAME = Regex("(fatal|caught|exit|exit-fatal)-[0-9]+\\.txt")
         private const val EXIT = "exit-"
         private const val EXIT_FATAL = "exit-fatal-"
+        /** Linia przyczyny w raporcie [ExitReasons] dla ANR. */
+        internal const val ANR_MARK = ": ANR ("
         private val ORDER = compareBy<File> { it.lastModified() }.thenBy { it.name }
 
         private fun isExit(f: File) = f.name.startsWith(EXIT)
@@ -79,6 +81,23 @@ class CrashStore(private val directory: File) {
         val all = logs()
         if (fatalOnly) return all.filter(::isFatal).maxWithOrNull(ORDER)
         return all.filter { !isExit(it) || isFatal(it) }.maxWithOrNull(ORDER) ?: all.maxWithOrNull(ORDER)
+    }
+
+    /**
+     * D48 (Raport v2, tylko odczyt): awarie w dzienniku jako (czas pliku, czy ANR), rosnąco.
+     * `fatal-` = awaria Javy; `exit-fatal-` = ANR albo błąd natywny (rozpoznany po linii
+     * przyczyny z [ExitReasons], czytamy tylko początek pliku). Nic nie jest wysyłane.
+     */
+    @Synchronized
+    fun fatalEvents(): List<Pair<Long, Boolean>> = logs().filter(::isFatal).sortedWith(ORDER).map { f ->
+        val anr = f.name.startsWith(EXIT_FATAL) && try {
+            f.bufferedReader(Charsets.UTF_8).use { r ->
+                val buf = CharArray(1024)
+                val n = r.read(buf)
+                n > 0 && String(buf, 0, n).contains(ANR_MARK)
+            }
+        } catch (_: Exception) { false }
+        Pair(f.lastModified(), anr)
     }
 
     /** Nazwa musi pochodzić z naszego katalogu; nie akceptujemy ścieżek ani URI. */
