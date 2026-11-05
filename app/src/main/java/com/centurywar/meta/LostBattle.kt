@@ -11,9 +11,17 @@ import kotlin.math.min
 /**
  * R10-01: bitwa przerwana aktualizacją gry. Zrzutu z poprzedniej wersji (inny format albo
  * balans) nie da się wznowić, więc gracz dostaje medale jak za kapitulację, a dzisiejsze
- * rankingowe wyzwanie dnia odzyskuje próbę. Czysta logika bez Androida.
+ * rankingowe wyzwanie dnia odzyskuje próbę (rozliczone w późniejszym dniu UTC: medale, D48). Czysta logika bez Androida.
  */
 object LostBattle {
+    /**
+     * D48 (decyzja właściciela 5.11, d39 poz. 2): rankingowe wyzwanie dnia przerwane aktualizacją
+     * i rozliczone w późniejszym dniu UTC (próby nie da się już zwrócić) daje medale jak za
+     * kapitulację. Kapitulacja w rankingowym wyzwaniu daje `min(90, wynik / 350) + 10`; wyniku
+     * bitwy opis zrzutu nie zawiera (stary plik), więc przyznajemy pewną część: 10.
+     */
+    const val RANKED_LATE_MEDALS = 10
+
 
     /**
      * Nagroda, jaką bitwa dałaby teraz za porażkę (gałąź porażki [com.centurywar.screens.BattleScreen]).
@@ -61,11 +69,14 @@ object LostBattle {
         var daily = false
         val settled = profile.settleBattle(meta.battleId, onPersisted) {
             medals = meta.consolation.coerceAtLeast(0)
-            profile.medals = (profile.medals.toLong() + medals).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             if (meta.rankedDaily && meta.dailyDay == today && profile.lastRankedDaily == meta.dailyDay) {
                 profile.lastRankedDaily = -1L
                 daily = true
+            } else if (meta.rankedDaily && meta.dailyDay in 0L until today) {
+                // D48: wczorajszej (lub starszej) próby nie da się zwrócić: medale jak za kapitulację.
+                medals = maxOf(medals, RANKED_LATE_MEDALS)
             }
+            profile.medals = (profile.medals.toLong() + medals).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         }
         return if (settled) Settlement(medals, daily) else null
     }
