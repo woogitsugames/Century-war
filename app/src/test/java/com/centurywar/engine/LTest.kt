@@ -373,6 +373,20 @@ class LTest {
         }
     }
 
+    /** D56: ostatnie francuskie teksty na „tu” przeszły na „vous”, jak reszta gry. */
+    @Test
+    fun d56FrenchUsesVous() {
+        val fr = L.CODES.indexOf("fr")
+        val tuForm = Regex("(?i)(^|[\\s|«(])(tu|ta|ton|tes|te|t’|t')(?=[\\s’'])|\\bAchète\\b|\\bcommences\\b|\\breçois\\b|\\bpeux\\b")
+        for (k in listOf("ec_war_chest_d", "week184_night_d", "week184_mercs_d", "week184_bastion_d",
+            "resume_desc", "ms_research", "ms_armory", "ms_unit_upgrades")) {
+            val text = L.raw(k)!![fr]
+            assertTrue("$k/fr nadal na „tu”: $text", !tuForm.containsMatchIn(text))
+            assertTrue("$k/fr bez formy „vous”: $text",
+                Regex("(?i)\\b(vous|votre|vos)\\b|ez\\b").containsMatchIn(text))
+        }
+    }
+
     /** Przypadki 1/2/5/21/22/25 i turecki znak procentu przed liczbą. */
     @Test
     fun passTwoMissionPluralsAndTurkishPercentOrder() {
