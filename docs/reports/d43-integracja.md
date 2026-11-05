@@ -93,15 +93,15 @@ Nowe testy z d44/d45 przechodzą: `PlaytestLogTest` i `PlaytestReportTextTest`.
 tr 130% 'İstatistikler' 9.8 sp
 ```
 
-Na zewnętrznym Foldzie, po turecku i przy tekście 130%, zakładka „İstatistikler” w siatce 2 × 2
-(`RecordsTabs`, przycisk rysowany w 12 sp i zmniejszany do szerokości) ma 9,8 sp. Wymagane jest ≥ 10.
+Na zewnętrznym Foldzie, po turecku i przy tekście 130%, zakładka „İstatistikler” ma 9,8 sp.
+Wymagane jest ≥ 10.
 
 To nie jest skutek integracji. Ten sam błąd jest na samej `origin/claude/dzien-41-drobne`: zbudowałem
 jej drzewo osobno (`git archive`) i uruchomiłem test. Test powstał w d36/d41 i nigdy wcześniej nie
-był uruchamiany. Nie poprawiałem go, bo to decyzja o układzie, nie błąd kompilacji. Możliwe kierunki:
-- pełna szerokość wiersza dla zakładek w siatce przy dłuższych nazwach,
-- mniejsze marginesy w `Ui.button` w trybie siatki,
-- krótsza nazwa w TR, np. „İstatistik”.
+był uruchamiany.
+
+**Poprawione w drugim etapie (pkt 6.1).** Mój pierwotny opis „w siatce 2 × 2” był błędny: zakładki
+stały w jednym rzędzie.
 
 ### Błędy, które wynikały tylko ze środowiska
 
@@ -122,14 +122,79 @@ Usunąłem je ustawieniami środowiska, bez zmian w repo:
   zwracane, nullowalność). Prawdziwa biblioteka `play-services-games-v2:22.1.0` może się różnić
   w szczegółach.
 - **Kotlin 2.2.20:** różnice wobec 2.0.21, np. nowe ostrzeżenia traktowane jako błędy.
-- **Testy zrzutów ekranu** (`screenshots`, około 30 wzorców PNG) i długie testy balansu: zajęłyby kilka
-  godzin. Renderowanie fontów poza Gradle też może się różnić.
+- **Testy zrzutów ekranu:** uruchomione w drugim etapie (pkt 6.3).
+- **Długie testy balansu:** nieuruchomione.
 - **Moduł `:server`** (zmiany z d38): poza tą kompilacją.
 
 ## 5. Odtworzenie
 
-Skrypty są w `/tmp/claude-0/d43/tools/` i giną po restarcie kontenera:
-- `build_app.sh <repo>` — kompilacja,
-- `run_tests.sh <repo> <klasy…>` — wybrane testy,
-- `run_fast.sh <repo>` — cały zestaw „fastTest”,
-- `build_res.py`, `mkr.py`, `mkstubs.py`, `mkmonitor.py`, `MockableJar.java`, `get_aapt.sh` — kroki pomocnicze.
+Skrypty są w repo, w `tools/offline-build/` (pkt 6.2). Ich README opisuje zależności i użycie.
+
+## 6. Drugi etap
+
+### 6.1. `recordsTabsReadableOnFoldOuter`: poprawione
+
+**Przyczyna.** Przy tureckim i tekście 130% zakładki Rekordów nie przechodziły w siatkę 2 × 2, tylko
+stały w jednym rzędzie z ikoną i podpisem pod nią:
+- Warunek siatki w `RecordsTabs.layout()` sprawdzał, czy podpis mieści się w 10 sp.
+  „İstatistikler” mieścił się na styk: 65,3 dp przy dostępnych 66,5 dp.
+- `Ui.fit` startuje jednak od 12 × 0,86 = 10,32 sp. Szerokość tekstu nie skaluje się liniowo
+  (hinting), więc wynik nie mieścił się, a pętla zmniejszała rozmiar krokami po 4 %.
+- Skutek: 9,79 sp.
+
+**Poprawka** (`RecordsTabs.kt`, jedna linia warunku). Siatka wchodzi, gdy podpis nie mieści się
+z zapasem jednego kroku, czyli w `10 / 0,96` sp. Dotyczy to tylko wąskiego pionowego ekranu
+(`narrow`, czyli zewnętrznego Folda). Telefony i rozłożony Fold są bez zmian, a próg testu też.
+
+**Wynik.**
+- `CodexFoldOuterLabelsTest`: 6/6.
+- Cały „fastTest”: **750/750**.
+- Zrzut `d43_foldOuter_tr130_rekordy.png` pokazuje siatkę 2 × 2 z pełnymi nazwami.
+
+Pierwsza próba, czyli węższe marginesy siatki, niczego nie zmieniła, bo siatka w ogóle nie
+była używana. Wycofałem ją przed commitem.
+
+### 6.2. `tools/offline-build/`
+
+Skrypty są przeniesione do repo, bez jarów i binarek:
+- `setup.sh`, `build_app.sh`, `run_tests.sh`, `run_fast.sh`, `run_shots.sh`, `build_sim.sh`,
+- `build_res.py`, `mkr.py`, `mkstubs.py`, `mkmonitor.py`, `MockableJar.java`,
+- `pom.xml`, `settings.xml`,
+- `README.md` po polsku: obejście na czas blokady, co i skąd pobiera, czym różni się od AGP.
+
+Katalog roboczy ustawia `$CW_OFFLINE_DIR` (domyślnie `/tmp/cw-offline`). Sprawdziłem, że kopie z
+repo kompilują projekt i uruchamiają testy.
+
+### 6.3. Testy zrzutów ekranu
+
+Testy działają z natywną grafiką Robolectric (`nativeruntime` 4.16 z Maven Central). Uruchomiłem 36
+klas z kategorii `screenshots`, każdą w osobnej JVM: **34 klasy OK**, 2 z błędami.
+
+**`ScreenshotTestMenus.regression100`.** Test zatrzymuje się na pierwszej różnicy. Uruchomiłem go
+więc dodatkowo z lokalną, niezatwierdzoną zmianą, która zbiera wszystkie różnice. Wynik: 26 z 30
+wzorców się zgadza, 4 się różnią:
+
+| Wzorzec | Zmienione piksele | Przyczyna (na podstawie pliku diff) |
+|---|---|---|
+| `phone720_reg100_campaign` | 0,128 % (limit 0,1 %) | nowe iskry „Nowość” przy nierozegranych etapach (R11-06) |
+| `foldOpen_reg100_campaign` | 0,125 % | to samo |
+| `phone720_reg100_campaign_info` | 0,681 % | linia „✦ Nowość: Epoka brązu (Rydwan), Mgła wojny” obok gwiazdek w panelu etapu 3 |
+| `foldOpen_reg100_campaign_info` | 0,684 % | to samo |
+
+Wszystkie 4 różnice to zamierzone zmiany z R11-06, a wzorce są starsze. Wzorców nie aktualizowałem.
+Pliki diff są w `/tmp/claude-0/d43/shots/diffs/`.
+
+**`LowEndScreensPerformanceTest.menuLow` i `menuHigh`.** Menu alokuje 30,4 i 30,5 KB na 600 klatek
+przy limicie 16 KB. Ten sam wynik jest na bazie `dzien-34-kandydat`, więc to nie skutek integracji.
+Może to zależeć od środowiska (JDK 21, Robolectric poza Gradle) albo od daty, bo menu ma zegar.
+Nie sprawdziłem tego dalej. Pozostałe ekrany w tym teście mieszczą się w limicie.
+
+**Uwaga z przeglądu zrzutów: wyzwanie dnia.** Linia „Wersja testowa: pełne zasady wyzwań od
+premiery” leży na złotej ramce dolnej krawędzi panelu, więc wygląda jak przekreślona:
+- `ModeScreen`: linia bazowa jest na `panel.bottom − 8 dp`, czyli na wysokości wewnętrznej ramki,
+- widać to na phone720, foldOpen i foldOuter.
+
+Nie poprawiałem tego, bo to poza zakresem zlecenia.
+
+**Zrzuty** (2427 PNG) są w `/tmp/claude-0/d43/shots/`. Obejmują testy z kategorii oraz zrzuty
+z lokalnego testu `D43ShotsTest` (spoza repo), zrobione dla scen, o które prosił koordynator.

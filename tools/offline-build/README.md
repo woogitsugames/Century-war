@@ -58,6 +58,7 @@ tools/offline-build/build_app.sh "$PWD"            # kompilacja sim + app (main 
 tools/offline-build/run_tests.sh "$PWD" com.centurywar.screens.CodexFoldOuterLabelsTest
 tools/offline-build/run_fast.sh "$PWD"             # odpowiednik fastTest (paczki po 25 klas)
 tools/offline-build/build_sim.sh "$PWD/sim"        # :sim main + test i wszystkie testy :sim
+tools/offline-build/run_shots.sh "$PWD"            # kategoria screenshots, jedna JVM na klasę
 ```
 
 Wyniki kompilacji trafiają do `$CW_OFFLINE_DIR/out`, a logi `run_fast.sh` do `$CW_OFFLINE_DIR/fast_*.log`.
