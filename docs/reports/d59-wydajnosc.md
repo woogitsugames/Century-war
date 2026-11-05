@@ -96,7 +96,13 @@ Symulacja (`:sim`) nie była zmieniana: `PROTOCOL` bez zmian, złote powtórki i
 
 ## Weryfikacja
 
-WYNIKI_WERYFIKACJI
+- `:sim:test --rerun`: **320 testów, 0 błędów** (1 pominięty jak na `main`), w tym `GoldenReplayTest`.
+  `:sim` i `SimVersion.PROTOCOL` (0.8.10) bez zmian.
+- `:app:testDebugUnitTest --tests '*Performance*' '*LowEnd*' '*Battle*' '*Screenshot*'`:
+  **73 klasy, 237 testów, 0 błędów** — w tym `ScreenshotGoldenTest` (wzorce bez zmian),
+  `ScreenshotTestMenus`, `ScreenshotTestBattle`, `LateEraPerformanceTest`, `LowEndScreensPerformanceTest`,
+  `BattleScreenAllocationTest`, `BattleCrowdPerformance101Test`.
+- Sumy CRC 2088 klatek bitwy przed/po identyczne (opis w „Metoda”).
 
 ## Czego nie zmieniano (rekomendacje)
 
