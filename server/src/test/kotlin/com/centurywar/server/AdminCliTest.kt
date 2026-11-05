@@ -13,7 +13,7 @@ class AdminCliTest {
         SqliteStore("jdbc:sqlite::memory:").use { store ->
             val player = UUID.randomUUID().toString()
             val input = ScoreSubmission(
-                board = "endless", player = player, nick = "Gracz", gameVersion = "0.8.9",
+                board = "endless", player = player, nick = "Gracz", gameVersion = "0.8.10",
                 seed = 42L, replay = "irrelevant", score = 150L, research = List(13) { 0 },
             )
             store.save(input, VerifiedReplay("endless", 150L, 900), now, "hash-abc")
