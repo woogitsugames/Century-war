@@ -198,3 +198,69 @@ Nie poprawiałem tego, bo to poza zakresem zlecenia.
 
 **Zrzuty** (2427 PNG) są w `/tmp/claude-0/d43/shots/`. Obejmują testy z kategorii oraz zrzuty
 z lokalnego testu `D43ShotsTest` (spoza repo), zrobione dla scen, o które prosił koordynator.
+
+## 7. Trzeci etap
+
+### 7.1. Linia „od premiery” w wyzwaniu dnia i tygodnia (commit 1a95d757)
+
+**Przyczyna.** Linia bazowa była na `panel.bottom − 8 dp`. Złota lamówka panelu leży 10,4 dp od
+krawędzi (`Ui.PANEL_TRIM_INSET`), więc napis przecinała rama. Pod przyciskiem Graj było tylko
+13,6 dp wolnego miejsca, a to za mało na 11 sp przy tekście 130%.
+
+**Poprawka** (`ModeScreen.layout`).
+- Gdy dopisek jest widoczny, linia dostaje własny pas nad wewnętrzną lamówką. Pas mieści litery,
+  kontur `textO` i cień, plus 3 dp odstępu od lamówki.
+- Graj stoi co najmniej 4 dp nad pasem i podnosi się tylko o brakującą wysokość: około 11 dp przy
+  100% i 16 dp przy 130%. Treść panelu liczy się od `start.r.top`, więc dopasowuje się sama.
+- Bez dopisku (wydanie albo dzień premiery) Graj zostaje na `panel.bottom − 24 dp`. Ekrany
+  Oblężenia i Potyczki są bez zmian.
+- Jeśli premiera wypadnie w trakcie, `update` przelicza układ.
+
+**Test `DailyRulesNoteLayoutTest`.** Zakres: 3 urządzenia (phone720, foldOpen, foldOuter) × 10 języków
+× tekst 100% i 130% × zakładka dzień i tydzień.
+- Linia jest narysowana dokładnie raz.
+- Cała linia, z pełnymi metrykami czcionki, konturem i cieniem, mieści się w `ui.panelInner(panel)`.
+- Linia nie nachodzi na Graj.
+- Rozmiar ≥ 11 sp.
+- Bez dopisku Graj zostaje na dawnym miejscu.
+
+Sprawdziłem, że test wykrywa stary błąd: po lokalnym przywróceniu starej linii bazowej odrzuca
+wszystkie 120 przypadków. Po poprawce fastTest przeszedł w całości.
+
+**Zrzuty po zmianie:**
+- phone720: `/tmp/claude-0/d43/shots/d43n_phone720_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_phone720_wyzwanie_tygodnia.png`
+- foldOpen: `/tmp/claude-0/d43/shots/d43n_foldOpen_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_foldOpen_wyzwanie_tygodnia.png`
+- foldOuter: `/tmp/claude-0/d43/shots/d43n_foldOuter_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_foldOuter_wyzwanie_tygodnia.png`
+- de 130%: `/tmp/claude-0/d43/shots/d43n_phone720_de130_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_phone720_de130_wyzwanie_tygodnia.png`,
+  `/tmp/claude-0/d43/shots/d43n_foldOpen_de130_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_foldOpen_de130_wyzwanie_tygodnia.png`,
+  `/tmp/claude-0/d43/shots/d43n_foldOuter_de130_wyzwanie_dnia.png`, `/tmp/claude-0/d43/shots/d43n_foldOuter_de130_wyzwanie_tygodnia.png`
+
+**Uwaga z przeglądu zrzutów.** Na phone720, w zakładce tygodnia przy de 130%, wiersz progów medali
+(„Gold: 30 Wellen (+120)”) wychodzi w prawo poza lamówkę. Ta usterka istniała przed zmianą:
+liczba wierszy progów zależy tylko od szerokości panelu (`stackedColumns`), nie od położenia Graj.
+Nie poprawiałem jej.
+
+### 7.2. `LowEndScreensPerformanceTest.menuLow` i `menuHigh`
+
+Uruchomiłem test tym samym narzędziem na czystym `origin/main` (210f868e): **15 936 i 16 080 B**
+na 600 klatek. To mniej niż limit, choć niewiele. Na `dzien-34` i na tej gałęzi wynik wynosił około
+30,5 KB. To była więc prawdziwa regresja, a nie skutek środowiska.
+
+**Przyczyna (bez bisekcji, z kodu).** `Game.clock` ma typ `() -> Long`, a wywołanie lambdy zwraca
+`Long` w pudełku, czyli alokuje 16 B na każde wywołanie. Menu woła zegar w każdej klatce:
+- już na `main`: `g.checkWelcomeBack()`, którego argument domyślny to `clock()` (R10-07, 4925288e).
+  Stąd 16 KB na `main`, tuż pod limitem;
+- od `dzien-29-zegar` (fd6bf01a, „jeden wstrzykiwany zegar”): dodatkowo
+  `Daily.dayNumber(g.clock())` dla plakietki darmowego wyzwania. Stąd 30 KB.
+
+**Poprawka.**
+- Nowa funkcja `Game.nowMillis()`. Przy domyślnym zegarze (`Game.SYSTEM_CLOCK`) woła
+  `System.currentTimeMillis()` bezpośrednio, bez pudełka. Przy zegarze podstawionym w teście
+  działa jak dotąd.
+- Używają jej argumenty domyślne `settleLostBattle`, `checkWelcomeBack` i `checkDailyLogin`,
+  3 miejsca w `MenuScreen` oraz codzienny test dnia w `ModeScreen.update`.
+- Typ i API `clock` się nie zmieniły, więc testy podstawiające zegar działają bez zmian.
+
+**Wynik:** menu LOW **1 536 B**, HIGH **1 680 B** na 600 klatek. `LowEndScreensPerformanceTest`:
+9/9. fastTest po obu poprawkach: **752/752** (commit ea87ef53). W `ScreenshotTestMenus` wzorce menu się zgadzają. Jedyna różnica to znane już
+`reg100_campaign` (pkt 6.3).
