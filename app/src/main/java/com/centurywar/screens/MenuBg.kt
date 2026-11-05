@@ -75,9 +75,13 @@ class MenuBg {
     private var k = 1f
     private var tile = 1f
 
-    /** [dt] jest ignorowane, jeśli w tej klatce czas już przesunięto (wspólny zegar). */
+    /**
+     * [dt] jest ignorowane, jeśli w tej klatce czas już przesunięto (wspólny zegar).
+     * [birds] = false pomija ptaki (dzień 56: w wąskich szczelinach między gęstymi rzędami
+     * przycisków ptak wyglądał jak znak „⌄” albo kreska „—”, czyli jak element interfejsu).
+     */
     fun draw(c: Canvas, w: Float, h: Float, dt: Float, animated: Boolean = true,
-             detail: Int = Quality.HIGH): Float {
+             detail: Int = Quality.HIGH, birds: Boolean = true): Float {
         if (animated) {
             val now = System.nanoTime()
             if (now - lastFrameNanos > 4_000_000L) { time += dt; lastFrameNanos = now }
@@ -94,7 +98,7 @@ class MenuBg {
             drawClouds(c, w, h, t, 1)
         }
         if (detail >= Quality.MED) scroll(c, mid, t * 11f * k, HILL, Color.rgb(44, 58, 78), 1.8f)
-        if (detail == Quality.HIGH) drawBirds(c, w, h, t)
+        if (detail == Quality.HIGH && birds) drawBirds(c, w, h, t)
         scroll(c, near, t * 18f * k, NEAR, OUT, 2.2f)
         val gy = h * 0.8f
         if (detail == Quality.LOW) drawLowFortresses(c, w, gy + 4 * k)

@@ -45,6 +45,13 @@ class CodexFoldOuterLabelsTest {
         /** [r] w układzie rysowania, [sr] na ekranie (po obrocie/przesunięciu płótna, dzień 41). */
         class Drawn(val s: String, val r: RectF, val sizePx: Float, val sr: RectF = r, val color: Int = 0)
         val texts = ArrayList<Drawn>()
+        /** Dzień 56: odcinki rysowane kolorem ptaków tła MenuBg (argb 200, 40, 30, 60). */
+        val birdLines = ArrayList<RectF>()
+        override fun drawLine(startX: Float, startY: Float, stopX: Float, stopY: Float, paint: Paint) {
+            if (paint.color == android.graphics.Color.argb(200, 40, 30, 60))
+                birdLines.add(RectF(minOf(startX, stopX), minOf(startY, stopY), maxOf(startX, stopX), maxOf(startY, stopY)))
+            super.drawLine(startX, startY, stopX, stopY, paint)
+        }
         override fun drawText(text: String, x: Float, y: Float, paint: Paint) {
             if (paint.style == Paint.Style.FILL && text.isNotBlank()) {
                 val w = paint.measureText(text)
@@ -314,6 +321,16 @@ class CodexFoldOuterLabelsTest {
             if (rs.tabCols != 5) gridSeen++
             val boardTabs = rs.buttons.filter { it.id in 0..4 }
             val recTabs = rs.buttons.filter { it.id in 200..203 }
+            // Dzień 56: przy siatce zakładek ptaki tła w szczelinie między siatką Rekordów
+            // a siatką tablic wyglądały jak „⌄” i „—”. Tam nie rysujemy żadnego ptaka.
+            if (rs.tabCols != 5 || recTabs.map { it.r.top }.toSet().size > 1) {
+                if (rs.bgBirds) problems.append("$tag: siatka zakładek, a tło z ptakami\n")
+                if (rec.birdLines.isNotEmpty()) problems.append("$tag: ${rec.birdLines.size} kresek ptaków tła przy siatce zakładek\n")
+                val gapTop = recTabs.maxOf { it.r.bottom }
+                val gapBottom = boardTabs.minOf { it.r.top }
+                for (l in rec.birdLines) if (l.bottom >= gapTop && l.top <= gapBottom)
+                    problems.append("$tag: kreska tła w szczelinie między siatkami (y=${l.top.toInt()})\n")
+            }
             if (boardTabs.size != 5) problems.append("$tag: ${boardTabs.size} zakładek tablic\n")
             for (b in boardTabs) {
                 if (rs.accessibilityLabel(b).isBlank()) problems.append("$tag: zakładka #${b.id} bez etykiety TalkBack\n")
@@ -335,6 +352,9 @@ class CodexFoldOuterLabelsTest {
             g.setScreen(rs)
             repeat(3) { g.frame(tiny, 1f / 30f) }
             val tabs = rs.buttons.filter { it.id in 0..4 }
+            val rec = Recorder(Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888))
+            g.frame(rec, 1f / 30f)
+            if (!rs.bgBirds || rec.birdLines.isEmpty()) problems.append("$w×$h: tło Rankingów bez ptaków\n")
             if (rs.tabCols != 5 || tabs.map { it.r.top }.toSet().size != 1) problems.append("$w×$h: zakładki tablic nie w jednym rzędzie\n")
             if (tabs.any { it.iconId < 0 }) problems.append("$w×$h: zakładki tablic bez ikon\n")
         }
