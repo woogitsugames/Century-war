@@ -77,8 +77,15 @@ class Game(
      * W grze zawsze czas systemowy; testy podają stały, by dzień nie zależał od północy UTC.
      * Parametr konstruktora, bo już `init` (seria logowań) liczy dzień.
      */
-    internal var clock: () -> Long = { System.currentTimeMillis() },
+    internal var clock: () -> Long = SYSTEM_CLOCK,
 ) {
+    /**
+     * D43: [clock] bez alokacji. `() -> Long` zwraca `Long` w pudełku (16 B na wywołanie), a menu
+     * pyta o czas w każdej klatce (powitanie po przerwie, darmowe wyzwanie) — test LowEnd menu
+     * przekraczał przez to 16 KB na 600 klatek. Przy zegarze systemowym bez pośrednika.
+     */
+    fun nowMillis(): Long = if (clock === SYSTEM_CLOCK) System.currentTimeMillis() else clock()
+
     val ui = Ui()
     var width = 1
     var height = 1
@@ -176,7 +183,7 @@ class Game(
      * (identyfikator bitwy w profilu). Pliki zrzutu i opisu znikają po trwałym zapisie profilu.
      * Komunikat idzie zwykłą kolejką banerów (bez okna, nigdy nad bitwą i wynikami).
      */
-    fun settleLostBattle(today: Long = Daily.dayNumber(clock())) {
+    fun settleLostBattle(today: Long = Daily.dayNumber(nowMillis())) {
         val meta = lostBattle ?: return
         lostBattle = null
         val store = snapshots
@@ -196,7 +203,7 @@ class Game(
      * utraconej przy aktualizacji (najpierw jej banery, potem powitanie) i nigdy przy ofercie
      * wznowienia bitwy. Tani test dnia w każdej klatce; zapis profilu raz na dzień UTC.
      */
-    fun checkWelcomeBack(nowMillis: Long = clock()) {
+    fun checkWelcomeBack(nowMillis: Long = this.nowMillis()) {
         if (resumeOffer != null || lostBattle != null) return
         val today = Daily.dayNumber(nowMillis)
         if (today <= profile.lastPlayDay) return
@@ -382,7 +389,7 @@ class Game(
      * starcie i po powrocie aplikacji z tła (MainActivity.onResume przez [post]), bo proces
      * potrafi przeżyć w tle północ i nagroda kolejnego dnia nie zostałaby przyznana.
      */
-    fun checkDailyLogin(nowMillis: Long = clock()) {
+    fun checkDailyLogin(nowMillis: Long = this.nowMillis()) {
         val m = Missions(profile)
         m.refresh(nowMillis)
         val reward = m.claimLogin(nowMillis)
@@ -887,5 +894,8 @@ class Game(
         /** `ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN` i `TRIM_MEMORY_BACKGROUND`. */
         const val TRIM_UI_HIDDEN = 20
         const val TRIM_BACKGROUND = 40
+
+        /** Domyślny [clock]; [nowMillis] rozpoznaje go i omija pakowanie `Long`. */
+        internal val SYSTEM_CLOCK: () -> Long = { System.currentTimeMillis() }
     }
 }

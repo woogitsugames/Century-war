@@ -214,7 +214,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     override fun update(dt: Float) {
         hints.update(dt)
         this.dt = dt
-        val today = previewDailyDay ?: Daily.dayNumber(g.clock())
+        val today = previewDailyDay ?: Daily.dayNumber(g.nowMillis())
         if (today != day) {
             day = today; dailyCfg = null; labelTimer = 0f
             // Dzień premiery w trakcie: pas linii „od premiery” znika, Graj wraca na miejsce.

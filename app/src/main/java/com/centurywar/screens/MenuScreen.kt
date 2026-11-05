@@ -120,7 +120,7 @@ class MenuScreen(g: Game) : Screen(g) {
     private var missionBadgeText = ""
 
     private fun refreshMissionBadge() {
-        val now = g.clock()
+        val now = g.nowMillis()
         val state = g.profile.missionState
         if (state.dailyDay != Missions.utcDay(now) || state.weeklyWeek != Missions.utcWeek(now))
             missionManager.refresh(now)
@@ -279,7 +279,7 @@ class MenuScreen(g: Game) : Screen(g) {
         b.visible = false
         goalKind = NextGoalKind.NONE
         if (portraitMenu || !g.profile.tutorialDone || missions.r.isEmpty) return
-        val goal = NextGoals.pick(g.profile, g.clock(), null, skipMissions = true)
+        val goal = NextGoals.pick(g.profile, g.nowMillis(), null, skipMissions = true)
         if (goal.kind == NextGoalKind.NONE) return
         val top = missions.r.bottom + 6 * dp
         val bottom = h - g.insetB - 4 * dp
@@ -481,7 +481,7 @@ class MenuScreen(g: Game) : Screen(g) {
         updateSurvey(dt)
         if (eliteReady && !hasOpenModal && research.visible && research.r.width() > 0f)
             hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
-        val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber(g.clock())
+        val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber(g.nowMillis())
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
         // Podpisy budujemy tylko po zmianie wartości (bez nowych Stringów w każdej klatce).
