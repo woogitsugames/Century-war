@@ -2089,7 +2089,7 @@ wydarzenia po `EVENTS_V3_DAY`; do niego zamrożona jedenastka `EVENTS_V3`). Kamp
 `SimVersion.PROTOCOL` 0.8.10 → **0.8.11**, `BattleSnapshot.VERSION` 20 → **21**, `Replay.VERSION` bez zmian.
 Raport: `docs/reports/d58-tresc.md`.
 
-Pomiar: „przed” = `origin/main` (3a2… z 5.11, kopia `git archive` poza repo), „po” = ta gałąź.
+Pomiar: „przed” = `origin/main` (42a26ca z 5.11, kopia `git archive` poza repo), „po” = ta gałąź.
 Endless: weteran 80% badań, `EndlessBalanceReportTest` (próba kontrolna: `ENDLESS100_FIRST_SEED=2001`).
 
 ### Endless, 100 seedów (cel: fala 60 = 5–15/100, mediana porażek 45–55, fala 20 ≥ 95)
@@ -2157,3 +2157,7 @@ bitwach oba w paśmie 45–55% i bez wydłużenia bitew.
 Dni sprzed `EVENTS_V4_DAY` mają te same wydarzenia (`Content206Test.daysBeforeEventsV4KeepTheirEvents`),
 dzień wyzwania nie dostaje nowych zestawów (`dailyChallengeNeverUsesNewRuleSets`). Karty nie występują
 w kampanii.
+Po regeneracji: we wszystkich 10 złotych powtórkach wynik, zwycięzca, fala, kroki, zabójstwa i czas
+są identyczne; zmienił się wyłącznie `snapshotSha256` (format v21 z 4 dodatkowymi stosami kart).
+
+- 2026-11-05 — regeneracja złotych powtórek: D58: paczka 206 - karty Endless, zestawy tygodnia, wydarzenia dnia, zrzut v21, PROTOCOL 0.8.11.
