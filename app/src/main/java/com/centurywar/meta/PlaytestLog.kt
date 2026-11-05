@@ -27,6 +27,11 @@ import java.util.concurrent.TimeUnit
  * (`reminders`). Wszystkie pola opcjonalne, [VERSION] bez zmian. Kod jest losowany lokalnie,
  * nie pochodzi z konta, urządzenia ani profilu i nie trafia do profilu, chmury ani powtórek.
  *
+ * D57 (R13 TOP 5 poz. 5, tylko wersje testowe): ankieta końcowa z 10. dnia testu: polecenie 0–10
+ * (`finalNps`), co najbardziej się podoba (`finalLiked`) i przeszkadza (`finalIssue`), stan
+ * (`final`) i dzień (`finalDay`). Bit [REMINDER_FINAL] w `reminders` = baner ankiety końcowej
+ * już pokazany. Pola opcjonalne, [VERSION] bez zmian.
+ *
  * Mutacje wykonuje wątek gry (albo UI w onPause, gdy pętla stoi); bez alokacji poza zapisem.
  * Zapis pliku robi osobny wątek I/O. Uszkodzony plik oznacza start od zera, bez ostrzeżenia.
  */
@@ -77,6 +82,22 @@ class PlaytestLog(private val file: File) {
         /** D48: bity [reminders]: przypomnienie z 3. i z 10. dnia już pokazane. */
         const val REMINDER_DAY3 = 1
         const val REMINDER_DAY10 = 2
+        /** D57: baner ankiety końcowej (połączony z przypomnieniem z 10. dnia) już pokazany. */
+        const val REMINDER_FINAL = 4
+        private const val REMINDER_MASK = REMINDER_DAY3 or REMINDER_DAY10 or REMINDER_FINAL
+
+        /** D57: ankieta końcowa — stany jak w pierwszej ankiecie. */
+        const val FINAL_NONE = 0
+        const val FINAL_ANSWERED = 1
+        const val FINAL_SKIPPED = 2
+        /** Skala polecenia 0–10. */
+        const val FINAL_NPS_MAX = 10
+        /** D57: „co najbardziej się podoba” do raportu (po angielsku, stałe etykiety). */
+        val FINAL_LIKED = arrayOf("campaign", "battles and units", "eras and research", "daily challenges",
+            "graphics and sound", "nothing special")
+        /** D57: „co najbardziej przeszkadza” w ankiecie końcowej (po angielsku, stałe etykiety). */
+        val FINAL_ISSUES = arrayOf("too hard", "too easy", "battles too long", "unclear rules",
+            "slow progress", "nothing, it's good")
 
         fun validTesterCode(code: String): Boolean = TESTER_CODE.matches(code)
     }
@@ -134,6 +155,21 @@ class PlaytestLog(private val file: File) {
     /** D48: pokazane przypomnienia o raporcie ([REMINDER_DAY3], [REMINDER_DAY10]). */
     var reminders = 0
         private set
+    /** D57: ankieta końcowa: [FINAL_NONE], [FINAL_ANSWERED] albo [FINAL_SKIPPED]. */
+    var finalState = FINAL_NONE
+        private set
+    /** Polecenie 0–10; −1 = brak. */
+    var finalNps = -1
+        private set
+    /** Indeks w [FINAL_LIKED]; −1 = brak odpowiedzi. */
+    var finalLiked = -1
+        private set
+    /** Indeks w [FINAL_ISSUES]; −1 = brak odpowiedzi. */
+    var finalIssue = -1
+        private set
+    /** Dzień UTC odpowiedzi albo pominięcia; −1 = brak. */
+    var finalDay = -1L
+        private set
 
     // Lejek kampanii: indeks = etap (0 = etap 1). Czas w sekundach bitwy.
     private val stageTries = IntArray(STAGE_COUNT)
@@ -186,6 +222,7 @@ class PlaytestLog(private val file: File) {
         lossStreak = 0; maxLossStreak = 0; surrenders = 0; screensVisited = 0
         surveyState = SURVEY_NONE; surveyRating = 0; surveyIssue = -1; surveyDay = -1L
         testerCode = ""; crashes = 0; anrs = 0; crashSeenMs = 0L; dayBits = 0L; reminders = 0
+        finalState = FINAL_NONE; finalNps = -1; finalLiked = -1; finalIssue = -1; finalDay = -1L
         perfReduction.fill(0); perfP95Tenths.fill(0); perfDropped.fill(0L); perfThermal.fill(0)
         perfHead = 0; perfCount = 0
         resetStages()
@@ -221,7 +258,15 @@ class PlaytestLog(private val file: File) {
         crashes = o.optLong("crashes", 0L).coerceIn(0L, MAX_COUNT.toLong()).toInt()
         anrs = o.optLong("anrs", 0L).coerceIn(0L, MAX_COUNT.toLong()).toInt()
         crashSeenMs = o.optLong("crashSeen", 0L).coerceAtLeast(0L)
-        reminders = o.optInt("reminders", 0) and (REMINDER_DAY3 or REMINDER_DAY10)
+        reminders = o.optInt("reminders", 0) and REMINDER_MASK
+        // D57: ankieta końcowa, pola opcjonalne; zepsuta ocena nie udaje odpowiedzi.
+        finalState = o.optInt("final", FINAL_NONE).let { if (it in FINAL_NONE..FINAL_SKIPPED) it else FINAL_NONE }
+        finalNps = o.optInt("finalNps", -1).let { if (it in 0..FINAL_NPS_MAX) it else -1 }
+        finalLiked = o.optInt("finalLiked", -1).let { if (it in FINAL_LIKED.indices) it else -1 }
+        finalIssue = o.optInt("finalIssue", -1).let { if (it in FINAL_ISSUES.indices) it else -1 }
+        finalDay = o.optLong("finalDay", -1L).coerceAtLeast(-1L)
+        if (finalState == FINAL_ANSWERED && finalNps < 0) finalState = FINAL_SKIPPED
+        if (finalState != FINAL_ANSWERED) { finalNps = -1; finalLiked = -1; finalIssue = -1 }
         dayBits = if (o.has("dayBits")) o.optLong("dayBits", 0L) else 0L
         if (lastDay >= 0L) {
             // Dziennik sprzed d48: znamy tylko pierwszy i ostatni dzień.
@@ -460,7 +505,38 @@ class PlaytestLog(private val file: File) {
     /** D48: zapamiętuje pokazane przypomnienie o raporcie (maska z [TesterReportReminder]). */
     @Synchronized
     fun reminderShown(mask: Int) {
-        reminders = reminders or (mask and (REMINDER_DAY3 or REMINDER_DAY10))
+        reminders = reminders or (mask and REMINDER_MASK)
+    }
+
+    /** D57: polecenie 0–10 z ankiety końcowej; po nim nie pytamy ponownie. */
+    @Synchronized
+    fun finalRecommend(score: Int, nowMs: Long) {
+        if (finalState != FINAL_NONE || score !in 0..FINAL_NPS_MAX) return
+        finalState = FINAL_ANSWERED
+        finalNps = score
+        finalDay = Missions.utcDay(nowMs.coerceAtLeast(0L))
+    }
+
+    /** D57: „co najbardziej się podoba” (tylko po poleceniu). */
+    @Synchronized
+    fun finalLikedChosen(index: Int) {
+        if (finalState != FINAL_ANSWERED || index !in FINAL_LIKED.indices) return
+        finalLiked = index
+    }
+
+    /** D57: „co najbardziej przeszkadza” (tylko po poleceniu). */
+    @Synchronized
+    fun finalIssueChosen(index: Int) {
+        if (finalState != FINAL_ANSWERED || index !in FINAL_ISSUES.indices) return
+        finalIssue = index
+    }
+
+    /** D57: pominięcie ankiety końcowej przed poleceniem: nie pytamy ponownie. */
+    @Synchronized
+    fun finalSkipped(nowMs: Long) {
+        if (finalState != FINAL_NONE) return
+        finalState = FINAL_SKIPPED
+        finalDay = Missions.utcDay(nowMs.coerceAtLeast(0L))
     }
 
     /** Wydajność sesji od najnowszej; [index] 0 = bieżąca. */
@@ -524,6 +600,12 @@ class PlaytestLog(private val file: File) {
         if (crashSeenMs > 0L) o.put("crashSeen", crashSeenMs)
         if (dayBits != 0L) o.put("dayBits", dayBits)
         if (reminders != 0) o.put("reminders", reminders)
+        if (finalState != FINAL_NONE) {
+            o.put("final", finalState); o.put("finalDay", finalDay)
+            if (finalNps >= 0) o.put("finalNps", finalNps)
+            if (finalLiked >= 0) o.put("finalLiked", finalLiked)
+            if (finalIssue >= 0) o.put("finalIssue", finalIssue)
+        }
         return o.toString()
     }
 

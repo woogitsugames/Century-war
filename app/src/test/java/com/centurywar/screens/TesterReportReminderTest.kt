@@ -140,11 +140,13 @@ class TesterReportReminderTest {
         g.playtest!!.saveAsync(); g.playtest!!.awaitWrites(2000L)
         val again = game(dir, t0 + 5 * day)
         assertEquals(0, menu(again, 3f).reminderDay)
-        // 10. dzień: drugi raz.
+        // 10. dzień: drugi raz, od d57 jeden baner z ankietą końcową (TesterFinalSurveyTest).
         val tenth = game(dir, t0 + 9 * day)
         val m10 = menu(tenth, 3f)
         assertEquals(10, m10.reminderDay)
-        assertEquals(PlaytestLog.REMINDER_DAY3 or PlaytestLog.REMINDER_DAY10, tenth.playtest!!.reminders)
+        assertTrue(m10.reminderFinal)
+        assertEquals(PlaytestLog.REMINDER_DAY3 or PlaytestLog.REMINDER_DAY10 or PlaytestLog.REMINDER_FINAL,
+            tenth.playtest!!.reminders)
     }
 
     @Test

@@ -18,12 +18,17 @@ import java.time.LocalDate
  * urządzeniem), liczba awarii i ANR z lokalnego dziennika awarii, mapa 28 dni gry i poziomy
  * badań. Wersja bez ankiety zostaje przy formacie 1 (bez tych linii). Gra nic nie wysyła sama; tekst trafia do systemowego okna
  * udostępniania dopiero po działaniu gracza.
+ *
+ * D57 (R13 TOP 5 poz. 5): w formacie 2 sekcja [FINAL_SECTION] zaraz po `[Tester survey]`:
+ * polecenie 0–10, co najbardziej się podoba i przeszkadza (etykiety stałe, po angielsku).
  */
 object PlaytestReportText {
     const val MAX_CHARS = 6_000
     val SECTIONS = arrayOf("[Tester survey]", "[Progress]", "[Campaign stages]", "[Play time]", "[Modes]",
         "[Performance]", "[Settings]")
     const val FORMAT = 2
+    /** D57: ankieta końcowa (tylko format 2, zaraz po `[Tester survey]`). */
+    const val FINAL_SECTION = "[Final survey]"
     /** D45: najwyżej tyle wierszy lejka (od najwyższego etapu), reszta jako „(+N lower stages)”. */
     const val MAX_STAGE_LINES = 15
     private val QUALITY = arrayOf("auto", "low", "medium", "high")
@@ -67,6 +72,12 @@ object PlaytestReportText {
         val researchLevels: Int = 0,
         val researchMax: Int = 0,
         val medals: Int = 0,
+        /** D57: ankieta końcowa z [PlaytestLog] (tylko format 2). */
+        val finalState: Int = PlaytestLog.FINAL_NONE,
+        val finalNps: Int = -1,
+        val finalLiked: Int = -1,
+        val finalIssue: Int = -1,
+        val finalDay: Long = -1L,
     )
 
     /** Wątek gry: odczyt profilu, dziennika testu i historii (kopia listy). */
@@ -116,6 +127,11 @@ object PlaytestReportText {
             researchLevels = p.researchLevels().sum(),
             researchMax = com.centurywar.game.Research.defs.sumOf { it.max },
             medals = p.medals,
+            finalState = log?.finalState ?: PlaytestLog.FINAL_NONE,
+            finalNps = log?.finalNps ?: -1,
+            finalLiked = log?.finalLiked ?: -1,
+            finalIssue = log?.finalIssue ?: -1,
+            finalDay = log?.finalDay ?: -1L,
         )
     }
 
@@ -177,6 +193,22 @@ object PlaytestReportText {
             else -> out.append("Not asked yet\n")
         }
         out.append('\n')
+        if (input.testBuild) {
+            // D57: ankieta końcowa (10. dzień) zaraz po pierwszej, też przed obcięciem raportu.
+            out.append(FINAL_SECTION).append('\n')
+            when (input.finalState) {
+                PlaytestLog.FINAL_ANSWERED -> {
+                    out.append("Recommend (0-10): ").append(input.finalNps).append(" (").append(day(input.finalDay)).append(")\n")
+                    out.append("Liked most: ")
+                        .append(PlaytestLog.FINAL_LIKED.getOrElse(input.finalLiked) { "skipped" }).append('\n')
+                    out.append("Bothered most: ")
+                        .append(PlaytestLog.FINAL_ISSUES.getOrElse(input.finalIssue) { "skipped" }).append('\n')
+                }
+                PlaytestLog.FINAL_SKIPPED -> out.append("Skipped (").append(day(input.finalDay)).append(")\n")
+                else -> out.append("Not asked yet\n")
+            }
+            out.append('\n')
+        }
 
         out.append(SECTIONS[1]).append('\n')
         out.append("Campaign: stage ").append(input.unlockedStage + 1).append(" of ").append(input.stageCount)

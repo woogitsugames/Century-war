@@ -20,6 +20,7 @@ import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
 import com.centurywar.meta.NextGoalKind
 import com.centurywar.meta.NextGoals
+import com.centurywar.meta.PlaytestLog
 import com.centurywar.meta.TesterReportReminder
 import com.centurywar.meta.TesterSurvey
 import kotlin.math.max
@@ -52,6 +53,9 @@ class MenuScreen(g: Game) : Screen(g) {
     internal val reportReminder = btn(REPORT_REMINDER).also { it.visible = false }
     /** Próg dnia pokazanego banera (3 albo 10); 0 = brak. */
     internal var reminderDay = 0
+        private set
+    /** D57: baner 10. dnia prowadzi najpierw do ankiety końcowej, potem do raportu (jeden baner). */
+    internal var reminderFinal = false
         private set
     private var reminderQuiet = 0f
     private var reminderText = ""
@@ -89,6 +93,9 @@ class MenuScreen(g: Game) : Screen(g) {
     internal val surveyRates = Array(5) { btn(SURVEY_RATE + it) }
     internal val surveyIssues = Array(TesterSurvey.ISSUES) { btn(SURVEY_ISSUE + it) }
     internal val surveySkip = btn(SURVEY_SKIP)
+    // D57 (R13 TOP 5 poz. 5): ankieta końcowa — polecenie 0–10, potem dwa pytania z listy.
+    internal val finalNps = Array(PlaytestLog.FINAL_NPS_MAX + 1) { btn(SURVEY_NPS + it) }
+    internal val finalOptions = Array(TesterSurvey.FINAL_OPTIONS) { btn(SURVEY_OPT + it) }
     internal var surveyStep = SURVEY_HIDDEN
         private set
     internal val surveyPanel = RectF()
@@ -103,6 +110,8 @@ class MenuScreen(g: Game) : Screen(g) {
         // Ankieta leży nad kafelkami: jej przyciski dostają dotyk przed menu.
         for (b in surveyRates) { buttons.remove(b); buttons.add(0, b) }
         for (b in surveyIssues) { buttons.remove(b); buttons.add(0, b) }
+        for (b in finalNps) { buttons.remove(b); buttons.add(0, b) }
+        for (b in finalOptions) { buttons.remove(b); buttons.add(0, b) }
         buttons.remove(surveySkip); buttons.add(0, surveySkip)
         hideSurveyButtons()
         buttons.add(0, hints.okBtn)
@@ -157,10 +166,22 @@ class MenuScreen(g: Game) : Screen(g) {
         const val SURVEY_RATE = 30
         const val SURVEY_ISSUE = 40
         const val SURVEY_SKIP = 45
+        /** D57: przyciski 0–10 (46–56) i odpowiedzi z listy (57–62) ankiety końcowej. */
+        const val SURVEY_NPS = 46
+        const val SURVEY_OPT = 57
+        const val SURVEY_LAST = 62
         const val SURVEY_HIDDEN = 0
         const val SURVEY_RATING = 1
         const val SURVEY_QUESTION = 2
+        const val SURVEY_FINAL_NPS = 3
+        const val SURVEY_FINAL_LIKED = 4
+        const val SURVEY_FINAL_ISSUE = 5
         val SURVEY_ISSUE_KEYS = arrayOf("t200_issue_hard", "t200_issue_long", "t200_issue_unclear", "t200_issue_none")
+        /** D57: kolejność jak [PlaytestLog.FINAL_LIKED] i [PlaytestLog.FINAL_ISSUES]. */
+        val FINAL_LIKED_KEYS = arrayOf("tr205_like_campaign", "tr205_like_battles", "tr205_like_eras",
+            "tr205_like_daily", "tr205_like_looks", "tr205_like_none")
+        val FINAL_ISSUE_KEYS = arrayOf("t200_issue_hard", "tr205_issue_easy", "t200_issue_long",
+            "t200_issue_unclear", "tr205_issue_slow", "t200_issue_none")
     }
 
     // logo
@@ -549,7 +570,7 @@ class MenuScreen(g: Game) : Screen(g) {
                 val b = buttons[i]
                 if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew && b !== goalBtn &&
                     b !== reportReminder &&
-                    b.id !in SURVEY_RATE..SURVEY_SKIP)
+                    b.id !in SURVEY_RATE..SURVEY_LAST)
                     ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
             }
             drawGoal(c)
@@ -636,13 +657,16 @@ class MenuScreen(g: Game) : Screen(g) {
     /** Czytnik ekranu: przy otwartym oknie tylko jego przyciski mają węzły. */
     fun accessibilityEligibleButton(b: Button): Boolean = when {
         g.resumeOffer != null -> b === resumeYes || b === resumeNo
-        surveyStep != SURVEY_HIDDEN -> b === surveySkip || b in surveyRates || b in surveyIssues
+        surveyStep != SURVEY_HIDDEN -> b === surveySkip || b in surveyRates || b in surveyIssues ||
+            b in finalNps || b in finalOptions
         else -> true
     }
 
     private fun hideSurveyButtons() {
         for (b in surveyRates) b.visible = false
         for (b in surveyIssues) b.visible = false
+        for (b in finalNps) b.visible = false
+        for (b in finalOptions) b.visible = false
         surveySkip.visible = false
     }
 
@@ -659,14 +683,25 @@ class MenuScreen(g: Game) : Screen(g) {
                 surveyStep == SURVEY_HIDDEN && !hints.okBtn.visible && !g.hasNotices() &&
                 !TesterSurvey.due(g.testerSurveyEnabled, log.surveyState, g.profile.tutorialDone,
                     g.profile.battles, log.daysPlayed)
-            val day = if (quiet && log != null) TesterReportReminder.due(true, log.firstDay,
-                Missions.utcDay(g.nowMillis()), log.reminders) else 0
+            var day = 0
+            var final = false
+            if (quiet && log != null) {
+                val today = Missions.utcDay(g.nowMillis())
+                if (TesterSurvey.finalPending(true, log.finalState, log.firstDay, today, log.reminders)) {
+                    // D57: jeden baner 10. dnia (ankieta końcowa, potem raport). Po pierwszej ankiecie
+                    // tego samego dnia czekamy do jutra: bez dwóch ankiet i dwóch banerów naraz.
+                    final = TesterSurvey.finalDue(true, log.finalState, log.firstDay, today, log.reminders,
+                        log.surveyDay)
+                    if (final) day = TesterReportReminder.DAY_FINAL
+                } else day = TesterReportReminder.due(true, log.firstDay, today, log.reminders)
+            }
             if (day == 0) { reminderQuiet = 0f; return }
             reminderQuiet += dt
             if (reminderQuiet < TesterReportReminder.QUIET_SECONDS) return
             reminderQuiet = 0f
             reminderDay = day
-            log!!.reminderShown(TesterReportReminder.mask(day))
+            reminderFinal = final
+            log!!.reminderShown(TesterReportReminder.mask(day) or (if (final) PlaytestLog.REMINDER_FINAL else 0))
             log.saveAsync()
             layoutReminder()
         }
@@ -677,7 +712,7 @@ class MenuScreen(g: Game) : Screen(g) {
     /** Ten sam prostokąt co baner powiadomienia w menu ([Game] rysuje go między logo a kafelkami). */
     private fun layoutReminder() {
         if (reminderDay == 0) { reportReminder.visible = false; return }
-        reminderText = L.f("tr204_banner", reminderDay)
+        reminderText = if (reminderFinal) L["tr205_banner"] else L.f("tr204_banner", reminderDay)
         reportReminder.label = ""
         val pw = min(470 * dp, w - g.insetL - g.insetR - 20 * dp)
         val px = (w + g.insetL - g.insetR - pw) / 2f
@@ -717,7 +752,7 @@ class MenuScreen(g: Game) : Screen(g) {
 
     private fun surveyClick(b: Button) {
         val log = g.playtest
-        val now = System.currentTimeMillis()
+        val now = g.nowMillis()
         when {
             surveyStep == SURVEY_RATING && b.id in SURVEY_RATE until SURVEY_RATE + 5 -> {
                 log?.surveyRated(b.id - SURVEY_RATE + 1, now)
@@ -730,14 +765,44 @@ class MenuScreen(g: Game) : Screen(g) {
                 log?.saveAsync()
                 closeSurvey(thanks = true)
             }
-            b === surveySkip -> {
-                if (surveyStep == SURVEY_RATING) {
+            surveyStep == SURVEY_FINAL_NPS && b.id in SURVEY_NPS..SURVEY_NPS + PlaytestLog.FINAL_NPS_MAX -> {
+                log?.finalRecommend(b.id - SURVEY_NPS, now)
+                log?.saveAsync()
+                surveyStep = SURVEY_FINAL_LIKED
+                layoutSurvey()
+            }
+            surveyStep == SURVEY_FINAL_LIKED && b.id in SURVEY_OPT until SURVEY_OPT + TesterSurvey.FINAL_OPTIONS -> {
+                log?.finalLikedChosen(b.id - SURVEY_OPT)
+                log?.saveAsync()
+                surveyStep = SURVEY_FINAL_ISSUE
+                layoutSurvey()
+            }
+            surveyStep == SURVEY_FINAL_ISSUE && b.id in SURVEY_OPT until SURVEY_OPT + TesterSurvey.FINAL_OPTIONS -> {
+                log?.finalIssueChosen(b.id - SURVEY_OPT)
+                log?.saveAsync()
+                closeFinal(thanks = true)
+            }
+            b === surveySkip -> when (surveyStep) {
+                SURVEY_RATING -> {
                     log?.surveySkipped(now)
                     log?.saveAsync()
                     closeSurvey(thanks = false)
-                } else closeSurvey(thanks = true)
+                }
+                SURVEY_FINAL_NPS -> {
+                    log?.finalSkipped(now)
+                    log?.saveAsync()
+                    closeFinal(thanks = false)
+                }
+                SURVEY_FINAL_LIKED, SURVEY_FINAL_ISSUE -> closeFinal(thanks = true)
+                else -> closeSurvey(thanks = true)
             }
         }
+    }
+
+    /** D57: koniec ankiety końcowej (odpowiedź albo Pomiń): od razu to samo okno raportu co baner z 3. dnia. */
+    private fun closeFinal(thanks: Boolean) {
+        closeSurvey(thanks)
+        g.host.sharePlaytestReport()
     }
 
     private fun closeSurvey(thanks: Boolean) {
@@ -759,17 +824,31 @@ class MenuScreen(g: Game) : Screen(g) {
         val lineH = 14 * dp * ui.textScale * 1.3f
         val cols = if (pw >= 400 * dp) 2 else 1
         val content: Float
-        if (surveyStep == SURVEY_RATING) {
-            surveyTitle = L["t200_title"]
-            surveyNoteCount = HintFrame.wrapInto(ui, L["t200_note"], inner, 13f, surveyNoteLines)
-            surveyScale = L["t200_scale"]
-            content = surveyNoteCount * lineH + 12 * dp + 56 * dp + 8 * dp + 18 * dp * ui.textScale
-        } else {
-            surveyTitle = L["t200_question"]
-            surveyNoteCount = 0
-            surveyScale = ""
-            val rows = (TesterSurvey.ISSUES + cols - 1) / cols
-            content = rows * bh + (rows - 1) * gap
+        // D57: polecenie 0–10 w rzędach po 6 (wąski ekran: po 4), przyciski co najmniej 48 dp.
+        val npsCols = if (inner >= 6 * 48 * dp + 5 * 8 * dp) 6 else 4
+        val npsRows = (finalNps.size + npsCols - 1) / npsCols
+        val options = if (surveyStep == SURVEY_QUESTION) surveyIssues else finalOptions
+        when (surveyStep) {
+            SURVEY_RATING -> {
+                surveyTitle = L["t200_title"]
+                surveyNoteCount = HintFrame.wrapInto(ui, L["t200_note"], inner, 13f, surveyNoteLines)
+                surveyScale = L["t200_scale"]
+                content = surveyNoteCount * lineH + 12 * dp + 56 * dp + 8 * dp + 18 * dp * ui.textScale
+            }
+            SURVEY_FINAL_NPS -> {
+                surveyTitle = L["tr205_title"]
+                surveyNoteCount = HintFrame.wrapInto(ui, L["tr205_recommend"], inner, 13f, surveyNoteLines)
+                surveyScale = L["tr205_scale"]
+                content = surveyNoteCount * lineH + 12 * dp + npsRows * bh + (npsRows - 1) * 8 * dp +
+                    8 * dp + 18 * dp * ui.textScale
+            }
+            else -> {
+                surveyTitle = L[if (surveyStep == SURVEY_FINAL_LIKED) "tr205_liked" else "t200_question"]
+                surveyNoteCount = 0
+                surveyScale = ""
+                val rows = (options.size + cols - 1) / cols
+                content = rows * bh + (rows - 1) * gap
+            }
         }
         val ph = min(52 * dp + content + 16 * dp + bh + 20 * dp, h - g.insetT - g.insetB - 24 * dp)
         val cy = (g.insetT + h - g.insetB) / 2
@@ -787,11 +866,32 @@ class MenuScreen(g: Game) : Screen(g) {
                 b.visible = true
             }
             surveyScaleY = ry + 56 * dp + 8 * dp + 12 * dp * ui.textScale
+        } else if (surveyStep == SURVEY_FINAL_NPS) {
+            surveyNoteY = y + 10 * dp
+            val ry = y + surveyNoteCount * lineH + 12 * dp
+            val ng = 8 * dp
+            val rw = (inner - (npsCols - 1) * ng) / npsCols
+            for (i in finalNps.indices) {
+                val b = finalNps[i]
+                val row = i / npsCols
+                // Niepełny ostatni rząd na środku.
+                val inRow = min(npsCols, finalNps.size - row * npsCols)
+                val rowLeft = left + (inner - inRow * rw - (inRow - 1) * ng) / 2f
+                b.label = i.toString()
+                b.set(rowLeft + (i % npsCols) * (rw + ng), ry + row * (bh + ng), rw, bh)
+                b.visible = true
+            }
+            surveyScaleY = ry + npsRows * bh + (npsRows - 1) * ng + 8 * dp + 12 * dp * ui.textScale
         } else {
+            val keys = when (surveyStep) {
+                SURVEY_QUESTION -> SURVEY_ISSUE_KEYS
+                SURVEY_FINAL_LIKED -> FINAL_LIKED_KEYS
+                else -> FINAL_ISSUE_KEYS
+            }
             val tw = (inner - (cols - 1) * gap) / cols
-            for (i in surveyIssues.indices) {
-                val b = surveyIssues[i]
-                b.label = L[SURVEY_ISSUE_KEYS[i]]
+            for (i in options.indices) {
+                val b = options[i]
+                b.label = L[keys[i]]
                 b.set(left + (i % cols) * (tw + gap), y + (i / cols) * (bh + gap), tw, bh)
                 b.visible = true
             }
@@ -812,8 +912,12 @@ class MenuScreen(g: Game) : Screen(g) {
             ui.text(c, surveyNoteLines[i] ?: "", p.centerX(), y, 13f, Ui.TEXT, Paint.Align.CENTER)
             y += 14 * dp * ui.textScale * 1.3f
         }
-        if (surveyStep == SURVEY_RATING) for (b in surveyRates) ui.button(c, b, 22f)
-        else for (b in surveyIssues) ui.button(c, b, 15f)
+        when (surveyStep) {
+            SURVEY_RATING -> for (b in surveyRates) ui.button(c, b, 22f)
+            SURVEY_FINAL_NPS -> for (b in finalNps) ui.button(c, b, 20f)
+            SURVEY_QUESTION -> for (b in surveyIssues) ui.button(c, b, 15f)
+            else -> for (b in finalOptions) ui.button(c, b, 15f)
+        }
         if (surveyScale.isNotEmpty()) {
             ui.text(c, surveyScale, p.centerX(), surveyScaleY,
                 ui.fit(surveyScale, 12f, p.width() - 48 * dp, 10f), Ui.DIM, Paint.Align.CENTER)
@@ -903,6 +1007,12 @@ class MenuScreen(g: Game) : Screen(g) {
             if (b === surveyRates[0]) "$surveyTitle. $n" else n
         }
         in surveyIssues -> if (b === surveyIssues[0]) "$surveyTitle. ${b.label}" else b.label
+        // D57: TalkBack czyta tytuł i pytanie przy pierwszym przycisku ankiety końcowej.
+        in finalNps -> {
+            val n = L.f("tr205_nps_n", b.id - SURVEY_NPS)
+            if (b === finalNps[0]) "$surveyTitle. ${L["tr205_recommend"]} $n" else n
+        }
+        in finalOptions -> if (b === finalOptions[0]) "$surveyTitle. ${b.label}" else b.label
         campaign -> if (b.sub2.isEmpty()) super.accessibilityLabel(b)
             else super.accessibilityLabel(b) + ", " + L["hard189_crowns"] + " " + b.sub2
         else -> super.accessibilityLabel(b)
@@ -943,9 +1053,15 @@ class MenuScreen(g: Game) : Screen(g) {
             9 -> g.push(MissionsScreen(g))
             WHATS_NEW -> g.push(WhatsNewScreen(g, fromMenu = true))
             REPORT_REMINDER -> {
+                val final = reminderFinal && g.playtest?.finalState == PlaytestLog.FINAL_NONE
                 reminderDay = 0
+                reminderFinal = false
                 reportReminder.visible = false
-                g.host.sharePlaytestReport()
+                // D57: 10. dzień — najpierw ankieta końcowa (Pomiń zawsze dostępne), potem okno raportu.
+                if (final) {
+                    surveyStep = SURVEY_FINAL_NPS
+                    layoutSurvey()
+                } else g.host.sharePlaytestReport()
             }
             GOAL -> when (goalKind) {
                 NextGoalKind.MISSIONS -> g.push(MissionsScreen(g))
