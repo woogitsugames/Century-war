@@ -6,7 +6,9 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 
@@ -611,9 +613,76 @@ class SnapshotStore(private val file: File) {
     private var written = 0L
     /** Identyfikator bitwy ostatnio zleconego zapisu (lub wczytanej bitwy); 0 = brak. */
     private var owner = 0L
-    private val io by lazy {
-        Executors.newSingleThreadExecutor { r -> Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
+    /**
+     * Wątek zapisu, tworzony leniwie przy pierwszym zapisie lub usunięciu (pod [lock]).
+     * D41: [close] go zamyka; bez tego każde ponowne otwarcie gry w tym samym procesie
+     * zostawiało kolejny bezczynny wątek „snapshot-io”.
+     */
+    private var executor: ExecutorService? = null
+    private var closed = false
+    /**
+     * D41: zadania I/O wykonują się pod tym zamkiem, żeby zadanie wykonane po [close]
+     * na wątku wołającym nie pisało pliku równocześnie z dokańczanym zadaniem z kolejki.
+     * Kolejność zamków zawsze [ioMutex] → [lock].
+     */
+    private val ioMutex = Any()
+
+    /** Wątek zapisu albo null po [close]. */
+    private fun io(): ExecutorService? = synchronized(lock) {
+        if (closed) null
+        else executor ?: Executors.newSingleThreadExecutor { r ->
+            Thread(r, "snapshot-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+        }.also { executor = it }
     }
+
+    /**
+     * Zadanie w tle w kolejności zlecenia. Po [close] (np. wywołanie zwrotne po onDestroy)
+     * zadanie wykonuje się od razu na wątku wołającym, więc zlecony zapis lub usunięcie
+     * nie przepada.
+     */
+    private fun runIo(task: () -> Unit) {
+        val ex = io()
+        if (ex != null) {
+            try {
+                ex.execute { synchronized(ioMutex) { task() } }
+                return
+            } catch (_: RejectedExecutionException) {
+                // close() między io() a execute(): wykonaj na miejscu.
+            }
+        }
+        synchronized(ioMutex) { task() }
+    }
+
+    /** Jak [runIo], ale czeka na wynik (narzędzia, start). */
+    private fun <T> callIo(timeoutMs: Long, task: () -> T): T {
+        val ex = io()
+        if (ex != null) {
+            try {
+                return ex.submit<T> { synchronized(ioMutex) { task() } }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            } catch (_: RejectedExecutionException) {
+                // close() między io() a submit(): wykonaj na miejscu.
+            }
+        }
+        return synchronized(ioMutex) { task() }
+    }
+
+    /**
+     * D41: zamyka wątek zapisu (MainActivity.onDestroy). Zadania już zlecone kończą się
+     * normalnie (shutdown, nie shutdownNow). Późniejsze wywołania nie rzucają wyjątków:
+     * wykonują się synchronicznie na wątku wołającym. Bez wpływu na symulację.
+     */
+    fun close() {
+        synchronized(lock) {
+            closed = true
+            executor?.shutdown()
+        }
+    }
+
+    /** Testy D41: czy [close] został wywołany. */
+    val isClosed: Boolean get() = synchronized(lock) { closed }
+
+    /** Testy D41: czy wątek zapisu w ogóle powstał. */
+    internal val ioStarted: Boolean get() = synchronized(lock) { executor != null }
 
     /**
      * R10-01: bitwa, której zrzutu nie dało się wznowić po aktualizacji gry (inna wersja
@@ -628,8 +697,8 @@ class SnapshotStore(private val file: File) {
      */
     fun saveAsync(bytes: ByteArray, battleId: Long = 0L, meta: ByteArray? = null) {
         val my = synchronized(lock) { owner = battleId; ++seq }
-        io.execute {
-            if (synchronized(lock) { my != seq || my <= written }) return@execute
+        runIo {
+            if (synchronized(lock) { my != seq || my <= written }) return@runIo
             if (writeAtomic(bytes, meta)) synchronized(lock) { written = my }
         }
     }
@@ -638,10 +707,10 @@ class SnapshotStore(private val file: File) {
     fun saveNow(bytes: ByteArray, battleId: Long = 0L, meta: ByteArray? = null): Boolean {
         val my = synchronized(lock) { owner = battleId; ++seq }
         return try {
-            io.submit<Boolean> {
+            callIo(10_000L) {
                 if (synchronized(lock) { my != seq || my <= written }) false
                 else writeAtomic(bytes, meta).also { if (it) synchronized(lock) { written = my } }
-            }.get(10, TimeUnit.SECONDS)
+            }
         } catch (e: Exception) {
             SaveGuard.report("snapshot-save", e)
             false
@@ -651,8 +720,8 @@ class SnapshotStore(private val file: File) {
     /** Usunięcie z wątku gry odbywa się także poza nim. */
     fun deleteAsync() {
         val my = synchronized(lock) { owner = 0L; ++seq }
-        io.execute {
-            if (synchronized(lock) { my != seq }) return@execute
+        runIo {
+            if (synchronized(lock) { my != seq }) return@runIo
             removeFiles()
             synchronized(lock) { written = my }
         }
@@ -671,8 +740,8 @@ class SnapshotStore(private val file: File) {
             owner = 0L
             ++seq
         }
-        io.execute {
-            if (synchronized(lock) { my != seq }) return@execute
+        runIo {
+            if (synchronized(lock) { my != seq }) return@runIo
             removeFiles()
             synchronized(lock) { written = my }
         }
@@ -683,7 +752,13 @@ class SnapshotStore(private val file: File) {
     fun awaitWrites(timeoutMs: Long): Boolean {
         if (timeoutMs <= 0L) return false
         return try {
-            io.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            val ex = io()
+            if (ex != null) ex.submit { }.get(timeoutMs, TimeUnit.MILLISECONDS)
+            else {
+                // D41: po close() bariera = dokończenie zadań z kolejki.
+                val old = synchronized(lock) { executor }
+                if (old != null && !old.awaitTermination(timeoutMs, TimeUnit.MILLISECONDS)) return false
+            }
             true
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
@@ -695,10 +770,10 @@ class SnapshotStore(private val file: File) {
     fun delete() {
         val my = synchronized(lock) { owner = 0L; ++seq }
         try {
-            io.submit {
+            callIo(10_000L) {
                 removeFiles()
                 synchronized(lock) { written = my }
-            }.get(10, TimeUnit.SECONDS)
+            }
         } catch (e: Exception) {
             SaveGuard.report("snapshot-delete", e)
         }

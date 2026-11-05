@@ -15,7 +15,7 @@ class ModerationStoreTest {
 
     private fun input(player: String = UUID.randomUUID().toString(), nick: String = "Gracz") =
         ScoreSubmission(
-            board = "endless", player = player, nick = nick, gameVersion = "0.8.8",
+            board = "endless", player = player, nick = nick, gameVersion = "0.8.9",
             seed = 42L, replay = "nieistotny", score = 100L, research = List(13) { 0 },
         )
 

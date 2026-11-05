@@ -24,7 +24,7 @@ class PlayerDeletionTest {
     private val playerSecret = "a1".repeat(32)
 
     private fun input(player: String = UUID.randomUUID().toString()) = ScoreSubmission(
-        board = "endless", player = player, nick = "Gracz", gameVersion = "0.8.8",
+        board = "endless", player = player, nick = "Gracz", gameVersion = "0.8.9",
         seed = 42L, replay = "nieistotny", score = 100L,
         research = List(13) { 0 },
     )
@@ -133,7 +133,7 @@ class PlayerDeletionTest {
                 c.createStatement().use { s ->
                     s.executeQuery("SELECT version FROM schema_version WHERE id=1").use { rs ->
                         assertTrue(rs.next())
-                        assertEquals(2, rs.getInt(1))
+                        assertEquals(3, rs.getInt(1))
                     }
                 }
             }

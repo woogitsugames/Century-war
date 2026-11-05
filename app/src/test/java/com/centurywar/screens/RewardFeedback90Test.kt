@@ -55,7 +55,10 @@ class RewardFeedback90Test {
 
     @Test fun missionClaimRewardsOnceAndCreatesFlight() {
         val (g, host) = game()
-        val mission = Missions(g.profile).refresh(System.currentTimeMillis()).daily.first()
+        // Jeden „teraz” dla testu i ekranu misji (bez wyścigu z północą UTC).
+        val now = System.currentTimeMillis()
+        g.clock = { now }
+        val mission = Missions(g.profile).refresh(now).daily.first()
         mission.progress = mission.target
         val s = MissionsScreen(g)
         g.setScreen(s)
@@ -80,6 +83,7 @@ class RewardFeedback90Test {
         assertEquals(HapticKind.EVOLVE, host.lastHaptic)
         g.rewardFeedback.clear()
         val now = System.currentTimeMillis()
+        g.clock = { now }
         val state = g.profile.missionState
         val yesterday = Missions.utcDay(now) - 1
         state.lastSeenDay = yesterday

@@ -66,8 +66,11 @@ class MissionsScreen(g: Game) : Screen(g) {
     internal var weeklyResetText = ""
         private set
 
-    /** D7: stały zegar dla powtarzalnych zrzutów sklepu; w grze zawsze czas systemowy. */
-    internal var clock: () -> Long = { System.currentTimeMillis() }
+    /**
+     * D7: stały zegar dla powtarzalnych zrzutów sklepu; domyślnie zegar gry ([Game.clock]),
+     * w grze zawsze czas systemowy.
+     */
+    internal var clock: () -> Long = { g.clock() }
 
     private fun refreshResetTexts(now: Long) {
         val sec = Math.floorDiv(now, 1000L)

@@ -18,6 +18,7 @@ import com.centurywar.game.Campaign
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.Stage
+import com.centurywar.meta.StageNovelty
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -93,6 +94,9 @@ class CampaignScreen(
         strokeJoin = Paint.Join.ROUND
     }
     private val artPath = Path()
+    /** R11-06: iskra nowości (osobna ścieżka: artPath nagrywa obrazy epok). */
+    private val sparkPath = Path()
+    private val sparkFill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val artFill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val artStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -541,6 +545,12 @@ class CampaignScreen(
             fill.color = Ui.OUTLINE; c.drawCircle(kx, ky, 12 * dp, fill)
             fill.color = CROWN_BG; c.drawCircle(kx, ky, 10 * dp, fill)
             Icons.draw(c, Icons.CROWN, kx, ky, 16 * dp, dp = dp)
+        } else if (StageNovelty.showSpark(i, g.profile.stars[i])) {
+            // R11-06: iskra „nowość” do pierwszej wygranej, w miejscu korony (korona = już wygrany).
+            val kx = x + r * CROWN_DX + CROWN_OUT_DP * dp
+            val ky = y + r * CROWN_DY
+            val pulse = if (g.profile.reduceFlash) 1f else 0.88f + 0.12f * sin(time * 3f + i)
+            drawSpark(c, kx, ky, 9 * dp * pulse, if (locked) 150 else 255)
         }
     }
 
@@ -734,30 +744,28 @@ class CampaignScreen(
         val tw = info.width() - 48 * dp
         // gwiazdki
         val line = hardInfoLine(s)
-        if (line.isNotEmpty() && row < 28 * dp) {
+        // R11-06: „Nowość: …” zawsze w wierszu gwiazdek (bez dodatkowego wiersza w panelu).
+        val novelty = StageNovelty.line(s.index)
+        val hardInRow = line.isNotEmpty() && row < 28 * dp
+        hardInfoRect.setEmpty()
+        noveltyInfoRect.setEmpty()
+        noveltyShown = ""
+        if (hardInRow || novelty.isNotEmpty()) {
             // R10-02: niski panel (720p): korona i napis w jednym wierszu z gwiazdkami.
-            val starSize = 26 * dp
-            val starsW = starSize * 1.05f * 2f + starSize
-            val textMax = tw - starsW - 30 * dp
-            val sz = ui.fit(line, 13f, textMax, 11f)
-            val total = starsW + 30 * dp + ui.measure(line, sz, true)
-            val left = info.centerX() - total / 2f
-            ui.stars(c, left + starsW / 2f, y + 4 * dp, starSize, g.profile.stars[s.index], 3, 1.05f)
-            hardInfoRect.set(left + starsW + 8 * dp, y - 6 * dp, left + total, y + 14 * dp)
-            drawHardLine(c, line, hardInfoRect.left, y + 4 * dp, sz)
+            drawStarRow(c, s, y, tw, if (hardInRow) line else "", novelty)
         } else {
             ui.stars(c, info.centerX(), y + 4 * dp, 30 * dp, g.profile.stars[s.index], 3, 1.05f)
-            if (line.isNotEmpty()) {
-                y += 30 * dp
-                val sz = ui.fit(line, 13f, tw - 24 * dp, 11f)
-                val total = 22 * dp + ui.measure(line, sz, true)
-                val left = info.centerX() - total / 2f
-                hardInfoRect.set(left, y - 6 * dp, left + total, y + 14 * dp)
-                drawHardLine(c, line, left, y + 4 * dp, sz)
-                y -= 4 * dp
-            } else hardInfoRect.setEmpty()
         }
-        if (line.isEmpty()) hardInfoRect.setEmpty()
+        if (!hardInRow && line.isNotEmpty()) {
+            // Wyższy panel: korona w osobnym wierszu pod gwiazdkami (jak dotąd).
+            y += 30 * dp
+            val sz = ui.fit(line, 13f, tw - 24 * dp, 11f)
+            val total = 22 * dp + ui.measure(line, sz, true)
+            val left = info.centerX() - total / 2f
+            hardInfoRect.set(left, y - 6 * dp, left + total, y + 14 * dp)
+            drawHardLine(c, line, left, y + 4 * dp, sz)
+            y -= 4 * dp
+        }
         y += 34 * dp
         val isz = 20 * dp
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
@@ -828,6 +836,106 @@ class CampaignScreen(
         Icons.draw(c, Icons.CROWN, left + 9 * dp, cy, 18 * dp, alpha = if (hardLineWon) 255 else 140, dp = dp)
         ui.textO(c, line, left + 22 * dp, cy + size * dp * ui.textScale * 0.36f, size,
             if (hardLineWon) Ui.GOLD else Ui.DIM)
+    }
+
+    /** R11-06: obszar wiersza „Nowość” w panelu etapu (pusty = brak wiersza); do testów. */
+    internal val noveltyInfoRect = RectF()
+
+    /** R11-06: napis nowości faktycznie narysowany (po ewentualnym skróceniu); do testów. */
+    internal var noveltyShown = ""
+        private set
+    private var noveltyFitSource = ""
+    private var noveltyFitSize = -1f
+    private var noveltyFitWidth = -1
+
+    /**
+     * R10-02 / R11-06: wiersz gwiazdek dzielony z koroną ([hard], tylko niski panel) i nowością.
+     * Oba napisy maleją razem do 11 sp; korona zostaje cała, a nowość w razie potrzeby
+     * skracamy wielokropkiem albo (gdy zostaje mniej niż [NOVELTY_MIN_DP]) pomijamy w wierszu
+     * (pełny opis i tak czyta TalkBack w treści panelu).
+     */
+    private fun drawStarRow(c: Canvas, s: Stage, y: Float, tw: Float, hard: String, novelty: String) {
+        val starSize = 26 * dp
+        val starsW = starSize * 1.05f * 2f + starSize
+        val slot = 8 * dp + 22 * dp
+        var textMax = tw - starsW - (if (hard.isNotEmpty()) slot else 0f)
+        if (novelty.isNotEmpty()) textMax -= slot
+        val floor = 11f / ui.textScale
+        var sz = 13f
+        var guard = 0
+        while (sz > floor && rowTextWidth(hard, novelty, sz) > textMax && guard++ < 10) {
+            sz = max(floor, sz * 0.94f)
+        }
+        val hardW = if (hard.isNotEmpty()) ui.measure(hard, sz, true) else 0f
+        var shown = ""
+        if (novelty.isNotEmpty()) {
+            val room = textMax - hardW
+            if (room >= NOVELTY_MIN_DP * dp) shown = fitNovelty(novelty, sz, room)
+        }
+        val shownW = if (shown.isNotEmpty()) ui.measure(shown, sz, true) else 0f
+        var total = starsW
+        if (hard.isNotEmpty()) total += slot + hardW
+        if (shown.isNotEmpty()) total += slot + shownW
+        val left = info.centerX() - total / 2f
+        ui.stars(c, left + starsW / 2f, y + 4 * dp, starSize, g.profile.stars[s.index], 3, 1.05f)
+        var cursor = left + starsW + 8 * dp
+        if (hard.isNotEmpty()) {
+            hardInfoRect.set(cursor, y - 6 * dp, cursor + 22 * dp + hardW, y + 14 * dp)
+            drawHardLine(c, hard, cursor, y + 4 * dp, sz)
+            cursor += 22 * dp + hardW + 8 * dp
+        }
+        noveltyShown = shown
+        if (shown.isNotEmpty()) {
+            noveltyInfoRect.set(cursor, y - 6 * dp, cursor + 22 * dp + shownW, y + 14 * dp)
+            drawSpark(c, cursor + 9 * dp, y + 4 * dp, 8 * dp, 255)
+            ui.textO(c, shown, cursor + 22 * dp, y + 4 * dp + sz * dp * ui.textScale * 0.36f, sz, Ui.TEXT)
+        }
+    }
+
+    private fun rowTextWidth(hard: String, novelty: String, size: Float): Float =
+        (if (hard.isNotEmpty()) ui.measure(hard, size, true) else 0f) +
+            (if (novelty.isNotEmpty()) ui.measure(novelty, size, true) else 0f)
+
+    /** Nowość skrócona wielokropkiem do [width]; wynik zapamiętany do zmiany napisu, rozmiaru lub miejsca. */
+    private fun fitNovelty(text: String, size: Float, width: Float): String {
+        val w = width.toInt()
+        if (text == noveltyFitSource && size == noveltyFitSize && w == noveltyFitWidth) return noveltyShownCache
+        noveltyFitSource = text
+        noveltyFitSize = size
+        noveltyFitWidth = w
+        noveltyShownCache = if (ui.measure(text, size, true) <= width) text else {
+            var n = text.length - 1
+            while (n > 1 && ui.measure(text.substring(0, n).trimEnd() + "…", size, true) > width) n--
+            text.substring(0, n).trimEnd() + "…"
+        }
+        return noveltyShownCache
+    }
+    private var noveltyShownCache = ""
+
+    /** R11-06: czteroramienna iskra „nowości” (mapa i panel etapu). */
+    private fun drawSpark(c: Canvas, x: Float, y: Float, radius: Float, alpha: Int) {
+        sparkStar(x, y, radius * 1.3f)
+        sparkFill.color = Ui.OUTLINE
+        sparkFill.alpha = alpha
+        c.drawPath(sparkPath, sparkFill)
+        sparkStar(x, y, radius)
+        sparkFill.color = Ui.GOLD
+        sparkFill.alpha = alpha
+        c.drawPath(sparkPath, sparkFill)
+        sparkFill.color = Color.WHITE
+        sparkFill.alpha = alpha * 3 / 4
+        c.drawCircle(x, y, radius * 0.22f, sparkFill)
+    }
+
+    private fun sparkStar(x: Float, y: Float, r: Float) {
+        val k = r * 0.16f
+        sparkPath.reset()
+        sparkPath.moveTo(x, y - r)
+        sparkPath.quadTo(x + k, y - k, x + r, y)
+        sparkPath.quadTo(x + k, y + k, x, y + r)
+        sparkPath.quadTo(x - k, y + k, x - r, y)
+        sparkPath.quadTo(x - k, y - k, x, y - r)
+        sparkPath.close()
     }
 
     /** R10-02: obwódka wokół Trudnego, gdy okno otworzył cel „korona na etapie”. */
@@ -910,6 +1018,8 @@ class CampaignScreen(
             if (b.highlight) text.append(", ").append(L["a196_next"])
         }
         if (g.profile.hardWon(i)) text.append(", ").append(L["hard189_a11y"])
+        // R11-06: nowość etapu do pierwszej wygranej (jak iskra na mapie).
+        if (StageNovelty.showSpark(i, g.profile.stars[i])) text.append(", ").append(StageNovelty.line(i))
         tileA11yKey[i] = key
         return text.toString().also { tileA11y[i] = it }
     }
@@ -1030,6 +1140,8 @@ class CampaignScreen(
         val text = StringBuilder(infoTitle).append(". ")
             .append(L.f("a196_stars", g.profile.stars[s.index])).append(". ")
         if (line.isNotEmpty()) text.append(line).append(". ")
+        val novelty = StageNovelty.line(s.index)
+        if (novelty.isNotEmpty()) text.append(novelty).append(". ")
         text.append(infoRange).append(". ")
             .append(infoPower).append(", ").append(enemy).append(". ")
             .append(L.f("a196_weather", L[s.weather.key])).append(". ")
@@ -1092,6 +1204,8 @@ class CampaignScreen(
         const val CROWN_OUT_DP = 4f
         const val CROWN_DY = 0.5f
         val CROWN_BG = Color.rgb(176, 124, 36)
+        /** R11-06: najmniejsze miejsce (dp) na skrócony napis nowości w wierszu gwiazdek. */
+        const val NOVELTY_MIN_DP = 48f
         /** R10-04 L4: najwyżej tyle obrazów epok nagrywa jedna klatka. */
         const val REGION_RECORDS_PER_FRAME = 2
     }

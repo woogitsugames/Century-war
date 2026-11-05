@@ -39,6 +39,8 @@ class RecordsUxTest {
     fun menuShowsUnclaimedMissionCountAndRecordsEntry() {
         val g = game(1600, 720, 1.8f)
         val now = System.currentTimeMillis()
+        // Plakietka misji w menu liczy dzień z zegara gry: ten sam „teraz” co test.
+        g.clock = { now }
         val state = g.profile.missionState
         state.dailyDay = Missions.utcDay(now)
         state.weeklyWeek = Missions.utcWeek(now)

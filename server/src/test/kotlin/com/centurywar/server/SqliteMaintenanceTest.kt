@@ -73,6 +73,76 @@ class SqliteMaintenanceTest {
         }
     }
 
+    /** Schemat 2 dokładnie tak, jak tworzył go serwer sprzed R5 (bez dzienników i statusu zgłoszeń). */
+    private fun createSchemaV2(db: Path, player: String, publicId: String) {
+        java.sql.DriverManager.getConnection("jdbc:sqlite:$db").use { c ->
+            c.createStatement().use { s ->
+                for (sql in listOf(
+                    "CREATE TABLE players (player_id TEXT PRIMARY KEY NOT NULL, nick TEXT NOT NULL, " +
+                        "updated_at INTEGER NOT NULL, secret_hash TEXT, public_id TEXT)",
+                    "CREATE TABLE blocked_players (player_id TEXT PRIMARY KEY NOT NULL, blocked_at INTEGER NOT NULL)",
+                    "CREATE TABLE scores (player_id TEXT NOT NULL REFERENCES players(player_id), " +
+                        "board TEXT NOT NULL, day INTEGER NOT NULL, score INTEGER NOT NULL CHECK (score >= 0), " +
+                        "seed INTEGER NOT NULL, game_version TEXT NOT NULL, ticks INTEGER NOT NULL, " +
+                        "replay_sha256 TEXT NOT NULL, verified_at INTEGER NOT NULL, " +
+                        "research_sum INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(player_id, board, day))",
+                    "CREATE INDEX idx_scores_board_time ON scores(board, verified_at, score)",
+                    "CREATE TABLE used_nonces (nonce TEXT PRIMARY KEY NOT NULL, expires_at INTEGER NOT NULL)",
+                    "CREATE TABLE score_submit_quotas (day INTEGER NOT NULL, quota_kind TEXT NOT NULL, " +
+                        "quota_key TEXT NOT NULL, requests INTEGER NOT NULL CHECK(requests > 0), " +
+                        "PRIMARY KEY(day, quota_kind, quota_key))",
+                    "CREATE TABLE schema_version (id INTEGER PRIMARY KEY CHECK (id = 1), version INTEGER NOT NULL)",
+                    "INSERT INTO schema_version(id, version) VALUES (1, 2)",
+                    "CREATE UNIQUE INDEX idx_players_public_id ON players(public_id)",
+                    "CREATE TABLE nick_reports (report_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "player_id TEXT NOT NULL, public_id TEXT NOT NULL, reported_nick TEXT NOT NULL, " +
+                        "reason TEXT NOT NULL, reported_at INTEGER NOT NULL)",
+                    "INSERT INTO players VALUES ('$player', 'Stary', 1800000000, NULL, '$publicId')",
+                    "INSERT INTO scores VALUES ('$player', 'endless', 20833, 90, 42, '0.8.8', 900, 'h', 1800000000, 0)",
+                    "INSERT INTO nick_reports(player_id, public_id, reported_nick, reason, reported_at) " +
+                        "VALUES ('$player', '$publicId', 'Stary', 'offensive', 1800000000)",
+                )) s.execute(sql)
+            }
+        }
+    }
+
+    private fun schemaVersion(db: Path): Int = java.sql.DriverManager.getConnection("jdbc:sqlite:$db").use { c ->
+        c.createStatement().use { s ->
+            s.executeQuery("SELECT version FROM schema_version WHERE id = 1").use { rs -> rs.next(); rs.getInt(1) }
+        }
+    }
+
+    @Test fun migratesSchemaTwoToThreeKeepingDataAndRefusesNewerSchema() {
+        val db = directory.resolve("v2.db")
+        val player = UUID.randomUUID().toString()
+        val ids = PublicPlayerIds(ByteArray(32) { 3 })
+        createSchemaV2(db, player, ids.of(player))
+        val now = 1_800_000_000_000L
+        SqliteStore("jdbc:sqlite:$db", ids).use { store ->
+            assertEquals(90L, store.top("endless", "all", now).single().score)
+            val report = store.recentReports().single()
+            assertEquals(null, report.resolvedAt)
+            assertEquals(true, store.resolveReport(report.id, now))
+            assertTrue(store.deletionLogSince(0L).isEmpty())
+            assertTrue(store.recentAdminLog().isEmpty())
+            assertEquals(1, store.findPlayersByNick("stary").size)
+            store.deletePlayer(player, SqliteStore.SOURCE_API, now)
+            assertEquals(1, store.deletionLogSince(0L).size)
+        }
+        assertEquals(3, schemaVersion(db))
+        // Ponowne otwarcie nie migruje drugi raz i zachowuje dzienniki.
+        SqliteStore("jdbc:sqlite:$db", ids).use { store -> assertEquals(1, store.deletionLogSince(0L).size) }
+        assertEquals(3, schemaVersion(db))
+
+        java.sql.DriverManager.getConnection("jdbc:sqlite:$db").use { c ->
+            c.createStatement().use { it.execute("UPDATE schema_version SET version = 4 WHERE id = 1") }
+        }
+        val error = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
+            SqliteStore("jdbc:sqlite:$db", ids).close()
+        }
+        assertEquals("unsupported_schema_version", error.message)
+    }
+
     @Test fun invalidBackupDoesNotReplaceExistingDatabase() {
         val db = directory.resolve("live.db")
         val invalid = directory.resolve("not-sqlite.sqlite")

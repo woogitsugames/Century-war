@@ -16,7 +16,10 @@ import java.time.LocalDate
  */
 object PlaytestReportText {
     const val MAX_CHARS = 6_000
-    val SECTIONS = arrayOf("[Tester survey]", "[Progress]", "[Play time]", "[Modes]", "[Performance]", "[Settings]")
+    val SECTIONS = arrayOf("[Tester survey]", "[Progress]", "[Campaign stages]", "[Play time]", "[Modes]",
+        "[Performance]", "[Settings]")
+    /** D45: najwyżej tyle wierszy lejka (od najwyższego etapu), reszta jako „(+N lower stages)”. */
+    const val MAX_STAGE_LINES = 15
     private val QUALITY = arrayOf("auto", "low", "medium", "high")
     private val PALETTES = arrayOf("standard", "deutan/protan", "tritan", "high contrast")
     private val RESULTS = arrayOf("win", "loss", "surrender")
@@ -46,6 +49,8 @@ object PlaytestReportText {
         val surveyRating: Int = 0,
         val surveyIssue: Int = -1,
         val surveyDay: Long = -1L,
+        /** D45 (R13 TOP 5 poz. 2): lejek kampanii z [PlaytestLog], etapy z próbami. */
+        val stages: List<PlaytestLog.StageStats> = emptyList(),
     )
 
     /** Wątek gry: odczyt profilu, dziennika testu i historii (kopia listy). */
@@ -87,6 +92,7 @@ object PlaytestReportText {
             surveyRating = log?.surveyRating ?: 0,
             surveyIssue = log?.surveyIssue ?: -1,
             surveyDay = log?.surveyDay ?: -1L,
+            stages = log?.stageStats() ?: emptyList(),
         )
     }
 
@@ -109,6 +115,16 @@ object PlaytestReportText {
     private fun yes(b: Boolean) = if (b) "yes" else "no"
 
     private fun modeName(mode: Int): String = Mode.entries.getOrNull(mode)?.name ?: "UNKNOWN"
+
+    /** `S19: 4 tries, 1 win, 0 surr, 52m, cmd 3`: etap od 1, czas bitew w pełnych minutach. */
+    private fun appendStage(out: StringBuilder, s: PlaytestLog.StageStats) {
+        out.append('S').append(s.stage + 1).append(": ")
+            .append(s.tries).append(if (s.tries == 1) " try, " else " tries, ")
+            .append(s.wins).append(if (s.wins == 1) " win, " else " wins, ")
+            .append(s.surrenders).append(" surr, ")
+            .append(s.seconds.coerceAtLeast(0) / 60).append("m, cmd ")
+            .append(s.commander).append('\n')
+    }
 
     fun build(version: String, model: String, android: String, input: Input): String {
         val out = StringBuilder(3072)
@@ -144,7 +160,15 @@ object PlaytestReportText {
             .append(" (max ").append(input.maxLossStreak).append(")\n")
         out.append("Login streak: ").append(input.loginStreak).append("\n\n")
 
+        // D45: lejek kampanii, od najwyższego etapu, najwyżej MAX_STAGE_LINES wierszy.
         out.append(SECTIONS[2]).append('\n')
+        val tried = input.stages.filter { it.tries > 0 }.sortedByDescending { it.stage }
+        if (tried.isEmpty()) out.append("-\n")
+        for (k in 0 until minOf(tried.size, MAX_STAGE_LINES)) appendStage(out, tried[k])
+        if (tried.size > MAX_STAGE_LINES) out.append("(+").append(tried.size - MAX_STAGE_LINES).append(" lower stages)\n")
+        out.append('\n')
+
+        out.append(SECTIONS[3]).append('\n')
         out.append("First day (UTC): ").append(day(input.firstDay))
             .append(", last day: ").append(day(input.lastDay)).append('\n')
         out.append("Days played: ").append(input.daysPlayed).append(", sessions: ").append(input.sessions).append('\n')
@@ -153,7 +177,7 @@ object PlaytestReportText {
         out.append("Battles: ").append(input.battles).append(", wins: ").append(input.wins)
             .append(", surrenders: ").append(input.surrenders).append("\n\n")
 
-        out.append(SECTIONS[3]).append('\n')
+        out.append(SECTIONS[4]).append('\n')
         for (i in Mode.entries.indices) {
             out.append(Mode.entries[i].name).append(": battles ").append(input.modeBattles.getOrElse(i) { 0 })
                 .append(", wins ").append(input.modeWins.getOrElse(i) { 0 })
@@ -180,7 +204,7 @@ object PlaytestReportText {
         }
         out.append('\n')
 
-        out.append(SECTIONS[4]).append('\n')
+        out.append(SECTIONS[5]).append('\n')
         out.append("Quality: ").append(QUALITY.getOrElse(input.qualitySetting) { "?" })
             .append(" (level ").append(input.qualityLevel)
             .append(", reduction now ").append(input.reduction).append('/').append(input.maxReductionSteps)
@@ -195,7 +219,7 @@ object PlaytestReportText {
         }
         out.append('\n')
 
-        out.append(SECTIONS[5]).append('\n')
+        out.append(SECTIONS[6]).append('\n')
         out.append("FPS cap: ").append(if (input.fpsCap == 0) "display" else input.fpsCap.toString()).append('\n')
         out.append("Game mode: ").append(GameModes.reportName(input.gameMode)).append('\n')
         out.append("Palette: ").append(PALETTES.getOrElse(input.palette) { "?" }).append('\n')

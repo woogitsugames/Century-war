@@ -219,10 +219,35 @@ przeszkadza?”); odpowiedz albo dotknij „Pomiń”. Odpowiedź trafia tylko d
 
 ### Kiedy wysyłamy testerom
 
-Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone, koordynator buduje podpisany AAB,
-uruchamia `./gradlew :app:releaseChecklist` (zatrzyma wydanie, jeśli czegoś brakuje)
-i postępuje według sekcji „Testy zamknięte w Play Console” poniżej
-(12 testerów przez 14 dni dla nowego konta osobistego).
+Decyzje właściciela (4.11.2026, R12 pytania 2, 5 i 6): testy zamknięte **bez serwera
+rankingu**, pierwsze wydanie **`0.1.0`, `versionCode 1`**, najpierw **test wewnętrzny** Play,
+potem ten sam AAB na **test zamknięty**.
+
+Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone (poza serwerem rankingu), AAB buduje
+**ręczne wydanie testowe** w GitHub Actions, nie tag:
+
+1. Actions → **Android CI** → **Run workflow**, gałąź `main`, zaznaczone **`test_release`**,
+   `version_name` = `0.1.0` (instrukcja klik po kliku: `docs/OWNER_CHECKLIST.md`, krok 11).
+2. Przebieg uruchamia pełne CI (`build`, `fast-tests`, `screenshot-tests`, `balance-tests`),
+   a po ich sukcesie zadanie `test-release`: podpis **wyłącznie kluczem upload** z sekretów,
+   jawne `-PskipCheck=releaseDay,serverUrl,hmacKey`, `-PtesterSurvey=true`,
+   `-PreleaseVersionName=0.1.0`. Pozostałe kontrole obowiązują: dane wydawcy (`OWNER_INPUT.md`),
+   84 ID Play Games, `CW_PRIVACY_URL`, numer wersji, dokumenty sklepu, podpis.
+3. Artefakty (90 dni): `century-war-test-release-aab` (do Play), `century-war-test-release-apk`
+   (instalacja ręczna, ten sam klucz upload), `century-war-test-release-mapping` (mapowanie R8
+   do wgrania w Play przy tej wersji).
+4. AAB na **test wewnętrzny** (do 100 osób, bez przeglądu Google): 1–2 dni na telefonie
+   właściciela i Foldzie, raport przedpremierowy i pętla testowa (R11-04).
+5. Ten sam AAB (**bez ponownego budowania**) awansuje na **test zamknięty** według sekcji
+   „Testy zamknięte w Play Console” poniżej (12 testerów przez 14 dni dla nowego konta osobistego).
+6. Po wgraniu do Play koordynator wpisuje `1` do `release/last_version_code.txt`; każde kolejne
+   wydanie testowe wymaga większego `releaseVersionCode` w `gradle.properties` i nowego
+   `version_name` (np. `0.1.1`).
+
+Wydanie testowe nie ma rankingu globalnego (puste `CW_SERVER_URL` i `CW_HMAC_KEY`, gra działa
+bez niego, rankingi z Play Games) i ma `Daily.RELEASE_DAY` poza oknem 60 dni, więc wyzwanie dnia
+i tygodnia działają na zasadach sprzed premiery (R12 pozycja 5). **Nie** taguj tego commita
+`v*`: tag to ścieżka produkcyjna, która nie pomija niczego i bez serwera się zatrzyma.
 
 ## Formalności Play 2026–2027
 
@@ -1121,6 +1146,25 @@ Wyjątek **nie konfiguruje** brakującej usługi ani nie naprawia podpisu.
 Ostateczna publikacja wymaga zaliczenia całej listy kontrolnej bez flag pomijających.
 Workflow `release-check.yml` świadomie pomija konfigurację niezbędną
 wyłącznie do publikacji; produkcyjny workflow z taga nie pomija niczego.
+
+**Wyjątki w GitHub Actions są ograniczone w samym Gradle** (`ReleaseChecklist.ciSkipProblem`,
+wywoływane w `app/build.gradle.kts`, R12 poz. 2a). Przy `GITHUB_ACTIONS=true`:
+
+| Zdarzenie | Podpis | Dozwolone `-PskipCheck` |
+|---|---|---|
+| `push` (tag `v*`, produkcja) | dowolny | **żadne** — konfiguracja kończy się błędem |
+| `workflow_dispatch` (zadanie `test-release` w `android.yml`) | klucz upload | tylko podzbiór `releaseDay,serverUrl,hmacKey` |
+| `pull_request` / inne | klucz upload | **żadne** |
+| smoke-test (`release-check.yml`, `-PciTestDebugSigning=true`, `CW_RELEASE_SMOKE=true`) | debug | jak wyżej; artefakty nie nadają się do Play |
+| bez podpisu | — | bez znaczenia: build i tak zatrzymuje kontrola podpisu |
+
+W `android.yml` jedyne `-PskipCheck` jest w zadaniu `test-release` (pilnuje tego
+`tests/test_ci_release_gates.py`), które działa tylko przy ręcznym uruchomieniu z
+`test_release=true` i nie na refie tagu. Wydanie testowe nie może użyć podpisu debug
+(nie ustawia `CW_RELEASE_SMOKE` ani `-PciTestDebugSigning`, odrzuca alias `androiddebugkey`,
+a Gradle wymaga keystore upload), nie pomija `ownerInput` (to wymaga smoke-testu z podpisem debug)
+ani `playGames`, `privacyUrl`, `versionCode`. Lokalnie (bez `GITHUB_ACTIONS`) świadome wyjątki
+działają jak dotąd.
 
 ### Kontrola rzeczywistego podpisu
 

@@ -8,6 +8,7 @@ import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
 import com.centurywar.engine.L
+import com.centurywar.engine.RowNote
 import com.centurywar.engine.Screen
 import com.centurywar.engine.Ui
 import com.centurywar.game.Skirmish
@@ -17,6 +18,7 @@ import com.centurywar.game.DailyEvent
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Weekly
+import com.centurywar.meta.PreReleaseRules
 import com.centurywar.meta.Profile
 import kotlin.math.max
 import kotlin.math.min
@@ -43,8 +45,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
 
     init { buttons.add(0, hints.okBtn) }
     private var dt = 0f
-    /** Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania. */
-    private var day = previewDailyDay ?: Daily.dayNumber()
+    /**
+     * Dzień UTC: odświeżany w update(), żeby ekran otwarty przez północ nie startował wczorajszego wyzwania.
+     * D41: z zegara gry (`g.clock()`), jak menu i misje, nie z zegara systemowego.
+     */
+    private var day = previewDailyDay ?: Daily.dayNumber(g.clock())
+    /** Testy D41. */
+    internal val dayForTests: Long get() = day
     private var dailyCfg: BattleConfig? = null
     private var dailyMods = ""
     private var dailyWeather = ""
@@ -79,9 +86,33 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     private var weeklyClaimMask = 0
     private var weeklyCountdown = ""
     private val tierNames = Array(3) { "" }
+    /**
+     * D46: progi medali liczone z realnej szerokości tekstu (przy przebudowie karty tygodnia):
+     * jeden rozmiar dla trzech progów, nie mniejszy niż [TIER_MIN_SP]; gdy się nie mieści,
+     * każdy próg idzie w dwóch wierszach ([tierLines]).
+     */
+    private val tierLines = Array(3) { emptyArray<String>() }
+    private var tierSize = 11f
+    private var tierLineCount = 1
+    /** Szeroki panel: początek tekstu każdego progu względem `panel.left`. */
+    private val tierTextX = FloatArray(3)
     private val tierColors = intArrayOf(
         Color.rgb(191, 117, 62), Color.rgb(184, 194, 211), Color.rgb(236, 193, 62),
     )
+
+    /**
+     * R12 (pozycja 5): „Wersja testowa: pełne zasady wyzwań od premiery” pod przyciskiem Graj
+     * (wyzwanie dnia i tygodnia, wersja testowa przed premierą). Stałe 11 sp; na wąskim panelu
+     * krótsza wersja, a w ostateczności wielokropek. Czytnik ekranu bez zmian.
+     */
+    private var rulesNote = ""
+    /** D43: czy linia „od premiery” ma pas pod Graj (liczone w [layout]) i jej linia bazowa. */
+    internal var noteShown = false
+        private set
+    private var noteBaseline = 0f
+    internal val panelForTests: RectF get() = panel
+    internal val startForTests: RectF get() = start.r
+    internal val tierLinesForTests: List<String> get() = tierLines.flatMap { it.toList() }
 
     private var labelTimer = 0f
     private var endlessBest = ""
@@ -141,7 +172,18 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         val top = chrome.top + 14 * dp + max(0f, (avail - ph) * 0.4f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
-        start.set(w / 2 - 110 * dp, panel.bottom - 76 * dp, 220 * dp, 52 * dp)
+        // D43: linia „od premiery” ma własny pas nad wewnętrzną lamówką (wcześniej leżała na ramie).
+        // Pas: litery (ok. 1,3 rozmiaru z cieniem) + kontur + 3 dp od lamówki; Graj stoi ≥ 4 dp
+        // nad nim i podnosi się tylko o brakującą wysokość (treść panelu liczy się od start.r.top).
+        noteShown = mode == Mode.DAILY && PreReleaseRules.active(g.preReleaseNotesEnabled, day)
+        val innerBottom = panel.bottom - Ui.PANEL_TRIM_INSET * dp
+        val noteSize = NOTE_SP * dp * ui.textScale
+        val noteOutline = max(2f * dp, noteSize * 0.16f)
+        noteBaseline = innerBottom - 3 * dp - noteSize * 0.3f - noteOutline * 0.6f
+        val startBottom = if (noteShown)
+            min(panel.bottom - 24 * dp, noteBaseline - noteSize * 1.0f - noteOutline - 4 * dp)
+            else panel.bottom - 24 * dp
+        start.set(w / 2 - 110 * dp, startBottom - 52 * dp, 220 * dp, 52 * dp)
         start.highlight = true
         start.iconId = Icons.PLAY
         val tabWidth = min(118 * dp, (pw - 42 * dp) / 2f)
@@ -153,6 +195,13 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         weeklyTab.iconId = Icons.MEDAL
         dailyTab.visible = mode == Mode.DAILY
         weeklyTab.visible = mode == Mode.DAILY
+        rulesNote = ""
+        if (mode == Mode.DAILY) {
+            val noteW = pw - 32 * dp
+            val longNote = L["t203_rules_note"]
+            rulesNote = if (ui.measure(longNote, NOTE_SP, true) <= noteW) longNote
+                else RowNote.ellipsize(ui, L["t203_rules_note_short"], NOTE_SP, noteW)
+        }
         weeklyLang = -1 // Po zmianie rozmiaru ekranu przelicz szerokości tekstu.
         dailyLang = -1
         val gap = 8 * dp
@@ -176,14 +225,18 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
     override fun update(dt: Float) {
         hints.update(dt)
         this.dt = dt
-        val today = previewDailyDay ?: Daily.dayNumber()
-        if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
+        val today = previewDailyDay ?: Daily.dayNumber(g.nowMillis())
+        if (today != day) {
+            day = today; dailyCfg = null; labelTimer = 0f
+            // Dzień premiery w trakcie: pas linii „od premiery” znika, Graj wraca na miejsce.
+            if (noteShown != (mode == Mode.DAILY && PreReleaseRules.active(g.preReleaseNotesEnabled, day))) layout()
+        }
         labelTimer -= dt
         if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
         if (mode == Mode.DAILY) {
             if (dailyCfg == null || dailyLang != L.lang) rebuildDaily()
             if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
-            val second = System.currentTimeMillis() / 1000L
+            val second = g.clock() / 1000L
             if (second != weeklySecond) {
                 weeklySecond = second
                 val remaining = ((week * 7L + 4L) * 86_400L - second).coerceAtLeast(0L)
@@ -360,6 +413,103 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                 0 -> "weekly_bronze"; 1 -> "weekly_silver"; else -> "weekly_gold"
             }], Weekly.threshold(i), Weekly.medalReward(i))
         }
+        layoutTiers(full)
+    }
+
+    /**
+     * D46 (de 130% na 720p: „Gold: 30 Wellen (+120)” wychodził poza lamówkę, bo dopuszczalna
+     * szerokość była liczona z całej kolumny, a `fit` schodził do 8 sp).
+     *
+     * Wąski panel: każdy próg ma własny wiersz od x + 27 dp; rozmiar ≤ 12 sp, nie mniej niż
+     * [TIER_MIN_SP], a gdy się nie mieści — dwa wiersze.
+     *
+     * Szeroki panel: trzy progi w jednym rzędzie od lamówki do lamówki. Każdy blok (medal 27 dp +
+     * realna szerokość tekstu z konturem) dostaje tyle miejsca, ile potrzebuje, a wolne miejsce
+     * dzieli się po równo między bloki — dłuższy „Bronze: 10 Wellen (+25)” nie jest ścinany do
+     * jednej trzeciej. Dopiero gdy rząd w 11 sp się nie mieści, progi idą w dwóch wierszach,
+     * a w ostateczności całość się zmniejsza.
+     */
+    private fun layoutTiers(full: Float) {
+        if (stackedColumns()) {
+            val width = full - 27 * dp
+            var single = 12f
+            for (i in 0 until Weekly.TIER_COUNT) single = min(single, fitSp(tierNames[i], 12f, width))
+            if (single >= TIER_MIN_SP) {
+                for (i in 0 until Weekly.TIER_COUNT) tierLines[i] = arrayOf(tierNames[i])
+                tierSize = single; tierLineCount = 1
+                return
+            }
+            var size = 12f
+            for (i in 0 until Weekly.TIER_COUNT) {
+                tierLines[i] = splitTier(tierNames[i], width)
+                for (line in tierLines[i]) size = min(size, fitSp(line, 12f, width))
+            }
+            tierSize = size
+            tierLineCount = tierLines.maxOf { it.size }
+            return
+        }
+        val avail = panel.width() - 2f * TIER_ROW_INSET * dp
+        val minGaps = (Weekly.TIER_COUNT + 1) * TIER_GAP * dp
+        for (i in 0 until Weekly.TIER_COUNT) tierLines[i] = arrayOf(tierNames[i])
+        var size = TIER_MIN_SP
+        if (tierRowWidth(size) + minGaps > avail) {
+            for (i in 0 until Weekly.TIER_COUNT) tierLines[i] = splitTier(tierNames[i], 0f)
+            var guard = 0
+            while (tierRowWidth(size) + minGaps > avail && guard++ < 40) size *= 0.98f
+        }
+        tierSize = size
+        tierLineCount = tierLines.maxOf { it.size }
+        val gap = (avail - tierRowWidth(size)) / (Weekly.TIER_COUNT + 1)
+        var left = TIER_ROW_INSET * dp + gap
+        for (i in 0 until Weekly.TIER_COUNT) {
+            tierTextX[i] = left + TIER_ICON_W * dp
+            left += tierBlockWidth(i, size) + gap
+        }
+    }
+
+    /** Blok progu w szerokim rzędzie: medal z odstępem i najdłuższy wiersz tekstu z konturem. */
+    private fun tierBlockWidth(i: Int, size: Float): Float {
+        var w = 0f
+        for (line in tierLines[i]) w = max(w, ui.measure(line, size, true))
+        return TIER_ICON_W * dp + w + max(2f * dp, size * dp * ui.textScale * 0.16f)
+    }
+
+    private fun tierRowWidth(size: Float): Float {
+        var sum = 0f
+        for (i in 0 until Weekly.TIER_COUNT) sum += tierBlockWidth(i, size)
+        return sum
+    }
+
+    /** Jak [Ui.fit], ale bez dolnej granicy: zwraca rozmiar (sp), przy którym tekst się mieści. */
+    private fun fitSp(s: String, base: Float, width: Float): Float {
+        var size = base
+        val m = ui.measure(s, size, true)
+        if (m <= width) return size
+        size = base * width / m
+        var guard = 0
+        while (ui.measure(s, size, true) > width && guard++ < 12) size *= 0.98f
+        return size
+    }
+
+    /**
+     * Podział na dwa wiersze przy spacji tak, by dłuższy wiersz był najkrótszy (w [TIER_MIN_SP]);
+     * przy `width <= 0` dzieli zawsze, inaczej tylko gdy cały tekst nie mieści się w [width].
+     */
+    private fun splitTier(s: String, width: Float): Array<String> {
+        var best: Array<String> = arrayOf(s)
+        var bestW = Float.MAX_VALUE
+        var at = s.indexOf(' ')
+        while (at > 0) {
+            val a = s.substring(0, at).trimEnd()
+            val b = s.substring(at + 1).trimStart()
+            // Drugi wiersz nie zaczyna się od dwukropka (fr „Or : 30 vagues”).
+            if (a.isNotEmpty() && b.isNotEmpty() && b[0] !in ":;,.") {
+                val w = max(ui.measure(a, TIER_MIN_SP, true), ui.measure(b, TIER_MIN_SP, true))
+                if (w < bestW) { bestW = w; best = arrayOf(a, b) }
+            }
+            at = s.indexOf(' ', at + 1)
+        }
+        return if (width > 0f && ui.measure(s, TIER_MIN_SP, true) <= width) arrayOf(s) else best
     }
 
     /** Karta tygodnia ma zwartą siatkę, by zmieścić się także na 720p. */
@@ -379,8 +529,11 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         // Tura 10: progi medali nie mogą wchodzić na „Koniec za…” i „Najlepszy” (720p);
         // w wąskim panelu każdy próg ma własny wiersz zamiast pisma 6 sp.
         val medalRows = if (stacked) Weekly.TIER_COUNT else 1
-        val medalStep = 21 * dp
-        val lowestMedal = start.r.top - 16 * dp - (medalRows - 1) * medalStep
+        // D46: przy dwóch wierszach progu (tierLineCount) środek medalu zostaje w połowie tekstu.
+        val tierLineStep = tierSize * ui.textScale * dp * 1.2f
+        val tierHalf = (tierLineCount - 1) * tierLineStep / 2f
+        val medalStep = 21 * dp + 2f * tierHalf
+        val lowestMedal = start.r.top - 16 * dp - (medalRows - 1) * medalStep - tierHalf
         val modsH = weeklyModsLines.size * 16 * dp
         val rowGap = if (stacked)
             min(24 * dp, max(17 * dp, (lowestMedal - 17 * dp - y - modsH - 8 * dp) / 3f))
@@ -406,24 +559,30 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         ui.textO(c, weeklyBest, rightX + 23 * dp, ry, ui.fit(weeklyBest, 13f, colWidth - 23 * dp), Ui.GOLD)
 
         val contentBottom = max(y, ry)
+        // D46: odstęp od ostatniego wiersza kolumn rośnie z rozmiarem tekstu systemu (130%:
+        // ascent progu z konturem nie wchodzi na „Endet in…” / „Bestwert”); przy 100% bez zmian.
         val medalY = min(lowestMedal,
-            max(start.r.top - 42 * dp - (medalRows - 1) * medalStep, contentBottom + 17 * dp))
+            max(start.r.top - 42 * dp - (medalRows - 1) * medalStep - tierHalf,
+                contentBottom + 17 * dp * max(1f, ui.textScale) + tierHalf))
         val mask = weeklyClaimMask
         for (i in 0 until Weekly.TIER_COUNT) {
             val claimed = mask and (1 shl i) != 0
             val tint = if (claimed) tierColors[i] else Ui.DIM
+            val my = if (stacked) medalY + i * medalStep else medalY
+            val tx: Float
             if (stacked) {
-                val my = medalY + i * medalStep
                 Icons.draw(c, Icons.MEDAL, x + 11 * dp, my - 1 * dp, 20 * dp, tint = tint, dp = dp)
-                ui.textO(c, tierNames[i], x + 27 * dp, my + 4 * dp,
-                    ui.fit(tierNames[i], 12f, full - 27 * dp), tint)
-                continue
+                tx = x + 27 * dp
+            } else {
+                tx = panel.left + tierTextX[i]
+                Icons.draw(c, Icons.MEDAL, tx - 15 * dp, my - 1 * dp, 24 * dp, tint = tint, dp = dp)
             }
-            val centerX = x + (i + 0.5f) * full / Weekly.TIER_COUNT
-            Icons.draw(c, Icons.MEDAL, centerX - 38 * dp, medalY - 1 * dp,
-                24 * dp, tint = tint, dp = dp)
-            ui.textO(c, tierNames[i], centerX - 23 * dp, medalY + 4 * dp,
-                ui.fit(tierNames[i], 11f, full / 3f - 35 * dp), tint)
+            val lines = tierLines[i]
+            var ty = my + 4 * dp - (lines.size - 1) * tierLineStep / 2f
+            for (line in lines) {
+                ui.textO(c, line, tx, ty, tierSize, tint)
+                ty += tierLineStep
+            }
         }
     }
 
@@ -447,6 +606,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         if (mode == Mode.DAILY) {
             if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
+            // D43: własny pas między Graj a wewnętrzną lamówką (layout), nie na ramie panelu.
+            if (rulesNote.isNotEmpty() && noteShown)
+                ui.textO(c, rulesNote, panel.centerX(), noteBaseline, NOTE_SP, Ui.DIM, Paint.Align.CENTER)
             for (bi in buttons.indices) { val b = buttons[bi]; if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f) }
             ui.button(c, start, 20f)
             hints.draw(c)
@@ -550,10 +712,10 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                     Mode.ENDLESS -> g.setScreen(BattleScreen(g, BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = pr.bonuses())))
                     Mode.DAILY -> {
                         if (weeklySelected) {
-                            val currentWeek = Weekly.weekNumber(Daily.dayNumber())
+                            val currentWeek = Weekly.weekNumber(Daily.dayNumber(g.clock()))
                             g.setScreen(BattleScreen(g, Weekly.config(currentWeek)))
                         } else {
-                            val today = Daily.dayNumber()
+                            val today = Daily.dayNumber(g.clock())
                             val ranked = pr.lastRankedDaily != today
                             if (ranked) { pr.lastRankedDaily = today; pr.save() }
                             g.setScreen(BattleScreen(g, Daily.config(today, pr.bonuses()), ranked))
@@ -566,5 +728,18 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
             10 -> weeklySelected = false
             11 -> weeklySelected = true
         }
+    }
+
+    private companion object {
+        /** R12-05: linia o zasadach od premiery nigdy mniejsza niż 11 sp. */
+        const val NOTE_SP = 11f
+        /** D46: progi medali tygodnia nie mniejsze niż 11 sp (inaczej dwa wiersze). */
+        const val TIER_MIN_SP = 11f
+        /** Szeroki rząd progów: od lamówki (10,4 dp) z zapasem na kontur i medal. */
+        const val TIER_ROW_INSET = 16f
+        /** Medal (24 dp, środek 15 dp przed tekstem) z odstępem: lewa krawędź 27 dp przed tekstem. */
+        const val TIER_ICON_W = 27f
+        /** Najmniejszy odstęp między blokami progów i od krawędzi rzędu. */
+        const val TIER_GAP = 6f
     }
 }

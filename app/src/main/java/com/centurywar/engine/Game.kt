@@ -67,7 +67,25 @@ interface Host {
  * kolejka dotyku. Zmiany rozmiaru (np. rozłożenie Folda) przychodzą przez [resize]
  * i każdy ekran przelicza wtedy swój układ, bez restartu Activity.
  */
-class Game(val host: Host, val profile: Profile, private val detectedQuality: Int) {
+class Game(
+    val host: Host,
+    val profile: Profile,
+    private val detectedQuality: Int,
+    /**
+     * Zegar ścienny (ms od epoki) dla logiki dni UTC menu: seria logowań, rozliczenie bitwy
+     * utraconej przy aktualizacji, powitanie po przerwie (R10-07), plakietka misji i cel.
+     * W grze zawsze czas systemowy; testy podają stały, by dzień nie zależał od północy UTC.
+     * Parametr konstruktora, bo już `init` (seria logowań) liczy dzień.
+     */
+    internal var clock: () -> Long = SYSTEM_CLOCK,
+) {
+    /**
+     * D43: [clock] bez alokacji. `() -> Long` zwraca `Long` w pudełku (16 B na wywołanie), a menu
+     * pyta o czas w każdej klatce (powitanie po przerwie, darmowe wyzwanie) — test LowEnd menu
+     * przekraczał przez to 16 KB na 600 klatek. Przy zegarze systemowym bez pośrednika.
+     */
+    fun nowMillis(): Long = if (clock === SYSTEM_CLOCK) System.currentTimeMillis() else clock()
+
     val ui = Ui()
     var width = 1
     var height = 1
@@ -146,6 +164,11 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
     var playtest: PlaytestLog? = null
     /** R11 (pozycja 7): ankieta testera w menu (tylko wersje testowe; testy mogą wyłączyć). */
     var testerSurveyEnabled = BuildConfig.TESTER_SURVEY
+    /**
+     * R12 (pozycja 5): dopiski „od premiery” w osiągnięciach i wyzwaniu ([com.centurywar.meta.PreReleaseRules]).
+     * Ten sam warunek co ankieta testera; zrzuty sklepu go wyłączają.
+     */
+    var preReleaseNotesEnabled = BuildConfig.TESTER_SURVEY
     private var playtestBattleSeconds = 0f
     /** Bitwa przerwana przez zabicie aplikacji: MenuScreen pyta, czy ją wznowić. */
     var resumeOffer: RestoredBattle? = null
@@ -160,7 +183,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
      * (identyfikator bitwy w profilu). Pliki zrzutu i opisu znikają po trwałym zapisie profilu.
      * Komunikat idzie zwykłą kolejką banerów (bez okna, nigdy nad bitwą i wynikami).
      */
-    fun settleLostBattle(today: Long = Daily.dayNumber()) {
+    fun settleLostBattle(today: Long = Daily.dayNumber(nowMillis())) {
         val meta = lostBattle ?: return
         lostBattle = null
         val store = snapshots
@@ -175,15 +198,12 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         if (texts.size > 1) showNotice(texts[1], if (result.dailyRestored) Icons.CHECK else Icons.MEDAL)
     }
 
-    /** R10-07: zegar powitania po przerwie (testy podstawiają własny). */
-    internal var clock: () -> Long = { System.currentTimeMillis() }
-
     /**
      * R10-07: powitanie po przerwie. Wołane z [MenuScreen.update] po rozliczeniu bitwy
      * utraconej przy aktualizacji (najpierw jej banery, potem powitanie) i nigdy przy ofercie
      * wznowienia bitwy. Tani test dnia w każdej klatce; zapis profilu raz na dzień UTC.
      */
-    fun checkWelcomeBack(nowMillis: Long = clock()) {
+    fun checkWelcomeBack(nowMillis: Long = this.nowMillis()) {
         if (resumeOffer != null || lostBattle != null) return
         val today = Daily.dayNumber(nowMillis)
         if (today <= profile.lastPlayDay) return
@@ -369,7 +389,7 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
      * starcie i po powrocie aplikacji z tła (MainActivity.onResume przez [post]), bo proces
      * potrafi przeżyć w tle północ i nagroda kolejnego dnia nie zostałaby przyznana.
      */
-    fun checkDailyLogin(nowMillis: Long = System.currentTimeMillis()) {
+    fun checkDailyLogin(nowMillis: Long = this.nowMillis()) {
         val m = Missions(profile)
         m.refresh(nowMillis)
         val reward = m.claimLogin(nowMillis)
@@ -874,5 +894,8 @@ class Game(val host: Host, val profile: Profile, private val detectedQuality: In
         /** `ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN` i `TRIM_MEMORY_BACKGROUND`. */
         const val TRIM_UI_HIDDEN = 20
         const val TRIM_BACKGROUND = 40
+
+        /** Domyślny [clock]; [nowMillis] rozpoznaje go i omija pakowanie `Long`. */
+        internal val SYSTEM_CLOCK: () -> Long = { System.currentTimeMillis() }
     }
 }

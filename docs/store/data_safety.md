@@ -25,9 +25,11 @@
 | PGS SDK 22.1.0 | Dane konta gracza (identyfikator, gamertag, awatar) oraz analityka i diagnostyka SDK | Google; dane automatyczne i zależne od użytych funkcji według dokumentacji PGS |
 | Własny serwer rankingu (`ScoreClient`) | UUID v4, pseudonim, tablica, wynik, czas, seed, trudność, poziomy badań, komendy powtórki do weryfikacji; sekret instalacji w nagłówku autoryzacji | **Tylko po osobnej zgodzie** na ranking i przy skonfigurowanych HTTPS/HMAC; serwer przechowuje m.in. UUID, pseudonim, wynik, publiczne ID (HMAC UUID), SHA-256 sekretu i metadane, ale nie jawny sekret ani całą powtórkę w SQLite |
 | Własny serwer — zgłoszenie nicku | Publiczne ID zgłaszanego, powód „offensive”, a w bazie również UUID i nick zgłaszanego, czas | Na żądanie gracza, gdy ranking działa; IP do limitowania zgłoszeń i potencjalnie w logach proxy; nie w tabeli zgłoszeń SQLite |
+| Własny serwer — dzienny limit wyników | Jednokierunkowy skrót HMAC (klucz tylko na serwerze) z adresu IP i dnia UTC, licznik zgłoszeń | Przy każdym podpisanym zgłoszeniu wyniku; sam adres IP nie trafia do bazy; skrót usuwany następnego dnia (także przez dobowe czyszczenie) |
+| Własny serwer — dzienniki usunięć i operatora | Skrót HMAC identyfikatora gracza (nie UUID, nie publiczne ID), czas, źródło/rodzaj operacji | Przy usunięciu (gra, prośba e-mailowa, retencja) i działaniach moderatora; tylko do powtórzenia usunięć po odtworzeniu kopii i rozliczalności; 400 dni |
 | Android Auto Backup / transfer urządzeń | **`profile.json` i `history.json`** (a więc także ewentualny sekret rankingu z profilu) | Mechanizm systemowy Google/Android; osobny od PGS Saved Games; warunki i ochrona różnią się między wersjami Androida |
 
-**Ważne:** kod klienta i serwera nie dowodzi, że własny serwer jest wdrożony. Przed deklarowaniem aktywnych transferów wydawca musi sprawdzić `CW_SERVER_URL`, `CW_HMAC_KEY`, zgodę w aplikacji, faktyczny adres HTTPS i retencję w środowisku produkcyjnym. SQLite nie zapisuje IP, ale infrastruktura sieciowa może je logować.
+**Ważne:** kod klienta i serwera nie dowodzi, że własny serwer jest wdrożony. Przed deklarowaniem aktywnych transferów wydawca musi sprawdzić `CW_SERVER_URL`, `CW_HMAC_KEY`, zgodę w aplikacji, faktyczny adres HTTPS i retencję w środowisku produkcyjnym. SQLite nie zapisuje adresu IP (tylko dobowy skrót do limitu, patrz wyżej), ale infrastruktura sieciowa (proxy) może je logować.
 
 ## 3. Systemowa kopia Androida — nie deklaruj bezwarunkowego E2E
 
@@ -61,9 +63,25 @@ Zaznacz „szyfrowanie danych w transmisji” dopiero po sprawdzeniu **wszystkic
 
 - Powiadomienia o wyzwaniu dnia używają lokalnie `AlarmManager` i `NotificationManager`, z `POST_NOTIFICATIONS` na Androidzie 13+; przy restarcie harmonogram może zostać odtworzony przez `RECEIVE_BOOT_COMPLETED`. **Brak FCM/push i przesyłania danych do serwera dla przypomnień**.
 - Własny ranking można wyłączyć. „Nowa tożsamość” zapisuje żądanie usunięcia starego UUID i uruchamia ponawianie (również offline), ale **nowe UUID nie potwierdza usunięcia na serwerze**. Przed publikacją wymagany jest test jednoczesnego usuwania i zgłaszania wyniku (ustalenie **A156-05**). Żądania mogą zaginąć przy wyczyszczeniu danych aplikacji przed ich dostarczeniem.
-- Własne rekordy wyników i zgłoszenia nie mają w źródłach stałego terminu wygaśnięcia; usuwanie zależy od żądania i operatora. Trzeba zatwierdzić retencję logów IP, backupów SQLite, weryfikować usunięcie również po odtworzeniu kopii.
+- Własny serwer usuwa dane automatycznie (przy starcie i raz na dobę) według okresów z tabeli poniżej; operator usuwa gracza na prośbę e-mailową (`admin delete-player`, w ciągu 30 dni), a po odtworzeniu kopii powtarza usunięcia z dziennika (`admin replay-deletions`). Retencję logów proxy (Caddy) trzeba potwierdzić osobno.
 - Reset postępu w grze zachowuje pseudonim; wyczyszczenie danych aplikacji usuwa pliki lokalne, ale **nie** usuwa danych PGS ani już wysłanych wpisów na serwerze. Google Play Games umożliwia oddzielne usunięcie danych tej gry. Android Auto Backup również jest oddzielny.
 - Brak konta wydawcy nie zwalnia z podania kontaktu i możliwości zgłoszenia żądania prywatności. Dane Google podlegają zasadom Google; dane własnego rankingu wymagają procedury obsługi przez wydawcę.
+
+### Przepływy po stronie serwera rankingu: retencja i usuwanie
+
+<!-- R5/d38: wartości = domyślne CW_RETENTION_* serwera; do potwierdzenia przez właściciela i zgodne z polityką prywatności §8. -->
+
+| Dane na serwerze | Okres przechowywania | Jak usuwane |
+|---|---|---|
+| Wyniki rankingu dnia i tygodnia | 90 dni od dnia wyzwania / końca tygodnia (`CW_RETENTION_PERIOD_DAYS`) | Automatycznie raz na dobę |
+| Gracz (UUID, nick, skrót sekretu, publiczne ID, wyniki stałych rankingów) | Do 24 miesięcy bez nowego wyniku (`CW_RETENTION_INACTIVE_DAYS`) albo do usunięcia | Automatycznie; w grze „Nowa tożsamość” (API); prośba e-mailowa → operator `delete-player` w ciągu 30 dni |
+| Zgłoszenia nicków | 180 dni (`CW_RETENTION_REPORT_DAYS`) | Automatycznie; razem z kontem zgłoszonego |
+| Blokada UUID | Do zdjęcia; bez konta najwyżej 24 miesiące od blokady | Operator `unblock` / `delete-player`; automatycznie po okresie |
+| Skrót IP + dzień (dzienny limit) | Do następnego dnia UTC | Automatycznie |
+| Jednorazowe `nonce` podpisów | 10 minut | Automatycznie |
+| Dziennik usunięć i dziennik operatora (skróty, bez UUID) | 400 dni (`CW_RETENTION_LOG_DAYS`) | Automatycznie |
+| Kopie bazy | 14 dni na serwerze, 30 dni zaszyfrowane poza serwerem (UE) | Rotacja skryptu kopii; usunięte dane znikają z kopii po tych okresach |
+| Adres IP w logach proxy | `server/Caddyfile.example` nie włącza logów dostępu (dyrektywa `log`); logi hostingu i błędów Caddy — **do potwierdzenia** po wdrożeniu | Konfiguracja infrastruktury |
 
 ## 6. Obowiązki wydawcy przed wysłaniem Data safety
 

@@ -4,6 +4,10 @@ Instrukcja dla właściciela gry. Własny ranking jest **opcjonalny**. VPS jest
 niezbędny tylko do funkcji rankingu online, nie do grania offline.
 Potrzebujesz domeny, serwera VPS, konta z możliwością SSH oraz kodu repozytorium.
 
+**Kiedy:** decyzja właściciela (04.11.2026) — testy zamknięte idą **bez serwera**
+(w APK pusty `CW_SERVER_URL`, ranking globalny wyłączony), serwer włączamy dopiero
+przy premierze, na VPS w UE. Przed włączeniem przejdź listę z §13 („Przed premierą”).
+
 ## 1. Zakup serwera i domena
 
 ### Ile to kosztuje? (orientacyjnie, 02.11.2026)
@@ -24,6 +28,8 @@ stawki, a współdzielony vCPU nie gwarantuje stałej wydajności.
 1. Wybierz VPS z **Ubuntu 24.04 LTS**, publicznym adresem IPv4, około 2 vCPU,
    **4 GB RAM do kompilacji obrazu Docker** i przynajmniej 20 GB SSD.
    Po zbudowaniu obrazu sam serwer potrzebuje znacznie mniej zasobów.
+   Jeśli obraz budujesz u siebie i wysyłasz na serwer (§7, „Budowa obrazu poza VPS”),
+   wystarczy VPS z **2 GB RAM**.
 2. Wybierz subdomenę, np. scores.twojadomena.pl. W panelu DNS dodaj rekord
    **A** wskazujący publiczny adres IPv4 VPS. Rekord AAAA dodaj tylko, jeżeli
    faktycznie działa IPv6. Na propagację DNS może być potrzebny czas.
@@ -194,7 +200,56 @@ Przechowuj także szyfrowaną kopię **poza VPS** (inna maszyna / zewnętrzny st
 retencją i procedurą usuwania danych. W przeciwnym razie awaria dysku VPS
 zniszczy bazę i kopie razem. Monitoruj nieudane zadania cron i miejsce na dysku.
 Odtworzenie starej kopii może przywrócić rekordy graczy, którzy później
-żądali usunięcia; prowadź procedurę ponownego wykonania takich żądań.
+żądali usunięcia; po odtworzeniu wykonaj `admin replay-deletions` (§7).
+
+### 6a. Kopia poza serwerem (rclone, szyfrowana)
+
+Skrypt wysyła kopię dalej, gdy ustawisz `CW_BACKUP_RCLONE_REMOTE`. `rclone`
+i `curl` działają **na hoście**, nie w kontenerze (obraz bez zmian).
+Rekomendacja: Backblaze B2 (10 GB za darmo, baza ma kilka MB) albo Hetzner
+Storage Box. U dostawcy zaakceptuj umowę powierzenia danych (DPA).
+
+1. Na VPS: `sudo apt install -y rclone` (albo instalator z rclone.org).
+2. U dostawcy utwórz **osobny kubełek w regionie UE** (np. `century-war-backup`; B2: region „EU Central”) i klucz
+   dostępu ograniczony do tego jednego kubełka.
+3. `sudo rclone config` (konfiguracja trafi do `/root/.config/rclone/rclone.conf`):
+   - `n` → nazwa `b2` → typ `b2` (albo `sftp` dla Storage Box) → podaj klucz;
+   - `n` → nazwa `b2crypt` → typ `crypt` → remote `b2:century-war-backup`
+     → szyfrowanie nazw plików `standard` → **wygeneruj dwa hasła**.
+   Oba hasła `crypt` zapisz w menedżerze haseł właściciela. **Bez nich kopii
+   zdalnej nie da się odczytać.**
+4. Próba: `sudo rclone lsd b2crypt:` (bez błędu) i ręczne uruchomienie skryptu
+   z ustawioną zmienną:
+   ~~~bash
+   sudo env CW_BACKUP_RCLONE_REMOTE=b2crypt:century-war bash /opt/century-war/server/backup-sqlite.sh
+   sudo rclone ls b2crypt:century-war
+   ~~~
+5. Wpisz zmienne w `sudo crontab -e` **nad** linią z kopią (cron nie czyta `.env`):
+   ~~~cron
+   CW_BACKUP_RCLONE_REMOTE=b2crypt:century-war
+   CW_BACKUP_REMOTE_RETENTION_DAYS=30
+   CW_BACKUP_PING_URL=https://hc-ping.com/WSTAW_UUID_Z_HEALTHCHECKS
+   0 3 * * * /usr/bin/bash /opt/century-war/server/backup-sqlite.sh >> /var/log/cw-backup.log 2>&1
+   ~~~
+
+Po udanej kopii lokalnej skrypt robi `rclone copy`, potem usuwa zdalne kopie
+starsze niż `CW_BACKUP_REMOTE_RETENTION_DAYS` (domyślnie **30 dni**). Każdy
+błąd (także `rclone`) kończy skrypt kodem ≠ 0 i wysyła `…/fail` na
+`CW_BACKUP_PING_URL` (§10). Lokalnie zostaje 14 dni (`CW_BACKUP_RETENTION_DAYS`).
+
+**Test odtworzenia z kopii zdalnej (raz w miesiącu, ok. 10 minut):**
+
+~~~bash
+mkdir -p /tmp/cw-restore-test && cd /tmp/cw-restore-test
+sudo rclone copy --max-age 2d b2crypt:century-war .
+ls -l
+sqlite3 cw-backup-*.sqlite 'PRAGMA integrity_check;'          # oczekiwane: ok
+sqlite3 cw-backup-*.sqlite 'SELECT COUNT(*) FROM scores;'     # liczba wyników
+cd / && sudo rm -rf /tmp/cw-restore-test
+~~~
+
+Gdy pobrano kilka plików, sprawdź jeden (najnowszy). Kopie zawierają dane
+osobowe: nie kopiuj ich na prywatny komputer i usuń katalog testowy.
 
 ## 7. Aktualizacja i bezpieczne przywracanie
 
@@ -224,25 +279,83 @@ Baza musi pochodzić ze starej numeracji, a nie z już poprawionego schematu.
 Konflikt danych zatrzymuje start bez częściowej migracji. Przy niepewności
 najpierw testuj na kopii produkcyjnej.
 
-**Przywracanie z backupu (przerwa serwisowa):** zamknij zapis do bazy
-poleceniem docker compose down (**bez -v**). Uruchom jednorazowy kontener
-z tym samym wolumenem i podmontowaną kopią tylko do odczytu:
+**Schemat 3 (zadanie R5):** pierwsze uruchomienie tej wersji dodaje tabele
+`deletion_log`, `admin_log` i kolumnę `nick_reports.resolved_at`. Starszy obraz
+serwera **nie otworzy** bazy w schemacie 3 (`unsupported_schema_version`), więc
+wycofanie wersji oznacza odtworzenie kopii sprzed aktualizacji.
+
+### Budowa obrazu poza VPS (VPS z 2 GB RAM)
+
+Gradle potrzebuje ok. 4 GB RAM. Obraz możesz zbudować na swoim komputerze
+(Docker, architektura x86_64 jak na VPS) i wysłać go przez SSH:
+
+~~~bash
+# na swoim komputerze, w katalogu repozytorium (ta sama gałąź/tag co na VPS)
+git rev-parse --short HEAD
+docker build --platform linux/amd64 -f server/Dockerfile -t century-war-score:local .
+docker save century-war-score:local | gzip | ssh admin@scores.twojadomena.pl 'gunzip | docker load'
+# na VPS
+cd /opt/century-war
+git pull --ff-only                       # ten sam commit co obraz (compose i skrypty)
+docker compose up -d --no-build
+docker compose ps
+~~~
+
+`--no-build` zapobiega budowie na VPS. Nazwa `century-war-score:local` musi
+zgadzać się z `image:` w `docker-compose.yml`. Zapisz commit, z którego
+zbudowano obraz, żeby w razie problemu wrócić do poprzedniego.
+
+### Harmonogram aktualizacji (raz w miesiącu, ok. 30 minut)
+
+1. Kopia (§6) i sprawdzenie, że skrypt wysłał ją poza serwer.
+2. System: `sudo apt update && sudo apt upgrade -y`, a po aktualizacji jądra
+   `sudo reboot` (w Ubuntu włącz też `unattended-upgrades` dla poprawek
+   bezpieczeństwa).
+3. Przebudowa obrazu bez cache, żeby pobrać nowy `eclipse-temurin` z poprawkami:
+   `docker build --pull --no-cache ...` (u siebie) albo
+   `docker compose build --pull --no-cache` (na VPS z 4 GB RAM), potem `up -d`.
+4. Przegląd wersji zależności w `server/build.gradle.kts` (Ktor, sqlite-jdbc,
+   kotlinx-serialization): komunikaty bezpieczeństwa na stronach projektów.
+   **Podnoszenie wersji to osobne zlecenie z pełnymi testami serwera**
+   (`./gradlew :server:test -PserverOnly=true`), nie część rutynowej obsługi.
+5. `curl -fsS https://scores.twojadomena.pl/health` i `docker compose logs --tail=50 leaderboard`.
+
+**Przywracanie z backupu (przerwa serwisowa):** zatrzymaj serwer (**bez -v**)
+i przekaż kopię komendą `admin restore -`. Poprzednia baza nie znika: trafia do
+katalogu ratunkowego `cw-pre-restore-*` na wolumenie, a jej dziennik usunięć
+posłuży do powtórzenia usunięć.
 
 ~~~bash
 cd /opt/century-war
-docker compose down
-docker compose run --rm --no-deps \
-  -v /var/backups/century-war:/restore:ro \
-  --entrypoint /bin/sh leaderboard \
-  -c 'rm -f /var/lib/cw/leaderboards.db-wal /var/lib/cw/leaderboards.db-shm && cp /restore/WSTAW_NAZWE_KOPII.sqlite /var/lib/cw/leaderboards.db'
-docker compose up -d
+docker compose stop leaderboard
+docker compose run --rm --no-deps -T leaderboard admin restore - \
+  < /var/backups/century-war/WSTAW_NAZWE_KOPII.sqlite
+# zanotuj wypisaną linię previous-files: /var/lib/cw/cw-pre-restore-…
+~~~
+
+**Powtórzenie usunięć (zanim ranking znów będzie publiczny).** Kopia nie zna
+usunięć wykonanych po jej utworzeniu (w grze, przez `delete-player` i retencję).
+Serwer zapisuje je w `deletion_log` jako skrót HMAC identyfikatora (nie surowy
+UUID). Podaj datę kopii (dzień UTC z nazwy pliku `cw-backup-RRRRMMDD-…`) i bazę
+sprzed odtworzenia:
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin replay-deletions \
+  --since 2027-01-14 --from /var/lib/cw/cw-pre-restore-WSTAW/leaderboards.db
+# entries: N           – ile usunięć od tej daty zna nowsza baza
+# deleted_players: M   – ilu z tych graczy było w odtworzonej kopii i zostało usuniętych
+docker compose up -d leaderboard
 curl -f http://127.0.0.1:8080/healthz
 ~~~
 
-Wstaw rzeczywistą nazwę kopii. Jeśli obraz nie może zapisać pliku, sprawdź
-uprawnienia właściciela katalogu wolumenu (kontener działa jako century).
-Po przywróceniu **powtórz wszystkie żądania usunięcia danych wykonane od
-daty kopii** przed ponownym publicznym udostępnieniem rankingu.
+Komenda jest bezpieczna do powtórzenia (drugi raz usuwa 0 graczy) i dopisuje
+wpisy do dziennika odtworzonej bazy. Jeśli **poprzednia baza przepadła** (np.
+awaria dysku i odtworzenie z kopii zdalnej), usunięć z ostatniej doby nie da się
+odzyskać z dziennika: wykonaj ponownie `delete-player` dla próśb e-mailowych
+z tego okresu (§8) i odnotuj zdarzenie w rejestrze incydentów. Blokady zostają
+takie, jak w kopii; ponów `admin block` nadane po dacie kopii (widać je w
+`admin log` starej bazy). Jeśli obraz nie może zapisać pliku, sprawdź uprawnienia
+wolumenu (kontener działa jako `century`).
 
 ## 8. Żądanie usunięcia danych gracza
 
@@ -265,6 +378,37 @@ Dane Google Play Games, lokalny profil i systemowe kopie Androida **nie są
 usuwane przez tę operację**. Wnioski i prośby o potwierdzenie usunięcia można
 kierować na adres kontaktowy wydawcy z opublikowanej polityki prywatności.
 Przed publikacją uzupełnij ten adres i przetestuj rzeczywisty proces.
+
+### 8a. Prośba e-mailowa (gracz zgubił telefon albo nie ma dostępu do gry)
+
+Termin: **do 30 dni** od otrzymania prośby (polityka prywatności). Operator
+zna tylko nick, więc:
+
+1. Odpowiedz z prośbą o: nick **dokładnie jak w rankingu** (także „Dowódca-XXXX”,
+   jeśli filtr zamienił nick), przybliżoną datę ostatniej gry i tryb (np. Endless).
+   Nie proś o dane, których serwer nie ma (e-mail, imię, numer telefonu).
+2. Kopia przed usunięciem: `sudo bash /opt/century-war/server/backup-sqlite.sh`.
+3. Znajdź gracza (bez rozróżniania wielkości liter, także bez polskich znaków):
+   ~~~bash
+   docker compose run --rm --no-deps -T leaderboard admin find-nick Kowalski
+   # player  public_id  nick  scores  last_activity
+   ~~~
+   Kilka trafień: wybierz wiersz zgodny z datą ostatniej aktywności i trybem
+   (`admin export-csv | grep '^"UUID"'` pokaże wyniki danego UUID). Brak pewności
+   → dopytaj gracza; **nie usuwaj na ślepo cudzych danych**. Komunikat `hint:`
+   oznacza, że taki nick zamienia filtr — poproś o nick „Dowódca-XXXX”.
+4. Usuń wszystko (wyniki, nick, zgłoszenia, domyślnie też blokadę):
+   ~~~bash
+   docker compose run --rm --no-deps -T leaderboard admin delete-player UUID_TUTAJ
+   # deleted (kod 0) albo not_found (kod 1)
+   ~~~
+   `--keep-block` zostawia blokadę, gdy prośba przychodzi od zablokowanego gracza
+   i blokada ma dalej działać (zapisany zostaje wtedy tylko UUID z datą blokady).
+5. Odpowiedz graczowi, że dane usunięto, z datą. Usunięcie trafia do
+   `deletion_log` (skrót, nie UUID) i `admin log`; zniknie z kopii po upływie
+   ich retencji (lokalnie 14 dni, poza serwerem 30 dni).
+6. Dostęp do danych (art. 15 RODO): zamiast usuwać, wyślij graczowi wiersze
+   `admin export-csv` dla jego UUID (zaszyfrowany plik, bez innych graczy).
 
 ## 9. Moderowanie pseudonimów i wyników (CLI)
 
@@ -298,6 +442,15 @@ Administrator widzi UUID, publiczne ID, nick, powód i datę; gracze nie otrzymu
 
 ~~~bash
 docker compose run --rm --no-deps -T leaderboard admin reports 50
+docker compose run --rm --no-deps -T leaderboard admin reports --all 50   # także rozpatrzone
+~~~
+
+Domyślnie widać tylko **nierozpatrzone** zgłoszenia. Po decyzji (blokada,
+usunięcie albo brak działania) oznacz zgłoszenie numerem z kolumny `id`:
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin resolve-report 12
+# resolved / unchanged (już rozpatrzone) / not_found (kod 1)
 ~~~
 
 **Krok 2a.** Obejrzyj ostatnie wyniki. Zwrócone kolumny: UUID, plansza,
@@ -347,6 +500,10 @@ serwera; nie wymagają klucza HMAC i nie uruchamiają serwera HTTP. Nie
 wykonuj ich na kopii .db pobranej zwykłym cp przy aktywnym WAL.
 Błędny UUID albo plansza nie wykonują operacji.
 
+**Dziennik operatora:** `block`, `unblock`, `delete-score`, `delete-player`,
+`purge` i `replay-deletions` zapisują wpis w `admin_log` (czas, akcja, skrót
+gracza, szczegóły; bez surowego UUID). Podgląd: `admin log 50`.
+
 **Blokada jest zachowywana:** /v1/player/delete usuwa wyniki i nick,
 ale nie usuwa rekordu blokady UUID. Historyczny UUID może być przejęty
 przed pierwszym przypisaniem sekretu (migracja ze starej bazy);
@@ -359,6 +516,33 @@ operator rozstrzyga spory ręcznie.
 - df -h — wolne miejsce.
 - sudo ls -lt /var/backups/century-war/ — sprawdź, czy powstają nowe kopie.
 - sudo systemctl status caddy — certyfikat i proxy.
+
+- docker compose logs leaderboard | grep retention — dobowe czyszczenie danych (§13), same liczby.
+
+### Monitoring zewnętrzny i alerty (darmowe konta)
+
+Healthcheck Dockera tylko restartuje kontener; o awarii nikt by się nie
+dowiedział. Załóż na **e-mail właściciela**:
+
+1. **Dostępność** (UptimeRobot albo Healthchecks.io): monitor HTTP(S) na
+   `https://scores.twojadomena.pl/health`, co **5 minut**, oczekiwana odpowiedź
+   200 i treść `ok`.
+2. **Kopie** (Healthchecks.io): check „cw-backup”, okres 1 dzień, tolerancja
+   2 godziny; jego adres ping wpisz jako `CW_BACKUP_PING_URL` (§6a). Brak pingu
+   albo ping `/fail` = e-mail.
+
+**Co zrobić, gdy przyjdzie e-mail z alertem (prostym językiem):**
+
+- **„Serwer nie odpowiada” (health down):** gracze nie wyślą wyników, ale gra
+  działa dalej offline, a wyniki czekają w aplikacji. Zaloguj się (albo poproś
+  koordynatora) i przejdź „Awaria — diagnostyka” poniżej. Jeśli alert sam
+  zniknie po 5–10 minutach, wystarczy sprawdzić `docker compose logs`.
+- **„Kopia nie przyszła” albo „fail” (backup):** dane są bezpieczne, dopóki
+  działa serwer, ale nie ma świeżej kopii. Sprawdź `tail -50 /var/log/cw-backup.log`:
+  `Brak uruchomionego kontenera` → najpierw serwer; błąd `rclone` → klucz/kubełek
+  u dostawcy kopii (ważność klucza, opłaty); `No space left` → `df -h`.
+  Napraw tego samego dnia i uruchom skrypt ręcznie; drugi dzień bez kopii to
+  priorytet.
 
 **Ograniczenia produkcyjne:** jedna instancja SQLite, ochrona DDoS na proxy,
 ryzyko utraty sekretu instalacji wraz z profilem, możliwość przejęcia znanego
@@ -477,3 +661,46 @@ zapobiega zakończeniu Endless przez presję po fali 120. Taka konfiguracja
 nie przechodzi walidacji API. Pojedyncza weryfikacja nie obejmuje
 drugiego przebiegu normalizacji badań, oczekiwania w kolejce ani działania
 innych klientów. Limit **15 s** dotyczy całego budżetu od wejścia do kolejki.
+
+## 13. Retencja danych (RODO) i lista przed premierą
+
+Serwer sam usuwa dane po okresie przechowywania: **przy starcie i raz na dobę**
+(wątek w procesie serwera, w logach linia `retention: …` z samymi liczbami).
+Okresy ustawiasz w `.env` (dni, `0` = krok wyłączony). **Wartości domyślne są
+propozycją do potwierdzenia przez właściciela** (najlepiej z prawnikiem):
+
+| Zmienna | Domyślnie | Co usuwa |
+|---|---|---|
+| `CW_RETENTION_PERIOD_DAYS` | 90 | wyniki tablicy dnia (`daily`, liczone od dnia wyzwania) i tygodnia (`weekly_<n>`, liczone od **końca** tygodnia) |
+| `CW_RETENTION_REPORT_DAYS` | 180 | zgłoszenia nicków (także rozpatrzone) |
+| `CW_RETENTION_INACTIVE_DAYS` | 730 | gracza bez nowego wyniku przez 24 miesiące — w całości (wszystkie tablice, nick, zgłoszenia), z wpisem w dzienniku usunięć; blokada bez konta starsza niż ten okres też wygasa |
+| `CW_RETENTION_LOG_DAYS` | 400 | wpisy dziennika usunięć i dziennika operatora |
+
+Tablice stałe (`endless`, `skirmish`, `campaign_*`) **nie** są czyszczone wiekiem,
+tylko razem z nieaktywnym graczem. Przy każdym przebiegu znikają też skróty IP
+do dziennego limitu z poprzednich dni i zużyte `nonce`.
+
+Podgląd bez usuwania i ręczne uruchomienie:
+
+~~~bash
+docker compose run --rm --no-deps -T leaderboard admin purge --dry-run
+# dry-run daily_scores=… weekly_scores=… nick_reports=… inactive_players=… …
+docker compose run --rm --no-deps -T leaderboard admin purge
+~~~
+
+Usunięcie jest **nieodwracalne** (poza odtworzeniem kopii). Przed pierwszym
+uruchomieniem na produkcji zrób kopię (§6) i obejrzyj `--dry-run`. Po zmianie
+wartości w `.env`: `docker compose up -d` (restart wykona przebieg od razu).
+Usunięte dane znikają z kopii po upływie retencji kopii (14 dni lokalnie,
+30 dni poza serwerem).
+
+### Przed premierą (kolejność)
+
+1. Właściciel: VPS w UE (Hetzner albo OVH), domena, DPA u hostingu i dostawcy kopii.
+2. Instalacja §2–§4, sekrety w menedżerze haseł, `CW_TRUSTED_PROXY_IPS` (§4).
+3. Kopia lokalna + zdalna (§6, §6a) i jeden test odtworzenia z kopii zdalnej.
+4. Monitory dostępności i kopii (§10) z e-mailem właściciela; test: zatrzymaj
+   kontener na 10 minut i sprawdź, czy przyszedł e-mail.
+5. Potwierdzone okresy retencji w `.env` i w polityce prywatności (te same liczby),
+   adres e-mail do próśb o usunięcie w polityce; próba procedury §8a na testowym nicku.
+6. Dopiero potem `CW_SERVER_URL` w buildzie wydania.

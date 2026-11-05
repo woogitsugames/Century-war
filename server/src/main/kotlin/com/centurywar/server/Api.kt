@@ -128,7 +128,7 @@ fun Application.leaderboardModule(
                 return@post
             }
             val deleted = withContext(Dispatchers.IO) {
-                store.deleteOwnedPlayer(input.player, installSecretHash(installationSecret!!))
+                store.deleteOwnedPlayer(input.player, installSecretHash(installationSecret!!), nowMillis())
             }
             if (!deleted) {
                 call.fail(HttpStatusCode.Forbidden, "not_player_owner")
