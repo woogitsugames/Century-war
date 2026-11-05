@@ -103,8 +103,8 @@ class LTest {
             for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
         }
         // Liczby z opisów kart zgadzają się z :sim we wszystkich językach.
-        val numbers = mapOf("ec_pike_square_d" to listOf("12", "30"), "ec_vanguard_d" to listOf("20"),
-            "ec_war_horns_d" to listOf("8", "15"), "day206_lore_d" to listOf("50"),
+        val numbers = mapOf("ec_pike_square_d" to listOf("20", "40"), "ec_vanguard_d" to listOf("30"),
+            "ec_war_horns_d" to listOf("10", "20"), "day206_lore_d" to listOf("50"),
             "day206_fury_d" to listOf("20"))
         for ((k, values) in numbers) for (text in L.raw(k)!!) {
             for (v in values) assertTrue("$k: $text", text.contains(v))

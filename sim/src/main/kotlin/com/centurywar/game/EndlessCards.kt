@@ -127,16 +127,16 @@ object EndlessCards {
     const val WAGER_WAVE_SCORE = 287L
 
     // Dzień 58 (paczka 206): stałe nowych kart.
-    /** Szyk pik: piechota gracza otrzymuje od ciężkich wroga (wręcz) -12% za pełny stos, najwyżej -30%. */
-    const val PIKE_SQUARE_REDUCTION = 0.12f
-    const val PIKE_SQUARE_MIN_MUL = 0.70f
-    /** Straż przednia: piechota gracza zadaje strzelcom wroga +20% za pełny stos. */
-    const val VANGUARD_BONUS = 0.20f
+    /** Szyk pik: piechota gracza otrzymuje od ciężkich wroga (wręcz) -20% za pełny stos, najwyżej -40%. */
+    const val PIKE_SQUARE_REDUCTION = 0.20f
+    const val PIKE_SQUARE_MIN_MUL = 0.60f
+    /** Straż przednia: piechota gracza zadaje strzelcom wroga +30% za pełny stos. */
+    const val VANGUARD_BONUS = 0.30f
     /** Nagroda za głowę: złoto za pokonanego bossa (× skala kosztów epoki, × moc stosów). */
-    const val BOSS_BOUNTY_GOLD = 80f
-    /** Rogi wojenne: przez pierwsze [WAR_HORNS_SECONDS] s fali jednostki gracza +15% za pełny stos. */
-    const val WAR_HORNS_BONUS = 0.15f
-    const val WAR_HORNS_SECONDS = 8f
+    const val BOSS_BOUNTY_GOLD = 120f
+    /** Rogi wojenne: przez pierwsze [WAR_HORNS_SECONDS] s fali jednostki gracza +20% za pełny stos. */
+    const val WAR_HORNS_BONUS = 0.20f
+    const val WAR_HORNS_SECONDS = 10f
 
     // Pierwsza karta ma pełną moc, kolejne 60%, 40% itd.; suma nigdy nie rośnie bez końca.
     private val stackPowers = floatArrayOf(1f, 0.6f, 0.4f, 0.3f, 0.2f, 0.15f, 0.1f, 0.05f)

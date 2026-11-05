@@ -2079,3 +2079,81 @@ ostrzegawcze < 50% zostają na 29, 31, 33, 36);
 tury 10 „≤ ok. 75%”, +3 pp w szumie). Etapy 19–27 bez zmian (klif 19 z dowódcą jak w D37).
 
 - 2026-11-04 — regeneracja złotych powtórek: K1: stageRamp 28 x0,90, 30 x0,92, 31 x0,88, 32 x0,92, 33 x0,92, PROTOCOL 0.8.10 (do decyzji właściciela); powtórki bez zmian (ponowna regeneracja 2026-11-05 „PROTOCOL 0.8.10 (K1)”: bez zmian).
+
+## D58 — Dzień 58: karty 206, zestawy tygodnia, wydarzenia dnia (5.11.2026)
+
+Paczka zawartości (decyzja właściciela): 4 karty Endless (Szyk pik, Straż przednia, Nagroda za głowę,
+Rogi wojenne), 2 zestawy Oblężenia tygodnia (Wojna błyskawiczna, Żelazny szyk) i 2 symetryczne
+wydarzenia dnia (Dzień nauki, Dzień furii) od `Daily.EVENTS_V4_DAY` = premiera + 19 (kolejny dzień
+wydarzenia po `EVENTS_V3_DAY`; do niego zamrożona jedenastka `EVENTS_V3`). Kampania bez zmian.
+`SimVersion.PROTOCOL` 0.8.10 → **0.8.11**, `BattleSnapshot.VERSION` 20 → **21**, `Replay.VERSION` bez zmian.
+Raport: `docs/reports/d58-tresc.md`.
+
+Pomiar: „przed” = `origin/main` (3a2… z 5.11, kopia `git archive` poza repo), „po” = ta gałąź.
+Endless: weteran 80% badań, `EndlessBalanceReportTest` (próba kontrolna: `ENDLESS100_FIRST_SEED=2001`).
+
+### Endless, 100 seedów (cel: fala 60 = 5–15/100, mediana porażek 45–55, fala 20 ≥ 95)
+
+| Metryka | 1001–1100 przed | pierwsza wersja | po strojeniu | 2001–2100 przed | pierwsza wersja | po strojeniu |
+|---|---:|---:|---:|---:|---:|---:|
+| Fala 60 (żywa baza) | 9/100 | 5/100 | **5/100** | 6/100 | 4/100 | **8/100** |
+| Mediana fali porażki | 53 | 53 | **53** | 53 | 54 | **53** |
+| Fala 20 | 100/100 | 100/100 | 100/100 | 100/100 | 100/100 | 100/100 |
+| Średnia fala | 51,22 | 50,29 | 50,42 | 50,96 | 50,92 | 50,98 |
+| Średni wynik | 21 064 | 20 657 | 20 707 | 20 952 | 20 899 | 20 933 |
+
+Przebiegi z nową kartą (AI gracza sama wybiera, po strojeniu, 1001 / 2001): Szyk pik 44 / 47,
+Straż przednia 19 / 29, Nagroda za głowę 11 / 18, Rogi wojenne 25 / 26 na 100 (zawsze 1 stos).
+
+**Strojenie.** Pierwsza wersja (Szyk pik −12%/min ×0,7, Straż +20%, Nagroda 80 złota, Rogi +15% przez 8 s)
+była słabsza od starszych kart i zabierała im miejsce w ofertach: fala 60 spadła do 5 i 4/100.
+Po strojeniu: Szyk pik **−20%** (min. ×0,6), Straż przednia **+30%**, Nagroda **120** złota × skala epoki,
+Rogi wojenne **+20% przez 10 s**. Obie próby w paśmie, mediana i średnia fala jak przed zmianą.
+
+### Siła kart — `newCardsEffect206` (50 seedów 1001–1050, karta ×3 przy fali 5)
+
+| Karta | Średnia fala | Fala 60 | Średni wynik |
+|---|---:|---:|---:|
+| brak | 49,62 | 3 | 20 304 |
+| Szyk pik | 49,80 | 1 | 20 458 |
+| Straż przednia | 48,94 | 2 | 19 930 |
+| Nagroda za głowę | 50,52 | 2 | 20 734 |
+| Rogi wojenne | 52,98 | 3 | 21 910 |
+| *Mur tarcz (D6)* | 53,44 | 3 | 22 076 |
+| *Saperzy (D6)* | 52,28 | 4 | 21 599 |
+| *Pancerz piechoty* | 55,42 | 9 | 23 010 |
+| *Skarbiec wojenny (D6)* | 51,74 | 3 | 21 238 |
+| *Bębny natarcia* | 50,74 | 2 | 20 763 |
+
+Żadna nowa karta nie jest dominująca: wszystkie poniżej Pancerza piechoty i Muru tarcz; najmocniejsze
+Rogi wojenne są na poziomie Saperów. Szyk pik i Straż przednia działają sytuacyjnie (ciężcy wręcz,
+strzelcy wroga), więc w średniej prawie nie ruszają fali.
+
+### Oblężenie tygodnia: `weeklyRuleSets184` (te same 8 tygodni)
+
+| Zestaw | Mediana fali przed | po |
+|---|---:|---:|
+| day109_gold / march / rain | 12,5 / 10,0 / 11,0 | 12,0 / 11,0 / 11,5 |
+| day109_veterans / hired / iron | 10,5 / 11,0 / 8,5 | 12,0 / 12,0 / 8,5 |
+| week184_night / mercs / bastion | 12,0 / 12,5 / 10,0 | 11,0 / 13,0 / 10,0 |
+| **week206_blitz** (Szklane działa + Szybkie wojska, Rogi wojenne) | — | **9,0** (pierwsza wersja kart: 7,5) |
+| **week206_pikes** (Opancerzony wróg + Bogaty start, Szyk pik) | — | **10,5** (pierwsza wersja: 9,5) |
+
+Pasmo istniejących zestawów 8,5–13,0; oba nowe w paśmie po strojeniu kart.
+
+### Wydarzenia dnia: lustrzane bitwy AI vs AI (`BALANCE_MIRROR_RUNS=60`, 360 bitew)
+
+| Wydarzenie | Wygrane strony 0 | Mediany czasu (epoka 0 / 4 / 8) [min] |
+|---|---:|---|
+| brak | 189/360 (52,5%) | 13,87 / 13,21 / 12,99 |
+| SCHOLARS_DAY | 181/360 (50,3%) | 13,90 / 12,79 / 13,07 |
+| FURY_DAY | 176/360 (48,9%) | 13,93 / 12,89 / 13,21 |
+
+Przy 20 próbach (120 bitew) Dzień nauki dał 44,2% przy 46,7% bez wydarzenia, więc to szum; na 360
+bitwach oba w paśmie 45–55% i bez wydłużenia bitew.
+
+### Regresja
+
+Dni sprzed `EVENTS_V4_DAY` mają te same wydarzenia (`Content206Test.daysBeforeEventsV4KeepTheirEvents`),
+dzień wyzwania nie dostaje nowych zestawów (`dailyChallengeNeverUsesNewRuleSets`). Karty nie występują
+w kampanii.

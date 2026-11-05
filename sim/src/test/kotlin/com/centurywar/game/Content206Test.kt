@@ -73,10 +73,10 @@ class Content206Test {
 
     @Test fun pikeSquareReducesOnlyHeavyMeleeHitsOnInfantryWithFloor() {
         val heavy = hitLoss(Role.MELEE, Role.HEAVY, 0, EndlessCard.PIKE_SQUARE, 0)
-        assertEquals(heavy * 0.88f, hitLoss(Role.MELEE, Role.HEAVY, 0, EndlessCard.PIKE_SQUARE, 1),
+        assertEquals(heavy * 0.8f, hitLoss(Role.MELEE, Role.HEAVY, 0, EndlessCard.PIKE_SQUARE, 1),
             heavy * 0.002f)
-        // 8 stosów: 1 - 0,12 × 2,8 = 0,664, ale dolny limit to 0,7.
-        assertEquals(heavy * 0.7f, hitLoss(Role.MELEE, Role.HEAVY, 0, EndlessCard.PIKE_SQUARE, 8),
+        // 8 stosów: 1 - 0,2 × 2,8 = 0,44, ale dolny limit to 0,6.
+        assertEquals(heavy * 0.6f, hitLoss(Role.MELEE, Role.HEAVY, 0, EndlessCard.PIKE_SQUARE, 8),
             heavy * 0.002f)
         // Inne role wroga i inne role gracza bez zmian.
         val blade = hitLoss(Role.MELEE, Role.MELEE, 0, EndlessCard.PIKE_SQUARE, 0)
@@ -87,9 +87,9 @@ class Content206Test {
 
     @Test fun vanguardBoostsInfantryOnlyAgainstRangedFoes() {
         val vsArcher = hitLoss(Role.RANGED, Role.MELEE, 1, EndlessCard.VANGUARD, 0)
-        assertEquals(vsArcher * 1.2f, hitLoss(Role.RANGED, Role.MELEE, 1, EndlessCard.VANGUARD, 1),
+        assertEquals(vsArcher * 1.3f, hitLoss(Role.RANGED, Role.MELEE, 1, EndlessCard.VANGUARD, 1),
             vsArcher * 0.002f)
-        assertEquals(vsArcher * 1.32f, hitLoss(Role.RANGED, Role.MELEE, 1, EndlessCard.VANGUARD, 2),
+        assertEquals(vsArcher * 1.48f, hitLoss(Role.RANGED, Role.MELEE, 1, EndlessCard.VANGUARD, 2),
             vsArcher * 0.002f)
         val vsBlade = hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.VANGUARD, 0)
         assertEquals(vsBlade, hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.VANGUARD, 1), 0f)
@@ -101,7 +101,7 @@ class Content206Test {
     @Test fun warHornsBoostOnlyTheStartOfAWave() {
         // Fala 1 trwa 27,75 s; waveTimer 25,75 to 2 s od początku, 7,75 to 20 s.
         val early = hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.WAR_HORNS, 0, wave = 1, waveTimer = 25.75f)
-        assertEquals(early * 1.15f, hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.WAR_HORNS, 1,
+        assertEquals(early * 1.2f, hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.WAR_HORNS, 1,
             wave = 1, waveTimer = 25.75f), early * 0.002f)
         val late = hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.WAR_HORNS, 0, wave = 1, waveTimer = 7.75f)
         assertEquals(late, hitLoss(Role.MELEE, Role.MELEE, 1, EndlessCard.WAR_HORNS, 1,
@@ -150,8 +150,8 @@ class Content206Test {
     @Test fun bossBountyPaysGoldPerBoss() {
         val plain = goldAfterBossKill(0)
         val scale = Defs.costScale(0)
-        assertEquals(80f * scale, goldAfterBossKill(1) - plain, 0.05f)
-        assertEquals(80f * scale * 1.6f, goldAfterBossKill(2) - plain, 0.05f)
+        assertEquals(120f * scale, goldAfterBossKill(1) - plain, 0.05f)
+        assertEquals(120f * scale * 1.6f, goldAfterBossKill(2) - plain, 0.05f)
     }
 
     @Test fun thousandOffersStayValidWithNewCards() {
