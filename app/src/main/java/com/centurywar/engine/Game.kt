@@ -857,7 +857,10 @@ class Game(
 
     /** Start aplikacji (MainActivity po utworzeniu gry). */
     fun playtestStarted(nowMs: Long) {
-        playtest?.startSession(nowMs, frameMetrics.totalDroppedSteps)
+        val log = playtest ?: return
+        log.startSession(nowMs, frameMetrics.totalDroppedSteps)
+        // D48: kod testera tylko w wersjach testowych (losowy, lokalny, raz).
+        if (testerSurveyEnabled) log.ensureTesterCode()
     }
 
     /** Powrót z tła (wątek gry). */

@@ -6,6 +6,7 @@ import com.centurywar.game.SaveGuard
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.security.SecureRandom
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -19,6 +20,12 @@ import java.util.concurrent.TimeUnit
  * D45 (R13 TOP 5 poz. 2): lejek kampanii, czyli dla każdego etapu próby, wygrane, kapitulacje,
  * łączny czas bitew i liczba bitew z przywołanym dowódcą. Pole `stages` jest opcjonalne: starszy
  * dziennik wczytuje się bez zmiany [VERSION], a uszkodzony lejek zeruje tylko lejek.
+ *
+ * D48 (R13 TOP 5 poz. 1, tylko wersje testowe): losowy kod testera (`code`), liczniki awarii
+ * i ANR z lokalnego [com.centurywar.crash.CrashStore] (`crashes`, `anrs`, znacznik `crashSeen`),
+ * mapa dni gry (`dayBits`, bit k = dzień `lastDay - k`) i znacznik przypomnień o raporcie
+ * (`reminders`). Wszystkie pola opcjonalne, [VERSION] bez zmian. Kod jest losowany lokalnie,
+ * nie pochodzi z konta, urządzenia ani profilu i nie trafia do profilu, chmury ani powtórek.
  *
  * Mutacje wykonuje wątek gry (albo UI w onPause, gdy pętla stoi); bez alokacji poza zapisem.
  * Zapis pliku robi osobny wątek I/O. Uszkodzony plik oznacza start od zera, bez ostrzeżenia.
@@ -60,6 +67,18 @@ class PlaytestLog(private val file: File) {
         private const val MAX_COUNT = 10_000_000
         /** Liczba etapów kampanii w lejku (stała tablica, bez alokacji przy rozliczeniu). */
         val STAGE_COUNT = Campaign.stages.size
+        /** D48: znaki kodu testera, bez mylących par (0/O, 1/I/L, 2/Z, 5/S, 6/G, 8/B). */
+        const val TESTER_CODE_CHARS = "ACDEFHJKMNPQRTUVWXY3479"
+        const val TESTER_CODE_LENGTH = 4
+        private val TESTER_CODE = Regex("[$TESTER_CODE_CHARS]{$TESTER_CODE_LENGTH}")
+        /** D48: mapa dni w raporcie: tyle ostatnich dni UTC. */
+        const val DAY_MAP_DAYS = 28
+        private const val DAY_MS = 86_400_000L
+        /** D48: bity [reminders]: przypomnienie z 3. i z 10. dnia już pokazane. */
+        const val REMINDER_DAY3 = 1
+        const val REMINDER_DAY10 = 2
+
+        fun validTesterCode(code: String): Boolean = TESTER_CODE.matches(code)
     }
 
     var firstDay = -1L
@@ -98,6 +117,22 @@ class PlaytestLog(private val file: File) {
         private set
     /** Dzień UTC odpowiedzi albo pominięcia; −1 = brak. */
     var surveyDay = -1L
+        private set
+    /** D48: losowy kod testera (pusty = jeszcze nie wylosowany; tylko wersje testowe). */
+    var testerCode = ""
+        private set
+    /** D48: awarie (Java i natywne) i ANR zauważone od założenia dziennika. */
+    var crashes = 0
+        private set
+    var anrs = 0
+        private set
+    /** Czas (ms) najnowszego policzonego raportu awarii; starszych nie liczymy drugi raz. */
+    private var crashSeenMs = 0L
+    /** Bit k = gra w dniu UTC `lastDay - k` (64 dni wstecz). */
+    var dayBits = 0L
+        private set
+    /** D48: pokazane przypomnienia o raporcie ([REMINDER_DAY3], [REMINDER_DAY10]). */
+    var reminders = 0
         private set
 
     // Lejek kampanii: indeks = etap (0 = etap 1). Czas w sekundach bitwy.
@@ -150,6 +185,7 @@ class PlaytestLog(private val file: File) {
         tutorialSeconds = NOT_YET; firstWinSeconds = NOT_YET
         lossStreak = 0; maxLossStreak = 0; surrenders = 0; screensVisited = 0
         surveyState = SURVEY_NONE; surveyRating = 0; surveyIssue = -1; surveyDay = -1L
+        testerCode = ""; crashes = 0; anrs = 0; crashSeenMs = 0L; dayBits = 0L; reminders = 0
         perfReduction.fill(0); perfP95Tenths.fill(0); perfDropped.fill(0L); perfThermal.fill(0)
         perfHead = 0; perfCount = 0
         resetStages()
@@ -180,6 +216,21 @@ class PlaytestLog(private val file: File) {
         surveyIssue = o.optInt("surveyIssue", -1).let { if (it in SURVEY_ISSUES.indices) it else -1 }
         surveyDay = o.optLong("surveyDay", -1L).coerceAtLeast(-1L)
         if (surveyState == SURVEY_ANSWERED && surveyRating == 0) surveyState = SURVEY_SKIPPED
+        // D48: pola raportu v2, opcjonalne; zły kod znika (nowy zostanie wylosowany).
+        testerCode = o.optString("code", "").let { if (validTesterCode(it)) it else "" }
+        crashes = o.optLong("crashes", 0L).coerceIn(0L, MAX_COUNT.toLong()).toInt()
+        anrs = o.optLong("anrs", 0L).coerceIn(0L, MAX_COUNT.toLong()).toInt()
+        crashSeenMs = o.optLong("crashSeen", 0L).coerceAtLeast(0L)
+        reminders = o.optInt("reminders", 0) and (REMINDER_DAY3 or REMINDER_DAY10)
+        dayBits = if (o.has("dayBits")) o.optLong("dayBits", 0L) else 0L
+        if (lastDay >= 0L) {
+            // Dziennik sprzed d48: znamy tylko pierwszy i ostatni dzień.
+            if (!o.has("dayBits")) {
+                dayBits = 1L
+                if (firstDay >= 0L && lastDay - firstDay in 1L..63L) dayBits = dayBits or (1L shl (lastDay - firstDay).toInt())
+            }
+            dayBits = dayBits or 1L
+        } else dayBits = 0L
         val perf = o.getJSONArray("perf")
         // Zapis od najstarszej do najnowszej sesji; najnowsza staje się bieżącą głową.
         val n = minOf(perf.length(), PERF_SESSIONS)
@@ -237,6 +288,8 @@ class PlaytestLog(private val file: File) {
         if (firstDay < 0L) firstDay = day
         // Zegar cofnięty przez gracza nie liczy dnia drugi raz.
         if (lastDay < 0L || day > lastDay) {
+            val shift = if (lastDay < 0L) 64L else day - lastDay
+            dayBits = (if (shift >= 64L) 0L else dayBits shl shift.toInt()) or 1L
             lastDay = day
             daysPlayed = (daysPlayed + 1).coerceAtMost(MAX_COUNT)
         }
@@ -360,6 +413,56 @@ class PlaytestLog(private val file: File) {
         surveyDay = Missions.utcDay(nowMs.coerceAtLeast(0L))
     }
 
+    /**
+     * D48: kod testera, losowany raz (lokalnie, [SecureRandom]) i zapisywany z dziennikiem.
+     * Wołane tylko w wersjach testowych.
+     */
+    @Synchronized
+    fun ensureTesterCode(random: java.util.Random = SecureRandom()): String {
+        if (testerCode.isNotEmpty()) return testerCode
+        val sb = StringBuilder(TESTER_CODE_LENGTH)
+        repeat(TESTER_CODE_LENGTH) { sb.append(TESTER_CODE_CHARS[random.nextInt(TESTER_CODE_CHARS.length)]) }
+        testerCode = sb.toString()
+        return testerCode
+    }
+
+    /**
+     * D48: awarie i ANR z lokalnego dziennika awarii (czas pliku, czy ANR). Liczy tylko zdarzenia
+     * nowsze niż ostatnio policzone i nie starsze niż pierwszy dzień dziennika. Zwraca, czy coś
+     * się zmieniło (wtedy warto zapisać). Wątek I/O; metoda zsynchronizowana.
+     */
+    @Synchronized
+    fun countCrashes(events: List<Pair<Long, Boolean>>): Boolean {
+        val since = if (firstDay >= 0L) firstDay * DAY_MS else Long.MAX_VALUE
+        var newest = crashSeenMs
+        var changed = false
+        for ((time, anr) in events) {
+            if (time <= crashSeenMs || time < since) continue
+            if (anr) anrs = (anrs + 1).coerceAtMost(MAX_COUNT) else crashes = (crashes + 1).coerceAtMost(MAX_COUNT)
+            if (time > newest) newest = time
+            changed = true
+        }
+        crashSeenMs = newest
+        return changed
+    }
+
+    /** D48: [DAY_MAP_DAYS] dni do [today] włącznie, od najstarszego; `1` = grał tego dnia UTC. */
+    @Synchronized
+    fun dayMap(today: Long): String {
+        val sb = StringBuilder(DAY_MAP_DAYS)
+        for (k in DAY_MAP_DAYS - 1 downTo 0) {
+            val back = lastDay - (today - k)
+            sb.append(if (lastDay >= 0L && back in 0L..63L && (dayBits ushr back.toInt()) and 1L == 1L) '1' else '0')
+        }
+        return sb.toString()
+    }
+
+    /** D48: zapamiętuje pokazane przypomnienie o raporcie (maska z [TesterReportReminder]). */
+    @Synchronized
+    fun reminderShown(mask: Int) {
+        reminders = reminders or (mask and (REMINDER_DAY3 or REMINDER_DAY10))
+    }
+
     /** Wydajność sesji od najnowszej; [index] 0 = bieżąca. */
     class PerfSession(val maxReduction: Int, val worstP95Ms: Float, val droppedSteps: Long, val maxThermal: Int)
 
@@ -415,6 +518,12 @@ class PlaytestLog(private val file: File) {
                 .put(stageSeconds[i]).put(stageCommander[i]))
         }
         if (stages.length() > 0) o.put("stages", stages)
+        if (testerCode.isNotEmpty()) o.put("code", testerCode)
+        if (crashes > 0) o.put("crashes", crashes)
+        if (anrs > 0) o.put("anrs", anrs)
+        if (crashSeenMs > 0L) o.put("crashSeen", crashSeenMs)
+        if (dayBits != 0L) o.put("dayBits", dayBits)
+        if (reminders != 0) o.put("reminders", reminders)
         return o.toString()
     }
 

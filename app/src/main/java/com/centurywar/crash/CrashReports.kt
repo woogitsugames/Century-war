@@ -86,6 +86,10 @@ object CrashReports {
         }
     }
 
+    /** D48: awarie i ANR z dziennika (czas, czy ANR) dla Raportu v2; wątek I/O. */
+    fun fatalEvents(): List<Pair<Long, Boolean>> =
+        try { store?.fatalEvents() ?: emptyList() } catch (_: Exception) { emptyList() }
+
     /** Wołane na wątku I/O przy uruchamianiu, nie podczas renderowania. */
     fun pendingFatal(context: Context): String? {
         val recent = store?.newest(fatalOnly = true) ?: return null

@@ -44,6 +44,16 @@ check(testerSurveyOverride == null || testerSurveyOverride in setOf("true", "fal
 val testerSurveyRelease = testerSurveyOverride?.toBoolean()
     ?: (releaseVersionName.startsWith("0.") || releaseVersionName.contains('-'))
 
+// D48 (R13 TOP 5 poz. 3): adres odbiorcy „Raportu dla testera”. -PtesterFeedback=<e-mail albo
+// https://… formularza>; domyślnie pusty = jak dotąd (tester sam wybiera odbiorcę). Używany tylko
+// w wersjach z ankietą testera (TESTER_SURVEY).
+val testerFeedback = providers.gradleProperty("testerFeedback").orNull?.trim().orEmpty()
+check(testerFeedback.isEmpty() || (testerFeedback.length <= 200 &&
+    (Regex("[^@\\s\"]+@[^@\\s\"]+\\.[^@\\s\"]+").matches(testerFeedback) ||
+        Regex("https://[^\\s\"]+").matches(testerFeedback)))) {
+    "-PtesterFeedback przyjmuje adres e-mail albo adres https:// (do 200 znaków)"
+}
+
 // Konfiguracja rankingu tylko z lokalnego pliku lub zmiennych CI; bez wartości domyślnych.
 val localSettings = Properties().apply {
     val settings = rootProject.file("local.properties")
@@ -108,6 +118,7 @@ android {
         buildConfigField("String", "CW_PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
         buildConfigField("String", "PRIVACY_URL", quotedBuildValue(scorePrivacyUrl))
         buildConfigField("boolean", "TESTER_SURVEY", testerSurveyRelease.toString())
+        buildConfigField("String", "TESTER_FEEDBACK", quotedBuildValue(testerFeedback))
     }
 
     buildFeatures { buildConfig = true }

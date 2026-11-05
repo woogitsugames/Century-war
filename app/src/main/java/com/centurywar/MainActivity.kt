@@ -58,6 +58,7 @@ import com.centurywar.meta.ProfileBackup
 import com.centurywar.meta.ReplayStore
 import com.centurywar.meta.BattleHistory
 import com.centurywar.meta.PlaytestLog
+import com.centurywar.meta.TesterReportReminder
 import com.centurywar.meta.ScoreClient
 import com.centurywar.engine.L
 import com.centurywar.engine.Icons
@@ -186,6 +187,7 @@ class MainActivity : Activity(), Host {
     private fun collectExitReasonsLater(app: Context) {
         Thread({
             exitReasonCollector(app)
+            countPlaytestCrashes()
             val pending = CrashReports.pendingFatal(app)
             exitReasonsCollected = true
             if (pending == null) return@Thread
@@ -201,6 +203,16 @@ class MainActivity : Activity(), Host {
                 }
             }
         }, "crash-io").apply { isDaemon = true; priority = Thread.MIN_PRIORITY; start() }
+    }
+
+    /**
+     * D48 (Raport v2, tylko wersje testowe): liczba awarii i ANR z lokalnego dziennika awarii
+     * do dziennika testu. Tylko odczyt plików; nic nie jest wysyłane. Wątek `crash-io`.
+     */
+    private fun countPlaytestCrashes() {
+        if (!::game.isInitialized || !game.testerSurveyEnabled) return
+        val log = game.playtest ?: return
+        if (log.countCrashes(CrashReports.fatalEvents())) log.saveAsync()
     }
 
     /** Odłożone pytanie o raport (było nad bitwą) przy następnym menu. */
@@ -892,17 +904,24 @@ class MainActivity : Activity(), Host {
         }
     }
 
+    private fun feedbackKind(): Int = TesterReportReminder.feedbackKind(BuildConfig.TESTER_FEEDBACK.trim())
+
     /** R2-04: okno z opisem zawartości; anulowanie niczego nie wysyła. */
     override fun sharePlaytestReport() {
         runOnUiThread {
             if (isFinishing || isDestroyed) return@runOnUiThread
-            AlertDialog.Builder(this)
+            val testBuild = ::game.isInitialized && game.testerSurveyEnabled
+            val dialog = AlertDialog.Builder(this)
                 .setTitle(L["pt182_button"])
-                .setMessage(L["pt186_desc"])
+                // D48: wersja testowa dopisuje kod testera i pozostałe pola Raportu v2.
+                .setMessage(if (testBuild) L["pt186_desc"] + "\n\n" + L["tr204_code_note"] else L["pt186_desc"])
                 .setPositiveButton(L["report_send"]) { _, _ -> sendPlaytestReport() }
                 .setNegativeButton(L["report_cancel"], null)
                 .setOnDismissListener { hideSystemBars() }
-                .show()
+            // D48 (-PtesterFeedback z adresem formularza): raport do schowka i formularz w przeglądarce.
+            if (testBuild && feedbackKind() == TesterReportReminder.FEEDBACK_URL)
+                dialog.setNeutralButton(L["tr204_form"]) { _, _ -> sendPlaytestReport(toForm = true) }
+            dialog.show()
         }
     }
 
@@ -910,8 +929,9 @@ class MainActivity : Activity(), Host {
      * Migawka liczników na wątku gry (bez I/O), tekst poza nim, potem `ACTION_SEND`:
      * gracz sam wybiera aplikację i odbiorcę; arkusz udostępniania nie wysyła nic sam.
      */
-    private fun sendPlaytestReport() {
+    private fun sendPlaytestReport(toForm: Boolean = false) {
         if (!::game.isInitialized) return
+        val feedback = if (game.testerSurveyEnabled) BuildConfig.TESTER_FEEDBACK.trim() else ""
         game.post {
             val input = PlaytestReportText.collect(game)
             Thread({
@@ -919,10 +939,22 @@ class MainActivity : Activity(), Host {
                 val body = PlaytestReportText.build(device[0], device[1], device[2], input)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (toForm) {
+                        // Tester sam wkleja raport w formularzu; nic nie jest wysyłane automatycznie.
+                        runCatching {
+                            getSystemService(android.content.ClipboardManager::class.java)
+                                ?.setPrimaryClip(ClipData.newPlainText(L["pt182_subject"], body))
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(feedback)))
+                        }
+                        return@runOnUiThread
+                    }
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_SUBJECT, L["pt182_subject"])
                         putExtra(Intent.EXTRA_TEXT, body)
+                        // D48: -PtesterFeedback z e-mailem podpowiada odbiorcę; tester nadal wybiera aplikację.
+                        if (TesterReportReminder.feedbackKind(feedback) == TesterReportReminder.FEEDBACK_EMAIL)
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf(feedback))
                     }
                     runCatching { startActivity(Intent.createChooser(send, L["pt182_share_title"])) }
                 }

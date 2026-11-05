@@ -20,6 +20,7 @@ import com.centurywar.game.SaveGuard
 import com.centurywar.meta.Missions
 import com.centurywar.meta.NextGoalKind
 import com.centurywar.meta.NextGoals
+import com.centurywar.meta.TesterReportReminder
 import com.centurywar.meta.TesterSurvey
 import kotlin.math.max
 import kotlin.math.min
@@ -47,6 +48,13 @@ class MenuScreen(g: Game) : Screen(g) {
     private var whatsNewSeenRef: String? = null
     /** R2-01: jedna linia „następnego celu” pod kaflami (po samouczku, gdy jest miejsce). */
     internal val goalBtn = btn(GOAL).also { it.visible = false }
+    /** D48 (R13 TOP 5 poz. 3): nieblokujący baner „wyślij Raport dla testera” (3. i 10. dzień). */
+    internal val reportReminder = btn(REPORT_REMINDER).also { it.visible = false }
+    /** Próg dnia pokazanego banera (3 albo 10); 0 = brak. */
+    internal var reminderDay = 0
+        private set
+    private var reminderQuiet = 0f
+    private var reminderText = ""
     internal var goalKind = NextGoalKind.NONE
         private set
     /** R10-02: argument celu (indeks etapu dla HARD_STAGE). */
@@ -98,6 +106,8 @@ class MenuScreen(g: Game) : Screen(g) {
         buttons.remove(surveySkip); buttons.add(0, surveySkip)
         hideSurveyButtons()
         buttons.add(0, hints.okBtn)
+        // Baner przypomnienia leży w pasie powiadomień nad kafelkami: dotyk dostaje pierwszy.
+        buttons.remove(reportReminder); buttons.add(0, reportReminder)
         // Okno „Wznowić bitwę?” leży nad kafelkami menu: jego przyciski muszą dostać dotyk pierwsze,
         // inaczej tap w „Porzuć” trafiał w zasłonięty kafelek i był ignorowany.
         buttons.remove(resumeNo); buttons.remove(resumeYes)
@@ -140,6 +150,7 @@ class MenuScreen(g: Game) : Screen(g) {
         const val RESUME_NO = 21
         const val WHATS_NEW = 10
         const val GOAL = 11
+        const val REPORT_REMINDER = 12
         /** Najmniejszy napis celu (sp); przy braku miejsca linia znika zamiast maleć. */
         const val GOAL_MIN_SP = 11f
         const val WHATS_NEW_H = 40f
@@ -188,6 +199,7 @@ class MenuScreen(g: Game) : Screen(g) {
             layoutPortrait()
             layoutResume(w / 2 + (g.insetL - g.insetR) / 2)
             layoutSurvey()
+            layoutReminder()
             refreshMissionBadge()
             refreshGoal()
             return
@@ -266,6 +278,7 @@ class MenuScreen(g: Game) : Screen(g) {
         layoutWhatsNew(codex.r.left - 12 * dp, landscape = true)
         layoutResume(cx)
         layoutSurvey()
+        layoutReminder()
         refreshMissionBadge()
         refreshGoal()
     }
@@ -413,6 +426,7 @@ class MenuScreen(g: Game) : Screen(g) {
     override fun onTouch(e: TouchEvent): Boolean {
         if (!portraitMenu || hasOpenModal || hints.okBtn.visible) return false
         if (whatsNew.visible && whatsNew.contains(e.x, e.y)) return false
+        if (reportReminder.visible && reportReminder.contains(e.x, e.y)) return false
         if (e.action == TouchEvent.DOWN && (e.y < portraitTop || e.y >= portraitBottom))
             return true
         if (e.action == TouchEvent.UP && (e.y < portraitTop || e.y >= portraitBottom))
@@ -479,6 +493,7 @@ class MenuScreen(g: Game) : Screen(g) {
         eliteReady = EliteUnlock.affordable(pr)
         hints.update(dt)
         updateSurvey(dt)
+        updateReminder(dt)
         if (eliteReady && !hasOpenModal && research.visible && research.r.width() > 0f)
             hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber(g.nowMillis())
@@ -527,15 +542,18 @@ class MenuScreen(g: Game) : Screen(g) {
                 portraitScroll, portraitMaxScroll, dp)
             drawPlayer(c)
             drawWhatsNew(c)
+            drawReminder(c)
         } else {
             // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).
             for (i in buttons.indices) {
                 val b = buttons[i]
                 if (b !== resumeYes && b !== resumeNo && b !== hints.okBtn && b !== whatsNew && b !== goalBtn &&
+                    b !== reportReminder &&
                     b.id !in SURVEY_RATE..SURVEY_SKIP)
                     ui.button(c, b, if (b.label.isEmpty()) 20f else 17f)
             }
             drawGoal(c)
+            drawReminder(c)
             drawWhatsNew(c)
             drawPlayer(c)
             drawTileBadges(c)
@@ -626,6 +644,59 @@ class MenuScreen(g: Game) : Screen(g) {
         for (b in surveyRates) b.visible = false
         for (b in surveyIssues) b.visible = false
         surveySkip.visible = false
+    }
+
+    /**
+     * D48: przypomnienie o raporcie w 3. i 10. dniu testu (tylko wersje testowe). Najpierw ankieta,
+     * banery i okna; potem po [TesterReportReminder.QUIET_SECONDS] spokoju baner w pasie powiadomień.
+     * Pokazany próg zapisujemy od razu (raz na dzień progowy), baner zostaje do dotknięcia albo
+     * wyjścia z menu, a chowa się, gdy nadejdzie powiadomienie albo otworzy się okno.
+     */
+    private fun updateReminder(dt: Float) {
+        if (reminderDay == 0) {
+            val log = g.playtest
+            val quiet = log != null && g.testerSurveyEnabled && g.resumeOffer == null && g.lostBattle == null &&
+                surveyStep == SURVEY_HIDDEN && !hints.okBtn.visible && !g.hasNotices() &&
+                !TesterSurvey.due(g.testerSurveyEnabled, log.surveyState, g.profile.tutorialDone,
+                    g.profile.battles, log.daysPlayed)
+            val day = if (quiet && log != null) TesterReportReminder.due(true, log.firstDay,
+                Missions.utcDay(g.nowMillis()), log.reminders) else 0
+            if (day == 0) { reminderQuiet = 0f; return }
+            reminderQuiet += dt
+            if (reminderQuiet < TesterReportReminder.QUIET_SECONDS) return
+            reminderQuiet = 0f
+            reminderDay = day
+            log!!.reminderShown(TesterReportReminder.mask(day))
+            log.saveAsync()
+            layoutReminder()
+        }
+        reportReminder.visible = reminderDay != 0 && !hasOpenModal && !hints.okBtn.visible &&
+            !g.hasNotices() && reportReminder.r.width() > 0f
+    }
+
+    /** Ten sam prostokąt co baner powiadomienia w menu ([Game] rysuje go między logo a kafelkami). */
+    private fun layoutReminder() {
+        if (reminderDay == 0) { reportReminder.visible = false; return }
+        reminderText = L.f("tr204_banner", reminderDay)
+        reportReminder.label = ""
+        val pw = min(470 * dp, w - g.insetL - g.insetR - 20 * dp)
+        val px = (w + g.insetL - g.insetR - pw) / 2f
+        val py = noticeTop
+        val ph = min(50 * dp, max(noticeBottom - py, 24 * dp))
+        reportReminder.set(px, py, pw, ph)
+        reportReminder.hitSlop = ((48 * dp - ph) / 2f).coerceIn(0f, 6 * dp)
+    }
+
+    private fun drawReminder(c: Canvas) {
+        val b = reportReminder
+        if (!b.visible) return
+        val r = b.r
+        ui.card(c, r, if (b.pressed) Color.rgb(70, 58, 30) else Color.rgb(42, 56, 84), 12f, Ui.GOLD)
+        val iconSize = min(26 * dp, r.height() - 10 * dp)
+        Icons.draw(c, Icons.BOOK, r.left + 23 * dp, r.centerY(), iconSize, dp = dp)
+        val size = ui.fit(reminderText, 14f, r.width() - 80 * dp)
+        ui.textO(c, reminderText, r.left + 45 * dp, r.centerY() + 5 * dp, size, Ui.GOLD)
+        ui.textO(c, "›", r.right - 16 * dp, r.centerY() + 6 * dp, 18f, Ui.TEXT, Paint.Align.CENTER)
     }
 
     /** Pytanie dopiero w spokojnym menu: bez okien, dymków, banerów i „Co nowego”. */
@@ -825,6 +896,7 @@ class MenuScreen(g: Game) : Screen(g) {
         whatsNew -> L["menu175_whats_new_desc"]
         surveySkip -> L["t200_skip"]
         goalBtn -> goalText
+        reportReminder -> reminderText
         // R10-02: TalkBack czyta też drugi licznik kafla Kampanii („Korony 5/36”).
         in surveyRates -> {
             val n = L.f("t200_rate_n", b.id - SURVEY_RATE + 1)
@@ -870,6 +942,11 @@ class MenuScreen(g: Game) : Screen(g) {
             8 -> g.push(CodexScreen(g))
             9 -> g.push(MissionsScreen(g))
             WHATS_NEW -> g.push(WhatsNewScreen(g, fromMenu = true))
+            REPORT_REMINDER -> {
+                reminderDay = 0
+                reportReminder.visible = false
+                g.host.sharePlaytestReport()
+            }
             GOAL -> when (goalKind) {
                 NextGoalKind.MISSIONS -> g.push(MissionsScreen(g))
                 NextGoalKind.RESEARCH -> g.push(ResearchScreen(g))

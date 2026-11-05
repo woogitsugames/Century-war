@@ -10,8 +10,10 @@ Wejście:
 Wyjście: Markdown w stylu `docs/reports/test-faleN.md` (tabela per raport, mediany,
 bramka G2 z R13 §1: twarde i miękkie) oraz opcjonalnie CSV „tester × dzień”.
 
-Format raportu to dokładnie `app/.../crash/PlaytestReportText.kt` (format 1, bez linii
-`Report format`). Etykiety treści są stałe, po angielsku; po lokalizacji gry zmienia się
+Format raportu to dokładnie `app/.../crash/PlaytestReportText.kt`: format 1 (bez linii
+`Report format`, wersje bez ankiety testera) albo format 2 (d48, wersje testowe:
+`Report format: 2`, `Tester code:`, `Crashes:`, `ANRs:` w nagłówku, `Research levels:` w
+`[Progress]`, `Day map (...):` w `[Play time]`). Etykiety treści są stałe, po angielsku; po lokalizacji gry zmienia się
 tylko temat e-maila (`pt182_subject` w 10 językach) i kod w linii `Language:`. Temat
 rozpoznajemy jako początek raportu, gdy tester wkleił e-mail razem z tematem.
 
@@ -106,16 +108,16 @@ PROBLEM_SUBJECTS = (
     "Century War - hata raporu",
 )
 
-# Pola Raportu v2 (R13 TOP 5 poz. 1, 2, 5) — format jeszcze nie istnieje w grze. Wzorce są
-# PROPOZYCJĄ z R13; po wdrożeniu v2 poprawić je według PlaytestReportText.kt. Każde pole
-# niesie listę kryteriów G2, które odblokowuje.
+# Pola Raportu v2 (R13 TOP 5 poz. 1; d48) — dokładnie jak w PlaytestReportText.build przy
+# `testBuild`. „-” = brak wartości (pole pomijane). Każde pole niesie listę kryteriów G2,
+# które odblokowuje.
 FUTURE_FIELDS = {
     "report_format": (re.compile(r"^Report format:\s*(\d+)"), ("—",)),
-    "tester_code": (re.compile(r"^Tester code:\s*([A-Z0-9]{3,8})\b"), ("2.4", "łączenie dnia 3 i 10")),
+    "tester_code": (re.compile(r"^Tester code:\s*([A-Z0-9]{3,8}|-)$"), ("2.4", "łączenie dnia 3 i 10")),
     "crashes": (re.compile(r"^Crashes:\s*(\d+)"), ("2.2",)),
     "anrs": (re.compile(r"^ANRs?:\s*(\d+)"), ("2.2",)),
-    "day_map": (re.compile(r"^Day map[^:]*:\s*([01]+)"), ("2.5",)),
-    "research_levels": (re.compile(r"^Research levels:\s*(\d+)"), ("2.10",)),
+    "day_map": (re.compile(r"^Day map[^:]*:\s*([01]+|-)$"), ("2.5",)),
+    "research_levels": (re.compile(r"^Research levels:\s*(\d+) of \d+, medals \d+$"), ("2.10",)),
 }
 # Wiersz lejka z PlaytestReportText.appendStage: `S19: 4 tries, 1 win, 0 surr, 52m, cmd 3`
 # (etap od 1; „try/tries”, „win/wins”; czas bitew w pełnych minutach; cmd = bitwy z dowódcą).
@@ -383,6 +385,9 @@ def parse_report(body: str, source: str, subject_lang=None) -> Report:
             break
         if not matched:
             r.problems.append("nieznana linia: " + ln[:80])
+    for key in ("tester_code", "day_map"):
+        if r.f.get(key) == "-":
+            del r.f[key]
     if "report_format" in r.f:
         r.format = int(r.f["report_format"])
     # Status.
@@ -670,7 +675,7 @@ def evaluate(day3, day10, base, external):
     else:
         checks.append(Check("2.2", "Powtarzalne awarie i ANR", True,
                             f"suma w raportach: {sum(crashes)}" if crashes else "—", "0 otwartych grup", NA,
-                            "Raport v1 nie liczy awarii/ANR (Raport v2, TOP 5 poz. 1); grupy z PC: `--crash-groups`"))
+                            "raporty formatu 1 nie liczą awarii/ANR (format 2: `Crashes:`/`ANRs:`); grupy z PC: `--crash-groups`"))
     pl = external.get("prelaunch_crashes")
     checks.append(Check("2.3", "Raport przedpremierowy ostatniej wersji", True, "—" if pl is None else str(pl),
                         "0 awarii i ANR", verdict(None if pl is None else pl == 0),
@@ -843,16 +848,17 @@ def build_markdown(reports, dropped, problem_count, notes, checks, wave, inputs,
                 out.append(f"| {c.num} | {c.name} | {cell(c.value)} | {cell(c.threshold)} | **{c.verdict}** | {cell(c.note)} |")
         out.append("")
 
-    out.append("### Czego nie da się policzyć z obecnego raportu (format 1)\n")
-    out.append("- **Łączenie dnia 3 i 10 tej samej osoby**: raport nie ma kodu testera. Narzędzie łączy po "
+    out.append("### Czego nie da się policzyć z raportów formatu 1\n")
+    out.append("- **Łączenie dnia 3 i 10 tej samej osoby**: format 1 nie ma kodu testera. Narzędzie łączy wtedy po "
                "pseudonimie z formularza albo nazwy pliku + modelu (`Device:`); bez pseudonimu raporty "
-               "zostają osobno (dwie osoby mogą mieć ten sam telefon i dzień startu). Pole `Tester code:` (Raport v2, TOP 5 poz. 1) jest już obsłużone.")
+               "zostają osobno. Format 2 (wersje testowe od d48) łączy po `Tester code:`; po reinstalacji "
+               "gry kod jest nowy, więc tester podaje pseudonim w formularzu.")
     out.append("- **2.1, 2.3** — tylko Play Console (`--active-testers`, `--prelaunch-crashes`).")
-    out.append("- **2.2** — raport nie liczy awarii/ANR; pola `Crashes:`/`ANRs:` z Raportu v2 są przygotowane, "
+    out.append("- **2.2** — format 1 nie liczy awarii/ANR; format 2 ma `Crashes:`/`ANRs:` (lokalny dziennik awarii), "
                "grupy z PC: `--crash-groups`.")
     out.append("- **2.10 „przy których etapach”** — tylko z raportów z sekcją `[Campaign stages]` (gra od d45); "
                "starsze raporty nie mają lejka ani dowódcy na etapie 19 (d37).")
-    out.append("- **2.5 ciągłość** — tylko `Days played`, bez mapy dni (Raport v2).\n")
+    out.append("- **2.5 ciągłość** — w formacie 1 tylko `Days played`; format 2 ma mapę 28 dni (`day_map` w CSV).\n")
 
     out.append("## Mediany (wszystkie raporty)\n")
     out.append("| Dzień | n | Dni gry | Sesje | Czas bitew (min) | Czas w aplikacji (min) | Etap | Bitwy | Ocena |")
@@ -940,7 +946,7 @@ CSV_COLUMNS = ("id", "source", "tester", "key", "day", "day_inferred", "status",
                "android", "language", "days_played", "sessions", "battle_min", "app_min", "battles", "wins",
                "surrenders", "stage", "stars", "difficulty", "tutorial_done", "tutorial_min", "first_win_min",
                "max_loss_streak", "rating", "issue", "worst_p95_ms", "max_thermal", "endless_battles",
-               "daily_battles", "tester_code", "crashes", "anrs")
+               "daily_battles", "tester_code", "crashes", "anrs", "day_map", "research_levels")
 
 
 def write_csv(path: Path, reports):
@@ -957,7 +963,8 @@ def write_csv(path: Path, reports):
                         mins(r.get("tutorial_s")), mins(r.get("first_win_s")), r.get("max_loss_streak", ""),
                         r.get("rating", ""), r.get("issue", ""), max((p[0] for p in r.perf), default=""),
                         max((p[3] for p in r.perf), default=""), r.modes.get("ENDLESS", ("",))[0],
-                        r.modes.get("DAILY", ("",))[0], r.get("tester_code", ""), r.get("crashes", ""), r.get("anrs", "")])
+                        r.modes.get("DAILY", ("",))[0], r.get("tester_code", ""), r.get("crashes", ""), r.get("anrs", ""),
+                        r.get("day_map", ""), r.get("research_levels", "")])
 
 
 def merge(inputs, overrides=None, external=None, day_split=7):

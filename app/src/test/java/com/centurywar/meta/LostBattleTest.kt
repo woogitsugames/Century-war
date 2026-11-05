@@ -148,9 +148,39 @@ class LostBattleTest {
         val old = LostBattle.settle(p, meta(Mode.DAILY, ranked = true, day = today - 1, id = 6L, consolation = 0), today)!!
         assertEquals(false, old.dailyRestored)
         assertEquals(today, p.lastRankedDaily)
+        // D48: zamiast próby medale jak za kapitulację.
+        assertEquals(LostBattle.RANKED_LATE_MEDALS, old.medals)
+        assertEquals(10 + LostBattle.RANKED_LATE_MEDALS, p.medals)
         val e = LostBattle.settle(p, meta(id = 7L), today)!!
         assertEquals(75, e.medals)
-        assertEquals(85, p.medals)
+        assertEquals(85 + LostBattle.RANKED_LATE_MEDALS, p.medals)
+        Profile.awaitHintWrites()
+    }
+
+    /** D48: rankingowe wyzwanie dnia rozliczone później: medale raz, bez zwrotu próby, z banerem medali. */
+    @Test
+    fun lateRankedDailyGivesSurrenderMedalsOnce() {
+        val today = 20_400L
+        val p = Profile(File(folder.newFolder(), "profile.json"))
+        p.medals = 0
+        p.lastRankedDaily = today - 1
+        val m = meta(Mode.DAILY, ranked = true, day = today - 1, id = 11L, consolation = 0)
+        val r = LostBattle.settle(p, m, today)!!
+        assertEquals(false, r.dailyRestored)
+        assertEquals(today - 1, p.lastRankedDaily)
+        assertEquals(LostBattle.RANKED_LATE_MEDALS, p.medals)
+        assertNull("drugi raz nic (idempotentnie)", LostBattle.settle(p, m, today))
+        assertNull(LostBattle.settle(p, m, today + 3))
+        assertEquals(LostBattle.RANKED_LATE_MEDALS, p.medals)
+        val texts = LostBattle.notices(m, r)
+        assertEquals(2, texts.size)
+        assertTrue(texts[1], texts[1].contains(LostBattle.RANKED_LATE_MEDALS.toString()))
+        // Nieznany dzień (np. uszkodzony opis) i zegar cofnięty: bez medali za rankingowe.
+        val q = Profile(File(folder.newFolder(), "profile.json"))
+        assertEquals(0, LostBattle.settle(q, meta(Mode.DAILY, ranked = true, day = -1L, id = 12L, consolation = 0), today)!!.medals)
+        assertEquals(0, LostBattle.settle(q, meta(Mode.DAILY, ranked = true, day = today + 1, id = 13L, consolation = 0), today)!!.medals)
+        // Dzisiejsze bez zapisanej próby (np. inny dzień w profilu): bez medali i bez zwrotu.
+        assertEquals(0, LostBattle.settle(q, meta(Mode.DAILY, ranked = true, day = today, id = 14L, consolation = 0), today)!!.medals)
         Profile.awaitHintWrites()
     }
 

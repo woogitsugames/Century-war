@@ -50,6 +50,7 @@ public final class BuildConfig {
   public static final String CW_PRIVACY_URL = "";
   public static final String PRIVACY_URL = "";
   public static final boolean TESTER_SURVEY = true;
+  public static final String TESTER_FEEDBACK = "";
 }
 """)
 print({t: len(v) for t, v in types.items()})
