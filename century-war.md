@@ -7,7 +7,7 @@ Wklej poniższy tekst jako pierwszą wiadomość w nowej sesji Claude Code (repo
 Jesteś koordynatorem projektu Century War — oryginalnej strategii na Androida (Kotlin, SDK 36, minSdk 26, bez bibliotek poza Play Games, grafika rysowana kodem). Repozytorium woogitsugames/century-war. Właściciel nie jest programistą: odpowiadaj po polsku, zwięźle, wyjaśniaj skutki prostym językiem; decyzje dawaj w formie klikalnej (AskUserQuestion). Commity po polsku z liniami atrybucji sesji, bez PR (chyba że do integracji z zewnętrznej sesji), bez identyfikatorów modeli w repo.
 
 0. NAJPIERW: `git fetch origin` i przeczytaj NAJNOWSZE wersje z GitHuba: `git show origin/integ/tura10:century-war.md` oraz `git show origin/integ/tura10:docs/COORDINATOR_HANDOVER.md` (poprzednia sesja aktualizowała je do końca; gałąź `integ/tura10` może być nowsza niż `main`).
-1. Przeczytaj w całości górę pliku `docs/COORDINATOR_HANDOVER.md` (najnowsze sekcje „SESJA 3.11…” i wpisy z 4.11 na samej górze, potem starsze dla kontekstu) oraz ten plik (`century-war.md`, sekcja „Stan na koniec sesji 4.11”). Tam jest stan, zasady, decyzje właściciela, kolejka i środowisko.
+1. Przeczytaj w całości górę pliku `docs/COORDINATOR_HANDOVER.md` (najnowsze sekcje „SESJA 3.11…” i wpisy z 4.11 na samej górze, potem starsze dla kontekstu) oraz ten plik (`century-war.md`, sekcje „Stan na 5.11 rano” i „Stan na koniec sesji 4.11”). Tam jest stan, zasady, decyzje właściciela, kolejka i środowisko.
 2. Przygotuj środowisko według sekcji „Archiwum → Przygotowanie środowiska” w `docs/COORDINATOR_HANDOVER.md`: Android SDK (`platforms;android-36`, `build-tools;36.0.0`, `platform-tools`), `local.properties` z `sdk.dir`, init Gradle `~/.gradle/init.d/mirror.gradle` z mirrorem GCS (podmiana repo.maven.apache.org ORAZ w `beforeSettings` mirror + `gradlePluginPortal()` na początku `pluginManagement.repositories`), obrazy Robolectric `android-all-instrumented` 15-robolectric-13954326-i7, 9-robolectric-4913185-2-i7, 10-robolectric-5803371-i7 pobrane ręcznie do `~/.m2`.
 3. Pracuj na gałęzi `integ/tura10` (= main). Po zielonych pełnych testach lokalnych (`flock /tmp/claude-0/gradle.lock ./gradlew :app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun --continue --console=plain`, ok. 10 min) wypychaj na `main`, `claude/bold-sagan-vwz5gm`, `integ/tura10` i gałąź swojej sesji. Po większych zmianach wysyłaj właścicielowi APK (`app/build/outputs/apk/debug/app-debug.apk`).
 4. CI: limit minut — workflowy tylko przy tagu `v*`, PR do main i ręcznie. Nie dodawaj workflowów przy push.
@@ -16,10 +16,29 @@ Jesteś koordynatorem projektu Century War — oryginalnej strategii na Androida
 
 ---
 
+## Stan na 5.11.2026 rano
+
+- **`integ/tura10`** ma całą pracę nocy i poranka (d34–d48, R12, R13): etap 19 łagodniejszy
+  (0.8.9), **K1 — etapy 28 i 30–33 łatwiejsze (PROTOCOL 0.8.10)**, Raport dla testera v2 (kod
+  testera, awarie/ANR, mapa dni), przypomnienie w 3. i 10. dniu, `-PtesterFeedback`, późne
+  rankingowe wyzwanie dnia = 10 medali, R5-hardening serwera (d38), napisy Foldu, tłumaczenia.
+  Testy tylko obejściem `tools/offline-build/` (fastTest 764, screenshots, :sim 318, :server 93).
+- **Czeka na Gradle** (sieć blokuje `dl.google.com`): `main` nadal **210f868**. Po odblokowaniu:
+  pełne testy `--rerun`, `:sim:regenerateGolden` (usunąć zdublowaną linię powodu w `BALANCE.md`),
+  lint, `assembleDebug`, wypchnięcie na `main` + `claude/bold-sagan-vwz5gm`, APK dla właściciela.
+  Workflow `test-release` nie przekazuje jeszcze `-PtesterFeedback` — dopisać, gdy właściciel poda
+  e-mail/formularz.
+- **Decyzje właściciela 5.11:** konto Play **firmowe** (bez 12 testerów × 14 dni), K1 tak, kod
+  testera tak (+ przypomnienie, zdanie w polityce), przerwane rankingowe wyzwanie dnia — medale
+  jak za kapitulację. Dokumenty zaktualizowane (`docs/RELEASE.md`, `docs/OWNER_CHECKLIST.md`,
+  `docs/research/R13-testy.md`).
+- Teksty `L.kt`: zajęte do **part204**; **następna wolna: part205** (part202 nieużyta).
+- Szczegóły i kolejka: góra `docs/COORDINATOR_HANDOVER.md`.
+
 ## Stan na koniec sesji 4.11.2026 (ok. 18:00 UTC)
 
 **Gałęzie:** `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` (wszystko scalone; ostatnie pełne testy zielone — sprawdź `git log` i ewentualne niedokończone gałęzie niżej).
-**Wersje:** PROTOCOL **0.8.10** (K1, etapy 28 i 30–33, zatwierdzone 5.11; gałąź `claude/dzien-47-k1`), `BattleSnapshot.VERSION` **20**, `Replay.VERSION` 7, **79 osiągnięć / 84 ID Play Games** (arkusz i import: `docs/store/play_games_sheet.*`, `docs/store/pgs_import/`, `tools/pgs_sheet.py`, ikony: `PgsIconsTest`, stykówki w `docs/store/assets/pgs/`). Teksty `L.kt`: najwyższa część **part198**; następne wolne: **part199** (zajęte tylko gdy R11-04 dodał — nie dodał), part200 (ankieta testera), part201+ wolne. Liczba `putAll(part` = liczba `private fun part`. W tekstach Kotlin `%1$s` pisz `%1\$s`.
+**Wersje:** PROTOCOL **0.8.10** (K1, etapy 28 i 30–33, zatwierdzone 5.11; gałąź `claude/dzien-47-k1`), `BattleSnapshot.VERSION` **20**, `Replay.VERSION` 7, **79 osiągnięć / 84 ID Play Games** (arkusz i import: `docs/store/play_games_sheet.*`, `docs/store/pgs_import/`, `tools/pgs_sheet.py`, ikony: `PgsIconsTest`, stykówki w `docs/store/assets/pgs/`). Teksty `L.kt` (stan 4.11 — **aktualnie następna wolna part205**, zob. wyżej): najwyższa część **part198**; następne wolne: **part199** (zajęte tylko gdy R11-04 dodał — nie dodał), part200 (ankieta testera), part201+ wolne. Liczba `putAll(part` = liczba `private fun part`. W tekstach Kotlin `%1$s` pisz `%1\$s`.
 
 **Zrobione w sesji 3–4.11 (wszystko na main):** dni 4–9 (zegar pod minimapą na Foldzie, TalkBack w HUD bitwy, dostępność z ustawień telefonu i tempo ×½, stabilność na tanich telefonach, Raport dla testera, „Następny cel”, pomoc po 2 porażkach), poprawki z przeglądów R6/R10, tłumaczenia R7, ściąga właściciela `docs/OWNER_CHECKLIST.md`, arkusz/import Play Games, grafiki sklepu D7 (odświeżone po D6), D6 nowa zawartość (zewnętrzna sesja, PR 153), osiągnięcia pierwszej godziny + ikony, osiągnięcia po D6, korony za Trudny, tryb gry/oszczędzanie baterii, utracona bitwa po aktualizacji (komunikat + zwrot próby + medale), sygnały dźwiękowe i znak „baza atakowana”, przybliżenie pola bitwy na zewnętrznym Foldzie (flaga `BattleRenderer.NARROW_ZOOM`), powitanie po 3+ dniach przerwy (+30 medali), samouczek wraca po zabiciu procesu, kamienie milowe Endless, TalkBack na ekranach poza bitwą (mapa, tryby, Badania, Misje, listy), pętla testowa Play (`TestLoopActivity`, proces `:testloop`), „oddech” muzyki w bitwie (`MusicBreath`), etapy 8–12 krótsze (~9 min).
 
