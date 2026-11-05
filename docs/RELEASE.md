@@ -930,6 +930,46 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
 - [Set up an open, closed, or internal test](https://support.google.com/googleplay/android-developer/answer/9845334)
   — tory testowania, lista e-mail, link opt-in, wydanie i opinie.
 
+### Scalanie raportów testerów (koordynator, `tools/playtest_merge.py`)
+
+Narzędzie z R13 (TOP 5 poz. 4). Czyta „Raporty dla testera” i liczy bramkę G2
+(R13 §1) bez ręcznego liczenia median. Tylko Python 3, bez instalowania pakietów.
+
+1. Od właściciela weź CSV z Arkusza odpowiedzi formularza (**Plik → Pobierz → CSV**)
+   i/lub raporty z e-maili zapisane jako `.txt` albo `.eml` w jednym katalogu.
+   W nazwie pliku możesz dać dzień, np. `kasia-dzien3.txt`, `kasia-d10.eml`.
+2. Uruchom w katalogu repozytorium:
+
+   ```
+   python3 tools/playtest_merge.py odpowiedzi.csv raporty/ \
+       -o docs/reports/test-fala1.md --fala 1 --csv-out fala1.csv \
+       --active-testers 14 --crash-groups 0 --prelaunch-crashes 0
+   ```
+
+   - `--active-testers`, `--crash-groups`, `--prelaunch-crashes`: liczby z Play Console
+     (kryteria 2.1–2.3). Bez nich bramka wychodzi „NIEROZSTRZYGNIĘTE”.
+   - Kolumny formularza są wykrywane po nagłówkach z R13 §3 (pseudonim, „Który raport”,
+     model telefonu, uwagi, wklejony raport). Inne nazwy: `--column which="Dzień"`,
+     `--column tester="Kod"` itd.
+   - Bez pola „Który raport” i bez dnia w nazwie pliku dzień wynika z dat raportu
+     (rozpiętość < 7 dni → dzień 3, inaczej 10; zmiana: `--day-split`). W tabeli ma gwiazdkę.
+3. Przeczytaj w wyniku:
+   - tabelę G2 (twarde/miękkie: wartość, próg, OK/NIE/nie do policzenia);
+   - sekcję „Czego nie da się policzyć”: raport w formacie 1 nie ma kodu testera, więc
+     dzień 3 i 10 tej samej osoby łączy się tylko po pseudonimie i modelu telefonu;
+     nie ma też awarii/ANR ani lejka etapów (Raport v2, TOP 5 poz. 1–2);
+   - „Uwagi parsera”: obcięte i uszkodzone raporty (ostatnia ucięta linia nie jest
+     liczona) oraz pominięte duplikaty.
+4. Wklejone „Zgłoś problem” (raport techniczny) narzędzie tylko liczy. Przejrzyj je
+   ręcznie jako kandydatów na P0.
+5. Plik `--csv-out` (tester × dzień) zostaw poza repozytorium. Pseudonimy z formularza
+   trafiają do Markdown, więc przed commitem sprawdź, czy nie ma tam imion i nazwisk.
+
+Progi są stałymi na górze `tools/playtest_merge.py` (`G2`). Zmiana progu w R13 oznacza
+zmianę w obu miejscach. Test `tests/test_playtest_merge.py` sprawdza, czy etykiety narzędzia
+zgadzają się z `PlaytestReportText.kt`. Po wdrożeniu Raportu v2 trzeba poprawić wzorce
+`FUTURE_FIELDS`, które są dziś tylko propozycją z R13.
+
 ## Walidacja
 
 Lokalnie (po wprowadzeniu prawdziwej konfiguracji publikacji):

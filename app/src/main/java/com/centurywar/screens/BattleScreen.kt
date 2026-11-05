@@ -1570,8 +1570,10 @@ class BattleScreen(
         pr.refreshBanners()
         g.history?.add(BattleHistory.capture(battle, finishedAt, reward, tipKey, surrendered))
         // R2-04: dziennik testu (porażki kampanii, kapitulacje, czas do pierwszej wygranej); bez I/O.
+        // D45: lejek kampanii (etap, czas bitwy, dowódca przywołany: tracker albo stan końcowy).
         g.playtest?.battleSettled(cfg.mode == Mode.CAMPAIGN, won, surrendered, pr.playSeconds,
-            pr.tutorialDone, finishedAt)
+            pr.tutorialDone, finishedAt, stage = cfg.stageIndex, battleSeconds = battle.time.toInt(),
+            commander = achievementEvents.commanderSummoned || AchievementBattleTracker.commanderOnField(battle))
         // R6-L8: zapis w tle także po bitwie, żeby awaria w trakcie sesji nie gubiła liczników.
         g.playtest?.saveAsync()
         tipIcon = when (tipKey) {
