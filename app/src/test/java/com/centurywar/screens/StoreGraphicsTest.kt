@@ -303,7 +303,11 @@ class StoreGraphicsTest {
     /** Ok. 10 ukończonych etapów kampanii z gwiazdkami w kilku epokach (kadr 03). */
     private val d7Stars = intArrayOf(3, 3, 2, 3, 3, 2, 3, 1, 2, 3)
 
-    /** Kadr 05: czas zwycięstwa (7:45) w przedziale 7–10 min etapu 11, przed presją oblężniczą (8:00). */
+    /**
+     * Kadr 05: czas zwycięstwa (7:45) w przedziale 7–10 min etapu 11. Presja oblężnicza w tym
+     * etapie rusza od 5:00 (`Campaign.SECOND_SIEGE_START`, +50%/min), więc HUD nad wynikiem
+     * pokazuje „Presja oblężnicza ×2.4” zamiast zegara — to zamierzony, prawdziwy stan gry.
+     */
     private val D7_RESULT_SECONDS = 465
 
     /** Stały dzień misji (UTC), żeby kadr 06 był powtarzalny: 18.11.2026, 10:00. */
