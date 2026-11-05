@@ -3,7 +3,7 @@
 #
 # R8 minifikuje moduł sim + pomocnika złotych powtórek z testów + sterownik R8Smoke
 # z regułami app/proguard-rules.pro i proguard-android-optimize (jak w APK).
-# Sterownik najpierw na klasach niezminifikowanych zapisuje bajty zrzutów v16/v17/v18
+# Sterownik najpierw na klasach niezminifikowanych zapisuje bajty zrzutów v16..VERSION (dziś v20)
 # i rekordu powtórki, a potem wersja po R8 musi: odtworzyć 10 złotych wzorców,
 # wczytać te bajty (z battleId), zapisać je identycznie i dalej symulować tak samo.
 #

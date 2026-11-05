@@ -2078,4 +2078,4 @@ ostrzegawcze < 50% zostają na 29, 31, 33, 36);
 „medale” + dowódca na 28 nadal **ściana** (69 → 42%, 1,95×). Docelowy najwyżej 78% (28, 32; cel
 tury 10 „≤ ok. 75%”, +3 pp w szumie). Etapy 19–27 bez zmian (klif 19 z dowódcą jak w D37).
 
-- 2026-11-04 — regeneracja złotych powtórek: K1: stageRamp 28 x0,90, 30 x0,92, 31 x0,88, 32 x0,92, 33 x0,92, PROTOCOL 0.8.10 (do decyzji właściciela); powtórki bez zmian.
+- 2026-11-04 — regeneracja złotych powtórek: K1: stageRamp 28 x0,90, 30 x0,92, 31 x0,88, 32 x0,92, 33 x0,92, PROTOCOL 0.8.10 (do decyzji właściciela); powtórki bez zmian (ponowna regeneracja 2026-11-05 „PROTOCOL 0.8.10 (K1)”: bez zmian).
