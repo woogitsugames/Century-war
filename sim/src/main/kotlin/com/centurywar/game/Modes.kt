@@ -82,6 +82,9 @@ enum class DailyEvent(val key: String, val descriptionKey: String) {
     // Zlecenie 184: losowane dopiero od Daily.EVENTS_V3_DAY.
     HEAVY_DAY("day184_heavy", "day184_heavy_d"),
     TOWER_DUEL("day184_towers", "day184_towers_d"),
+    // Dzień 58 (paczka 206): losowane dopiero od Daily.EVENTS_V4_DAY.
+    SCHOLARS_DAY("day206_lore", "day206_lore_d"),
+    FURY_DAY("day206_fury", "day206_fury_d"),
 }
 
 /** Mnożniki z badań gracza (metaprogresja). Liczy je [com.centurywar.meta.Profile]. */
@@ -322,7 +325,7 @@ object Campaign {
 
 
 /**
- * Dziewięć zestawów łączących istniejące modyfikatory z pogodą dnia
+ * Jedenaście zestawów łączących istniejące modyfikatory z pogodą dnia
  * i kartą startową tygodnia. Kolejność i skład są stałe dla rankingu.
  *
  * Zlecenie 184 dopisało trzy zestawy przed premierą, gdy nie było jeszcze historycznych
@@ -330,6 +333,10 @@ object Campaign {
  * więc kolejne zestawy wymagają własnego progu tygodnia (wzór: [Weekly.firstRuleSetWeek]).
  * Kolejność modyfikatorów w nowych zestawach jest odwrotna niż w parach [Daily], więc
  * [Daily.ruleSet] ich nie zwraca i dni pozostają bez zmian.
+ *
+ * Dzień 58 (paczka 206) dopisał dwa kolejne zestawy, także przed premierą
+ * ([Daily.RELEASE_DAY] i [Weekly.firstRuleSetWeek] jeszcze nie nadeszły), z tą samą
+ * zasadą odwróconej kolejności modyfikatorów.
  */
 object ChallengeRuleSets {
     class RuleSet(
@@ -361,9 +368,14 @@ object ChallengeRuleSets {
             EndlessCard.MARCH),
         RuleSet("week184_bastion", "week184_bastion_d", Modifier.EXPENSIVE_TOWERS,
             Modifier.FRAGILE_BASES, EndlessCard.FRONTLINE_PLATE),
+        // Dzień 58 (paczka 206): dopisane na końcu, z nowymi kartami jako kartą tygodnia.
+        RuleSet("week206_blitz", "week206_blitz_d", Modifier.GLASS_CANNON, Modifier.FAST_UNITS,
+            EndlessCard.WAR_HORNS),
+        RuleSet("week206_pikes", "week206_pikes_d", Modifier.ARMORED_FOE, Modifier.RICH_START,
+            EndlessCard.PIKE_SQUARE),
     )
 
-    const val COUNT = 9
+    const val COUNT = 11
 
     /** Wszystkie zestawy w stałej kolejności (Kodeks, testy). */
     val all: List<RuleSet> get() = SETS.asList()
@@ -413,7 +425,7 @@ object Weekly {
 
     /**
      * Zestaw tematyczny co [RULE_SET_EVERY] tygodnie, pozostałe tygodnie losowane jak dotąd.
-     * Ten sam zestaw wraca dopiero po COUNT * RULE_SET_EVERY = 27 tygodniach.
+     * Ten sam zestaw wraca dopiero po COUNT * RULE_SET_EVERY = 33 tygodniach.
      */
     fun ruleSet(week: Long): ChallengeRuleSets.RuleSet? {
         val offset = week - firstRuleSetWeek()
@@ -517,8 +529,22 @@ object Daily {
     /** Od tego dnia (dwa cykle po premierze) losujemy także dni dodane w zleceniu 170. */
     const val EVENTS_V2_DAY = RELEASE_DAY + 8L
 
-    /** Od tego dnia losujemy także wydarzenia z zlecenia 184 (pełna lista [DailyEvent]). */
+    /** Od tego dnia losujemy także wydarzenia z zlecenia 184 (zamrożona jedenastka [EVENTS_V3]). */
     const val EVENTS_V3_DAY = RELEASE_DAY + 15L
+
+    /**
+     * Dzień 58 (paczka 206): od tego dnia (kolejny dzień wydarzenia po [EVENTS_V3_DAY])
+     * losujemy pełną listę [DailyEvent] z Dniem nauki i Dniem furii.
+     */
+    const val EVENTS_V4_DAY = RELEASE_DAY + 19L
+
+    // Zamrożona jedenastka z zlecenia 184: dni od EVENTS_V3_DAY do EVENTS_V4_DAY bez zmian.
+    private val EVENTS_V3 = arrayOf(
+        DailyEvent.MARKSMEN, DailyEvent.RAPID_ABILITIES, DailyEvent.FREE_BARRAGE,
+        DailyEvent.FORTIFIED_BASES, DailyEvent.GOLD_RUSH, DailyEvent.MIRROR_ARMY,
+        DailyEvent.SIEGE_WORKS, DailyEvent.FORCED_MARCH, DailyEvent.SPOILS_OF_WAR,
+        DailyEvent.HEAVY_DAY, DailyEvent.TOWER_DUEL,
+    )
 
     // Zamrożona dziewiątka z zlecenia 170: dni od EVENTS_V2_DAY do EVENTS_V3_DAY bez zmian.
     private val EVENTS_V2 = arrayOf(
@@ -548,6 +574,10 @@ object Daily {
         DailyEvent.MARKSMEN to setOf(Modifier.RANGED_HORDE),
         // „Dodatkowy slot wieży” przy „Bez wież” albo „Ciężkich wieżach”.
         DailyEvent.TOWER_DUEL to setOf(Modifier.NO_TURRETS, Modifier.EXPENSIVE_TOWERS),
+        // „Szybsze doświadczenie” przy „Wolnym doświadczeniu” (×1,5 i ×0,6).
+        DailyEvent.SCHOLARS_DAY to setOf(Modifier.SLOW_XP),
+        // Dwa razy „więcej obrażeń” (Szklane działo ×1,5 i furia ×1,2).
+        DailyEvent.FURY_DAY to setOf(Modifier.GLASS_CANNON),
     )
 
     fun conflicts(event: DailyEvent, mods: Set<Modifier>): Boolean =
@@ -588,6 +618,7 @@ object Daily {
             val pool = when {
                 day < EVENTS_V2_DAY -> EVENTS_V1
                 day < EVENTS_V3_DAY -> EVENTS_V2
+                day < EVENTS_V4_DAY -> EVENTS_V3
                 else -> DailyEvent.entries.toTypedArray()
             }
             val eventRng = Rng(day * 131_071L + 907L)

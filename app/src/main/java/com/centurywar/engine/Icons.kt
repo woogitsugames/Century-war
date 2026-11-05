@@ -123,6 +123,8 @@ object Icons {
         DailyEvent.SPOILS_OF_WAR -> BAG
         DailyEvent.HEAVY_DAY -> HELMET
         DailyEvent.TOWER_DUEL -> TOWER
+        DailyEvent.SCHOLARS_DAY -> BOOK
+        DailyEvent.FURY_DAY -> FLAME
     }
 
     fun weatherIcon(weather: Weather): Int = when (weather) {

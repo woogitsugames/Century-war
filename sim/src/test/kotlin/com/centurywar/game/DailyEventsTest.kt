@@ -18,6 +18,7 @@ class DailyEventsTest {
                 (when {
                     day < Daily.EVENTS_V2_DAY -> DailyEvent.entries.take(6)
                     day < Daily.EVENTS_V3_DAY -> DailyEvent.entries.take(9)
+                    day < Daily.EVENTS_V4_DAY -> DailyEvent.entries.take(11)
                     else -> DailyEvent.entries
                 })
                     .let { pool ->

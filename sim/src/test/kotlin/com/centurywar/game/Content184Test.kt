@@ -20,7 +20,8 @@ class Content184Test {
 
     @Test fun newCardsAreAppendedAfterMasterMasons() {
         val last = EndlessCard.MASTER_MASONS.ordinal
-        assertEquals(newCards, EndlessCard.entries.drop(last + 1))
+        // Dzień 58 dopisał kolejne cztery karty za Zakładem.
+        assertEquals(newCards, EndlessCard.entries.drop(last + 1).take(4))
         assertEquals(listOf("ec_sappers", "ec_shield_wall", "ec_war_chest", "ec_wager"),
             newCards.map { it.textKey })
         assertTrue(EndlessCards.persistent(EndlessCard.SAPPERS))
@@ -205,14 +206,15 @@ class Content184Test {
 
     // ------------------------------------------------------------------ tydzień
 
-    @Test fun nineRuleSetsRotateEveryTwentySevenWeeks() {
-        assertEquals(9, ChallengeRuleSets.COUNT)
-        assertEquals(9, ChallengeRuleSets.all.size)
+    @Test fun ruleSetsRotateEveryCountTimesThreeWeeks() {
+        // Dzień 58 dopisał dwa kolejne zestawy (11); zestawy 184 zostają na pozycjach 6–8.
+        assertEquals(11, ChallengeRuleSets.COUNT)
+        assertEquals(11, ChallengeRuleSets.all.size)
         assertEquals(listOf("week184_night", "week184_mercs", "week184_bastion"),
-            ChallengeRuleSets.all.drop(6).map { it.key })
+            ChallengeRuleSets.all.drop(6).take(3).map { it.key })
         val first = Weekly.firstRuleSetWeek()
         val period = ChallengeRuleSets.COUNT * Weekly.RULE_SET_EVERY
-        assertEquals(27L, period)
+        assertEquals(33L, period)
         for (i in 0 until ChallengeRuleSets.COUNT) {
             val week = first + i * Weekly.RULE_SET_EVERY
             val rule = Weekly.ruleSet(week)!!

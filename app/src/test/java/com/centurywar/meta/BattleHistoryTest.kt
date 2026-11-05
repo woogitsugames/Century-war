@@ -85,6 +85,26 @@ class BattleHistoryTest {
         }
     }
 
+    /** Dzień 58: wpis sprzed kart 184 i 206 (o 8 krótszy) też się wczytuje, nowe stosy = 0. */
+    @Test
+    fun entryFromBeforeCards184And206Loads() {
+        val f = file()
+        val old = com.centurywar.game.EndlessCard.entries.size - 8
+        val h = BattleHistory(f)
+        h.add(entry(8, mode = Mode.ENDLESS).copy(cards = IntArray(old) { 1 + it % 2 }))
+        h.awaitWrites()
+        h.close()
+        val restored = BattleHistory(f).also { it.load() }
+        try {
+            val record = restored.snapshot().single()
+            assertEquals(com.centurywar.game.EndlessCard.entries.size, record.cards.size)
+            assertEquals(2, record.cards[1])
+            for (i in old until record.cards.size) assertEquals(0, record.cards[i])
+        } finally {
+            restored.close()
+        }
+    }
+
     @Test
     fun ignoresBadEntriesAndClampsOptionalValues() {
         val f = file()

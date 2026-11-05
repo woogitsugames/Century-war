@@ -45,7 +45,12 @@ class DailyEventConflictsTest {
             val c = Daily.config(day, Bonuses())
             val e = c.dailyEvent ?: continue
             // Zlecenie 184: do EVENTS_V3_DAY pula to zamrożona dziewiątka.
-            val pool = if (day < Daily.EVENTS_V3_DAY) DailyEvent.entries.take(9) else DailyEvent.entries
+            // Dzień 58: do EVENTS_V4_DAY pula to zamrożona jedenastka.
+            val pool = when {
+                day < Daily.EVENTS_V3_DAY -> DailyEvent.entries.take(9)
+                day < Daily.EVENTS_V4_DAY -> DailyEvent.entries.take(11)
+                else -> DailyEvent.entries
+            }
             val first = pool[Rng(day * 131_071L + 907L).nextInt(pool.size)]
             if (first != e) {
                 assertTrue("dzień $day", Daily.conflicts(first, c.modifiers))
