@@ -1,0 +1,27 @@
+"""Minimalne zamienniki androidx.test:monitor (Google Maven niedostępny) — tylko symbole,
+których Robolectric 4.16 używa w AndroidTestEnvironment/RoboMonitoringInstrumentation."""
+import os, sys
+root = sys.argv[1]
+P = "androidx/test/"
+files = {
+"runner/lifecycle/Stage.java": "package androidx.test.runner.lifecycle;\npublic enum Stage { PRE_ON_CREATE, CREATED, STARTED, RESUMED, PAUSED, STOPPED, RESTARTED, DESTROYED }\n",
+"runner/lifecycle/ApplicationStage.java": "package androidx.test.runner.lifecycle;\npublic enum ApplicationStage { PRE_ON_CREATE, CREATED }\n",
+"runner/lifecycle/ActivityLifecycleCallback.java": "package androidx.test.runner.lifecycle;\npublic interface ActivityLifecycleCallback { void onActivityLifecycleChanged(android.app.Activity activity, Stage stage); }\n",
+"runner/lifecycle/ActivityLifecycleMonitor.java": "package androidx.test.runner.lifecycle;\npublic interface ActivityLifecycleMonitor { void addLifecycleCallback(ActivityLifecycleCallback c); void removeLifecycleCallback(ActivityLifecycleCallback c); java.util.Collection<android.app.Activity> getActivitiesInStage(Stage s); Stage getLifecycleStageOf(android.app.Activity a); }\n",
+"runner/lifecycle/ApplicationLifecycleMonitor.java": "package androidx.test.runner.lifecycle;\npublic interface ApplicationLifecycleMonitor {}\n",
+"runner/lifecycle/ActivityLifecycleMonitorRegistry.java": "package androidx.test.runner.lifecycle;\npublic final class ActivityLifecycleMonitorRegistry { private static volatile ActivityLifecycleMonitor m; public static ActivityLifecycleMonitor getInstance() { if (m == null) throw new IllegalStateException(\"no monitor\"); return m; } public static void registerInstance(ActivityLifecycleMonitor x) { m = x; } }\n",
+"runner/lifecycle/ApplicationLifecycleMonitorRegistry.java": "package androidx.test.runner.lifecycle;\npublic final class ApplicationLifecycleMonitorRegistry { private static volatile ApplicationLifecycleMonitor m; public static ApplicationLifecycleMonitor getInstance() { return m; } public static void registerInstance(ApplicationLifecycleMonitor x) { m = x; } }\n",
+"internal/runner/lifecycle/ActivityLifecycleMonitorImpl.java": "package androidx.test.internal.runner.lifecycle;\nimport androidx.test.runner.lifecycle.*;\nimport android.app.Activity;\nimport java.util.*;\npublic final class ActivityLifecycleMonitorImpl implements ActivityLifecycleMonitor {\n private final List<ActivityLifecycleCallback> cbs = new ArrayList<>();\n private final Map<Activity, Stage> stages = new WeakHashMap<>();\n public synchronized void addLifecycleCallback(ActivityLifecycleCallback c) { cbs.add(c); }\n public synchronized void removeLifecycleCallback(ActivityLifecycleCallback c) { cbs.remove(c); }\n public synchronized Collection<Activity> getActivitiesInStage(Stage s) { List<Activity> r = new ArrayList<>(); for (Map.Entry<Activity, Stage> e : stages.entrySet()) if (e.getValue() == s) r.add(e.getKey()); return r; }\n public synchronized Stage getLifecycleStageOf(Activity a) { return stages.get(a); }\n public void signalLifecycleChange(Stage s, Activity a) { List<ActivityLifecycleCallback> copy; synchronized (this) { stages.put(a, s); copy = new ArrayList<>(cbs); } for (ActivityLifecycleCallback c : copy) c.onActivityLifecycleChanged(a, s); }\n}\n",
+"internal/runner/lifecycle/ApplicationLifecycleMonitorImpl.java": "package androidx.test.internal.runner.lifecycle;\nimport androidx.test.runner.lifecycle.*;\npublic final class ApplicationLifecycleMonitorImpl implements ApplicationLifecycleMonitor { public void signalLifecycleChange(android.app.Application app, ApplicationStage s) {} }\n",
+"runner/intent/IntentMonitor.java": "package androidx.test.runner.intent;\npublic interface IntentMonitor {}\n",
+"runner/intent/IntentMonitorRegistry.java": "package androidx.test.runner.intent;\npublic final class IntentMonitorRegistry { private static volatile IntentMonitor m; public static IntentMonitor getInstance() { return m; } public static void registerInstance(IntentMonitor x) { m = x; } }\n",
+"internal/runner/intent/IntentMonitorImpl.java": "package androidx.test.internal.runner.intent;\npublic final class IntentMonitorImpl implements androidx.test.runner.intent.IntentMonitor { public void signalIntent(android.content.Intent i) {} }\n",
+"runner/intent/IntentStubber.java": "package androidx.test.runner.intent;\npublic interface IntentStubber { android.app.Instrumentation.ActivityResult getActivityResultForIntent(android.content.Intent i); }\n",
+"runner/intent/IntentStubberRegistry.java": "package androidx.test.runner.intent;\npublic final class IntentStubberRegistry { private static volatile IntentStubber s; public static boolean isLoaded() { return s != null; } public static IntentStubber getInstance() { return s; } public static void load(IntentStubber x) { s = x; } public static void reset() { s = null; } }\n",
+"platform/app/InstrumentationRegistry.java": "package androidx.test.platform.app;\npublic final class InstrumentationRegistry { private static volatile android.app.Instrumentation i; private static volatile android.os.Bundle b; public static void registerInstance(android.app.Instrumentation x, android.os.Bundle y) { i = x; b = y; } public static android.app.Instrumentation getInstrumentation() { return i; } public static android.os.Bundle getArguments() { return b; } }\n",
+}
+for p, c in files.items():
+    path = os.path.join(root, P, p)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "w").write(c)
+print(len(files))
