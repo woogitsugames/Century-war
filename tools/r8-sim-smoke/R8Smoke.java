@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
 
-/** Próba zachowania sim po R8 (tryb JVM): wzorce, zrzuty v16-v18, powtórki. */
+/** Próba zachowania sim po R8 (tryb JVM): wzorce, zrzuty v16..BattleSnapshot.VERSION, powtórki. */
 public final class R8Smoke {
     static int fails = 0;
 
@@ -38,13 +38,15 @@ public final class R8Smoke {
             String expected = new String(Files.readAllBytes(golden.resolve(s.getId() + ".json")), "UTF-8");
             check(expected.equals(GoldenFixtures.INSTANCE.render(s)), "wzorzec " + s.getId());
         }
-        // 2. Zrzuty v16/v17/v18: bajty z wersji niezminifikowanej czytane po R8.
+        // 2. Zrzuty v16..VERSION (dziś v20): bajty z wersji niezminifikowanej czytane po R8;
+        //    bieżący format musi się dodatkowo zapisać identycznie i dalej symulować tak samo.
+        final int cur = BattleSnapshot.VERSION;
         int idx = 0;
         for (GoldenFixtures.Scenario s : scenarios) {
             if (idx++ % 3 != 0) continue;
             BattleConfig cfg = s.getConfig().invoke();
             Battle a = battle(cfg, 60 * 45);
-            for (int v : new int[] {16, 17, 18}) {
+            for (int v = 16; v <= cur; v++) {
                 long id = 1000L * v + idx;
                 byte[] bytes = BattleSnapshot.INSTANCE.encode$sim(a, true, 12.5f, id, v);
                 Path f = dir.resolve(s.getId() + "-v" + v + ".snap");
@@ -56,14 +58,14 @@ public final class R8Smoke {
                 if (r == null) continue;
                 check(r.getBattleId() == (v >= 17 ? id : 0L) && r.getRankedDaily() && r.getCamX() == 12.5f,
                         "zrzut v" + v + " " + s.getId() + " battleId=" + r.getBattleId() + ", ranked, camX");
-                if (v == 18) {
+                if (v == cur) {
                     check(Arrays.equals(BattleSnapshot.INSTANCE.encode(r.getBattle(), true, 12.5f, id), stored),
-                            "zrzut v18 " + s.getId() + " ponowny zapis identyczny");
+                            "zrzut v" + v + " " + s.getId() + " ponowny zapis identyczny");
                     Battle copy = BattleSnapshot.INSTANCE.decode(stored).getBattle();
                     for (int i = 0; i < 600; i++) { a.step(); copy.step(); }
                     check(Arrays.equals(BattleSnapshot.INSTANCE.encode(a, false, 0f, 0L),
                             BattleSnapshot.INSTANCE.encode(copy, false, 0f, 0L)),
-                            "zrzut v18 " + s.getId() + " dalsza symulacja zgodna");
+                            "zrzut v" + v + " " + s.getId() + " dalsza symulacja zgodna");
                 }
             }
         }
