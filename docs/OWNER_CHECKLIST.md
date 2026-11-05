@@ -17,8 +17,9 @@ dokumentów.** Nie wpisuj ich też do repozytorium.
    czasem dłużej.
 3. **Strona WWW firmy na własnej domenie, z polityką prywatności PL i EN.** Konto organizacji
    wymaga zweryfikowanej witryny, a polityka musi być pod publicznym adresem `https://`.
-4. **Lista testerów.** Zbierz co najmniej **12 osób** z kontem Google (Gmail) i telefonem
-   z Androidem 8 lub nowszym, gotowych grać przez 14 dni. Zbieranie ludzi trwa najdłużej
+4. **Lista testerów.** Zbierz ok. **18–20 osób** z kontem Google (Gmail) i telefonem
+   z Androidem 8 lub nowszym, gotowych grać przez ok. 14 dni (przy koncie firmowym Google
+   tego nie wymaga, ale bez testerów nie poznamy błędów). Zbieranie ludzi trwa najdłużej
    ze wszystkiego, co nie zależy od Google.
 5. **Play Games: 84 identyfikatory.** Trzeba ręcznie utworzyć w konsoli projekt, 4 rankingi
    i 79 osiągnięć. To 3–4 godziny klikania. Można zacząć zaraz po utworzeniu aplikacji w konsoli
@@ -27,7 +28,7 @@ dokumentów.** Nie wpisuj ich też do repozytorium.
 ## Krok po kroku
 
 ### 1. Konto deweloperskie
-- **Osobiste czy organizacja?** Wcześniej ustaliłeś: **organizacja** (firma/JDG). Różnice:
+- **Osobiste czy organizacja?** **Decyzja 5.11.2026: konto FIRMOWE (organizacja).** Różnice:
   - konto osobiste (nowe): przed wydaniem dla wszystkich **obowiązkowo 12 testerów przez 14 dni**
     bez przerwy, potem wniosek do Google;
   - konto organizacji: tego wymogu nie ma, ale potrzebny jest **D-U-N-S**, a nazwa, adres,
@@ -150,18 +151,29 @@ grafiki, wybrać kategorię „Strategia”, e-mail kontaktowy i kraje.
 W konsoli: **Testowanie → Testy zamknięte → Testerzy → lista e-mail**. Wpisz adresy testerów
 i wyślij im **link zapisu** („opt-in”). Samo wpisanie adresu nie zapisuje testera: każdy musi
 kliknąć link tym samym kontem Google i zainstalować grę ze Sklepu Play.
-- **Ile:** przy koncie osobistym **co najmniej 12 osób przez 14 dni bez przerwy**, a Google
-  sprawdza, czy naprawdę grali. Przy koncie organizacji to nie jest wymóg, ale zalecamy tyle samo.
+- **Ile:** mamy konto firmowe, więc Google **nie wymaga** 12 osób przez 14 dni. Zalecamy
+  zapisać 18–20 osób i testować ok. 14 dni (część zawsze odpada).
 - **Co dostają:** „Scenariusz dla testerów” z `docs/RELEASE.md`.
 - **O co prosić:** w **3. i 10. dniu** o „Raport dla testera” (Ustawienia → O grze → Raport
-  dla testera). Tester sam wybiera, komu go wysyła.
+  dla testera). Gra sama przypomni o tym w menu. Tester sam wybiera, komu go wysyła. Raport ma
+  4-znakowy **kod testera** (np. `K7QM`) — po nim łączysz raporty jednej osoby bez znania jej nazwiska.
+- **Gdzie mają trafiać raporty — podaj nam JEDNO z dwóch:**
+  - **adres e-mail** (np. osobna skrzynka `testy@twojafirma.pl`) — przycisk w grze otworzy
+    pocztę z gotowym raportem do tego adresu; albo
+  - **link do formularza Google** (Formularze Google → nowy formularz → pola: kod testera,
+    pseudonim, „wklej raport”, uwagi → „Wyślij” → ikona linku → skopiuj adres `https://…`) —
+    gra skopiuje raport i otworzy formularz, tester tylko wkleja.
+
+  Wystarczy napisać koordynatorowi: „raporty testerów na: …”. Resztę (wpisanie do wersji
+  testowej) robi koordynator. Ten sam adres wpisz w Play Console przy teście zamkniętym
+  („adres e-mail albo URL do opinii”).
 
 [Testy zamknięte](https://support.google.com/googleplay/android-developer/answer/9845334),
-[12 testerów / 14 dni](https://support.google.com/googleplay/android-developer/answer/14151465)
+[12 testerów / 14 dni — tylko konta osobiste](https://support.google.com/googleplay/android-developer/answer/14151465)
 
 | Czas | Koszt | Przekaż koordynatorowi | Blokuje testy |
 |---|---|---|---|
-| 14 dni testu + zbieranie ludzi | 0 | liczba zapisanych testerów (nie ich adresy), raporty z 3. i 10. dnia | **TAK** (ktoś musi testować) |
+| 14 dni testu + zbieranie ludzi | 0 | liczba zapisanych testerów (nie ich adresy), **e-mail albo link formularza na raporty**, raporty z 3. i 10. dnia | **TAK** (ktoś musi testować) |
 
 ### 9. Serwer rankingu globalnego
 **Decyzja 4.11.2026: testy zamknięte bez serwera.** Na testach **można go pominąć**. Gra działa bez niego, a rankingi zapewnia Play Games.
