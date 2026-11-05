@@ -236,7 +236,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         if (mode == Mode.DAILY) {
             if (dailyCfg == null || dailyLang != L.lang) rebuildDaily()
             if (week != Weekly.weekNumber(today) || weeklyLang != L.lang) rebuildWeekly(today)
-            val second = g.clock() / 1000L
+            val second = g.nowMillis() / 1000L
             if (second != weeklySecond) {
                 weeklySecond = second
                 val remaining = ((week * 7L + 4L) * 86_400L - second).coerceAtLeast(0L)

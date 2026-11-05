@@ -18,6 +18,7 @@ import com.centurywar.game.EraArt
 import com.centurywar.game.Terrain
 import com.centurywar.game.Weather
 import kotlin.math.floor
+import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -28,6 +29,12 @@ class Backdrops(private val g: Game, private val b: Battle) {
     private companion object {
         const val TILE = 640f
         const val BOTTOM = 390f
+        /**
+         * D59: zapas (dp) na wstrząs kamery (najwyżej 7 dp w poziomie i 4 dp w pionie,
+         * [com.centurywar.game.BattleRenderer]) i wygładzanie krawędzi. Niebo kończy się tyle
+         * pod linią ziemi, a kafle krajobrazu poza tym marginesem ekranu nie są rysowane.
+         */
+        const val SHAKE_MARGIN_DP = 8f
     }
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -52,6 +59,9 @@ class Backdrops(private val g: Game, private val b: Battle) {
     internal var cacheBuilds = 0
         private set
     internal var lastDrawnLayers = 0
+        private set
+    /** D59: kafle wszystkich warstw narysowane w ostatnim [drawLandscape] (test budżetu). */
+    internal var lastDrawnTiles = 0
         private set
     internal val artInCache: EraArt? get() = cachedArt
 
@@ -108,7 +118,9 @@ class Backdrops(private val g: Game, private val b: Battle) {
             sky.shader = LinearGradient(0f, 0f, 0f, groundY.coerceAtLeast(1f),
                 upper, lo, Shader.TileMode.CLAMP)
         }
-        c.drawRect(0f, 0f, w, h, sky)
+        // D59: poniżej ziemi niebo zakrywa nieprzezroczysty grunt (drawGround, ten sam wstrząs),
+        // więc gradient kończy się kilka dp pod nią: mniej wypełnianych pikseli, ten sam obraz.
+        c.drawRect(0f, 0f, w, min(h, groundY + SHAKE_MARGIN_DP * g.ui.dp), sky)
 
         val art = Defs.sideArt(era, variant)
         if (art == EraArt.ORBITAL) {
@@ -184,6 +196,7 @@ class Backdrops(private val g: Game, private val b: Battle) {
     fun drawLandscape(c: Canvas, w: Float, groundY: Float, camX: Float, k: Float, farScale: Float = 1f) {
         ensure(w, groundY)
         lastDrawnLayers = 0
+        lastDrawnTiles = 0
         if (cachedLayers == 3) drawLayer(c, pictures[0], w, groundY, camX, k * farScale, 0.14f)
         if (cachedLayers >= 2) drawLayer(c, pictures[1], w, groundY, camX, k * farScale, 0.36f)
         drawLayer(c, pictures[2], w, groundY, camX, k, 0.70f)
@@ -196,10 +209,14 @@ class Backdrops(private val g: Game, private val b: Battle) {
         if (picture == null) return
         lastDrawnLayers++
         val offset = camX * parallax
-        val first = floor(offset / TILE).toInt() - 1
-        val last = floor((offset + w / k) / TILE).toInt() + 1
+        // D59: treść kafla mieści się w [0, TILE]; rysujemy tylko kafle widoczne z marginesem
+        // na wstrząs kamery (dawniej zawsze o jeden kafel więcej z każdej strony, poza ekranem).
+        val margin = SHAKE_MARGIN_DP * g.ui.dp / k
+        val first = floor((offset - margin) / TILE).toInt()
+        val last = floor((offset + w / k + margin) / TILE).toInt()
         var i = first
         while (i <= last) {
+            lastDrawnTiles++
             c.save()
             c.translate((i * TILE - offset) * k, groundY - BOTTOM * k)
             c.scale(k, k)
