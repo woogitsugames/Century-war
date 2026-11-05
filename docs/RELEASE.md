@@ -2,8 +2,13 @@
 
 ## Kandydat do testów zamkniętych
 
-Stan: **4 listopada 2026 r., wieczór (gałąź `integ/tura10`, PROTOCOL 0.8.8: etapy 2–18 krótsze,
-ankieta testera, pętla testowa Play; przegląd R12 w `docs/research/R12-backlog.md`).**
+Stan: **5 listopada 2026 r. rano (gałąź `integ/tura10`, PROTOCOL 0.8.10: etapy 2–18 krótsze,
+etap 19 łatwiejszy (0.8.9), etapy 28 i 30–33 łatwiejsze (K1, 0.8.10); ankieta testera, pętla
+testowa Play; Raport dla testera v2 z kodem testera i przypomnieniem w 3. i 10. dniu
+(`docs/reports/d48-raport-v2.md`); przegląd R12 w `docs/research/R12-backlog.md`).**
+Decyzje właściciela 5.11: **konto Play firmowe** (bez wymogu 12 testerów × 14 dni przed
+produkcją; test zamknięty i tak trwa ok. 14 dni), kod testera w raporcie — tak.
+Kompilacja i testy na razie obejściem (`tools/offline-build/`); `main` czeka na pełny Gradle.
 Lista dla właściciela — bez wiedzy programistycznej.
 „Zrobione” znaczy: poprawka jest w kodzie i ma automatyczny test. „Zostało” znaczy:
 bez tego nie wysyłamy gry testerom w Google Play. Numery w nawiasach (np. A156-10)
@@ -155,7 +160,10 @@ Tę listę dostają testerzy (i właściciel przed wysyłką). Każdy krok to je
 pytanie „czy wyszło?”. Jeśli coś nie działa: zrób zrzut ekranu, zanotuj, co robiłeś tuż przed,
 i wyślij raport z gry (**Ustawienia → O grze → Zgłoś problem**). Raport nie zawiera nicku.
 W **3. i 10. dniu** testu wyślij też „Raport dla testera” (**Ustawienia → O grze**), nawet
-jeśli wszystko działa. W menu raz pojawi się krótka **ankieta** (ocena 1–5 i „Co najbardziej
+jeśli wszystko działa — w te dni gra sama przypomni o tym krótkim paskiem w menu (dotknięcie
+otwiera raport). Raport zaczyna się od **kodu testera** (4 znaki, np. `K7QM`): wpisz go też
+w formularzu opinii, żeby połączyć Twoje raporty. Kod jest losowy i nie zdradza, kim jesteś;
+po ponownej instalacji gry kod się zmienia (wtedy podaj w formularzu ten sam pseudonim). W menu raz pojawi się krótka **ankieta** (ocena 1–5 i „Co najbardziej
 przeszkadza?”); odpowiedz albo dotknij „Pomiń”. Odpowiedź trafia tylko do tego raportu.
 
 **A. Pierwsze uruchomienie (ok. 15 min, nowa instalacja)**
@@ -170,8 +178,9 @@ przeszkadza?”); odpowiedz albo dotknij „Pomiń”. Odpowiedź trafia tylko d
 **B. Nowości (ok. 30–45 min, w kolejnych dniach)**
 6. Dojdź do **etapu 8**: w dolnym pasku bitwy pojawia się **Wódz**. Przywołaj go i sprawdź,
    czy pobliscy żołnierze świecą aurą. Bitwy etapów 8–12 trwają ok. 9–10 min, 13–18
-   ok. 10–11 min. Od etapu 19 bitwy znów są dłuższe; napisz, jeśli etap 19 wyda się nagle
-   dużo trudniejszy od 18.
+   ok. 10–11 min. Od etapu 19 bitwy znów są dłuższe. Etap 19 i etapy 28, 30–33 zostały
+   złagodzone po pomiarach; napisz, jeśli któryś z nich nadal wyda się nagle dużo trudniejszy
+   od poprzedniego (albo za łatwy).
 7. Kup wieżę, a potem podnieś jej **stopień** (panel wież, przycisk ulepszenia). Przy wieży
    ma być widać jej stopień (2, potem 3), a panel pokazuje koszt kolejnego.
 8. **Muzyka:** w menu gra spokojny motyw, w bitwie muzyka narasta, gdy armie się starły.
@@ -214,8 +223,8 @@ przeszkadza?”); odpowiedz albo dotknij „Pomiń”. Odpowiedź trafia tylko d
 **F. Co odesłać po teście**
 23. Model telefonu i wersja Androida (Ustawienia telefonu → Informacje o telefonie).
 24. Co się podobało, co było niejasne, gdzie gra się zacinała lub grzała telefon.
-25. Ile dni i mniej więcej ile minut dziennie grałeś. Google pyta o to przy wniosku o produkcję.
-26. „Raport dla testera” z 3. i 10. dnia (jeśli jeszcze nie poszedł).
+25. Ile dni i mniej więcej ile minut dziennie grałeś.
+26. „Raport dla testera” z 3. i 10. dnia (jeśli jeszcze nie poszedł) — z kodem testera.
 
 ### Kiedy wysyłamy testerom
 
@@ -239,7 +248,12 @@ Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone (poza serwerem ra
 4. AAB na **test wewnętrzny** (do 100 osób, bez przeglądu Google): 1–2 dni na telefonie
    właściciela i Foldzie, raport przedpremierowy i pętla testowa (R11-04).
 5. Ten sam AAB (**bez ponownego budowania**) awansuje na **test zamknięty** według sekcji
-   „Testy zamknięte w Play Console” poniżej (12 testerów przez 14 dni dla nowego konta osobistego).
+   „Testy zamknięte w Play Console” poniżej (konto firmowe: bez wymogu 12 testerów × 14 dni;
+   test zamknięty i tak ok. 14 dni z 18–20 osobami, plan w `docs/research/R13-testy.md`).
+   Adres e-mail albo formularz opinii trafia do gry przez `-PtesterFeedback=<e-mail|https://…>`
+   (przycisk w oknie raportu; tylko wersje testowe). Workflow CI tego jeszcze nie przekazuje —
+   koordynator dopisuje to przed pierwszym wydaniem testowym, gdy właściciel poda adres
+   (`docs/OWNER_CHECKLIST.md`).
 6. Po wgraniu do Play koordynator wpisuje `1` do `release/last_version_code.txt`; każde kolejne
    wydanie testowe wymaga większego `releaseVersionCode` w `gradle.properties` i nowego
    `version_name` (np. `0.1.1`).
@@ -265,7 +279,7 @@ w konsoli przed decyzją.
 | **Progi pamięci** (gry, p90 z 28 dni, anon RSS + swap) | od **02.2027** [oficjalne]; np. telefon 4 GB: 2,25 GB na pierwszym planie, 2,0 GB w tle; bitmapy w tle > 200 MB = źle; DEX ≥ 25% optymalizacji tylko gdy DEX gry > 50 MB | Spodziewamy się dużego zapasu (budżet bitmap 2–8 MiB). Zmierzyć `adb shell dumpsys meminfo com.centurywar.game` w Endless po fali 40 i dopisać do `PERFORMANCE.md` | [Google: progi pamięci](https://support.google.com/googleplay/android-developer/answer/17492799), [blog 08.2026](https://android-developers.googleblog.com/2026/08/app-quality-memory-optimization-secure-onboarding.html) |
 | **targetSdk 36** | nowe aplikacje i aktualizacje od **31.08.2026** [oficjalne] | Spełnione (`targetSdk = 36`) | [Google: target API](https://developer.android.com/google/play/requirements/target-sdk) |
 | **targetSdk 37 (Android 17)** | prawdopodobnie **31.08.2027** — tak wynika z rytmu Google, oficjalna tabela jeszcze tego nie podaje [nieoficjalne] | Gry są zwolnione z ignorowania orientacji na dużych ekranach (`android:appCategory="game"`) [oficjalne]. Przed podniesieniem sprawdzić na Foldzie wymuszone przez użytkownika proporcje | [Android 17: ograniczenia ignorowane](https://developer.android.com/about/versions/17/changes/ff-restrictions-ignored), [ecorpit (nieoficjalne)](https://ecorpit.com/android-17-targetsdk-37-adaptive-layout-migration-2026/) |
-| **Wniosek o produkcję** (konto osobiste po 13.11.2023) | 12 testerów z ciągłym opt-in przez 14 dni; ocena zwykle do 7 dni [oficjalne] | Google pisze wprost, że powodem dalszego testowania może być **„insufficient tester engagement during the testing period”** [oficjalne] — testerzy muszą grać, nie tylko zainstalować. Raport testera (zlecenie `tasks/R2-04-tester-report.md`) daje dane do odpowiedzi | [Google: wymagania testów](https://support.google.com/googleplay/android-developer/answer/14151465) |
+| **Wniosek o produkcję** (konto osobiste po 13.11.2023; **nas nie dotyczy — konto firmowe, decyzja 5.11**) | 12 testerów z ciągłym opt-in przez 14 dni; ocena zwykle do 7 dni [oficjalne] | Google pisze wprost, że powodem dalszego testowania może być **„insufficient tester engagement during the testing period”** [oficjalne] — testerzy muszą grać, nie tylko zainstalować. Raport testera (zlecenie `tasks/R2-04-tester-report.md`) daje dane do odpowiedzi | [Google: wymagania testów](https://support.google.com/googleplay/android-developer/answer/14151465) |
 | **Raport przedpremierowy** | automatycznie po wgraniu AAB na tor testowy [oficjalne] | Przejrzeć awarie, zrzuty, ostrzeżenia dostępności po każdym AAB | [Google: pre-launch report](https://support.google.com/googleplay/android-developer/answer/9842757) |
 | **Firebase Test Lab** (opcjonalnie) | plan Spark bez opłat: **5 testów dziennie na fizycznych i 10 na wirtualnych urządzeniach**; plan Blaze: 30 / 60 min dziennie bez opłat, potem 5 / 1 USD za godzinę [oficjalne] | Tylko po decyzji właściciela (projekt Firebase). `gcloud firebase test android run --type robo` | [Firebase: limity Test Lab](https://firebase.google.com/docs/test-lab/usage-quotas-pricing) |
 
@@ -896,7 +910,8 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
    Androida, zrzut i opis kroków dla każdego błędu. Zbieraj także
    informację, co działało. **Poproś testerów o wysłanie „Raportu dla
    testera” po 3. i po 10. dniu testu** (Ustawienia → O grze → Raport dla
-   testera): postęp, dni i sesje gry, tryby, wydajność telefonu i ustawienia.
+   testera; gra przypomina o nim paskiem w menu): kod testera, postęp, dni i
+   sesje gry (mapa dni), awarie i ANR, tryby, wydajność telefonu i ustawienia.
    To dane do odpowiedzi na pytania we wniosku o produkcję (pkt 9).
 
    Raport jest **lokalny**: liczniki leżą w `files/playtest.json` (poza
@@ -913,12 +928,14 @@ debug **nie mogą być wykorzystane do dystrybucji w Google Play**.
    i ponowny zapis restartują 14-dniowy okres danej osoby.
    To wymaganie dotyczy wskazanej kategorii kont; nie jest
    uniwersalnym wymogiem dla wszystkich istniejących kont firmowych.
+   **Century War: konto firmowe (decyzja 5.11) — wymóg nas nie dotyczy;**
+   test zamknięty ok. 14 dni robimy dla jakości, nie dla Google.
 8. W trakcie dwóch tygodni reaguj na problemy testerów, publikuj
    poprawione AAB na tym samym torze i zachowaj ciągłość ich udziału.
    Sprawdzaj raport przedpremierowy, stabilność i powtarzalność
    zgłaszanych błędów. W dokumentacji testu zanotuj użycie kluczowych
    funkcji i konkretne poprawki.
-9. Po spełnieniu wymagań wejdź na **Dashboard → Apply for production**
+9. (Tylko konto osobiste — nas nie dotyczy.) Po spełnieniu wymagań wejdź na **Dashboard → Apply for production**
    i odpowiedz na pytania o przebieg testów, opinię testerów, aplikację
    oraz gotowość do wydania. Dostęp produkcyjny wymaga zatwierdzenia
    przez Google; nie jest przyznawany automatycznie po 14 dniach.
