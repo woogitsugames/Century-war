@@ -147,4 +147,31 @@ class D59PerfProbeTest {
     @Test fun achievementsIdle() = screen("rekordy-osiagniecia HIGH", Quality.HIGH, 36, { AchievementsScreen(it) }) {}
     @Test fun replaysIdle() = screen("rekordy-powtorki HIGH", Quality.HIGH, 36, { ReplayListScreen(it) }) {}
     @Test fun menuIdle() = screen("menu HIGH", Quality.HIGH, 36, { MenuScreen(it) }) {}
+
+    @Test fun achievementsSplit() {
+        val g = game(Quality.LOW, 36)
+        val c = Canvas(Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888))
+        val s = AchievementsScreen(g)
+        g.setScreen(s); g.finishScreenTransition()
+        repeat(900) { s.update(1f / 60f); s.render(c) }
+        for (k in 0 until 3) {
+            var b0 = bytes(); repeat(600) { s.update(1f / 60f) }; val u = bytes() - b0
+            b0 = bytes(); repeat(600) { s.render(c) }; val r = bytes() - b0
+            println("D59 osiagniecia update=$u render=$r")
+        }
+    }
+
+    @Test fun endlessWindows() {
+        val g = game(Quality.LOW)
+        val c = Canvas(Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888))
+        val s = BattleScreen(g, BattleConfig(Mode.ENDLESS, 5952L, 1f, startEra = 8, maxEra = 8))
+        g.setScreen(s); g.finishScreenTransition()
+        s.battle.playerAi = Ai(s.battle, 0); s.battle.wave = 52
+        repeat(1800) { s.update(Battle.STEP); s.render(c) }
+        for (k in 0 until 6) {
+            var b0 = bytes(); repeat(300) { s.update(Battle.STEP) }; val u = bytes() - b0
+            b0 = bytes(); repeat(300) { s.render(c) }; val r = bytes() - b0
+            println("D59 endless okno$k update=$u render=$r wave=${s.battle.wave} over=${s.battle.over}")
+        }
+    }
 }

@@ -160,7 +160,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
 
     // rysowanie szczegółowe (art/*): wspólny pisak + moduły
     private val pen = Pen()
-    private val backdrops = Backdrops(g, b)
+    internal val backdrops = Backdrops(g, b)
     private val men = Soldiers(pen)
     private val commanders = CommanderArt(pen)
     private val mach = Machines(pen, men)

@@ -157,6 +157,25 @@ object Achievements {
 
     fun byId(id: String): AchievementDef? = all.firstOrNull { it.id == id }
 
+    /** D59: maski liczone raz; `values()` kopiował tablicę przy każdym odczycie (co klatkę ekranu). */
+    private val MODIFIER_VICTORY_MASK = (1L shl Modifier.values().size) - 1L
+    private val DOCTRINE_VICTORY_MASK = (1L shl com.centurywar.game.Doctrine.values().size) - 1L
+
+    /** D59: pętle po indeksie; ekran Osiągnięć liczy postęp co klatkę, a iterator alokował. */
+    private fun researchLevels(profile: Profile): Long {
+        val defs = Profile.research
+        var sum = 0L
+        for (i in defs.indices) sum += profile.level(defs[i].key).toLong()
+        return sum
+    }
+
+    private fun maxedResearch(profile: Profile): Long {
+        val defs = Profile.research
+        var n = 0L
+        for (i in defs.indices) if (profile.level(defs[i].key) >= defs[i].max) n++
+        return n
+    }
+
     fun isUnlocked(profile: Profile, id: String): Boolean = id in profile.unlockedAchievements
 
     /** Surowy postęp; UI może ograniczyć go do progu z definicji. */
@@ -168,10 +187,8 @@ object Achievements {
         AchievementMetric.HARD_CAMPAIGN -> profile.hardStagesCleared().toLong()
         AchievementMetric.WAVES -> profile.bestWave.toLong()
         AchievementMetric.KILLS -> profile.totalKills
-        AchievementMetric.RESEARCH_LEVELS -> Profile.research.sumOf { profile.level(it.key).toLong() }
-        AchievementMetric.MAXED_RESEARCH -> Profile.research.count {
-            profile.level(it.key) >= it.max
-        }.toLong()
+        AchievementMetric.RESEARCH_LEVELS -> researchLevels(profile)
+        AchievementMetric.MAXED_RESEARCH -> maxedResearch(profile)
         AchievementMetric.DOCTRINES -> Integer.bitCount(profile.achievementDoctrineMask).toLong()
         AchievementMetric.STEAM_VARIANTS, AchievementMetric.SILICON_VARIANTS ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and 3L).toLong()
@@ -183,10 +200,10 @@ object Achievements {
                 DAILY_EVENT_MASK).toLong()
         AchievementMetric.MODIFIER_VICTORIES ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
-                ((1L shl Modifier.values().size) - 1L)).toLong()
+                MODIFIER_VICTORY_MASK).toLong()
         AchievementMetric.DOCTRINE_VICTORIES ->
             java.lang.Long.bitCount((profile.achievementCounters[definition.metric.name] ?: 0L) and
-                ((1L shl com.centurywar.game.Doctrine.values().size) - 1L)).toLong()
+                DOCTRINE_VICTORY_MASK).toLong()
         else -> profile.achievementCounters[definition.metric.name] ?: 0L
     }
 

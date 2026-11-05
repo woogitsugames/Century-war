@@ -150,6 +150,15 @@ class LowEndScreensPerformanceTest {
         }
     }
 
+    /** D59: Rekordy → Osiągnięcia (zegar bez pudełka, maski bez kopii `values()`). */
+    @Test fun achievementsLow() {
+        val g = game()
+        val c = canvas()
+        val s = AchievementsScreen(g)
+        g.setScreen(s)
+        check("Osiągnięcia LOW") { s.update(1f / 60f); s.render(c) }
+    }
+
     @Test fun battlePauseLow() {
         val g = game()
         val c = canvas()
