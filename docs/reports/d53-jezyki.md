@@ -56,4 +56,7 @@ z `private fun partN` (78 = 78). Wynik jest identyczny jak przed zmianą. Zosta�
 alarmy: formy mnogie z `|` w `ms_*` i `medals_n`, szablon w `lost188_body` i komentarz z „klucz”.
 Każdą podmianę skrypt dodatkowo sprawdzał pod kątem zgodności placeholderów.
 
-Test `LTest` obejściem `tools/offline-build/` (`CW_OFFLINE_DIR=/tmp/claude-0/d53`): wynik niżej.
+Obejście `tools/offline-build/` (`CW_OFFLINE_DIR=/tmp/claude-0/d53`, zależności z d48): `build_app.sh`
+kończy się „OK” (sim + app, main i test). `run_tests.sh` dla `LTest`, `LTestReview120` i `LTestReview136`
+daje **OK (26 testów)**. Uwaga dla następnych użyć: katalog `stubs` trzeba skopiować z d48, a nie
+podlinkować, bo `find $D/stubs` nie wchodzi w symlink („error: no source files”).
