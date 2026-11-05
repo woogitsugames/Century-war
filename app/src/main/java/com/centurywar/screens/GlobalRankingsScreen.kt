@@ -59,20 +59,23 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         val pw = min(1040 * dp, w - g.insetL - g.insetR - 32 * dp)
         val gap = 6 * dp
         val tw = (pw - 3 * gap) / 4
-        val left = (w - pw) / 2f
+        // Dzień 60: środek bezpiecznego obszaru (20:9 z wycięciem z lewej: zakładka wychodziła poza niego).
+        val left = (w + g.insetL - g.insetR - pw) / 2f
         for (i in 0..3) {
             tabs[i].label = chrome.tabLabel(L[names[i]], L[shortNames[i]], tw, 48 * dp)
             tabs[i].iconId = icons[i]
             tabs[i].set(left + i * (tw + gap), chrome.top + 4 * dp, tw, 48 * dp)
         }
         panel.set(left, chrome.top + 56 * dp, left + pw, h - g.insetB - 12 * dp)
-        val filterWidth = min(150 * dp, (pw - 40 * dp) / 2f)
-        periodBtn.set(panel.left + 12 * dp, panel.top + 8 * dp, filterWidth, 48 * dp)
-        stageBtn.set(panel.left + 22 * dp + filterWidth, panel.top + 8 * dp, filterWidth, 48 * dp)
+        // Dzień 60: filtry odsunięte od złotej lamówki ramki (leżały na niej).
+        val filterInset = (Ui.PANEL_TRIM_INSET + 6f) * dp
+        val filterWidth = min(150 * dp, (pw - 2 * filterInset - 10 * dp) / 2f)
+        periodBtn.set(panel.left + filterInset, panel.top + filterInset, filterWidth, 48 * dp)
+        stageBtn.set(periodBtn.r.right + 10 * dp, periodBtn.r.top, filterWidth, 48 * dp)
         periodBtn.iconId = Icons.CALENDAR
         stageBtn.iconId = Icons.MAP
         val reportWidth = min(180 * dp, (pw - 35 * dp) / 3f)
-        reportBtn.set(panel.right - 12 * dp - reportWidth, panel.top + 8 * dp,
+        reportBtn.set(panel.right - filterInset - reportWidth, periodBtn.r.top,
             reportWidth, 48 * dp)
         update(0f)
         refresh()
@@ -106,7 +109,7 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         if (stageBtn.visible) ui.button(c, stageBtn, 13f)
         if (reportBtn.visible) ui.button(c, reportBtn, 12f)
         val normalized = L["global_normalized"]
-        ui.textO(c, normalized, panel.centerX(), panel.top + 66 * dp,
+        ui.textO(c, normalized, panel.centerX(), periodBtn.r.bottom + 12 * dp,
             ui.fit(normalized, 11f, panel.width() - 24 * dp), Ui.DIM, Paint.Align.CENTER)
 
         val view = g.scores?.view(board(), periods[period], g.profile.playerId)
@@ -114,7 +117,7 @@ class GlobalRankingsScreen(g: Game) : Screen(g) {
         val around = view?.around ?: emptyList()
         val l = panel.left + 16 * dp
         val r = panel.right - 16 * dp
-        var y = panel.top + 78 * dp
+        var y = periodBtn.r.bottom + 20 * dp
         val limit = panel.bottom - 120 * dp
         if (list.isEmpty()) {
             Icons.draw(c, Icons.TROPHY, panel.centerX(), y + 30 * dp, 42 * dp, dp = dp)

@@ -961,13 +961,16 @@ class MenuScreen(g: Game) : Screen(g) {
         // podtytuł na wstędze
         if (portraitMenu) {
             val safeW = w - g.insetL - g.insetR - 24 * dp
-            ui.ribbon(c, cx, subY, L["subtitle"], min(16f, s / dp * 0.3f),
+            ui.ribbon(c, cx, subY, L["subtitle"], subtitleDp(s),
                 Ui.RIBBON, min(s * 4.2f, safeW - 28 * dp), Ui.TEXT, safeW)
         } else {
-            ui.ribbon(c, cx, subY, L["subtitle"], min(16f, s / dp * 0.3f),
+            ui.ribbon(c, cx, subY, L["subtitle"], subtitleDp(s),
                 Ui.RIBBON, s * 4.2f, Ui.TEXT)
         }
     }
+
+    /** Dzień 60: podtytuł pod logo nie mniejszy niż 9 dp (na 720p i 20:9 miał 7,8 dp). */
+    private fun subtitleDp(s: Float) = min(16f, max(9f, s / dp * 0.3f))
 
     private fun drawPlayer(c: Canvas) {
         val pr = g.profile

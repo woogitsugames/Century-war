@@ -451,10 +451,13 @@ class CampaignScreen(
         }
         c.restore()
         ui.button(c, back, 16f)
-        chrome.title(c, L["campaign"])
+        chrome.titleBounds(L["campaign"], hints.titleRect)
+        // Dzień 60: na 720p i 20:9 wstęga okna etapu wchodziła na przyciemniony tytuł „Kampania”
+        // (dwie wstęgi jedna na drugiej); wtedy tytułu ekranu pod oknem nie rysujemy.
+        if (selected == null || hints.titleRect.bottom < info.top - 16 * dp * ui.textScale)
+            chrome.title(c, L["campaign"])
         chrome.badges(c, g.profile.medals, g.profile.totalStars())
         selected?.let { drawInfo(c, it) }
-        chrome.titleBounds(L["campaign"], hints.titleRect)
         hints.draw(c)
         eraIntro?.draw(c)
     }

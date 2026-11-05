@@ -19,6 +19,7 @@ class PrivacySummaryScreen(g: Game) : Screen(g) {
     private val panel = RectF()
     private val lines = ArrayList<String>()
     private var scroll = 0f
+    private val scrollCue = ScrollCue()
     private var maxScroll = 0f
     private var lineHeight = 0f
     private var dt = 0f
@@ -37,12 +38,13 @@ class PrivacySummaryScreen(g: Game) : Screen(g) {
         chrome.layoutBack(back)
         back.label = L["back"]
         val pw = min(820f * dp, w - g.insetL - g.insetR - 24f * dp)
-        val left = (w - pw) / 2f
+        val left = (w + g.insetL - g.insetR - pw) / 2f
         panel.set(left, chrome.top + 7f * dp, left + pw, h - g.insetB - 11f * dp)
 
         // Zawijanie tylko przy zmianie rozmiaru/języka, bez alokacji na klatkę.
         lines.clear()
-        val width = panel.width() - 44f * dp
+        // Dzień 60: z prawej miejsce na strzałkę przewijania.
+        val width = panel.width() - 64f * dp
         for (key in SECTIONS) {
             if (lines.isNotEmpty()) lines.add("")
             val words = L[key].split(' ')
@@ -82,6 +84,9 @@ class PrivacySummaryScreen(g: Game) : Screen(g) {
             y += lineHeight
         }
         c.restore()
+        // Dzień 60: tekst przewija się, ale nic tego nie zdradzało (ostatni akapit tuż przy ramce).
+        scrollCue.vertical(c, panel.right - 22f * dp, panel.top + 10f * dp, panel.bottom - 10f * dp,
+            scroll, maxScroll, dp)
         chrome.title(c, L["privacy93_title"])
         ui.button(c, back, 16f)
     }

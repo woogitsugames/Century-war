@@ -516,9 +516,13 @@ class BattleScreen(
         }
         val freeW = w - g.insetL - g.insetR - 50 * dp
         val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
-        val vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
+        var vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
+        // Dzień 60: wstęga „Wybierz wariant epoki” (27 dp nad kartami) nie wychodzi poza górę ekranu.
+        val variantTop = max((h + g.insetT - g.insetB - vch) / 2f,
+            g.insetT + (27f + 21f * ui.textScale * 1.05f * 0.75f + 8f) * dp)
+        vch = min(vch, h - g.insetB - 8 * dp - variantTop)
         for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
-            (h + g.insetT - g.insetB - vch) / 2f, vcw, vch)
+            variantTop, vcw, vch)
         upgradesView.layoutTurretPanel()
         upgradesView.layoutUpgradePanel()
         // Szerokość paneli zmienia łamanie opisów wariantów i kart.
@@ -546,7 +550,10 @@ class BattleScreen(
      */
     private fun layoutPause() {
         val freeW = w - g.insetL - g.insetR - 24 * dp
-        val freeH = h - g.insetT - g.insetB - 20 * dp
+        // Dzień 60: wstęga „Pauza” (środek 4 dp pod górą panelu) wystawała ponad ekran na 720p i 20:9;
+        // u góry zostaje miejsce na jej połowę + 6 dp, u dołu 10 dp jak dotąd.
+        val pauseTopM = max(10 * dp, (21f * ui.textScale * 1.05f * 0.75f + 1.2f - 4f + 6f) * dp)
+        val freeH = h - g.insetT - g.insetB - pauseTopM - 10 * dp
         pauseWide = freeW >= 560 * dp || freeW > freeH
         val pw = min(if (pauseWide) 780 * dp else 520 * dp, freeW)
         val side = (Ui.PANEL_TRIM_INSET + Ui.PANEL_BUTTON_MARGIN) * dp
@@ -558,7 +565,7 @@ class BattleScreen(
         val stackExtra = if (pauseStacked) (pauseMenu.size - 1) * (48 * dp + PAUSE_STACK_GAP * dp) else 0f
         val ph = min((if (pauseWide) 354 * dp else 560 * dp) + stackExtra, freeH)
         val cx = (g.insetL + w - g.insetR) * 0.5f
-        val cy = (g.insetT + h - g.insetB) * 0.5f
+        val cy = (g.insetT + pauseTopM + h - g.insetB - 10 * dp) * 0.5f
         pausePanel.set(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f)
 
         // Pełne 48 dp i wyraźny odstęp od złotej lamówki ramki (zgłoszenie z Folda).
@@ -2002,13 +2009,14 @@ class BattleScreen(
             val name = L[v.nameKey]
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
-            val wrapWidth = tmpR.width() - 18 * dp
+            // Dzień 60: opis z tym samym marginesem od lamówki co karty doktryn (był tuż przy ramce).
+            val wrapWidth = tmpR.width() - 2 * CHOICE_TEXT_PAD * dp
             val key = era * 2 + i
             if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
                 variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
                 variantDescKey[i] = key
-                variantDescCount[i] = HintFrame.wrapInto(ui, L[v.descKey],
-                    wrapWidth, 12.5f, variantDescLines[i])
+                variantDescCount[i] = HintFrame.wrapHintInto(ui, L[v.descKey],
+                    wrapWidth, 12.5f, variantDescLines[i], hyphen = true)
             }
             drawWrappedLines(c, variantDescLines[i], variantDescCount[i],
                 tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
@@ -2028,7 +2036,7 @@ class BattleScreen(
             }
         }
         variantDescLanguage = L.lang
-        variantDescWidth = variantBtn[0].r.width() - 18 * dp
+        variantDescWidth = variantBtn[0].r.width() - 2 * CHOICE_TEXT_PAD * dp
         variantDescScale = ui.textScale
     }
 
@@ -2049,18 +2057,6 @@ class BattleScreen(
             val rarity = cards?.get(i)?.rarity
             val trim = if (rarity == null) Ui.GOLD else CARD_RARITY[rarity.ordinal.coerceIn(0, CARD_RARITY.size - 1)]
             ui.panel(c, tmpR, Color.argb(245, 40, 48, 70), 14f)
-            val mr = min(33 * dp, min(b.r.width() * 0.2f, b.r.height() * 0.18f))
-            val my = tmpR.top + 10 * dp + mr
-            val icon = if (cards == null) doctrineIcon(doctrines!![i]) else endlessIcon(cards[i])
-            ui.medallion(c, tmpR.centerX(), my, mr, trim, icon)
-            val key = if (cards == null) doctrines!![i].key else cards[i].textKey
-            val name = L[key]
-            ui.textO(c, name, tmpR.centerX(), my + mr + 23 * dp,
-                ui.fit(name, 17f, tmpR.width() - 2 * CHOICE_TEXT_PAD * dp), Ui.GOLD, Paint.Align.CENTER)
-            if (rarity != null) {
-                ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
-                    10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
-            }
             val descKey = choiceDescriptionKey(cards?.get(i), doctrines?.get(i))
             // Tura 9: tekst karty nie dotyka złotej lamówki (Ui.PANEL_TRIM_INSET), także na Foldzie.
             val wrapWidth = tmpR.width() - 2 * CHOICE_TEXT_PAD * dp
@@ -2072,8 +2068,27 @@ class BattleScreen(
                 choiceDescCount[i] = HintFrame.wrapHintInto(ui, L[descKey],
                     wrapWidth, 12f, choiceDescLines[i], hyphen = true)
             }
+            val descOff = (if (rarity != null) 56f else 45f) * dp
+            var mr = min(33 * dp, min(b.r.width() * 0.2f, b.r.height() * 0.18f))
+            // Dzień 60: trzy wiersze opisu (karta Endless na 720p) wchodziły na dolną lamówkę;
+            // wtedy medalion maleje i cała treść podnosi się o brakujące miejsce.
+            val lastLine = tmpR.top + 10 * dp + 2 * mr + descOff +
+                (choiceDescCount[i] - 1).coerceAtLeast(0) * 12f * dp * ui.textScale * 1.3f + 4 * dp
+            val overflow = lastLine - (tmpR.bottom - CHOICE_TEXT_PAD * dp + 2 * dp)
+            if (overflow > 0f) mr = max(18 * dp, mr - overflow / 2f)
+            val my = tmpR.top + 10 * dp + mr
+            val icon = if (cards == null) doctrineIcon(doctrines!![i]) else endlessIcon(cards[i])
+            ui.medallion(c, tmpR.centerX(), my, mr, trim, icon)
+            val key = if (cards == null) doctrines!![i].key else cards[i].textKey
+            val name = L[key]
+            ui.textO(c, name, tmpR.centerX(), my + mr + 23 * dp,
+                ui.fit(name, 17f, tmpR.width() - 2 * CHOICE_TEXT_PAD * dp), Ui.GOLD, Paint.Align.CENTER)
+            if (rarity != null) {
+                ui.textO(c, rarityLabel(rarity), tmpR.centerX(), my + mr + 40 * dp,
+                    10f, Ui.DIM, Paint.Align.CENTER, 1.6f)
+            }
             drawWrappedLines(c, choiceDescLines[i], choiceDescCount[i],
-                tmpR.centerX(), my + mr + (if (rarity != null) 56f else 45f) * dp,
+                tmpR.centerX(), my + mr + descOff,
                 12f, Ui.TEXT, Paint.Align.CENTER)
         }
         choiceDescLanguage = L.lang
