@@ -511,8 +511,9 @@ class BattleScreen(
             val top = g.insetT + (availH - 3 * sh - 2 * gap) / 2f + 17 * dp
             val left = (w + g.insetL - g.insetR - sw) / 2f
             for (i in 0..2) doctrineBtn[i].set(left, top + i * (sh + gap), sw, sh)
-        } else
-        for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
+        } else {
+            for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
+        }
         val freeW = w - g.insetL - g.insetR - 50 * dp
         val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
         val vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
