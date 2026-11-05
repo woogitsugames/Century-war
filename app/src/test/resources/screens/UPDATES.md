@@ -11,3 +11,4 @@
 - 2026-11-03 UTC: R2-04: przycisk „Raport dla testera” w O grze (Fold)
 - 2026-11-03 UTC: R2-01: linia „następnego celu” pod kaflami menu
 - 2026-11-05 UTC: R11-06 nowość na etapie
+- 2026-11-05 UTC: Dzien 60: szlif wizualny (podtytul menu 9 dp, wstegi pauzy i wariantow, ranking globalny)
