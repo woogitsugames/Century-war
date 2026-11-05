@@ -15,7 +15,7 @@ Dokument nie zmienia kodu gry.
 osobami), ale tydzień 3 („wniosek”) odpada, a próg 2.1 jest celem jakości, nie warunkiem Google.
 Zrobione: TOP 5 poz. 1 (Raport v2, kod testera), poz. 2 (lejek, d45), poz. 3 (przypomnienie
 w 3./10. dniu + `-PtesterFeedback`) — `docs/reports/d48-raport-v2.md`; K1 (etapy 28, 30–33)
-i etap 19 złagodzone (PROTOCOL 0.8.10).
+i etap 19 złagodzone (PROTOCOL 0.8.10). Poz. 5 (ankieta końcowa, jeden baner 10. dnia) — `docs/reports/d57-ankieta-koncowa.md`.
 
 **Skąd liczby:**
 - dane lokalne: kod `meta/PlaytestLog.kt`, `crash/PlaytestReportText.kt`, `meta/TesterSurvey.kt`,
