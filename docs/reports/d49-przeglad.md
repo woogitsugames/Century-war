@@ -66,4 +66,8 @@ obu wątków).
 ## Testy
 
 Obejście `tools/offline-build/` (`CW_OFFLINE_DIR=/tmp/claude-0/d49`, zależności podlinkowane z d48):
-WYNIK_TESTOW
+`build_app.sh` (sim + app main + test) — OK; `run_tests.sh` z klasami `PlaytestLogSaveOrderTest`,
+`PlaytestLogTest`, `PlaytestReportV2Test`, `TesterReportReminderTest`, `LowEndScreensPerformanceTest`
+(limit alokacji w menu), `LostBattleTest` — **OK (36 testów)**. Pełnego fastTest nie uruchamiano
+(limit czasu); nie sprawdzono też, jak często nowy test pada bez poprawki. Lint, R8 i
+`./gradlew build` nie były uruchamiane (Gradle zablokowany).
