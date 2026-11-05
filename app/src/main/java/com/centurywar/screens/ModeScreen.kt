@@ -96,6 +96,12 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
      * krótsza wersja, a w ostateczności wielokropek. Czytnik ekranu bez zmian.
      */
     private var rulesNote = ""
+    /** D43: czy linia „od premiery” ma pas pod Graj (liczone w [layout]) i jej linia bazowa. */
+    internal var noteShown = false
+        private set
+    private var noteBaseline = 0f
+    internal val panelForTests: RectF get() = panel
+    internal val startForTests: RectF get() = start.r
 
     private var labelTimer = 0f
     private var endlessBest = ""
@@ -155,7 +161,18 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         val top = chrome.top + 14 * dp + max(0f, (avail - ph) * 0.4f)
         panel.set(w / 2 - pw / 2, top, w / 2 + pw / 2, top + ph)
-        start.set(w / 2 - 110 * dp, panel.bottom - 76 * dp, 220 * dp, 52 * dp)
+        // D43: linia „od premiery” ma własny pas nad wewnętrzną lamówką (wcześniej leżała na ramie).
+        // Pas: litery (ok. 1,3 rozmiaru z cieniem) + kontur + 3 dp od lamówki; Graj stoi ≥ 4 dp
+        // nad nim i podnosi się tylko o brakującą wysokość (treść panelu liczy się od start.r.top).
+        noteShown = mode == Mode.DAILY && PreReleaseRules.active(g.preReleaseNotesEnabled, day)
+        val innerBottom = panel.bottom - Ui.PANEL_TRIM_INSET * dp
+        val noteSize = NOTE_SP * dp * ui.textScale
+        val noteOutline = max(2f * dp, noteSize * 0.16f)
+        noteBaseline = innerBottom - 3 * dp - noteSize * 0.3f - noteOutline * 0.6f
+        val startBottom = if (noteShown)
+            min(panel.bottom - 24 * dp, noteBaseline - noteSize * 1.0f - noteOutline - 4 * dp)
+            else panel.bottom - 24 * dp
+        start.set(w / 2 - 110 * dp, startBottom - 52 * dp, 220 * dp, 52 * dp)
         start.highlight = true
         start.iconId = Icons.PLAY
         val tabWidth = min(118 * dp, (pw - 42 * dp) / 2f)
@@ -198,7 +215,11 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         hints.update(dt)
         this.dt = dt
         val today = previewDailyDay ?: Daily.dayNumber(g.clock())
-        if (today != day) { day = today; dailyCfg = null; labelTimer = 0f }
+        if (today != day) {
+            day = today; dailyCfg = null; labelTimer = 0f
+            // Dzień premiery w trakcie: pas linii „od premiery” znika, Graj wraca na miejsce.
+            if (noteShown != (mode == Mode.DAILY && PreReleaseRules.active(g.preReleaseNotesEnabled, day))) layout()
+        }
         labelTimer -= dt
         if (labelTimer <= 0f) { labelTimer = 1f; refreshLabels() }
         if (mode == Mode.DAILY) {
@@ -468,9 +489,9 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         }
         if (mode == Mode.DAILY) {
             if (weeklySelected) drawWeekly(c, pr) else drawDaily(c, pr)
-            // Pas 24 dp pod przyciskiem Graj (start.r.bottom = panel.bottom − 24 dp) jest pusty.
-            if (rulesNote.isNotEmpty() && PreReleaseRules.active(g.preReleaseNotesEnabled, day))
-                ui.textO(c, rulesNote, panel.centerX(), panel.bottom - 8 * dp, NOTE_SP, Ui.DIM, Paint.Align.CENTER)
+            // D43: własny pas między Graj a wewnętrzną lamówką (layout), nie na ramie panelu.
+            if (rulesNote.isNotEmpty() && noteShown)
+                ui.textO(c, rulesNote, panel.centerX(), noteBaseline, NOTE_SP, Ui.DIM, Paint.Align.CENTER)
             for (bi in buttons.indices) { val b = buttons[bi]; if (b !== start && b !== dailyTab && b !== weeklyTab) ui.button(c, b, 14f) }
             ui.button(c, start, 20f)
             hints.draw(c)
