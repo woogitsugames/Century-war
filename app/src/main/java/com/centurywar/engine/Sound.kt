@@ -239,7 +239,10 @@ class Sound(private val ctx: Context) {
                         next = i
                         break
                     }
-                    if (next < 0 && !released) wake.wait(4_000L)
+                    // D59: czekamy bez limitu czasu. prewarm() i release() budzą wątek pod tym
+                    // samym zamkiem po zmianie stanu, więc sygnał nie ginie; dawny limit 4 s
+                    // budził proces co 4 s także wtedy, gdy gra była w tle.
+                    if (next < 0 && !released) wake.wait()
                 }
                 if (next < 0) continue
                 try {

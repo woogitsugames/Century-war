@@ -220,6 +220,8 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         private set
 
     companion object {
+        /** D59: zapas (dp) przy pomijaniu cząstek poza ekranem; wstrząs kamery to najwyżej 7 dp. */
+        const val PARTICLE_CULL_DP = 8f
         /**
          * Przybliżenie pola bitwy na wąskich, wysokich ekranach (zewnętrzny Fold w pionie).
          * false przywraca wygląd sprzed dnia 17 (widok 880 j. świata). Telefon poziomo,
@@ -1327,6 +1329,10 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         pprio[i] = priority
     }
 
+    /** D59: cząstki pominięte przy rysowaniu, bo leżały poza ekranem (licznik do testów). */
+    internal var culledParticles = 0L
+        private set
+
     private fun updateParticles(c: Canvas, dt: Float) {
         var i = 0
         while (i < pcount) {
@@ -1345,7 +1351,16 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                 3 -> { pvx[i] *= 0.98f }
                 4 -> { pvx[i] *= 0.94f }
             }
-            val x = sx(px[i]); val y = sy(ph[i])
+            val x = sx(px[i])
+            // D59: cząstka całkiem poza ekranem (z zapasem na wstrząs 7 dp) tylko się porusza;
+            // promień 1,6·rozmiaru + 4 ogranicza każdy typ razem z grubością konturu.
+            val reach = psize[i] * k * 1.6f + 4f * k + PARTICLE_CULL_DP * g.ui.dp
+            if (x < -reach || x > viewW + reach) {
+                culledParticles++
+                i++
+                continue
+            }
+            val y = sy(ph[i])
             val a = Color.alpha(pcol[i]) / 255f
             fill.color = Color.argb((255 * a * min(1f, t * 1.5f) * (if (ptype[i] == 2) fxIntensity else 1f)).toInt(), Color.red(pcol[i]), Color.green(pcol[i]), Color.blue(pcol[i]))
             when (ptype[i]) {

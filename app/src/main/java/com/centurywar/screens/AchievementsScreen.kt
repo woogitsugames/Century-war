@@ -122,7 +122,8 @@ class AchievementsScreen(g: Game) : Screen(g) {
 
     override fun update(dt: Float) {
         this.dt = dt
-        today = Daily.dayNumber(g.clock())
+        // D59: nowMillis() bez pudełka Long (zegar jako lambda alokował 16 B na klatkę, jak menu w d43).
+        today = Daily.dayNumber(g.nowMillis())
         refreshProgress()
     }
 
