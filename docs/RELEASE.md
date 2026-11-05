@@ -64,6 +64,16 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
       z wersją bez minifikacji. Poprawka: typ misji (`MissionType`, zapisywany w profilu po
       nazwie) chroniony regułą R8 jak metryki osiągnięć; kontrola obejmuje teraz pola
       rozliczenia bitwy (A156-10).
+- [x] **Powtórka próby release (5 listopada 2026 r., d54, R12 poz. 2b)** — po zmianach 3–4.11,
+      lokalnie jak smoke CI: build OK bez ostrzeżeń R8; `verify_release_mapping` (27 klas,
+      101 pól) i `verify_release_dex` (749 klas) zaliczone; klucze JSON zapisów (profil
+      z powitaniem, koronami, serią porażek i rozliczeniem bitwy; `playtest.json` z kodem
+      testera, lejkiem i ankietą; historia, misje, kopia) obecne w DEX; `TestLoopActivity`
+      z niezmienioną nazwą, w manifeście release proces `:testloop` i filtr `TEST_LOOP`;
+      brak `.so`; profil ART w obu paczkach; bez klucza upload build nadal zablokowany.
+      `tools/r8-sim-smoke`: **82/82 OK** (zrzuty v16–v20). Rozmiar: **APK 20,1 MiB,
+      AAB 20,9 MiB** (muzyka bez zmian: 19,0 MiB). `lintDebug`: 0 błędów. Raport:
+      [reports/d54-release.md](reports/d54-release.md).
 
 - [x] **Nowości tur 9–10 i dni 1–4** (sprawdzone automatycznie, do obejrzenia przez testerów
       według scenariusza niżej):
@@ -667,12 +677,12 @@ Testy JUnit działają na klasach debug. Żeby sprawdzić **kod po minifikacji**
 `tools/r8-sim-smoke/run.sh` uruchamia R8 (z Android SDK, tryb `--classfile`) na module
 `sim` z tymi samymi regułami (`proguard-android-optimize` + `app/proguard-rules.pro`)
 i jedynym punktem wejścia `R8Smoke`. Najpierw wersja niezminifikowana zapisuje bajty
-zrzutów bitwy w formatach **v16, v17 i v18** oraz rekordu powtórki, potem wersja po R8:
+zrzutów bitwy we wszystkich formatach od **v16 do bieżącego** (`BattleSnapshot.VERSION`, dziś v20) oraz rekordu powtórki, potem wersja po R8:
 
 - odtwarza wszystkie 10 złotych powtórek (`GoldenFixtures.render`: kodek komend,
   weryfikator serwera, odtwarzacz, SHA-256 zrzutu końcowego) zgodnie z wzorcami,
-- wczytuje zrzuty v16–v18 z bajtów wersji niezminifikowanej (`battleId` 0 dla v16,
-  zachowany dla v17/v18), zapisuje v18 identycznie i dalej symuluje tak samo jak oryginał,
+- wczytuje zrzuty v16–v20 z bajtów wersji niezminifikowanej (`battleId` 0 dla v16,
+  zachowany od v17), zapisuje bieżący format identycznie i dalej symuluje tak samo jak oryginał,
 - odczytuje `ReplayRecord` (konfiguracja, komendy, metadane) i zapisuje go identycznie.
 
 ```bash
@@ -681,6 +691,7 @@ tools/r8-sim-smoke/run.sh    # wynik: „WYNIK: OK” dwa razy
 ```
 
 Wynik 3 listopada 2026 r.: **60/60 kontroli OK**, R8 przemianował 61 klas `com.centurywar`.
+Wynik 5 listopada 2026 r. (d54, zrzuty v16–v20): **82/82 OK**, 62 klasy przemianowane.
 Profilu (`Profile`, Android `org.json`) nie da się tak uruchomić bez urządzenia — sprawdzono
 kod: zapis i odczyt profilu, misji, historii bitew i kopii zapasowej używa wyłącznie jawnych
 kluczy JSON (`put`/`opt*`), zrzuty i powtórki — jawnych bajtów `DataOutputStream`/varint;
@@ -705,6 +716,7 @@ gałąź `integ/tura10` + poprawki nocy 6, lokalnie jak smoke CI, podpis debug C
 | AAB release / R8 / podpis CI | **21 614 758 B** (21 108,2 KiB, ok. 20,6 MiB) | `scripts/release_size_report.py` |
 | — w tym muzyka (21 × `.ogg`, bez kompresji w APK) | 19 927 585 B (ok. 19,0 MiB, 95 % APK) | `unzip -v` |
 | — w tym kod DEX (1 plik, 695 klas) | 1 702 560 B surowo, 827,8 KiB w ZIP | `unzip -v`, `verify_release_dex.py` |
+| APK / AAB 5.11.2026 (d54, ta sama metoda) | **21 118 507 B** (20,1 MiB) / **21 866 670 B** (20,9 MiB); DEX 1 881,7 KiB surowo, 749 klas | `release_size_report.py` |
 | Start debug / release (median z 5 prób) | n/d do pomiaru na telefonie | `adb shell am start -W` |
 
 `n/d` oznacza **brak wykonanego pomiaru**, nie 0 B lub 0 ms. Rozmiar pobrania z Google Play
