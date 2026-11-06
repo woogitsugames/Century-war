@@ -1,5 +1,9 @@
 # CI Android: Century War
 
+## Ręczna kontrola dokumentów i narzędzi
+
+W GitHub Actions wybierz **Dokumenty i narzędzia**, następnie **Run workflow** i gałąź. Workflow uruchamia pytest, kontrolę kart sklepu i lokalnych odnośników oraz statystyki lokalizacji. Statystyki Markdown są podsumowaniem kroku i artefaktem `l10n-stats`. Nie używa Gradle ani Android SDK. Lista wyjątków odnośników jest obecnie pusta; znane braki należy przejrzeć przed świadomym dodaniem wyjątków. Istniejące błędy w pytest i odnośnikach mogą powodować czerwony wynik.
+
 ## Zlecenie 162: bramki wydania i pamięć CI
 
 Na tagu `v*` job `release` czeka na zielone `build`, `fast-tests`,

@@ -1,0 +1,45 @@
+name: Dokumenty i narzędzia
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-tools-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  docs-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Zainstaluj pytest
+        run: python3 -m pip install pytest
+      - name: Testy Python
+        run: python3 -m pytest tests/ -v
+      - name: Limity kart sklepu
+        if: always()
+        run: python3 tools/check_store_listings.py
+      - name: Odnośniki dokumentacji
+        if: always()
+        run: |
+          # Brak zatwierdzonych wyjątków; dopisz tylko uzgodnione źródło:cel.
+          : > "$RUNNER_TEMP/doc-links-allow-list.txt"
+          python3 tools/check_doc_links.py --allow-list "$RUNNER_TEMP/doc-links-allow-list.txt"
+      - name: Statystyki lokalizacji
+        if: always()
+        run: |
+          python3 tools/l10n_stats.py --markdown > l10n-stats.md
+          cat l10n-stats.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Zapisz statystyki
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l10n-stats
+          path: l10n-stats.md
+          if-no-files-found: error
