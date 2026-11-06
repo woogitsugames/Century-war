@@ -52,4 +52,12 @@ Po scaleniu d65 (osiągnięcia z progami 9 / 27★) z d66 (18 rozkazów) padał
 - `OrdersAchievements65Test`: progi 18 / 54, medale 300 / 900, liczby w 10 opisach, postęp 20
   (3★ + 17 × 1★).
 
-Wyniki pełnych przebiegów — niżej.
+Pełny przebieg (`--rerun`, `--continue`): **BUILD SUCCESSFUL**, wyniki z XML:
+
+| Moduł | Testy | Pominięte | Porażki | Błędy |
+|---|---|---|---|---|
+| `:app:testDebugUnitTest` | 958 | 12 | 0 | 0 |
+| `:sim:test` | 354 | 3 | 0 | 0 |
+| `:server:test` | 95 | 1 | 0 | 0 |
+
+`python3 tools/pgs_sheet.py --check`: 83 osiągnięcia, suma 1605, bez problemów.
