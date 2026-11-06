@@ -1,4 +1,4 @@
-package com.centurywar.screens
+﻿package com.centurywar.screens
 
 import android.graphics.Canvas
 import android.graphics.Color
@@ -98,7 +98,8 @@ class ResearchScreen(g: Game) : Screen(g) {
     private fun place() {
         val langChanged = labelLanguage != L.lang
         labelLanguage = L.lang
-        for ((i, b) in cards.withIndex()) {
+        for (i in cards.indices) {
+            val b = cards[i]
             val d = b.tag as ResearchDef
             b.set(g.insetL + 16 * dp + (i % cols) * (cw + 12 * dp), top + 6 * dp + (i / cols) * (ch + 12 * dp) - scroll, cw, ch)
             b.enabled = g.profile.canBuy(d)
@@ -129,7 +130,8 @@ class ResearchScreen(g: Game) : Screen(g) {
         chrome.dim(c, 120)
         c.save()
         c.clipRect(0f, top, w, h)
-        for ((i, b) in cards.withIndex()) {
+        for (i in cards.indices) {
+            val b = cards[i]
             if (b.r.bottom < top - 10 * dp || b.r.top > h) continue
             drawCard(c, i, b)
         }
@@ -289,3 +291,4 @@ class ResearchScreen(g: Game) : Screen(g) {
         }
     }
 }
+
