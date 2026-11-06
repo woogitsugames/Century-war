@@ -24,14 +24,34 @@ import kotlin.math.min
 internal object OrderTexts {
     fun clock(seconds: Int): String = String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60)
 
-    fun goal(order: Orders.Order): String = L.f(
-        if (order.goal == Orders.Goal.HOLD) "o209_goal_hold" else "o209_goal_destroy", clock(order.limitSeconds))
+    fun goal(order: Orders.Order): String = L.f(when (order.goal) {
+        Orders.Goal.HOLD -> "o209_goal_hold"
+        Orders.Goal.DESTROY -> "o209_goal_destroy"
+        Orders.Goal.ESCORT -> "o211_goal_escort"
+        Orders.Goal.SPEARHEAD -> "o211_goal_spear"
+    }, clock(order.limitSeconds))
+
+    /** Ikona celu na liście: tarcza (obrona), miecze (atak), hełm (eskorta dowódcy). */
+    fun goalIcon(order: Orders.Order): Int = when (order.goal) {
+        Orders.Goal.HOLD -> Icons.SHIELD
+        Orders.Goal.DESTROY -> Icons.CROSSED_SWORDS
+        Orders.Goal.ESCORT, Orders.Goal.SPEARHEAD -> Icons.HELMET
+    }
+
+    /** Podpis zablokowanego rozkazu: etap kampanii (partia 1) albo gwiazdki w rozkazie partii 1. */
+    fun locked(order: Orders.Order): String {
+        val pre = Orders.prerequisite(order) ?: return L.f("o209_locked", Orders.unlockStageNumber(order))
+        return L.f("o211_locked", Orders.BATCH2_UNLOCK_STARS, L[pre.nameKey])
+    }
 
     fun objective(o: Orders.Objective): String = when (o.kind) {
         Orders.ObjectiveKind.BASE_HP -> L.f("o209_obj_base", "${o.value}%")
         Orders.ObjectiveKind.WITHIN -> L.f("o209_obj_within", clock(o.value))
         Orders.ObjectiveKind.KILLS -> L.f("o209_obj_kills", o.value)
         Orders.ObjectiveKind.LOSSES -> L.f("o209_obj_losses", o.value)
+        Orders.ObjectiveKind.COMMANDER_ALIVE -> L["o211_obj_commander"]
+        Orders.ObjectiveKind.GOLD_LEFT -> L.f("o211_obj_gold", o.value)
+        Orders.ObjectiveKind.FIELDED_MAX -> L.f("o211_obj_fielded", o.value)
     }
 
     private val KINDS = intArrayOf(OrderRules.MELEE, OrderRules.RANGED, OrderRules.HEAVY, OrderRules.ELITE,
@@ -63,12 +83,13 @@ internal object OrderTexts {
         if (order.maxEra > order.era) out.append(" → ").append(L[Defs.eraKeys[order.maxEra]])
         if (order.weather != Weather.CLEAR) out.append(" · ").append(L[order.weather.key])
         for (m in order.modifiers) out.append(" · ").append(L[m.key])
+        if (order.incomePct != 100) out.append(" · ").append(L.f("o211_income", "${order.incomePct}%"))
         return out.toString()
     }
 }
 
 /**
- * Dzień 62: Rozkazy sztabu — lista 9 rozkazów (po jednym na epokę) i karta wybranego rozkazu
+ * Dzień 62: Rozkazy sztabu — lista rozkazów (dzień 66: 18, dwie partie po jednym na epokę) i karta wybranego rozkazu
  * z celem, ograniczeniami, warunkami i nagrodą. Jedna kolumna (telefon, zewnętrzny Fold),
  * przewijana; karta rozkazu też się przewija przy dużym tekście. Bez powiadomień na ekranie.
  */
@@ -122,7 +143,7 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
     internal val selectedForTests: Int get() = selected
     internal fun openForTests(i: Int) { selected = i; detailScroll = 0f; layout() }
 
-    private fun unlocked(i: Int) = Orders.unlocked(Orders.all[i], g.profile.stars)
+    private fun unlocked(i: Int) = Orders.unlocked(Orders.all[i], g.profile.stars, g.profile.orderStars)
 
     override fun isDragScreen() = true
 
@@ -147,7 +168,7 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
             val b = cards[i]
             b.label = L[o.nameKey]
             subs[i] = if (unlocked(i)) L[Defs.eraKeys[o.era]] + " · " + OrderTexts.goal(o)
-                else L.f("o209_locked", Orders.unlockStageNumber(o))
+                else OrderTexts.locked(o)
             // TalkBack: nazwa + podpis + gwiazdki, jak na innych listach.
             b.sub = subs[i] + if (unlocked(i)) ", " + L["stars"] + " " + pr.orderStars[i] + "/3" else ""
         }
@@ -250,7 +271,7 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
             ui.card(c, r, if (open) CARD_BODY else CARD_LOCKED, 11f, if (cards[i].pressed) Ui.GOLD else 0)
             val mr = min(r.height() * 0.34f, 22 * dp)
             ui.medallion(c, r.left + 12 * dp + mr, r.centerY(), mr, Ui.ERA[o.era],
-                if (open) (if (o.goal == Orders.Goal.HOLD) Icons.SHIELD else Icons.CROSSED_SWORDS) else Icons.LOCK)
+                if (open) OrderTexts.goalIcon(o) else Icons.LOCK)
             val tx = r.left + 24 * dp + mr * 2
             val starsW = 3 * 20 * dp
             val textW = r.right - tx - starsW - 18 * dp

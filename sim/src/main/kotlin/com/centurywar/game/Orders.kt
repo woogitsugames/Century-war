@@ -135,7 +135,7 @@ object Orders {
             bonus = listOf(Objective(ObjectiveKind.BASE_HP, 10), Objective(ObjectiveKind.KILLS, 75))),
 
         // ---- Dzień 66: partia 2 (rozkazy 10–18), trudniejsza, nowe rodzaje celów.
-        // Plemiona: eskorta — wódz stoi z drużyną od pierwszej chwili i musi przeżyć.
+        // Plemiona: eskorta — wódz stoi za linią obrony od pierwszej chwili i musi przeżyć.
         Order(9, "chief_guard", era = 0, maxEra = 0, aiPower = 4.7f, goal = Goal.ESCORT,
             limitSeconds = 210, playerAllowed = NO_TURRETS, personality = AiPersonality.ASSAULT,
             bonus = listOf(Objective(ObjectiveKind.BASE_HP, 57), Objective(ObjectiveKind.KILLS, 52))),
@@ -147,11 +147,11 @@ object Orders {
         Order(11, "lean_winter", era = 2, maxEra = 2, aiPower = 3.2f, goal = Goal.HOLD,
             limitSeconds = 240, playerAllowed = OrderRules.ALL, incomePct = 50,
             bonus = listOf(Objective(ObjectiveKind.GOLD_LEFT, 100), Objective(ObjectiveKind.FIELDED_MAX, 70))),
-        // Feudalizm: grot — nocny atak z dowódcą, który musi przeżyć.
+        // Feudalizm: grot — nocny atak kierowany z tyłów przez dowódcę, który musi przeżyć.
         Order(12, "night_herald", era = 3, maxEra = 3, aiPower = 0.85f, goal = Goal.SPEARHEAD,
             limitSeconds = 360, playerAllowed = OrderRules.ALL, weather = Weather.NIGHT,
             bonus = listOf(Objective(ObjectiveKind.WITHIN, 315), Objective(ObjectiveKind.LOSSES, 80))),
-        // Proch: zniszcz w ulewie (proch słabiej pali), szybko i oszczędnie.
+        // Proch: zniszcz w ulewie (wolniejszy marsz, krótszy zasięg), oszczędnie, dowódca przy życiu.
         Order(13, "wet_powder", era = 4, maxEra = 4, aiPower = 0.4f, goal = Goal.DESTROY,
             limitSeconds = 315, playerAllowed = OrderRules.ALL, weather = Weather.RAIN,
             modifiers = setOf(Modifier.FRAGILE_BASES),
@@ -166,7 +166,7 @@ object Orders {
             playerAllowed = OrderRules.HEAVY or OrderRules.ELITE or OrderRules.COMMANDER or
                 OrderRules.TURRETS or OrderRules.BARRAGE or OrderRules.RALLY,
             bonus = listOf(Objective(ObjectiveKind.BASE_HP, 42), Objective(ObjectiveKind.LOSSES, 31))),
-        // Krzem: chudy budżet na wietrze — zniszcz bazę przy 60% dochodu.
+        // Krzem: chudy budżet na wietrze — zniszcz bazę przy 70% dochodu, z rezerwą złota.
         Order(16, "thin_signal", era = 7, maxEra = 7, aiPower = 0.69f, goal = Goal.DESTROY,
             limitSeconds = 330, playerAllowed = OrderRules.ALL, incomePct = 70, weather = Weather.WIND,
             bonus = listOf(Objective(ObjectiveKind.GOLD_LEFT, 1000), Objective(ObjectiveKind.WITHIN, 285))),

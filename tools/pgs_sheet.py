@@ -41,8 +41,8 @@ LEADERBOARDS = [  # klucz w properties, klucz nazwy w L.kt, uwaga
     ("leaderboard_campaign", "board_campaign", "suma gwiazdek 0–108"),
     ("leaderboard_skirmish", "board_skirmish", "punkty potyczki"),
     ("leaderboard_daily", "board_daily", "punkty wyzwania dnia; gra pokazuje okno dzienne"),
-    # Dzień 62: Rozkazy sztabu — suma najlepszych punktów 9 rozkazów (gwiazdki × 1000 + zdrowie bazy 0–500).
-    ("leaderboard_orders", "board_orders", "punkty sztabu 0–31500: suma za rozkazy (gwiazdki × 1000 + zdrowie bazy 0–500)"),
+    # Dzień 62: Rozkazy sztabu — suma najlepszych punktów 18 rozkazów (gwiazdki × 1000 + zdrowie bazy 0–500).
+    ("leaderboard_orders", "board_orders", "punkty sztabu 0–63000: suma za rozkazy (gwiazdki × 1000 + zdrowie bazy 0–500)"),
 ]
 
 # Wartości zastępujące wyrażenia progów z Achievements.kt (stan 3.11.2026).
