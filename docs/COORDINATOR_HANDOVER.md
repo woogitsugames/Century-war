@@ -1,3 +1,6 @@
+# KONIEC SESJI 6.11.2026 ok. 16:15 UTC (limit tygodniowy właściciela)
+- Stan, decyzje i kolejka: `century-war.md` → „Stan na koniec sesji 6.11” (tam też prompt startowy). main = integ = bold-sagan, pełne testy zielone, brak agentów i worktree. Budzenia :07/:37 wyłączone.
+
 - **5.11 ~11:40 UTC: dl.google.com ODBLOKOWANY. SDK zainstalowane, `assembleDebug` OK, pełne testy Gradle: :app 912 (1 niestabilny `RecordedMusicTest.musicResumesAfterTrimMemoryInBackground` — osobno zielony), :sim i :server zielone. `main` = `claude/bold-sagan-vwz5gm` = `integ/tura10` = 6dc6441f. APK wysłane właścicielowi.** Dalej: lint, `assembleRelease` próba R8 (R12 poz. 2b), eksport grafik sklepu 10 języków, `-PtesterFeedback` gdy właściciel poda adres.
 
 - 5.11 ~12:40 UTC: main = e09abb4b — d54 (lint 0 błędów; próba release R8 OK: zapisy w DEX, brak .so, AAB 20,9 MiB; r8-sim-smoke na v20; złote bez zmian), d55 (grafiki D7 10 języków), d56 (ostatnie fr „vous”, bez ptaków tła przy siatce Rankingów na foldOuter). Pełne testy Gradle zielone (22 min). APK wysłane. Czeka: adres `-PtesterFeedback` od właściciela; dane właściciela do pierwszego AAB (OWNER_CHECKLIST krok 11).
