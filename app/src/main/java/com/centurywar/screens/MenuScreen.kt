@@ -68,7 +68,11 @@ class MenuScreen(g: Game) : Screen(g) {
     internal var goalText = ""
         private set
     private var goalSize = 13f
-    private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, orders, research,
+    /**
+     * D64: Badania przed Rozkazami — po dodaniu kafla Rozkazów (d62) Badania spadły na wewnętrznym
+     * ekranie Folda pod krawędź listy i dymek „stać cię na Doktrynę elit” (d61) nie miał celu.
+     */
+    private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, research, orders,
         rankings, missions, settings, codex)
     private val scrollCue = ScrollCue()
     internal var portraitMenu = false
@@ -444,8 +448,17 @@ class MenuScreen(g: Game) : Screen(g) {
         // Baner powiadomienia ma własne 50 dp między logotypem i przewijaną listą.
         portraitBottom = h - g.insetB - 12 * dp
         portraitTop = min(subY + 69 * dp, portraitBottom - 48 * dp)
-        val contentHeight = portraitTiles.size * portraitTileHeight +
+        var contentHeight = portraitTiles.size * portraitTileHeight +
             (portraitTiles.size - 1) * portraitGap + 12 * dp
+        // D64: gdy do zmieszczenia całej listy brakuje niewiele (zewnętrzny Fold po dodaniu
+        // Rozkazów: ok. 47 dp), kafle są nieco niższe (najwyżej o 12 %, nie mniej niż 48 dp)
+        // zamiast przewijania — Kampania zostaje na górze nawet po wizycie w Badaniach.
+        val room = portraitBottom - portraitTop - 12 * dp - (portraitTiles.size - 1) * portraitGap
+        val fitted = room / portraitTiles.size
+        if (fitted < portraitTileHeight && fitted >= max(48 * dp, portraitTileHeight * 0.88f)) {
+            portraitTileHeight = fitted
+            contentHeight = portraitBottom - portraitTop
+        }
         portraitMaxScroll = max(0f, contentHeight - (portraitBottom - portraitTop))
         portraitScroll = portraitScroll.coerceIn(0f, portraitMaxScroll)
 
