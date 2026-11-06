@@ -37,6 +37,11 @@ Poprzednio oznacza stan po strojeniu D58 z 5.11; bieżące wyniki i różnice zo
 | Skarbiec wojenny (`WAR_CHEST`) | czeka | 51,74 | czeka |
 | Bębny natarcia (`WAR_DRUMS`) | czeka | 50,74 | czeka |
 
+Wyniki D58 dla tych samych wariantów (fala 60 / 50; średni wynik): brak 3 / 20 304;
+Szyk pik 1 / 20 458; Straż przednia 2 / 19 930; Nagroda za głowę 2 / 20 734;
+Rogi wojenne 3 / 21 910; Mur tarcz 3 / 22 076; Saperzy 4 / 21 599;
+Pancerz piechoty 9 / 23 010; Skarbiec wojenny 3 / 21 238; Bębny natarcia 2 / 20 763.
+
 ### Tygodnie — mediana fali na ośmiu tych samych tygodniach
 
 | Zestaw | Teraz | Poprzednio D58 | Różnica |
