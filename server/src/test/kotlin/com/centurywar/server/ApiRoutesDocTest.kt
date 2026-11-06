@@ -20,7 +20,7 @@ class ApiRoutesDocTest {
     @Test fun everyLiteralApiRouteHasMethodAndPathInReadmeTable() {
         val source = file("src/main/kotlin/com/centurywar/server/Api.kt",
             "server/src/main/kotlin/com/centurywar/server/Api.kt").readText()
-        val readme = file("README.md", "server/README.md").readText()
+        val readme = file("server/README.md", "README.md").readText()
         val actual = sourceRoutes(source)
         assertTrue(actual.isNotEmpty(), "Nie rozpoznano żadnej trasy — parser wymaga aktualizacji")
         assertEquals(emptySet<Pair<String, String>>(), actual - documentedRoutes(readme),
