@@ -39,8 +39,8 @@ class SoundSynthTest {
 
     /** R10-03: trzy sygnały bitwy na końcu listy, krótkie i bez przesterowania. */
     @Test fun battleAlertsAreShortAndClean() {
-        assertEquals(59, SoundSynth.COUNT)
-        assertEquals(4, SoundSynth.VERSION)
+        assertEquals(62, SoundSynth.COUNT)
+        assertEquals(5, SoundSynth.VERSION)
         val ids = intArrayOf(SoundSynth.ALERT_BASE, SoundSynth.ALERT_ENEMY_ERA, SoundSynth.ALERT_READY)
         assertArrayEquals(intArrayOf(56, 57, 58), ids)
         for (id in ids) {

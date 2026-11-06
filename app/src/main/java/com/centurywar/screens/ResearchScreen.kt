@@ -272,7 +272,7 @@ class ResearchScreen(g: Game) : Screen(g) {
         hints.onAction()
         lastNotice = L.f("rs143_need", pr.medals, d.cost(lv))
         g.showNotice(lastNotice, Icons.MEDAL)
-        g.sfx(Sound.ERROR, 0.34f, 150)
+        g.sfx(Sound.ERROR, 0.5f, 150)
     }
 
     override fun onClick(b: Button) {
@@ -285,7 +285,7 @@ class ResearchScreen(g: Game) : Screen(g) {
             g.showAchievements(Achievements.onResearchBought(g.profile, d, g.onlineAchievements))
             g.haptic(30)
         } else {
-            g.sfx(Sound.ERROR, 0.34f, 150)
+            g.sfx(Sound.ERROR, 0.5f, 150)
         }
     }
 }

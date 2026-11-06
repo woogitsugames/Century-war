@@ -1,6 +1,8 @@
 package com.centurywar.screens
 
 import com.centurywar.engine.Game
+import com.centurywar.engine.Music
+import com.centurywar.engine.SfxSink
 import com.centurywar.engine.Sound
 import com.centurywar.game.Battle
 import com.centurywar.game.Body
@@ -22,12 +24,13 @@ object BattleSfx {
         sound.prewarm(Sound.HIT_BRONZE)
         sound.prewarm(Sound.HIT_STEEL)
         sound.prewarm(Sound.HIT_ENERGY)
+        sound.prewarm(Sound.HIT_POWDER)
         sound.prewarm(barrageSound(style))
         sound.prewarm(evolveSound(style))
         sound.prewarm(Sound.DEATH_HUMAN)
         sound.prewarm(Sound.DEATH_BEAST)
         sound.prewarm(Sound.DEATH_MACHINE)
-        sound.prewarm(Sound.EXPLOSION)
+        sound.prewarm(explosionSound(style))
         sound.prewarm(Sound.THUMP)
         sound.prewarm(Sound.BOSS)
         for (role in Role.entries) {
@@ -45,15 +48,17 @@ object BattleSfx {
         return if (e == side.era) Defs.sideArt(e, side.eraVariant) else Defs.specs[e].art
     }
 
-    private fun hitSound(style: EraArt): Int = when (style) {
+    internal fun hitSound(style: EraArt): Int = when (style) {
         EraArt.TRIBAL -> Sound.HIT_WOOD
         EraArt.BRONZE -> Sound.HIT_BRONZE
-        EraArt.IRON, EraArt.FEUDAL, EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC, EraArt.STEEL -> Sound.HIT_STEEL
+        EraArt.IRON, EraArt.FEUDAL -> Sound.HIT_STEEL
+        // D63: epoki prochu i stali — trafienie pociskiem (wcześniej to samo ostrze co w żelazie).
+        EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC, EraArt.STEEL -> Sound.HIT_POWDER
         EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH, EraArt.ORBITAL -> Sound.HIT_ENERGY
     }
 
     /** Materiał trafienia uwzględnia typ celu, nie tylko epokę atakującego. */
-    private fun impactSound(style: EraArt, body: Int): Int = when (body) {
+    internal fun impactSound(style: EraArt, body: Int): Int = when (body) {
         Body.BEAST -> Sound.HIT_WOOD
         Body.SIEGE, Body.CANNON, Body.VEHICLE -> Sound.HIT_STEEL
         Body.MECH, Body.HOVER -> Sound.HIT_ENERGY
@@ -61,7 +66,7 @@ object BattleSfx {
     }
 
     /** Odrębny charakter akustyczny epok i ich wariantów bez nowych plików WAV. */
-    private fun eraPitch(style: EraArt): Float = when (style) {
+    internal fun eraPitch(style: EraArt): Float = when (style) {
         EraArt.TRIBAL -> 0.93f
         EraArt.BRONZE -> 1.00f
         EraArt.IRON -> 0.95f
@@ -78,13 +83,18 @@ object BattleSfx {
     }
 
     /**
-     * Wybuch zawsze brzmi jak wybuch (rozpoznawalny we wszystkich epokach); charakter epoki
-     * nadaje eraPitch. Próbki ostrzału (BARRAGE_*) zostają zarezerwowane dla ostrzału.
+     * Wybuch zawsze brzmi jak wybuch (rozpoznawalny we wszystkich epokach); próbki ostrzału
+     * (BARRAGE_*) zostają zarezerwowane dla ostrzału. D63: trzy barwy wybuchu zamiast jednej
+     * (przedtem 13 stylów różniła tylko wysokość): łomot kamienia/drewna przed prochem,
+     * prochowy huk, opadający „zap” epok krzemu; dalej różnicuje je eraPitch.
      */
-    @Suppress("UNUSED_PARAMETER")
-    internal fun explosionSound(style: EraArt): Int = Sound.EXPLOSION
+    internal fun explosionSound(style: EraArt): Int = when (style) {
+        EraArt.TRIBAL, EraArt.BRONZE, EraArt.IRON, EraArt.FEUDAL -> Sound.EXPLOSION_PRIMITIVE
+        EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC, EraArt.STEEL -> Sound.EXPLOSION
+        EraArt.SILICON, EraArt.SWARM, EraArt.BIOTECH, EraArt.ORBITAL -> Sound.EXPLOSION_ENERGY
+    }
 
-    private fun shotSound(projectile: Int, style: EraArt, turret: Boolean): Int {
+    internal fun shotSound(projectile: Int, style: EraArt, turret: Boolean): Int {
         if (turret) return when (style) {
             EraArt.TRIBAL, EraArt.BRONZE -> Sound.TURRET_PRIMITIVE
             EraArt.IRON, EraArt.FEUDAL -> Sound.TURRET_MEDIEVAL
@@ -105,7 +115,7 @@ object BattleSfx {
         }
     }
 
-    private fun barrageSound(style: EraArt): Int = when (style) {
+    internal fun barrageSound(style: EraArt): Int = when (style) {
         EraArt.TRIBAL, EraArt.BRONZE, EraArt.IRON -> Sound.BARRAGE_STONE
         EraArt.FEUDAL -> Sound.BARRAGE_FIRE
         EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC -> Sound.BARRAGE_CANNON
@@ -113,7 +123,7 @@ object BattleSfx {
         EraArt.ORBITAL -> Sound.BARRAGE_ORBITAL
     }
 
-    private fun evolveSound(style: EraArt): Int = when (style) {
+    internal fun evolveSound(style: EraArt): Int = when (style) {
         EraArt.TRIBAL, EraArt.BRONZE, EraArt.IRON -> Sound.EVOLVE_PRIMITIVE
         EraArt.FEUDAL -> Sound.EVOLVE_MEDIEVAL
         EraArt.POWDER, EraArt.STEAM, EraArt.COMBUSTION, EraArt.GALVANIC, EraArt.STEEL -> Sound.EVOLVE_INDUSTRIAL
@@ -125,8 +135,16 @@ object BattleSfx {
      * Zwraca true, gdy w tej klatce zabrzmiał [Sound.BOSS] (R10-03: sygnały go nie dublują).
      */
     fun play(g: Game, battle: Battle, camX: Float, worldVisible: Float): Boolean {
-        val fx = battle.fx
         if (g.sound == null) return false
+        return playTo(g, g.music, battle, camX, worldVisible)
+    }
+
+    /**
+     * D63: ta sama decyzja co [play], ale do dowolnego [SfxSink] — pomiar głośności miksu
+     * bitwy w testach JVM (bez SoundPool). Bez alokacji: Game jest swoim własnym ujściem.
+     */
+    internal fun playTo(g: SfxSink, music: Music?, battle: Battle, camX: Float, worldVisible: Float): Boolean {
+        val fx = battle.fx
         if (fx.count == 0) return false
         var boss = false
         val center = camX + worldVisible * 0.5f
@@ -162,7 +180,7 @@ object BattleSfx {
                     FxBuffer.EXPLOSION -> {
                         g.sfx(explosionSound(style), vol * min(1f, fx.value[i]) * 0.75f, 100,
                             pitch = eraPitch(style), pan = pan, priority = 3)
-                        if (fx.value[i] > 1.1f) g.music?.duck(0.52f, 0.45f)
+                        if (fx.value[i] > 1.1f) music?.duck(0.52f, 0.45f)
                     }
                     FxBuffer.MUZZLE -> {
                         if (++shots > 4) continue
@@ -172,24 +190,24 @@ object BattleSfx {
                     }
                     FxBuffer.BASE_HIT -> {
                         g.sfx(Sound.THUMP, vol * 0.74f, 80, pan = pan, priority = 3)
-                        g.music?.duck(0.55f, 0.35f)
+                        music?.duck(0.55f, 0.35f)
                     }
                     FxBuffer.EVOLVE -> {
                         if (fx.value[i] >= 2f) {
                             g.sfx(Sound.BOSS, 0.8f, 500, pan = pan, priority = 3)
                             boss = true
-                            g.music?.duck(0.36f, 1.3f)
+                            music?.duck(0.36f, 1.3f)
                         } else {
                             g.sfx(evolveSound(style), if (fx.side[i] == 0) 0.8f else 0.4f,
                                 250, pan = pan, priority = 3)
-                            if (fx.side[i] == 0) g.music?.duck(0.35f, 1f)
+                            if (fx.side[i] == 0) music?.duck(0.35f, 1f)
                         }
                     }
                     FxBuffer.GOLD -> g.sfx(Sound.COIN, 0.22f, 120, pan = pan)
                     FxBuffer.BARRAGE -> {
                         g.sfx(barrageSound(style), 0.82f, 170,
                             pitch = eraPitch(style), pan = pan, priority = 3)
-                        g.music?.duck(0.34f, 1f)
+                        music?.duck(0.34f, 1f)
                     }
                 }
             }

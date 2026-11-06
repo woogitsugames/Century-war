@@ -1188,7 +1188,7 @@ class CampaignScreen(
         hints.onAction()
         lastNotice = L.f("cp143_locked", need + 1)
         g.showNotice(lastNotice, Icons.LOCK)
-        g.sfx(Sound.ERROR, 0.34f, 150)
+        g.sfx(Sound.ERROR, 0.5f, 150)
     }
 
     override fun onBack(): Boolean {
