@@ -178,7 +178,7 @@ class Profile(private val file: File) {
     fun recordOrder(index: Int, stars: Int, points: Int): Int {
         if (index !in orderStars.indices) return 0
         val old = orderStars[index]
-        val medals = Orders.medalsFor(old, stars)
+        val medals = Orders.all.getOrNull(index)?.let { Orders.medalsFor(it, old, stars) } ?: 0
         if (stars > old) orderStars[index] = stars.coerceIn(0, Orders.MAX_STARS)
         if (points > orderPoints[index]) orderPoints[index] = points.coerceAtLeast(0)
         return medals

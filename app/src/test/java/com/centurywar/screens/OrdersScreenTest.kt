@@ -166,7 +166,7 @@ class OrdersScreenTest {
         val stars = g.profile.orderStars[2]
         assertTrue("Wygrana daje co najmniej 1★", stars >= 1)
         val gained = g.profile.medals - before
-        assertTrue("Medale za nowe gwiazdki ≥ ${Orders.medalsFor(0, stars)}", gained >= Orders.medalsFor(0, stars))
+        assertTrue("Medale za nowe gwiazdki ≥ ${Orders.medalsFor(Orders.all[2], 0, stars)}", gained >= Orders.medalsFor(Orders.all[2], 0, stars))
         assertEquals(g.profile.orderPointTotal(), g.profile.top(Profile.BOARD_ORDERS).first().score)
         assertTrue(bs.orderDone[0])
         // Druga, taka sama wygrana: bez medali za gwiazdki (nie da się farmić).

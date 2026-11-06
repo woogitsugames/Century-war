@@ -221,7 +221,7 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
         for (obj in o.bonus) addWrapped(OrderTexts.objective(obj), 14f, Ui.TEXT, tw, Icons.STAR)
         addWrapped(OrderTexts.forces(o), 13f, Ui.TEXT, tw, Icons.HELMET, gap = 10f)
         addWrapped(OrderTexts.enemy(o), 13f, Ui.TEXT, tw, Icons.SKULL)
-        val left = Orders.medalsFor(pr.orderStars[selected], Orders.MAX_STARS)
+        val left = Orders.medalsFor(o, pr.orderStars[selected], Orders.MAX_STARS)
         addWrapped(if (left > 0) L.f("o209_reward", L.plural("medals_n", left.toLong())) else L["o209_reward_done"],
             13f, Ui.GOLD, tw, Icons.MEDAL, gap = 10f)
         detailText = accessibilitySentences(L[o.nameKey], *lineText.toTypedArray())

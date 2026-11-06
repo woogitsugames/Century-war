@@ -122,11 +122,24 @@ class OrdersTest {
     }
 
     @Test fun starsMedalsPointsAndUnlocks() {
-        assertEquals(10, Orders.medalsFor(0, 1))
-        assertEquals(45, Orders.medalsFor(0, 3))
-        assertEquals(20, Orders.medalsFor(2, 3))
-        assertEquals(0, Orders.medalsFor(3, 3))
-        assertEquals(0, Orders.medalsFor(3, 1))
+        val first = Orders.all[0]
+        assertEquals(10, Orders.medalsFor(first, 0, 1))
+        assertEquals(45, Orders.medalsFor(first, 0, 3))
+        assertEquals(20, Orders.medalsFor(first, 2, 3))
+        assertEquals(0, Orders.medalsFor(first, 3, 3))
+        assertEquals(0, Orders.medalsFor(first, 3, 1))
+        // Dzień 67: partia 2 (rozkazy 10–18) — 15/20/30, razem 65 za rozkaz; partia 1 bez zmian.
+        for (o in Orders.all) {
+            val expected = if (o.index < Orders.BATCH) intArrayOf(10, 15, 20) else intArrayOf(15, 20, 30)
+            assertArrayEquals("rozkaz ${o.index + 1}", expected, Orders.starMedals(o))
+        }
+        val second = Orders.all[Orders.BATCH]
+        assertEquals(15, Orders.medalsFor(second, 0, 1))
+        assertEquals(65, Orders.medalsFor(second, 0, 3))
+        assertEquals(30, Orders.medalsFor(second, 2, 3))
+        assertEquals(0, Orders.medalsFor(second, 3, 3))
+        assertEquals(Orders.BATCH * 45 + Orders.BATCH * 65,
+            Orders.all.sumOf { Orders.medalsFor(it, 0, Orders.MAX_STARS) })
         val stars = IntArray(Campaign.stages.size)
         assertFalse(Orders.unlocked(Orders.all[0], stars, IntArray(Orders.COUNT)))
         stars[0] = 1

@@ -62,12 +62,15 @@ class OrdersProfileTest {
         assertArrayEquals(intArrayOf(3, 2, 1, 0, 0, 0, 0, 0, 2) + IntArray(Orders.BATCH), nine.orderStars)
         assertEquals(3400 + 2300 + 1100 + 2050L, nine.orderPointTotal())
         assertEquals(8, nine.orderStarTotal())
-        assertEquals(10, nine.recordOrder(9, 1, 1_300))
-        assertEquals(9, nine.orderStarTotal())
+        // Dzień 67: partia 2 płaci 15/20/30 za nowe gwiazdki.
+        assertEquals(15, nine.recordOrder(9, 1, 1_300))
+        assertEquals(50, nine.recordOrder(9, 3, 3_100))
+        assertEquals(0, nine.recordOrder(9, 3, 3_200))
+        assertEquals(11, nine.orderStarTotal())
         nineFile.writeText(nine.toJson())
         val nineCopy = Profile(nineFile).apply { load() }
         assertEquals(Orders.COUNT, JSONObject(nine.toJson()).getJSONArray("orderStars").length())
-        assertEquals(1, nineCopy.orderStars[9])
+        assertEquals(3, nineCopy.orderStars[9])
 
         // Uszkodzone wartości są przycinane do zakresu.
         json.put("orderStars", JSONArray(listOf(9, -2, 3)))

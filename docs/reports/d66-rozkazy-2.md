@@ -24,6 +24,8 @@ nienaruszone. Ikona na liście: tarcza (obrona), miecze (atak), **hełm (eskorta
 
 Medale i punkty jak w partii 1 (10/15/20 za nowe gwiazdki, gwiazdki × 1000 + zdrowie bazy × 500).
 Nie podnosiłem medali za partię 2 — pytanie do właściciela niżej.
+**D67 (decyzja właściciela 6.11):** partia 2 płaci **15/20/30** za nowe gwiazdki (65 za rozkaz,
+585 za partię; razem z partią 1: 990), partia 1 bez zmian — `docs/reports/d67-rozkazy-medale.md`.
 
 ## Nowe rodzaje celów (`:sim`)
 
@@ -163,7 +165,7 @@ Wszystkie z `--rerun`, 6.11, zielone:
 ## Otwarte / pytania do właściciela
 
 - Medale za partię 2: takie same jak w partii 1 (10/15/20). Czy podnieść (np. 15/20/25) za
-  trudniejsze rozkazy?
+  trudniejsze rozkazy? → **Rozstrzygnięte w d67: 15/20/30.**
 - Osiągnięcia za Rozkazy i „Co nowego” — nadal poza zakresem.
 - `century-war.md` i `COORDINATOR_HANDOVER.md` opisują wersje — do aktualizacji przez koordynatora
   przy scalaniu (0.8.13, zrzut v23, ReplayRecord v3).

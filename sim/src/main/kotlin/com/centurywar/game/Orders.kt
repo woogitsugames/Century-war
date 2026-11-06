@@ -197,6 +197,15 @@ object Orders {
     /** Medale za każdą NOWĄ gwiazdkę (pierwsza, druga, trzecia); powtórki bez medali. */
     val STAR_MEDALS = intArrayOf(10, 15, 20)
 
+    /**
+     * Dzień 67 (decyzja właściciela 6.11): partia 2 (rozkazy 10–18) jest trudniejsza, więc płaci
+     * 15/20/30 za nowe gwiazdki. Medale są poza symulacją (zapis w profilu), PROTOCOL bez zmian.
+     */
+    val STAR_MEDALS_BATCH2 = intArrayOf(15, 20, 30)
+
+    /** Medale za kolejne gwiazdki rozkazu [order] (zależnie od partii). */
+    fun starMedals(order: Order): IntArray = if (order.batch == 0) STAR_MEDALS else STAR_MEDALS_BATCH2
+
     /** Punkty rankingu za rozkaz: gwiazdki × 1000 + zdrowie bazy (0–500). */
     const val POINTS_PER_STAR = 1000
     const val MAX_HP_POINTS = 500
@@ -258,10 +267,11 @@ object Orders {
         return stars * POINTS_PER_STAR + (hp * MAX_HP_POINTS).toInt()
     }
 
-    /** Medale za przejście z [old] do [new] gwiazdek (tylko nowe gwiazdki). */
-    fun medalsFor(old: Int, new: Int): Int {
+    /** Medale za przejście z [old] do [new] gwiazdek w rozkazie [order] (tylko nowe gwiazdki). */
+    fun medalsFor(order: Order, old: Int, new: Int): Int {
+        val table = starMedals(order)
         var sum = 0
-        for (s in old.coerceIn(0, MAX_STARS) until new.coerceIn(0, MAX_STARS)) sum += STAR_MEDALS[s]
+        for (s in old.coerceIn(0, MAX_STARS) until new.coerceIn(0, MAX_STARS)) sum += table[s]
         return sum
     }
 
