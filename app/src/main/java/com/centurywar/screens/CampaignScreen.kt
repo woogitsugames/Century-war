@@ -125,6 +125,7 @@ class CampaignScreen(
     private var infoTitle = ""
     private var infoRange = ""
     private var infoModifiers = ""
+    private var compactModifiers = ""
     private var infoPower = ""
     private var infoDifficulty = CampaignDifficulty.NORMAL
 
@@ -137,6 +138,8 @@ class CampaignScreen(
         infoTitle = L.f("stage_n", s.index + 1)
         infoRange = L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]])
         infoModifiers = L["modifiers"] + ":"
+        compactModifiers = if (s.modifiers.isEmpty()) L["none"]
+            else s.modifiers.joinToString(" · ") { L[it.key] }
         infoPower = L.f("ai_power", (s.aiPower * difficulty.powerMultiplier * 100f).toInt())
     }
 
@@ -741,9 +744,10 @@ class CampaignScreen(
         c.drawColor(Color.argb(150, 0, 0, 0))
         ui.panel(c, info)
         ui.ribbon(c, info.centerX(), info.top + 4 * dp, infoTitle, 20f, Ui.ERA[s.index / 4].let { Ui.blend(it, Ui.RIBBON, 0.35f) }, info.width() * 0.55f)
-        var y = info.top + 48 * dp
-        // Niski panel (telefon 720p w poziomie): ciaśniejsze wiersze, by zmieścić chipy nad trudnością.
-        val row = if (info.height() < 352 * dp) 25 * dp else 28 * dp
+        val compact = info.height() < 352 * dp
+        var y = info.top + (if (compact) 44 else 48) * dp
+        // Tylko niski panel: odzyskaj miejsce między modyfikatorami a trudnością.
+        val row = if (compact) 21 * dp else 28 * dp
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
         // gwiazdki
@@ -770,22 +774,30 @@ class CampaignScreen(
             drawHardLine(c, line, left, y + 4 * dp, sz)
             y -= 4 * dp
         }
-        y += 34 * dp
+        y += (if (compact) 30 else 34) * dp
         val isz = 20 * dp
         Icons.draw(c, Icons.TOWER, x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, infoRange, x + isz + 8 * dp, y, 14f, Ui.TEXT)
+        ui.textO(c, infoRange, x + isz + 8 * dp, y,
+            ui.fit(infoRange, 14f, tw - isz - 8 * dp), Ui.TEXT)
         y += row
         val pw = s.aiPower * g.profile.campaignDifficulty.powerMultiplier
         Icons.draw(c, if (pw > 1f) Icons.SKULL else Icons.CHECK, x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, infoPower, x + isz + 8 * dp, y, 14f, if (pw > 1f) Ui.BAD else Ui.GOOD)
+        ui.textO(c, infoPower, x + isz + 8 * dp, y,
+            ui.fit(infoPower, 14f, tw * 0.62f - isz - 12 * dp), if (pw > 1f) Ui.BAD else Ui.GOOD)
         ui.bar(c, x + tw * 0.62f, y - 10 * dp, tw * 0.38f, 8 * dp, (pw / 1.8f).coerceIn(0f, 1f), if (pw > 1f) Ui.BAD else Ui.GOOD)
         y += row
         Icons.draw(c, Icons.weatherIcon(s.weather), x + isz / 2, y - 5 * dp, isz, dp = dp)
-        ui.textO(c, L[s.weather.key], x + isz + 8 * dp, y, 14f, Ui.TEXT)
+        val weather = L[s.weather.key]
+        ui.textO(c, weather, x + isz + 8 * dp, y, ui.fit(weather, 14f, tw - isz - 8 * dp), Ui.TEXT)
         y += row
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
-        if (s.modifiers.isEmpty()) {
+        if (compact) {
+            // W niskim panelu nazwy stoją w tym samym wierszu; poprzednie chipy nie mieściły się pod nim.
+            val tx = x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true)
+            val available = (info.right - 24 * dp - tx).coerceAtLeast(1f)
+            ui.text(c, compactModifiers, tx, y, ui.fit(compactModifiers, 12f, available, 8f), Ui.DIM)
+        } else if (s.modifiers.isEmpty()) {
             // Tura 10: „brak” w tym samym wierszu; niżej wchodził pod napis „Trudność” (720p).
             ui.text(c, L["none"], x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true), y, 13f, Ui.DIM)
         } else {
