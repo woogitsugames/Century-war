@@ -386,7 +386,10 @@ class Tura8UiTest {
             frame(g)
             assertFalse("$tag: plakietka bez medali", menu.eliteReady)
             g.profile.medals = EliteUnlock.def.cost(0)
+            // D61: dymek menu czeka na koniec banerów (np. serii dni) — jeden komunikat naraz.
             frame(g)
+            assertEquals("$tag: dymek razem z banerem", -1, (field(menu, "hints") as HintOverlay).activeId.takeIf { g.hasNotices() } ?: -1)
+            g.clearNotices()
             frame(g)
             assertTrue("$tag: brak plakietki", menu.eliteReady)
             val hints = field(menu, "hints") as HintOverlay

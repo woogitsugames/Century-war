@@ -104,9 +104,10 @@ internal object HintFrame {
         // Gęsty ekran (np. menu): górny albo dolny pas ekranu bez wskaźnika; cel ma własną obwódkę.
         val cx = (target.centerX() - width * 0.5f).coerceIn(safeL, safeR - width)
         val mid = (safeL + safeR - width) * 0.5f
-        for (k in 0 until 4) {
-            val x = if (k % 2 == 0) mid else cx
-            val y = if (k < 2) safeT else safeB - height
+        // D61: potem pas przy prawej albo lewej krawędzi (np. obok tabliczki gracza w menu).
+        for (k in 0 until 8) {
+            val x = if (k < 4) (if (k % 2 == 0) mid else cx) else if (k % 2 == 0) safeR - width else safeL
+            val y = if (k % 4 < 2) safeT else safeB - height
             out.set(x, y, x + width, y + height)
             if (!blocked(out, target, avoid) && !RectF.intersects(out, target)) {
                 link.setEmpty()

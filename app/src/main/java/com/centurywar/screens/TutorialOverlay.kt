@@ -628,14 +628,21 @@ class TutorialOverlay(
         var chosenY = fieldTop
         // Tura 9: najpierw pole bitwy (góra, dół), dopiero potem krawędzie ekranu; w pierwszym
         // przebiegu „Pomiń” nie może przykryć przycisku HUD (np. Naprzód, ×1 na wąskim Foldzie).
-        search@ for (pass in 0..1) for (i in 0..7) {
+        // D61: przed krawędziami ekranu jeszcze pas pola bitwy tuż pod i nad opisem kroku,
+        // a w pierwszym przebiegu „Pomiń” nie wchodzi na pasek górny (pauza, „Wróg: …”).
+        search@ for (pass in 0..1) for (i in 0..11) {
             val x = if (i % 2 == 0) right else left
             val y = when (i / 2) {
                 0 -> fieldTop
                 1 -> max(fieldTop, fieldBottom)
-                2 -> sb - bh
+                2 -> panel.bottom + 9 * dp
+                3 -> panel.top - 9 * dp - bh
+                4 -> sb - bh
                 else -> st + 8 * dp
             }
+            // Pas przy opisie może wejść na tło dolnego paska, ale przycisków HUD nie zakryje (pass 0).
+            if (i / 2 in 2..3 && (panel.isEmpty || y < fieldTop || y + bh > sb)) continue
+            if (pass == 0 && y < t.area.top - 0.5f) continue
             if (hasHole && overlaps(x, y, x + bw, y + bh, hole, 8 * dp)) continue
             if (overlaps(x, y, x + bw, y + bh, panel, 8 * dp)) continue
             if (nextBtn.visible && overlaps(x, y, x + bw, y + bh, nextBtn.r, 30 * dp)) continue
@@ -786,7 +793,8 @@ class TutorialOverlay(
             ui.button(c, skipBtn, 13f)
         }
 
-        if (selectedHand) {
+        // D61: w otwartym panelu wież ręka zasłaniała przycisk slotu 2 i tytuł opisu; cel ma obwódkę.
+        if (selectedHand && !(step == S_TURRET && t.turretsOpen())) {
             val bob = (sin(clock * 5f) + 1f) * 4 * dp
             val down = panel.bottom <= hole.top
             val tipY = if (down) hole.top - 6 * dp - bob else hole.bottom + 6 * dp + bob

@@ -431,6 +431,7 @@ class BattleScreen(
     private val hints = HintOverlay(g, battle, HintOverlay.Targets(
         unitUpgrade, armoryBtn, rallyBtn, stanceBtn, evolveBtn, turretBtn,
         goldRect, xpRect, mini, fieldRect, weatherRect, variantBtn, unitBtn[3], commanderBtn,
+        topBarView.siegeDrawn,
     ), rankedDaily)
 
     /** Plansza nie zapisuje komend i nie wykonuje kroków symulacji. */

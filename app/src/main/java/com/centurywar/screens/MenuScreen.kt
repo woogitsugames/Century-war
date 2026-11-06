@@ -367,6 +367,26 @@ class MenuScreen(g: Game) : Screen(g) {
         refreshWhatsNew(force = true)
     }
 
+    /**
+     * D61: dymek menu nie zasłania tabliczki gracza (imię, medale, gwiazdki). W poziomie mieści
+     * się między nią a Kodeksem (wyśrodkowany), w pionie stoi pod nią (na logo).
+     */
+    private fun updateHintRoom() {
+        val top = g.insetT + 10 * dp
+        val plateR = playerPlateRight()
+        hints.keepClear.set(g.insetL + 12 * dp, top, plateR, top + 48 * dp)
+        if (portraitMenu || codex.r.isEmpty) {
+            hints.maxWidth = 0f
+            hints.minTop = top + 52 * dp
+            return
+        }
+        val safeL = g.insetL + 4 * dp
+        val safeR = w - g.insetR - 4 * dp
+        val cx = (safeL + safeR) / 2f
+        hints.maxWidth = 2f * min(cx - plateR, codex.r.left - cx) - 16 * dp
+        hints.minTop = 0f
+    }
+
     /** Prawa krawędź tabliczki gracza (te same wymiary co w [drawPlayer]). */
     private fun playerPlateRight(): Float {
         val pr = g.profile
@@ -515,8 +535,12 @@ class MenuScreen(g: Game) : Screen(g) {
         hints.update(dt)
         updateSurvey(dt)
         updateReminder(dt)
-        if (eliteReady && !hasOpenModal && research.visible && research.r.width() > 0f)
+        // D61: dymek dopiero po banerach osiągnięć (jeden komunikat naraz) i obok tabliczki gracza.
+        if (eliteReady && !hasOpenModal && !g.hasNotices() && research.visible && research.r.width() > 0f &&
+            hints.activeId < 0) {
+            updateHintRoom()
             hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
+        }
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber(g.nowMillis())
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1

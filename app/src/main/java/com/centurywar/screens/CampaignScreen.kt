@@ -379,7 +379,8 @@ class CampaignScreen(
         // R2-02: przy 3. porażce z rzędu dymek przypomina o zmianie poziomu (raz).
         if (easySuggested && g.profile.lossStreakOn(focusStage) >= 3)
             hints.showScreen(HintOverlay.DIFFICULTY, difficultyButtons[0].r)
-        if (g.profile.battles == 1 && selected == null && !autoScroll) {
+        // D61: dymek po pierwszej bitwie czeka, aż przewiną się banery osiągnięć (jeden komunikat naraz).
+        if (g.profile.battles == 1 && selected == null && !autoScroll && !g.hasNotices()) {
             val next = tiles[g.profile.unlockedStage().coerceIn(0, tiles.lastIndex)]
             hints.showScreen(HintOverlay.FIRST_BATTLE, if (next.visible) next.r else back.r)
         }
