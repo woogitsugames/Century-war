@@ -1,4 +1,4 @@
-﻿package com.centurywar.screens
+package com.centurywar.screens
 
 import android.graphics.Canvas
 import android.graphics.Color
@@ -291,4 +291,3 @@ class ResearchScreen(g: Game) : Screen(g) {
         }
     }
 }
-
