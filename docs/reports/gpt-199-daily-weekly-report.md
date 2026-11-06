@@ -67,7 +67,7 @@ Test pomiarowy uruchomiono lokalnie w jednorazowym pliku testowym, po czym usuni
 - Poniżej 30% wygranych AI: przesunięcia od premiery 0, 1, 2, 5, 8, 9, 11, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27. To sygnał do zbadania, nie propozycja automatycznej korekty balansu; w każdym dniu jest tylko 10 prób.
 - Dni z `SHORT_DAY` kończą się w medianie po 8 minutach i w tej próbie mają 0/10 wygranych AI. Przy remisie procentowego zdrowia baz po upływie czasu wygrywa przeciwnik (`Battle.kt:1072–1076`); pomiar nie zapisał liczby remisów, więc nie można przypisać im tych wyników.
 - Zestawy tygodnia mają medianę 8,5–13 fal; `week184_mercs` osiągnął falę 20 w 2/8 prób, pozostałe 0/8. Potrzebna większa liczba prawdziwych tygodni i obserwacja graczy.
-- W badanym oknie nie wystąpiły nowe zdarzenia `SCHOLARS_DAY` ani `FURY_DAY`; ich osobny pomiar pozostaje otwarty. Nie proponuję zmiany parametrów bez większej próby i testów z ludźmi.
+- W badanym oknie nie wystąpiły nowe zdarzenia `SCHOLARS_DAY` ani `FURY_DAY`; poniżej podano odrębny symetryczny pomiar wymuszonych zdarzeń. Nie proponuję zmiany parametrów bez większej próby i testów z ludźmi.
 
 ## Testy
 
@@ -80,3 +80,25 @@ Test pomiarowy uruchomiono lokalnie w jednorazowym pliku testowym, po czym usuni
 Pomiar lustrzany: mediana 13,87 / 13,66 / 13,24 min dla epok 0 / 4 / 8, wygrane strony 0 odpowiednio 15/40, 22/40, 19/40; bez timeoutów.
 
 Jedyny plik w końcowym diffie: `docs/reports/gpt-199-daily-weekly-report.md`. Kod gry i balans niezmienione; raport nie jest prognozą wyników testerów.
+
+### SCHOLARS — dodatkowy pomiar lustrzany
+
+Wymuszone zdarzenie na symetrycznych bitwach AI, 40 prób na epokę; to nie są rzeczywiste dni z okna powyżej.
+
+```text
+MIRROR era=0 event=SCHOLARS_DAY timeouts=0/40 median=13.93m side0wins=15/40
+MIRROR era=4 event=SCHOLARS_DAY timeouts=0/40 median=12.75m side0wins=19/40
+MIRROR era=8 event=SCHOLARS_DAY timeouts=0/40 median=13.49m side0wins=19/40
+MIRROR_TOTAL event=SCHOLARS_DAY side0wins=53/120 meanMinutes=12.69
+```
+
+### FURY — dodatkowy pomiar lustrzany
+
+Wymuszone zdarzenie na symetrycznych bitwach AI, 40 prób na epokę; to nie są rzeczywiste dni z okna powyżej.
+
+```text
+MIRROR era=0 event=FURY_DAY timeouts=0/40 median=14.09m side0wins=16/40
+MIRROR era=4 event=FURY_DAY timeouts=0/40 median=13.19m side0wins=22/40
+MIRROR era=8 event=FURY_DAY timeouts=0/40 median=13.43m side0wins=20/40
+MIRROR_TOTAL event=FURY_DAY side0wins=58/120 meanMinutes=12.89
+```
