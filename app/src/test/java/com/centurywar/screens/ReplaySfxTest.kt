@@ -87,7 +87,7 @@ class ReplaySfxTest {
             assertTrue(requests.get(Sound.SHOT_LASER * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
             assertTrue(requests.get(Sound.SHOT_PLASMA * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
             // Trafienia zależą od typu celu: wszystkie materiały muszą być gotowe.
-            for (id in intArrayOf(Sound.HIT_WOOD, Sound.HIT_BRONZE, Sound.HIT_STEEL, Sound.HIT_ENERGY))
+            for (id in intArrayOf(Sound.HIT_WOOD, Sound.HIT_BRONZE, Sound.HIT_STEEL, Sound.HIT_ENERGY, Sound.HIT_POWDER))
                 assertTrue("Brak prewarm trafienia $id",
                     requests.get(id * com.centurywar.engine.SoundSynth.VARIANTS) > 0)
         } finally {
@@ -95,9 +95,13 @@ class ReplaySfxTest {
         }
     }
 
-    /** Wybuch w każdej epoce to próbka wybuchu, nie dźwięk ostrzału. */
+    /** Wybuch w każdej epoce to próbka wybuchu, nie dźwięk ostrzału; D63: trzy barwy epok. */
     @Test fun explosionUsesExplosionSampleInEveryEra() {
+        val booms = setOf(Sound.EXPLOSION, Sound.EXPLOSION_PRIMITIVE, Sound.EXPLOSION_ENERGY)
         for (style in com.centurywar.game.EraArt.entries)
-            assertEquals("Epoka $style", Sound.EXPLOSION, BattleSfx.explosionSound(style))
+            assertTrue("Epoka $style", BattleSfx.explosionSound(style) in booms)
+        assertEquals(Sound.EXPLOSION_PRIMITIVE, BattleSfx.explosionSound(com.centurywar.game.EraArt.TRIBAL))
+        assertEquals(Sound.EXPLOSION, BattleSfx.explosionSound(com.centurywar.game.EraArt.POWDER))
+        assertEquals(Sound.EXPLOSION_ENERGY, BattleSfx.explosionSound(com.centurywar.game.EraArt.SILICON))
     }
 }

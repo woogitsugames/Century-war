@@ -78,7 +78,7 @@ class Game(
      * Parametr konstruktora, bo już `init` (seria logowań) liczy dzień.
      */
     internal var clock: () -> Long = SYSTEM_CLOCK,
-) {
+) : SfxSink {
     /**
      * D43: [clock] bez alokacji. `() -> Long` zwraca `Long` w pudełku (16 B na wywołanie), a menu
      * pyta o czas w każdej klatce (powitanie po przerwie, darmowe wyzwanie) — test LowEnd menu
@@ -221,9 +221,9 @@ class Game(
         history?.clear()
     }
 
-    fun sfx(
-        id: Int, vol: Float = 1f, gap: Long = 45L, pitch: Float = 1f,
-        pan: Float = 0f, priority: Int = 1,
+    override fun sfx(
+        id: Int, vol: Float, gap: Long, pitch: Float,
+        pan: Float, priority: Int,
     ) {
         if (profile.sound && profile.sfxVolume > 0f) sound?.play(id, vol, gap, pitch, pan, priority)
     }

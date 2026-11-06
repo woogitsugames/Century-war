@@ -110,12 +110,12 @@ internal class SfxRateGate(count: Int) {
     }
 
     private fun family(id: Int): Int = when (id) {
-        SoundSynth.HIT, in SoundSynth.HIT_WOOD..SoundSynth.HIT_ENERGY -> 0
+        SoundSynth.HIT, in SoundSynth.HIT_WOOD..SoundSynth.HIT_ENERGY, SoundSynth.HIT_POWDER -> 0
         SoundSynth.SHOT, SoundSynth.ARROW, SoundSynth.LASER,
         in SoundSynth.SHOT_SLING..SoundSynth.SHOT_PLASMA,
         in SoundSynth.TURRET_PRIMITIVE..SoundSynth.TURRET_ENERGY -> 1
         SoundSynth.DEATH, in SoundSynth.DEATH_HUMAN..SoundSynth.DEATH_MACHINE -> 2
-        SoundSynth.EXPLOSION,
+        SoundSynth.EXPLOSION, SoundSynth.EXPLOSION_PRIMITIVE, SoundSynth.EXPLOSION_ENERGY,
         in SoundSynth.BARRAGE_STONE..SoundSynth.BARRAGE_ORBITAL -> 3
         else -> -1
     }

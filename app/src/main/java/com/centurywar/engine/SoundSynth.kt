@@ -6,7 +6,7 @@ package com.centurywar.engine
  */
 object SoundSynth {
     const val SAMPLE_RATE = 22_050
-    const val VERSION = 4
+    const val VERSION = 5
     const val VARIANTS = 2
     const val MAX_CACHE_BYTES = 2 * 1_024 * 1_024
 
@@ -72,20 +72,27 @@ object SoundSynth {
     const val ALERT_BASE = 56
     const val ALERT_ENEMY_ERA = 57
     const val ALERT_READY = 58
-    const val COUNT = 59
+    // D63: różnicowanie epok (dopisane na końcu): trafienie pociskiem epok prochu i stali,
+    // wybuch epok bez prochu i wybuch epok krzemu.
+    const val HIT_POWDER = 59
+    const val EXPLOSION_PRIMITIVE = 60
+    const val EXPLOSION_ENERGY = 61
+    const val COUNT = 62
 
     fun duration(id: Int): Float {
         require(id in 0 until COUNT)
         return when (id) {
-            HIT, HIT_WOOD, HIT_BRONZE, HIT_STEEL, HIT_ENERGY -> 0.13f
+            HIT, HIT_WOOD, HIT_BRONZE, HIT_STEEL, HIT_ENERGY, HIT_POWDER -> 0.13f
             SHOT, ARROW, LASER, in SHOT_SLING..SHOT_PLASMA -> 0.22f
-            EXPLOSION, in BARRAGE_STONE..BARRAGE_ORBITAL -> 0.64f
+            EXPLOSION, in BARRAGE_STONE..BARRAGE_ORBITAL, EXPLOSION_PRIMITIVE, EXPLOSION_ENERGY -> 0.64f
             DEATH, in DEATH_HUMAN..DEATH_MACHINE -> 0.3f
             EVOLVE, in EVOLVE_PRIMITIVE..EVOLVE_FUTURE -> 0.68f
             VICTORY -> 0.82f
             DEFEAT -> 0.68f
             THUMP -> 0.16f
-            COIN, CLICK, PURCHASE, ERROR -> 0.12f
+            CLICK -> 0.12f
+            // D63: druga nuta (po 60 ms) była ucinana w pół brzmienia — ogon −9 dB przy końcu.
+            COIN, PURCHASE, ERROR -> 0.17f
             in TURRET_PRIMITIVE..TURRET_ENERGY -> 0.28f
             MEDALS, ACHIEVEMENT, ERA_UNLOCK, REWARD, RANK_UP -> 0.46f
             BOSS -> 0.48f

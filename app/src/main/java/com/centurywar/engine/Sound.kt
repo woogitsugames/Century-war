@@ -76,6 +76,9 @@ class Sound(private val ctx: Context) {
         const val ALERT_BASE = SoundSynth.ALERT_BASE
         const val ALERT_ENEMY_ERA = SoundSynth.ALERT_ENEMY_ERA
         const val ALERT_READY = SoundSynth.ALERT_READY
+        const val HIT_POWDER = SoundSynth.HIT_POWDER
+        const val EXPLOSION_PRIMITIVE = SoundSynth.EXPLOSION_PRIMITIVE
+        const val EXPLOSION_ENERGY = SoundSynth.EXPLOSION_ENERGY
         private const val COUNT = SoundSynth.COUNT
         private const val VARIANTS = SoundSynth.VARIANTS
         private const val SAMPLE_COUNT = COUNT * VARIANTS
