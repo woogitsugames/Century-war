@@ -1,3 +1,12 @@
+# SESJA 6.11.2026 wieczór (session_01V6ZttWmaMyWqUx4MLz3B5i)
+- Budzenie: trig_01SZj4YGVEUGPDMj4ZUVy5br (:07). main = 7d847576 (stałe ziarno w FirstHourImpression61Test, `Game.newBattleSeed()`; `updateScreenshots` wymaga `LC_ALL=C.UTF-8`).
+- Właściciel zlecił 166–201 jednej sesji Codex. Wszystkie gałęzie `gpt/166…201` scalone na `integ/gpt-166-199` (bez BOM; testy Python zaktualizowane: ORDERS, 83 osiągnięcia / 89 ID). 192 poprawione przez koordynatora (czytelny modyfikator) + nowy wzorzec phone720 campaign_info.
+- NIEUKOŃCZONE przez Codex (winny mój prompt — zakazał `:sim` i `L.kt`): 175 (testy ScoreWire w `sim/src/test`), 194 (skróty bitwy: tylko pomiar, propozycje w raporcie), 197 (teksty przypomnień: tylko przegląd). Do zrobienia przez koordynatora.
+- `tools/check_doc_links.py` znajduje 19 zepsutych linków w docs — do poprawy.
+- Niestabilny pod obciążeniem: `TestLoopActivityTest.playerFilesStayByteForByteUnchanged` (osobno zielony).
+- Budżet punktów PGS: właściciel — zostaje 1650.
+- Research 170 (osobowości AI) i 171 (warianty epok) gotowe: `docs/research/R170-wrogowie.md`, `R171-warianty-epok.md` — propozycje do decyzji właściciela.
+
 # KONIEC SESJI 6.11.2026 ok. 16:15 UTC (limit tygodniowy właściciela)
 - Stan, decyzje i kolejka: `century-war.md` → „Stan na koniec sesji 6.11” (tam też prompt startowy). main = integ = bold-sagan, pełne testy zielone, brak agentów i worktree. Budzenia :07/:37 wyłączone.
 
