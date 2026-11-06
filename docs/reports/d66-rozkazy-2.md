@@ -95,7 +95,31 @@ Zapis zawsze 18 pozycji.
 `OrdersBalanceReport` (AI gracza kontra AI wroga, te same ograniczenia, 40 seedów). Cel partii 2
 (trudniej niż partia 1): 1★ 40–70%, 3★ 5–25%, 0 patów.
 
-BALANCE_TABLE
+| Rozkaz | Epoka | Cel | aiPower | N | ≥1★ | 2★+ | 3★ | cel dod. 1 | cel dod. 2 | mediana min | paty |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 first_line | 0 | HOLD 240 s | 4.50 | 40 | 80% | 53% | 28% | 35% | 45% | 4.00 | 0 |
+| 2 shield_wall | 1 | DESTROY 360 s | 0.70 | 40 | 65% | 40% | 10% | 10% | 40% | 5.24 | 0 |
+| 3 iron_rain | 2 | DESTROY 360 s | 0.70 | 40 | 78% | 43% | 18% | 30% | 30% | 5.29 | 0 |
+| 4 night_watch | 3 | HOLD 240 s | 3.00 | 40 | 68% | 58% | 23% | 38% | 43% | 4.00 | 0 |
+| 5 powder_race | 4 | DESTROY 360 s | 0.85 | 40 | 63% | 15% | 13% | 13% | 15% | 5.59 | 0 |
+| 6 steam_battery | 5 | HOLD 240 s | 3.00 | 40 | 75% | 38% | 10% | 23% | 25% | 4.00 | 0 |
+| 7 steel_fist | 6 | DESTROY 300 s | 1.40 | 40 | 73% | 73% | 10% | 43% | 40% | 4.49 | 0 |
+| 8 blitz | 7 | DESTROY 240 s | 0.20 | 40 | 50% | 30% | 25% | 28% | 28% | 3.24 | 0 |
+| 9 last_bastion | 8 | HOLD 300 s | 2.00 | 40 | 68% | 53% | 20% | 35% | 38% | 5.00 | 0 |
+| 10 chief_guard | 0 | ESCORT 210 s | 4.70 | 40 | 50% | 15% | 5% | 10% | 10% | 3.50 | 0 |
+| 11 bronze_towers | 1 | HOLD 210 s | 1.25 | 40 | 60% | 55% | 18% | 43% | 30% | 3.50 | 0 |
+| 12 lean_winter | 2 | HOLD 240 s | 3.20 | 40 | 65% | 30% | 8% | 15% | 23% | 4.00 | 0 |
+| 13 night_herald | 3 | SPEARHEAD 360 s | 0.85 | 40 | 40% | 25% | 15% | 20% | 20% | 5.33 | 0 |
+| 14 wet_powder | 4 | DESTROY 315 s | 0.40 | 40 | 50% | 33% | 8% | 23% | 18% | 5.22 | 0 |
+| 15 counter_steam | 5 | HOLD 270 s | 2.80 | 40 | 55% | 38% | 18% | 38% | 18% | 4.50 | 0 |
+| 16 fog_escort | 6 | ESCORT 240 s | 3.70 | 40 | 60% | 50% | 18% | 35% | 33% | 4.00 | 0 |
+| 17 thin_signal | 7 | DESTROY 330 s | 0.69 | 40 | 53% | 43% | 13% | 33% | 23% | 5.02 | 0 |
+| 18 final_spear | 8 | SPEARHEAD 360 s | 0.80 | 40 | 50% | 30% | 20% | 28% | 23% | 5.12 | 0 |
+
+Partia 2: 1★ 40–65%, 3★ 5–18%, 2★+ 15–55%, 0 patów — wszystkie w paśmie celu (trudniej niż
+partia 1: tam 1★ 50–80%, 3★ 10–28%). Partia 1 bez zmian (te same liczby co w d62). Mediany
+ataku 5,0–5,3 min przy limitach 5:15–6:00 (AI gra ostrożnie, jak w partii 1); eskorty i obrony
+kończą się z limitem. `OrdersTest.everyOrderHasReachableThreeStars` obejmuje wszystkie 18.
 
 Strojenie: `ORDERS_SWEEP` przyjmuje teraz mnożniki względne (`x0.85,x1,x1.15`), a statystyki
 wygranych pokazują wystawione jednostki i złoto na końcu (progi `FIELDED_MAX` i `GOLD_LEFT`).
