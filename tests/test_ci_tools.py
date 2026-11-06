@@ -14,6 +14,18 @@ from ci_synthetic_play_games_ids import main as synthetic_ids, substitute
 
 
 class CiToolsTest(unittest.TestCase):
+    def test_docs_workflow_is_manual_and_limited(self):
+        text = (ROOT / ".github/workflows/docs-tools.yml").read_text(encoding="utf-8")
+        self.assertIn("\non: workflow_dispatch\n", text)
+        self.assertNotRegex(text, r"(?m)^\s*(push|pull_request|schedule):")
+        self.assertIn("contents: read", text)
+        self.assertIn("timeout-minutes: 10", text)
+        self.assertIn("concurrency:", text)
+        self.assertIn("tools/check_doc_links.py --allow-list", text)
+        self.assertIn("tools/l10n_stats.py --markdown", text)
+        self.assertIn("$GITHUB_STEP_SUMMARY", text)
+        self.assertIn("actions/upload-artifact@", text)
+
     def test_groups_cover_every_method_without_duplicates(self):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
