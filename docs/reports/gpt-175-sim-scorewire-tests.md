@@ -1,4 +1,4 @@
-﻿# 175 — testy ScoreWire
+# 175 — testy ScoreWire
 
 **NIEUKOŃCZONE: NIE URUCHOMIONO GRADLE ANI TESTÓW ZLECENIA.**
 

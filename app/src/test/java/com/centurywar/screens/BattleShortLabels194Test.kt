@@ -1,4 +1,4 @@
-﻿package com.centurywar.screens
+package com.centurywar.screens
 
 import com.centurywar.engine.Game
 import com.centurywar.engine.Host

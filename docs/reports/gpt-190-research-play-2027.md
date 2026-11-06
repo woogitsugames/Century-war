@@ -1,4 +1,4 @@
-﻿# 190 — Google Play i Android: przygotowanie na 2027
+# 190 — Google Play i Android: przygotowanie na 2027
 
 Data odczytu źródeł i stanu repo: **6 listopada 2026 r.** Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź: `gpt/190-research-play-2027`.
 

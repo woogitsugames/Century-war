@@ -1,4 +1,4 @@
-﻿# Zlecenie 191 — dymek po pierwszej bitwie
+# Zlecenie 191 — dymek po pierwszej bitwie
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź `gpt/191-hint-map-bubble`; końcowy hash podaje `git rev-parse HEAD`.
 

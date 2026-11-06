@@ -1,4 +1,4 @@
-﻿# 176 — testy ThermalWatch
+# 176 — testy ThermalWatch
 
 Baza `origin/main` 7d847576e27bc5411bfd93877c1ba6df18af05cd (6.11.2026); gałąź `gpt/176-thermal-watch-tests`. Zmieniono wyłącznie `app/src/test/java/com/centurywar/engine/ThermalWatchTest.kt` oraz ten raport. Kod produkcyjny niezmieniony.
 

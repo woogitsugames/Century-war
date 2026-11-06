@@ -1,4 +1,4 @@
-﻿# 201 — wydajność ekranu Badań
+# 201 — wydajność ekranu Badań
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`; gałąź `gpt/201-research-screen-perf`. Ostatni commit kodu przed raportem: `b1e4841c`. Gradle uruchomiono.
 

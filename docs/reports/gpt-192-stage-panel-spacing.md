@@ -1,4 +1,4 @@
-﻿# 192 — odstęp w oknie etapu
+# 192 — odstęp w oknie etapu
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź: `gpt/192-stage-panel-spacing`. Ostatni commit kodu przed raportem: `0560e7366375bdcea78b36dacd01df400a9bddb5`; hash końcowego commita raportu podaje Git.
 

@@ -1,4 +1,4 @@
-﻿# 194 — pomiar podpisów bitwy
+# 194 — pomiar podpisów bitwy
 
 Data: 2026-11-06. Gałąź `gpt/194-battle-short-labels` bazuje na `gpt/191-hint-map-bubble` (`0ee8f4a4a1b89340da05a0d2a454d4a5854c55a8`), której baza main to `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Ostatni commit pomiaru przed raportem: `76741d57`. Gradle uruchomiono.
 
