@@ -136,3 +136,14 @@ Wartości są strojone pod próbę 40 seedów; po przyszłych zmianach jednostek
 - ID `leaderboard_orders` do utworzenia w Play Console (razem z pozostałymi 84).
 - „Co nowego” i osiągnięcia za Rozkazy — nie dodane (poza zakresem decyzji).
 - Kolejne partie rozkazów dopisywać na końcu `Orders.all` (indeks = zapis w profilu).
+
+## Wyniki testów (6.11)
+
+- `:sim:test` i `:server:test` (`--rerun`): zielone.
+- `buildSrc` test: zielony (generator ID: 85 kluczy).
+- `:app:testDebugUnitTest` dla nowych klas + `*Screenshot*`, `*Menu*`, `*Mode*`, `*LTest*`,
+  `*PgsIcons*`, `*PlayGamesIds*`, `*LostBattle*`, `*ReleaseConfig*`, `*BattleHistory*`,
+  `*Profile*`, `*BattleScreen*`: 322 testy; jedyna porażka (wzorzec menu `phone720/foldOpen_reg100_menu`
+  — nowy kafel Rozkazy) usunięta aktualizacją wzorców (`:app:updateScreenshots`, wpis w
+  `screens/UPDATES.md`), po niej `ScreenshotTestMenus` zielony. Pełnego `:app:testDebugUnitTest`
+  nie uruchamiano.
