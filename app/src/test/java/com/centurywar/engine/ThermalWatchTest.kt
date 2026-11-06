@@ -42,6 +42,12 @@ class ThermalWatchTest {
             assertEquals(PowerManager.THERMAL_STATUS_SEVERE, g.thermalStatus)
             assertEquals(PowerManager.THERMAL_STATUS_SEVERE,
                 QualityGovernor.thermalSignal(g.thermalStatus, g.thermalHeadroom))
+            val governor = QualityGovernor()
+            repeat(60 * 20) {
+                governor.record(8f, 1f / 60f, true, 0, 12,
+                    thermal = QualityGovernor.thermalSignal(g.thermalStatus, g.thermalHeadroom))
+            }
+            assertTrue(governor.reduction > 0)
             shadow.setCurrentThermalStatus(PowerManager.THERMAL_STATUS_NONE)
             assertEquals(PowerManager.THERMAL_STATUS_NONE, g.thermalStatus)
         } finally { watch.stop() }
