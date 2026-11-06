@@ -46,9 +46,17 @@ BUILD SUCCESSFUL in 16s
 37 actionable tasks: 1 executed, 36 up-to-date
 ```
 
-`fastTest` jeszcze nieuruchomiony na tej gałęzi: kolejkę zwolniono na prośbę koordynatora. Zlecenie oczekuje na jego wynik; nie ma kompletu potwierdzonych kontroli ogólnych.
+`fastTest` uruchomiono z `--no-configuration-cache --no-daemon`; po ponad 40 sekundach nadal trwał w `:app:testDebugUnitTest`, a log podał:
+
+```text
+ReplayShareProviderTest > onlyReadOnlyReplayFilesAreExposed FAILED
+    java.nio.file.FileSystemException at ReplayShareProviderTest.kt:63
+``` 
+
+Przebieg przerwano na polecenie koordynatora po potwierdzeniu znanego błędu; nie ma pełnego wyniku i zestaw nie jest zielony. Przyczyny błędu nie diagnozowano w tym zleceniu.
 
 ## Dalej
 
 - Przeanalizować podział lub skrócenie trzech podpisów na zewnętrznym Foldzie (`CodexComparePanel.kt`) i zweryfikować 10 sp na urządzeniu.
 - Uzupełnić test o granice podpisu względem wartości w tej samej karcie i sprawdzić widoczne przycięcia na zrzutach wszystkich języków, bez automatycznej aktualizacji wzorców.
+
