@@ -42,6 +42,8 @@ object LostBattle {
             Mode.ENDLESS -> if (cfg.weekly >= 0L) (battle.wave * 3 + kills / 10) / 2
                 else battle.wave * 3 + kills / 10
             Mode.DAILY -> if (rankedDaily) 0 else (5 * effort).toInt()
+            // Dzień 62: Rozkazy sztabu dają medale tylko za nowe gwiazdki (jednorazowo).
+            Mode.ORDERS -> 0
         }
     }
 
@@ -87,6 +89,7 @@ object LostBattle {
         Mode.ENDLESS -> L.f(if (meta.weekly >= 0L) "lost188_weekly" else "lost188_endless", meta.wave)
         Mode.DAILY -> L["daily"]
         Mode.SKIRMISH -> L["skirmish"]
+        Mode.ORDERS -> L["o209_title"] + " " + (meta.stageIndex + 1)
     }
 
     /**

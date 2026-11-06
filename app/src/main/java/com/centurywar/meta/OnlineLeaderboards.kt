@@ -3,7 +3,8 @@ package com.centurywar.meta
 /**
  * Most do rankingu globalnego. Domyślnie [Local] (tylko lokalne tablice w [Profile]).
  *
- * Adapter PGS v2 obsługuje cztery tablice: endless, daily, campaign i skirmish.
+ * Adapter PGS v2 obsługuje pięć tablic: endless, daily, campaign, skirmish i orders
+ * (dzień 62: Rozkazy sztabu, punkty sztabu).
  * Identyfikatory są generowane z docs/store/play_games_ids.properties.
  * Dzienne wyniki używają okna TIME_SPAN_DAILY, nie fizycznego resetu tablicy.
  *

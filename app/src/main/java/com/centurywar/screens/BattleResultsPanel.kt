@@ -33,6 +33,7 @@ import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessBosses
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
+import com.centurywar.game.Orders
 import com.centurywar.game.Campaign
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Research
@@ -141,6 +142,18 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         resultBossesText = battle.bossesDefeated.toString()
         resultScoreText = battle.score().toString()
         resultStars = if (cfg.mode == Mode.CAMPAIGN && won) battle.stars() else 0
+        Orders.of(cfg)?.let { order ->
+            // Dzień 62: cel główny i dwa dodatkowe z wynikiem tej bitwy.
+            resultStars = Orders.stars(order, battle)
+            orderLines[0] = OrderTexts.goal(order)
+            orderDone[0] = Orders.mainDone(battle)
+            for (i in 0 until 2) {
+                orderLines[i + 1] = OrderTexts.objective(order.bonus[i])
+                orderDone[i + 1] = Orders.objectiveDone(order.bonus[i], battle)
+            }
+            orderPointsLabel = L["o209_points_short"]
+            orderPointsText = Orders.points(order, battle).toString()
+        }
         resultCustomSkirmish = cfg.mode == Mode.SKIRMISH && !SkirmishSetup.isRanked(cfg)
         resultUnrankedText = L["sk_unranked"]
         resultTimeLabel = L["time"]
@@ -196,13 +209,15 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             tipText = if (tipText.isEmpty()) helpText else "$helpText $tipText"
         }
         // Zlecenie 141: po bitwie wyraźnie wskazujemy Doktrynę elit, gdy gracza na nią stać.
-        if (tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
+        // Dzień 62: w Rozkazach panel ma trzy wiersze celów; bez podpowiedzi celu i badań.
+        val ordersResult = cfg.mode == Mode.ORDERS
+        if (!ordersResult && tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
             tipText = EliteUnlock.text("elite141_afford", g.profile)
             resultGoalKind = NextGoalKind.RESEARCH
             resultGoalText = tipText
         }
         // R2-01: bez wskazówki (zwykle wygrana) wiersz pokazuje najbliższy cel gracza.
-        if (tipText.isEmpty()) {
+        if (!ordersResult && tipText.isEmpty()) {
             val goal = NextGoals.pick(g.profile, System.currentTimeMillis(),
                 if (cfg.mode == Mode.ENDLESS && cfg.weekly < 0L) null else cfg.mode)
             tipText = goal.text
@@ -296,8 +311,36 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
         val cy = tmpR.centerY()
         Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+        // Dzień 62: podpis dopasowany do miejsca obok wartości (≥ 10 sp), bez nachodzenia.
+        val labelW = rx - ui.measure(value, 15f, true) - 8 * dp - (lx + 24 * dp)
+        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, ui.fit(label, 14f, labelW, 10f), Ui.DIM, Paint.Align.LEFT, 1.6f)
         ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
+        return y + lh
+        }
+    }
+
+    /**
+     * Dzień 62: wiersz celu rozkazu (gwiazdka pełna/pusta, opis dopasowany do szerokości,
+     * znak wykonania po prawej). Opis nie schodzi poniżej 10 sp.
+     */
+    fun drawObjectiveRow(c: Canvas, y: Float, i: Int): Float {
+        with(owner) {
+        val lh = resultRowH
+        if (y + lh > restartEnd.r.top - 8 * dp) { resultRowsClipped++; return y }
+        val lx = resultPanel.left + 30 * dp
+        val rx = resultPanel.right - 30 * dp
+        tmpR.set(lx - 10 * dp, y, rx + 10 * dp, y + lh - 3 * dp)
+        ui.fill.color = Color.argb(30, 255, 255, 255)
+        c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
+        val cy = tmpR.centerY()
+        val done = orderDone[i]
+        Icons.draw(c, if (done) Icons.STAR else Icons.STAR_EMPTY, lx + 8 * dp, cy, 18 * dp, dp = dp)
+        val text = orderLines[i]
+        val avail = rx - 26 * dp - (lx + 24 * dp)
+        ui.textO(c, text, lx + 24 * dp, cy + 5 * dp, ui.fit(text, 13f, avail, 10f),
+            if (done) Ui.TEXT else Ui.DIM, Paint.Align.LEFT, 1.6f)
+        Icons.draw(c, if (done) Icons.CHECK else Icons.CLOSE, rx - 8 * dp, cy, 16 * dp,
+            if (done) Ui.GOOD else Ui.BAD, dp = dp)
         return y + lh
         }
     }
@@ -322,7 +365,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         } else {
         var y = rp.top + 73 * dp
         resultGoalDrawn = false
-        if (cfg.mode == Mode.CAMPAIGN && won) {
+        if ((cfg.mode == Mode.CAMPAIGN || cfg.mode == Mode.ORDERS) && won) {
             ui.stars(c, rp.centerX(), y + 16 * dp, 32 * dp, resultStars, 3, 1.05f)
             y += 36 * dp
         } else {
@@ -338,7 +381,9 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         }
         // Treść zaczyna się pod zakładkami (73 dp), więc na 720p wiersze mogą się ścisnąć,
         // zamiast znikać ostatnie (np. nagroda w tygodniowym Endless).
-        var rows = 2
+        val orders = cfg.mode == Mode.ORDERS
+        // Dzień 62: Rozkazy — czas, trzy cele i punkty sztabu (bez wiersza zabójstw).
+        var rows = if (orders) 4 else 2
         if (cfg.mode == Mode.ENDLESS) rows += if (cfg.weekly >= 0L) 3 else 2
         if (cfg.mode != Mode.CAMPAIGN) rows++
         if (totalMedalsGained > 0) rows++
@@ -355,14 +400,16 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             .coerceIn(20 * dp, 26 * dp)
         resultRowsClipped = 0
         y = drawResultRow(c, y, Icons.STOPWATCH, resultTimeLabel, resultTimeText)
-        y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
+        if (orders) for (i in 0 until 3) y = drawObjectiveRow(c, y, i)
+        else y = drawResultRow(c, y, Icons.SKULL, resultKillsLabel, resultKillsText)
         if (cfg.mode == Mode.ENDLESS) {
             y = drawResultRow(c, y, Icons.TOWER, resultWaveLabel, resultWaveText)
             y = drawResultRow(c, y, Icons.CROWN, resultBossesLabel, resultBossesText)
             if (cfg.weekly >= 0L)
                 y = drawResultRow(c, y, Icons.MEDAL, resultWeeklyTiersLabel, weeklyResultLabel, Ui.GOLD)
         }
-        if (cfg.mode != Mode.CAMPAIGN)
+        if (orders) y = drawResultRow(c, y, Icons.STAR, orderPointsLabel, orderPointsText, Ui.GOLD)
+        else if (cfg.mode != Mode.CAMPAIGN)
             y = drawResultRow(c, y, Icons.STAR, resultScoreLabel, resultScoreText, Ui.GOLD)
         if (totalMedalsGained > 0) y = drawResultRow(c, y, Icons.MEDAL,
             resultRewardLabel, rewardText, Ui.GOLD)

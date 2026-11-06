@@ -1032,10 +1032,11 @@ Plik zawiera 84 klucze: ID projektu, 4 rankingi i 79 osiągnięć.
    **Play Games Services → Setup and management → Configuration**. Utwórz usługę
    i odczytaj numeryczny **Game services project ID** (nie OAuth Client ID).
    Wpisz go jako `app_id` w `docs/store/play_games_ids.properties`.
-2. W **Play Games Services → Leaderboards** utwórz cztery rankingi
+2. W **Play Games Services → Leaderboards** utwórz pięć rankingów
    z sortowaniem malejącym i skopiuj ich identyfikatory z Play Console do
    `leaderboard_endless` (oblężenie), `leaderboard_campaign` (gwiazdki),
-   `leaderboard_skirmish` (potyczka) i `leaderboard_daily` (wyzwanie dnia).
+   `leaderboard_skirmish` (potyczka), `leaderboard_daily` (wyzwanie dnia) i
+   `leaderboard_orders` (Rozkazy sztabu, punkty sztabu).
    Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
 3. W **Play Games Services → Achievements** utwórz 79 osiągnięć standardowych.
    Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego

@@ -190,11 +190,11 @@ class Content206Test {
     }
 
     @Test fun olderSnapshotFormatsStillResume() {
-        assertEquals(21, BattleSnapshot.VERSION)
+        assertEquals(22, BattleSnapshot.VERSION)
         val a = endless(2_061L)
         a.playerAi = Ai(a, 0)
         repeat(60 * 60) { a.step(); a.fx.count = 0 }
-        for (version in listOf(16, 17, 18, 19, 20)) {
+        for (version in listOf(16, 17, 18, 19, 20, 21)) {
             val legacy = BattleSnapshot.encode(a, rankedDaily = false, camX = 0f,
                 battleId = 9L, formatVersion = version)
             val restored = BattleSnapshot.decode(legacy)

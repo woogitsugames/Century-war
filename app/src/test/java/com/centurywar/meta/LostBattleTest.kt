@@ -60,6 +60,7 @@ class LostBattleTest {
             Mode.SKIRMISH -> SkirmishSetup.reward(cfg, false, b.time, kills)
             Mode.ENDLESS -> if (cfg.weekly >= 0L) (b.wave * 3 + kills / 10) / 2 else b.wave * 3 + kills / 10
             Mode.DAILY -> if (ranked) 0 else (5 * effort).toInt()
+            Mode.ORDERS -> 0
         }
     }
 

@@ -57,6 +57,7 @@ class ReplayListScreen(g: Game) : Screen(g) {
                     com.centurywar.game.Mode.ENDLESS -> "endless"
                     com.centurywar.game.Mode.DAILY -> "daily"
                     com.centurywar.game.Mode.SKIRMISH -> "skirmish"
+                    com.centurywar.game.Mode.ORDERS -> "o209_title"
                 }]
                 val suffix = if (e.meta.stage >= 0) " #${e.meta.stage + 1}" else
                     if (e.meta.wave > 0) " ${e.meta.wave}" else ""

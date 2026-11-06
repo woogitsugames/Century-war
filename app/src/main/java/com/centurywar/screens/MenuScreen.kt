@@ -44,6 +44,8 @@ class MenuScreen(g: Game) : Screen(g) {
     private val missions = btn(9)
     private val settings = btn(7)
     private val codex = btn(8)
+    /** Dzień 62: Rozkazy sztabu — w poziomie obok Misji (ten sam rząd), w pionie osobny kafel. */
+    internal val orders = btn(ORDERS)
     /** Dzień 2: „Co nowego” po aktualizacji, dopóki gracz nie otworzy historii zmian. */
     internal val whatsNew = btn(WHATS_NEW).also { it.visible = false }
     private var whatsNewSeenRef: String? = null
@@ -66,7 +68,7 @@ class MenuScreen(g: Game) : Screen(g) {
     internal var goalText = ""
         private set
     private var goalSize = 13f
-    private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, research,
+    private val portraitTiles = arrayOf(campaign, endless, daily, skirmish, orders, research,
         rankings, missions, settings, codex)
     private val scrollCue = ScrollCue()
     internal var portraitMenu = false
@@ -160,6 +162,8 @@ class MenuScreen(g: Game) : Screen(g) {
         const val WHATS_NEW = 10
         const val GOAL = 11
         const val REPORT_REMINDER = 12
+        /** Dzień 62: kafel Rozkazów sztabu. */
+        const val ORDERS = 13
         /** Najmniejszy napis celu (sp); przy braku miejsca linia znika zamiast maleć. */
         const val GOAL_MIN_SP = 11f
         const val WHATS_NEW_H = 40f
@@ -205,6 +209,7 @@ class MenuScreen(g: Game) : Screen(g) {
         campaign.iconId = Icons.MAP; endless.iconId = Icons.TOWER; daily.iconId = Icons.CALENDAR
         skirmish.iconId = Icons.CROSSED_SWORDS; research.iconId = Icons.FLASK; rankings.iconId = Icons.TROPHY
         missions.label = L["ms_missions"]; missions.iconId = Icons.MISSIONS
+        orders.label = L["o209_menu"]; orders.iconId = Icons.FLAG
         settings.iconId = Icons.GEAR
         codex.label = ""; codex.iconId = Icons.CODEX
         settings.tooltipTitle = L["settings"]; settings.tooltipBody = ""
@@ -216,6 +221,10 @@ class MenuScreen(g: Game) : Screen(g) {
         // Android może przydzielić pionowe lub bardzo wąskie okno mimo sensorLandscape.
         // Prawie kwadratowy rozłożony Fold (np. 1968x2184) zachowuje zatwierdzony układ kafelków.
         portraitMenu = h > w * 1.3f || w - g.insetL - g.insetR < 520 * dp
+        // Dzień 62: licznik gwiazdek sztabu tylko na pionowym kaflu (poziomy rząd ma 48 dp).
+        orders.sub = if (portraitMenu)
+            "${g.profile.orderStarTotal()}/${com.centurywar.game.Orders.COUNT * com.centurywar.game.Orders.MAX_STARS}" else ""
+        orders.subIcon = if (portraitMenu) Icons.STAR else -1
         if (portraitMenu) {
             layoutPortrait()
             layoutResume(w / 2 + (g.insetL - g.insetR) / 2)
@@ -282,7 +291,9 @@ class MenuScreen(g: Game) : Screen(g) {
             skirmish.set(left, top + 3 * (bh + gap), bw, bh)
             research.set(left, top + 4 * (bh + gap), bw, bh)
             rankings.set(left, top + 5 * (bh + gap), bw, bh)
-            missions.set(left, top + 6 * (bh + gap), bw, mh)
+            val half = (bw - gap) / 2
+            missions.set(left, top + 6 * (bh + gap), half, mh)
+            orders.set(left + half + gap, top + 6 * (bh + gap), bw - half - gap, mh)
         } else {
             campaign.set(cx - bw - gap / 2, top, bw, bh)
             endless.set(cx + gap / 2, top, bw, bh)
@@ -290,7 +301,8 @@ class MenuScreen(g: Game) : Screen(g) {
             skirmish.set(cx + gap / 2, top + bh + gap, bw, bh)
             research.set(cx - bw - gap / 2, top + (bh + gap) * 2, bw, bh)
             rankings.set(cx + gap / 2, top + (bh + gap) * 2, bw, bh)
-            missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw * 2 + gap, mh)
+            missions.set(cx - bw - gap / 2, top + (bh + gap) * 3, bw, mh)
+            orders.set(cx + gap / 2, top + (bh + gap) * 3, bw, mh)
         }
         val sb = 48 * dp
         settings.set(w - g.insetR - sb - 12 * dp, g.insetT + 10 * dp, sb, sb)
@@ -319,7 +331,8 @@ class MenuScreen(g: Game) : Screen(g) {
         val bottom = h - g.insetB - 4 * dp
         val bh = min(30 * dp, bottom - top)
         if (bh < 20 * dp) return
-        val bw = missions.r.width()
+        // Dzień 62: wiersz celu pod całym rzędem Misji i Rozkazów.
+        val bw = orders.r.right - missions.r.left
         val textW = bw - 44 * dp
         val size = ui.fit(goal.text, 13f, textW, 1f)
         if (size * ui.textScale < GOAL_MIN_SP) return
@@ -503,6 +516,7 @@ class MenuScreen(g: Game) : Screen(g) {
                 Mode.ENDLESS -> L["endless"] + " · " + L.f("wave", b.wave)
                 Mode.DAILY -> L["daily"]
                 Mode.SKIRMISH -> L["skirmish"]
+                Mode.ORDERS -> L["o209_title"] + " " + (b.cfg.stageIndex + 1)
             }
             val s = b.time.toInt()
             mode + " · " + L["time"] + " " + String.format(java.util.Locale.ROOT, "%d:%02d", s / 60, s % 60)
@@ -1078,6 +1092,7 @@ class MenuScreen(g: Game) : Screen(g) {
             7 -> g.push(SettingsScreen(g))
             8 -> g.push(CodexScreen(g))
             9 -> g.push(MissionsScreen(g))
+            ORDERS -> g.push(OrdersScreen(g))
             WHATS_NEW -> g.push(WhatsNewScreen(g, fromMenu = true))
             REPORT_REMINDER -> {
                 val final = reminderFinal && g.playtest?.finalState == PlaytestLog.FINAL_NONE

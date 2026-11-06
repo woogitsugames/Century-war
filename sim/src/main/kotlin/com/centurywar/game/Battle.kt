@@ -446,6 +446,13 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (cfg.dailyEvent == DailyEvent.TOWER_DUEL) {
             for (s in sides) if (s.slots > 0) s.slots = min(Defs.MAX_TURRET_SLOTS, s.slots + 1)
         }
+        // Dzień 62 (Rozkazy sztabu): ograniczenia strony; przy OrderRules.ALL nic się nie zmienia.
+        for (s in sides) {
+            val allowed = allowedMask(s)
+            if (allowed and OrderRules.ELITE == 0) s.eliteUnlocked = false
+            if (allowed and OrderRules.RALLY == 0) s.rallyUnlocked = false
+            if (allowed and OrderRules.TURRETS == 0) s.slots = 0
+        }
         // Przeciwnik ma taki sam limit armii i slotów, jak strona bez badań.
         if (cfg.tutorial) { e.gold *= 0.5f; p.xpMul *= 1.5f } // samouczek: łagodniejszy start, szybszy awans
         if (endless) {
@@ -469,13 +476,21 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     val player get() = sides[0]
     val enemy get() = sides[1]
 
+    /** Dzień 62: maska [OrderRules] strony (gracz albo przeciwnik). */
+    fun allowedMask(side: Side): Int = if (side.index == 0) cfg.playerAllowed else cfg.enemyAllowed
+
+    /** Czy rozkaz pozwala tej stronie szkolić daną rolę (poza Rozkazami zawsze tak). */
+    fun roleAllowed(side: Side, role: Role): Boolean = allowedMask(side) and OrderRules.roleBit(role) != 0
+
     fun commanderCost(side: Side): Int = side.unit(Role.HEAVY).cost * 2
 
     fun canSummonCommander(side: Side): Boolean = commanderAvailable && !over &&
+        allowedMask(side) and OrderRules.COMMANDER != 0 &&
         side.commanderCd == 0f && side.aliveCount < side.cap && side.gold >= commanderCost(side)
 
     private fun spawnCommander(side: Side): Boolean {
-        if (!commanderAvailable || over || side.commanderCd != 0f || side.aliveCount >= side.cap) return false
+        if (!commanderAvailable || over || side.commanderCd != 0f || side.aliveCount >= side.cap ||
+            allowedMask(side) and OrderRules.COMMANDER == 0) return false
         val f = spawnFighter(side, side.unit(Role.HEAVY), 1.8f) ?: return false
         f.isCommander = true
         f.dmg *= 1.15f
@@ -509,6 +524,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     fun canQueue(side: Side, role: Role): Boolean {
         if (cfg.dailyEvent == DailyEvent.MARKSMEN && role != Role.RANGED) return false
         if (role == Role.ELITE && !side.eliteUnlocked) return false
+        if (!roleAllowed(side, role)) return false
         return side.queueSize < min(side.queueMax, QUEUE_CAP) && side.gold >= unitCost(side, role)
     }
 
@@ -906,7 +922,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     }
 
     fun abilityReady(side: Side, i: Int): Boolean =
-        !over && i in 0..1 && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked)
+        !over && i in 0..1 && side.abilityCd[i] <= 0f && (i == 0 || side.rallyUnlocked) &&
+            (i != 0 || allowedMask(side) and OrderRules.BARRAGE != 0)
 
     /** Bez argumentu celu zachowuje dawny, losowy rozrzut ostrzału. */
     fun castBarrage(side: Side): Boolean = castBarrage(side, Float.NaN)
@@ -1049,6 +1066,9 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                 val playerHp = player.baseHp / player.baseMaxHp
                 val enemyHp = enemy.baseHp / enemy.baseMaxHp
                 finish(if (playerHp > enemyHp) 0 else 1)
+            } else if (cfg.timeLimitSteps > 0 && stepCount >= cfg.timeLimitSteps) {
+                // Dzień 62: limit rozkazu; obrona wygrywa, gdy baza przetrwała, atak przegrywa.
+                finish(if (cfg.holdWins) 0 else 1)
             }
         }
         if (endless && !over && pendingCards == null && bossRewardsPending > 0) {

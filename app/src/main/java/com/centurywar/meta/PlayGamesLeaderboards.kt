@@ -43,6 +43,7 @@ class PlayGamesLeaderboards(
         "daily" to activity.getString(R.string.leaderboard_daily),
         Profile.BOARD_CAMPAIGN to activity.getString(R.string.leaderboard_campaign),
         Profile.BOARD_SKIRMISH to activity.getString(R.string.leaderboard_skirmish),
+        Profile.BOARD_ORDERS to activity.getString(R.string.leaderboard_orders),
     )
 
     @Volatile private var authenticated = false
@@ -236,6 +237,7 @@ class PlayGamesLeaderboards(
                 Profile.BOARD_ENDLESS,
                 Profile.BOARD_CAMPAIGN,
                 Profile.BOARD_SKIRMISH,
+                Profile.BOARD_ORDERS,
                 Profile.dailyBoard(day),
             )) {
                 val scores = all.optJSONArray(key) ?: continue

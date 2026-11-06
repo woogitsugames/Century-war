@@ -838,7 +838,7 @@ class Game(
             Mode.SKIRMISH -> PlaytestLog.SCREEN_SKIRMISH
             Mode.ENDLESS -> if (s.cfg.weekly >= 0L) PlaytestLog.SCREEN_WEEKLY else PlaytestLog.SCREEN_ENDLESS
             Mode.DAILY -> PlaytestLog.SCREEN_DAILY
-            Mode.CAMPAIGN -> -1
+            Mode.CAMPAIGN, Mode.ORDERS -> -1
         }
         else -> -1
     }

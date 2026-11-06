@@ -35,6 +35,7 @@ import com.centurywar.game.EndlessCard
 import com.centurywar.game.EndlessBosses
 import com.centurywar.game.EndlessRarity
 import com.centurywar.game.Mode
+import com.centurywar.game.Orders
 import com.centurywar.game.Weekly
 import com.centurywar.game.Role
 import com.centurywar.game.Skirmish
@@ -176,6 +177,12 @@ class BattleScreen(
     internal var achievementRewardText = ""
     internal var resultNewRecordLabel = ""
     internal var resultStars = 0
+    /** Dzień 62: Rozkazy sztabu — gwiazdki tej bitwy, wykonane cele (główny + 2) i ich opisy. */
+    internal var orderStarsNow = 0
+    internal val orderDone = BooleanArray(3)
+    internal val orderLines = Array(3) { "" }
+    internal var orderPointsText = ""
+    internal var orderPointsLabel = ""
     internal var resultCustomSkirmish = false
     internal val resultTipLines = arrayOfNulls<String>(16)
     internal var resultTipCount = 0
@@ -1106,7 +1113,7 @@ class BattleScreen(
         mode, if (mode == Mode.DAILY || weekly >= 0L) seed else seed + 1, aiPower,
         startEra, maxEra, modifiers, playerBonuses, stageIndex,
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
-        dailyEvent,
+        dailyEvent, playerAllowed, enemyAllowed, timeLimitSteps, holdWins,
     )
 
     /** R2-01: ekran celu z wiersza wskazówki; Wstecz z niego wraca do menu. */
@@ -1136,6 +1143,7 @@ class BattleScreen(
         Mode.ENDLESS -> if (cfg.weekly >= 0L) ModeScreen(g, Mode.DAILY, true) else ModeScreen(g, Mode.ENDLESS)
         Mode.DAILY -> ModeScreen(g, cfg.mode)
         Mode.SKIRMISH -> SkirmishSetupScreen(g)
+        Mode.ORDERS -> OrdersScreen(g, cfg.stageIndex)
     }
 
     private fun setPauseVolume(x: Float) {
@@ -1540,6 +1548,22 @@ class BattleScreen(
                     g.online.submit(Profile.BOARD_ENDLESS, score)
                 }
             }
+            Mode.ORDERS -> {
+                // Dzień 62: medale wyłącznie za NOWE gwiazdki (jednorazowo); porażka bez medali.
+                val order = Orders.of(cfg)
+                if (order != null) {
+                    val st = Orders.stars(order, battle)
+                    val old = pr.orderStars[order.index]
+                    orderStarsNow = st
+                    reward = pr.recordOrder(order.index, st, Orders.points(order, battle))
+                    if (st > old) earnedStars = st - old
+                    if (st > 0) {
+                        val total = pr.orderPointTotal()
+                        newRecord = pr.submit(Profile.BOARD_ORDERS, total, day, replayId)
+                        g.online.submit(Profile.BOARD_ORDERS, total)
+                    }
+                } else reward = 0
+            }
             Mode.DAILY -> {
                 if (rankedDaily) {
                     reward = min(90, (score / 350).toInt()) + 10
@@ -1554,7 +1578,8 @@ class BattleScreen(
         }
         pr.medals = (pr.medals.toLong() + reward).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val finishedAt = System.currentTimeMillis()
-        Missions(pr).onBattleEnd(battle, finishedAt, persist = false, newStars = earnedStars, playerCommands = missionLog)
+        Missions(pr).onBattleEnd(battle, finishedAt, persist = false,
+            newStars = if (cfg.mode == Mode.ORDERS) 0 else earnedStars, playerCommands = missionLog)
         missionsAdvanced = (pr.missionState.daily + pr.missionState.weekly)
             .count { it.progress > (missionBefore[it.id] ?: it.progress) }
         g.showAchievements(Achievements.onBattleEnd(pr, battle, cfg, won, g.onlineAchievements, achievementEvents))

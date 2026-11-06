@@ -47,5 +47,5 @@
     {"step":4500,"kind":"BARRAGE","argument":0},
     {"step":4600,"kind":"UNIT_UPGRADE","argument":0}
   ],
-  "expected": {"score":20875,"winner":0,"wave":0,"steps":5332,"kills":23,"enemyKills":14,"timeBits":1118944188,"snapshotSha256":"87c422dd55a68833f72936b6f9a92a7792617e2ee7356161f6a365a628ad2f93"}
+  "expected": {"score":20875,"winner":0,"wave":0,"steps":5332,"kills":23,"enemyKills":14,"timeBits":1118944188,"snapshotSha256":"c6a246e3ee76b41fb19fe38163dfcc0834cf5fe5d5ea685efead14f48e943341"}
 }

@@ -367,7 +367,8 @@ class Ai(
     /** Losowanie ważone kontrami, ekonomią i profilem dowódcy, bez tymczasowych tablic. */
     private fun pickRole(melee: Int, ranged: Int, heavy: Int): Role {
         if (b.cfg.dailyEvent == DailyEvent.MARKSMEN) return Role.RANGED
-        if (melee == 0 && me.queueSize == 0) return Role.MELEE
+        val restricted = b.allowedMask(me) != OrderRules.ALL
+        if (melee == 0 && me.queueSize == 0 && (!restricted || b.roleAllowed(me, Role.MELEE))) return Role.MELEE
         val profile = personality
         var wm = profile.meleeWeight
         var wr = profile.rangedWeight
@@ -396,8 +397,19 @@ class Ai(
                 we += profile.lateEliteBoost
             }
         }
-        if (b.rangedHorde && me.index == 1 &&
+        if (b.rangedHorde && me.index == 1 && (!restricted || b.roleAllowed(me, Role.RANGED)) &&
             b.rng.nextAiInt(me.index, 100) < 55) return Role.RANGED
+        // Dzień 62 (Rozkazy sztabu): tylko role dozwolone rozkazem; poza Rozkazami bez zmian.
+        if (restricted) {
+            if (!b.roleAllowed(me, Role.MELEE)) wm = 0
+            if (!b.roleAllowed(me, Role.RANGED)) wr = 0
+            if (!b.roleAllowed(me, Role.HEAVY)) wh = 0
+            if (!b.roleAllowed(me, Role.ELITE)) we = 0
+            if (wm + wr + wh + we <= 0) {
+                return Role.entries.firstOrNull { b.roleAllowed(me, it) && it != Role.ELITE }
+                    ?: Role.ELITE
+            }
+        }
 
         val roll = b.rng.nextAiInt(me.index, wm + wr + wh + we)
         return when {

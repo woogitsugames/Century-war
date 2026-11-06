@@ -2161,3 +2161,5 @@ Po regeneracji: we wszystkich 10 złotych powtórkach wynik, zwycięzca, fala, k
 są identyczne; zmienił się wyłącznie `snapshotSha256` (format v21 z 4 dodatkowymi stosami kart).
 
 - 2026-11-05 — regeneracja złotych powtórek: D58: paczka 206 - karty Endless, zestawy tygodnia, wydarzenia dnia, zrzut v21, PROTOCOL 0.8.11.
+
+- 2026-11-06 — regeneracja złotych powtórek: D62: Rozkazy sztabu - Mode.ORDERS, pola ograniczeń i limitu czasu (domyślne), zrzut v22, PROTOCOL 0.8.12; wyniki istniejących trybów bez zmian.

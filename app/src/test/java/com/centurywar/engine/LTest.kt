@@ -111,6 +111,31 @@ class LTest {
         }
     }
 
+    /** Dzień 62: Rozkazy sztabu (part209) — nazwy i odprawy 9 rozkazów, cele, ranking w 10 językach. */
+    @Test
+    fun orders209KeysHaveAllLanguages() {
+        val keys = com.centurywar.game.Orders.all.flatMap { listOf(it.nameKey, it.briefKey) } + listOf(
+            "o209_title", "o209_menu", "o209_goal_destroy", "o209_goal_hold", "o209_obj_base",
+            "o209_obj_within", "o209_obj_kills", "o209_obj_losses", "o209_forces", "o209_enemy", "o209_all",
+            "o209_k_melee", "o209_k_ranged", "o209_k_heavy", "o209_k_elite", "o209_k_commander",
+            "o209_k_turrets", "o209_k_barrage", "o209_k_rally", "o209_locked", "o209_stars", "o209_points",
+            "o209_points_short", "o209_reward", "o209_reward_done", "o209_ranking", "o209_main", "o209_bonus",
+            "board_orders")
+        for (k in keys) {
+            val entry = L.raw(k)
+            assertTrue("brak $k", entry != null)
+            assertEquals(k, L.CODES.size, entry!!.size)
+            for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
+        }
+        // Nazwy rozkazów są unikalne w każdym języku.
+        for (i in L.CODES.indices) {
+            val names = com.centurywar.game.Orders.all.map { L.raw(it.nameKey)!![i] }
+            assertEquals(L.CODES[i], names.size, names.toSet().size)
+        }
+        for (k in listOf("o209_goal_destroy", "o209_goal_hold", "o209_obj_base", "o209_locked"))
+            for (text in L.raw(k)!!) assertTrue("$k: $text", text.contains("%1\$s"))
+    }
+
     @Test
     fun placeholderRegexSupportsPositionalArguments() {
         val samples = "%1\$s %2\$d %.1f %%"

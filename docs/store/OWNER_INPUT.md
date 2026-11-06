@@ -26,7 +26,7 @@ Te pozycje **nie są dodatkowymi polami tabeli**. Przekaż je koordynatorowi wyd
 
 - [ ] **Adres własnego serwera rankingowego:** produkcyjny adres `https://` wpisywany jako `CW_SERVER_URL`. Jeżeli serwer nie będzie uruchomiony przy premierze, potwierdź tę decyzję i sposób wyłączenia funkcji/zwolnienia odpowiedniej bramki wydania. Nie twierdź w polityce, że serwer już działa bez testu.
 - [ ] **Bezpieczna konfiguracja serwera:** `CW_HMAC_KEY` i klucze do podpisywania aplikacji przekazywane wyłącznie kanałem sekretów CI; **nigdy** do tego pliku ani do repozytorium. Zatwierdź hosting, logowanie IP, czas przechowywania i procedurę usuwania danych.
-- [ ] **Google Play Games:** skonfiguruj w Play Console i wpisz w [`play_games_ids.properties`](play_games_ids.properties) **84 identyfikatory: 1 projekt, 4 rankingi i 79 osiągnięć**. Nie wpisuj ich do tabeli OWNER_INPUT. Uruchom i sprawdź logowanie, wyniki, osiągnięcia i Saved Games na urządzeniu z podpisaną aplikacją.
+- [ ] **Google Play Games:** skonfiguruj w Play Console i wpisz w [`play_games_ids.properties`](play_games_ids.properties) **85 identyfikatorów: 1 projekt, 5 rankingów i 79 osiągnięć**. Nie wpisuj ich do tabeli OWNER_INPUT. Uruchom i sprawdź logowanie, wyniki, osiągnięcia i Saved Games na urządzeniu z podpisaną aplikacją.
 - [ ] **Konto deweloperskie:** sprawdź zgodność nazwy prawnej, adresu, e-maili i danych weryfikacyjnych z Google Play Console (w tym D-U-N-S, jeśli wymaga go dane konto organizacji).
 - [ ] **Publikacja i zgody:** wybierz kraje oraz grupę wiekową, wypełnij ankietę IARC i zatwierdź [`data_safety.md`](data_safety.md) dla rzeczywistego pakietu AAB. Sprawdź, że w grze działa link do polityki i że można zgłaszać żądania usunięcia.
 - [ ] **Dwa języki polityki:** sprawdź poprawność swoich danych, obu wersji PL/EN, publiczną dostępność URL oraz rzeczywistą obsługę żądań prywatności; potwierdź przed publikacją.
@@ -45,5 +45,5 @@ Te pozycje **nie są dodatkowymi polami tabeli**. Przekaż je koordynatorowi wyd
 
 - **Nieustalone:** nazwa prawna wydawcy, e-mail, adres, URL polityki i ostateczna data premiery — wszystkie pięć pól pozostaje do wypełnienia.
 - **Niepotwierdzone w produkcji:** adres własnego serwera rankingu, jego hosting i retencja; właściciel musi zdecydować, czy włącza go przy premierze.
-- **Google Play Games:** integracja kodowa obejmuje 4 rankingi, synchronizację osiągnięć i Saved Games, ale identyfikatory w pliku konfiguracyjnym nadal są zastępcze. Ich uruchomienie w sklepie wymaga konfiguracji i testu.
+- **Google Play Games:** integracja kodowa obejmuje 5 rankingów, synchronizację osiągnięć i Saved Games, ale identyfikatory w pliku konfiguracyjnym nadal są zastępcze. Ich uruchomienie w sklepie wymaga konfiguracji i testu.
 - **Data premiery w kodzie:** `Daily.RELEASE_DAY` = 2027-12-01 jest wartością do podjęcia decyzji, nie potwierdzoną datą wydania.

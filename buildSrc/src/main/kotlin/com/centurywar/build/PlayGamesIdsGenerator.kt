@@ -8,6 +8,8 @@ object PlayGamesIdsGenerator {
     val leaderboardKeys = listOf(
         "leaderboard_endless", "leaderboard_campaign",
         "leaderboard_skirmish", "leaderboard_daily",
+        // Dzień 62: Rozkazy sztabu — punkty sztabu (suma najlepszych wyników rozkazów).
+        "leaderboard_orders",
     )
 
     val achievementNames = listOf(
