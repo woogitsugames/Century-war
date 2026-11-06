@@ -186,7 +186,8 @@ class ScreenshotTestFold : ScreenshotTestBase() {
                         val buttons = screen.buttons.filter { it.visible && it.r.width() > 0f && it.r.height() > 0f }
                         for (button in buttons) {
                             assertTrue("$tag/$lang/$scale/$name: przycisk ${button.id} za niski: ${button.r.height() / g.ui.dp} dp",
-                                button.r.height() + 0.5f >= 48 * g.ui.dp)
+                                // D65: cienki pasek celu ma cel dotyku 48 dp przez hitSlop.
+                                button.r.height() + 2 * button.hitSlop + 0.5f >= 48 * g.ui.dp)
                             assertTrue("$tag/$lang/$scale/$name: przycisk ${button.id} za wąski: ${button.r.width() / g.ui.dp} dp",
                                 button.r.width() + 0.5f >= 48 * g.ui.dp)
                         }
