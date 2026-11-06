@@ -43,3 +43,6 @@ Cały zestaw serwera **nie jest zielony**: błąd sprzątania plików SQLite w i
 
 - Sprawdzić zamykanie uchwytów SQLite w `SqliteMaintenanceTest.kt` i ponowić pełne `:server:test` na Windows oraz Linux.
 - Uzgodnić sposób liczenia długości nicku i doprecyzować `server/README.md`; rozważyć osobną decyzję co do znaków łączących, bez zmiany tego zachowania w zleceniu testowym.
+
+Instrukcja ogólna przewiduje także osobne `:app:assembleDebug`, `LTest` i `fastTest` dla zleceń kodowych. Tych trzech poleceń nie uruchomiono osobno na gałęzi 173: wykonano wyłącznie wskazane w zleceniu testy serwera. Pozostają niezweryfikowane, a czerwony pełny test serwera oznacza, że gałąź nie ma kompletu zielonych kontroli.
+
