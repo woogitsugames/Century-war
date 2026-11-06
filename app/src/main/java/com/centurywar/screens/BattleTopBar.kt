@@ -56,6 +56,8 @@ internal class BattleTopBar(private val owner: BattleScreen) {
     val enemyEraDrawn = RectF()
     /** Dzień 2: napis presji lub fali przeniesiony do bocznego pola (zewnętrzny Fold); pusty, gdy brak. */
     val sideLabelDrawn = RectF()
+    /** D61: napis „Presja oblężnicza ×…” (pod minimapą albo w bocznym polu); cel dymka presji. */
+    val siegeDrawn = RectF()
     /** R11-03: wiersz „Następna fala” i blok bossa (tytuł, opis, pasek HP); do testów nachodzenia. */
     val nextThemeDrawn = RectF()
     val bossDrawn = RectF()
@@ -335,10 +337,17 @@ internal class BattleTopBar(private val owner: BattleScreen) {
                 if (tooSmallUnderMini(siegeSize)) {
                     // Dzień 4 (zgoda właściciela): presja w bocznym polu, pod minimapą wraca zegar.
                     drawSideLabel(c, siegeText, Ui.BAD)
+                    siegeDrawn.set(sideLabelDrawn)
                     drawClockUnderMini(c)
-                } else ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize,
-                    Ui.BAD, Paint.Align.CENTER, 1.8f)
-            } else drawClockUnderMini(c)
+                } else {
+                    ui.textO(c, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize,
+                        Ui.BAD, Paint.Align.CENTER, 1.8f)
+                    record(siegeDrawn, siegeText, mini.centerX(), mini.bottom + 14 * dp, siegeSize, Paint.Align.CENTER)
+                }
+            } else {
+                siegeDrawn.setEmpty()
+                drawClockUnderMini(c)
+            }
         }
         if (battle.endless && battle.pendingCards == null && battle.pendingChoice == null) {
             val boss = battle.currentBoss()

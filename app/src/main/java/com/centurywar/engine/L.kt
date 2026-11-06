@@ -198,8 +198,24 @@ object L {
         putAll(part204())
         putAll(part205())
         putAll(part206())
+        putAll(part208())
         }
     }
+
+    /** Dzień 61 (paczka 208, „Pierwsze wrażenie”): dymek ulepszenia nazywa szewrony, jak dymek stopnia wieży. */
+    private fun part208(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "hint208_upgrade" to t(
+            "Stać cię na ulepszenie jednostki. Dotknij szewronów na jej przycisku.",
+            "You can upgrade a unit. Tap the chevrons on its button.",
+            "Du kannst eine Einheit verbessern. Tippe auf die Winkel an ihrer Taste.",
+            "Puedes mejorar una unidad. Toca los galones de su botón.",
+            "Vous pouvez améliorer une unité. Touchez les chevrons sur son bouton.",
+            "Puoi potenziare un'unità. Tocca i gradi sul suo pulsante.",
+            "Podes melhorar uma unidade. Toca nas divisas do seu botão.",
+            "Можна поліпшити загін. Натисни шеврони на його кнопці.",
+            "Je kunt een eenheid upgraden. Tik op de strepen op de knop.",
+            "Bir birliği geliştirebilirsin. Düğmesindeki şeritlere dokun."),
+    )
 
     /** Dzień 58 (paczka 206): cztery karty Endless, dwa zestawy tygodnia, dwa wydarzenia dnia. */
     private fun part206(): Array<Pair<String, Array<out String>>> = arrayOf(

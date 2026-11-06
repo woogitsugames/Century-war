@@ -44,6 +44,8 @@ class HintOverlay(
         /** Przycisk jednostki elitarnej (podpowiedź o elicie wroga). */
         val eliteUnit: Button? = null,
         val commander: Button? = null,
+        /** D61: napis presji oblężniczej w pasku (pusty, gdy nie jest rysowany). */
+        val siege: RectF? = null,
     )
 
     private class HintDef(val id: Int, val key: String, val priority: Int)
@@ -80,7 +82,8 @@ class HintOverlay(
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
-            HintDef(UPGRADE, "hint_upgrade", 72),
+            // D61: ikona ulepszenia to szewrony, nie strzałka (tekst z paczki 208).
+            HintDef(UPGRADE, "hint208_upgrade", 72),
             HintDef(CAP, "hint_cap", 84),
             HintDef(RALLY, "hint_rally", 90),
             HintDef(HOLD, "hint_hold", 75),
@@ -145,6 +148,7 @@ class HintOverlay(
     private var layoutDp = -1f
     private var layoutScale = -1f
     private var layoutSafeWidth = -1f
+    private var layoutLimit = -1f
     private val panel = RectF()
     private val connector = RectF()
     private val highlight = RectF()
@@ -281,16 +285,18 @@ class HintOverlay(
         val dp = g.ui.dp
         val scale = g.ui.textScale
         val safeW = g.width - g.insetL - g.insetR - 18f * dp
-        if (dp == layoutDp && scale == layoutScale && safeW == layoutSafeWidth) return
+        val limit = if (battle == null && maxWidth > 0f) maxWidth else Float.MAX_VALUE
+        if (dp == layoutDp && scale == layoutScale && safeW == layoutSafeWidth && limit == layoutLimit) return
         layoutDp = dp
         layoutScale = scale
         layoutSafeWidth = safeW
+        layoutLimit = limit
         hintWidth = 0f
         hintHeight = 0f
         if (safeW < 110f * dp || body.isEmpty()) return
 
         // Nad wariantami zostaje wąski pas pionowy; korzystamy z całej szerokości.
-        val maxW = if (activeId == VARIANT) safeW else min(600f * dp, safeW)
+        val maxW = if (activeId == VARIANT) safeW else min(min(600f * dp, safeW), max(150f * dp, limit))
         // Tura 9: tekst i „OK” z odstępem od złotej lamówki (Ui.PANEL_TRIM_INSET), cel OK ≥ 48 dp.
         val buttonW = OK_W * dp + 8f * dp
         val padding = TEXT_PAD * dp
@@ -370,7 +376,8 @@ class HintOverlay(
             RALLY -> t.rally.r
             HOLD -> t.stance.r
             VETERAN -> t.evolve.r
-            SIEGE -> t.xp
+            // D61: dymek presji wskazuje napis presji, nie pasek doświadczenia.
+            SIEGE -> t.siege?.takeIf { it.width() > 0f && it.height() > 0f } ?: t.xp
             MODIFIERS, DAILY -> t.gold
             FOG -> t.field
             CARD, THEME, BOSS -> if (t.minimap.width() > 0f) t.minimap else t.field
@@ -399,6 +406,15 @@ class HintOverlay(
      */
     val titleRect = RectF()
 
+    /** D61: obszar, którego dymek poza bitwą nie zasłania, gdy to możliwe (tabliczka gracza w menu). */
+    val keepClear = RectF()
+
+    /** D61: najszersza dopuszczalna szerokość dymka poza bitwą w px (0 = bez dodatkowego limitu). */
+    var maxWidth = 0f
+
+    /** D61: górna granica dymka poza bitwą w px (0 = krawędź bezpiecznego obszaru). */
+    var minTop = 0f
+
     private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
                            dp: Float): Boolean {
         val f = targets?.field
@@ -411,6 +427,7 @@ class HintOverlay(
                 if (b.visible && b !== okBtn) avoidRects.add(b.r)
             }
             if (!titleRect.isEmpty) avoidRects.add(titleRect)
+            if (!keepClear.isEmpty) avoidRects.add(keepClear)
             val placed = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
                 hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
             if (!placed || titleRect.isEmpty || !RectF.intersects(panel, titleRect)) return placed
@@ -460,7 +477,7 @@ class HintOverlay(
         val dp = g.ui.dp
         val safeL = g.insetL + 4f * dp
         val safeR = g.width - g.insetR - 4f * dp
-        val safeT = g.insetT + 4f * dp
+        val safeT = if (battle == null) max(g.insetT + 4f * dp, minTop) else g.insetT + 4f * dp
         val safeB = g.height - g.insetB - 4f * dp
         val target = focus()
         if (!placePanel(target, safeL, safeT, safeR, safeB, dp)) return
