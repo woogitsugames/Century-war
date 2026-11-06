@@ -116,3 +116,5 @@ Kolejność wysyłki i polecenia startowe: [DISPATCH.md](DISPATCH.md).
 Zlecenia 39–52 (tura 3) są pogrupowane w fale o rozłącznych plikach; opis w [DISPATCH.md](DISPATCH.md).
 
 Zlecenia 92–117 (tura 6): trzy fale, opis w [DISPATCH.md](DISPATCH.md).
+| 170 | [Research: nowi wrogowie i osobowości AI (raport)](170-research-enemies.md) | `gpt/170-research-enemies` | — (tylko dokument) |
+| 171 | [Research: nowe warianty epok (raport)](171-research-era-variants.md) | `gpt/171-research-era-variants` | — (tylko dokument) |
