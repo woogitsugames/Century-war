@@ -118,3 +118,35 @@ Zlecenia 39–52 (tura 3) są pogrupowane w fale o rozłącznych plikach; opis w
 Zlecenia 92–117 (tura 6): trzy fale, opis w [DISPATCH.md](DISPATCH.md).
 | 170 | [Research: nowi wrogowie i osobowości AI (raport)](170-research-enemies.md) | `gpt/170-research-enemies` | — (tylko dokument) |
 | 171 | [Research: nowe warianty epok (raport)](171-research-era-variants.md) | `gpt/171-research-era-variants` | — (tylko dokument) |
+| 172 | [Testy jednostkowe `server/Security.kt`](172-server-security-tests.md) | `gpt/172-server-security-tests` | paczka 172–201, grupa A, S; zależności: — |
+| 173 | [Testy walidacji wejścia `server/Models.kt`](173-server-models-tests.md) | `gpt/173-server-models-tests` | paczka 172–201, grupa A, S; zależności: — |
+| 174 | [Dokumentacja API serwera zgodna z kodem](174-server-api-docs.md) | `gpt/174-server-api-docs` | paczka 172–201, grupa A, S; zależności: — |
+| 175 | [Testy jednostkowe `ScoreWire` w `:sim`](175-sim-scorewire-tests.md) | `gpt/175-sim-scorewire-tests` | paczka 172–201, grupa A, S; zależności: — |
+| 176 | [Testy `engine/ThermalWatch.kt`](176-thermal-watch-tests.md) | `gpt/176-thermal-watch-tests` | paczka 172–201, grupa A, S; zależności: — |
+| 177 | [Testy panelu ulepszeń i wież w bitwie (`BattleUpgradePanel`)](177-upgrade-panel-tests.md) | `gpt/177-upgrade-panel-tests` | paczka 172–201, grupa A, M; zależności: — |
+| 178 | [Testy panelu porównania w Kodeksie (`CodexComparePanel`)](178-codex-compare-panel-tests.md) | `gpt/178-codex-compare-panel-tests` | paczka 172–201, grupa A, S; zależności: przed 201 nie trzeba; z 201 rozłączne pliki |
+| 179 | [Testy wstęgi kamieni milowych i baneru ewolucji](179-battle-banners-tests.md) | `gpt/179-battle-banners-tests` | paczka 172–201, grupa A, S; zależności: — |
+| 180 | [Testy planowania przypomnienia dnia (`DailyReminders`)](180-daily-reminders-tests.md) | `gpt/180-daily-reminders-tests` | paczka 172–201, grupa A, M; zależności: z 197 rozłączne pliki (197 zmienia tylko `DailyReminderTexts.kt`) |
+| 181 | [Testy `tools/check_campaign_balance.py`](181-tools-campaign-balance-tests.md) | `gpt/181-tools-campaign-balance-tests` | paczka 172–201, grupa B, S; zależności: przed 185 |
+| 182 | [Testy `tools/check_store_listings.py`](182-tools-store-listings-tests.md) | `gpt/182-tools-store-listings-tests` | paczka 172–201, grupa B, S; zależności: przed 185; niezależne od 195/196 (testy na kopiach w fixtures) |
+| 183 | [Narzędzie: statystyki tekstów `L.kt` (tylko odczyt)](183-tools-l10n-stats.md) | `gpt/183-tools-l10n-stats` | paczka 172–201, grupa B, M; zależności: przed 185 |
+| 184 | [Narzędzie: sprawdzanie linków w dokumentach](184-tools-doc-links.md) | `gpt/184-tools-doc-links` | paczka 172–201, grupa B, S; zależności: przed 185 |
+| 185 | [Ręczny workflow „narzędzia i dokumenty” (`workflow_dispatch`)](185-ci-docs-tools.md) | `gpt/185-ci-docs-tools` | paczka 172–201, grupa B, S; zależności: **po 181–184** (używa ich testów i narzędzi) |
+| 186 | [FAQ dla testerów zamkniętych (pl + en)](186-testers-faq.md) | `gpt/186-testers-faq` | paczka 172–201, grupa C, S; zależności: — |
+| 187 | [Scenariusze testów ręcznych dla testerów](187-testers-scenarios.md) | `gpt/187-testers-scenarios` | paczka 172–201, grupa C, M; zależności: — |
+| 188 | [Poradnik gracza (pomoc w grze jako tekst w docs)](188-player-guide.md) | `gpt/188-player-guide` | paczka 172–201, grupa C, M; zależności: — |
+| 189 | [Aktualizacja słownika pojęć `docs/GLOSSARY.md`](189-glossary-update.md) | `gpt/189-glossary-update` | paczka 172–201, grupa C, S; zależności: — |
+| 190 | [Research: wymagania Google Play na 2027 (raport)](190-research-play-2027.md) | `gpt/190-research-play-2027` | paczka 172–201, grupa C, S; zależności: — |
+| 191 | [Dymek mapy po pierwszej bitwie nie zasłania etapu 1](191-hint-map-bubble.md) | `gpt/191-hint-map-bubble` | paczka 172–201, grupa D, M, `part212`; zależności: `L.kt` wspólny z 194 (inne wpisy) — scalać po kolei 191 → 194 |
+| 192 | [Okno etapu: odstęp „Trudność” od „Modyfikatory” na 720p](192-stage-panel-spacing.md) | `gpt/192-stage-panel-spacing` | paczka 172–201, grupa D, S, `part214`; zależności: — |
+| 193 | [Samouczek: ręka w kroku „Złoto i teren” nie zasłania licznika zabitych](193-tutorial-hand.md) | `gpt/193-tutorial-hand` | paczka 172–201, grupa D, S, `part215`; zależności: — |
+| 194 | [Skróty na przyciskach bitwy („Zbroj.”, „Rüst.”, „Арсен.”)](194-battle-short-labels.md) | `gpt/194-battle-short-labels` | paczka 172–201, grupa D, S, `part213`; zależności: `L.kt` wspólny z 191 (inne wpisy) — scalać po 191 |
+| 195 | [Natywny przegląd karty sklepu: turecki (`listing_tr.md`)](195-listing-tr.md) | `gpt/195-listing-tr` | paczka 172–201, grupa E, S; zależności: — |
+| 196 | [Natywny przegląd karty sklepu: ukraiński (`listing_uk.md`)](196-listing-uk.md) | `gpt/196-listing-uk` | paczka 172–201, grupa E, S; zależności: — |
+| 197 | [Przegląd tekstów przypomnienia dnia (`DailyReminderTexts.kt`, 10 języków)](197-reminder-texts.md) | `gpt/197-reminder-texts` | paczka 172–201, grupa E, S; zależności: z 180 rozłączne pliki |
+| 198 | [Raport balansu Endless po zawartości 206 (tylko odczyt)](198-endless-report.md) | `gpt/198-endless-report` | paczka 172–201, grupa F, M; zależności: — |
+| 199 | [Raport trudności wyzwań dnia i tygodnia (tylko odczyt)](199-daily-weekly-report.md) | `gpt/199-daily-weekly-report` | paczka 172–201, grupa F, M; zależności: — |
+| 200 | [Raport ekonomii medali kampanii po K1 i etapie 19 (tylko odczyt)](200-campaign-medals-report.md) | `gpt/200-campaign-medals-report` | paczka 172–201, grupa F, M; zależności: — |
+| 201 | [Przegląd wydajności ekranu Badań (`ResearchScreen`)](201-research-screen-perf.md) | `gpt/201-research-screen-perf` | paczka 172–201, grupa F, M; zależności: z 178 rozłączne pliki |
+
+Zlecenia 172–201 (paczka zewnętrzna, baza `main`, 30 zleceń w 6 grupach A–F): kolejność wklejania, grupy równoległe i sprawdzanie wyników — [PACZKA-172-201.md](PACZKA-172-201.md). Rezerwacje tekstów: 191 → part212, 194 → part213, 192 → part214, 193 → part215 (pozostałe nie zmieniają `L.kt`).
