@@ -235,6 +235,171 @@ W języku tureckim znak procentu jest **przed** liczbą (np. +%8); w sformatowan
 | Seria dni (`ms_streak`) | Seria dni | Daily streak | Tages-Serie | Racha diaria | Série quotidienne | Serie giornaliera | Sequência diária | Щоденна серія | Dagreeks | Günlük seri |
 | Nagroda dnia (`ms_login_paid`) | Dziś +%s | Today +%s | Heute +%s | Hoy +%s | Aujourd’hui +%s | Oggi +%s | Hoje +%s | Сьогодні +%s | Vandaag +%s | Bugün +%s |
 
+## Uzupełnienie nazw z aktualnej wersji
+
+Każdy wiersz podaje dokładny tekst z `L.kt`; rozróżnienie znaczeń wynika z nagłówka i klucza. Nazwy o podobnym brzmieniu w różnych mechanikach nie muszą być tym samym pojęciem.
+
+### Doktryny
+
+Doktryna to wybierany wariant premii w walce.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Sztandar (`d_banner`) | Sztandar | War Banner | Kampfbanner | Estandarte | Bannière | Stendardo | Estandarte | Бойовий стяг | Strijdvaandel | Savaş Sancağı |
+| Zaopatrzenie (`d_supply`) | Zaopatrzenie | Supply Lines | Nachschub | Suministros | Ravitaillement | Rifornimenti | Abastecimento | Постачання | Bevoorrading | İkmal |
+| Mistrzowie oblężeń (`d_siege_masters`) | Mistrzowie oblężeń | Siege Masters | Belagerungsmeister | Maestros del asedio | Maîtres de siège | Maestri d'assedio | Mestres do cerco | Майстри облоги | Belegeringsmeesters | Kuşatma Ustaları |
+| Czujność (`d_vigilance`) | Czujność | Vigilance | Wachsamkeit | Vigilancia | Vigilance | Vigilanza | Vigilância | Пильність | Waakzaamheid | Teyakkuz |
+
+### Karty Endless
+
+Karta to wybierana premia dostępna w trybie Endless.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Szyk pik (`ec_pike_square`) | Szyk pik | Pike square | Pikenkarree | Cuadro de picas | Carré de piques | Quadrato di picche | Quadrado de piques | Стрій пік | Piekencarré | Mızrak karesi |
+| Straż przednia (`ec_vanguard`) | Straż przednia | Vanguard | Vorhut | Vanguardia | Avant-garde | Avanguardia | Vanguarda | Авангард | Voorhoede | Öncü birlik |
+| Nagroda za głowę (`ec_boss_bounty`) | Nagroda za głowę | Bounty | Kopfgeld | Recompensa | Prime | Taglia | Recompensa | Нагорода за голову | Premie | Ödül avı |
+| Rogi wojenne (`ec_war_horns`) | Rogi wojenne | War horns | Kriegshörner | Cuernos de guerra | Cors de guerre | Corni di guerra | Trompas de guerra | Бойові роги | Oorlogshoorns | Savaş boruları |
+| Saperzy (`ec_sappers`) | Saperzy | Sappers | Pioniere | Zapadores | Sapeurs | Guastatori | Sapadores | Сапери | Sappeurs | İstihkamcılar |
+| Mur tarcz (`ec_shield_wall`) | Mur tarcz | Shield wall | Schildwall | Muro de escudos | Mur de boucliers | Muro di scudi | Muralha de escudos | Стіна щитів | Schildmuur | Kalkan duvarı |
+| Skarbiec wojenny (`ec_war_chest`) | Skarbiec wojenny | War chest | Kriegskasse | Cofre de guerra | Trésor de guerre | Forziere di guerra | Cofre de guerra | Воєнна скарбниця | Oorlogskas | Savaş hazinesi |
+| Zakład (`ec_wager`) | Zakład | Wager | Wette | Apuesta | Pari | Scommessa | Aposta | Парі | Weddenschap | İddia |
+| Kwatermistrz (`ec_quartermaster`) | Kwatermistrz | Quartermaster | Quartiermeister | Intendente | Intendant | Quartiermastro | Intendente | Інтендант | Kwartiermeester | Levazımcı |
+| Mistrzowie murarscy (`ec_master_masons`) | Mistrzowie murarscy | Master masons | Baumeister | Maestros canteros | Maîtres maçons | Mastri muratori | Mestres pedreiros | Майстри-мулярі | Meester-metselaars | Usta duvarcılar |
+| Płonące wieże (`ec_burning_towers`) | Płonące wieże | Burning turrets | Brennende Türme | Torretas incendiarias | Tourelles incendiaires | Torrette incendiarie | Torres incendiárias | Палаючі вежі | Brandende torens | Yakan kuleler |
+| Krew za złoto (`ec_blood_gold`) | Krew za złoto | Blood for gold | Blut für Gold | Sangre por oro | Du sang pour de l’or | Sangue per oro | Sangue por ouro | Кров за золото | Bloed voor goud | Kana karşılık altın |
+| Klonowanie (`ec_cloning`) | Klonowanie | Cloning | Klonen | Clonación | Clonage | Clonazione | Clonagem | Клонування | Klonen | Klonlama |
+| Pancerz piechoty (`ec_frontline_plate`) | Pancerz piechoty | Frontline armor | Frontpanzerung | Blindaje frontal | Blindage du front | Armatura del fronte | Blindagem frontal | Броня передової | Frontpantser | Ön cephe zırhı |
+| Instruktor (`ec_drill_sergeant`) | Instruktor | Drill sergeant | Ausbilder | Instructor | Instructeur | Istruttore | Instrutor | Інструктор | Instructeur | Eğitmen |
+| Szybkie wieże (`ec_rapid_towers`) | Szybkie wieże | Rapid turrets | Schnelle Türme | Torretas rápidas | Tourelles rapides | Torrette rapide | Torres rápidas | Швидкі вежі | Snelle torens | Hızlı kuleler |
+| Medycy (`ec_medic`) | Medycy | Medics | Sanitäter | Médicos | Médecins | Medici | Médicos | Медики | Hulpverleners | Sağlıkçılar |
+| Skarbiec (`ec_extra_gold`) | Skarbiec | War chest | Kriegskasse | Tesoro de guerra | Trésor de guerre | Forziere di guerra | Baú de guerra | Військова скарбниця | Oorlogskas | Savaş hazinesi |
+| Mobilizacja (`ec_mobilization`) | Mobilizacja | Mobilization | Mobilmachung | Movilización | Mobilisation | Mobilitazione | Mobilização | Мобілізація | Mobilisatie | Seferberlik |
+| Forteca (`ec_fortress`) | Forteca | Fortress | Festung | Fortaleza | Forteresse | Fortezza | Fortaleza | Фортеця | Vesting | Kale |
+| Strzelcy wyborowi (`ec_sharpshooters`) | Strzelcy wyborowi | Sharpshooters | Scharfschützen | Tiradores de élite | Tireurs d’élite | Tiratori scelti | Atiradores de elite | Влучні стрільці | Scherpschutters | Keskin nişancılar |
+| Szał bojowy (`ec_berserk`) | Szał bojowy | Berserk | Kampfrausch | Furia de combate | Furie au combat | Furia bellica | Fúria de combate | Бойова лють | Strijdwoede | Savaş çılgınlığı |
+| Zbieracze (`ec_scavenger`) | Zbieracze | Scavengers | Plünderer | Recolectores | Récupérateurs | Recuperatori | Catadores | Збирачі | Verzamelaars | Toplayıcılar |
+| Marsz bojowy (`ec_march`) | Marsz bojowy | Forced march | Eilmarsch | Marcha forzada | Marche forcée | Marcia forzata | Marcha forçada | Форсований марш | Geforceerde mars | Hızlı yürüyüş |
+| Mistrz zrywu (`ec_rally_master`) | Mistrz zrywu | Rally master | Ansturmmeister | Maestro del impulso | Maître de l’élan | Maestro dello slancio | Mestre do ímpeto | Майстер ривка | Stormloopmeester | Atılım ustası |
+| Akademia elit (`ec_elite_school`) | Akademia elit | Elite academy | Eliteakademie | Academia de élite | Académie d’élite | Accademia d'élite | Academia de elite | Академія еліти | Eliteacademie | Elit akademisi |
+| Ostatnia linia (`ec_last_stand`) | Ostatnia linia | Last stand | Letztes Gefecht | Última defensa | Dernière ligne | Ultima difesa | Última resistência | Останній рубіж | Laatste linie | Son savunma |
+| Ekipy naprawcze (`ec_repair_crew`) | Ekipy naprawcze | Repair crews | Reparaturteams | Equipos de reparación | Équipes de réparation | Squadre di riparazione | Equipas de reparação | Ремонтні бригади | Reparatieteams | Onarım ekipleri |
+| Szlaki zaopatrzenia (`ec_supply_line`) | Szlaki zaopatrzenia | Supply routes | Nachschublinien | Rutas de suministro | Routes de ravitaillement | Vie di rifornimento | Rotas de abastecimento | Шляхи постачання | Aanvoerlijnen | İkmal yolları |
+| Bębny natarcia (`ec_war_drums`) | Bębny natarcia | War drums | Kriegstrommeln | Tambores de guerra | Tambours de guerre | Tamburi di guerra | Tambores de guerra | Бойові барабани | Oorlogstrommels | Savaş davulları |
+| Żelazna kurtyna (`ec_iron_curtain`) | Żelazna kurtyna | Iron curtain | Eiserner Vorhang | Cortina de hierro | Rideau de fer | Cortina di ferro | Cortina de ferro | Залізна завіса | IJzeren gordijn | Demir perde |
+| Sieć bastionów (`ec_tower_network`) | Sieć bastionów | Turret network | Turmverbund | Red de torres | Réseau de tours | Rete di torri | Rede de torres | Мережа веж | Torenverbond | Kule ağı |
+| Sztandar zaciągu (`ec_muster_banner`) | Sztandar zaciągu | Muster banner | Musterbanner | Estandarte de leva | Bannière de levée | Stendardo di leva | Estandarte de recrutamento | Стяг набору | Wervingsbanier | Seferberlik sancağı |
+| Ostatni bastion (`ec_last_bastion`) | Ostatni bastion | Final bastion | Letztes Bollwerk | Último bastión | Dernier bastion | Ultimo bastione | Último bastião | Останній бастіон | Laatste bolwerk | Son burç |
+| Żar zbrojowni (`ec_ember_forge`) | Żar zbrojowni | Ember forge | Glut-Schmiede | Forja ardiente | Forge ardente | Forgia ardente | Forja incandescente | Жар кузні | Gloeiende smidse | Kor demirhanesi |
+| Serce cytadeli (`ec_citadel_heart`) | Serce cytadeli | Citadel heart | Herz der Zitadelle | Corazón de la ciudadela | Cœur de la citadelle | Cuore della cittadella | Coração da cidadela | Серце цитаделі | Hart van de citadel | Hisarın kalbi |
+| Medycy polowi (`ec_field_medics`) | Medycy polowi | Field medics | Feldsanitäter | Médicos de campaña | Médecins de campagne | Medici da campo | Médicos de campanha | Польові медики | Veldmedici | Saha sıhhiyecileri |
+| Ostatnia iskra (`ec_final_spark`) | Ostatnia iskra | Final spark | Letzter Funke | Última chispa | Dernière étincelle | Ultima scintilla | Última faísca | Остання іскра | Laatste vonk | Son kıvılcım |
+| Osłona pierwszego ciosu (`ec_first_guard`) | Osłona pierwszego ciosu | First-hit guard | Erstschlagschutz | Guardia inicial | Protection initiale | Guardia iniziale | Guarda inicial | Захист першого удару | Bescherming bij volle HP | İlk darbe kalkanı |
+| Odnowa po bossie (`ec_boss_recall`) | Odnowa po bossie | Boss recharge | Aufladung nach Bosskampf | Recarga tras el jefe | Recharge après le boss | Ricarica dopo il boss | Recarga após o chefe | Відновлення після боса | Herladen na baas | Boss sonrası yenileme |
+
+### Wydarzenia dnia
+
+Wydarzenie dnia określa warunki dziennego wyzwania.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dzień strzelców (`day_marksmen`) | Dzień strzelców | Marksmen Day | Tag der Schützen | Día de tiradores | Jour des tireurs | Giorno dei tiratori | Dia dos atiradores | День стрільців | Schuttersdag | Nişancı Günü |
+| Dzień szybkich zdolności (`day_rapid`) | Dzień szybkich zdolności | Rapid Abilities Day | Tag der schnellen Kräfte | Día de habilidades rápidas | Jour des pouvoirs rapides | Giorno delle abilità rapide | Dia das habilidades rápidas | День швидких здібностей | Dag van snelle krachten | Hızlı Yetenekler Günü |
+| Dzień nawały (`day_barrage`) | Dzień nawały | Barrage Day | Tag des Sperrfeuers | Día del bombardeo | Jour du barrage | Giorno dello sbarramento | Dia do bombardeamento | День обстрілу | Dag van het spervuur | Baraj Ateşi Günü |
+| Dzień twierdz (`day_fortress`) | Dzień twierdz | Fortress Day | Tag der Festungen | Día de fortalezas | Jour des forteresses | Giorno delle fortezze | Dia das fortalezas | День фортець | Vestingdag | Kale Günü |
+| Dzień złotego startu (`day_gold`) | Dzień złotego startu | Golden Start Day | Tag des Goldstarts | Día del inicio dorado | Jour du départ doré | Giorno della partenza d'oro | Dia do início dourado | День золотого старту | Dag van de gouden start | Altın Başlangıç Günü |
+| Dzień lustrzanych armii (`day_mirror`) | Dzień lustrzanych armii | Mirror Armies Day | Tag der Spiegelarmeen | Día de ejércitos espejo | Jour des armées miroirs | Giorno degli eserciti specchio | Dia dos exércitos espelho | День дзеркальних армій | Dag van spiegellegers | Ayna Ordular Günü |
+| Dzień inżynierów (`day_siege_works`) | Dzień inżynierów | Engineers' Day | Tag der Ingenieure | Día de ingenieros | Jour des ingénieurs | Giorno degli ingegneri | Dia dos engenheiros | День інженерів | Ingenieursdag | Mühendis Günü |
+| Forsowny marsz (`day_forced_march`) | Forsowny marsz | Forced March | Gewaltmarsch | Marcha forzada | Marche forcée | Marcia forzata | Marcha forçada | Форсований марш | Geforceerde mars | Hızlı Yürüyüş |
+| Łupy wojenne (`day_spoils`) | Łupy wojenne | Spoils of War | Kriegsbeute | Botín de guerra | Butin de guerre | Bottino di guerra | Espólios de guerra | Воєнна здобич | Oorlogsbuit | Savaş Ganimeti |
+| Dzień ciężkiej piechoty (`day184_heavy`) | Dzień ciężkiej piechoty | Heavy Infantry Day | Tag der schweren Infanterie | Día de infantería pesada | Jour de l'infanterie lourde | Giorno della fanteria pesante | Dia da infantaria pesada | День важкої піхоти | Dag van de zware infanterie | Ağır Piyade Günü |
+| Pojedynek wież (`day184_towers`) | Pojedynek wież | Turret Duel | Turmduell | Duelo de torres | Duel de tours | Duello di torri | Duelo de torres | Дуель веж | Torenduel | Kule Düellosu |
+| Dzień nauki (`day206_lore`) | Dzień nauki | Day of Learning | Tag des Lernens | Día del aprendizaje | Jour de l'apprentissage | Giorno dell'apprendimento | Dia da aprendizagem | День навчання | Dag van het leren | Öğrenme Günü |
+| Dzień furii (`day206_fury`) | Dzień furii | Day of Fury | Tag des Zorns | Día de furia | Jour de furie | Giorno della furia | Dia da fúria | День люті | Dag van woede | Öfke Günü |
+
+### Zestawy tygodnia
+
+Zestaw tygodnia określa warunki wyzwania tygodniowego.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Złote ruiny (`day109_gold`) | Złote ruiny | Golden Ruins | Goldene Ruinen | Ruinas doradas | Ruines dorées | Rovine dorate | Ruínas douradas | Золоті руїни | Gouden ruïnes | Altın Harabeler |
+| Marsz we mgle (`day109_march`) | Marsz we mgle | March in the Fog | Marsch im Nebel | Marcha en la niebla | Marche dans le brouillard | Marcia nella nebbia | Marcha no nevoeiro | Марш у тумані | Mars in de mist | Sisli Yürüyüş |
+| Strzelcy i wieże (`day109_rain`) | Strzelcy i wieże | Ranged Troops and Turrets | Schützen und Türme | Tiradores y torretas | Tireurs et tourelles | Tiratori e torrette | Atiradores e torres | Стрільці та вежі | Schutters en torens | Nişancılar ve Kuleler |
+| Bogaci weterani (`day109_veterans`) | Bogaci weterani | Wealthy Veterans | Reiche Veteranen | Veteranos ricos | Vétérans fortunés | Veterani facoltosi | Veteranos ricos | Заможні ветерани | Rijke veteranen | Zengin Gaziler |
+| Najemna fala (`day109_hired`) | Najemna fala | Mercenary Wave | Söldnerwelle | Oleada mercenaria | Vague mercenaire | Ondata mercenaria | Onda mercenária | Хвиля найманців | Huurlingengolf | Paralı Asker Dalgası |
+| Żelazny szturm (`day109_iron`) | Żelazny szturm | Iron Assault | Eiserner Sturm | Asalto de hierro | Assaut de fer | Assalto di ferro | Assalto de ferro | Залізний штурм | IJzeren aanval | Demir Hücum |
+| Nocna straż (`week184_night`) | Nocna straż | Night Watch | Nachtwache | Guardia nocturna | Garde de nuit | Guardia notturna | Guarda noturna | Нічна варта | Nachtwacht | Gece Nöbeti |
+| Żołd i łupy (`week184_mercs`) | Żołd i łupy | Pay and Plunder | Sold und Beute | Paga y botín | Solde et pillage | Paga e bottino | Soldo e saque | Платня і здобич | Soldij en buit | Maaş ve Yağma |
+| Kruchy bastion (`week184_bastion`) | Kruchy bastion | Fragile Bastion | Brüchige Bastion | Bastión frágil | Bastion fragile | Bastione fragile | Bastião frágil | Крихкий бастіон | Broos bastion | Kırılgan Burç |
+| Wojna błyskawiczna (`week206_blitz`) | Wojna błyskawiczna | Lightning War | Blitzfeldzug | Guerra relámpago | Guerre éclair | Guerra lampo | Guerra relâmpago | Блискавична війна | Bliksemoorlog | Yıldırım Savaşı |
+| Żelazny szyk (`week206_pikes`) | Żelazny szyk | Iron Formation | Eiserne Formation | Formación de hierro | Formation de fer | Formazione di ferro | Formação de ferro | Залізний стрій | IJzeren formatie | Demir Düzen |
+
+### Rozkazy i inne nazwy interfejsu
+
+Nazwy poniżej zachowują kontekst klucza: tryb, jednostka, zasób albo przycisk.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Rozkazy sztabu (`o209_title`) | Rozkazy sztabu | Staff Orders | Stabsbefehle | Órdenes del estado mayor | Ordres d'état-major | Ordini dello stato maggiore | Ordens do estado-maior | Накази штабу | Stafbevelen | Karargâh emirleri |
+| Rozkazy (`o209_menu`) | Rozkazy | Orders | Befehle | Órdenes | Ordres | Ordini | Ordens | Накази | Bevelen | Emirler |
+| Punkty sztabu (`o209_points_short`) | Punkty sztabu | Staff points | Stabspunkte | Puntos | Points | Punti | Pontos | Очки штабу | Stafpunten | Karargâh puanı |
+| Cel główny (`o209_main`) | Cel główny | Main goal | Hauptziel | Objetivo principal | Objectif principal | Obiettivo principale | Objetivo principal | Головна мета | Hoofddoel | Ana hedef |
+| Cele dodatkowe (`o209_bonus`) | Cele dodatkowe | Bonus goals | Zusatzziele | Objetivos extra | Objectifs bonus | Obiettivi extra | Objetivos extra | Додаткові цілі | Extra doelen | Ek hedefler |
+| dowódca (`o209_k_commander`) | dowódca | commander | Kommandant | comandante | commandant | comandante | comandante | командир | commandant | komutan |
+| Zryw (`battle84_rally_short`) | Zryw | Rally | Sturm | Impulso | Élan | Slancio | Ímpeto | Ривок | Aanval | Hücum |
+| Wydarzenie dnia (`cx184_daily_event`) | Wydarzenie dnia | Daily event | Tagesereignis | Evento diario | Événement du jour | Evento del giorno | Evento diário | Подія дня | Dagevenement | Günlük etkinlik |
+| Zestaw tygodnia (`cx184_weekly_set`) | Zestaw tygodnia | Weekly rule set | Wochen-Regelset | Reglas semanales | Règles de la semaine | Regole settimanali | Regras semanais | Набір тижня | Weekregels | Haftalık kural seti |
+| Stopnie wież (`cx176_tiers`) | Stopnie wież | Turret tiers | Turmstufen | Niveles de torreta | Niveaux de tourelle | Gradi delle torrette | Níveis de torre | Рівні веж | Torenniveaus | Kule seviyeleri |
+| Taktyka dowódcy (`cx176_commander_tips`) | Taktyka dowódcy | Commander tactics | Kommandanten-Taktik | Tácticas del comandante | Tactiques du commandant | Tattiche del comandante | Táticas do comandante | Тактика командира | Commandanttactiek | Komutan taktikleri |
+| Nagroda (`reward`) | Nagroda | Reward | Belohnung | Recompensa | Récompense | Ricompensa | Recompensa | Нагорода | Beloning | Ödül |
+| Fala (`bh_wave`) | Fala | Wave | Welle | Oleada | Vague | Ondata | Onda | Хвиля | Golf | Dalga |
+| Karta startowa (`weekly_start_card`) | Karta startowa | Starting card | Startkarte | Carta inicial | Carte de départ | Carta iniziale | Carta inicial | Стартова карта | Startkaart | Başlangıç kartı |
+| Wybierz kartę (`choose_card`) | Wybierz kartę | Choose a card | Wähle eine Karte | Elige una carta | Choisir une carte | Scegli una carta | Escolhe uma carta | Обери карту | Kies een kaart | Bir kart seç |
+| Tydzień (`weekly_week_tab`) | Tydzień | Week | Woche | Semana | Semaine | Settimana | Semana | Тиждень | Week | Hafta |
+| Tydzień (`global_period_week`) | Tydzień | Week | Woche | Semana | Semaine | Settimana | Semana | Тиждень | Week | Hafta |
+| Gospodarz (`cx127_economist`) | Gospodarz | Economist | Ökonom | Economista | Économe | Economista | Economista | Господарник | Econoom | Ekonomist |
+| Oblężnik (`cx127_sieger`) | Oblężnik | Siege Expert | Belagerer | Asediador | Assiégeant | Assediante | Sitiador | Майстер облоги | Belegeraar | Kuşatmacı |
+| Taktyk (`cx127_balanced`) | Taktyk | Tactician | Taktiker | Táctico | Tacticien | Tattico | Tático | Тактик | Tacticus | Taktikçi |
+
+### Często używane pojęcia walki i postępu
+
+Nazwy ogólne jednostek i działań, parametrów, wyników oraz interfejsu. Kolumny podają etykietę z podanego klucza; w zdaniach mogą występować odmiana i warianty kontekstowe.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dowódca (`comm125_name`) | Dowódca | Commander | Kommandant | Comandante | Commandant | Comandante | Comandante | Командир | Commandant | Komutan |
+| Wieże (`turrets`) | Wieże | Turrets | Türme | Torretas | Tourelles | Torrette | Torres | Вежі | Torens | Kuleler |
+| Powtórka (`replay`) | Powtórka | Replay | Wiederholung | Repetición | Replay | Replay | Repetição | Повтор | Herhaling | Tekrar |
+| Badania (`research`) | Badania | Research | Forschung | Investigación | Recherche | Ricerca | Pesquisa | Дослідження | Onderzoek | Araştırma |
+| Wróg (`bs104_enemy`) | Wróg | Enemy | Gegner | Enemigo | Ennemi | Nemico | Inimigo | Ворог | Vijand | Rakip |
+| HP baz (`bs104_hp`) | HP baz | Base HP | Basis-LP | PV de bases | PV des bases | PV delle basi | PV das bases | Міцність баз | Basis-HP | Üs canı |
+| Pogoda (`w_label`) | Pogoda | Weather | Wetter | Clima | Météo | Meteo | Clima | Погода | Weer | Hava |
+| Czas (`time`) | Czas | Time | Zeit | Tiempo | Temps | Tempo | Tempo | Час | Tijd | Süre |
+| Wynik (`score`) | Wynik | Score | Punkte | Puntuación | Score | Punteggio | Pontuação | Очки | Score | Puan |
+| Ulepsz (`upgrade`) | Ulepsz | Upgrade | Verbessern | Mejorar | Améliorer | Potenzia | Melhorar | Покращити | Upgraden | Yükselt |
+| Armia (`cap`) | Armia | Army | Armee | Ejército | Armée | Esercito | Exército | Армія | Leger | Ordu |
+| Piechur (`u_infantry`) | Piechur | Infantry | Infanterist | Infante | Fantassin | Fante | Infante | Піхотинець | Infanterist | Piyade |
+| BOSS (`eb_boss`) | BOSS | BOSS | BOSS | JEFE | BOSS | BOSS | CHEFE | БОС | BAAS | BOSS |
+| Koszt (`cx_cost`) | Koszt | Cost | Kosten | Coste | Coût | Costo | Custo | Ціна | Kosten | Maliyet |
+| Obrażenia (`cx_dmg`) | Obrażenia | Damage | Schaden | Daño | Dégâts | Danni | Dano | Шкода | Schade | Hasar |
+| Zasięg (`cx_range`) | Zasięg | Range | Reichweite | Alcance | Portée | Gittata | Alcance | Дальність | Bereik | Menzil |
+| Szybkość (`cx_speed`) | Szybkość | Speed | Tempo | Velocidad | Vitesse | Velocità | Velocidade | Швидкість | Snelheid | Hız |
+| Szkolenie (`cx_train`) | Szkolenie | Training | Ausbildung | Entrenamiento | Entraînement | Addestramento | Treino | Навчання | Training | Eğitim |
+| Odnowienie (`cx_cd`) | Odnowienie | Cooldown | Abklingzeit | Enfriamiento | Récupération | Recupero | Espera | Відновлення | Afkoeltijd | Bekleme |
+| Bitwy (`bh_battles`) | Bitwy | Battles | Schlachten | Batallas | Batailles | Battaglie | Batalhas | Битви | Gevechten | Savaşlar |
+| Wygrane (`bh_wins`) | Wygrane | Wins | Siege | Victorias | Victoires | Vittorie | Vitórias | Перемоги | Overwinningen | Galibiyetler |
+| Etap (`bh_stage`) | Etap | Stage | Etappe | Etapa | Étape | Tappa | Etapa | Етап | Etappe | Aşama |
+| Jednostki (`cx62_units`) | Jednostki | Units | Einheiten | Unidades | Unités | Unità | Unidades | Бійці | Eenheden | Birimler |
+| Trudny (`campaign126_hard`) | Trudny | Hard | Schwer | Difícil | Difficile | Difficile | Difícil | Складний | Moeilijk | Zor |
+| Bitwa (`a178_battle`) | Bitwa | Battle | Schlacht | Batalla | Bataille | Battaglia | Batalha | Битва | Gevecht | Savaş |
+| PORAŻKA (`defeat`) | PORAŻKA | DEFEAT | NIEDERLAGE | DERROTA | DÉFAITE | SCONFITTA | DERROTA | ПОРАЗКА | NEDERLAAG | YENİLGİ |
+| Ustawienia (`settings`) | Ustawienia | Settings | Einstellungen | Ajustes | Paramètres | Impostazioni | Ajustes | Налаштування | Instellingen | Ayarlar |
+| wręcz (`o209_k_melee`) | wręcz | melee | Nahkampf | cuerpo a cuerpo | mêlée | mischia | corpo a corpo | ближній бій | melee | yakın dövüş |
+| dystans (`o209_k_ranged`) | dystans | ranged | Fernkampf | a distancia | distance | distanza | à distância | стрільці | afstand | menzilli |
+| ciężcy (`o209_k_heavy`) | ciężcy | heavy | Schwere | pesados | lourds | pesanti | pesados | важкі | zwaar | ağır |
+| ostrzał (`o209_k_barrage`) | ostrzał | barrage | Sperrfeuer | bombardeo | barrage | sbarramento | barragem | обстріл | spervuur | yaylım ateşi |
+
 ## Reguły utrzymania
 
 Przy każdej zmianie nazwy porównuj `L.kt` z glosariuszem, aktualizuj równocześnie powiązane ekrany (`bh_ai_*`, `sk_person_*`, `cx_*`) i uruchom testy `LTest`. Klucze pozostają bez zmian, a liczba i kolejność dziesięciu tłumaczeń są obowiązkowe.
