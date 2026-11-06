@@ -10,7 +10,7 @@ Century War
 
 Ordunu dokuz çağ boyunca yönet. Birlikler yetiştir, kuleler inşa et ve bir sonraki çağa ne zaman geçeceğine karar ver.
 
-Bir komutan çağır: aurası yakındaki birliklerini güçlendirir. Savaş sırasında kulelerini daha yüksek seviyelere yükselterek savunmanı güçlendir.
+Bir komutan çağır: aurası yakındaki birliklerini güçlendirir. Savaş sırasında kule seviyelerini yükselterek savunmanı güçlendir.
 
 Zorluk seviyeni seçerek seferin 36 aşamasını oyna, Sonsuz Kuşatma'da dalgalara diren veya kendi çatışmanı ayarla. Hava durumu, yetenekler, doktrinler ve araştırmalar taktik seçenekler sunar.
 
