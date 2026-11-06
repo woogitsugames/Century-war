@@ -106,15 +106,15 @@ class OrdersTest {
         assertEquals(0, Orders.medalsFor(3, 3))
         assertEquals(0, Orders.medalsFor(3, 1))
         val stars = IntArray(Campaign.stages.size)
-        assertFalse(Orders.unlocked(Orders.all[0], stars))
+        assertFalse(Orders.unlocked(Orders.all[0], stars, IntArray(Orders.COUNT)))
         stars[0] = 1
-        assertTrue(Orders.unlocked(Orders.all[0], stars))
-        assertFalse(Orders.unlocked(Orders.all[1], stars))
+        assertTrue(Orders.unlocked(Orders.all[0], stars, IntArray(Orders.COUNT)))
+        assertFalse(Orders.unlocked(Orders.all[1], stars, IntArray(Orders.COUNT)))
         stars[3] = 2
-        assertTrue(Orders.unlocked(Orders.all[1], stars))
+        assertTrue(Orders.unlocked(Orders.all[1], stars, IntArray(Orders.COUNT)))
         assertEquals(4, Orders.unlockStageNumber(Orders.all[1]))
         assertEquals(32, Orders.unlockStageNumber(Orders.all[8]))
-        assertFalse(Orders.unlocked(Orders.all[8], stars))
+        assertFalse(Orders.unlocked(Orders.all[8], stars, IntArray(Orders.COUNT)))
     }
 
     /** Zabezpieczenie przed rozkazem niemożliwym po przyszłych zmianach balansu (R14). */

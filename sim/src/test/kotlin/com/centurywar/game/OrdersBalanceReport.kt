@@ -42,7 +42,7 @@ class OrdersBalanceReport {
                 base.mode, base.seed, power, base.startEra, base.maxEra, base.modifiers,
                 base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality,
                 base.variantsEnabled, base.weather, base.weekly, base.weeklyCard, base.dailyEvent,
-                playerMask, enemyMask, base.timeLimitSteps, base.holdWins,
+                playerMask, enemyMask, base.timeLimitSteps, base.holdWins, base.orderFlags,
             )
             val b = Battle(cfg)
             b.playerAi = Ai(b, 0)
@@ -73,17 +73,20 @@ class OrdersBalanceReport {
         }
     }
 
-    /** Strojenie: `ORDERS_SWEEP=0.6,0.8,1.0` i opcjonalnie `ORDERS_ONLY=1,2`. */
+    /** Strojenie: `ORDERS_SWEEP=0.6,0.8,1.0` (albo względnie `x0.8,x1.2`) i opcjonalnie `ORDERS_ONLY=1,2`. */
     @Test fun ordersSweep() {
         val raw = System.getenv("ORDERS_SWEEP") ?: return
         // „def”: aiPower z definicji rozkazu.
-        val sweep = if (raw == "def") listOf(Float.NaN) else raw.split(',').map { it.trim().toFloat() }
+        // „x1.3”: mnożnik aiPower z definicji (dzień 66, strojenie wielu rozkazów naraz).
+        val relative = raw.startsWith("x")
+        val sweep = if (raw == "def") listOf(Float.NaN)
+            else raw.split(',').map { it.trim().removePrefix("x").toFloat() }
         val only = System.getenv("ORDERS_ONLY")?.split(',')?.map { it.trim().toInt() - 1 }?.toSet()
         val runs = System.getenv("ORDERS_RUNS")?.toIntOrNull() ?: 20
         for (order in Orders.all) {
             if (only != null && order.index !in only) continue
             for (p in sweep) {
-                val power = if (p.isNaN()) order.aiPower else p
+                val power = if (p.isNaN()) order.aiPower else if (relative) order.aiPower * p else p
                 val r = measure(order, runs, power)
                 println("SWEEP-W ${order.index + 1} power=$power " + winnerStats(order, runs, power))
                 println(String.format(Locale.US,
@@ -95,22 +98,27 @@ class OrdersBalanceReport {
         }
     }
 
-    /** Kwartyle (25/50/75%) wśród wygranych: czas s, straty, zabici, HP bazy %, obrażenia bazy wroga %. */
+    /**
+     * Kwartyle (25/50/75%) wśród wygranych: czas s, straty, zabici, HP bazy %, obrażenia bazy wroga %,
+     * wystawione jednostki i złoto na końcu (dzień 66).
+     */
     private fun winnerStats(order: Orders.Order, runs: Int, power: Float): String {
         val t = ArrayList<Int>(); val l = ArrayList<Int>(); val k = ArrayList<Int>()
         val hp = ArrayList<Int>(); val dmg = ArrayList<Int>()
+        val fielded = ArrayList<Int>(); val gold = ArrayList<Int>()
         for (i in 0 until runs) {
             val b = play(order, seedFor(order.index, i), power)
             if (!Orders.mainDone(b)) continue
             t.add(b.time.toInt()); l.add(b.enemy.kills); k.add(b.player.kills)
             hp.add((b.player.baseHp / b.player.baseMaxHp * 100).toInt())
             dmg.add((b.enemy.baseDamageTaken / b.enemy.baseMaxHp * 100).toInt())
+            fielded.add(b.player.spawned); gold.add(b.player.gold.toInt())
         }
         fun q(a: ArrayList<Int>): String {
             if (a.isEmpty()) return "-"
             a.sort(); return "${a[a.size / 4]}/${a[a.size / 2]}/${a[a.size * 3 / 4]}"
         }
-        return "n=${t.size} t=${q(t)} loss=${q(l)} kills=${q(k)} hp=${q(hp)} dmgE=${q(dmg)}"
+        return "n=${t.size} t=${q(t)} loss=${q(l)} kills=${q(k)} hp=${q(hp)} dmgE=${q(dmg)} fielded=${q(fielded)} gold=${q(gold)}"
     }
 
     @Test fun ordersReport() {

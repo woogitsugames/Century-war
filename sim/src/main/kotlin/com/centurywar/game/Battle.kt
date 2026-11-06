@@ -252,6 +252,10 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         const val MAX_PROJ = 160
         const val QUEUE_CAP = 32
         const val HOLD_DIST = 430f
+        /** Dzień 66: odstęp, o który żołnierz musi wyprzedzać eskortowanego dowódcę, by ten ruszył. */
+        const val ESCORT_GAP = 40f
+        /** Dzień 66: najdalsza odległość eskortowanego dowódcy od bazy (za linią [HOLD_DIST]). */
+        const val ESCORT_LINE = 260f
         const val MIN_ABILITY_CD_MUL = 0.35f
         const val SUPPLY_INSTANT_GOLD = 15f
         const val BARRAGE_CD = 55f
@@ -1003,6 +1007,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             if (pendingCards != null) controller.choosePendingCard()
         }
         if (pendingVariant != null || pendingChoice != null || pendingCards != null) return
+        // Dzień 66 (eskorta): darmowy dowódca gracza w pierwszym kroku, przed decyzjami AI.
+        if (stepCount == 0 && cfg.escort && player.commanderCd == 0f) spawnCommander(player)
         val dt = STEP
         // AI gracza wydaje komendy przed krokiem N, tak samo jak odtwarzacz.
         if (controller != null) playerAi?.update(dt)
@@ -1060,6 +1066,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             applySiegeAttrition(dt)
         if (!over) {
             if (sides[0].baseHp <= 0f) finish(1)
+            // Dzień 66 (eskorta): dowódca gracza padł (po śmierci odlicza odnowienie, żywy ma −1).
+            else if (cfg.escort && player.commanderCd != -1f) finish(1)
             else if (!endless && sides[1].baseHp <= 0f) finish(0)
             else if (!endless && Modifier.SHORT_DAY in cfg.modifiers && stepCount >= SHORT_DAY_STEPS) {
                 // Porównujemy procent zdrowia baz; przy remisie wygrywa obrona.
@@ -1440,18 +1448,21 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
 
         // Ruch: zatrzymaj się za sojusznikiem albo na linii obrony.
         var blocked = false
+        // Dzień 66 (eskorta): żołnierze gracza przechodzą obok eskortowanego dowódcy,
+        // więc stojący z tyłu dowódca nie blokuje posiłków.
+        val escortPass = cfg.escort && u.side == 0 && !u.isCommander
         if (useIndexedScan) {
             ensureLiveSlots()
             val slots = liveSlots[u.side]
             for (i in 0 until liveCounts[u.side]) {
                 val a = units[slots[i]]
-                if (a === u || !a.alive) continue
+                if (a === u || !a.alive || (escortPass && a.isCommander)) continue
                 val ahead = (a.x - u.x) * s.dir
                 if (ahead > 0f && ahead < (u.radius + a.radius) * 0.9f + 6f) { blocked = true; break }
             }
         } else {
             for (a in units) {
-                if (a === u || !a.alive || a.side != u.side) continue
+                if (a === u || !a.alive || a.side != u.side || (escortPass && a.isCommander)) continue
                 val ahead = (a.x - u.x) * s.dir
                 if (ahead > 0f && ahead < (u.radius + a.radius) * 0.9f + 6f) { blocked = true; break }
             }
@@ -1459,6 +1470,20 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (!blocked && s.hold) {
             val holdX = s.baseFront + s.dir * HOLD_DIST
             if ((u.x - holdX) * s.dir >= 0f) blocked = true
+        }
+        // Dzień 66 (eskorta): dowódca gracza zostaje za linią obrony (nie dalej niż
+        // [ESCORT_LINE] od bazy) i nie wychodzi przed własną armię — idzie tylko wtedy, gdy przed nim
+        // stoi co najmniej jeden żołnierz (odstęp [ESCORT_GAP]).
+        if (!blocked && u.isCommander && u.side == 0 && cfg.escort) {
+            if ((u.x - (s.baseFront + s.dir * ESCORT_LINE)) * s.dir >= 0f) blocked = true
+        }
+        if (!blocked && u.isCommander && u.side == 0 && cfg.escort) {
+            var covered = false
+            for (a in units) {
+                if (a === u || !a.alive || a.side != 0) continue
+                if ((a.x - u.x) * s.dir > ESCORT_GAP) { covered = true; break }
+            }
+            if (!covered) blocked = true
         }
         if (!blocked) {
             val slowMul = if (endless && u.slowLeft > 0f)
