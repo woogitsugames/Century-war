@@ -451,8 +451,28 @@ class HintOverlay(
                 if (screen != null) for (b in screen.buttons) if (b.visible && b.id == -1) avoidRects.add(b.r)
                 val retry = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
                     hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
-                if (!retry || RectF.intersects(panel, mapRoute)) { panel.setEmpty(); return false }
-                return true
+                if (retry && !RectF.intersects(panel, mapRoute)) return true
+                // Wąski ekran: szukaj całego wolnego obszaru, nie tylko czterech stron celu.
+                val step = 8f * dp
+                var y = safeT
+                while (y + hintHeight <= safeB + .01f) {
+                    var x = safeL
+                    while (x + hintWidth <= safeR + .01f) {
+                        panel.set(x, y, x + hintWidth, y + hintHeight)
+                        var blocked = false
+                        for (r in avoidRects) if (RectF.intersects(panel, r)) { blocked = true; break }
+                        if (!blocked) {
+                            if (target != null) connector.set(panel.centerX(), panel.bottom,
+                                target.centerX(), target.top)
+                            else connector.setEmpty()
+                            return true
+                        }
+                        x += step
+                    }
+                    y += step
+                }
+                panel.setEmpty()
+                return false
             }
             if (!placed || titleRect.isEmpty || !RectF.intersects(panel, titleRect)) return placed
             // Gęsty ekran (Badania na wąskim Foldzie): nie da się ominąć wszystkich przycisków.
