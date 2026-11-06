@@ -39,6 +39,10 @@ foldInner, foldOuter) i `menu_<urządzenie>_pl_baner.png` (baner zamiast paska).
 | `orders_stars_27` | Marszałek polny / Field Marshal | komplet 27★ | 450 | 30 |
 | `orders_hold_no_turrets` | Mur z ludzi / Living Wall | wygrany rozkaz obrony z dozwolonymi wieżami (6 i 9) bez zbudowania wieży | 150 | 15 |
 
+> **D67 (decyzja właściciela 6.11):** po 2. partii (d66) `orders_all_9` = ≥ 1★ we wszystkich
+> **18** rozkazach (300 medali, 25 pkt PGS), `orders_stars_27` = komplet **54★** (900 medali,
+> 40 pkt PGS); klucze ID bez zmian. Suma PGS 1605, budżet 1650. Szczegóły: `d67-rozkazy-medale.md`.
+
 - Trzy pierwsze liczone z profilu (`orderStars`, zapisane przed `Achievements.onBattleEnd`),
   czwarte z bitwy (`markOnce`). Nowe metryki na końcu enuma; kategoria TACTICS; niejawne: żadne.
   Medale przyznaje `unlockReady` jak przy innych osiągnięciach (baner i suma na wynikach).

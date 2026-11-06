@@ -14,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 
-/** D65: cztery osiągnięcia za Rozkazy sztabu (d62) — progi, medale, teksty i warunek obrony bez wież. */
+/** D65: cztery osiągnięcia za Rozkazy sztabu (d62) — progi, medale, teksty i warunek obrony bez wież; d67: 18 rozkazów i 54★. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class OrdersAchievements65Test {
@@ -48,8 +48,23 @@ class OrdersAchievements65Test {
             assertEquals(10, L.raw("ach_${id}_d")?.size)
             assertTrue(L.raw("ach_$id")!!.all { it.isNotBlank() })
         }
-        assertEquals(Orders.COUNT.toLong(), Achievements.byId("orders_all_9")!!.threshold)
-        assertEquals((Orders.COUNT * Orders.MAX_STARS).toLong(), Achievements.byId("orders_stars_27")!!.threshold)
+        // D67 (decyzja właściciela 6.11): progi liczą WSZYSTKIE rozkazy. Próg rośnie sam z
+        // Orders.COUNT, ale opisy w L.kt (part210) i arkusz PGS mają liczby wpisane na sztywno —
+        // stąd sprawdzenie, że każdy z 10 opisów zawiera bieżący próg. Gdy dojdzie partia 3,
+        // ten test padnie i trzeba poprawić teksty oraz przegenerować tools/pgs_sheet.py.
+        val all = Achievements.byId("orders_all_9")!!
+        val stars = Achievements.byId("orders_stars_27")!!
+        assertEquals(Orders.COUNT.toLong(), all.threshold)
+        assertEquals((Orders.COUNT * Orders.MAX_STARS).toLong(), stars.threshold)
+        assertEquals(18L, all.threshold)
+        assertEquals(54L, stars.threshold)
+        assertEquals(300, all.medalReward)
+        assertEquals(900, stars.medalReward)
+        for (a in listOf(all, stars)) {
+            val n = a.threshold.toString()
+            for ((i, d) in L.raw("ach_${a.id}_d")!!.withIndex())
+                assertTrue("${a.id}[$i] bez liczby $n: $d", Regex("(^|\\D)$n(\\D|$)").containsMatchIn(d))
+        }
     }
 
     @Test fun starAchievementsFollowRecordedOrderStarsAndPayMedals() {
@@ -64,12 +79,12 @@ class OrdersAchievements65Test {
         got = record(p, won(Orders.config(Orders.all[0], 2L)))
         assertTrue("orders_perfect_1" in got)
         assertTrue(p.medals - medals >= 40)
-        // Wszystkie 9 wykonane (≥ 1★), ale nie 27★.
+        // Wszystkie 18 wykonane (≥ 1★), ale nie 54★.
         for (i in 1 until Orders.COUNT) p.recordOrder(i, 1, 1000)
         got = record(p, won(Orders.config(Orders.all[1], 3L)))
         assertTrue("orders_all_9" in got)
         assertFalse("orders_stars_27" in got)
-        assertEquals(11L, Achievements.progress(p, Achievements.byId("orders_stars_27")!!))
+        assertEquals(3L + (Orders.COUNT - 1), Achievements.progress(p, Achievements.byId("orders_stars_27")!!))
         // Komplet gwiazdek.
         for (i in 0 until Orders.COUNT) p.recordOrder(i, 3, 3500)
         got = record(p, won(Orders.config(Orders.all[2], 4L)))

@@ -17,7 +17,7 @@ Stan: 3.11.2026. Pliki:
 | Nazwa osiągnięcia / rankingu | do 100 znaków, unikalna w języku | najdłuższa pl: 25 |
 | Opis osiągnięcia | do 500 znaków | najdłuższy pl: 62 |
 | Punkty jednego osiągnięcia | wielokrotność 5, od 5 do 200 | 5–40 |
-| Suma punktów gry | najwyżej 2000 (XP gracza = 100 × punkty) | **1585** (158 500 XP), zapas 415 na przyszłe osiągnięcia (własny budżet 1600) |
+| Suma punktów gry | najwyżej 2000 (XP gracza = 100 × punkty) | **1605** (160 500 XP), zapas 395 na przyszłe osiągnięcia (własny budżet 1650; d67: Rozkazy 18/54★) |
 | Liczba osiągnięć | najwyżej 400 przez całe życie gry | 83 |
 | Rankingi | najwyżej 70 | 4 |
 | Ikona | 512×512 PNG/JPEG; osiągnięcie: kolorowe (szarą wersję robi Google), w toaście przycięte do koła; bez tekstu | brak (zlecenie `docs/tasks/R9-achievement-icons.md`) |

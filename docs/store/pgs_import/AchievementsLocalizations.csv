@@ -358,15 +358,6 @@ Pogromca szału,Fúria vencida,Derrota o chefe Fúria no cerco sem fim.,pt-PT
 Pogromca szału,Приборканий гнів,Подолай боса Лють у нескінченній облозі.,uk
 Pogromca szału,Razernij getemd,Versla de Razernij-baas in het eindeloze beleg.,nl-NL
 Pogromca szału,Öfke dizginlendi,Sonsuz Kuşatma'da Öfke patronunu yen.,tr-TR
-Weteran sztabu,Staff Veteran,Earn at least 1 star in all 9 Staff Orders.,en-US
-Weteran sztabu,Stabsveteran,Hole mindestens 1 Stern in allen 9 Stabsbefehlen.,de-DE
-Weteran sztabu,Veterano del estado mayor,Consigue al menos 1 estrella en las 9 órdenes del estado mayor.,es-ES
-Weteran sztabu,Vétéran de l'état-major,Obtenez au moins 1 étoile dans les 9 ordres d'état-major.,fr-FR
-Weteran sztabu,Veterano dello stato maggiore,Ottieni almeno 1 stella in tutti i 9 ordini dello stato maggiore.,it-IT
-Weteran sztabu,Veterano do estado-maior,Ganha pelo menos 1 estrela nas 9 ordens do estado-maior.,pt-PT
-Weteran sztabu,Ветеран штабу,Здобудь щонайменше 1 зірку в усіх 9 наказах штабу.,uk
-Weteran sztabu,Stafveteraan,Verdien minstens 1 ster in alle 9 stafbevelen.,nl-NL
-Weteran sztabu,Karargâh gazisi,9 karargâh emrinin hepsinde en az 1 yıldız kazan.,tr-TR
 Mur z ludzi,Living Wall,Complete a defense order that allows turrets without building any.,en-US
 Mur z ludzi,Lebende Mauer,Erfülle einen Verteidigungsbefehl mit erlaubten Türmen ohne einen Turm zu bauen.,de-DE
 Mur z ludzi,Muro viviente,Cumple una orden de defensa que permite torretas sin construir ninguna.,es-ES
@@ -610,6 +601,15 @@ Sześć wydarzeń,Seis eventos diários,Vence um desafio diário com cada um dos
 Sześć wydarzeń,Шість щоденних подій,Виграй виклик дня з кожною з шести подій.,uk
 Sześć wydarzeń,Zes dagevenementen,Win een daguitdaging met elk van de zes gebeurtenissen.,nl-NL
 Sześć wydarzeń,Altı günlük etkinlik,Altı olayın her biriyle bir günlük mücadele kazan.,tr-TR
+Weteran sztabu,Staff Veteran,Earn at least 1 star in all 18 Staff Orders.,en-US
+Weteran sztabu,Stabsveteran,Hole mindestens 1 Stern in allen 18 Stabsbefehlen.,de-DE
+Weteran sztabu,Veterano del estado mayor,Consigue al menos 1 estrella en las 18 órdenes del estado mayor.,es-ES
+Weteran sztabu,Vétéran de l'état-major,Obtenez au moins 1 étoile dans les 18 ordres d'état-major.,fr-FR
+Weteran sztabu,Veterano dello stato maggiore,Ottieni almeno 1 stella in tutti i 18 ordini dello stato maggiore.,it-IT
+Weteran sztabu,Veterano do estado-maior,Ganha pelo menos 1 estrela nas 18 ordens do estado-maior.,pt-PT
+Weteran sztabu,Ветеран штабу,Здобудь щонайменше 1 зірку в усіх 18 наказах штабу.,uk
+Weteran sztabu,Stafveteraan,Verdien minstens 1 ster in alle 18 stafbevelen.,nl-NL
+Weteran sztabu,Karargâh gazisi,18 karargâh emrinin hepsinde en az 1 yıldız kazan.,tr-TR
 Nowa granica,New frontier,Reach wave 50 with one of the four new cards.,en-US
 Nowa granica,Neue Grenze,Erreiche Welle 50 mit einer der vier neuen Karten.,de-DE
 Nowa granica,Nueva frontera,Alcanza la oleada 50 con una de las cuatro cartas nuevas.,es-ES
@@ -664,15 +664,6 @@ Kalendarz wojny,Calendário de guerra,Vence um desafio diário com nove eventos 
 Kalendarz wojny,Календар війни,Виграй виклик дня з дев'ятьма різними подіями дня.,uk
 Kalendarz wojny,Oorlogskalender,Win een daguitdaging met negen verschillende dagevenementen.,nl-NL
 Kalendarz wojny,Savaş takvimi,Dokuz farklı günlük olayla bir günlük mücadele kazan.,tr-TR
-Marszałek polny,Field Marshal,Earn all 27 staff stars.,en-US
-Marszałek polny,Feldmarschall,Hole alle 27 Stabssterne.,de-DE
-Marszałek polny,Mariscal de campo,Consigue las 27 estrellas del estado mayor.,es-ES
-Marszałek polny,Maréchal de camp,Obtenez les 27 étoiles d'état-major.,fr-FR
-Marszałek polny,Feldmaresciallo,Ottieni tutte le 27 stelle dello stato maggiore.,it-IT
-Marszałek polny,Marechal de campo,Ganha as 27 estrelas do estado-maior.,pt-PT
-Marszałek polny,Фельдмаршал,Здобудь усі 27 зірок штабу.,uk
-Marszałek polny,Veldmaarschalk,Verdien alle 27 stafsterren.,nl-NL
-Marszałek polny,Mareşal,27 karargâh yıldızının hepsini kazan.,tr-TR
 Sześć oblicz wojny,Six faces of war,Reach wave 20 in any six different weekly rule sets.,en-US
 Sześć oblicz wojny,Sechs Gesichter des Krieges,Erreiche Welle 20 mit beliebigen sechs verschiedenen Wochen-Regelsets.,de-DE
 Sześć oblicz wojny,Seis rostros de la guerra,Alcanza la oleada 20 con seis conjuntos de reglas semanales distintos cualesquiera.,es-ES
@@ -745,3 +736,12 @@ Postrach armii,Inimigos derrotados 100000,Inimigos derrotados ao todo: 100000.,p
 Postrach armii,Переможені вороги 100000,Усього переможено ворогів: 100000.,uk
 Postrach armii,Verslagen vijanden 100000,In totaal verslagen vijanden: 100000.,nl-NL
 Postrach armii,Yenilen düşmanlar 100000,Toplam yenilen düşman sayısı: 100000.,tr-TR
+Marszałek polny,Field Marshal,Earn all 54 staff stars.,en-US
+Marszałek polny,Feldmarschall,Hole alle 54 Stabssterne.,de-DE
+Marszałek polny,Mariscal de campo,Consigue las 54 estrellas del estado mayor.,es-ES
+Marszałek polny,Maréchal de camp,Obtenez les 54 étoiles d'état-major.,fr-FR
+Marszałek polny,Feldmaresciallo,Ottieni tutte le 54 stelle dello stato maggiore.,it-IT
+Marszałek polny,Marechal de campo,Ganha as 54 estrelas do estado-maior.,pt-PT
+Marszałek polny,Фельдмаршал,Здобудь усі 54 зірки штабу.,uk
+Marszałek polny,Veldmaarschalk,Verdien alle 54 stafsterren.,nl-NL
+Marszałek polny,Mareşal,54 karargâh yıldızının hepsini kazan.,tr-TR

@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ACH = ROOT / "app/src/main/java/com/centurywar/meta/Achievements.kt"
+ORDERS = ROOT / "sim/src/main/kotlin/com/centurywar/game/Orders.kt"
 LKT = ROOT / "app/src/main/java/com/centurywar/engine/L.kt"
 SHEET = ROOT / "docs/store/play_games_sheet.csv"
 IMPORT_DIR = ROOT / "docs/store/pgs_import"
@@ -35,7 +36,9 @@ POINTS_TOTAL_MAX, POINTS_ONE_MAX = 2000, 200
 # Proponowany budżet: zostawiamy zapas na przyszłe osiągnięcia.
 # 4.11 (po D6): 1500 → 1600, bo „Wygrany zakład” (20 pkt) daje sumę 1515; limit Google to 2000.
 # 6.11 (d65): 4 osiągnięcia Rozkazów sztabu (+70 pkt) → 1585, nadal w budżecie.
-POINTS_BUDGET = 1600
+# 6.11 (d67): „Weteran sztabu” 150 → 300 medali (15 → 25 pkt), „Marszałek polny” 450 → 900
+# (30 → 40 pkt) → 1605; budżet 1600 → 1650 (limit Google 2000, zapas 350).
+POINTS_BUDGET = 1650
 
 LEADERBOARDS = [  # klucz w properties, klucz nazwy w L.kt, uwaga
     ("leaderboard_endless", "board_endless", "punkty Oblężenia (Endless)"),
@@ -52,6 +55,18 @@ EXPR = {
     "Campaign.stages.size.toLong()": 36,
     "com.centurywar.game.Doctrine.values().size.toLong()": 13,
 }
+
+
+def orders_const(name):
+    """Stała z Orders.kt (d67: progi osiągnięć Rozkazów rosną z liczbą rozkazów)."""
+    m = re.search(r"const val " + name + r" = (\d+)", ORDERS.read_text(encoding="utf-8"))
+    if not m:
+        raise SystemExit("Brak Orders." + name)
+    return int(m.group(1))
+
+
+EXPR["Orders.COUNT.toLong()"] = orders_const("COUNT")
+EXPR["Orders.COUNT * Orders.MAX_STARS.toLong()"] = orders_const("COUNT") * orders_const("MAX_STARS")
 
 
 def l_table():

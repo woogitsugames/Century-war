@@ -8,6 +8,7 @@ import com.centurywar.game.DailyEvent
 import com.centurywar.game.Defs
 import com.centurywar.game.Mode
 import com.centurywar.game.Modifier
+import com.centurywar.game.Orders
 import com.centurywar.game.Weather
 import com.centurywar.game.Weekly
 
@@ -149,11 +150,15 @@ object Achievements {
         // Po D6: fala 40 z Zakładem (docs/BALANCE.md, D6: do fali 40 dochodzi ok. 85/100 weteranów,
         // a Zakład kosztuje ok. 1,5 fali), więc wymaga badań i dobrej talii, ale nie rekordu.
         def("wager_40", AchievementMetric.WAGER_40, 1, 200, AchievementCategory.ENDLESS),
-        // D65: Rozkazy sztabu — pierwszy rozkaz na 3★, wszystkie 9 wykonane, komplet 27★ i obrona
+        // D65: Rozkazy sztabu — pierwszy rozkaz na 3★, wszystkie wykonane, komplet gwiazdek i obrona
         // bez wież tam, gdzie są dozwolone (rozkazy 6 i 9).
+        // D67 (decyzja właściciela 6.11): progi liczą WSZYSTKIE rozkazy (18 i 54★), medale 300/900.
+        // Klucze ID (orders_all_9, orders_stars_27) zostają — to ID Play Games i zapisu. Próg rośnie
+        // z Orders.COUNT, ale opisy (L.kt part210) i arkusz PGS mają liczby wpisane na sztywno —
+        // OrdersAchievements65Test pilnuje, by tekst zgadzał się z progiem.
         def("orders_perfect_1", AchievementMetric.ORDERS_PERFECT, 1, 40, AchievementCategory.TACTICS),
-        def("orders_all_9", AchievementMetric.ORDERS_COMPLETED, 9, 150, AchievementCategory.TACTICS),
-        def("orders_stars_27", AchievementMetric.ORDER_STARS, 27, 450, AchievementCategory.TACTICS),
+        def("orders_all_9", AchievementMetric.ORDERS_COMPLETED, Orders.COUNT.toLong(), 300, AchievementCategory.TACTICS),
+        def("orders_stars_27", AchievementMetric.ORDER_STARS, Orders.COUNT * Orders.MAX_STARS.toLong(), 900, AchievementCategory.TACTICS),
         def("orders_hold_no_turrets", AchievementMetric.ORDERS_HOLD_NO_TURRETS, 1, 150, AchievementCategory.TACTICS),
     )
 
