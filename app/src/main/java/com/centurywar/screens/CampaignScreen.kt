@@ -982,7 +982,7 @@ class CampaignScreen(
             -2 -> selected?.let { s ->
                 val tutorial = s.index == 0 && !g.profile.tutorialDone
                 // Samouczek ma stałą, łagodną siłę AI niezależnie od wybranego poziomu.
-                g.setScreen(BattleScreen(g, Campaign.config(s, g.profile.bonuses(), System.nanoTime(),
+                g.setScreen(BattleScreen(g, Campaign.config(s, g.profile.bonuses(), g.newBattleSeed(),
                     tutorial = tutorial,
                     difficulty = if (tutorial) CampaignDifficulty.NORMAL else g.profile.campaignDifficulty)))
             }

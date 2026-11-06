@@ -142,7 +142,7 @@ Plik dla nowej sesji Claude Code. Przeczytaj w całości przed działaniem. Star
 2. Init Gradle `~/.gradle/init.d/mirror.gradle`: mirror GCS `https://maven-central.storage-download.googleapis.com/maven2/` — podmiana URL repo.maven.apache.org we wszystkich repozytoriach ORAZ w `beforeSettings` dodanie mirrora na początek `pluginManagement.repositories` + `gradlePluginPortal()` (inaczej buildSrc dostaje 429). Nie dodawaj repozytoriów w `allprojects` (FAIL_ON_PROJECT_REPOS).
 3. Robolectric: ręcznie pobierz `android-all-instrumented` 15-robolectric-13954326-i7, 9-robolectric-4913185-2-i7, 10-robolectric-5803371-i7 z mirrora do `~/.m2/repository/org/robolectric/android-all-instrumented/<wersja>/`.
 4. Pełne testy: `./gradlew :app:testDebugUnitTest :sim:test :server:test --continue --console=plain` — teraz **ok. 8–11 min**. Narzędzia scalania: `docs/coord-tools/` (res.py, mergeauto.sh, fixL.py). Po każdym scaleniu `L.kt`: liczba `putAll(part` = liczba `private fun part` (teraz 49).
-5. `-PscreenReason=...` przy `updateScreenshots` podawaj bez polskich znaków (inaczej krzaki w UPDATES.md).
+5. `-PscreenReason=...` przy `updateScreenshots`: uruchamiaj z `LC_ALL=C.UTF-8` (w kontenerze locale POSIX gubi polskie znaki; build przerwie się z podpowiedzią).
 
 ## Stan na moment przekazania
 - `main` = `claude/bold-sagan-vwz5gm` = **969b0414** (tura 9 bez dowódcy): GPT 135 (sklep, „Co nowego”), 140 (stopnie wież 1–3), przeglądy UX nowego gracza (143, 144), naprawa „Porzuć” w oknie wznowienia, uczciwe elity i Zryw wroga, PROTOCOL 0.7.0. Pełne testy zielone. APK wysłane.

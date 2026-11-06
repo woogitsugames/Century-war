@@ -86,6 +86,15 @@ class Game(
      */
     fun nowMillis(): Long = if (clock === SYSTEM_CLOCK) System.currentTimeMillis() else clock()
 
+    /**
+     * Ziarno nowej bitwy (kampania, samouczek, Endless, potyczka). W grze `System.nanoTime()`;
+     * testy podają stałe, by przebieg nie zależał od chwili uruchomienia (niestabilny
+     * `FirstHourImpression61Test`).
+     */
+    internal var seedSource: (() -> Long)? = null
+
+    fun newBattleSeed(): Long = seedSource?.invoke() ?: System.nanoTime()
+
     val ui = Ui()
     var width = 1
     var height = 1
