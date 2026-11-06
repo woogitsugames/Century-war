@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Matrix
 import com.centurywar.engine.Button
 import com.centurywar.engine.Game
 import com.centurywar.engine.Icons
@@ -693,6 +694,10 @@ class TutorialOverlay(
 
     /** Tura 9: zewnętrzna krawędź ostatnio narysowanej obwódki celu (do testów). */
     internal val ringBounds = RectF()
+    /** Zachowawcze granice dłoni wraz z obrysem i cieniem, po obrocie. */
+    internal val handBounds = RectF()
+    private val handMatrix = Matrix()
+    private val armyBounds = RectF()
 
     /**
      * Obwódka celu przy krawędzi ekranu (np. przycisk jednostki na rozłożonym Foldzie) nie może
@@ -707,6 +712,7 @@ class TutorialOverlay(
     }
 
     fun draw(c: Canvas) {
+        handBounds.setEmpty()
         if (finished || battle.over) { hideButtons(); return }
         val ui = g.ui
         val sl = g.insetL + 12 * dp
@@ -798,7 +804,12 @@ class TutorialOverlay(
             val bob = (sin(clock * 5f) + 1f) * 4 * dp
             val down = panel.bottom <= hole.top
             val tipY = if (down) hole.top - 6 * dp - bob else hole.bottom + 6 * dp + bob
-            drawHand(c, hole.centerX(), tipY, 46 * dp, down)
+            if (step == S_INCOME) {
+                // Wskazuj złoto z boku, nad drugim rzędem paska, zamiast zasłaniać liczebność armii.
+                val left = g.profile.leftHandedHud
+                val tipX = if (left) hole.left - 6 * dp else hole.right + 6 * dp
+                drawHand(c, tipX, hole.centerY(), 46 * dp, false, if (left) 90f else -90f)
+            } else drawHand(c, hole.centerX(), tipY, 46 * dp, down)
         }
         if (hasHole && step == S_BARRAGE && t.barrageAiming()) drawBarrageDrag(c)
     }
@@ -819,11 +830,24 @@ class TutorialOverlay(
     }
 
     /** Kreskówkowa dłoń z wyciągniętym palcem; czubek palca w ([x], [y]). */
-    private fun drawHand(c: Canvas, x: Float, y: Float, s: Float, down: Boolean) {
+    private fun drawHand(c: Canvas, x: Float, y: Float, s: Float, down: Boolean, direction: Float? = null) {
+        val angle = (direction ?: if (down) 180f else 0f) - 14f
+        handBounds.set(-0.50f * s, -0.06f * s, 0.38f * s, 1.11f * s)
+        handMatrix.setRotate(angle)
+        handMatrix.postTranslate(x, y)
+        handMatrix.mapRect(handBounds)
+        // Wąski pasek ma drugi rząd, w którym wyświetlane są liczebności armii.
+        if (t.minimap.width() > 0f && t.area.top - g.insetT >= 100 * dp) {
+            val ax = (if (g.profile.leftHandedHud)
+                t.minimap.right + (g.width - g.insetR - 8 * dp - t.minimap.right) * 0.5f
+            else (g.insetL + 8 * dp + t.minimap.left) * 0.5f) - 38 * dp
+            armyBounds.set(ax, t.minimap.centerY() - 11 * dp,
+                ax + BattleScreen.ARMY_COUNTS_W * dp, t.minimap.centerY() + 11 * dp)
+            if (RectF.intersects(handBounds, armyBounds)) { handBounds.setEmpty(); return }
+        }
         c.save()
         c.translate(x, y)
-        if (down) c.rotate(180f)
-        c.rotate(-14f)
+        c.rotate(angle)
         handPath.rewind()
         handPath.addRoundRect(-0.11f * s, 0f, 0.11f * s, 0.62f * s, 0.11f * s, 0.11f * s, Path.Direction.CW)
         handPath.addRoundRect(-0.30f * s, 0.38f * s, 0.27f * s, 0.88f * s, 0.15f * s, 0.15f * s, Path.Direction.CW)
