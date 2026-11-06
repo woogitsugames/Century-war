@@ -174,7 +174,9 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
         if (text.isEmpty()) return
         val out = arrayOfNulls<String>(12)
         val n = HintFrame.wrapInto(ui, text, width, size, out)
-        for (k in 0 until n) addLine(out[k] ?: "", size, color, if (k == 0) icon else -2, if (k == 0) gap else 0f)
+        // Kolejne wiersze zawinięcia: wcięte tylko pod ikoną (-2), bez ikony od lewego brzegu.
+        for (k in 0 until n) addLine(out[k] ?: "", size, color,
+            if (k == 0 || icon == -1) icon else -2, if (k == 0) gap else 0f)
     }
 
     private fun layoutDetail() {
@@ -204,7 +206,7 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
         detailText = accessibilitySentences(L[o.nameKey], *lineText.toTypedArray())
         var hgt = 0f
         for (i in lineText.indices) hgt += lineGap[i] * dp + lineSize[i] * dp * ui.textScale * 1.3f
-        val top = detail.top + 44 * dp + max(18f, 16f * ui.textScale) * dp
+        val top = detail.top + 30 * dp + max(22f, 18f * ui.textScale) * dp + max(18f, 16f * ui.textScale) * dp
         val visible = play.r.top - 10 * dp - top
         detailMax = max(0f, hgt - visible)
         detailScroll = detailScroll.coerceIn(0f, detailMax)
@@ -266,9 +268,11 @@ class OrdersScreen(g: Game, initial: Int = -1) : Screen(g) {
     private fun renderDetail(c: Canvas) {
         val o = Orders.all[selected]
         ui.panel(c, detail)
-        ui.ribbon(c, detail.centerX(), detail.top + 4 * dp, L[o.nameKey], 20f, Ui.RIBBON,
-            detail.width() * 0.5f, Ui.GOLD, detail.width() - 16 * dp)
-        val starsY = detail.top + 44 * dp
+        // Nazwa rozkazu w panelu (druga wstęga nachodziłaby na tytuł ekranu).
+        val name = L[o.nameKey]
+        ui.textO(c, name, detail.centerX(), detail.top + 30 * dp,
+            ui.fit(name, 20f, detail.width() - 48 * dp, 11f), Ui.GOLD, Paint.Align.CENTER)
+        val starsY = detail.top + 30 * dp + max(22f, 18f * ui.textScale) * dp
         ui.stars(c, detail.centerX(), starsY, 24 * dp, g.profile.orderStars[selected], 3, 1.05f)
         val top = starsY + max(18f, 16f * ui.textScale) * dp
         val bottom = play.r.top - 10 * dp

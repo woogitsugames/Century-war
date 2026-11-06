@@ -209,13 +209,15 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             tipText = if (tipText.isEmpty()) helpText else "$helpText $tipText"
         }
         // Zlecenie 141: po bitwie wyraźnie wskazujemy Doktrynę elit, gdy gracza na nią stać.
-        if (tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
+        // Dzień 62: w Rozkazach panel ma trzy wiersze celów; bez podpowiedzi celu i badań.
+        val ordersResult = cfg.mode == Mode.ORDERS
+        if (!ordersResult && tipText.isEmpty() && EliteUnlock.affordable(g.profile)) {
             tipText = EliteUnlock.text("elite141_afford", g.profile)
             resultGoalKind = NextGoalKind.RESEARCH
             resultGoalText = tipText
         }
         // R2-01: bez wskazówki (zwykle wygrana) wiersz pokazuje najbliższy cel gracza.
-        if (tipText.isEmpty()) {
+        if (!ordersResult && tipText.isEmpty()) {
             val goal = NextGoals.pick(g.profile, System.currentTimeMillis(),
                 if (cfg.mode == Mode.ENDLESS && cfg.weekly < 0L) null else cfg.mode)
             tipText = goal.text
@@ -309,7 +311,9 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
         c.drawRoundRect(tmpR, 8 * dp, 8 * dp, ui.fill)
         val cy = tmpR.centerY()
         Icons.draw(c, icon, lx + 8 * dp, cy, 18 * dp, dp = dp)
-        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, 14f, Ui.DIM, Paint.Align.LEFT, 1.6f)
+        // Dzień 62: podpis dopasowany do miejsca obok wartości (≥ 10 sp), bez nachodzenia.
+        val labelW = rx - ui.measure(value, 15f, true) - 8 * dp - (lx + 24 * dp)
+        ui.textO(c, label, lx + 24 * dp, cy + 5 * dp, ui.fit(label, 14f, labelW, 10f), Ui.DIM, Paint.Align.LEFT, 1.6f)
         ui.textO(c, value, rx, cy + 5 * dp, 15f, color, Paint.Align.RIGHT, 1.8f)
         return y + lh
         }
