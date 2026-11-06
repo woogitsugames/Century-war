@@ -188,7 +188,7 @@ class HintOverlay(
     fun showScreen(id: Int, focus: RectF) {
         val key = when (id) {
             in RESEARCH..ENDLESS_MENU -> SCREEN_KEYS[id - RESEARCH]
-            FIRST_BATTLE -> "first_next_steps"
+            FIRST_BATTLE -> "map191_next_steps"
             ELITE_RESEARCH -> "elite141_menu_hint"
             DIFFICULTY -> "help180_hint"
             else -> return
@@ -399,6 +399,8 @@ class HintOverlay(
      * ziemi, ze strzałką w dół; cel w pasku górnym: dymek pod paskiem ze strzałką w górę.
      */
     private val avoidRects = ArrayList<RectF>(48)
+    /** Odsłonięte węzły oraz łącząca je droga muszą pozostać widoczne pod dymkiem mapy. */
+    private val mapRoute = RectF()
 
     /**
      * Tura 9: wstęga tytułu ekranu (Chrome.titleBounds), której dymek poza bitwą nie zasłania;
@@ -426,10 +428,52 @@ class HintOverlay(
                 val b = screen.buttons[i]
                 if (b.visible && b !== okBtn) avoidRects.add(b.r)
             }
+            mapRoute.setEmpty()
+            if (activeId == FIRST_BATTLE && screen is CampaignScreen) {
+                for (b in screen.buttons) if (b.visible && b.enabled && b.id in 0..35) {
+                    if (mapRoute.isEmpty) mapRoute.set(b.r) else mapRoute.union(b.r)
+                }
+                if (!mapRoute.isEmpty) {
+                    // Droga ma obrys 12 dp, nie jest przyciskiem.
+                    mapRoute.inset(-6f * dp, -6f * dp)
+                    avoidRects.add(mapRoute)
+                }
+            }
             if (!titleRect.isEmpty) avoidRects.add(titleRect)
             if (!keepClear.isEmpty) avoidRects.add(keepClear)
             val placed = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
                 hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
+            if (activeId == FIRST_BATTLE && !mapRoute.isEmpty && RectF.intersects(panel, mapRoute)) {
+                // Priorytet: odsłonięta droga, tytuł i Wstecz; inne kafle są mniej ważne.
+                avoidRects.clear()
+                avoidRects.add(mapRoute)
+                if (!titleRect.isEmpty) avoidRects.add(titleRect)
+                if (screen != null) for (b in screen.buttons) if (b.visible && b.id == -1) avoidRects.add(b.r)
+                val retry = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
+                    hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
+                if (retry && !RectF.intersects(panel, mapRoute)) return true
+                // Wąski ekran: szukaj całego wolnego obszaru, nie tylko czterech stron celu.
+                val step = 8f * dp
+                var y = safeT
+                while (y + hintHeight <= safeB + .01f) {
+                    var x = safeL
+                    while (x + hintWidth <= safeR + .01f) {
+                        panel.set(x, y, x + hintWidth, y + hintHeight)
+                        var blocked = false
+                        for (r in avoidRects) if (RectF.intersects(panel, r)) { blocked = true; break }
+                        if (!blocked) {
+                            if (target != null) connector.set(panel.centerX(), panel.bottom,
+                                target.centerX(), target.top)
+                            else connector.setEmpty()
+                            return true
+                        }
+                        x += step
+                    }
+                    y += step
+                }
+                panel.setEmpty()
+                return false
+            }
             if (!placed || titleRect.isEmpty || !RectF.intersects(panel, titleRect)) return placed
             // Gęsty ekran (Badania na wąskim Foldzie): nie da się ominąć wszystkich przycisków.
             // Tytuł i Wstecz mają pierwszeństwo, karty treści mogą zostać na chwilę przykryte.

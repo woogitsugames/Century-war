@@ -202,6 +202,7 @@ object L {
         putAll(part209())
         putAll(part210())
         putAll(part211())
+        putAll(part212())
         }
     }
 
@@ -2441,6 +2442,22 @@ object L {
             "Обери наступний етап кампанії. Витрать медалі на постійні покращення в Дослідженнях у меню.",
             "Kies de volgende campagnefase. Besteed medailles aan blijvende upgrades bij Onderzoek in het menu.",
             "Sonraki sefer bölümünü seç. Madalyalarını menüde Araştırma'daki kalıcı geliştirmelere harca."
+        ),
+    )
+
+    /** Krótka podpowiedź mapy po pierwszej bitwie. */
+    private fun part212(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "map191_next_steps" to t(
+            "Wybierz kolejny etap. W menu Badania kup trwałe ulepszenia za medale.",
+            "Choose the next stage. Buy permanent Research upgrades with medals.",
+            "Wähle die nächste Stufe. Kaufe mit Medaillen dauerhafte Forschung im Menü.",
+            "Elige la siguiente fase. Compra mejoras permanentes con medallas en Investigación del menú.",
+            "Choisissez l’étape suivante. Achetez des améliorations permanentes avec vos médailles dans Recherche, au menu.",
+            "Scegli la prossima fase. Compra migliorie permanenti con medaglie in Ricerca nel menu.",
+            "Escolhe a próxima etapa. Compra melhorias permanentes com medalhas em Pesquisa no menu.",
+            "Обери наступний етап. Купуй постійні покращення за медалі в Дослідженнях у меню.",
+            "Kies de volgende fase. Koop blijvende upgrades met medailles bij Onderzoek in het menu.",
+            "Sonraki bölümü seç. Menüde Araştırma'dan madalyalarla kalıcı geliştirme al."
         ),
     )
 
