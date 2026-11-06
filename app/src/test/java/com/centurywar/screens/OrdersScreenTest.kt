@@ -192,8 +192,14 @@ class OrdersScreenTest {
         val s = OrdersScreen(g)
         g.setScreen(s)
         frame(g, null)
-        assertTrue(Orders.unlocked(Orders.all[1], g.profile.stars))
-        assertTrue(!Orders.unlocked(Orders.all[2], g.profile.stars))
+        assertTrue(Orders.unlocked(Orders.all[1], g.profile.stars, g.profile.orderStars))
+        assertTrue(!Orders.unlocked(Orders.all[2], g.profile.stars, g.profile.orderStars))
+        // Dzień 66: partia 2 — rozkaz 10 po 2★ w rozkazie 1 (profil ma 3★), rozkaz 11 zablokowany (1★ w rozkazie 2).
+        assertTrue(Orders.unlocked(Orders.all[9], g.profile.stars, g.profile.orderStars))
+        assertTrue(!Orders.unlocked(Orders.all[10], g.profile.stars, g.profile.orderStars))
+        s.onClick(s.buttons.first { it.id == 110 })
+        assertEquals("Zablokowany rozkaz partii 2 nie otwiera karty", -1, s.selectedForTests)
+        assertTrue(s.accessibilityLabel(s.buttons.first { it.id == 110 }).contains(L[Orders.all[1].nameKey]))
         s.onClick(s.buttons.first { it.id == 102 })
         assertEquals("Zablokowany rozkaz nie otwiera karty", -1, s.selectedForTests)
         s.onClick(s.buttons.first { it.id == 101 })
@@ -205,6 +211,49 @@ class OrdersScreenTest {
         // Standardowe etykiety TalkBack: nazwa rozkazu i podpis z karty.
         val label = s.accessibilityLabel(s.buttons.first { it.id == 100 })
         assertTrue(label.startsWith(L[Orders.all[0].nameKey]))
+    }
+
+    /**
+     * Dzień 66: lista 18 rozkazów przewinięta do partii 2 i karty nowych rozkazów (eskorta,
+     * chuda zima, ostatni grot) — czytelne przy 100% i 130%; zrzuty phone720 i foldOuter pl/en
+     * do /tmp/claude-0/d66 (gdy katalog jest dostępny) i build/screenshots (d66_*).
+     */
+    @Test fun batchTwoListAndCardsReadableWithoutOverlap() {
+        val old = L.lang
+        val problems = StringBuilder()
+        val shots = File("/tmp/claude-0/d66").let { if (it.mkdirs() || it.isDirectory) it else null }
+        fun save(name: String) {
+            val src = File(out, "$name.png")
+            if (shots != null && src.isFile) src.copyTo(File(shots, "$name.png"), overwrite = true)
+        }
+        try {
+            for ((tag, d) in devices) for (scale in floatArrayOf(1f, 1.3f)) for (lang in arrayOf("pl", "en", "de")) {
+                val pct = (scale * 100).toInt()
+                val g = game(d, lang, scale)
+                val s = OrdersScreen(g)
+                g.setScreen(s)
+                val shot = tag != "foldInner" && lang != "de"
+                val base = "d66_${tag}_${pct}_${lang}"
+                val content = RectF(0f, g.insetT + 120f * g.ui.dp, g.width.toFloat(), g.height.toFloat())
+                frame(g, null)
+                s.onDrag(0f, -100_000f)
+                var rec = frame(g, if (shot) base + "_list2" else null)
+                if (shot) save(base + "_list2")
+                checkTexts(rec, g, content, "$tag $pct% $lang lista (partia 2)", problems)
+                for (i in intArrayOf(9, 11, 17)) {
+                    s.openForTests(i)
+                    val name = if (shot) base + "_order${i + 1}" else null
+                    rec = frame(g, name)
+                    if (name != null) save(name)
+                    checkTexts(rec, g, content, "$tag $pct% $lang karta ${i + 1}", problems)
+                    s.onBack()
+                }
+            }
+        } finally {
+            L.lang = old
+            File(out, "d66_orders_layout.txt").writeText(problems.toString())
+        }
+        assertTrue("Rozkazy sztabu, partia 2 — układ:\n$problems", problems.isEmpty())
     }
 
     @Test fun menuHasOrdersEntry() {

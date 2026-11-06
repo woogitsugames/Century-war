@@ -52,6 +52,23 @@ class OrdersProfileTest {
         assertArrayEquals(IntArray(Orders.COUNT), legacy.orderStars)
         assertArrayEquals(IntArray(Orders.COUNT), legacy.orderPoints)
 
+        // Dzień 66: profil z partii 1 (tablice po 9 pozycji) — wartości zostają, partia 2 = zera.
+        assertEquals(18, Orders.COUNT)
+        json.put("orderStars", JSONArray(listOf(3, 2, 1, 0, 0, 0, 0, 0, 2)))
+        json.put("orderPoints", JSONArray(listOf(3400, 2300, 1100, 0, 0, 0, 0, 0, 2050)))
+        val nineFile = File(folder.root, "nine.json").apply { writeText(json.toString()) }
+        val nine = Profile(nineFile).apply { load() }
+        assertEquals(Orders.COUNT, nine.orderStars.size)
+        assertArrayEquals(intArrayOf(3, 2, 1, 0, 0, 0, 0, 0, 2) + IntArray(Orders.BATCH), nine.orderStars)
+        assertEquals(3400 + 2300 + 1100 + 2050L, nine.orderPointTotal())
+        assertEquals(8, nine.orderStarTotal())
+        assertEquals(10, nine.recordOrder(9, 1, 1_300))
+        assertEquals(9, nine.orderStarTotal())
+        nineFile.writeText(nine.toJson())
+        val nineCopy = Profile(nineFile).apply { load() }
+        assertEquals(Orders.COUNT, JSONObject(nine.toJson()).getJSONArray("orderStars").length())
+        assertEquals(1, nineCopy.orderStars[9])
+
         // Uszkodzone wartości są przycinane do zakresu.
         json.put("orderStars", JSONArray(listOf(9, -2, 3)))
         val clampedFile = File(folder.root, "clamped.json").apply { writeText(json.toString()) }

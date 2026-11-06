@@ -136,6 +136,23 @@ class LTest {
             for (text in L.raw(k)!!) assertTrue("$k: $text", text.contains("%1\$s"))
     }
 
+    /** Dzień 66: partia 2 Rozkazów sztabu (part211). */
+    @Test
+    fun orders211KeysHaveAllLanguages() {
+        val keys = listOf("o211_goal_escort", "o211_goal_spear", "o211_obj_commander", "o211_obj_gold",
+            "o211_obj_fielded", "o211_income", "o211_locked") +
+            com.centurywar.game.Orders.all.drop(com.centurywar.game.Orders.BATCH).flatMap { listOf(it.nameKey, it.briefKey) }
+        for (k in keys) {
+            val entry = L.raw(k)
+            assertTrue("brak $k", entry != null)
+            assertEquals(k, L.CODES.size, entry!!.size)
+            for (i in L.CODES.indices) assertTrue("$k/${L.CODES[i]}", entry[i].isNotBlank())
+        }
+        for (k in listOf("o211_goal_escort", "o211_goal_spear", "o211_obj_gold", "o211_obj_fielded", "o211_income"))
+            for (text in L.raw(k)!!) assertTrue("$k: $text", text.contains("%1\$s"))
+        for (text in L.raw("o211_locked")!!) assertTrue(text, text.contains("%1\$s") && text.contains("%2\$s"))
+    }
+
     @Test
     fun placeholderRegexSupportsPositionalArguments() {
         val samples = "%1\$s %2\$d %.1f %%"

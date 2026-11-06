@@ -6,6 +6,11 @@ package com.centurywar.game
  * na epokę. Nowe rozkazy dopisuje się WYŁĄCZNIE na końcu listy (indeks = zapis w profilu,
  * [BattleConfig.stageIndex] w zrzutach i powtórkach).
  *
+ * Dzień 66: druga partia (rozkazy 10–18, `o211_*`), trudniejsza, z nowymi rodzajami celów:
+ * eskorta dowódcy ([Goal.ESCORT], [Goal.SPEARHEAD]), obrona samymi wieżami (maska),
+ * obcięty dochód ([Order.incomePct]) i cele dodatkowe [ObjectiveKind.COMMANDER_ALIVE],
+ * [ObjectiveKind.GOLD_LEFT], [ObjectiveKind.FIELDED_MAX].
+ *
  * Gwiazdki: cel główny = 1★, każdy z dwóch celów dodatkowych +1★ (liczone tylko po
  * wykonaniu celu głównego). Wszystkie rozkazy mają te same, zamrożone bonusy
  * ([Daily.normalizedBonuses]), więc badania nic nie zmieniają i ranking jest uczciwy.
@@ -17,6 +22,15 @@ object Orders {
         DESTROY,
         /** Utrzymaj bazę do końca limitu (limit = zwycięstwo). */
         HOLD,
+        /** Dzień 66: utrzymaj bazę i dowódcę do końca limitu; śmierć dowódcy = porażka. */
+        ESCORT,
+        /** Dzień 66: zniszcz bazę wroga w limicie, nie tracąc dowódcy (śmierć = porażka). */
+        SPEARHEAD;
+
+        /** Upływ limitu oznacza zwycięstwo (obrona). */
+        val holdWins: Boolean get() = this == HOLD || this == ESCORT
+        /** Gracz zaczyna z dowódcą, którego musi utrzymać przy życiu ([OrderFlags.ESCORT]). */
+        val escort: Boolean get() = this == ESCORT || this == SPEARHEAD
     }
 
     /** Rodzaj celu dodatkowego; [Objective.value] w jednostkach opisanych przy każdym. */
@@ -29,6 +43,12 @@ object Orders {
         KILLS,
         /** Najwyżej `value` utraconych własnych jednostek. */
         LOSSES,
+        /** Dzień 66: dowódca gracza żyje na końcu bitwy (`value` nieużywane). */
+        COMMANDER_ALIVE,
+        /** Dzień 66: w skarbcu zostaje na końcu co najmniej `value` złota. */
+        GOLD_LEFT,
+        /** Dzień 66: na polu stanęło najwyżej `value` własnych jednostek (z dowódcą i najemnikami). */
+        FIELDED_MAX,
     }
 
     class Objective(val kind: ObjectiveKind, val value: Int = 0)
@@ -48,9 +68,14 @@ object Orders {
         val weather: Weather = Weather.CLEAR,
         val personality: AiPersonality? = null,
         val bonus: List<Objective>,
+        /** Dzień 66: dochód gracza w % (mnożnik [Bonuses.incomeMul]); 100 = bez zmian. */
+        val incomePct: Int = 100,
     ) {
-        val nameKey: String get() = "o209_$key"
-        val briefKey: String get() = "o209_${key}_d"
+        /** Partia (0 = rozkazy 1–9, 1 = rozkazy 10–18); prefiks tekstów `o209_`/`o211_`. */
+        val batch: Int get() = index / BATCH
+        private val prefix: String get() = if (batch == 0) "o209_" else "o211_"
+        val nameKey: String get() = "$prefix$key"
+        val briefKey: String get() = "$prefix${key}_d"
     }
 
     private const val NO_TURRETS = OrderRules.ALL and OrderRules.TURRETS.inv()
@@ -108,9 +133,57 @@ object Orders {
             limitSeconds = 300, playerAllowed = OrderRules.ALL, weather = Weather.WIND,
             personality = AiPersonality.SIEGER,
             bonus = listOf(Objective(ObjectiveKind.BASE_HP, 10), Objective(ObjectiveKind.KILLS, 75))),
+
+        // ---- Dzień 66: partia 2 (rozkazy 10–18), trudniejsza, nowe rodzaje celów.
+        // Plemiona: eskorta — wódz stoi za linią obrony od pierwszej chwili i musi przeżyć.
+        Order(9, "chief_guard", era = 0, maxEra = 0, aiPower = 4.7f, goal = Goal.ESCORT,
+            limitSeconds = 210, playerAllowed = NO_TURRETS, personality = AiPersonality.ASSAULT,
+            bonus = listOf(Objective(ObjectiveKind.BASE_HP, 57), Objective(ObjectiveKind.KILLS, 52))),
+        // Brąz: obrona wyłącznie wieżami i ostrzałem.
+        Order(10, "bronze_towers", era = 1, maxEra = 1, aiPower = 1.25f, goal = Goal.HOLD,
+            limitSeconds = 210, playerAllowed = OrderRules.TURRETS or OrderRules.BARRAGE,
+            bonus = listOf(Objective(ObjectiveKind.BASE_HP, 40), Objective(ObjectiveKind.KILLS, 36))),
+        // Żelazo: chuda zima — połowa dochodu, przetrwaj i zachowaj zapas.
+        Order(11, "lean_winter", era = 2, maxEra = 2, aiPower = 3.2f, goal = Goal.HOLD,
+            limitSeconds = 240, playerAllowed = OrderRules.ALL, incomePct = 50,
+            bonus = listOf(Objective(ObjectiveKind.GOLD_LEFT, 100), Objective(ObjectiveKind.FIELDED_MAX, 70))),
+        // Feudalizm: grot — nocny atak kierowany z tyłów przez dowódcę, który musi przeżyć.
+        Order(12, "night_herald", era = 3, maxEra = 3, aiPower = 0.85f, goal = Goal.SPEARHEAD,
+            limitSeconds = 360, playerAllowed = OrderRules.ALL, weather = Weather.NIGHT,
+            bonus = listOf(Objective(ObjectiveKind.WITHIN, 315), Objective(ObjectiveKind.LOSSES, 80))),
+        // Proch: zniszcz w ulewie (wolniejszy marsz, krótszy zasięg), oszczędnie, dowódca przy życiu.
+        Order(13, "wet_powder", era = 4, maxEra = 4, aiPower = 0.4f, goal = Goal.DESTROY,
+            limitSeconds = 315, playerAllowed = OrderRules.ALL, weather = Weather.RAIN,
+            modifiers = setOf(Modifier.FRAGILE_BASES),
+            bonus = listOf(Objective(ObjectiveKind.FIELDED_MAX, 88), Objective(ObjectiveKind.COMMANDER_ALIVE))),
+        // Para: obrona przy 75% dochodu przeciw silnemu wrogowi, z zapasem w skarbcu.
+        Order(14, "counter_steam", era = 5, maxEra = 5, aiPower = 2.8f, goal = Goal.HOLD,
+            limitSeconds = 270, playerAllowed = OrderRules.ALL, incomePct = 75,
+            bonus = listOf(Objective(ObjectiveKind.GOLD_LEFT, 250), Objective(ObjectiveKind.KILLS, 70))),
+        // Stal: eskorta we mgle — ciężcy i dowódca trzymają pozycję.
+        Order(15, "fog_escort", era = 6, maxEra = 6, aiPower = 3.7f, goal = Goal.ESCORT,
+            limitSeconds = 240, modifiers = setOf(Modifier.FOG_OF_WAR),
+            playerAllowed = OrderRules.HEAVY or OrderRules.ELITE or OrderRules.COMMANDER or
+                OrderRules.TURRETS or OrderRules.BARRAGE or OrderRules.RALLY,
+            bonus = listOf(Objective(ObjectiveKind.BASE_HP, 42), Objective(ObjectiveKind.LOSSES, 31))),
+        // Krzem: chudy budżet na wietrze — zniszcz bazę przy 70% dochodu, z rezerwą złota.
+        Order(16, "thin_signal", era = 7, maxEra = 7, aiPower = 0.69f, goal = Goal.DESTROY,
+            limitSeconds = 330, playerAllowed = OrderRules.ALL, incomePct = 70, weather = Weather.WIND,
+            bonus = listOf(Objective(ObjectiveKind.GOLD_LEFT, 1000), Objective(ObjectiveKind.WITHIN, 285))),
+        // Era orbitalna: ostatni grot — dowódca prowadzi szturm na oblegającego.
+        Order(17, "final_spear", era = 8, maxEra = 8, aiPower = 0.8f, goal = Goal.SPEARHEAD,
+            limitSeconds = 360, playerAllowed = OrderRules.ALL, personality = AiPersonality.SIEGER,
+            weather = Weather.WIND,
+            bonus = listOf(Objective(ObjectiveKind.BASE_HP, 30), Objective(ObjectiveKind.FIELDED_MAX, 82))),
     )
 
-    const val COUNT = 9
+    const val COUNT = 18
+
+    /** Liczba rozkazów w partii (po jednym na epokę). */
+    const val BATCH = 9
+
+    /** Dzień 66: gwiazdki w rozkazie tej samej epoki z partii 1, które odblokowują rozkaz partii 2. */
+    const val BATCH2_UNLOCK_STARS = 2
 
     /**
      * Presja oblężnicza w Rozkazach: od 90. sekundy, +80%/min (jak etapy 2–7 kampanii, ale
@@ -131,11 +204,24 @@ object Orders {
     fun config(order: Order, seed: Long): BattleConfig = BattleConfig(
         mode = Mode.ORDERS, seed = seed, aiPower = order.aiPower,
         startEra = order.era, maxEra = order.maxEra, modifiers = order.modifiers,
-        playerBonuses = Daily.normalizedBonuses(), stageIndex = order.index,
+        playerBonuses = bonuses(order), stageIndex = order.index,
         aiPersonality = order.personality, weather = order.weather,
         playerAllowed = order.playerAllowed, enemyAllowed = order.enemyAllowed,
-        timeLimitSteps = order.limitSeconds * 60, holdWins = order.goal == Goal.HOLD,
+        timeLimitSteps = order.limitSeconds * 60, holdWins = order.goal.holdWins,
+        orderFlags = if (order.goal.escort) OrderFlags.ESCORT else 0,
     )
+
+    /** Zamrożone bonusy rozkazów; dzień 66: obcięty dochód przez [Order.incomePct]. */
+    private fun bonuses(order: Order): Bonuses {
+        val base = Daily.normalizedBonuses()
+        if (order.incomePct == 100) return base
+        return Bonuses(popCap = base.popCap, turretSlots = base.turretSlots,
+            eliteUnlocked = base.eliteUnlocked, rallyUnlocked = base.rallyUnlocked,
+            incomeMul = base.incomeMul * order.incomePct / 100f)
+    }
+
+    /** Dzień 66: czy dowódca gracza żyje (przy eskorcie: od pierwszego kroku). */
+    fun commanderAlive(battle: Battle): Boolean = battle.player.commanderCd == -1f
 
     /** Rozkaz bitwy (null poza trybem Rozkazów albo przy nieznanym indeksie). */
     fun of(cfg: BattleConfig): Order? =
@@ -152,6 +238,9 @@ object Orders {
             ObjectiveKind.WITHIN -> battle.time <= objective.value.toFloat()
             ObjectiveKind.KILLS -> p.kills >= objective.value
             ObjectiveKind.LOSSES -> e.kills <= objective.value
+            ObjectiveKind.COMMANDER_ALIVE -> commanderAlive(battle)
+            ObjectiveKind.GOLD_LEFT -> p.gold >= objective.value
+            ObjectiveKind.FIELDED_MAX -> p.spawned <= objective.value
         }
     }
 
@@ -179,13 +268,26 @@ object Orders {
     /**
      * Rozkaz epoki odblokowuje się razem z epoką w kampanii: rozkaz 1 po samouczku (etap 1),
      * rozkaz epoki e ≥ 1 po zdobyciu etapu 4e (pierwszy etap tej epoki jest wtedy dostępny).
-     * [campaignStars]: gwiazdki etapów kampanii z profilu.
+     * Dzień 66: rozkaz partii 2 wymaga [BATCH2_UNLOCK_STARS]★ w rozkazie tej samej epoki
+     * z partii 1 ([prerequisite]), który z kolei wymaga epoki w kampanii.
+     * [campaignStars]: gwiazdki etapów kampanii z profilu; [orderStars]: gwiazdki rozkazów.
      */
-    fun unlocked(order: Order, campaignStars: IntArray): Boolean {
+    fun unlocked(order: Order, campaignStars: IntArray, orderStars: IntArray): Boolean {
+        prerequisite(order)?.let { pre ->
+            return unlocked(pre, campaignStars, orderStars) &&
+                orderStars.getOrElse(pre.index) { 0 } >= BATCH2_UNLOCK_STARS
+        }
         val needed = if (order.era == 0) 0 else order.era * 4 - 1
         return campaignStars.getOrElse(needed) { 0 } > 0
     }
 
+    /** Rozkaz partii 1 tej samej epoki, od którego zależy rozkaz partii 2 (null w partii 1). */
+    fun prerequisite(order: Order): Order? =
+        if (order.batch == 0) null else all.first { it.batch == 0 && it.era == order.era }
+
     /** Numer etapu kampanii (od 1), którego zdobycie odblokowuje rozkaz. */
     fun unlockStageNumber(order: Order): Int = if (order.era == 0) 1 else order.era * 4
+
+    /** Najwyższy wynik punktowy jednego rozkazu (3★ i pełne zdrowie bazy). */
+    const val MAX_POINTS = MAX_STARS * POINTS_PER_STAR + MAX_HP_POINTS
 }

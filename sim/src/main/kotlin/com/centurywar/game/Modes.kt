@@ -85,6 +85,16 @@ object OrderRules {
     }
 }
 
+/**
+ * Dzień 66 (druga partia Rozkazów sztabu): reguły rozkazu poza maską działań
+ * ([BattleConfig.orderFlags]). 0 = brak, więc wszystkie dotychczasowe bitwy działają bez zmian.
+ */
+object OrderFlags {
+    /** Gracz zaczyna z darmowym dowódcą; gdy dowódca padnie, bitwa jest przegrana. */
+    const val ESCORT = 1
+    const val ALL = 1
+}
+
 /** Jawny mnożnik gospodarki i doświadczenia AI w kampanii. */
 enum class CampaignDifficulty(val powerMultiplier: Float, val medalMultiplier: Float, val key: String) {
     EASY(0.8f, 0.75f, "campaign126_easy"),
@@ -160,7 +170,12 @@ class BattleConfig(
     val timeLimitSteps: Int = 0,
     /** Po upływie [timeLimitSteps]: true = wygrywa gracz (obrona), false = wygrywa przeciwnik. */
     val holdWins: Boolean = false,
-)
+    /** Dzień 66: dodatkowe reguły rozkazu ([OrderFlags]); domyślnie brak. */
+    val orderFlags: Int = 0,
+) {
+    /** Dzień 66: dowódca gracza na starcie, jego śmierć = porażka ([OrderFlags.ESCORT]). */
+    val escort: Boolean get() = orderFlags and OrderFlags.ESCORT != 0
+}
 
 class Stage(
     val index: Int,

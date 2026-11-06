@@ -36,7 +36,7 @@ Play Games Services → Setup and management → Leaderboards: utwórz pięć ta
 | daily | leaderboard_daily | punkty wyzwania dnia | daily |
 | campaign | leaderboard_campaign | suma gwiazdek 0–108 | all-time |
 | skirmish | leaderboard_skirmish | punkty potyczki | all-time |
-| orders | leaderboard_orders | punkty sztabu 0–31500 (suma najlepszych wyników 9 rozkazów: gwiazdki × 1000 + zdrowie bazy 0–500) | all-time |
+| orders | leaderboard_orders | punkty sztabu 0–63000 (suma najlepszych wyników 18 rozkazów: gwiazdki × 1000 + zdrowie bazy 0–500) | all-time |
 
 Wstaw ID przydzielone przez Play Console do zasobów docs/store/play_games_ids.properties, zastępując wszystkie napisy REPLACE_ME. PGS włącza się dopiero po ustawieniu ID projektu i wszystkich pięciu tablic. Tablica dzienna korzysta z wbudowanego wariantu czasowego TIME_SPAN_DAILY; nie jest to oddzielny reset fizycznych rekordów. Wyniki trzeba wysyłać w dniu rozgrywki, a nie po kolejnej północy UTC.
 

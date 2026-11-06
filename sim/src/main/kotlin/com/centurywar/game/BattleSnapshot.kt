@@ -100,7 +100,10 @@ enum class SnapshotReject { OK, CORRUPT, OLDER_FORMAT, NEWER_FORMAT, BALANCE_CHA
  */
 object BattleSnapshot {
     /** 22: dzień 62 — Mode.ORDERS i pola Rozkazów sztabu w konfiguracji (tylko dla ORDERS). */
-    const val VERSION = 22
+    /** 23: dzień 66 — [BattleConfig.orderFlags] (eskorta) w konfiguracji, tylko dla ORDERS. */
+    const val VERSION = 23
+    /** Pierwsza wersja z bajtem [BattleConfig.orderFlags] w konfiguracji Rozkazów. */
+    private const val FIRST_WITH_ORDER_FLAGS = 23
     /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
     private const val FIRST_WITH_SIEGE_DAMAGE = 19
     /** Wersje 16–17 zapisywały karty Endless sprzed zlecenia 170 (bez dwóch ostatnich kart). */
@@ -179,7 +182,7 @@ object BattleSnapshot {
         o.writeInt(defsFingerprint)
         o.writeBoolean(rankedDaily)
         o.writeFloat(camX)
-        writeConfig(o, b.cfg)
+        writeConfig(o, b.cfg, formatVersion >= FIRST_WITH_ORDER_FLAGS)
         o.writeBoolean(b.turretTiersEnabled)
         o.writeBoolean(b.commanderEnabled)
         o.writeLong(b.rng.state)
@@ -246,7 +249,8 @@ object BattleSnapshot {
         return out.toByteArray()
     }
 
-    fun writeConfig(o: DataOutputStream, c: BattleConfig) {
+    /** [orderFlags] = false tylko przy zapisie w starszym formacie (v22, testy zgodności). */
+    fun writeConfig(o: DataOutputStream, c: BattleConfig, orderFlags: Boolean = true) {
         o.writeByte(c.mode.ordinal)
         o.writeLong(c.seed)
         o.writeFloat(c.aiPower)
@@ -273,6 +277,8 @@ object BattleSnapshot {
         if (c.mode == Mode.ORDERS) {
             o.writeShort(c.playerAllowed); o.writeShort(c.enemyAllowed)
             o.writeInt(c.timeLimitSteps); o.writeBoolean(c.holdWins)
+            // Dzień 66 (v23): reguły rozkazu, np. eskorta dowódcy.
+            if (orderFlags) o.writeByte(c.orderFlags)
         }
     }
 
@@ -346,7 +352,7 @@ object BattleSnapshot {
     }
 
     private fun supported(version: Int): Boolean =
-        version == VERSION || version == 21 || version == 20 || version == 19 || version == 18 || version == 17 ||
+        version == VERSION || version == 22 || version == 21 || version == 20 || version == 19 || version == 18 || version == 17 ||
             version == LEGACY_VERSION_WITHOUT_ID
 
     /**
@@ -399,7 +405,7 @@ object BattleSnapshot {
         if (i.readInt() != defsFingerprint) return null
         val ranked = i.readBoolean()
         val camX = i.readFloat()
-        val cfg = readConfig(i) ?: return null
+        val cfg = readConfig(i, hasOrderFlags = version >= FIRST_WITH_ORDER_FLAGS) ?: return null
         val b = Battle(cfg, turretTiersEnabled = i.readBoolean(), commanderEnabled = i.readBoolean())
         b.rng.state = i.readLong()
         b.rng.setAiState(0, i.readLong()); b.rng.setAiState(1, i.readLong())
@@ -486,7 +492,7 @@ object BattleSnapshot {
         return RestoredBattle(b, ranked, camX, battleId)
     }
 
-    internal fun readConfig(i: DataInputStream, hasDailyEvent: Boolean = true): BattleConfig? {
+    internal fun readConfig(i: DataInputStream, hasDailyEvent: Boolean = true, hasOrderFlags: Boolean = true): BattleConfig? {
         val mode = enumAt(Mode.values(), i.readByte().toInt())
         val seed = i.readLong()
         val aiPower = i.readFloat()
@@ -514,6 +520,9 @@ object BattleSnapshot {
         val enemyAllowed = if (orders) i.readUnsignedShort() else OrderRules.ALL
         val timeLimit = if (orders) i.readInt() else 0
         val holdWins = if (orders) i.readBoolean() else false
+        // Dzień 66: zrzuty v22 i powtórki v2 nie miały reguł rozkazu (= 0, jak partia 1).
+        val orderFlags = if (orders && hasOrderFlags) i.readUnsignedByte() else 0
+        if (orderFlags and OrderFlags.ALL.inv() != 0) return null
         if (playerAllowed !in 0..OrderRules.ALL || enemyAllowed !in 0..OrderRules.ALL ||
             timeLimit !in 0..Replay.MAX_STEPS) return null
         if (startEra > maxEra || weekly < -1L ||
@@ -523,7 +532,7 @@ object BattleSnapshot {
         val event = if (eventId < 0) null else enumAt(DailyEvent.values(), eventId)
         return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial,
             personality, enabled, weather, weekly, weeklyCard, event,
-            playerAllowed, enemyAllowed, timeLimit, holdWins)
+            playerAllowed, enemyAllowed, timeLimit, holdWins, orderFlags)
     }
 
     private fun readSide(i: DataInputStream, s: Side, version: Int) {
