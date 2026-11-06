@@ -68,6 +68,8 @@ class MenuScreen(g: Game) : Screen(g) {
     internal var goalText = ""
         private set
     private var goalSize = 13f
+    /** D65: cel wyliczony i ułożony; widoczność zależy jeszcze od innych komunikatów. */
+    private var goalReady = false
     /**
      * D64: Badania przed Rozkazami — po dodaniu kafla Rozkazów (d62) Badania spadły na wewnętrznym
      * ekranie Folda pod krawędź listy i dymek „stać cię na Doktrynę elit” (d61) nie miał celu.
@@ -168,8 +170,11 @@ class MenuScreen(g: Game) : Screen(g) {
         const val REPORT_REMINDER = 12
         /** Dzień 62: kafel Rozkazów sztabu. */
         const val ORDERS = 13
-        /** Najmniejszy napis celu (sp); przy braku miejsca linia znika zamiast maleć. */
+        /** Najmniejszy napis celu (sp); dłuższy tekst dostaje wielokropek. */
         const val GOAL_MIN_SP = 11f
+        /** D65: wysokość paska celu (dp) i najmniejsza, przy której jeszcze go pokazujemy. */
+        const val GOAL_H = 28f
+        const val GOAL_MIN_H = 22f
         const val WHATS_NEW_H = 40f
         const val SURVEY_RATE = 30
         const val SURVEY_ISSUE = 40
@@ -321,34 +326,57 @@ class MenuScreen(g: Game) : Screen(g) {
     }
 
     /**
-     * R2-01: cel pod kaflami. Misje mają już czerwoną plakietkę, więc tu następny cel w kolejności.
-     * Wołane przy layout(), zmianie języka i co 10 s; nigdy w każdej klatce.
+     * R2-01 / D65: cienki pasek „następnego celu” pod logo, nad kaflami — w pasie powiadomień, na
+     * wszystkich układach (poziomy i pionowy). Jeden komunikat naraz: pasek chowa się, gdy jest baner,
+     * przypomnienie testera, dymek albo okno ([updateGoalVisibility]). Misje mają już czerwoną
+     * plakietkę, więc tu następny cel w kolejności. Wołane przy layout(), zmianie języka i co 10 s.
      */
     private fun refreshGoal() {
         val b = goalBtn
         b.visible = false
+        goalReady = false
         goalKind = NextGoalKind.NONE
-        if (portraitMenu || !g.profile.tutorialDone || missions.r.isEmpty) return
+        if (!g.profile.tutorialDone || campaign.r.isEmpty) return
         val goal = NextGoals.pick(g.profile, g.nowMillis(), null, skipMissions = true)
         if (goal.kind == NextGoalKind.NONE) return
-        val top = missions.r.bottom + 6 * dp
-        val bottom = h - g.insetB - 4 * dp
-        val bh = min(30 * dp, bottom - top)
-        if (bh < 20 * dp) return
-        // Dzień 62: wiersz celu pod całym rzędem Misji i Rozkazów.
-        val bw = orders.r.right - missions.r.left
+        val bandTop = noticeTop
+        val bandBottom = noticeBottom
+        val bh = min(GOAL_H * dp, bandBottom - bandTop)
+        if (bh < GOAL_MIN_H * dp) return
+        val left: Float
+        val bw: Float
+        if (portraitMenu) { left = portraitLeft; bw = portraitWidth }
+        else { left = min(campaign.r.left, missions.r.left); bw = max(endless.r.right, orders.r.right) - left }
         val textW = bw - 44 * dp
-        val size = ui.fit(goal.text, 13f, textW, 1f)
-        if (size * ui.textScale < GOAL_MIN_SP) return
-        goalText = goal.text
+        // Rozmiar ograniczony wysokością paska; najmniej GOAL_MIN_SP, dłuższy tekst z wielokropkiem.
+        val maxSize = min(13f, bh / dp * 0.52f / ui.textScale)
+        val minSize = GOAL_MIN_SP / ui.textScale
+        if (maxSize < minSize) return
+        val size = max(minSize, ui.fit(goal.text, maxSize, textW, GOAL_MIN_SP))
+        goalText = ellipsize(goal.text, size, textW)
         goalKind = goal.kind
         goalArg = goal.arg
         goalSize = size
         b.label = ""
-        b.set(missions.r.left, top, bw, bh)
-        // Cel dotyku 48 dp; w górę nie sięga na kafel Misji (jest wcześniej na liście przycisków).
+        b.set(left, bandTop + (bandBottom - bandTop - bh) / 2f, bw, bh)
+        // Cel dotyku 48 dp; kafle są wcześniej na liście przycisków, więc dostają dotyk pierwsze.
         b.hitSlop = ((48 * dp - bh) / 2f).coerceAtLeast(0f)
-        b.visible = true
+        goalReady = true
+        updateGoalVisibility()
+    }
+
+    /** Skraca tekst z „…”, aż zmieści się w [width] (raz przy odświeżeniu celu, nie w klatce). */
+    private fun ellipsize(text: String, size: Float, width: Float): String {
+        if (ui.measure(text, size, true) <= width) return text
+        var end = text.length
+        while (end > 1 && ui.measure(text.substring(0, end).trimEnd() + "…", size, true) > width) end--
+        return text.substring(0, end).trimEnd() + "…"
+    }
+
+    /** D65: pasek celu tylko wtedy, gdy w pasie nad kaflami nie ma innego komunikatu. */
+    private fun updateGoalVisibility() {
+        goalBtn.visible = goalReady && !hasOpenModal && !g.hasNotices() && !reportReminder.visible &&
+            !hints.okBtn.visible && hints.activeId < 0
     }
 
     /** Szerokość przycisku „Co nowego”: medalion z ikoną + napis 14 sp. */
@@ -494,6 +522,7 @@ class MenuScreen(g: Game) : Screen(g) {
         if (!portraitMenu || hasOpenModal || hints.okBtn.visible) return false
         if (whatsNew.visible && whatsNew.contains(e.x, e.y)) return false
         if (reportReminder.visible && reportReminder.contains(e.x, e.y)) return false
+        if (goalBtn.visible && goalBtn.contains(e.x, e.y)) return false
         if (e.action == TouchEvent.DOWN && (e.y < portraitTop || e.y >= portraitBottom))
             return true
         if (e.action == TouchEvent.UP && (e.y < portraitTop || e.y >= portraitBottom))
@@ -568,6 +597,7 @@ class MenuScreen(g: Game) : Screen(g) {
             updateHintRoom()
             hints.showScreen(HintOverlay.ELITE_RESEARCH, research.r)
         }
+        updateGoalVisibility()
         val dailyFree = pr.lastRankedDaily != com.centurywar.game.Daily.dayNumber(g.nowMillis())
         daily.sub = if (dailyFree) L["daily_free"] else ""
         daily.subIcon = if (dailyFree) Icons.STAR else -1
@@ -614,6 +644,7 @@ class MenuScreen(g: Game) : Screen(g) {
                 portraitScroll, portraitMaxScroll, dp)
             drawPlayer(c)
             drawWhatsNew(c)
+            drawGoal(c)
             drawReminder(c)
         } else {
             // Poziome menu rysujemy w dotychczasowej kolejności (wzorce PNG).

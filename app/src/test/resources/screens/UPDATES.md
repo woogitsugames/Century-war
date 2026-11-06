@@ -13,3 +13,4 @@
 - 2026-11-05 UTC: R11-06 nowość na etapie
 - 2026-11-05 UTC: Dzien 60: szlif wizualny (podtytul menu 9 dp, wstegi pauzy i wariantow, ranking globalny)
 - 2026-11-06 UTC: D62: kafel Rozkazy sztabu w menu (obok Misji)
+- 2026-11-06 UTC: D65: pasek „następnego celu” pod logo, nad kaflami (R2-01)
