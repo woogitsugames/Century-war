@@ -90,6 +90,10 @@ class StagePanel192Test {
                     if (gap < 9.95f) problems.append("$tag: odstęp $gap dp (${modifier.rect}, ${difficulty.rect})\n")
                 }
                 val info = screen.javaClass.getDeclaredField("info").apply { isAccessible = true }.get(screen) as RectF
+                if (info.height() < 352 * game.ui.dp) {
+                    val names = stage.modifiers.joinToString(" · ") { L[it.key] }
+                    if (canvas.texts.none { it.text == names }) problems.append("$tag: brak nazw modyfikatorów\n")
+                }
                 for (t in canvas.texts) {
                     // Tytuł wstęgi ma osobną oprawę; pozostałe teksty są wewnątrz panelu.
                     if (t.text == L.f("stage_n", stage.index + 1)) continue

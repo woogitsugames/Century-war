@@ -125,6 +125,7 @@ class CampaignScreen(
     private var infoTitle = ""
     private var infoRange = ""
     private var infoModifiers = ""
+    private var compactModifiers = ""
     private var infoPower = ""
     private var infoDifficulty = CampaignDifficulty.NORMAL
 
@@ -137,6 +138,8 @@ class CampaignScreen(
         infoTitle = L.f("stage_n", s.index + 1)
         infoRange = L.f("eras_range", L[Defs.eraKeys[s.startEra]], L[Defs.eraKeys[s.maxEra]])
         infoModifiers = L["modifiers"] + ":"
+        compactModifiers = if (s.modifiers.isEmpty()) L["none"]
+            else s.modifiers.joinToString(" · ") { L[it.key] }
         infoPower = L.f("ai_power", (s.aiPower * difficulty.powerMultiplier * 100f).toInt())
     }
 
@@ -789,7 +792,12 @@ class CampaignScreen(
         y += row
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
-        if (s.modifiers.isEmpty()) {
+        if (compact) {
+            // W niskim panelu nazwy stoją w tym samym wierszu; poprzednie chipy nie mieściły się pod nim.
+            val tx = x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true)
+            val available = (info.right - 24 * dp - tx).coerceAtLeast(1f)
+            ui.text(c, compactModifiers, tx, y, ui.fit(compactModifiers, 12f, available, 8f), Ui.DIM)
+        } else if (s.modifiers.isEmpty()) {
             // Tura 10: „brak” w tym samym wierszu; niżej wchodził pod napis „Trudność” (720p).
             ui.text(c, L["none"], x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true), y, 13f, Ui.DIM)
         } else {
