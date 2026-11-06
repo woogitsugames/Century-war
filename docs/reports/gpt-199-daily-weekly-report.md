@@ -1,5 +1,7 @@
 # 199 — wyzwania dnia i tygodnia
 
+**NIEUKOŃCZONE: WYNIKI DNI MIRROR_ARMY SĄ BŁĘDNE I WYMAGAJĄ PONOWNEGO POMIARU.**
+
 Baza: `origin/main` **7d847576e27bc5411bfd93877c1ba6df18af05cd**, 6.11.2026. Gałąź `gpt/199-daily-weekly-report`. Wyniki są pomiarem AI, nie wynikami graczy.
 
 ## Metoda i ograniczenia
