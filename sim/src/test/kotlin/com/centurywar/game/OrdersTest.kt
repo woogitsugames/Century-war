@@ -11,20 +11,40 @@ import org.junit.Test
 class OrdersTest {
     private fun step(b: Battle, n: Int) = repeat(n) { if (!b.over) { b.step(); b.fx.count = 0 } }
 
-    @Test fun nineOrdersOnePerEraInStableOrder() {
+    @Test fun twoBatchesOfNineOrdersOnePerEraInStableOrder() {
         assertEquals(Orders.COUNT, Orders.all.size)
-        assertEquals((0 until Defs.ERA_COUNT).toList(), Orders.all.map { it.era })
+        assertEquals(2 * Orders.BATCH, Orders.COUNT)
+        val eras = (0 until Defs.ERA_COUNT).toList()
+        assertEquals(eras + eras, Orders.all.map { it.era })
         Orders.all.forEachIndexed { i, o ->
             assertEquals(i, o.index)
+            assertEquals(i / Orders.BATCH, o.batch)
             assertEquals(2, o.bonus.size)
             assertTrue(o.limitSeconds in 120..360)
             assertTrue(o.maxEra >= o.era)
-            // Każdy rozkaz pozwala graczowi szkolić co najmniej jedną rolę.
-            assertTrue(Role.entries.any { o.playerAllowed and OrderRules.roleBit(it) != 0 })
+            assertTrue(o.incomePct in 1..100)
+            assertTrue(o.enemyAllowed != 0)
+            // Eskorta wymaga dowódcy w masce gracza.
+            if (o.goal.escort) assertTrue(o.playerAllowed and OrderRules.COMMANDER != 0)
             assertTrue(Role.entries.any { o.enemyAllowed and OrderRules.roleBit(it) != 0 })
+            // Partia 1: gracz szkoli co najmniej jedną rolę; partia 2 może mieć obronę samymi wieżami.
+            if (o.batch == 0) assertTrue(Role.entries.any { o.playerAllowed and OrderRules.roleBit(it) != 0 })
+            else assertTrue(o.playerAllowed and (OrderRules.TURRETS or 15) != 0)
         }
+        assertEquals("o209_first_line", Orders.all[0].nameKey)
+        assertEquals("o211_chief_guard", Orders.all[9].nameKey)
+        assertEquals("o211_final_spear_d", Orders.all[17].briefKey)
         assertEquals(Orders.COUNT, Orders.all.map { it.key }.toSet().size)
         assertEquals(Mode.ORDERS, Mode.entries.last())
+        // Partia 2 ma wszystkie nowe rodzaje celów.
+        val batch2 = Orders.all.drop(Orders.BATCH)
+        assertTrue(batch2.any { it.goal == Orders.Goal.ESCORT })
+        assertTrue(batch2.any { it.goal == Orders.Goal.SPEARHEAD })
+        assertTrue(batch2.any { it.incomePct < 100 })
+        assertTrue(batch2.any { Role.entries.none { r -> it.playerAllowed and OrderRules.roleBit(r) != 0 } })
+        val kinds = batch2.flatMap { it.bonus }.map { it.kind }.toSet()
+        for (k in listOf(Orders.ObjectiveKind.COMMANDER_ALIVE, Orders.ObjectiveKind.GOLD_LEFT,
+            Orders.ObjectiveKind.FIELDED_MAX)) assertTrue(k in kinds)
     }
 
     @Test fun defaultsKeepOtherModesUnrestricted() {
@@ -33,6 +53,8 @@ class OrdersTest {
         assertEquals(OrderRules.ALL, cfg.enemyAllowed)
         assertEquals(0, cfg.timeLimitSteps)
         assertFalse(cfg.holdWins)
+        assertEquals(0, cfg.orderFlags)
+        assertFalse(cfg.escort)
         val b = Battle(cfg)
         for (role in Role.entries) assertTrue(b.roleAllowed(b.player, role))
         assertEquals(Battle.SIEGE_START, b.siegeStart)
@@ -173,5 +195,103 @@ class OrdersTest {
         assertEquals(Orders.SIEGE_START, b.siegeStart)
         assertEquals(Orders.SIEGE_RAMP, b.siegeRamp)
         assertEquals(Battle.SIEGE_START, Battle(Daily.config(Daily.RELEASE_DAY, Bonuses())).siegeStart)
+    }
+
+    /** Dzień 66: eskorta — dowódca od pierwszego kroku, zostaje za linią, jego śmierć = porażka. */
+    @Test fun escortCommanderStartsBehindTheLineAndItsDeathLoses() {
+        val order = Orders.all.first { it.goal == Orders.Goal.ESCORT }
+        val cfg = Orders.config(order, 66L)
+        assertTrue(cfg.escort)
+        assertTrue(cfg.holdWins)
+        val b = Battle(cfg)
+        b.playerAi = Ai(b, 0)
+        step(b, 1)
+        assertTrue(Orders.commanderAlive(b))
+        val cmd = b.units.first { it.alive && it.isCommander && it.side == 0 }
+        step(b, 60 * 40)
+        if (!b.over) {
+            assertTrue((cmd.x - b.player.baseFront) <= Battle.ESCORT_LINE + 1f)
+            // Śmierć dowódcy kończy bitwę porażką, choć baza stoi.
+            cmd.hp = 0f
+            cmd.dying = 0f
+            b.player.aliveCount--
+            b.player.commanderCd = Battle.COMMANDER_COOLDOWN
+            step(b, 1)
+            assertTrue(b.over)
+            assertEquals(1, b.winner)
+            assertEquals(0, Orders.stars(order, b))
+        }
+        // Bez eskorty dowódca nie pojawia się sam.
+        val plain = Battle(Orders.config(Orders.all[0], 66L))
+        step(plain, 1)
+        assertFalse(Orders.commanderAlive(plain))
+        val spear = Orders.config(Orders.all.first { it.goal == Orders.Goal.SPEARHEAD }, 1L)
+        assertTrue(spear.escort)
+        assertFalse(spear.holdWins)
+    }
+
+    /** Dzień 66: nowe cele dodatkowe i obcięty dochód. */
+    @Test fun newObjectiveKindsAndIncome() {
+        val order = Orders.all.first { it.incomePct < 100 }
+        val cfg = Orders.config(order, 5L)
+        assertEquals(order.incomePct / 100f, cfg.playerBonuses.incomeMul, 1e-6f)
+        assertEquals(Daily.normalizedBonuses().popCap, cfg.playerBonuses.popCap)
+        assertEquals(1f, Orders.config(Orders.all[0], 5L).playerBonuses.incomeMul, 0f)
+        val base = Orders.config(Orders.all[0], 3L)
+        val b = Battle(BattleConfig(base.mode, base.seed, base.aiPower, base.startEra, base.maxEra,
+            base.modifiers, base.playerBonuses, base.stageIndex, aiPersonality = base.aiPersonality,
+            playerAllowed = base.playerAllowed, timeLimitSteps = 300, holdWins = true))
+        step(b, 400)
+        assertTrue(Orders.mainDone(b))
+        b.player.gold = 500f
+        assertTrue(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.GOLD_LEFT, 500), b))
+        assertFalse(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.GOLD_LEFT, 501), b))
+        b.player.spawned = 10
+        assertTrue(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.FIELDED_MAX, 10), b))
+        assertFalse(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.FIELDED_MAX, 9), b))
+        assertFalse(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.COMMANDER_ALIVE), b))
+        b.player.commanderCd = -1f
+        assertTrue(Orders.objectiveDone(Orders.Objective(Orders.ObjectiveKind.COMMANDER_ALIVE), b))
+    }
+
+    /** Dzień 66: rozkaz partii 2 wymaga 2★ w rozkazie tej samej epoki z partii 1. */
+    @Test fun batchTwoUnlocksAfterTwoStarsInPairedOrder() {
+        val campaign = IntArray(Campaign.stages.size) { 1 }
+        val stars = IntArray(Orders.COUNT)
+        for (o in Orders.all.drop(Orders.BATCH)) {
+            val pre = Orders.prerequisite(o)!!
+            assertEquals(o.era, pre.era)
+            assertEquals(0, pre.batch)
+            assertFalse(Orders.unlocked(o, campaign, stars))
+            stars[pre.index] = 1
+            assertFalse(Orders.unlocked(o, campaign, stars))
+            stars[pre.index] = Orders.BATCH2_UNLOCK_STARS
+            assertTrue(Orders.unlocked(o, campaign, stars))
+            // Bez epoki w kampanii nadal zablokowany.
+            if (o.era > 0) assertFalse(Orders.unlocked(o, IntArray(Campaign.stages.size), stars))
+        }
+        for (o in Orders.all.take(Orders.BATCH)) assertEquals(null, Orders.prerequisite(o))
+        assertEquals(18 * Orders.MAX_POINTS, Orders.COUNT * 3500)
+    }
+
+    /** Dzień 66: zrzut v23 zapisuje eskortę; zrzut v22 (partia 1) wczytuje się bez reguł rozkazu. */
+    @Test fun snapshotV23KeepsOrderFlagsAndV22StillLoads() {
+        val escort = Battle(Orders.config(Orders.all.first { it.goal.escort }, 4L))
+        escort.playerAi = Ai(escort, 0)
+        step(escort, 120)
+        val restored = BattleSnapshot.decode(BattleSnapshot.encode(escort))!!.battle
+        assertEquals(OrderFlags.ESCORT, restored.cfg.orderFlags)
+        step(escort, 600); step(restored, 600)
+        assertArrayEquals(BattleSnapshot.encode(escort), BattleSnapshot.encode(restored))
+
+        val old = Battle(Orders.config(Orders.all[2], 4L))
+        old.playerAi = Ai(old, 0)
+        step(old, 120)
+        val v22 = BattleSnapshot.encode(old, false, 0f, 7L, 22)
+        val back = BattleSnapshot.decode(v22)!!.battle
+        assertEquals(0, back.cfg.orderFlags)
+        assertEquals(Orders.all[2].playerAllowed, back.cfg.playerAllowed)
+        assertEquals(Orders.all[2].limitSeconds * 60, back.cfg.timeLimitSteps)
+        assertEquals(old.stepCount, back.stepCount)
     }
 }
