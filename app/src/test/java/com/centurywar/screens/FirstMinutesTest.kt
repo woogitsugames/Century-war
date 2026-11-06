@@ -99,6 +99,10 @@ class FirstMinutesTest {
         val g = game(p)
         val first = CampaignScreen(g)
         g.setScreen(first)
+        // D61: dymek mapy czeka na koniec banerów (np. serii dni) — jeden komunikat naraz.
+        first.update(1f)
+        if (g.hasNotices()) assertEquals(0L, p.hintsSeen and (1L shl HintOverlay.FIRST_BATTLE))
+        g.clearNotices()
         first.update(1f)
 
         val bit = 1L shl HintOverlay.FIRST_BATTLE
