@@ -1,4 +1,4 @@
-﻿"""Sprawdzenie rzeczywistego interfejsu skryptu na odizolowanych kopiach kart."""
+"""Sprawdzenie rzeczywistego interfejsu skryptu na odizolowanych kopiach kart."""
 from pathlib import Path
 import os
 import re

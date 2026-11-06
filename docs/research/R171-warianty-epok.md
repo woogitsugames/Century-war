@@ -1,4 +1,4 @@
-﻿# R171 — propozycje wariantów epok
+# R171 — propozycje wariantów epok
 
 Stan źródeł: `origin/main` f17c6e25, 6.11.2026. To koncepcje, nie implementacja ani wynik pomiaru. Żaden z proponowanych wariantów nie ma jeszcze potwierdzonego balansu. `Defs.kt:4`, `:129` i `:190` określają cztery role, dane wariantu i epoki; aktualnie istnieją dwie pary dla Pary i Krzemu (`Defs.kt:221`, `:249`). Wersje w aktualnym kodzie to protokół 0.8.13 (`SimVersion.kt:5`), zapis 23 (`BattleSnapshot.kt:104`) i powtórka 7 (`Replay.kt:11`).
 

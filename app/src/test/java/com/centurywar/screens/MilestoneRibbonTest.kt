@@ -1,4 +1,4 @@
-﻿package com.centurywar.screens
+package com.centurywar.screens
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

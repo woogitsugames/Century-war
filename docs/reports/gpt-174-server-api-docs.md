@@ -1,4 +1,4 @@
-﻿# Zlecenie 174 — opis API serwera
+# Zlecenie 174 — opis API serwera
 
 GRADLE NIE URUCHOMIONO — TEST OCZEKUJE NA KOLEJKĘ; ZLECENIE NIE JEST GOTOWE.
 

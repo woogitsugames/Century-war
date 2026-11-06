@@ -1,4 +1,4 @@
-﻿# 172 — testy Security.kt
+# 172 — testy Security.kt
 
 Baza: `origin/main` f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7 (6.11.2026). Gałąź: `gpt/172-server-security-tests`. Gradle uruchomiono na Windows z JDK 17.
 

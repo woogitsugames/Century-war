@@ -1,4 +1,4 @@
-﻿package com.centurywar.server
+package com.centurywar.server
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

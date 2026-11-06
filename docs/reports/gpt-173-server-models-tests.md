@@ -1,4 +1,4 @@
-﻿# Zlecenie 173 — walidacja modeli serwera
+# Zlecenie 173 — walidacja modeli serwera
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576` (pełny hash: patrz `git rev-parse 632a6b3c^`). Gałąź `gpt/173-server-models-tests`. Commit z testami: `632a6b3c84ecabeed6324ac289c58319405ec980`; własnego hasha końcowego commita raport nie może zawierać — podaje go `git rev-parse HEAD`.
 

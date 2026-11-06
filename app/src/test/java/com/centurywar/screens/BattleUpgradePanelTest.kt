@@ -1,4 +1,4 @@
-﻿package com.centurywar.screens
+package com.centurywar.screens
 
 import android.graphics.RectF
 import com.centurywar.engine.Button

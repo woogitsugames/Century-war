@@ -1,4 +1,4 @@
-﻿# Zlecenie 179 — testy banerów bitwy
+# Zlecenie 179 — testy banerów bitwy
 
 GRADLE NIE URUCHOMIONO — TESTY OCZEKUJĄ W KOLEJCE; ZLECENIE NIE JEST GOTOWE.
 

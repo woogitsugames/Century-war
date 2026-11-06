@@ -1,4 +1,4 @@
-﻿# Zlecenie 177 — testy panelu ulepszeń
+# Zlecenie 177 — testy panelu ulepszeń
 
 Data: 2026-11-06. Baza `origin/main`: `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`. Gałąź `gpt/177-upgrade-panel-tests`. Commit z testami: `0e84c896fe238943380ea7cc9b56d37211ebde98`; hash ostatniego commita raportującego ten wynik ustala `git rev-parse HEAD` (nie można wpisać jego własnego hasha do jego treści).
 

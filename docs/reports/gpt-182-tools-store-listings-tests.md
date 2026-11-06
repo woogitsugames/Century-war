@@ -1,4 +1,4 @@
-﻿# Raport 182 — testy kart sklepu
+# Raport 182 — testy kart sklepu
 
 Data: 2026-11-06. Gałąź: `gpt/182-tools-store-listings-tests`. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`.
 

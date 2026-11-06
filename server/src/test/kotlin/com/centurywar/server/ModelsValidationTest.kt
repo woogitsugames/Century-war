@@ -1,4 +1,4 @@
-﻿package com.centurywar.server
+package com.centurywar.server
 
 import com.centurywar.game.Campaign
 import com.centurywar.game.Research

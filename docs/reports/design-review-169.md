@@ -1,4 +1,4 @@
-﻿# Recenzja projektu gry — 169
+# Recenzja projektu gry — 169
 
 **Oceniany `origin/main`:** `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7` (6.11.2026). To przegląd dokumentacji i kodu, nie test gry z ludźmi. Materiały: `README.md`, `century-war.md`, `docs/GDD.md`, początek `docs/COORDINATOR_HANDOVER.md`, `docs/BALANCE.md`, `docs/unit-upgrades-balance.md`, `docs/COUNTERS.md`, raporty `d37-balans-19-36`, `d40-k1`, `d58-tresc`, `d33-pomiar-19`, `d35-etap-19`, `noc-5-pierwsza-godzina`, `d45-lejek`, backlogi `R1`, `R10`, `R11`, `R12`, `docs/store/monetization_plan.md`; ponadto definicje, tryby, badania, karty, misje, cele, powrót, nowości etapu i nakładki gry. Liczby historycznych raportów są oznaczone jako takie i nie stanowią nowego pomiaru tej rewizji.
 

@@ -1,4 +1,4 @@
-﻿# Zlecenie 178 — panel porównania Kodeksu
+# Zlecenie 178 — panel porównania Kodeksu
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź `gpt/178-codex-compare-panel-tests`. Pierwszy commit testów `548778e40af782eaa3fc4687c9128b07e776b652`; własny hash końcowego commita raportu jest dostępny przez `git rev-parse HEAD`.
 

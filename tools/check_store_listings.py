@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Sprawdza obecność wszystkich kart i limity tekstów Google Play."""
 import argparse
 from pathlib import Path

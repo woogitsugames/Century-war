@@ -1,4 +1,4 @@
-﻿# R170 — czytelne style przeciwnika
+# R170 — czytelne style przeciwnika
 
 Stan odniesienia: `origin/main` f17c6e25, 6.11.2026. To propozycje do późniejszej decyzji i pomiaru, nie zmiana gry ani wynik wykonanego eksperymentu. W tym zleceniu nie uruchamiano Gradle: zmieniono tylko dokument.
 
