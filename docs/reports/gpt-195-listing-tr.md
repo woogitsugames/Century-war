@@ -1,5 +1,3 @@
-GRADLE NIE URUCHOMIONO — oczekiwanie na dostęp do kolejki Gradle.
-
 # 195 — turecka karta sklepu
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź: `gpt/195-listing-tr`. Hash końcowego commita: `git rev-parse HEAD` na tej gałęzi (hash pliku raportu nie może zawierać własnego hasha).
@@ -24,7 +22,15 @@ tr Full description: 1015/4000
 ```
 Informacja o nowościach: 460/500 znaków. `python -m pytest tests/ -q` — `3 failed, 68 passed, 1 error, 24 subtests passed`: istniejące błędy testów `test_playtest_merge.py::PlaytestMergeTest::test_constants_match_game_code`, `test_privacy_docs.py::PrivacyDocumentationTest::test_owner_fields_are_still_renderable_and_require_real_input`, `test_privacy_docs.py::PrivacyDocumentationTest::test_pgs_catalog_count_matches_owner_instructions` oraz brak fixture `i` dla `test_playtest_merge.py::tester`. Nie dotyczą tureckiej karty.
 
-`StoreGraphicsTest.listingLimits` — nieuruchomiony; oczekiwanie na kolejkę Gradle. Warunek zielonego testu pozostaje niespełniony.
+`gradlew.bat :app:testDebugUnitTest --tests '*StoreGraphicsTest.listingLimits*' --console=plain --no-configuration-cache --no-daemon` — test nie przeszedł. Pierwsza próba bez `ANDROID_HOME` zakończyła się błędem braku SDK; ponowienie ze wskazanym SDK:
+```text
+StoreGraphicsTest > listingLimits FAILED
+    java.lang.IllegalStateException at StoreGraphicsTest.kt:170
+1 test completed, 1 failed
+BUILD FAILED in 23s
+37 actionable tasks: 15 executed, 19 from cache, 3 up-to-date
+```
+XML podaje `Brak sekcji: Tytuł`: test szuka nagłówka zakończonego LF, natomiast plik polskiej karty w tym checkout ma CRLF. Błąd występuje przed sprawdzeniem karty tureckiej. Warunek zielonego testu pozostaje niespełniony.
 
 ## Ograniczenia i dalsze kroki
 
