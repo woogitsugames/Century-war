@@ -28,7 +28,7 @@
 | Etapy kampanii | **36** (4 na epokę), po 3 gwiazdki = **108 gwiazdek** |
 | Badania | **13** drzew, łącznie **110 poziomów** |
 | Tryby | Kampania, Oblężenie bez końca, Wyzwanie dnia, Potyczka (4 poziomy trudności) |
-| Rankingi | 4 tablice: fale oblężenia, wyzwanie dnia, gwiazdki kampanii, potyczka |
+| Rankingi | 5 tablic: fale oblężenia, wyzwanie dnia, gwiazdki kampanii, potyczka, punkty Rozkazów sztabu |
 
 ### Kampania (36 etapów)
 - Każdy etap ma ograniczony zakres epok (np. etap 7: Brąz → Epoka żelaza), więc bitwa trwa kilka minut.

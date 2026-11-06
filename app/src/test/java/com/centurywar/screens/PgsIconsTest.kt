@@ -131,6 +131,8 @@ class PgsIconsTest {
         "campaign" to Spec(Icons.MAP, 0, Icons.TROPHY),
         "skirmish" to Spec(Icons.CROSSED_SWORDS, 0, Icons.TROPHY),
         "daily" to Spec(Icons.CALENDAR, 0, Icons.TROPHY),
+        // Dzień 62: Rozkazy sztabu (ikona kafla w menu).
+        "orders" to Spec(Icons.FLAG, 0, Icons.TROPHY),
     )
 
     private val size = 512

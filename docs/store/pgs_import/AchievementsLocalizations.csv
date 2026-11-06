@@ -1,5 +1,5 @@
 Nowa epoka,New Era,Advance to the next era.,en-US
-Nowa epoka,Neues Zeitalter,Steige in die nächste Epoche auf.,de-DE
+Nowa epoka,Neue Epoche,Steige in die nächste Epoche auf.,de-DE
 Nowa epoka,Nueva era,Avanza a la siguiente era.,es-ES
 Nowa epoka,Nouvelle ère,Passez à l'ère suivante.,fr-FR
 Nowa epoka,Nuova era,Avanza all'era successiva.,it-IT
@@ -109,7 +109,7 @@ Uczeń uczonego,Bilgin çırağı,Satın alınan araştırma seviyeleri: 10.,tr-
 Zwycięstwo w deszczu,Victory in the rain,Win a battle in the rain.,en-US
 Zwycięstwo w deszczu,Sieg im Regen,Gewinne eine Schlacht bei Regen.,de-DE
 Zwycięstwo w deszczu,Victoria bajo la lluvia,Gana una batalla bajo la lluvia.,es-ES
-Zwycięstwo w deszczu,Victoire sous la pluie,Gagne une bataille sous la pluie.,fr-FR
+Zwycięstwo w deszczu,Victoire sous la pluie,Gagnez une bataille sous la pluie.,fr-FR
 Zwycięstwo w deszczu,Vittoria sotto la pioggia,Vinci una battaglia sotto la pioggia.,it-IT
 Zwycięstwo w deszczu,Vitória à chuva,Vence uma batalha à chuva.,pt-PT
 Zwycięstwo w deszczu,Перемога під дощем,Виграй битву під дощем.,uk
@@ -118,7 +118,7 @@ Zwycięstwo w deszczu,Yağmurda zafer,Yağmurda bir savaşı kazan.,tr-TR
 Zwycięstwo pod wiatr,Against the wind,Win a battle in windy weather.,en-US
 Zwycięstwo pod wiatr,Sieg gegen den Wind,Gewinne eine Schlacht bei Wind.,de-DE
 Zwycięstwo pod wiatr,Contra el viento,Gana una batalla con viento.,es-ES
-Zwycięstwo pod wiatr,Contre le vent,Gagne une bataille par temps venteux.,fr-FR
+Zwycięstwo pod wiatr,Contre le vent,Gagnez une bataille par temps venteux.,fr-FR
 Zwycięstwo pod wiatr,Controvento,Vinci una battaglia con il vento.,it-IT
 Zwycięstwo pod wiatr,Contra o vento,Vence uma batalha com vento.,pt-PT
 Zwycięstwo pod wiatr,Проти вітру,Виграй битву у вітряну погоду.,uk
@@ -127,7 +127,7 @@ Zwycięstwo pod wiatr,Rüzgâra karşı,Rüzgârlı havada bir savaşı kazan.,t
 Pan nocy,Master of the night,Win a battle at night.,en-US
 Pan nocy,Herr der Nacht,Gewinne eine Schlacht bei Nacht.,de-DE
 Pan nocy,Señor de la noche,Gana una batalla de noche.,es-ES
-Pan nocy,Maître de la nuit,Gagne une bataille de nuit.,fr-FR
+Pan nocy,Maître de la nuit,Gagnez une bataille de nuit.,fr-FR
 Pan nocy,Signore della notte,Vinci una battaglia di notte.,it-IT
 Pan nocy,Senhor da noite,Vence uma batalha de noite.,pt-PT
 Pan nocy,Володар ночі,Виграй нічну битву.,uk
@@ -138,14 +138,14 @@ Tylko armia,Nur die Armee,Gewinne eine Schlacht ohne Türme zu bauen – obwohl 
 Tylko armia,Solo el ejército,Gana una batalla sin construir torretas cuando estén disponibles.,es-ES
 Tylko armia,L’armée seule,Gagnez sans construire de tourelles lorsqu’elles sont disponibles.,fr-FR
 Tylko armia,Solo l'esercito,Vinci senza costruire torrette quando sono disponibili.,it-IT
-Tylko armia,Só o exército,Vença sem construir torres quando estiverem disponíveis.,pt-PT
+Tylko armia,Só o exército,Vence sem construir torres quando estiverem disponíveis.,pt-PT
 Tylko armia,Лише армія,Виграй без побудови веж – коли вони доступні.,uk
 Tylko armia,Alleen het leger,Win zonder torens te bouwen terwijl dat wel kan.,nl-NL
 Tylko armia,Yalnızca ordu,Kuleler kullanılabilirken hiç kule inşa etmeden kazan.,tr-TR
 Łamacz odrzutu,Knockback breaker,Defeat the Knockback boss in Endless Siege.,en-US
 Łamacz odrzutu,Rückstoßbezwinger,Besiege den Rückstoß-Boss in der endlosen Belagerung.,de-DE
 Łamacz odrzutu,Vence al empuje,Derrota al jefe Empuje en el asedio sin fin.,es-ES
-Łamacz odrzutu,Briseur de recul,Bats le boss Repoussement dans le siège sans fin.,fr-FR
+Łamacz odrzutu,Briseur de recul,Battez le boss Repoussement dans le siège sans fin.,fr-FR
 Łamacz odrzutu,Domatore del respingimento,Sconfiggi il boss Spinta nell'assedio infinito.,it-IT
 Łamacz odrzutu,Quebra-repulsão,Derrota o chefe Repulsão no cerco sem fim.,pt-PT
 Łamacz odrzutu,Переможець відкидання,Подолай боса Відкидання у нескінченній облозі.,uk
@@ -183,14 +183,14 @@ Straż przyboczna,Ehrengarde,Gewinne mit mindestens einer ausgebildeten Eliteein
 Straż przyboczna,Guardia de honor,Gana tras entrenar al menos una unidad de élite sin perder ninguna.,es-ES
 Straż przyboczna,Garde d’honneur,Gagnez après avoir formé une élite – sans en perdre aucune.,fr-FR
 Straż przyboczna,Guardia d'onore,Vinci dopo aver addestrato almeno un'élite senza perderne nessuna.,it-IT
-Straż przyboczna,Guarda de honra,Vença após treinar pelo menos uma unidade de elite sem perder nenhuma.,pt-PT
+Straż przyboczna,Guarda de honra,Vence depois de treinar pelo menos uma unidade de elite sem perder nenhuma.,pt-PT
 Straż przyboczna,Почесна варта,Виграй після підготовки еліти – не втративши жодного елітного бійця.,uk
 Straż przyboczna,Erewacht,Win na het trainen van een elite-eenheid zonder er een te verliezen.,nl-NL
 Straż przyboczna,Onur kıtası,En az bir seçkin birlik eğitip hiçbirini kaybetmeden kazan.,tr-TR
 Pogromca aury,Aura breaker,Defeat the Speed Aura boss in Endless Siege.,en-US
 Pogromca aury,Aurabezwinger,Besiege den Tempaura-Boss in der endlosen Belagerung.,de-DE
 Pogromca aury,Rompeauras,Derrota al jefe Aura de velocidad en el asedio sin fin.,es-ES
-Pogromca aury,Briseur d'aura,Bats le boss Aura de vitesse dans le siège sans fin.,fr-FR
+Pogromca aury,Briseur d'aura,Battez le boss Aura de vitesse dans le siège sans fin.,fr-FR
 Pogromca aury,Spezza-aura,Sconfiggi il boss Aura di velocità nell'assedio infinito.,it-IT
 Pogromca aury,Quebra-aura,Derrota o chefe Aura de velocidade no cerco sem fim.,pt-PT
 Pogromca aury,Руйнівник аури,Подолай боса Аура швидкості у нескінченній облозі.,uk
@@ -199,7 +199,7 @@ Pogromca aury,Aura kırıcı,Sonsuz Kuşatma'da Hız aurası patronunu yen.,tr-T
 Jeszcze raz!,One more time!,Watch 10 seconds of your own record replay.,en-US
 Jeszcze raz!,Noch einmal!,Sieh dir 10 s deiner Rekordwiederholung an.,de-DE
 Jeszcze raz!,¡Otra vez!,Mira 10 s de la repetición de tu récord.,es-ES
-Jeszcze raz!,Encore une fois !,Regarde 10 s de la rediffusion de ton record.,fr-FR
+Jeszcze raz!,Encore une fois !,Regardez 10 s de la rediffusion de votre record.,fr-FR
 Jeszcze raz!,Ancora una volta!,Guarda 10 s del replay del tuo record.,it-IT
 Jeszcze raz!,Mais uma vez!,Vê 10 s da repetição do teu recorde.,pt-PT
 Jeszcze raz!,Ще раз!,Подивись 10 с повтору власного рекорду.,uk
@@ -219,7 +219,7 @@ Błyskawiczna wygrana,Blitzsieg,Gewinne eine Schlacht in höchstens fünf Minute
 Błyskawiczna wygrana,Victoria relámpago,Gana una batalla en cinco minutos como máximo.,es-ES
 Błyskawiczna wygrana,Victoire éclair,Gagnez une bataille en cinq minutes ou moins.,fr-FR
 Błyskawiczna wygrana,Vittoria lampo,Vinci una battaglia in non più di cinque minuti.,it-IT
-Błyskawiczna wygrana,Vitória relâmpago,Vença uma batalha em até cinco minutos.,pt-PT
+Błyskawiczna wygrana,Vitória relâmpago,Vence uma batalha em cinco minutos ou menos.,pt-PT
 Błyskawiczna wygrana,Блискавична перемога,Виграй битву щонайбільше за п'ять хвилин.,uk
 Błyskawiczna wygrana,Bliksemsnelle zege,Win een gevecht binnen vijf minuten.,nl-NL
 Błyskawiczna wygrana,Yıldırım zaferi,Bir savaşı en fazla beş dakikada kazan.,tr-TR
@@ -228,7 +228,7 @@ Mistrz dziedziny,Forschungsmeister,Schließe einen ganzen Forschungszweig ab.,de
 Mistrz dziedziny,Maestro de investigación,Completa una rama de investigación entera.,es-ES
 Mistrz dziedziny,Maître de recherche,Terminez entièrement une branche de recherche.,fr-FR
 Mistrz dziedziny,Maestro della ricerca,Completa interamente un ramo di ricerca.,it-IT
-Mistrz dziedziny,Mestre da pesquisa,Conclua uma área de pesquisa inteira.,pt-PT
+Mistrz dziedziny,Mestre da pesquisa,Conclui uma área de pesquisa inteira.,pt-PT
 Mistrz dziedziny,Майстер досліджень,Повністю заверши одну гілку досліджень.,uk
 Mistrz dziedziny,Onderzoeksmeester,Voltooi een volledige onderzoekstak.,nl-NL
 Mistrz dziedziny,Araştırma ustası,Bir araştırma dalını tamamen bitir.,tr-TR
@@ -244,7 +244,7 @@ Tydzień wyzwań,Mücadele haftası,Günlük mücadelenin oynandığı farklı g
 Potrójna próba,Triple challenge,Win a skirmish with 3 modifiers.,en-US
 Potrójna próba,Dreifachprüfung,Gewinne ein Gefecht mit 3 Modifikatoren.,de-DE
 Potrójna próba,Desafío triple,Gana una escaramuza con 3 modificadores.,es-ES
-Potrójna próba,Triple défi,Gagne une escarmouche avec 3 modificateurs.,fr-FR
+Potrójna próba,Triple défi,Gagnez une escarmouche avec 3 modificateurs.,fr-FR
 Potrójna próba,Tripla sfida,Vinci una schermaglia con 3 modificatori.,it-IT
 Potrójna próba,Desafio triplo,Vence uma escaramuça com 3 modificadores.,pt-PT
 Potrójna próba,Потрійний виклик,Виграй сутичку з 3 модифікаторами.,uk
@@ -255,14 +255,14 @@ Mistrz zbrojowni,Waffenmeister,Erreiche Waffenlager-Stufe 10 in einer einzigen S
 Mistrz zbrojowni,Maestro de la armería,Alcanza el nivel 10 de armería en una sola batalla.,es-ES
 Mistrz zbrojowni,Maître de l’armurerie,Atteignez le niveau 10 de l’armurerie au cours d’une bataille.,fr-FR
 Mistrz zbrojowni,Maestro dell'armeria,Raggiungi il livello 10 dell'armeria in una singola battaglia.,it-IT
-Mistrz zbrojowni,Mestre do arsenal,Alcance o nível 10 do arsenal numa única batalha.,pt-PT
+Mistrz zbrojowni,Mestre do arsenal,Alcança o nível 10 do arsenal numa única batalha.,pt-PT
 Mistrz zbrojowni,Майстер арсеналу,Досягни 10-го рівня арсеналу за одну битву.,uk
 Mistrz zbrojowni,Wapenmeester,Bereik wapenarsenaalniveau 10 in één gevecht.,nl-NL
 Mistrz zbrojowni,Cephanelik ustası,Tek bir savaşta cephaneliği 10. seviyeye çıkar.,tr-TR
 Rozbita tarcza,Shattered shield,Defeat the Shieldbearer boss in Endless Siege.,en-US
 Rozbita tarcza,Schildbrecher,Besiege den Schildträger-Boss in der endlosen Belagerung.,de-DE
 Rozbita tarcza,Escudo roto,Derrota al jefe Portaescudo en el asedio sin fin.,es-ES
-Rozbita tarcza,Bouclier brisé,Bats le boss Porte-bouclier dans le siège sans fin.,fr-FR
+Rozbita tarcza,Bouclier brisé,Battez le boss Porte-bouclier dans le siège sans fin.,fr-FR
 Rozbita tarcza,Scudo infranto,Sconfiggi il boss Portascudo nell'assedio infinito.,it-IT
 Rozbita tarcza,Escudo quebrado,Derrota o chefe Porta-escudo no cerco sem fim.,pt-PT
 Rozbita tarcza,Розбитий щит,Подолай боса Щитоносець у нескінченній облозі.,uk
@@ -282,7 +282,7 @@ Ku gwiazdom,Zu den Sternen,Steige während einer Schlacht zur orbitalen Ära auf
 Ku gwiazdom,Lleva la guerra a las estrellas,Alcanza la era orbital al evolucionar durante una batalla.,es-ES
 Ku gwiazdom,Vers les étoiles,Atteignez l’ère orbitale en évoluant pendant une bataille.,fr-FR
 Ku gwiazdom,Verso le stelle,Raggiungi l'era orbitale evolvendo durante una battaglia.,it-IT
-Ku gwiazdom,Rumo às estrelas,Alcance a era orbital evoluindo durante uma batalha.,pt-PT
+Ku gwiazdom,Rumo às estrelas,Alcança a era orbital ao evoluir durante uma batalha.,pt-PT
 Ku gwiazdom,До зірок,Перейди до орбітальної епохи під час битви.,uk
 Ku gwiazdom,Naar de sterren,Bereik het orbitale tijdperk door tijdens een gevecht te evolueren.,nl-NL
 Ku gwiazdom,Yıldızlara doğru,Savaş sırasında Yörünge Çağı'na yüksel.,tr-TR
@@ -291,7 +291,7 @@ Niemożliwe? Nie.,Unmöglich? Keineswegs,Gewinne ein Gefecht auf Wahnsinn.,de-DE
 Niemożliwe? Nie.,Imposible – ¿en serio?,Gana una escaramuza en dificultad Demencial.,es-ES
 Niemożliwe? Nie.,Impossible ? Vraiment ?,Gagnez une escarmouche en difficulté Démentiel.,fr-FR
 Niemożliwe? Nie.,Impossibile? Affatto,Vinci una schermaglia alla difficoltà Folle.,it-IT
-Niemożliwe? Nie.,Impossível? Nada disso,Vença uma escaramuça na dificuldade Insano.,pt-PT
+Niemożliwe? Nie.,Impossível? Nada disso,Vence uma escaramuça na dificuldade Insano.,pt-PT
 Niemożliwe? Nie.,Неможливо? Ні,Виграй сутичку на божевільній складності.,uk
 Niemożliwe? Nie.,Onmogelijk? Zeker niet,Win een schermutseling op Krankzinnig.,nl-NL
 Niemożliwe? Nie.,İmkânsız mı? Hayır,Çılgın zorlukta bir çatışmayı kazan.,tr-TR
@@ -307,7 +307,7 @@ Budowniczy obrony,Savunma ustası,Toplam inşa edilen kuleler: 50.,tr-TR
 Koniec werbunku,Recruitment stopped,Defeat the Recruiter boss in Endless Siege.,en-US
 Koniec werbunku,Anwerbung gestoppt,Besiege den Anwerber-Boss in der endlosen Belagerung.,de-DE
 Koniec werbunku,Fin del reclutamiento,Derrota al jefe Reclutador en el asedio sin fin.,es-ES
-Koniec werbunku,Recrutement stoppé,Bats le boss Recruteur dans le siège sans fin.,fr-FR
+Koniec werbunku,Recrutement stoppé,Battez le boss Recruteur dans le siège sans fin.,fr-FR
 Koniec werbunku,Reclutamento fermato,Sconfiggi il boss Reclutatore nell'assedio infinito.,it-IT
 Koniec werbunku,Recrutamento travado,Derrota o chefe Recrutador no cerco sem fim.,pt-PT
 Koniec werbunku,Кінець вербування,Подолай боса Вербувальник у нескінченній облозі.,uk
@@ -316,7 +316,7 @@ Koniec werbunku,Askere alım bitti,Sonsuz Kuşatma'da Asker toplayıcı patronu 
 Dwie drogi pary,Two paths of steam,Win battles using both Steam Age variants.,en-US
 Dwie drogi pary,Zwei Wege des Dampfs,Gewinne mit beiden Varianten der Dampfzeit.,de-DE
 Dwie drogi pary,Dos caminos del vapor,Gana con ambas variantes de la era del vapor.,es-ES
-Dwie drogi pary,Deux voies de vapeur,Gagne avec les deux variantes de l’âge de la vapeur.,fr-FR
+Dwie drogi pary,Deux voies de vapeur,Gagnez avec les deux variantes de l’âge de la vapeur.,fr-FR
 Dwie drogi pary,Due vie del vapore,Vinci con entrambe le varianti dell'era del vapore.,it-IT
 Dwie drogi pary,Dois caminhos do vapor,Vence com ambas as variantes da era do vapor.,pt-PT
 Dwie drogi pary,Два шляхи пари,Переможи з обома варіантами Доби пари.,uk
@@ -325,7 +325,7 @@ Dwie drogi pary,Buharın iki yolu,Buhar çağının iki seçeneğiyle de kazan.,
 Medycy na froncie,Medics at the front,Reach wave 30 with the Field Medics card.,en-US
 Medycy na froncie,Sanitäter an der Front,Erreiche Welle 30 mit der Karte Feldsanitäter.,de-DE
 Medycy na froncie,Médicos al frente,Alcanza la oleada 30 con Médicos de campaña.,es-ES
-Medycy na froncie,Médecins au front,Atteins la vague 30 avec Médecins de campagne.,fr-FR
+Medycy na froncie,Médecins au front,Atteignez la vague 30 avec Médecins de campagne.,fr-FR
 Medycy na froncie,Medici al fronte,Raggiungi l'ondata 30 con Medici da campo.,it-IT
 Medycy na froncie,Médicos na frente,Chega à vaga 30 com Médicos de campanha.,pt-PT
 Medycy na froncie,Медики на фронті,Досягни хвилі 30 з картою Польові медики.,uk
@@ -343,7 +343,7 @@ Niezłomny wódz,Yılmaz lider,Komutanın bir kez bile düşmeden bir savaş kaz
 Pogromca szału,Frenzy breaker,Defeat the Frenzy boss in Endless Siege.,en-US
 Pogromca szału,Raserei gebändigt,Besiege den Raserei-Boss in der endlosen Belagerung.,de-DE
 Pogromca szału,Furia vencida,Derrota al jefe Furia en el asedio sin fin.,es-ES
-Pogromca szału,Furie vaincue,Bats le boss Furie dans le siège sans fin.,fr-FR
+Pogromca szału,Furie vaincue,Battez le boss Furie dans le siège sans fin.,fr-FR
 Pogromca szału,Furia domata,Sconfiggi il boss Furia nell'assedio infinito.,it-IT
 Pogromca szału,Fúria vencida,Derrota o chefe Fúria no cerco sem fim.,pt-PT
 Pogromca szału,Приборканий гнів,Подолай боса Лють у нескінченній облозі.,uk
@@ -370,7 +370,7 @@ Nawała ogniowa,Ateş fırtınası,Kullanılan özel baraj ateşleri: 100.,tr-TR
 Precyzyjna salwa,Precision barrage,Hit 8 distinct enemies with one aimed barrage.,en-US
 Precyzyjna salwa,Präzisionssalve,Triff 8 Feinde mit einem gezielten Beschuss.,de-DE
 Precyzyjna salwa,Salva precisa,Alcanza a 8 enemigos con un bombardeo dirigido.,es-ES
-Precyzyjna salwa,Salve de précision,Touche 8 ennemis avec un seul tir ciblé.,fr-FR
+Precyzyjna salwa,Salve de précision,Touchez 8 ennemis avec un seul tir ciblé.,fr-FR
 Precyzyjna salwa,Salva precisa,Colpisci 8 nemici con un solo tiro mirato.,it-IT
 Precyzyjna salwa,Salva de precisão,Atinge 8 inimigos com um bombardeamento dirigido.,pt-PT
 Precyzyjna salwa,Точний залп,Влуч у 8 ворогів одним прицільним залпом.,uk
@@ -424,7 +424,7 @@ Fala uderzeniowa,Şok dalgası,Toplam 50 komutan Darbesi uygula.,tr-TR
 Nienaruszona twierdza,Untouched fortress,Win a hard campaign stage without any base damage.,en-US
 Nienaruszona twierdza,Unversehrte Festung,Gewinne eine schwere Kampagnenstufe ohne Basisschaden.,de-DE
 Nienaruszona twierdza,Fortaleza intacta,Gana una fase difícil de campaña sin daños en la base.,es-ES
-Nienaruszona twierdza,Forteresse intacte,Gagne une étape difficile sans dégâts à la base.,fr-FR
+Nienaruszona twierdza,Forteresse intacte,Gagnez une étape difficile sans dégâts à la base.,fr-FR
 Nienaruszona twierdza,Fortezza intatta,Vinci una fase difficile senza danni alla base.,it-IT
 Nienaruszona twierdza,Fortaleza intacta,Vence uma fase difícil sem danos na base.,pt-PT
 Nienaruszona twierdza,Непорушна фортеця,Переможи на складному етапі кампанії без пошкоджень бази.,uk
@@ -451,7 +451,7 @@ Akademia wojny,Savaş akademisi,Satın alınan araştırma seviyeleri: 50.,tr-TR
 Dwa oblicza krzemu,Two faces of silicon,Win battles using both Silicon Age variants.,en-US
 Dwa oblicza krzemu,Zwei Seiten des Siliziums,Gewinne mit beiden Varianten der Siliziumzeit.,de-DE
 Dwa oblicza krzemu,Dos caras del silicio,Gana con ambas variantes de la era del silicio.,es-ES
-Dwa oblicza krzemu,Deux visages du silicium,Gagne avec les deux variantes de l’âge du silicium.,fr-FR
+Dwa oblicza krzemu,Deux visages du silicium,Gagnez avec les deux variantes de l’âge du silicium.,fr-FR
 Dwa oblicza krzemu,Due volti del silicio,Vinci con entrambe le varianti dell'era del silicio.,it-IT
 Dwa oblicza krzemu,Duas faces do silício,Vence com ambas as variantes da era do silício.,pt-PT
 Dwa oblicza krzemu,Два обличчя кремнію,Переможи з обома варіантами Доби кремнію.,uk
@@ -460,7 +460,7 @@ Dwa oblicza krzemu,Silisyumun iki yüzü,Silisyum çağının iki seçeneğiyle 
 Iskra przetrwania,Spark of survival,Reach wave 30 with the Final Spark card.,en-US
 Iskra przetrwania,Funke des Überlebens,Erreiche Welle 30 mit der Karte Letzter Funke.,de-DE
 Iskra przetrwania,Chispa de supervivencia,Alcanza la oleada 30 con Última chispa.,es-ES
-Iskra przetrwania,Étincelle de survie,Atteins la vague 30 avec Dernière étincelle.,fr-FR
+Iskra przetrwania,Étincelle de survie,Atteignez la vague 30 avec Dernière étincelle.,fr-FR
 Iskra przetrwania,Scintilla di salvezza,Raggiungi l'ondata 30 con Ultima scintilla.,it-IT
 Iskra przetrwania,Faísca da sobrevivência,Chega à vaga 30 com Última faísca.,pt-PT
 Iskra przetrwania,Іскра виживання,Досягни хвилі 30 з картою Остання іскра.,uk
@@ -469,7 +469,7 @@ Iskra przetrwania,Hayatta kalma kıvılcımı,Son Kıvılcım kartıyla 30. dalg
 Pierwsza tarcza,First shield,Reach wave 30 with the First-hit Guard card.,en-US
 Pierwsza tarcza,Erster Schild,Erreiche Welle 30 mit Erstschlagschutz.,de-DE
 Pierwsza tarcza,Primer escudo,Alcanza la oleada 30 con Guardia inicial.,es-ES
-Pierwsza tarcza,Premier bouclier,Atteins la vague 30 avec Protection initiale.,fr-FR
+Pierwsza tarcza,Premier bouclier,Atteignez la vague 30 avec Protection initiale.,fr-FR
 Pierwsza tarcza,Primo scudo,Raggiungi l'ondata 30 con Guardia iniziale.,it-IT
 Pierwsza tarcza,Primeiro escudo,Chega à vaga 30 com Guarda inicial.,pt-PT
 Pierwsza tarcza,Перший щит,Досягни хвилі 30 із Захистом першого удару.,uk
@@ -487,7 +487,7 @@ Cztery bastiony,Dört burç,Aynı anda dört adet 3. seviye kuleye sahip ol.,tr-
 Trzy próby tygodnia,Three weekly trials,Reach wave 20 in three different weekly rule sets.,en-US
 Trzy próby tygodnia,Drei Wochenproben,Erreiche Welle 20 mit drei verschiedenen Wochen-Regelsets.,de-DE
 Trzy próby tygodnia,Tres pruebas semanales,Alcanza la oleada 20 con tres conjuntos de reglas semanales distintos.,es-ES
-Trzy próby tygodnia,Trois épreuves hebdomadaires,Atteins la vague 20 avec trois ensembles de règles hebdomadaires différents.,fr-FR
+Trzy próby tygodnia,Trois épreuves hebdomadaires,Atteignez la vague 20 avec trois ensembles de règles hebdomadaires différents.,fr-FR
 Trzy próby tygodnia,Tre prove settimanali,Raggiungi l'ondata 20 con tre set di regole settimanali diversi.,it-IT
 Trzy próby tygodnia,Três provas semanais,Chega à vaga 20 em três conjuntos de regras semanais diferentes.,pt-PT
 Trzy próby tygodnia,Три тижневі випробування,Досягни хвилі 20 у трьох різних тижневих наборах правил.,uk
@@ -496,7 +496,7 @@ Trzy próby tygodnia,Üç haftalık sınav,Üç farklı haftalık kural setinde 
 Złoto tygodnia,Weekly gold,Reach the gold tier in the weekly siege.,en-US
 Złoto tygodnia,Wochengold,Erreiche die Goldstufe der Wochenbelagerung.,de-DE
 Złoto tygodnia,Oro semanal,Llega al nivel oro en el asedio semanal.,es-ES
-Złoto tygodnia,Or de la semaine,Atteins le palier or du siège hebdomadaire.,fr-FR
+Złoto tygodnia,Or de la semaine,Atteignez le palier or du siège hebdomadaire.,fr-FR
 Złoto tygodnia,Oro settimanale,Raggiungi il livello oro nell'assedio settimanale.,it-IT
 Złoto tygodnia,Ouro semanal,Atinge o nível ouro no cerco semanal.,pt-PT
 Złoto tygodnia,Золото тижня,Досягни золотого рівня тижневої облоги.,uk
@@ -514,9 +514,9 @@ Wódz zwycięstw,Muzaffer komutan,Komutan çağırdığın 10 savaş kazan.,tr-T
 Wygrany zakład,Wager won,Reach wave 40 in Endless Siege with the Wager card.,en-US
 Wygrany zakład,Gewonnene Wette,Erreiche Welle 40 in der Endlosen Belagerung mit der Karte Wette.,de-DE
 Wygrany zakład,Apuesta ganada,Alcanza la oleada 40 en el Asedio sin fin con la carta Apuesta.,es-ES
-Wygrany zakład,Pari gagné,Atteins la vague 40 du Siège sans fin avec la carte Pari.,fr-FR
+Wygrany zakład,Pari gagné,Atteignez la vague 40 du Siège sans fin avec la carte Pari.,fr-FR
 Wygrany zakład,Scommessa vinta,Raggiungi l'ondata 40 nell'Assedio infinito con la carta Scommessa.,it-IT
-Wygrany zakład,Aposta ganha,Chega à vaga 40 no Cerco sem fim com a carta Aposta.,pt-PT
+Wygrany zakład,Aposta ganha,Chega à onda 40 no Cerco sem fim com a carta Aposta.,pt-PT
 Wygrany zakład,Вигране парі,Досягни хвилі 40 у Нескінченній облозі з картою Парі.,uk
 Wygrany zakład,Gewonnen weddenschap,Bereik golf 40 in Eindeloos beleg met de kaart Weddenschap.,nl-NL
 Wygrany zakład,Kazanılan iddia,Sonsuz Kuşatma'da İddia kartıyla 40. dalgaya ulaş.,tr-TR
@@ -532,7 +532,7 @@ Gwardia,Seçkin birlikler 100,Eğitilen seçkin birlik sayısı: 100.,tr-TR
 Dziesięć zasad zwycięstwa,Ten ways to win,Win battles with ten different modifiers.,en-US
 Dziesięć zasad zwycięstwa,Zehn Wege zum Sieg,Gewinne Schlachten mit zehn verschiedenen Modifikatoren.,de-DE
 Dziesięć zasad zwycięstwa,Diez formas de ganar,Gana batallas con diez modificadores distintos.,es-ES
-Dziesięć zasad zwycięstwa,Dix façons de gagner,Gagne des batailles avec dix modificateurs différents.,fr-FR
+Dziesięć zasad zwycięstwa,Dix façons de gagner,Gagnez des batailles avec dix modificateurs différents.,fr-FR
 Dziesięć zasad zwycięstwa,Dieci modi per vincere,Vinci battaglie con dieci modificatori diversi.,it-IT
 Dziesięć zasad zwycięstwa,Dez formas de vencer,Vence batalhas com dez modificadores diferentes.,pt-PT
 Dziesięć zasad zwycięstwa,Десять шляхів до перемоги,Переможи в боях із десятьма різними модифікаторами.,uk
@@ -541,7 +541,7 @@ Dziesięć zasad zwycięstwa,Zaferin on yolu,On farklı değiştiriciyle savaş 
 Nowy rozkaz,Fresh orders,Reach wave 30 with the Boss Recharge card.,en-US
 Nowy rozkaz,Neue Befehle,Erreiche Welle 30 mit Aufladung nach Bosskampf.,de-DE
 Nowy rozkaz,Nuevas órdenes,Alcanza la oleada 30 con Recarga tras el jefe.,es-ES
-Nowy rozkaz,Nouveaux ordres,Atteins la vague 30 avec Recharge après le boss.,fr-FR
+Nowy rozkaz,Nouveaux ordres,Atteignez la vague 30 avec Recharge après le boss.,fr-FR
 Nowy rozkaz,Nuovi ordini,Raggiungi l'ondata 30 con Ricarica dopo il boss.,it-IT
 Nowy rozkaz,Novas ordens,Chega à vaga 30 com Recarga após o chefe.,pt-PT
 Nowy rozkaz,Нові накази,Досягни хвилі 30 з картою Відновлення після боса.,uk
@@ -561,7 +561,7 @@ Znawca doktryn,Meister aller Doktrinen,Wähle jede der neun Doktrinen mindestens
 Znawca doktryn,Maestro de doctrinas,Elige cada una de las nueve doctrinas al menos una vez.,es-ES
 Znawca doktryn,Maître des doctrines,Choisissez chacune des neuf doctrines au moins une fois.,fr-FR
 Znawca doktryn,Maestro delle dottrine,Scegli ognuna delle nove dottrine almeno una volta.,it-IT
-Znawca doktryn,Mestre das doutrinas,Escolha cada uma das nove doutrinas ao menos uma vez.,pt-PT
+Znawca doktryn,Mestre das doutrinas,Escolhe cada uma das nove doutrinas pelo menos uma vez.,pt-PT
 Znawca doktryn,Знавець доктрин,Обери кожну з дев'яти доктрин щонайменше один раз.,uk
 Znawca doktryn,Leermeester van doctrines,Kies alle negen doctrines minstens eenmaal.,nl-NL
 Znawca doktryn,Doktrin ustası,Dokuz doktrinin her birini en az bir kez seç.,tr-TR
@@ -586,7 +586,7 @@ Sześć wydarzeń,Altı günlük etkinlik,Altı olayın her biriyle bir günlük
 Nowa granica,New frontier,Reach wave 50 with one of the four new cards.,en-US
 Nowa granica,Neue Grenze,Erreiche Welle 50 mit einer der vier neuen Karten.,de-DE
 Nowa granica,Nueva frontera,Alcanza la oleada 50 con una de las cuatro cartas nuevas.,es-ES
-Nowa granica,Nouvelle frontière,Atteins la vague 50 avec une des quatre nouvelles cartes.,fr-FR
+Nowa granica,Nouvelle frontière,Atteignez la vague 50 avec une des quatre nouvelles cartes.,fr-FR
 Nowa granica,Nuova frontiera,Raggiungi l'ondata 50 con una delle quattro nuove carte.,it-IT
 Nowa granica,Nova fronteira,Chega à vaga 50 com uma das quatro novas cartas.,pt-PT
 Nowa granica,Новий рубіж,Досягни хвилі 50 з однією з чотирьох нових карт.,uk
@@ -622,9 +622,9 @@ Miesiąc prób,Bir aylık mücadele,Günlük mücadelenin oynandığı farklı g
 Doktryny zwycięzców,Victorious doctrines,Win battles using each of the 13 doctrines.,en-US
 Doktryny zwycięzców,Doktrinen der Sieger,Gewinne Schlachten mit jeder der 13 Doktrinen.,de-DE
 Doktryny zwycięzców,Doctrinas vencedoras,Gana batallas usando cada una de las 13 doctrinas.,es-ES
-Doktryny zwycięzców,Doctrines victorieuses,Gagne des batailles avec chacune des 13 doctrines.,fr-FR
+Doktryny zwycięzców,Doctrines victorieuses,Gagnez des batailles avec chacune des 13 doctrines.,fr-FR
 Doktryny zwycięzców,Dottrine vincenti,Vinci battaglie usando tutte le 13 dottrine.,it-IT
-Doktryny zwycięzców,Doutrinas vencedoras,Vence batalhas usando cada uma das 13 doutrinas.,pt-PT
+Doktryny zwycięzców,Doutrinas vencedoras,Vence batalhas com cada uma das 13 doutrinas.,pt-PT
 Doktryny zwycięzców,Доктрини переможців,Переможи в боях з усіма 13 доктринами.,uk
 Doktryny zwycięzców,Winnende doctrines,Win gevechten met elk van de 13 doctrines.,nl-NL
 Doktryny zwycięzców,Zafer doktrinleri,13 doktrinin her biriyle savaş kazan.,tr-TR
@@ -640,7 +640,7 @@ Kalendarz wojny,Savaş takvimi,Dokuz farklı günlük olayla bir günlük mücad
 Sześć oblicz wojny,Six faces of war,Reach wave 20 in any six different weekly rule sets.,en-US
 Sześć oblicz wojny,Sechs Gesichter des Krieges,Erreiche Welle 20 mit beliebigen sechs verschiedenen Wochen-Regelsets.,de-DE
 Sześć oblicz wojny,Seis rostros de la guerra,Alcanza la oleada 20 con seis conjuntos de reglas semanales distintos cualesquiera.,es-ES
-Sześć oblicz wojny,Six visages de la guerre,Atteins la vague 20 avec six ensembles de règles hebdomadaires différents au choix.,fr-FR
+Sześć oblicz wojny,Six visages de la guerre,Atteignez la vague 20 avec six ensembles de règles hebdomadaires différents au choix.,fr-FR
 Sześć oblicz wojny,Sei volti della guerra,Raggiungi l'ondata 20 con sei set di regole settimanali diversi a scelta.,it-IT
 Sześć oblicz wojny,Seis faces da guerra,Chega à vaga 20 em quaisquer seis conjuntos de regras semanais diferentes.,pt-PT
 Sześć oblicz wojny,Шість облич війни,Досягни хвилі 20 у будь-яких шести різних тижневих наборах.,uk

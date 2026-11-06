@@ -1,7 +1,7 @@
 # Play Games: z arkusza do konsoli i z powrotem
 
 Stan: 3.11.2026. Pliki:
-- `docs/store/play_games_sheet.csv`: arkusz do wpisywania ręcznie, 4 rankingi i 79 osiągnięć;
+- `docs/store/play_games_sheet.csv`: arkusz do wpisywania ręcznie, 5 rankingów i 79 osiągnięć (6.11: ranking Rozkazów sztabu);
 - `docs/store/pgs_import/`: pliki do **importu wszystkich osiągnięć naraz**;
 - `tools/pgs_sheet.py`: generuje oba z kodu gry (`python3 tools/pgs_sheet.py`, a samo sprawdzenie
   to `--check`). Po każdej zmianie osiągnięć albo tekstów uruchom go ponownie.
@@ -55,7 +55,7 @@ już dodanych do gry. [Tłumaczenia](https://developer.android.com/games/pgs/con
 Skopiuj **Game services project ID** (same cyfry) do kolumny `id_z_konsoli` albo od razu
 jako `app_id`.
 
-## Krok 2: rankingi (4, ręcznie)
+## Krok 2: rankingi (5, ręcznie)
 
 **Leaderboards → Create leaderboard**, po jednym na wiersz `ranking` arkusza:
 - nazwa z `nazwa_pl`;
@@ -67,7 +67,7 @@ jako `app_id`.
 - ikona 512×512 z `app/build/pgs-icons/lb_<tryb>.png` (generator w kroku 3).
 
 Po zapisaniu kliknij kartę każdego języka i wpisz tłumaczenie nazwy z L.kt
-(`board_endless`, `board_campaign`, `board_skirmish`, `board_daily`; kolumny w kolejności pl,
+(`board_endless`, `board_campaign`, `board_skirmish`, `board_daily`, `board_orders`; kolumny w kolejności pl,
 en, de, es, fr, it, pt, uk, nl, tr). Skopiuj ID każdego rankingu do `id_z_konsoli`.
 
 ## Krok 3: osiągnięcia (79, najlepiej importem)
@@ -119,7 +119,7 @@ Jak build czyta ten plik (`buildSrc/.../PlayGamesIdsGenerator.kt`):
 - to zwykły plik `klucz=wartość`. Gradle generuje z niego `games_ids.xml`; nie edytuj XML;
 - `app_id` to same cyfry. Pozostałe ID zaczynają się literą i mają 12–128 znaków
   (litery, cyfry, `_`, `-`). Zły format oznacza błąd builda;
-- **nieznany klucz to błąd builda**: plik ma dokładnie 84 klucze (projekt, 4 rankingi,
+- **nieznany klucz to błąd builda**: plik ma dokładnie 85 kluczy (projekt, 5 rankingów,
   79 osiągnięć, w tym 4 z R6-01 i 1 po D6);
 - ID nie mogą się powtarzać;
 - jeśli brakuje choć jednego ID albo zostaje `REPLACE_ME`, wersja debug działa tylko lokalnie,
