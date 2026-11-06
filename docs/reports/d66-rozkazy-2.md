@@ -150,7 +150,15 @@ grotu, 3 cele dodatkowe, dochód, warunek odblokowania. Nazwy własne, bez nawi�
 
 ## Testy
 
-TEST_RESULTS
+Wszystkie z `--rerun`, 6.11, zielone:
+- `:sim:test` — 354 testy, 0 porażek (`OrdersTest` 13 testów: dwie partie, eskorta i grot,
+  nowe cele i dochód, odblokowanie partii 2, zrzut v23 i odczyt v22, osiągalne 3★ we wszystkich 18;
+  wersja zrzutu 23 w `BattleSnapshotTest`, `Content206Test`, `Doctrine69SnapshotTest`).
+- `:server:test` — 95 testów, 0 porażek (wersja 0.8.13).
+- `:app:testDebugUnitTest --rerun` (pełny) — BUILD SUCCESSFUL, 0 porażek (m.in. `OrdersScreenTest`
+  z nowym testem partii 2, `OrdersProfileTest` z profilem 9-elementowym,
+  `LTest.orders211KeysHaveAllLanguages`, `ReleaseConfigTest` 0.8.13). Wzorce zrzutów ekranów
+  bez zmian (menu pokazuje x/54 tylko w pionowym kaflu).
 
 ## Otwarte / pytania do właściciela
 
