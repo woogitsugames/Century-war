@@ -37,7 +37,12 @@ StoreGraphicsTest > listingLimits FAILED
 1 test completed, 1 failed
 BUILD FAILED in 17s
 ```
-XML wskazał `Pełny opis bez dowódcy/stopni wież: tr`: pierwsza redakcja usunęła wymagany fragment `kule seviyeleri`. W poprawionym opisie występuje teraz `kule seviyelerini`; ponowny test oczekuje na kolejkę. Warunek zielonego testu pozostaje niespełniony.
+XML wskazał `Pełny opis bez dowódcy/stopni wież: tr`: pierwsza redakcja usunęła wymagany fragment `kule seviyeleri`. W poprawionym opisie występuje `kule seviyelerini`. Ponowienie z lokalnymi końcami LF przeszło:
+```text
+> Task :app:testDebugUnitTest
+BUILD SUCCESSFUL in 15s
+37 actionable tasks: 1 executed, 36 up-to-date
+```
 
 ## Ograniczenia i dalsze kroki
 
