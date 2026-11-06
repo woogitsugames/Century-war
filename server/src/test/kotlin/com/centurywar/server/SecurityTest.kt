@@ -34,6 +34,7 @@ class SecurityTest {
     @Test fun emptyTimestamp() = assertFalse(checkAuth(""))
     @Test fun tooLongTimestamp() = assertFalse(checkAuth("9".repeat(100)))
     @Test fun emptyNonce() = assertFalse(checkAuth("1800000000", nonce = ""))
+    @Test fun emptySignature() = assertFalse(checkAuth("1800000000", sig = ""))
     @Test fun tooLongSignature() = assertFalse(checkAuth("1800000000", sig = "a".repeat(65)))
 
     @Test fun rateLimitAndResetAtMinuteBoundary() {
