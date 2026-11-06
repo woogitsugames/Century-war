@@ -61,6 +61,8 @@ object ScoreWire {
             Mode.ENDLESS -> if (weekly) "weekly" else "endless"
             Mode.SKIRMISH -> "skirmish"
             Mode.CAMPAIGN -> "campaign"
+            // Dzień 62: Rozkazy sztabu nie trafiają na serwer (ranking tylko Play Games).
+            Mode.ORDERS -> throw IllegalArgumentException("Rozkazy sztabu nie mają rankingu serwera")
         }
         return buildString(256) {
             append("{\"board\":")

@@ -22,15 +22,15 @@ class PlayGamesIdsTest {
         ).firstOrNull { it.isFile } ?: error("Nie znaleziono szablonu Play Games")
         val props = Properties().apply { file.inputStream().use { load(it) } }
         val expected = setOf("app_id", "leaderboard_endless", "leaderboard_campaign",
-            "leaderboard_skirmish", "leaderboard_daily") +
+            "leaderboard_skirmish", "leaderboard_daily", "leaderboard_orders") +
             Achievements.all.map { "achievement_" + it.id }
         assertEquals(expected, props.stringPropertyNames())
     }
 
     @Test fun isConfiguredRequiresEveryValidAndUniqueId() {
-        val boards = ids(4)
+        val boards = ids(5)
         val achievements = ids(79).mapIndexed { i, s ->
-            if (i < 4) "CgkI" + (i + 100).toString().padStart(12, '0') + "EAIQAg" else s
+            if (i < 5) "CgkI" + (i + 100).toString().padStart(12, '0') + "EAIQAg" else s
         }
         assertTrue(PlayGamesIds.isConfiguredValues("123456789012", boards, achievements))
         assertFalse(PlayGamesIds.isConfiguredValues("REPLACE_ME", boards, achievements))

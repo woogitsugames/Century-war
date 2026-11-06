@@ -99,7 +99,8 @@ enum class SnapshotReject { OK, CORRUPT, OLDER_FORMAT, NEWER_FORMAT, BALANCE_CHA
  * na symulację.
  */
 object BattleSnapshot {
-    const val VERSION = 21
+    /** 22: dzień 62 — Mode.ORDERS i pola Rozkazów sztabu w konfiguracji (tylko dla ORDERS). */
+    const val VERSION = 22
     /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
     private const val FIRST_WITH_SIEGE_DAMAGE = 19
     /** Wersje 16–17 zapisywały karty Endless sprzed zlecenia 170 (bez dwóch ostatnich kart). */
@@ -267,6 +268,12 @@ object BattleSnapshot {
         o.writeLong(c.weekly)
         o.writeByte(c.weeklyCard?.ordinal ?: -1)
         o.writeByte(c.dailyEvent?.ordinal ?: -1)
+        // Dzień 62: pola Rozkazów sztabu tylko dla Mode.ORDERS, więc zapis pozostałych
+        // trybów (zrzuty i pliki powtórek) jest bajt w bajt taki jak przed v22.
+        if (c.mode == Mode.ORDERS) {
+            o.writeShort(c.playerAllowed); o.writeShort(c.enemyAllowed)
+            o.writeInt(c.timeLimitSteps); o.writeBoolean(c.holdWins)
+        }
     }
 
     private fun writeSide(o: DataOutputStream, s: Side, formatVersion: Int) {
@@ -339,7 +346,7 @@ object BattleSnapshot {
     }
 
     private fun supported(version: Int): Boolean =
-        version == VERSION || version == 20 || version == 19 || version == 18 || version == 17 ||
+        version == VERSION || version == 21 || version == 20 || version == 19 || version == 18 || version == 17 ||
             version == LEGACY_VERSION_WITHOUT_ID
 
     /**
@@ -502,13 +509,21 @@ object BattleSnapshot {
         val weekly = i.readLong()
         val cardId = i.readByte().toInt()
         val eventId = if (hasDailyEvent) i.readByte().toInt() else -1
+        val orders = mode == Mode.ORDERS
+        val playerAllowed = if (orders) i.readUnsignedShort() else OrderRules.ALL
+        val enemyAllowed = if (orders) i.readUnsignedShort() else OrderRules.ALL
+        val timeLimit = if (orders) i.readInt() else 0
+        val holdWins = if (orders) i.readBoolean() else false
+        if (playerAllowed !in 0..OrderRules.ALL || enemyAllowed !in 0..OrderRules.ALL ||
+            timeLimit !in 0..Replay.MAX_STEPS) return null
         if (startEra > maxEra || weekly < -1L ||
             (weekly >= 0L) != (cardId >= 0) || (weekly >= 0L && mode != Mode.ENDLESS) ||
             (eventId >= 0 && mode != Mode.DAILY)) return null
         val weeklyCard = if (cardId < 0) null else enumAt(EndlessCard.values(), cardId)
         val event = if (eventId < 0) null else enumAt(DailyEvent.values(), eventId)
         return BattleConfig(mode, seed, aiPower, startEra, maxEra, mods, bonuses, stageIndex, tutorial,
-            personality, enabled, weather, weekly, weeklyCard, event)
+            personality, enabled, weather, weekly, weeklyCard, event,
+            playerAllowed, enemyAllowed, timeLimit, holdWins)
     }
 
     private fun readSide(i: DataInputStream, s: Side, version: Int) {

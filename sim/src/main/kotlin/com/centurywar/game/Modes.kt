@@ -58,7 +58,32 @@ enum class Weather(
     }
 }
 
-enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY }
+/** Nowe tryby zawsze na końcu (ordinal w zrzutach i powtórkach); ORDERS: dzień 62. */
+enum class Mode { CAMPAIGN, SKIRMISH, ENDLESS, DAILY, ORDERS }
+
+/**
+ * Dzień 62 (Rozkazy sztabu): maska działań dozwolonych jednej stronie bitwy
+ * ([BattleConfig.playerAllowed], [BattleConfig.enemyAllowed]). [ALL] = bez ograniczeń,
+ * więc wszystkie dotychczasowe tryby działają bez zmian.
+ */
+object OrderRules {
+    const val MELEE = 1
+    const val RANGED = 2
+    const val HEAVY = 4
+    const val ELITE = 8
+    const val COMMANDER = 16
+    const val TURRETS = 32
+    const val BARRAGE = 64
+    const val RALLY = 128
+    const val ALL = 255
+
+    fun roleBit(role: Role): Int = when (role) {
+        Role.MELEE -> MELEE
+        Role.RANGED -> RANGED
+        Role.HEAVY -> HEAVY
+        Role.ELITE -> ELITE
+    }
+}
 
 /** Jawny mnożnik gospodarki i doświadczenia AI w kampanii. */
 enum class CampaignDifficulty(val powerMultiplier: Float, val medalMultiplier: Float, val key: String) {
@@ -127,6 +152,14 @@ class BattleConfig(
     val weeklyCard: EndlessCard? = null,
     /** Specjalna reguła dnia, niezależna od zwykłych modyfikatorów. */
     val dailyEvent: DailyEvent? = null,
+    /** Dzień 62: dozwolone działania gracza ([OrderRules]); domyślnie wszystkie. */
+    val playerAllowed: Int = OrderRules.ALL,
+    /** Dzień 62: dozwolone działania przeciwnika ([OrderRules]); domyślnie wszystkie. */
+    val enemyAllowed: Int = OrderRules.ALL,
+    /** Dzień 62: twardy limit bitwy w krokach symulacji; 0 = bez limitu. */
+    val timeLimitSteps: Int = 0,
+    /** Po upływie [timeLimitSteps]: true = wygrywa gracz (obrona), false = wygrywa przeciwnik. */
+    val holdWins: Boolean = false,
 )
 
 class Stage(
@@ -292,6 +325,8 @@ object Campaign {
         campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_START
         campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_START
         campaignStage(cfg, THIRD_SIEGE_STAGES) -> THIRD_SIEGE_START
+        // Dzień 62: Rozkazy sztabu są krótkie (3–6 min), presja startuje wcześnie.
+        cfg.mode == Mode.ORDERS -> Orders.SIEGE_START
         else -> Battle.SIEGE_START
     }
 
@@ -310,6 +345,7 @@ object Campaign {
         campaignStage(cfg, EARLY_SIEGE_STAGES) -> EARLY_SIEGE_RAMP
         campaignStage(cfg, SECOND_SIEGE_STAGES) -> SECOND_SIEGE_RAMP
         campaignStage(cfg, THIRD_SIEGE_STAGES) -> THIRD_SIEGE_RAMP
+        cfg.mode == Mode.ORDERS -> Orders.SIEGE_RAMP
         else -> Battle.SIEGE_RAMP
     }
 

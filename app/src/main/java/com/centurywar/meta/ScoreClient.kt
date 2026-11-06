@@ -150,6 +150,8 @@ class ScoreClient(
         if (!enabled || !profile.globalRanking || playerId.isEmpty() || score <= 0L ||
             playerId == deletingPlayerId) return
         if (cfg.mode == Mode.DAILY && !rankedDaily) return
+        // Dzień 62: Rozkazy sztabu mają tylko ranking Play Games (bez serwera).
+        if (cfg.mode == Mode.ORDERS) return
         // Samouczek nie jest wynikiem rankingowym, również w etapie pierwszym.
         if (cfg.tutorial || (cfg.mode == Mode.CAMPAIGN &&
                 Campaign.difficulty(cfg) != CampaignDifficulty.NORMAL)) return

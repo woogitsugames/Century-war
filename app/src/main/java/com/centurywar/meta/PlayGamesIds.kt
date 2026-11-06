@@ -10,6 +10,8 @@ internal object PlayGamesIds {
         R.string.leaderboard_campaign,
         R.string.leaderboard_skirmish,
         R.string.leaderboard_daily,
+        // Dzień 62: Rozkazy sztabu (punkty sztabu).
+        R.string.leaderboard_orders,
     )
 
     val achievementResources: Map<String, Int> = linkedMapOf(

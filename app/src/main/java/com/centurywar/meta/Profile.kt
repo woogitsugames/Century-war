@@ -3,6 +3,7 @@ package com.centurywar.meta
 import com.centurywar.game.BattleConfig
 import com.centurywar.game.Bonuses
 import com.centurywar.game.Campaign
+import com.centurywar.game.Orders
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.Defs
 import com.centurywar.game.GameIoCounter
@@ -90,6 +91,8 @@ class Profile(private val file: File) {
         const val BOARD_ENDLESS = "endless"
         const val BOARD_CAMPAIGN = "campaign"
         const val BOARD_SKIRMISH = "skirmish"
+        /** Dzień 62: Rozkazy sztabu — punkty sztabu ([orderPointTotal]); lokalnie i w Play Games. */
+        const val BOARD_ORDERS = "orders"
         fun dailyBoard(day: Long) = "daily_$day"
         fun weeklyBoard(week: Long) = "weekly_$week"
 
@@ -131,6 +134,10 @@ class Profile(private val file: File) {
     val stars = IntArray(Campaign.stages.size)
     /** Lokalne i globalne rekordy gwiazdek zdobytych na Normalnym poziomie. */
     val normalStars = IntArray(Campaign.stages.size)
+    /** Dzień 62: najlepsze gwiazdki Rozkazów sztabu (indeks = [Orders.all]); brak w starszych profilach = 0. */
+    val orderStars = IntArray(Orders.COUNT)
+    /** Dzień 62: najlepsze punkty sztabu za każdy rozkaz ([Orders.points]). */
+    val orderPoints = IntArray(Orders.COUNT)
     var campaignDifficulty = CampaignDifficulty.NORMAL
     private var hardStageWins = 0L
 
@@ -160,6 +167,22 @@ class Profile(private val file: File) {
     fun lossStreakOn(stage: Int): Int = if (stage == campaignLossStreakStage) campaignLossStreak else 0
 
     fun normalStarTotal(): Int = normalStars.sum()
+    fun orderStarTotal(): Int = orderStars.sum()
+    /** Dzień 62: wynik rankingu „Punkty sztabu” (suma najlepszych punktów rozkazów). */
+    fun orderPointTotal(): Long = orderPoints.sumOf { it.toLong() }
+
+    /**
+     * Dzień 62: zapis wyniku rozkazu. Zwraca medale za NOWE gwiazdki (jednorazowo, [Orders.medalsFor]);
+     * powtórki bez poprawy nie dają medali. Punkty zapamiętujemy, gdy są wyższe.
+     */
+    fun recordOrder(index: Int, stars: Int, points: Int): Int {
+        if (index !in orderStars.indices) return 0
+        val old = orderStars[index]
+        val medals = Orders.medalsFor(old, stars)
+        if (stars > old) orderStars[index] = stars.coerceIn(0, Orders.MAX_STARS)
+        if (points > orderPoints[index]) orderPoints[index] = points.coerceAtLeast(0)
+        return medals
+    }
     fun hardStagesCleared(): Int = java.lang.Long.bitCount(hardStageWins)
     /** R10-02: czy etap [index] wygrano na Trudnym (korona na mapie). */
     fun hardWon(index: Int): Boolean =
@@ -600,6 +623,8 @@ class Profile(private val file: File) {
         o.put("levels", JSONObject(levels as Map<*, *>))
         o.put("stars", JSONArray().apply { stars.forEach { put(it) } })
         o.put("normalStars", JSONArray().apply { normalStars.forEach { put(it) } })
+        o.put("orderStars", JSONArray().apply { orderStars.forEach { put(it) } })
+        o.put("orderPoints", JSONArray().apply { orderPoints.forEach { put(it) } })
         o.put("campaignDifficulty", campaignDifficulty.ordinal)
         o.put("hardStageWins", hardStageWins)
         o.put("selectedBanner", selectedBanner)
@@ -952,6 +977,22 @@ class Profile(private val file: File) {
                 newNormalStars[i] = a.optInt(i).coerceIn(0, newStars[i])
             }
         }
+        // Dzień 62: starsze profile nie mają Rozkazów sztabu — zera; nowe rozkazy na końcu listy.
+        val newOrderStars = IntArray(orderStars.size)
+        arr("orderStars")?.let { a ->
+            for (i in 0 until minOf(a.length(), newOrderStars.size)) {
+                if (strict && a.opt(i) !is Number) error("Niepoprawna gwiazdka rozkazu: $i")
+                newOrderStars[i] = a.optInt(i).coerceIn(0, Orders.MAX_STARS)
+            }
+        }
+        val maxOrderPoints = Orders.MAX_STARS * Orders.POINTS_PER_STAR + Orders.MAX_HP_POINTS
+        val newOrderPoints = IntArray(orderPoints.size)
+        arr("orderPoints")?.let { a ->
+            for (i in 0 until minOf(a.length(), newOrderPoints.size)) {
+                if (strict && a.opt(i) !is Number) error("Niepoprawne punkty rozkazu: $i")
+                newOrderPoints[i] = a.optInt(i).coerceIn(0, maxOrderPoints)
+            }
+        }
         val difficultyIndex = json.optInt("campaignDifficulty", CampaignDifficulty.NORMAL.ordinal)
         val newDifficulty = CampaignDifficulty.entries.getOrNull(difficultyIndex) ?: CampaignDifficulty.NORMAL
         val maxHardMask = (1L shl Campaign.stages.size) - 1L
@@ -1100,6 +1141,8 @@ class Profile(private val file: File) {
         levels.clear(); levels.putAll(newLevels)
         newStars.copyInto(stars)
         newNormalStars.copyInto(normalStars)
+        newOrderStars.copyInto(orderStars)
+        newOrderPoints.copyInto(orderPoints)
         campaignDifficulty = newDifficulty
         hardStageWins = newHardWins
         bestWave = json.optInt("bestWave", 0).coerceAtLeast(0)
@@ -1345,6 +1388,7 @@ class Profile(private val file: File) {
     fun reset() {
         val keepName = name
         medals = 0; levels.clear(); stars.fill(0); normalStars.fill(0)
+        orderStars.fill(0); orderPoints.fill(0)
         campaignDifficulty = CampaignDifficulty.NORMAL; hardStageWins = 0L
         campaignLossStreakStage = -1; campaignLossStreak = 0
         bestWave = 0; lastRankedDaily = -1L
