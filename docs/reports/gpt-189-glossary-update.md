@@ -6,6 +6,8 @@ Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`
 
 Uzupełniono słownik o 88 wierszy: doktryny, karty Endless, wydarzenia dnia i zestawy tygodnia oraz wybrane nazwy Rozkazów sztabu i interfejsu. Każdy wiersz zachowuje klucz i dziesięć wartości z `L.kt`; kontekst wyjaśniają nagłówki grup. Zmodyfikowano `docs/GLOSSARY.md`, dodano ten raport. `L.kt` pozostaje bez zmian.
 
+W uzupełnieniu dodano 31 dalszych etykiet dotyczących m.in. dowódcy, wież, parametrów walki, jednostek, pogody, wyniku i powtórek. Kandydatów wybrano z krótkich nazw, których angielska fraza występuje co najmniej osiem razy w wartościach kluczy; następnie ręcznie odrzucono część ogólnych przycisków i powtórzeń. To wyszukiwanie pomocnicze nie rozstrzyga znaczenia w każdym kontekście ani nie dowodzi kryterium trzech kluczy. Tabela zawiera dokładne wartości dziesięciu języków z podanych kluczy, wraz z ogólnym znaczeniem grupy.
+
 ## Kontrola
 
 Kontrola skryptem porównała wszystkie nowe komórki z wartościami `t(...)` w `L.kt`:
@@ -15,6 +17,8 @@ Kontrola skryptem porównała wszystkie nowe komórki z wartościami `t(...)` w 
 ```
 
 `git diff --check` nie zgłosił błędów. Testy Gradle i aplikacji nie były uruchamiane; nie zmieniono kodu.
+
+Kontrola dodatkowego uzupełnienia: 31 wybranych kluczy po 10 wartości, generowanych bezpośrednio z `L.kt`; `git diff --check` bez błędów.
 
 ## Niespójności do przeglądu
 

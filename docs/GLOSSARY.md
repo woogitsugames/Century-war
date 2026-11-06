@@ -362,6 +362,44 @@ Nazwy poniżej zachowują kontekst klucza: tryb, jednostka, zasób albo przycisk
 | Oblężnik (`cx127_sieger`) | Oblężnik | Siege Expert | Belagerer | Asediador | Assiégeant | Assediante | Sitiador | Майстер облоги | Belegeraar | Kuşatmacı |
 | Taktyk (`cx127_balanced`) | Taktyk | Tactician | Taktiker | Táctico | Tacticien | Tattico | Tático | Тактик | Tacticus | Taktikçi |
 
+### Często używane pojęcia walki i postępu
+
+Nazwy ogólne jednostek i działań, parametrów, wyników oraz interfejsu. Kolumny podają etykietę z podanego klucza; w zdaniach mogą występować odmiana i warianty kontekstowe.
+
+| Pojęcie (klucz) | PL | EN | DE | ES | FR | IT | PT | UK | NL | TR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dowódca (`comm125_name`) | Dowódca | Commander | Kommandant | Comandante | Commandant | Comandante | Comandante | Командир | Commandant | Komutan |
+| Wieże (`turrets`) | Wieże | Turrets | Türme | Torretas | Tourelles | Torrette | Torres | Вежі | Torens | Kuleler |
+| Powtórka (`replay`) | Powtórka | Replay | Wiederholung | Repetición | Replay | Replay | Repetição | Повтор | Herhaling | Tekrar |
+| Badania (`research`) | Badania | Research | Forschung | Investigación | Recherche | Ricerca | Pesquisa | Дослідження | Onderzoek | Araştırma |
+| Wróg (`bs104_enemy`) | Wróg | Enemy | Gegner | Enemigo | Ennemi | Nemico | Inimigo | Ворог | Vijand | Rakip |
+| HP baz (`bs104_hp`) | HP baz | Base HP | Basis-LP | PV de bases | PV des bases | PV delle basi | PV das bases | Міцність баз | Basis-HP | Üs canı |
+| Pogoda (`w_label`) | Pogoda | Weather | Wetter | Clima | Météo | Meteo | Clima | Погода | Weer | Hava |
+| Czas (`time`) | Czas | Time | Zeit | Tiempo | Temps | Tempo | Tempo | Час | Tijd | Süre |
+| Wynik (`score`) | Wynik | Score | Punkte | Puntuación | Score | Punteggio | Pontuação | Очки | Score | Puan |
+| Ulepsz (`upgrade`) | Ulepsz | Upgrade | Verbessern | Mejorar | Améliorer | Potenzia | Melhorar | Покращити | Upgraden | Yükselt |
+| Armia (`cap`) | Armia | Army | Armee | Ejército | Armée | Esercito | Exército | Армія | Leger | Ordu |
+| Piechur (`u_infantry`) | Piechur | Infantry | Infanterist | Infante | Fantassin | Fante | Infante | Піхотинець | Infanterist | Piyade |
+| BOSS (`eb_boss`) | BOSS | BOSS | BOSS | JEFE | BOSS | BOSS | CHEFE | БОС | BAAS | BOSS |
+| Koszt (`cx_cost`) | Koszt | Cost | Kosten | Coste | Coût | Costo | Custo | Ціна | Kosten | Maliyet |
+| Obrażenia (`cx_dmg`) | Obrażenia | Damage | Schaden | Daño | Dégâts | Danni | Dano | Шкода | Schade | Hasar |
+| Zasięg (`cx_range`) | Zasięg | Range | Reichweite | Alcance | Portée | Gittata | Alcance | Дальність | Bereik | Menzil |
+| Szybkość (`cx_speed`) | Szybkość | Speed | Tempo | Velocidad | Vitesse | Velocità | Velocidade | Швидкість | Snelheid | Hız |
+| Szkolenie (`cx_train`) | Szkolenie | Training | Ausbildung | Entrenamiento | Entraînement | Addestramento | Treino | Навчання | Training | Eğitim |
+| Odnowienie (`cx_cd`) | Odnowienie | Cooldown | Abklingzeit | Enfriamiento | Récupération | Recupero | Espera | Відновлення | Afkoeltijd | Bekleme |
+| Bitwy (`bh_battles`) | Bitwy | Battles | Schlachten | Batallas | Batailles | Battaglie | Batalhas | Битви | Gevechten | Savaşlar |
+| Wygrane (`bh_wins`) | Wygrane | Wins | Siege | Victorias | Victoires | Vittorie | Vitórias | Перемоги | Overwinningen | Galibiyetler |
+| Etap (`bh_stage`) | Etap | Stage | Etappe | Etapa | Étape | Tappa | Etapa | Етап | Etappe | Aşama |
+| Jednostki (`cx62_units`) | Jednostki | Units | Einheiten | Unidades | Unités | Unità | Unidades | Бійці | Eenheden | Birimler |
+| Trudny (`campaign126_hard`) | Trudny | Hard | Schwer | Difícil | Difficile | Difficile | Difícil | Складний | Moeilijk | Zor |
+| Bitwa (`a178_battle`) | Bitwa | Battle | Schlacht | Batalla | Bataille | Battaglia | Batalha | Битва | Gevecht | Savaş |
+| PORAŻKA (`defeat`) | PORAŻKA | DEFEAT | NIEDERLAGE | DERROTA | DÉFAITE | SCONFITTA | DERROTA | ПОРАЗКА | NEDERLAAG | YENİLGİ |
+| Ustawienia (`settings`) | Ustawienia | Settings | Einstellungen | Ajustes | Paramètres | Impostazioni | Ajustes | Налаштування | Instellingen | Ayarlar |
+| wręcz (`o209_k_melee`) | wręcz | melee | Nahkampf | cuerpo a cuerpo | mêlée | mischia | corpo a corpo | ближній бій | melee | yakın dövüş |
+| dystans (`o209_k_ranged`) | dystans | ranged | Fernkampf | a distancia | distance | distanza | à distância | стрільці | afstand | menzilli |
+| ciężcy (`o209_k_heavy`) | ciężcy | heavy | Schwere | pesados | lourds | pesanti | pesados | важкі | zwaar | ağır |
+| ostrzał (`o209_k_barrage`) | ostrzał | barrage | Sperrfeuer | bombardeo | barrage | sbarramento | barragem | обстріл | spervuur | yaylım ateşi |
+
 ## Reguły utrzymania
 
 Przy każdej zmianie nazwy porównuj `L.kt` z glosariuszem, aktualizuj równocześnie powiązane ekrany (`bh_ai_*`, `sk_person_*`, `cx_*`) i uruchom testy `LTest`. Klucze pozostają bez zmian, a liczba i kolejność dziesięciu tłumaczeń są obowiązkowe.
