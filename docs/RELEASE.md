@@ -87,7 +87,7 @@ to pozycje z audytu przed premierą (`docs/reports/audit-156.md`).
     w kampanii);
   - **wyniki bitwy**: medale „Za bitwę” i „Za osiągnięcia” osobno;
   - **„Co nowego”** jako przycisk w menu (z kropką po aktualizacji) i strzałka przewijania listy;
-  - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 79 osiągnięć), wpisy w Kodeksie;
+  - **osiągnięcia i misje** dowódcy oraz stopni wież (razem 79 osiągnięć, a od d65 83 z Rozkazami sztabu), wpisy w Kodeksie;
   - **zewnętrzny ekran Folda**: zegar bitwy pod minimapą także przy presji oblężniczej,
     górny pasek bez nachodzenia napisów.
 - [x] **Nowości z 3–4.11 (kolejne dni i R11):**
@@ -124,7 +124,7 @@ Te pozycje może dostarczyć tylko właściciel. Szczegóły i instrukcje:
       przechowywania danych — albo decyzja „na start bez rankingu globalnego”.
 - [ ] **Sekrety tylko w CI** (nigdy w repozytorium): klucz upload do podpisu, `CW_HMAC_KEY`,
       `CW_SERVER_URL`, `CW_PRIVACY_URL`.
-- [ ] **Google Play Games:** 84 identyfikatory (1 projekt, 4 rankingi, 79 osiągnięć) z Play
+- [ ] **Google Play Games:** 89 identyfikatorów (1 projekt, 5 rankingów, 83 osiągnięcia) z Play
       Console do `docs/store/play_games_ids.properties` (dziś `REPLACE_ME`).
 - [ ] **Play Console:** konto dewelopera z tymi samymi danymi, kraje, grupa wiekowa (ankieta
       IARC), zatwierdzenie Data safety dla prawdziwego pakietu AAB.
@@ -251,7 +251,7 @@ Gdy wszystkie pola w obu sekcjach „Zostało” są odhaczone (poza serwerem ra
    a po ich sukcesie zadanie `test-release`: podpis **wyłącznie kluczem upload** z sekretów,
    jawne `-PskipCheck=releaseDay,serverUrl,hmacKey`, `-PtesterSurvey=true`,
    `-PreleaseVersionName=0.1.0`. Pozostałe kontrole obowiązują: dane wydawcy (`OWNER_INPUT.md`),
-   84 ID Play Games, `CW_PRIVACY_URL`, numer wersji, dokumenty sklepu, podpis.
+   89 ID Play Games, `CW_PRIVACY_URL`, numer wersji, dokumenty sklepu, podpis.
 3. Artefakty (90 dni): `century-war-test-release-aab` (do Play), `century-war-test-release-apk`
    (instalacja ręczna, ten sam klucz upload), `century-war-test-release-mapping` (mapowanie R8
    do wgrania w Play przy tej wersji).
@@ -1026,7 +1026,7 @@ Data safety, listing (`docs/store/`) i wdrożenie w torze testowym.
 **Jedynym źródłem identyfikatorów jest `docs/store/play_games_ids.properties`.**
 Nie edytuj ręcznie XML. Gradle generuje `games_ids.xml` osobno dla każdego wariantu
 w `app/build/generated/res/playGames/<wariant>/values/games_ids.xml`.
-Plik zawiera 84 klucze: ID projektu, 4 rankingi i 79 osiągnięć.
+Plik zawiera 89 kluczy: ID projektu, 5 rankingów i 83 osiągnięcia.
 
 1. Otwórz Google Play Console → **Century War** (`com.centurywar.game`) →
    **Play Games Services → Setup and management → Configuration**. Utwórz usługę
@@ -1038,7 +1038,7 @@ Plik zawiera 84 klucze: ID projektu, 4 rankingi i 79 osiągnięć.
    `leaderboard_skirmish` (potyczka), `leaderboard_daily` (wyzwanie dnia) i
    `leaderboard_orders` (Rozkazy sztabu, punkty sztabu).
    Gra wyświetla ranking dzienny w oknie `TIME_SPAN_DAILY`.
-3. W **Play Games Services → Achievements** utwórz 79 osiągnięć standardowych.
+3. W **Play Games Services → Achievements** utwórz 83 osiągnięcia standardowe.
    Wykorzystaj listę `Achievements.all` z `meta/Achievements.kt`. Dla każdego
    identyfikatora katalogu `id` skopiuj ID przyznane przez Play Console do
    `achievement_<id>`, np. `achievement_win_1`. Wszystkie klucze z szablonu
@@ -1095,7 +1095,7 @@ Nie publikuj szablonów z nierozstrzygniętymi znacznikami właściciela.
    kopię zapasową i cztery zmienne `RELEASE_*` lokalnie lub sekrety CI z
    [CI.md](CI.md). Zweryfikuj SHA-1 certyfikatu podpisu aplikacji i upload.
    Nie publikuj APK/AAB podpisanych kluczem debug.
-4. **Play Games i osiągnięcia.** Utwórz usługę, cztery rankingi i 79
+4. **Play Games i osiągnięcia.** Utwórz usługę, pięć rankingów i 83
    osiągnięć w Play Console. Ich ID wpisz wyłącznie w
    `docs/store/play_games_ids.properties` (bez ręcznego XML).
    Skonfiguruj testerów, OAuth i Saved Games; zweryfikuj logowanie,

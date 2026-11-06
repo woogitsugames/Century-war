@@ -38,9 +38,9 @@ class AchievementsTest {
 
     @Test
     fun catalogIsCompleteAndLocalized() {
-        assertEquals(79, Achievements.all.size)
-        assertEquals(79, Achievements.all.map { it.id }.toSet().size)
-        assertEquals(79, Achievements.all.map { it.pgsKey }.toSet().size)
+        assertEquals(83, Achievements.all.size)
+        assertEquals(83, Achievements.all.map { it.id }.toSet().size)
+        assertEquals(83, Achievements.all.map { it.pgsKey }.toSet().size)
         for (a in Achievements.all) {
             assertTrue(a.threshold > 0L)
             assertTrue(a.medalReward > 0)
@@ -275,8 +275,9 @@ class AchievementsTest {
             listOf("first_research", AchievementMetric.RESEARCH_LEVELS, 1L, 10, AchievementCategory.RESEARCH),
             listOf("stages_3", AchievementMetric.STAGES, 3L, 20, AchievementCategory.CAMPAIGN),
         )
-        // Dopisane na końcu katalogu R6-01, w ustalonej kolejności (po nich tylko wager_40 z 4.11).
-        assertEquals(expected.map { it[0] } + "wager_40", Achievements.all.takeLast(5).map { it.id })
+        // Dopisane na końcu katalogu R6-01, w ustalonej kolejności (po nich wager_40 z 4.11
+        // i cztery osiągnięcia Rozkazów sztabu z d65).
+        assertEquals(expected.map { it[0] } + "wager_40", Achievements.all.dropLast(4).takeLast(5).map { it.id })
         for (row in expected) {
             val a = Achievements.byId(row[0] as String)!!
             assertEquals(row[1], a.metric)

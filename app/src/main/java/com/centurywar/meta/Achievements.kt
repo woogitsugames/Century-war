@@ -32,6 +32,8 @@ enum class AchievementMetric {
     TURRET_TIER_FOUR, LATE_NO_TURRET_WINS,
     // Po D6 (4.11): fala 40 z kartą Zakład, metryka na końcu.
     WAGER_40,
+    // D65: Rozkazy sztabu (d62) — trzy liczone z profilu, jedna z bitwy; na końcu.
+    ORDERS_PERFECT, ORDERS_COMPLETED, ORDER_STARS, ORDERS_HOLD_NO_TURRETS,
 }
 
 data class AchievementDef(
@@ -147,6 +149,12 @@ object Achievements {
         // Po D6: fala 40 z Zakładem (docs/BALANCE.md, D6: do fali 40 dochodzi ok. 85/100 weteranów,
         // a Zakład kosztuje ok. 1,5 fali), więc wymaga badań i dobrej talii, ale nie rekordu.
         def("wager_40", AchievementMetric.WAGER_40, 1, 200, AchievementCategory.ENDLESS),
+        // D65: Rozkazy sztabu — pierwszy rozkaz na 3★, wszystkie 9 wykonane, komplet 27★ i obrona
+        // bez wież tam, gdzie są dozwolone (rozkazy 6 i 9).
+        def("orders_perfect_1", AchievementMetric.ORDERS_PERFECT, 1, 40, AchievementCategory.TACTICS),
+        def("orders_all_9", AchievementMetric.ORDERS_COMPLETED, 9, 150, AchievementCategory.TACTICS),
+        def("orders_stars_27", AchievementMetric.ORDER_STARS, 27, 450, AchievementCategory.TACTICS),
+        def("orders_hold_no_turrets", AchievementMetric.ORDERS_HOLD_NO_TURRETS, 1, 150, AchievementCategory.TACTICS),
     )
 
     /** Etap kampanii (indeks od 0), od którego liczy się wygrana bez wież; etap 8 jak dowódca. */
@@ -176,6 +184,14 @@ object Achievements {
         return n
     }
 
+    /** D65: liczba rozkazów z co najmniej [minStars] gwiazdkami (pętla po indeksie, bez alokacji). */
+    private fun countOrders(profile: Profile, minStars: Int): Long {
+        val stars = profile.orderStars
+        var n = 0L
+        for (i in stars.indices) if (stars[i] >= minStars) n++
+        return n
+    }
+
     fun isUnlocked(profile: Profile, id: String): Boolean = id in profile.unlockedAchievements
 
     /** Surowy postęp; UI może ograniczyć go do progu z definicji. */
@@ -186,6 +202,9 @@ object Achievements {
         AchievementMetric.STAGES -> profile.stars.count { it > 0 }.toLong()
         AchievementMetric.HARD_CAMPAIGN -> profile.hardStagesCleared().toLong()
         AchievementMetric.WAVES -> profile.bestWave.toLong()
+        AchievementMetric.ORDERS_PERFECT -> countOrders(profile, com.centurywar.game.Orders.MAX_STARS)
+        AchievementMetric.ORDERS_COMPLETED -> countOrders(profile, 1)
+        AchievementMetric.ORDER_STARS -> profile.orderStarTotal().toLong()
         AchievementMetric.KILLS -> profile.totalKills
         AchievementMetric.RESEARCH_LEVELS -> researchLevels(profile)
         AchievementMetric.MAXED_RESEARCH -> maxedResearch(profile)
@@ -303,6 +322,11 @@ object Achievements {
         if (won && cfg.mode == Mode.CAMPAIGN && cfg.stageIndex >= LATE_STAGE_INDEX &&
             player.slots > 0 && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers
         ) markOnce(profile, AchievementMetric.LATE_NO_TURRET_WINS)
+        // D65: rozkaz obrony z dozwolonymi wieżami wykonany bez budowania wież.
+        if (won && cfg.mode == Mode.ORDERS && cfg.holdWins &&
+            (cfg.playerAllowed and com.centurywar.game.OrderRules.TURRETS) != 0 &&
+            player.slots > 0 && player.turretsBuilt == 0 && Modifier.NO_TURRETS !in cfg.modifiers
+        ) markOnce(profile, AchievementMetric.ORDERS_HOLD_NO_TURRETS)
 
         // Dowódca i stopnie wież: tracker obserwuje każdy krok, bez niego liczymy stan końcowy.
         val summoned = events?.commanderSummoned ?: AchievementBattleTracker.commanderOnField(battle)

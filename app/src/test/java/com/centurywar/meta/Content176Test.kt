@@ -60,7 +60,7 @@ class Content176Test {
         Achievements.onBattleEnd(p, b, b.cfg, b.winner == 0, events = tracker).map { it.id }.toSet()
 
     @Test fun definitionsHaveKeysTranslationsAndRewardsInExistingScale() {
-        assertEquals(79, Achievements.all.size)
+        assertEquals(83, Achievements.all.size)
         val rewards = Achievements.all.map { it.medalReward }
         for (id in newIds) {
             val def = Achievements.byId(id)!!
@@ -76,7 +76,10 @@ class Content176Test {
         // Nowe metryki są dopisane na końcu enumu (zapis po nazwie i kolejność w JSON).
         val metrics = AchievementMetric.values().map { it.name }
         assertEquals(listOf("COMMANDER_SUMMONED", "COMMANDER_SURVIVOR", "COMMANDER_PULSES",
-            "COMMANDER_WINS", "TURRET_TIER_FOUR", "LATE_NO_TURRET_WINS", "WAGER_40"), metrics.takeLast(7))
+            "COMMANDER_WINS", "TURRET_TIER_FOUR", "LATE_NO_TURRET_WINS", "WAGER_40"), metrics.dropLast(4).takeLast(7))
+        // D65: cztery metryki Rozkazów sztabu po nich.
+        assertEquals(listOf("ORDERS_PERFECT", "ORDERS_COMPLETED", "ORDER_STARS", "ORDERS_HOLD_NO_TURRETS"),
+            metrics.takeLast(4))
         for (key in listOf("cx176_tiers", "cx176_tiers_d", "cx176_commander_tips",
             "cx176_commander_tips_d", "wn_176_content")) assertEquals(key, 10, L.raw(key)?.size)
         assertTrue("wn_176_content" in WhatsNewCatalog.releases.first().textKeys)

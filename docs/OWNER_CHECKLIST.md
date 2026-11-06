@@ -21,8 +21,8 @@ dokumentów.** Nie wpisuj ich też do repozytorium.
    z Androidem 8 lub nowszym, gotowych grać przez ok. 14 dni (przy koncie firmowym Google
    tego nie wymaga, ale bez testerów nie poznamy błędów). Zbieranie ludzi trwa najdłużej
    ze wszystkiego, co nie zależy od Google.
-5. **Play Games: 85 identyfikatorów.** Trzeba ręcznie utworzyć w konsoli projekt, 5 rankingów
-   i 79 osiągnięć. To 3–4 godziny klikania. Można zacząć zaraz po utworzeniu aplikacji w konsoli
+5. **Play Games: 89 identyfikatorów.** Trzeba ręcznie utworzyć w konsoli projekt, 5 rankingów
+   i 83 osiągnięcia. To 3–4 godziny klikania. Można zacząć zaraz po utworzeniu aplikacji w konsoli
    (krok 2), bo bez tych ID nie zbudujemy wersji do sklepu.
 
 ## Krok po kroku
@@ -114,15 +114,15 @@ W konsoli: **Zawartość aplikacji**. Koordynator przygotuje odpowiedzi do przek
 |---|---|---|---|
 | 1–2 h | 0 | zrzut podsumowania Data safety i wynik IARC; wybrana grupa wiekowa | **TAK** |
 
-### 6. Play Games: projekt i 85 identyfikatorów
+### 6. Play Games: projekt i 89 identyfikatorów
 W konsoli: **Play Games Services → Konfiguracja**. Utwórz:
 - **projekt** (1 ID, same cyfry);
 - **5 rankingów**, sortowane od największego wyniku: oblężenie (Endless), kampania, potyczka,
   wyzwanie dnia, Rozkazy sztabu (punkty sztabu, dodane 6.11);
-- **79 osiągnięć** (w tym 4 zatwierdzone 3.11 i już w grze: `first_evolve`, `first_turret`,
+- **83 osiągnięcia** (w tym 4 zatwierdzone 3.11 i już w grze: `first_evolve`, `first_turret`,
   `first_research`, `stages_3`, oraz `wager_40` dodane 4.11 po D6); wszystkie zwykłe, bez paska postępu.
 
-Razem **85 ID**. Nazwy i opisy osiągnięć dostaniesz od koordynatora w tabeli. Potem dodaj:
+Razem **89 ID**. Nazwy i opisy osiągnięć dostaniesz od koordynatora w tabeli. Potem dodaj:
 - poświadczenia OAuth dla Androida (SHA-1 z kroku 3 i SHA-1 „App signing” z Konfiguracja →
   Integralność aplikacji, widoczny po pierwszym wgraniu);
 - swoje konto i konta testerów jako testerów Play Games;
@@ -134,7 +134,7 @@ do `docs/store/play_games_ids.properties`. Bez kompletu ID wersja do sklepu się
 
 | Czas | Koszt | Przekaż koordynatorowi | Blokuje testy |
 |---|---|---|---|
-| 3–4 h | 0 | 85 ID (projekt, 5 rankingów, 79 osiągnięć) z nazwami | **TAK** |
+| 3–4 h | 0 | 89 ID (projekt, 5 rankingów, 83 osiągnięcia) z nazwami | **TAK** |
 
 ### 7. Karta sklepu
 Teksty w 10 językach są gotowe: `docs/store/listing_*.md`. Koordynator poda je bez nagłówków
@@ -194,7 +194,7 @@ wersję testową zbudujemy ze świadomym wyjątkiem i ustawimy datę bliżej pre
 | 5 min (decyzja) | 0 | data premiery albo „jeszcze nieznana” | **NIE** |
 
 ### 11. Zbudowanie wersji testowej 0.1.0 i wgranie na test wewnętrzny
-Gdy kroki 1–8 są zrobione, a koordynator potwierdzi, że wpisał 85 ID i dane wydawcy, wersję
+Gdy kroki 1–8 są zrobione, a koordynator potwierdzi, że wpisał 89 ID i dane wydawcy, wersję
 do sklepu budujesz **jednym kliknięciem w GitHubie**. Decyzje z 4.11: pierwsza wersja `0.1.0`,
 najpierw test wewnętrzny, potem ten sam plik na test zamknięty, bez serwera rankingu.
 
@@ -256,7 +256,7 @@ nic nie budujemy od nowa. Dalej jak w kroku 8.
 ## Kolejność w skrócie
 
 D-U-N-S → konto i weryfikacja → strona firmy z polityką → utworzenie gry → klucz podpisu →
-Play Games (85 ID) → deklaracje i karta sklepu → Ty klikasz „Run workflow” z wydaniem testowym
+Play Games (89 ID) → deklaracje i karta sklepu → Ty klikasz „Run workflow” z wydaniem testowym
 (krok 11) i wgrywasz AAB na testy wewnętrzne → sprawdzenie na Twoim telefonie → ten sam AAB na
 testy zamknięte z testerami.
 Realnie: **2–5 tygodni** od zera, głównie przez D-U-N-S i weryfikację w Google.

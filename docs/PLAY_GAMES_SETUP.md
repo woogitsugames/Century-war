@@ -42,7 +42,7 @@ Wstaw ID przydzielone przez Play Console do zasobów docs/store/play_games_ids.p
 
 ## 3. Osiągnięcia
 
-Lokalny katalog `meta/Achievements.kt` zawiera **79 osiągnięć** (liczba zgodna z kluczami w `docs/store/play_games_ids.properties`).
+Lokalny katalog `meta/Achievements.kt` zawiera **83 osiągnięcia** (liczba zgodna z kluczami w `docs/store/play_games_ids.properties`).
 Nazwy i opisy znajdują się w `engine/L.kt` w 10 językach. Nagrody medalowe
 są zapisywane w profilu lokalnie, działają offline i nie zależą od usług Google.
 `AchievementBattleTracker` obserwuje wyniki kroków symulacji, nie wpływając
@@ -51,7 +51,7 @@ na stan gry, seed ani kodowanie powtórek.
 W Play Console → Play Games Services → Setup and management → Achievements utwórz
 odpowiednie osiągnięcia **standardowe, odblokowywane jednorazowo**. Przepisz
 nadane przez Google identyfikatory do `docs/store/play_games_ids.properties`.
-Wszystkie 79 pól mają nazwy `achievement_<id>` i wartości `REPLACE_ME` do zastąpienia.
+Wszystkie 83 pola mają nazwy `achievement_<id>` i wartości `REPLACE_ME` do zastąpienia.
 Ich logiczny klucz po stronie katalogu to `cw_<id>`.
 
 | ID katalogu / sufiks zasobu | Warunek |

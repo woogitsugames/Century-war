@@ -16,7 +16,7 @@ Zorluk seçeneğiyle 36 sefer aşamasını oyna, sonsuz kuşatmada dalgalara dir
 
 Tekrarları ve savaş sonrası grafiği incele, sancakların kilidini aç ve profilini bir dosyaya kaydet. Renkleri ayarla ve solak modunu kullan. Sefer ve yerel ilerleme çevrimdışı çalışır.
 
-Her çağın kendi kayıtlı müziği var: savaş sırasında birbirine akıcı biçimde geçen sakin ve savaş temaları. 79 başarım ile günlük ve haftalık görevler sürekli yeni hedefler sunar.
+Her çağın kendi kayıtlı müziği var: savaş sırasında birbirine akıcı biçimde geçen sakin ve savaş temaları. 83 başarım ile günlük ve haftalık görevler sürekli yeni hedefler sunar.
 
 Erişilebilirlik: renk körlüğüne uygun paletler ve yüksek kontrast, daha büyük metin, ×½ savaş hızı, daha az parlama ve ekran sarsıntısı, menülerde ve ayarlarda ekran okuyucu desteği.
 

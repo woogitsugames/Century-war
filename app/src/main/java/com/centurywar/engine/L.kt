@@ -200,6 +200,7 @@ object L {
         putAll(part206())
         putAll(part208())
         putAll(part209())
+        putAll(part210())
         }
     }
 
@@ -216,6 +217,18 @@ object L {
             "Можна поліпшити загін. Натисни шеврони на його кнопці.",
             "Je kunt een eenheid upgraden. Tik op de strepen op de knop.",
             "Bir birliği geliştirebilirsin. Düğmesindeki şeritlere dokun."),
+    )
+
+    /** Dzień 65 (paczka 210): cztery osiągnięcia za Rozkazy sztabu. */
+    private fun part210(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "ach_orders_perfect_1" to t("Wzorowy rozkaz", "Textbook Order", "Befehl nach Lehrbuch", "Orden de manual", "Ordre exemplaire", "Ordine da manuale", "Ordem exemplar", "Зразковий наказ", "Bevel volgens het boekje", "Kusursuz emir"),
+        "ach_orders_perfect_1_d" to t("Zdobądź 3 gwiazdki w dowolnym rozkazie sztabu.", "Earn 3 stars in any Staff Order.", "Hole 3 Sterne in einem beliebigen Stabsbefehl.", "Consigue 3 estrellas en cualquier orden del estado mayor.", "Obtenez 3 étoiles dans n'importe quel ordre d'état-major.", "Ottieni 3 stelle in un qualsiasi ordine dello stato maggiore.", "Ganha 3 estrelas em qualquer ordem do estado-maior.", "Здобудь 3 зірки в будь-якому наказі штабу.", "Verdien 3 sterren in een willekeurig stafbevel.", "Herhangi bir karargâh emrinde 3 yıldız kazan."),
+        "ach_orders_all_9" to t("Weteran sztabu", "Staff Veteran", "Stabsveteran", "Veterano del estado mayor", "Vétéran de l'état-major", "Veterano dello stato maggiore", "Veterano do estado-maior", "Ветеран штабу", "Stafveteraan", "Karargâh gazisi"),
+        "ach_orders_all_9_d" to t("Zdobądź co najmniej 1 gwiazdkę w każdym z 9 rozkazów sztabu.", "Earn at least 1 star in all 9 Staff Orders.", "Hole mindestens 1 Stern in allen 9 Stabsbefehlen.", "Consigue al menos 1 estrella en las 9 órdenes del estado mayor.", "Obtenez au moins 1 étoile dans les 9 ordres d'état-major.", "Ottieni almeno 1 stella in tutti i 9 ordini dello stato maggiore.", "Ganha pelo menos 1 estrela nas 9 ordens do estado-maior.", "Здобудь щонайменше 1 зірку в усіх 9 наказах штабу.", "Verdien minstens 1 ster in alle 9 stafbevelen.", "9 karargâh emrinin hepsinde en az 1 yıldız kazan."),
+        "ach_orders_stars_27" to t("Marszałek polny", "Field Marshal", "Feldmarschall", "Mariscal de campo", "Maréchal de camp", "Feldmaresciallo", "Marechal de campo", "Фельдмаршал", "Veldmaarschalk", "Mareşal"),
+        "ach_orders_stars_27_d" to t("Zdobądź wszystkie 27 gwiazdek sztabu.", "Earn all 27 staff stars.", "Hole alle 27 Stabssterne.", "Consigue las 27 estrellas del estado mayor.", "Obtenez les 27 étoiles d'état-major.", "Ottieni tutte le 27 stelle dello stato maggiore.", "Ganha as 27 estrelas do estado-maior.", "Здобудь усі 27 зірок штабу.", "Verdien alle 27 stafsterren.", "27 karargâh yıldızının hepsini kazan."),
+        "ach_orders_hold_no_turrets" to t("Mur z ludzi", "Living Wall", "Lebende Mauer", "Muro viviente", "Mur vivant", "Muro vivente", "Muralha viva", "Живий мур", "Levende muur", "Canlı duvar"),
+        "ach_orders_hold_no_turrets_d" to t("Wykonaj rozkaz obrony z dozwolonymi wieżami bez budowania żadnej wieży.", "Complete a defense order that allows turrets without building any.", "Erfülle einen Verteidigungsbefehl mit erlaubten Türmen ohne einen Turm zu bauen.", "Cumple una orden de defensa que permite torretas sin construir ninguna.", "Accomplissez un ordre de défense autorisant les tourelles sans en construire aucune.", "Completa un ordine di difesa che consente le torrette senza costruirne nessuna.", "Cumpre uma ordem de defesa que permite torres sem construir nenhuma.", "Виконай наказ оборони з дозволеними вежами і не збудуй жодної.", "Voltooi een verdedigingsbevel waarin torens mogen zonder er een te bouwen.", "Kulelere izin veren bir savunma emrini hiç kule kurmadan tamamla."),
     )
 
     /** Dzień 62: Rozkazy sztabu (tryb B z R14) — 9 rozkazów, cele, ograniczenia, ranking. */

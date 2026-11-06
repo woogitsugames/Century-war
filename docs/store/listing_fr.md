@@ -16,7 +16,7 @@ Parcourez 36 étapes de campagne avec difficulté réglable, résistez aux vague
 
 Consultez les replays et le graphique après bataille, débloquez des bannières et exportez votre profil dans un fichier. Adaptez les couleurs et activez le mode gaucher. La campagne et la progression locale fonctionnent hors ligne.
 
-Chaque époque a sa propre musique enregistrée : un thème calme et un thème de combat qui s’enchaînent en douceur pendant la bataille. 79 succès et des missions quotidiennes et hebdomadaires offrent sans cesse de nouveaux objectifs.
+Chaque époque a sa propre musique enregistrée : un thème calme et un thème de combat qui s’enchaînent en douceur pendant la bataille. 83 succès et des missions quotidiennes et hebdomadaires offrent sans cesse de nouveaux objectifs.
 
 Accessibilité : palettes adaptées au daltonisme et contraste élevé, texte plus grand, bataille à ×½, moins de flashs et de secousses d’écran, et prise en charge du lecteur d’écran dans les menus et les paramètres.
 

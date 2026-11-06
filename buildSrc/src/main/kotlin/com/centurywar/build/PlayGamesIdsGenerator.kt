@@ -92,6 +92,11 @@ object PlayGamesIdsGenerator {
         "first_research",
         "stages_3",
         "wager_40",
+        // D65: Rozkazy sztabu.
+        "orders_perfect_1",
+        "orders_all_9",
+        "orders_stars_27",
+        "orders_hold_no_turrets",
     )
 
     val requiredKeys = listOf("app_id") + leaderboardKeys +

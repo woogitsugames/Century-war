@@ -34,6 +34,7 @@ NAME_MAX, DESC_MAX = 100, 500
 POINTS_TOTAL_MAX, POINTS_ONE_MAX = 2000, 200
 # Proponowany budżet: zostawiamy zapas na przyszłe osiągnięcia.
 # 4.11 (po D6): 1500 → 1600, bo „Wygrany zakład” (20 pkt) daje sumę 1515; limit Google to 2000.
+# 6.11 (d65): 4 osiągnięcia Rozkazów sztabu (+70 pkt) → 1585, nadal w budżecie.
 POINTS_BUDGET = 1600
 
 LEADERBOARDS = [  # klucz w properties, klucz nazwy w L.kt, uwaga
