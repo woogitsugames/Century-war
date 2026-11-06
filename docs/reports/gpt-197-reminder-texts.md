@@ -26,4 +26,11 @@ Poniższy przegląd ma charakter redakcyjny i nie zastępuje kontroli przez rodz
 
 ## Testy
 
-W TRAKCIE: wymagane filtry powiadomień i ustawień; kod nie zmieniony.
+Uruchomiono Gradle w Windows z JDK 17 i SDK 36:
+
+```text
+:app:testDebugUnitTest --tests *DailyReminder*: BUILD SUCCESSFUL in 23s
+:app:testDebugUnitTest --tests *SettingsNotificationsTest*: BUILD SUCCESSFUL in 17s
+```
+
+Kod nie został zmieniony; wymagany zakres zmian tekstów pozostaje otwarty.
