@@ -13,11 +13,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /** Pomiar tym samym Ui.measure/fit i geometrią co podpis zbrojowni. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class BattleShortLabels194Test {
     private val savedLang = L.lang
     @After fun restoreLang() { L.lang = savedLang }
@@ -43,6 +45,7 @@ class BattleShortLabels194Test {
             val s = BattleScreen(g, BattleConfig(Mode.SKIRMISH, 194L, 1f))
             g.setScreen(s)
             val ui = g.ui
+            ui.textScale = scale / 100f
             val available = s.armoryBtn.r.width() - 8f * ui.dp
             val old = L["battle84_armory_short"]
             val full = L["armory"]
@@ -54,3 +57,4 @@ class BattleShortLabels194Test {
         }
     }
 }
+
