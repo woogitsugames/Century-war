@@ -1,11 +1,11 @@
-# Audyt 166 — przegląd częściowy
+# Audyt 166 — przegląd statyczny
 
 Data: 2026-11-06. Baza `origin/main`: `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`.
-**NIE URUCHAMIANO GRADLE ANI TESTÓW GRADLE.** Wykonano `python -m unittest discover -s tests -p 'test_verify_release_*.py'`: **23 testy, OK** (testy narzędzi kontroli R8 na danych testowych, bez budowania release). Pozostałe wyniki pochodzą z czytania kodu; awarii nie odtwarzano na urządzeniu. Zlecenie dokumentowe nie wymaga budowania. Audyt jest częściowy.
+**NIE URUCHAMIANO GRADLE ANI TESTÓW GRADLE.** Wykonano `python -m unittest discover -s tests -p 'test_verify_release_*.py'`: **23 testy, OK** (testy narzędzi kontroli R8 na danych testowych, bez budowania release). Pozostałe wyniki pochodzą z czytania kodu; awarii nie odtwarzano na urządzeniu. Zlecenie dokumentowe nie wymaga budowania.
 
 ## Podsumowanie dla właściciela
 
-Wykryto braki w kodzie i podejrzenia wymagające odtworzenia. Synchronizacja Play Games może przyjąć profil z chmury podczas bitwy i usunąć jej zapis; wymaga to poprawki przed testami korzystającymi z chmury. Prośba o usunięcie danych własnego rankingu może zostać wykonana po ponownym uruchomieniu, mimo wcześniejszego komunikatu o niepowodzeniu. Ranking ten nie jest zaplanowany na bieżące testy zamknięte. Nietypowo uszkodzony zapis bitwy z poprawną sumą kontrolną może zawierać nieprawidłowe liczby. Nie wykazano, że zdarza się to podczas zwykłej gry. Powtarzane otwieranie i zamykanie aplikacji może pozostawiać niepotrzebne wątki powtórek, a błąd nagranej muzyki może spowodować ciszę. Potencjalne wyścigi rozliczenia i pętli testowej wymagają kontrolowanych prób. Nie można na podstawie częściowego przeglądu wiarygodnie zatwierdzić wydania dla testerów.
+Wykryto braki w kodzie i podejrzenia wymagające odtworzenia. Synchronizacja Play Games może przyjąć profil z chmury podczas bitwy i usunąć jej zapis; wymaga to poprawki przed testami korzystającymi z chmury. Prośba o usunięcie danych własnego rankingu może zostać wykonana po ponownym uruchomieniu, mimo wcześniejszego komunikatu o niepowodzeniu. Ranking ten nie jest zaplanowany na bieżące testy zamknięte. Nietypowo uszkodzony zapis bitwy z poprawną sumą kontrolną może zawierać nieprawidłowe liczby. Nie wykazano, że zdarza się to podczas zwykłej gry. Powtarzane otwieranie i zamykanie aplikacji może pozostawiać niepotrzebne wątki powtórek, a błąd nagranej muzyki może spowodować ciszę. Potencjalne wyścigi rozliczenia, zapisów i pętli testowej wymagają kontrolowanych prób. Sam przegląd statyczny nie wystarcza do zatwierdzenia wydania dla testerów.
 
 ## Znaleziska
 
@@ -45,7 +45,16 @@ W tabeli `app/` oznacza `app/src/main/java/com/centurywar/`, a `sim/` — `sim/s
 
 ## Ograniczenia
 
-Nie ukończono pełnej analizy wszystkich ścieżek nagród, awarii zapisu, starszych i nowszych wersji, Folda i TestLoop, dźwięku, Play Games ani instrumentowanych testów R8. `Profile.load` czyta lokalny profil bez limitu rozmiaru (`Profile.kt:1322,1338`), ale opisano to już w `audit-156.md`, więc nie jest ponownie zgłaszane jako nowe znalezisko. Wcześniejsze audyty i zlecenia są punktem odniesienia, nie dowodem, że wszystkie ich ustalenia zostały naprawione.
+Nie wykonano symulacji zabicia procesu, rzeczywistych prób Folda i TestLoop, testów urządzenia audio, konta Play Games ani instrumentowanych testów R8. Wnioski o przeplotach są analizą kodu, a nie wynikami tych prób. `Profile.load` czyta lokalny profil bez limitu rozmiaru (`Profile.kt:1322,1338`), ale opisano to już w `audit-156.md`, więc nie jest ponownie zgłaszane jako nowe znalezisko. Wcześniejsze audyty i zlecenia są punktem odniesienia, nie dowodem, że wszystkie ich ustalenia zostały naprawione.
+
+| Obszar zlecenia | Sprawdzone ścieżki | Granica pewności |
+|---|---|---|
+| Zapisy i odczyty | profil i kopia, usuwanie danych, dziennik, awarie, historia, snapshot, wznowienie i import powtórki; kolejność I/O i limity | Bez kontrolowanego zabicia procesu i awarii dysku; A166-01/02/08/09. |
+| Nagrody | zakończenie bitwy, gwiazdki, korony, misje, osiągnięcia, tydzień, kamienie milowe, powitanie i utracona bitwa | Statyczne przejście stanów, nie dowód wszystkich możliwych przeplotów; A166-03/07/08. |
+| Wątki | profil, dziennik, historia, snapshot, powtórki, Sound, PendingSfx, muzyka, ThermalWatch, QualityGovernor, kolejka wyników, PGS | Brak pomiaru retencji i obciążenia urządzenia; A166-05/06/09. |
+| Activity i TestLoop | start, pauza, wznowienie, zniszczenie, konfiguracja, oddzielny proces i katalog | Fizyczny obrót, podzielony ekran, Fold i przerwania wymagają prób; A166-04/07/09. |
+| Release i R8 | reguły komponentów i enumów, skrypt smoke, testy weryfikatorów mapowania i DEX | 23 testy Python sprawdzają fikstury; nie zbudowano ani nie uruchomiono release. |
+| Dane uszkodzone i wersje | limity importu, profil, historia, snapshot i metadane replaya, ordinale, NaN oraz zachowanie przy nowszej wersji | Nie wykonano fuzzingu ani zestawu fizycznie uszkodzonych plików; A166-02/08/09. |
 
 ## Proponowane paczki naprawcze
 
