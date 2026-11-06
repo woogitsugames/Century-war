@@ -20,6 +20,7 @@ import android.view.SurfaceView
  *  - `lockHardwareCanvas()` rysuje przez GPU (Canvas akcelerowany sprzętowo).
  *  - `unlockCanvasAndPost` blokuje do vsync, więc pętla naturalnie chodzi w tempie
  *    ekranu (60/90/120 Hz). Opcjonalny limit 30/60 FPS oszczędza baterię.
+ *  - D61: poza bitwą i powtórką najwyżej 60 FPS ([FramePacer]); bitwa bez zmian.
  *  - `setFixedSize` zmniejsza bufor na słabszych telefonach; skalowanie do
  *    rozdzielczości ekranu robi kompozytor sprzętowo.
  */
@@ -32,7 +33,11 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
     @Volatile private var bufW = 0
     @Volatile private var bufH = 0
     @Volatile private var sizeChanged = false
+    /** Limit gracza / trybu baterii (0 = tempo ekranu); poza bitwą [FramePacer.capFor] daje ≤ 60. */
     @Volatile var frameCapFps = 0
+    private val pacer = FramePacer()
+    /** Ostatnia wskazówka tempa przekazana powierzchni (-1 = jeszcze żadna). */
+    @Volatile private var surfaceRate = -1
     /** true, dopóki wątek gry faktycznie działa (od startu pętli do jej wyjścia). */
     @Volatile var loopActive = false
         private set
@@ -65,6 +70,15 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
 
     fun setFrameRate(fps: Int) {
         frameCapFps = fps
+        applySurfaceRate(FramePacer.capFor(fps, game.uncappedScreen))
+    }
+
+    /**
+     * Wątek UI. Wskazówka dla kompozytora (API 30+): 60 Hz poza bitwą pozwala ekranowi 120 Hz
+     * zwolnić bez szarpania; system zmienia tryb tylko, gdy da się to zrobić płynnie.
+     */
+    private fun applySurfaceRate(fps: Int) {
+        surfaceRate = fps
         if (Build.VERSION.SDK_INT >= 30 && hasSurface) {
             try {
                 holder.surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
@@ -204,14 +218,12 @@ class GameView(context: Context, private val game: Game) : SurfaceView(context),
                 } catch (_: Exception) { }
             }
             accessibility.refreshIfEnabled()
-            val cap = frameCapFps
-            if (cap > 0) {
-                val target = 1_000_000_000L / cap
-                val spent = System.nanoTime() - frameStart
-                if (spent < target) {
-                    try { Thread.sleep((target - spent) / 1_000_000L) } catch (_: InterruptedException) { }
-                }
+            val cap = FramePacer.capFor(frameCapFps, game.uncappedScreen)
+            if (cap != surfaceRate) {
+                surfaceRate = cap
+                post { if (surfaceRate == cap) applySurfaceRate(cap) }
             }
+            FramePacer.sleep(pacer.sleepNanos(frameStart, System.nanoTime(), cap))
         }
     }
 

@@ -147,6 +147,7 @@ class Game(
 
     private fun syncMusicScreen(s: Screen) {
         battleActive = s is BattleScreen
+        uncappedScreen = s is BattleScreen || s is ReplayScreen
         if (s !is BattleScreen && s !is ReplayScreen) {
             music?.setEra(Music.MENU)
             music?.setIntensity(0f)
@@ -312,6 +313,12 @@ class Game(
     @Volatile var thermalHeadroom = Float.NaN
     /** Czy bieżący ekran to bitwa; wątek UI odpytuje zapas termiczny tylko wtedy. */
     @Volatile var battleActive = false
+        private set
+    /**
+     * D61: bitwa i powtórka rysują w tempie ekranu (albo limitu gracza); pozostałe ekrany
+     * najwyżej 60 FPS ([FramePacer.capFor]). Czytane przez wątek pętli w [GameView].
+     */
+    @Volatile var uncappedScreen = false
         private set
     private var frameAvg = 16f
     var fps = 60f
