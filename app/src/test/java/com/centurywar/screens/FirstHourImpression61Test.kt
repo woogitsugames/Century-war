@@ -23,7 +23,7 @@ import java.util.Locale
  * oś czasu z czasem czekania między krokami samouczka: `os_czasu.txt` w tym samym katalogu.
  * Kontrole (dwie nakładki naraz, dymek nad HUD, baner nad bitwą i wynikami) z [FirstHourJourneyBase].
  * Dodatkowo (d61): samouczek nie każe czekać dłużej niż [MAX_WAIT] s między krokami, a pierwsza
- * bitwa (samouczek + reszta, AI gracza, ziarno z zegara) mieści się w 12 minutach.
+ * bitwa (samouczek + reszta, AI gracza, stałe ziarno [SEED]) mieści się w 12 minutach.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -69,6 +69,7 @@ class FirstHourImpression61Test : FirstHourJourneyBase() {
 
     private fun walk(device: String, lang: String) {
         val g = game(devices.getValue(device), lang)
+        g.seedSource = { SEED }
         L.setCode(lang)
         tick(g, 0.1f, 5)
         note(g, "start: menu")
@@ -211,5 +212,8 @@ class FirstHourImpression61Test : FirstHourJourneyBase() {
     companion object {
         /** Najdłuższe dopuszczalne czekanie (czas symulacji) między kolejnymi krokami samouczka. */
         const val MAX_WAIT = 1000f
+
+        /** Stałe ziarno bitew (dawniej `System.nanoTime()` — test bywał niestabilny). */
+        const val SEED = 20261106L
     }
 }

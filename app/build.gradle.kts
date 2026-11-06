@@ -319,6 +319,12 @@ if (updateScreenshotsRequested) {
     require(screenshotReason.length >= 8) {
         "Użyj :app:updateScreenshots -PscreenReason='powód (min. 8 znaków)'."
     }
+    // Przy locale POSIX (kontener) JVM klienta Gradle zamienia polskie znaki argumentu na U+FFFD
+    // i do UPDATES.md trafiał zepsuty powód.
+    require('�' !in screenshotReason) {
+        "Polskie znaki w -PscreenReason zostały zgubione (locale ${System.getenv("LC_ALL") ?: "POSIX"}). " +
+            "Uruchom z LC_ALL=C.UTF-8 ./gradlew :app:updateScreenshots …"
+    }
     check(providers.environmentVariable("CW_SCREENSHOT_DEVICE").orNull.isNullOrBlank()) {
         "Aktualizacja wzorców musi objąć oba urządzenia; usuń CW_SCREENSHOT_DEVICE."
     }

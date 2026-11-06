@@ -1126,7 +1126,7 @@ class MenuScreen(g: Game) : Screen(g) {
                 // Pierwsza epoka nie zasłania powrotu z samouczka zapowiedzią.
                 g.profile.markEraIntroSeen(0)
                 g.setScreen(BattleScreen(g, Campaign.config(Campaign.stages[0],
-                    g.profile.bonuses(), System.nanoTime(), tutorial = true)))
+                    g.profile.bonuses(), g.newBattleSeed(), tutorial = true)))
             } else g.push(CampaignScreen(g))
             2 -> g.push(ModeScreen(g, Mode.ENDLESS))
             3 -> g.push(ModeScreen(g, Mode.DAILY))

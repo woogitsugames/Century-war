@@ -707,7 +707,7 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
         when (b.id) {
             -1 -> g.pop()
             -2 -> {
-                val seed = System.nanoTime()
+                val seed = g.newBattleSeed()
                 when (mode) {
                     Mode.ENDLESS -> g.setScreen(BattleScreen(g, BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = pr.bonuses())))
                     Mode.DAILY -> {
