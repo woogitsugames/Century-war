@@ -95,6 +95,10 @@ Każdy plik to samodzielne zlecenie (prompt ogólny + prompt zlecenia). Każde z
 | 89 | [Ustawienia, potyczka i kodeks: porządek i przewijanie](89-settings-codex-ux.md) | `gpt/89-settings-codex-ux` | tura 6 (audyt) |
 | 90 | [Odczucia: odbiór nagród i drobne optymalizacje rysowania](90-feedback-perf.md) | `gpt/90-feedback-perf` | tura 6 (audyt) |
 | 91 | [Siatka bezpieczeństwa: złote powtórki i testy symulacji bez Androida](91-golden-tests.md) | `gpt/91-golden-tests` | tura 6 (audyt) |
+| 166 | [Niezależny audyt kodu (raport `docs/reports/audit-166.md`)](166-code-audit.md) | `gpt/166-code-audit` | paczka zewnętrzna (baza `main`); bez zmian w kodzie |
+| 167 | [Natywny przegląd tłumaczeń 10 języków w `L.kt`](167-l10n-native.md) | `gpt/167-l10n-native` | paczka zewnętrzna (baza `main`); jedyna zmienia `L.kt`, rezerwacja part207 |
+| 168 | [Teksty marketingowe w 10 językach (`docs/store/marketing/`)](168-marketing.md) | `gpt/168-marketing` | paczka zewnętrzna (baza `main`); tylko dokumenty |
+| 169 | [Recenzja projektu gry (raport `docs/reports/design-review-169.md`)](169-design-review.md) | `gpt/169-design-review` | paczka zewnętrzna (baza `main`); bez zmian w kodzie |
 
 **Konflikty:** zlecenia 05, 06, 07, 13, 16, 17 i 18 dotykają `game/Battle.kt` lub `game/Ai.kt` i będą scalane po kolei. Najlepsza kolejność: niezależne (01–03, 08–12, 14, 15) równolegle; potem 05 → 06 → 07 → 13 → 16 → 17 → 18; balans (04) na końcu albo po każdej większej zmianie.
 
