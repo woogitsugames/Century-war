@@ -102,11 +102,20 @@ class CodexComparePanelTest {
                     }
                     // Dwie kolumny wartości na kartach: każdy podpis statystyki występuje po obu stronach.
                     val labels = CodexCompareModel.statKeys.map { L[it] }.toSet()
-                    val stats = first.texts.filter { it.text in labels && it.bounds.top >= bottom && it.bounds.bottom <= height }
+                    val stats = ArrayList<Drawn>()
+                    repeat(8) {
+                        val rec = Recorder(bitmap)
+                        screen.render(rec)
+                        for (t in rec.texts.filter { it.text in labels && it.bounds.top >= bottom && it.bounds.bottom <= height }) {
+                            val right = t.bounds.centerX() > width / 2f
+                            if (stats.none { it.text == t.text && (it.bounds.centerX() > width / 2f) == right }) stats.add(t)
+                        }
+                        if (stats.size < labels.size * 2) screen.onDrag(0f, -55f * game.ui.dp)
+                    }
                     for (label in labels) {
                         val pair = stats.filter { it.text == label }
                         if (pair.size != 2) problems.append("$tag: '$label' narysowano ${pair.size}/2\n")
-                        if (pair.size == 2 && (pair[0].bounds.centerX() >= width / 2f || pair[1].bounds.centerX() <= width / 2f))
+                        if (pair.size == 2 && pair.count { it.bounds.centerX() < width / 2f } != 1)
                             problems.append("$tag: '$label' nie ma osobnych kolumn\n")
                         for (text in pair) {
                             val sp = text.pixels / game.ui.dp / game.ui.textScale
