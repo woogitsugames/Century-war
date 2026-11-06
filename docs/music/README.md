@@ -85,6 +85,7 @@ Pomiar `ffmpeg ebur128` (stereo, liniowe wzmocnienia jak w grze: `SoundPool` i `
 - efekty bitwy: 4 min prawdziwej bitwy AI (seed 12) zmiksowane jak `BattleSfx` + bramka odstępów i budżet z `Sound`, suwak efektów 0,8 → **−35,0 LUFS** (krótkoterminowo: mediana −37, p90 −29); pojedyncze efekty przy typowym `vol`: trafienie −42, strzał −38, śmierć −36, wybuch −31, ostrzał −28 LUFS-M max;
 - nagrania przed zmianą, suwak 0,5: **−22,1 LUFS**, czyli **13 dB nad efektami** (synteza dla porównania: menu −43, epoka spokój −38, starcie −36 LUFS);
 - po zmianie (`LOOP_GAIN = 0,1`, −20 dB): suwak 0,5 → **−42,1 LUFS, 7 dB pod efektami**; suwak 1,0 → −36 LUFS; suwak 0 → cisza i brak fokusu. Przerywnik wyniku `STINGER_GAIN = 0,2` (+6 dB nad pętlą, ok. −36 LUFS) — zastępuje efekt zwycięstwa/porażki (−29 LUFS-M max).
+- D63 (6.11): efekty wyrównane w rodzinach według głośności K-ważonej, poziomy rodzin bez zmian — miks bitwy nadal **−35,3 LUFS**, pętle −42,0…−42,2 LUFS (6,7–6,9 dB pod efektami); pilnuje `SoundBalance63Test`. Szczegóły: [`docs/reports/d63-dzwiek.md`](../reports/d63-dzwiek.md).
 
 Synteza (zapas na brakujący/uszkodzony plik) zostaje bez zmian.
 
