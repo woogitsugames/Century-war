@@ -73,6 +73,31 @@ wątku `ScoreClient` ani konfiguracji HTTPS konkretnego urządzenia.
 
 ### API v1
 
+Poniższa tabela opisuje trasy z `Api.kt`. Limity są domyślne, konfigurowalne
+przez `CW_RATE_*`, liczone w minutowym oknie przez jedną instancję; body ma
+limit także bez `Content-Length`. Błędy `/v1/*` mają JSON `{"error":"kod"}`;
+health i metrics zwracają wskazany tekst albo JSON. Kody pod tabelą to wyniki
+obsługiwane przez te procedury, a nie gwarancja przy awarii infrastruktury.
+
+| Metoda | Ścieżka | Uwierzytelnienie | Limit | Żądanie → odpowiedź sukcesu | Błędy |
+|---|---|---|---|---|---|
+| GET | `/health` | brak | brak w aplikacji | brak → 200 tekst `ok` | 503 `unavailable` przy niedostępnej bazie |
+| GET | `/healthz` | brak | brak w aplikacji | brak → 200 tekst `ok` | 503 `unavailable` przy niedostępnej bazie |
+| GET | `/metrics` | `Authorization: Bearer <token>`; trasa tylko z `CW_METRICS_TOKEN` | brak w aplikacji | brak → 200 JSON: `scoreCount`, `verificationAccepted`, `verificationRejected`, `verificationUnavailable`, `verificationSamples`, `verificationMeanMs`, `verificationMaxMs`, `uptimeSeconds` | 404 gdy wyłączona, 401 `unauthorized`, 503 `unavailable` |
+| POST | `/v1/score` | HMAC, timestamp, nonce i sekret instalacji w podpisie | 20/min/IP, 6/min/gracza, 100/dzień/instalację, 400/dzień/IP; body 1 MiB | JSON: `board`, `player`, `nick`, `gameVersion`, `day?`, `seed`, `stage?`, `replay`, `score`, `research`, `difficulty?`, `tutorial?` → 200 `board`, `verifiedScore`, `bestScore`, `accepted` | 400 `invalid_submission`, `unsupported_version`, `invalid_board`, `invalid_stage`, `invalid_week`, `invalid_research`, `invalid_difficulty`, `invalid_tutorial`; 401 `invalid_signature_or_nonce`; 403 `blocked_player`, `not_player_owner`; 409 `player_deleted`, `daily_already_submitted`; 413 `body_too_large`; 422 `invalid_replay`, `unsupported_replay_format`; 429 `rate_limited`, `daily_quota_exceeded`; 503 `verification_busy` |
+| GET | `/v1/top` | HMAC, timestamp i nonce | 120/min/IP wspólnie z around | query `board` wymagane, `period` domyślnie `all` → 200 `board`, `period`, `entries`, `self` (null); wpis `rank`, `player`, `nick`, `score` | 400 `invalid_query`; 401 `invalid_signature`; 429 `rate_limited` |
+| GET | `/v1/around` | HMAC, timestamp, nonce i sekret instalacji w podpisie | 120/min/IP wspólnie z top | query `player` wymagane, `board` domyślnie `endless`, `period` domyślnie `all` → 200 `board`, `period`, `entries`, `self` | 400 `invalid_query`; 401 `invalid_signature`; 403 `not_player_owner`; 429 `rate_limited` |
+| POST | `/v1/report` | brak | 5/min/IP i 15/min/publiczne ID; body 512 B | JSON `publicId`, `reason` → 202 `accepted` | 400 `invalid_report`; 404 `unknown_player`; 413 `body_too_large`; 429 `rate_limited` |
+| POST | `/v1/player/delete` | HMAC, timestamp, nonce i sekret instalacji w podpisie | 20/min/IP; body 1024 B | JSON `player` → 200 `deleted` | 400 `invalid_player`; 401 `invalid_signature_or_nonce`; 403 `not_player_owner`; 413 `body_too_large`; 429 `rate_limited` |
+
+W `/v1/score` pominięte pola z `?` mają wartości domyślne modelu;
+`research` domyślnie jest puste, ale walidacja wymaga 13 prawidłowych
+poziomów. `difficulty` jest wymagane dla `skirmish`, `stage` dla `campaign`,
+`day` dla `daily` i `weekly`. Sprawdzenie dnia, seeda, wyniku i powtórki
+odbywa się w weryfikatorze i jego pozostałe błędy trafiają na zewnątrz jako
+422 `invalid_replay`. Dzienne 429 ma `Retry-After` do północy UTC, a 503
+`verification_busy` — `Retry-After: 30`.
+
 Podpisy wymagane dla `/v1/score`, `/v1/player/delete`, `/v1/top`, `/v1/around`.
 `/v1/report`, `/health` i `/healthz` są bez HMAC; pierwszy jest limitowany per-IP.
 
@@ -154,7 +179,7 @@ nie jest poprawną, zweryfikowaną powtórką):
 
 Pozostałe pola: `day` (`daily` — dzień UTC od epoki Unix; `weekly` — numer tygodnia
 z `Weekly.weekNumber(day)`), `stage` (tylko `campaign`, indeks 0–35). Gracz to losowy **UUID v4**, utrwalany
-lokalnie na urządzeniu; `nick` ma 1–24 znaki Unicode: litery, cyfry,
+lokalnie na urządzeniu; `nick` ma 1–24 jednostki UTF-16: litery, cyfry,
 spację oraz `._-`, bez białych znaków na końcach. Jeżeli nick zawiera
 słowo ze słownika moderacji (10 języków gry) albo nie spełnia reguł,
 serwer **przyjmuje poprawną powtórkę**, ale zapisuje nick zastępczy
@@ -297,7 +322,7 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
   w `:sim` (obecnie `0.8.13`). Używa jej klient oraz domyślny serwer.
   `CW_GAME_VERSION` nie jest już konfigurowana w Docker Compose.
   Jej podbicie po zmianach przebiegu symulacji wykonuje koordynator.
-  `Replay.VERSION` (obecnie 5) wersjonuje tylko format powtórek.
+  `Replay.VERSION` (obecnie 7) wersjonuje tylko format powtórek.
   Przed wydaniem sprawdź identyczne odtwarzanie Android/JVM (Float).
 - Komenda `Replay.Kind.VARIANT` pozostaje częścią formatu; `Daily.config`
   utrzymuje historyczne reguły przed `Daily.RELEASE_DAY`.
