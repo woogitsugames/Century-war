@@ -746,7 +746,7 @@ class CampaignScreen(
         ui.ribbon(c, info.centerX(), info.top + 4 * dp, infoTitle, 20f, Ui.ERA[s.index / 4].let { Ui.blend(it, Ui.RIBBON, 0.35f) }, info.width() * 0.55f)
         val compact = info.height() < 352 * dp
         var y = info.top + (if (compact) 44 else 48) * dp
-        // Tylko niski panel: odzyskaj miejsce między modyfikatorami a trudnością.
+        // Tylko niski panel: odzyskaj miejsce między modyfikatorami a trudnością (≥ 10 dp także przy 130%).
         val row = if (compact) 21 * dp else 28 * dp
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
@@ -796,7 +796,7 @@ class CampaignScreen(
             // W niskim panelu nazwy stoją w tym samym wierszu; poprzednie chipy nie mieściły się pod nim.
             val tx = x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true)
             val available = (info.right - 24 * dp - tx).coerceAtLeast(1f)
-            ui.text(c, compactModifiers, tx, y, ui.fit(compactModifiers, 12f, available, 8f), Ui.DIM)
+            ui.text(c, compactModifiers, tx, y, ui.fit(compactModifiers, 14f, available, 9f), Ui.TEXT)
         } else if (s.modifiers.isEmpty()) {
             // Tura 10: „brak” w tym samym wierszu; niżej wchodził pod napis „Trudność” (720p).
             ui.text(c, L["none"], x + isz + 14 * dp + ui.measure(infoModifiers, 14f, true), y, 13f, Ui.DIM)
