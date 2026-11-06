@@ -61,4 +61,17 @@ nic nowego dla TalkBack.
 
 ## Weryfikacja
 
-WYNIKI_PELNE
+- `MenuGoal65Test`, `OrdersAchievements65Test`, `PgsIconsTest` (z `PGS_ICONS=true`), `*Menu*`,
+  `*FirstHour*`, `*Tura8*`, `*HardCampaign189*`, `*TesterReminder*`, `*NextGoal*`, `meta.*`: zielone.
+- Pierwsze pełne `:app:testDebugUnitTest --rerun`: 956 testów, 1 błąd —
+  `ScreenshotTestFold.foldAudit98` wymagał 48 dp **wysokości rysunku** każdego przycisku; pasek celu
+  ma 28 dp i cel dotyku 48 dp przez `hitSlop`. Audyt liczy teraz wysokość z `hitSlop` (tak jak
+  `GameAccessibility` liczy obszar dotyku).
+- Drugie pełne `:app:testDebugUnitTest --rerun`: **956 testów, 12 pominiętych, 0 błędów**
+  (BUILD SUCCESSFUL, ok. 28 min).
+- Uwaga (bez zmian w kodzie): `FirstHourImpression61Test.phonePl` bywa niestabilny — pierwsza bitwa
+  ma ziarno `System.nanoTime()` i czasem trwa > 12 min (13,2 min także na czystym `main`;
+  przy ponownym uruchomieniu zielony). W obu pełnych przebiegach d65 przeszedł.
+- `updateScreenshots` zapisuje wzorce, ale kończy się błędem configuration cache
+  (`DefaultTask` z referencją do skryptu) i przekłamuje polskie znaki z `ORG_GRADLE_PROJECT_screenReason`;
+  wpis w `UPDATES.md` poprawiony ręcznie.
