@@ -29,6 +29,7 @@ CAMPAIGN: battles 12, wins 9, time 1h 0m
 SKIRMISH: battles 3, wins 2, time 20m 0s
 ENDLESS: battles 3, wins 2, time 20m 0s
 DAILY: battles 2, wins 1, time 20m 0s
+ORDERS: battles 0, wins 0, time 0m 0s
 Screens visited: Codex, Research, Daily
 Recent battles (newest first):
   CAMPAIGN stage 8, win, 5m 3s, era 2, AI 100%

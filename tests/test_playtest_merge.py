@@ -133,7 +133,10 @@ def build_report(version="0.1.0 (1)", model="Acme Phone", android="15 (API 35)",
     o.append(f"Battles: {battles}, wins: {wins}, surrenders: {surrenders}\n\n")
     o.append("[Modes]\n")
     for i, m in enumerate(pm.MODES):
-        o.append(f"{m}: battles {mode_battles[i]}, wins {mode_wins[i]}, time {_duration(mode_s[i])}\n")
+        mb = mode_battles[i] if i < len(mode_battles) else 0
+        mw = mode_wins[i] if i < len(mode_wins) else 0
+        ms = mode_s[i] if i < len(mode_s) else 0
+        o.append(f"{m}: battles {mb}, wins {mw}, time {_duration(ms)}\n")
     names = [pm.SCREEN_NAMES[i] for i in range(len(pm.SCREEN_NAMES)) if screens & (1 << i)]
     o.append("Screens visited: " + (", ".join(names) if names else "-") + "\n")
     o.append("Recent battles (newest first):\n")

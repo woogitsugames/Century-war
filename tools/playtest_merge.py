@@ -89,7 +89,7 @@ FINAL_SECTION = "[Final survey]"
 FINAL_LIKED = ("campaign", "battles and units", "eras and research", "daily challenges",
                "graphics and sound", "nothing special")
 FINAL_ISSUES = ("too hard", "too easy", "battles too long", "unclear rules", "slow progress", "nothing, it's good")
-MODES = ("CAMPAIGN", "SKIRMISH", "ENDLESS", "DAILY")
+MODES = ("CAMPAIGN", "SKIRMISH", "ENDLESS", "DAILY", "ORDERS")
 SCREEN_NAMES = ("Codex", "Research", "Missions", "Replays", "Accessibility",
                 "Skirmish", "Endless", "Daily", "Weekly")
 SURVEY_ISSUES = ("too hard", "battles too long", "unclear rules", "nothing, it's good")
