@@ -1,8 +1,8 @@
-# Zlecenie 198 — pomiar Endless, przygotowanie
+# Zlecenie 198 — pomiar Endless
 
 Data: 2026-11-06. Baza `origin/main`: `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`; gałąź `gpt/198-endless-report`.
 
-**WYMAGANA KOMENDA ZLECENIA NIE ZOSTAŁA JESZCZE URUCHOMIONA.** Poniższe rzeczywiste wyniki pochodzą ze świeżego `:server:test` uruchomionego przez koordynatora w worktree zlecenia 172 na tym samym SHA `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7` (`C:/Users/matma/.codex/century-war-build/172-server.log`). Wszystkie cztery wymienione niżej metody Endless przeszły, ale cały zestaw serwera zakończył się błędem innego testu. Po zwolnieniu Gradle trzeba wykonać komendę wymaganą w 198. Jedyny zmieniony plik: ten raport. Bez zmian symulacji, balansu, testów i `docs/BALANCE.md`.
+**GRADLE URUCHOMIONO: TESTY ENDLESS PRZESZŁY.** Wyniki pochodzą z wymaganego przebiegu na bazie `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`; pełny log `C:/Users/matma/.codex/century-war-build/198-server.log`. Wszystkie sześć metod klasy przeszło. Dodatkowy wcześniejszy `:server:test` koordynatora na tym samym SHA dał te same 170 linii pomiarowych, ale cały jego zestaw serwera zakończył się błędem innego testu. Jedyny zmieniony plik: ten raport. Bez zmian symulacji, balansu, testów i `docs/BALANCE.md`. Aktualny hash gałęzi z raportem: `git rev-parse HEAD`.
 
 ## Metoda i porównywalność
 
@@ -10,7 +10,7 @@ Data: 2026-11-06. Baza `origin/main`: `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`
 
 ## Bazowe dane z `docs/BALANCE.md`, sekcja D58
 
-Poprzednio oznacza stan po strojeniu D58 z 5.11; wartości bieżące pochodzą z opisanego wyżej przebiegu serwera. Wyniki D58 w dokumencie są zaokrąglone.
+Poprzednio oznacza stan po strojeniu D58 z 5.11; wartości bieżące pochodzą z wymaganego przebiegu 198. Wyniki D58 w dokumencie są zaokrąglone.
 
 | Miara | Teraz | Poprzednio | Różnica |
 |---|---:|---:|---:|
@@ -70,7 +70,7 @@ Pancerz piechoty 9 / 23 010; Skarbiec wojenny 3 / 21 238; Bębny natarcia 2 / 20
 
 ## Wyniki dostępnego przebiegu
 
-Wybrane linie rzeczywistego logu koordynatora (metody oznaczone `PASSED`):
+Wybrane linie rzeczywistego logu 198 (metody oznaczone `PASSED`):
 
 ```text
 ENDLESS_MEAN=50.95
@@ -130,6 +130,15 @@ BUILD FAILED in 55s
 
 Niepowodzenie dotyczyło `SqliteMaintenanceTest.migratesSchemaTwoToThreeKeepingDataAndRefusesNewerSchema`, a nie wymienionych metod pomiarowych.
 
-## Pomiar do wykonania
+## Wymagana komenda i końcówka wyniku
 
-Po zwolnieniu Gradle: `./gradlew :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks`. Zachować pełne wyjście, w tym `ENDLESS_SEED`, `ENDLESS100_*`, `CARD206` i `WEEKLY184_SET`, a następnie wkleić zmierzone liczby, histogram i końcówkę polecenia. Nie traktować powyższych historycznych wartości jako nowych wyników. Skala 20/100 seedów ma ograniczoną precyzję; test AI nie zastępuje obserwacji ludzi.
+Windows: `gradlew.bat :server:test -PserverOnly=true --tests '*EndlessBalanceReportTest*' --console=plain --no-configuration-cache --rerun-tasks --no-daemon`. Dodatkowe `--no-daemon` ogranicza wpływ środowiska; użyto JDK 17. Wszystkie sześć metod klasy oznaczono `PASSED`.
+
+```text
+EndlessBalanceReportTest > newCardsEffect206() PASSED
+
+BUILD SUCCESSFUL in 1m 30s
+10 actionable tasks: 10 executed
+```
+
+Próba kontrolna 2001–2100 nie została ponowiona: nie była wymagana przez komendę zlecenia. Skala 20/100 seedów ma ograniczoną precyzję; test AI nie zastępuje obserwacji ludzi. Dalsza propozycja: **obserwacja ogona Endless w testach graczy** i ewentualny powtórny pomiar kontrolny (`server/src/test/kotlin/com/centurywar/server/EndlessBalanceReportTest.kt`, wyłącznie raport); brak podstaw do zmiany balansu na podstawie tego porównania.
