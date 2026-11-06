@@ -1,4 +1,4 @@
-﻿# Century War — FAQ dla testerów
+# Century War — FAQ dla testerów
 
 To instrukcja do wersji testowej. Link do dołączenia i sposób przekazania uwag otrzymasz od osoby prowadzącej test; nie są zawarte w tym dokumencie.
 
@@ -55,4 +55,3 @@ Podstawowa gra i lokalny postęp działają bez stałego połączenia. Instalacj
 
 ## 18. Gdzie sprawdzić prywatność i jak usunąć dane lokalne?
 Otwórz **Ustawienia → O grze → Polityka prywatności**; gdy adres polityki nie jest skonfigurowany, gra pokazuje lokalny skrót. Dane lokalne można usunąć w ustawieniach Androida lub przez odinstalowanie gry. Kopie Androida i dane usług Google mogą wymagać osobnej obsługi; zapis profilu do pliku warto zrobić wcześniej, jeśli chcesz zachować postęp.
-

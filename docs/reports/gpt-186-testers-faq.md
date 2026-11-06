@@ -1,4 +1,4 @@
-﻿# Raport 186 — FAQ testerów
+# Raport 186 — FAQ testerów
 
 Data: 2026-11-06. Baza: `origin/main` `f17c6e25abf7b3c1b679a77a0a1fbe457df7a3f7`. Gałąź: `gpt/186-testers-faq`.
 
@@ -45,7 +45,7 @@ FAQ_en.md 18 pytań, kolejność 1–18: OK
 check_doc_links.py: POMINIĘTO — pliku nie ma na origin/main
 ```
 
-`git diff --check` bez komunikatów. Budowanie i testy Gradle nie były wymagane ani uruchamiane; nie zmieniono kodu ani plików testowanych przez `tests/`. Nie przeprowadzono instalacji na urządzeniu ani weryfikacji tekstu angielskiego przez native speakera.
+`git diff --cached --check` po usunięciu pustych wierszy na końcu FAQ: bez komunikatów. Budowanie i testy Gradle nie były wymagane ani uruchamiane; nie zmieniono kodu ani plików testowanych przez `tests/`. Nie przeprowadzono instalacji na urządzeniu ani weryfikacji tekstu angielskiego przez native speakera.
 
 ## Ryzyka i dalsze kroki
 

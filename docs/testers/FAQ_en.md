@@ -1,4 +1,4 @@
-﻿# Century War — tester FAQ
+# Century War — tester FAQ
 
 This guide is for the test build. The person running the test will provide the joining link and feedback channel; they are not included here.
 
@@ -55,4 +55,3 @@ Basic play and local progress work without a constant connection. Store installa
 
 ## 18. Where can I read the privacy policy and delete local data?
 Open **Settings → About → Privacy policy**; if the policy URL is not configured, the game shows a local summary. You can clear local data in Android settings or uninstall the game. Android backups and Google service data may need separate handling; export your profile first if you want to keep your progress.
-
