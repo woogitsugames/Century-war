@@ -123,14 +123,17 @@ opłaca się grać łatwiej (problem 2). Skok w h 3 (505 z osiągnięć: `kills_
 przerwie (0,2%, problem 4), Trudny/korony (problem 2), sufit 90 w wyzwaniu dnia (problem 5),
 potyczka rankingowa na presetach 0–1 (1,9–3,6/min, poniżej każdego innego trybu).
 
-**Czy badania zmieniają rozgrywkę odczuwalnie?** — sekcja 5 (pomiar).
+**Czy badania zmieniają rozgrywkę odczuwalnie?** Łącznie tak (profil 10% vs 80% badań to
+kilkanaście–kilkadziesiąt pp na późnych etapach), ale **pojedyncza godzina zakupów — nie**:
++800 medali w dowolne badanie na etapie 28 nie zmienia wygranych poza szumem ±11 pp (sekcja 5).
 
 ## 4. Problemy od najważniejszych
 
 ### P1. Druga połowa drzewa badań: drogo i mało odczuwalnie
 Dowód: od h 13 1–2 zakupy/h, najdłuższe czekanie 42–69 min, następny koszt 331–468 (tabela).
 Do pełnego drzewa brakuje po 20 h ok. 31 tys. medali; 43% całej sumy to `r_unitDmg`/`r_unitHp`,
-których poziomy 10–15 kosztują 787–2 438 za +4%. Gracz „robi postęp” liczbowo, ale go nie widzi.
+których poziomy 10–15 kosztują 787–2 438 za +4%. Gracz „robi postęp” liczbowo, ale go nie widzi: pomiar (sekcja 5) — +800 medali w jedno
+badanie na etapie 28 nie zmienia wygranych poza szumem.
 **Propozycja (do wyboru):**
 - (a) `r_unitDmg` i `r_unitHp`: max 15 → 10, efekt +4% → +6% na poziom (sufit +60% bez zmian),
   wzrost 1,33 → 1,40. Koszty 45…(45·1,4⁹ = 932), suma 3 662 zamiast 9 684 każde — drzewo
@@ -186,7 +189,42 @@ wygranej bez strat). Koszt ≈ +25 medali/dzień.
 
 ## 5. Czy badania czuć (pomiar)
 
-RESEARCH_PLACEHOLDER
+Test `researchFeel`: AI gracza (`Ai(battle, 0)`), Normalny, baza = badania kupione „najtańsze
+najpierw” za budżet z gpt-200 (`medale-czas`) przed danym etapem; warianty = baza + dodatkowe
+medale włożone w **jedno** badanie (albo dalej „najtańsze najpierw”). To ok. 1–1,5 h przychodu.
+
+**Etap 28, N=20, +800 medali** (baza 5 474 medali = 53 poziomy):
+
+| Wariant | Zmiana | Wydane | Wygrane | Δ pp | Mediana wygranej [min] | Śr. ★ |
+|---|---|---:|---:|---:|---:|---:|
+| baza | — | 0 | 60% | 0 | 12,7 | 1,83 |
+| +800 najtańsze najpierw | startGold 7→8, cap 1→2, cd 3→4 | 800 | 45% | −15 | 12,5 | 2,11 |
+| r_income | 6→8 | 657 | 60% | 0 | 13,2 | 1,67 |
+| r_unitDmg | 6→8 | 580 | 60% | 0 | **10,6** | **2,33** |
+| r_unitHp | 6→8 | 580 | 50% | −10 | 12,7 | 2,00 |
+| r_startGold | 7→9 | 575 | 60% | 0 | 13,2 | 1,50 |
+| r_baseHp | 6→8 | 597 | 60% | 0 | 12,7 | 1,83 |
+| r_turretDmg | 6→8 | 597 | 60% | 0 | 12,7 | 1,83 |
+| r_train | 5→7 | 595 | 55% | −5 | 13,3 | 1,36 |
+| r_xp | 5→7 | 644 | 65% | +5 | 13,5 | 1,69 |
+| r_cap | 1→3 | 624 | 65% | +5 | 12,7 | 1,77 |
+| r_cd | 3→5 | 484 | 65% | +5 | 13,5 | 1,77 |
+| r_slots | 0→1 | 260 | 55% | −5 | 11,2 | 1,82 |
+
+Etap 12 (N=4, +500, baza 1 442 medali): baza wygrywa 4/4, warianty bez różnicy (jedyny
+spadek, r_income 2/4, to szum przy N=4).
+
+**Wniosek:** przy N=20 szum to ±11 pp — **żaden zakup za godzinę gry nie zmienia wyniku
+mierzalnie** (wszystkie Δ mieszczą się w szumie). Badania działają tylko łącznie: d37/BALANCE
+pokazują duże różnice między profilami 10% a 80% badań (np. etapy 28–36: realny gracz 48%,
+docelowy 80% badań 67%). Pojedynczy zakup w drugiej połowie drzewa jest więc „niewidoczny”, co
+wzmacnia P1. Jedyny sygnał poza szumem to `r_unitDmg`: krótsza wygrana (10,6 vs 12,7 min) i
+więcej ★ — obrażenia gracz widzi najszybciej. Pułapki w sensie „szkodzi” nie znalazłem; najsłabiej
+wypadają `r_startGold` i `r_train` (★ 1,50 i 1,36 przy tym samym odsetku wygranych) — na późnych
+etapach +20 złota na start i +5% tempa szkolenia giną w 12-minutowej bitwie. Propozycja: przy
+P1 przenieść część kosztu z `r_startGold` (10 poz., 1 632) na mniej poziomów z większym efektem
+(np. 5 × +40 złota) i podobnie `r_train` (5 × +10%).
+Ograniczenie: AI gracza nie korzysta z badań „sprytniej” niż zwykle (np. elita, zryw).
 
 ## 6. Sprawdzone pod kątem podwójnego naliczania (bez błędów)
 
