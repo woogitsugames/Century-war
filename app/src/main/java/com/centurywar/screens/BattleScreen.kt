@@ -524,7 +524,9 @@ class BattleScreen(
         }
         val freeW = w - g.insetL - g.insetR - 50 * dp
         val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
-        var vch = min(305 * dp, (h - g.insetT - g.insetB) * 0.77f)
+        // Dzień 69: wąski, wysoki ekran (zewnętrzny Fold) ma dłuższe opisy kart w wielu wierszach.
+        val tallCards = h > w * 1.3f
+        var vch = min((if (tallCards) 430 else 305) * dp, (h - g.insetT - g.insetB) * 0.77f)
         // Dzień 60: wstęga „Wybierz wariant epoki” (27 dp nad kartami) nie wychodzi poza górę ekranu.
         val variantTop = max((h + g.insetT - g.insetB - vch) / 2f,
             g.insetT + (27f + 21f * ui.textScale * 1.05f * 0.75f + 8f) * dp)
@@ -2073,12 +2075,12 @@ class BattleScreen(
             for (role in 0..3) {
                 val def = Defs.unit(era, roles[role], choices[i])
                 val xx = tmpR.left + (role + 0.5f) * slotW
-                // Dzień 69: zmieniona rola na karcie nowej jednostki ma złote podłoże.
+                // Dzień 69: zmieniona rola na karcie nowej jednostki ma złotą kreskę pod sylwetką.
                 if (choices[i] >= 0 && recruitRole == roles[role]) {
                     val glow = ui.fill
                     glow.shader = null
-                    glow.color = Color.argb(70, 232, 192, 74)
-                    c.drawCircle(xx, iy - imgH * 0.45f, min(slotW * 0.48f, imgH * 0.62f), glow)
+                    glow.color = Color.rgb(232, 192, 74)
+                    c.drawRoundRect(xx - slotW * 0.38f, iy + 4 * dp, xx + slotW * 0.38f, iy + 8 * dp, 2 * dp, 2 * dp, glow)
                 }
                 c.save()
                 c.clipRect(tmpR.left + role * slotW + 4 * dp, tmpR.top,

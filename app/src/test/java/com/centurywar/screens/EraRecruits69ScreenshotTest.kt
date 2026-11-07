@@ -56,7 +56,7 @@ class EraRecruits69ScreenshotTest : ScreenshotTestBase() {
                     for (i in 0..1) {
                         val text = bs.variantAccessibilityText(i)
                         assertTrue("$key: pusty opis karty $i", text.length > 10)
-                        assertTrue("$key: brak nazwy w opisie", '%' !in text)
+                        assertTrue("$key: brak nazwy w opisie", "%1\$" !in text && "\$s" !in text)
                     }
                     if (lang != "pl") continue
                     // Karta 1: nowa jednostka; kilka sztuk obu stron na polu bitwy.

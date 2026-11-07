@@ -635,12 +635,12 @@ class Soldiers(private val p: Pen) {
     fun mantlet(team: Int, atk: Float) {
         val frame = 0xFF3A2A1C.toInt()
         val kick = atk * atk * 2.5f
-        p.rect(13f, -60f, 25f, 0f, frame)
-        p.rect(15.5f, -57f, 22.5f, -3f, team)
-        p.rect(15.5f, -46f, 22.5f, -40f, frame)
+        p.rect(11f, -62f, 29f, 0f, frame)
+        p.rect(14f, -59f, 26f, -3f, team)
+        p.rect(14f, -46f, 26f, -40f, frame)
         if (p.hi) {
-            p.segF(15.5f, -22f, 22.5f, -22f, 1.4f, dark(team, 0.3f))
-            p.rivets(17f, -54f, 21f, 2, 0.9f, 0xFFB8BEC4.toInt())
+            p.segF(14f, -22f, 26f, -22f, 1.4f, dark(team, 0.3f))
+            p.rivets(16.5f, -55f, 23.5f, 2, 0.9f, 0xFFB8BEC4.toInt())
         }
         // Lufa przechodzi przez szczelinę osłony; przy strzale cofa się jak muszkiet.
         p.seg(10f - kick, -43f, 46f - kick, -43f, 2.6f, GUNMETAL)

@@ -577,9 +577,9 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         val bob = if (p.hi) sin((walk + phase) * 2f) * stride * 0.8f else 0f
         cv.save(); cv.translate(0f, bob)
         // Maszt i płachta za łucznikiem: największa plama barwy drużyny.
-        p.seg(-8f, -32f, -8f, -90f, 3f, WOOD_D)
-        p.tri(-10f, -88f, -10f, -38f, -44f, -40f); p.shape(team)
-        if (p.hi) p.segF(-12f, -80f, -36f, -42f, 1.4f, dark(team, 0.3f))
+        p.seg(-8f, -32f, -8f, -94f, 3f, WOOD_D)
+        p.tri(-10f, -92f, -10f, -37f, -50f, -39f); p.shape(team)
+        if (p.hi) p.segF(-12f, -84f, -42f, -41f, 1.4f, dark(team, 0.3f))
         // Łucznik na platformie.
         cv.save(); cv.translate(12f, -31f); cv.scale(0.7f, 0.7f)
         men.draw(1, true, Weapon.BOW, team, 0f, atk, false, false)

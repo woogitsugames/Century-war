@@ -938,7 +938,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         when (d.trait) {
             Trait.SHIELD -> return 54f
             Trait.BRACE -> return 76f
-            Trait.DASH -> return 92f
+            Trait.DASH -> return 100f
             Trait.RAM -> return 118f
         }
         if (isVariantMachine(d)) return variantMachineWidth(d)
@@ -960,7 +960,7 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     private fun unitHeight(d: UnitDef): Float {
         when (d.trait) {
             Trait.SHIELD, Trait.BRACE -> return 68f
-            Trait.DASH -> return 92f
+            Trait.DASH -> return 98f
             Trait.RAM -> return 64f
         }
         if (isVariantMachine(d)) return when (d.art) {
