@@ -289,6 +289,13 @@ abstract class FirstHourJourneyBase {
             if (hints.activeId == id) problem("$where: OK nie zamyka dymka #$id")
             return true
         }
+        // Dzień 69: w potyczce epoka startowa ma wybór „podstawowy skład / nowa jednostka”.
+        if (bs.battle.pendingVariant != null && bs.variantBtn[1].visible) {
+            note(g, "$where: wybór wariantu epoki ${bs.battle.pendingVariant} (nowa jednostka)")
+            tap(g, bs.variantBtn[1], "$where/wariant")
+            if (bs.battle.pendingVariant != null) problem("$where: karta wariantu nie zamyka wyboru")
+            return true
+        }
         return false
     }
 

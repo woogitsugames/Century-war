@@ -34,7 +34,7 @@ class RankedReplayFormatTest {
     /** Potyczka jak w audycie: przebieg bez stopni wież i dowódcy, oznaczony jako format [format]. */
     private fun legacySkirmish(format: Int, steps: Int = 3_000): ScoreSubmission {
         val bonuses = Research.bonuses(IntArray(Research.defs.size))
-        val cfg = BattleConfig(Mode.SKIRMISH, 42L, Skirmish.power(1), playerBonuses = bonuses)
+        val cfg = BattleConfig(Mode.SKIRMISH, 42L, Skirmish.power(1), playerBonuses = bonuses, eraRecruits = true)
         val battle = Battle(cfg, turretTiersEnabled = format >= 6, commanderEnabled = format >= 7)
         val controller = BattleController(battle)
         battle.playerAi = Ai(battle, 0)

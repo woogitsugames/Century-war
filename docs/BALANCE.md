@@ -2167,3 +2167,32 @@ są identyczne; zmienił się wyłącznie `snapshotSha256` (format v21 z 4 dodat
 - 2026-11-06 — regeneracja złotych powtórek: D66: Rozkazy sztabu partia 2 - orderFlags (eskorta) w konfiguracji ORDERS, zrzut v23, ReplayRecord v3, PROTOCOL 0.8.13; wyniki istniejacych trybow bez zmian.
 
 - 2026-11-07 — regeneracja złotych powtórek: D69: warianty epok.
+
+## Dzień 69 — warianty epok jednej roli (R171, PROTOCOL 0.8.15)
+
+Cztery nowe jednostki zamiast jednej roli epoki; gracz i AI wybierają kartę „Podstawowy skład”
+(`eraVariant = -1`) albo nową jednostkę (`0`). Tylko potyczka (`BattleConfig.eraRecruits`, włączane
+przez ekrany potyczki i serwer); kampania, Endless, wyzwania dnia/tygodnia i Rozkazy bez zmian.
+Mnożniki względem zastępowanej jednostki:
+
+| Epoka | Nowa jednostka (zamiast) | Cecha | Start | Po strojeniu |
+|---|---|---|---|---|
+| Plemiona | Tarczownik (Osiłek) | po 1. trafieniu 2 s obrażeń ×0,8 | HP 1,10, obr. 0,85, prędk. 0,88 | HP 1,02, obr. 0,85, prędk. 0,88 |
+| Brąz | Lekki wóz (Rydwan) | do 1. strzału/trafienia prędk. ×1,25 | koszt 0,9, HP 0,8 | koszt 0,85, HP 0,85 |
+| Żelazo | Taran (Skorpion polowy) | 1. uderzenie w bazę ×1,25 | HP 1,2, obr. 1,1, prędk. 0,85, wręcz bez rozprysku | koszt 0,9, HP 2,2, obr. 1,7, prędk. 0,85, rozprysk 40, oblężenie ×2,2 |
+| Proch | Strzelec z osłoną (Muszkieter) | po 2 s bez ruchu strzał ×1,15 | HP 1,2, obr. 0,9, prędk. 0,9, szkolenie ×1,25 | HP 1,03, obr. 0,85, prędk. 0,9, szkolenie ×1,25 |
+
+`BalanceReport.recruitReport` (`BALANCE_RUN=true`): podstawowy (-1) przeciw nowemu (0), 200 seedów ×
+zamiana stron, BALANCED × BALANCED, limit 30 min. Cel 180–220 zwycięstw nowego na 400, zero patów.
+
+| Nowa jednostka | Wygrane nowej / podst. | Paty | Mediana [min] | Użycia cechy / wystawione |
+|---|---:|---:|---:|---:|
+| Tarczownik | 205 / 195 | 0 | 14,04 | 20072 / 23434 (0,86) |
+| Lekki wóz | 216 / 184 | 0 | 13,93 | 23090 / 26386 (0,88) |
+| Taran | 210 / 190 | 0 | 12,77 | 130 / 1474 (0,09) |
+| Strzelec z osłoną | 210 / 190 | 0 | 13,24 | 12548 / 28955 (0,43) |
+
+Przed strojeniem (40–100 seedów): Tarczownik 57%, Lekki wóz 39%, Taran 9% (cecha 0 użyć — taran
+wręcz bez rozprysku prawie nigdy nie sięgał bazy; od teraz cecha działa też przy rozprysku obejmującym
+bazę), Strzelec 64%. Taran rzadko trafia bazę (9% sztuk), więc jego siła wynika głównie ze statystyk.
+Złote powtórki: wyniki bez zmian, inny tylko `snapshotSha256` (zrzut v25).
