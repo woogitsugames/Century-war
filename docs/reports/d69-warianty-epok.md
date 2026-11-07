@@ -88,7 +88,11 @@ na karcie, wyższe karty na zewnętrznym Foldzie (wcześniej opis 130% nachodzi�
 - Złote powtórki zregenerowane: wyniki identyczne, zmienił się tylko `snapshotSha256` (zrzut v25).
 - Wzorce PNG regresji (`src/test/resources/screens`) bez zmian — potyczki w testach bez flagi.
 
-WYNIK_PELNYCH_TESTOW
+**Pełne testy** (`:app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun :app:lintDebug
+:app:assembleDebug --continue`): EXIT=0, BUILD SUCCESSFUL w 27 min; app 989 testów (0 błędów, 13 pominiętych),
+sim 372 (0, 3 pominięte), serwer 125 (0, 1 pominięty). W poprzednim pełnym przebiegu raz padł
+`RecordedMusicTest.musicResumesAfterTrimMemoryInBackground` (zależny od czasu, niezwiązany z
+wariantami); osobno i w kolejnym pełnym przebiegu przechodzi.
 
 ## Poza zakresem / do decyzji
 
