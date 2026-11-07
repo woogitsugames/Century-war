@@ -2,7 +2,7 @@
   "id": "skirmish-modifiers",
   "config": {"mode":"SKIRMISH","seed":91007,"aiPower":1.25,"startEra":2,"maxEra":5,"modifiers":["FAST_UNITS","GLASS_CANNON"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"RAIN","weekly":-1,"weeklyCard":null,"dailyEvent":null},
   "replayVersion": 7,
-  "replay": "B_-QHB4AAAAAAwAZAAA3AAFpAADgAwAA6wEHMgABIwAAoAEAADcIygIAAZ8DAACgAQAABQABmwEAAIcBAAEZAACgAQAAaQABNwAAoAEAAEsAARQAAuEBAAAtAAFzAACgAQAADwABKAs",
+  "replay": "B_-QHB8AAAAAAwAZAAA3AAFpAADgAwAA6wEHVQAAoAEAADcIaQAA4AMAAMACAAAFAAGbAQAAhwEAARkAAKABAABpAAE3AAA3DwBpAABLAAEUAAJBAACgAQAALQABcwAAoAEAAA8AASgL",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -11,12 +11,11 @@
     {"step":185,"kind":"QUEUE","argument":0},
     {"step":665,"kind":"QUEUE","argument":0},
     {"step":900,"kind":"BARRAGE","argument":0},
-    {"step":950,"kind":"QUEUE","argument":1},
     {"step":985,"kind":"QUEUE","argument":0},
     {"step":1145,"kind":"QUEUE","argument":0},
     {"step":1200,"kind":"RALLY","argument":0},
-    {"step":1530,"kind":"QUEUE","argument":1},
-    {"step":1945,"kind":"QUEUE","argument":0},
+    {"step":1305,"kind":"QUEUE","argument":0},
+    {"step":1785,"kind":"QUEUE","argument":0},
     {"step":2105,"kind":"QUEUE","argument":0},
     {"step":2110,"kind":"QUEUE","argument":1},
     {"step":2265,"kind":"QUEUE","argument":0},
@@ -25,9 +24,11 @@
     {"step":2585,"kind":"QUEUE","argument":0},
     {"step":2690,"kind":"QUEUE","argument":1},
     {"step":2745,"kind":"QUEUE","argument":0},
+    {"step":2800,"kind":"UNIT_UPGRADE","argument":0},
     {"step":2905,"kind":"QUEUE","argument":0},
     {"step":2980,"kind":"QUEUE","argument":1},
     {"step":3000,"kind":"QUEUE","argument":2},
+    {"step":3065,"kind":"QUEUE","argument":0},
     {"step":3225,"kind":"QUEUE","argument":0},
     {"step":3270,"kind":"QUEUE","argument":1},
     {"step":3385,"kind":"QUEUE","argument":0},
@@ -35,5 +36,5 @@
     {"step":3560,"kind":"QUEUE","argument":1},
     {"step":3600,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":249,"winner":1,"wave":0,"steps":3600,"kills":15,"enemyKills":20,"timeBits":1114636289,"snapshotSha256":"087119086e0945eb840b968021b6180c79c181aecf79aa201d5e5dee0095d7cc"}
+  "expected": {"score":282,"winner":1,"wave":0,"steps":3600,"kills":14,"enemyKills":16,"timeBits":1114636289,"snapshotSha256":"54dbf32f7ea70565b7abf403ad0203e70c79ed9c3188bf3001411f0d2b05b459"}
 }

@@ -2216,3 +2216,5 @@ Przed strojeniem (40–100 seedów): Tarczownik 57%, Lekki wóz 39%, Taran 9% (c
 wręcz bez rozprysku prawie nigdy nie sięgał bazy; od teraz cecha działa też przy rozprysku obejmującym
 bazę), Strzelec 64%. Taran rzadko trafia bazę (9% sztuk), więc jego siła wynika głównie ze statystyk.
 Złote powtórki: wyniki bez zmian, inny tylko `snapshotSha256` (zrzut v25).
+
+- 2026-11-07 — regeneracja złotych powtórek: D68+D69 scalone: style przeciwnika i warianty epok (PROTOCOL 0.8.15).

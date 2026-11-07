@@ -2,7 +2,7 @@
   "id": "skirmish-night",
   "config": {"mode":"SKIRMISH","seed":91010,"aiPower":0.9,"startEra":1,"maxEra":3,"modifiers":["FOG_OF_WAR"],"bonuses":{"startGold":0.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":1.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":1.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"NIGHT","weekly":-1,"weeklyCard":null,"dailyEvent":null},
   "replayVersion": 7,
-  "replay": "B_-QHBIAAAAAAwAZAAA3AAFpAADAAgAAiwMHVQAA1wEIaQAAoAEAAKABAADAAgAAwAIAAOADAADAAgAA4AMAADcL",
+  "replay": "B_-QHBIAAAAAAwAZAAA3AAFpAADAAgAAiwMHVQAA1wEIKAAB4QEAAKABAACgAQAAwAIAAOADAADAAgAA4AMAANcBCw",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -13,15 +13,15 @@
     {"step":900,"kind":"BARRAGE","argument":0},
     {"step":985,"kind":"QUEUE","argument":0},
     {"step":1200,"kind":"RALLY","argument":0},
-    {"step":1305,"kind":"QUEUE","argument":0},
+    {"step":1240,"kind":"QUEUE","argument":1},
     {"step":1465,"kind":"QUEUE","argument":0},
     {"step":1625,"kind":"QUEUE","argument":0},
-    {"step":1945,"kind":"QUEUE","argument":0},
-    {"step":2265,"kind":"QUEUE","argument":0},
-    {"step":2745,"kind":"QUEUE","argument":0},
-    {"step":3065,"kind":"QUEUE","argument":0},
-    {"step":3545,"kind":"QUEUE","argument":0},
+    {"step":1785,"kind":"QUEUE","argument":0},
+    {"step":2105,"kind":"QUEUE","argument":0},
+    {"step":2585,"kind":"QUEUE","argument":0},
+    {"step":2905,"kind":"QUEUE","argument":0},
+    {"step":3385,"kind":"QUEUE","argument":0},
     {"step":3600,"kind":"SURRENDER","argument":0}
   ],
-  "expected": {"score":6,"winner":1,"wave":0,"steps":3600,"kills":1,"enemyKills":12,"timeBits":1114636289,"snapshotSha256":"17c6e3f543fc8be081016c21f38e05fa57b534d82259c34a45cce0b26ac22990"}
+  "expected": {"score":13,"winner":1,"wave":0,"steps":3600,"kills":2,"enemyKills":13,"timeBits":1114636289,"snapshotSha256":"2eff96dd55c49308437fc4ef1a701a8a92cad5cc04390e12d22687b8b67e5946"}
 }

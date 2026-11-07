@@ -2,7 +2,7 @@
   "id": "steam-variant-wind",
   "config": {"mode":"SKIRMISH","seed":91008,"aiPower":1.0,"startEra":4,"maxEra":5,"modifiers":[],"bonuses":{"startGold":7000.0,"incomeMul":1.0,"unitHpMul":1.0,"unitDmgMul":3.0,"baseHpMul":1.0,"turretDmgMul":1.0,"trainMul":1.0,"xpMul":100.0,"popCap":12,"abilityCdMul":1.0,"turretSlots":2,"eliteUnlocked":true,"rallyUnlocked":true},"stageIndex":-1,"tutorial":false,"aiPersonality":null,"variantsEnabled":true,"weather":"WIND","weekly":-1,"weeklyCard":null,"dailyEvent":null},
   "replayVersion": 7,
-  "replay": "B__UKSoAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAADgAwAAoAEAAIcBAAEZAACgAQAAaQABNwAANw8AZAQABQAASwABFAACQQAAoAEAAPsJB2QPAA",
+  "replay": "B__lLjIAAAAAAwAZAAA3AAFpAACgAQAAGQABhwEAAJsBAAEFAACgAQAASwcyAAEjAAAPDwCRAQAANwgoAAE8AAIFAACgAQAAQQABRgIAEAEACgAZAADAAgAAoAEAAAUAAZsBAACHAQABGQAAoAEAAGkAATcAADcPAGQEAAUAAEsAARQAAtwLB2QPAKEEAACbAQABBQAAoAEAAH0AAQoIuQEAAF8AAQ",
   "commands": [
     {"step":0,"kind":"QUEUE","argument":0},
     {"step":0,"kind":"BUY_TURRET","argument":0},
@@ -30,7 +30,9 @@
     {"step":1600,"kind":"VARIANT","argument":1},
     {"step":1600,"kind":"DOCTRINE","argument":0},
     {"step":1625,"kind":"QUEUE","argument":0},
+    {"step":1945,"kind":"QUEUE","argument":0},
     {"step":2105,"kind":"QUEUE","argument":0},
+    {"step":2110,"kind":"QUEUE","argument":1},
     {"step":2265,"kind":"QUEUE","argument":0},
     {"step":2400,"kind":"QUEUE","argument":1},
     {"step":2425,"kind":"QUEUE","argument":0},
@@ -42,10 +44,16 @@
     {"step":2905,"kind":"QUEUE","argument":0},
     {"step":2980,"kind":"QUEUE","argument":1},
     {"step":3000,"kind":"QUEUE","argument":2},
-    {"step":3065,"kind":"QUEUE","argument":0},
-    {"step":3225,"kind":"QUEUE","argument":0},
     {"step":4500,"kind":"BARRAGE","argument":0},
-    {"step":4600,"kind":"UNIT_UPGRADE","argument":0}
+    {"step":4600,"kind":"UNIT_UPGRADE","argument":0},
+    {"step":5145,"kind":"QUEUE","argument":0},
+    {"step":5300,"kind":"QUEUE","argument":1},
+    {"step":5305,"kind":"QUEUE","argument":0},
+    {"step":5465,"kind":"QUEUE","argument":0},
+    {"step":5590,"kind":"QUEUE","argument":1},
+    {"step":5600,"kind":"RALLY","argument":0},
+    {"step":5785,"kind":"QUEUE","argument":0},
+    {"step":5880,"kind":"QUEUE","argument":1}
   ],
-  "expected": {"score":20875,"winner":0,"wave":0,"steps":5332,"kills":23,"enemyKills":14,"timeBits":1118944188,"snapshotSha256":"d8ecc593f581e5dd063ebd392f0fb559696a27d7c9b2967ff2459857b7802b6f"}
+  "expected": {"score":20881,"winner":0,"wave":0,"steps":5989,"kills":28,"enemyKills":21,"timeBits":1120379427,"snapshotSha256":"f9b6575d3561b8fb9b6bc4e45c92a3cef8eb8776648cda4d10fb13dbc4778a29"}
 }
