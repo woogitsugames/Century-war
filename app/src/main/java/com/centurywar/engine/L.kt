@@ -205,6 +205,7 @@ object L {
         putAll(part212())
         putAll(part216())
         putAll(part217())
+        putAll(part218())
         }
     }
 
@@ -2538,5 +2539,11 @@ object L {
         "v_mantlet_d" to t("Zamiast Muszkietera: dłużej się szkoli, słabiej strzela. Po 2 s bez ruchu następny strzał zadaje 15% więcej.", "Replaces the Musketeer: trains slower, weaker shots. After 2 s standing still, his next shot deals 15% more.", "Ersetzt den Musketier: längere Ausbildung, schwächere Schüsse. Nach 2 s Stillstand trifft der nächste Schuss 15 % stärker.", "Sustituye al Mosquetero: tarda más en entrenarse y dispara más flojo. Tras 2 s quieto, su siguiente disparo hace un 15 % más.", "Remplace le Mousquetaire : formation plus longue, tirs plus faibles. Après 2 s immobile, son tir suivant inflige 15 % de plus.", "Sostituisce il Moschettiere: addestramento più lungo, colpi più deboli. Dopo 2 s da fermo, il tiro seguente infligge il 15% in più.", "Substitui o Mosqueteiro: treina mais devagar, dispara mais fraco. Após 2 s parado, o disparo seguinte causa mais 15%.", "Замість Мушкетера: довше навчається, слабше стріляє. Після 2 с без руху наступний постріл завдає на 15% більше.", "Vervangt de Musketier: langere training, zwakkere schoten. Na 2 s stilstaan doet het volgende schot 15% meer.", "Misketçi yerine: daha geç yetişir, daha zayıf ateş eder. 2 sn kıpırdamadan durunca sonraki atışı %15 daha güçlüdür."),
         "v_base" to t("Podstawowy skład", "Standard army", "Standardarmee", "Ejército estándar", "Armée standard", "Esercito standard", "Exército padrão", "Звичайне військо", "Standaardleger", "Standart ordu"),
         "v_base_d" to t("Klasyczna armia tej epoki. %1\$s walczy jak dotąd.", "The classic army of this era. %1\$s fights as before.", "Die klassische Armee dieser Epoche. %1\$s kämpft wie bisher.", "El ejército clásico de esta era. %1\$s lucha como siempre.", "L’armée classique de cette ère. %1\$s combat comme avant.", "L'esercito classico di quest'era. %1\$s combatte come sempre.", "O exército clássico desta era. %1\$s combate como antes.", "Класичне військо цієї епохи. %1\$s б'ється як і раніше.", "Het klassieke leger van dit tijdperk. %1\$s vecht zoals altijd.", "Bu çağın klasik ordusu. %1\$s eskisi gibi savaşır."),
+    )
+
+    /** Dzień 70: nowe jednostki epok w Kodeksie i dymek okna wyboru (wieża się nie zmienia). */
+    private fun part218(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "hint218_recruit" to t("Wybierz skład: podstawowy albo z nową jednostką w jednej roli. Wieża i ostrzał zostają te same.", "Choose your army: standard, or with a new unit in one role. Turret and barrage stay the same.", "Wähle deine Armee: Standard oder mit einer neuen Einheit in einer Rolle. Turm und Sperrfeuer bleiben gleich.", "Elige tu ejército: el estándar o con una tropa nueva en un papel. La torre y el bombardeo no cambian.", "Choisissez votre armée : standard, ou avec une nouvelle unité dans un rôle. Tourelle et barrage restent les mêmes.", "Scegli l'esercito: standard o con una nuova unità in un ruolo. Torre e sbarramento restano uguali.", "Escolhe o exército: padrão ou com uma nova unidade numa função. A torre e a barragem mantêm-se.", "Обери військо: звичайне або з новим бійцем в одній ролі. Вежа й обстріл не змінюються.", "Kies je leger: standaard of met een nieuwe eenheid in één rol. Toren en spervuur blijven gelijk.", "Ordunu seç: standart ya da tek bir rolde yeni birimle. Kule ve baraj aynı kalır."),
+        "cx218_skirmish" to t("Tylko w potyczce", "Skirmish only", "Nur im Gefecht", "Solo en escaramuza", "Escarmouche uniquement", "Solo in schermaglia", "Só em escaramuça", "Лише в сутичці", "Alleen in schermutseling", "Yalnızca çatışmada"),
     )
 }

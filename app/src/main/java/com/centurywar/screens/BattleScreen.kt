@@ -363,6 +363,13 @@ class BattleScreen(
     private var variantDescWidth = -1f
     private var variantDescScale = -1f
     private var variantDescLanguage = -1
+    /** Dzień 70: wąski, wysoki ekran — karty wariantów o wysokości treści, sylwetki 2×2. */
+    private var variantTall = false
+    /** Najwyższa dopuszczalna wysokość kart wariantów (z [layout]). */
+    private var variantMaxH = 0f
+    /** Wysokość wiersza siatki sylwetek na wąskim, wysokim ekranie (0 = jeszcze nie liczona). */
+    private var variantRowH = 0f
+    private val variantTextEnd = FloatArray(2)
     private val choiceDescLines = Array(3) { arrayOfNulls<String>(16) }
     private val choiceDescCount = IntArray(3)
     private val choiceDescKey = IntArray(3) { -1 }
@@ -522,21 +529,16 @@ class BattleScreen(
         } else {
             for (i in 0..2) doctrineBtn[i].set(w / 2 - cw * 1.5f - 14 * dp + i * (cw + 14 * dp), h * 0.5f - chH * 0.4f, cw, chH)
         }
-        val freeW = w - g.insetL - g.insetR - 50 * dp
-        val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
         // Dzień 69: wąski, wysoki ekran (zewnętrzny Fold) ma dłuższe opisy kart w wielu wierszach.
-        val tallCards = h > w * 1.3f
-        var vch = min((if (tallCards) 430 else 305) * dp, (h - g.insetT - g.insetB) * 0.77f)
-        // Dzień 60: wstęga „Wybierz wariant epoki” (27 dp nad kartami) nie wychodzi poza górę ekranu.
-        val variantTop = max((h + g.insetT - g.insetB - vch) / 2f,
-            g.insetT + (27f + 21f * ui.textScale * 1.05f * 0.75f + 8f) * dp)
-        vch = min(vch, h - g.insetB - 8 * dp - variantTop)
-        for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
-            variantTop, vcw, vch)
+        variantTall = h > w * 1.3f
+        variantMaxH = min((if (variantTall) 430 else 305) * dp, (h - g.insetT - g.insetB) * 0.77f)
+        placeVariantCards(variantMaxH)
+        variantMaxH = variantBtn[0].r.height()
         upgradesView.layoutTurretPanel()
         upgradesView.layoutUpgradePanel()
         // Szerokość paneli zmienia łamanie opisów wariantów i kart.
         variantDescWidth = -1f
+        variantRowH = 0f
         choiceDescWidth = -1f
         eraIntro?.layout()
     }
@@ -2040,11 +2042,84 @@ class BattleScreen(
 
 
 
+    /** Karty wariantów o wysokości [height], wyśrodkowane w pionie (bez nowych obiektów). */
+    private fun placeVariantCards(height: Float) {
+        val freeW = w - g.insetL - g.insetR - 50 * dp
+        val vcw = min(285 * dp, (freeW - 12 * dp) / 2f)
+        // Dzień 60: wstęga „Wybierz wariant epoki” (27 dp nad kartami) nie wychodzi poza górę ekranu.
+        val variantTop = max((h + g.insetT - g.insetB - height) / 2f,
+            g.insetT + (27f + 21f * ui.textScale * 1.05f * 0.75f + 8f) * dp)
+        val vch = min(height, h - g.insetB - 8 * dp - variantTop)
+        for (i in 0..1) variantBtn[i].set(w / 2 - vcw - 6 * dp + i * (vcw + 12 * dp),
+            variantTop, vcw, vch)
+    }
+
+    /** Dolna krawędź ostatniego wiersza opisu karty [i] (po łamaniu w [drawVariants]). */
+    private fun variantTextBottom(i: Int, top: Float): Float =
+        top + 58 * dp + (variantDescCount[i] - 1).coerceAtLeast(0) * 12.5f * dp * ui.textScale * 1.3f +
+            12.5f * dp * ui.textScale * 0.35f
+
+    /**
+     * Dzień 70: wysokość wiersza sylwetek na wąskim, wysokim ekranie (zewnętrzny Fold), gdzie
+     * sylwetki stoją w siatce 2×2. Karta ma wysokość treści: opis + siatka, bez pustego pasa.
+     */
+    private fun tallVariantRowH(cardW: Float): Float {
+        val slotW = (cardW - 2 * CHOICE_TEXT_PAD * dp) / 2f
+        return min(70 * dp, slotW * 0.8f) + 18 * dp
+    }
+
+    /**
+     * Do testów: dolna krawędź opisu karty [i] względem jej góry, w skali tekstu z ostatniego
+     * rysowania (HUD bitwy rysuje z tekstem ograniczonym do 115%).
+     */
+    internal fun variantTextOffset(i: Int): Float = variantTextEnd[i]
+
+    /** Górna krawędź pola sylwetek karty [i] (do testów rozłączności tekstu i sylwetek). */
+    internal fun variantIconTop(i: Int): Float {
+        val b = variantBtn[i].r
+        return if (variantTall) b.bottom - CHOICE_TEXT_PAD * dp - 2 * variantRowH
+        else b.bottom - 28 * dp - min(72 * dp, b.height() * 0.32f)
+    }
+
+    /** Zewnętrzny Fold: karty dopasowane do treści (dłuższy z dwóch opisów), siatka 2×2 sylwetek. */
+    private fun fitTallVariantCards() {
+        val b0 = variantBtn[0].r
+        var textEnd = 0f
+        for (i in 0..1) textEnd = max(textEnd, variantTextBottom(i, 0f))
+        var rowH = tallVariantRowH(b0.width())
+        val gapAbove = 14 * dp
+        val bottomPad = CHOICE_TEXT_PAD * dp
+        // Długi opis (130%, wąski ekran): wiersz sylwetek maleje, karta nie przekracza limitu z layout.
+        val room = variantMaxH - textEnd - gapAbove - bottomPad
+        if (2 * rowH > room) rowH = max(34 * dp, room / 2f)
+        variantRowH = rowH
+        placeVariantCards(textEnd + gapAbove + 2 * rowH + bottomPad)
+    }
+
     /** Modal dwóch wariantów: ikonki tych samych jednostek co na polu bitwy. */
     private fun drawVariants(c: Canvas) {
         val era = battle.pendingVariant ?: return
         val choices = Defs.variantChoices(era)
         val recruitRole = Defs.spec(era).recruit?.role
+        // Najpierw łamanie opisów obu kart: od nich zależy wysokość kart na zewnętrznym Foldzie.
+        val wrapWidth = variantBtn[0].r.width() - 2 * CHOICE_TEXT_PAD * dp
+        var rewrapped = false
+        for (i in choices.indices) {
+            if (i >= variantBtn.size) break
+            val key = era * 2 + i
+            if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
+                variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
+                variantDescKey[i] = key
+                variantDescCount[i] = HintFrame.wrapHintInto(ui, variantCardDesc(era, i),
+                    wrapWidth, 12.5f, variantDescLines[i], hyphen = true)
+                rewrapped = true
+            }
+        }
+        variantDescLanguage = L.lang
+        variantDescWidth = wrapWidth
+        variantDescScale = ui.textScale
+        for (i in 0..1) variantTextEnd[i] = variantTextBottom(i, 0f)
+        if (variantTall && (rewrapped || variantRowH <= 0f)) fitTallVariantCards()
         c.drawColor(Color.argb(175, 0, 0, 0))
         ui.ribbon(c, w / 2, variantBtn[0].r.top - 27 * dp,
             L["choose_variant"], 21f, Ui.RIBBON, min(340 * dp, w * 0.7f))
@@ -2058,23 +2133,22 @@ class BattleScreen(
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
             // Dzień 60: opis z tym samym marginesem od lamówki co karty doktryn (był tuż przy ramce).
-            val wrapWidth = tmpR.width() - 2 * CHOICE_TEXT_PAD * dp
-            val key = era * 2 + i
-            if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
-                variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
-                variantDescKey[i] = key
-                variantDescCount[i] = HintFrame.wrapHintInto(ui, variantCardDesc(era, i),
-                    wrapWidth, 12.5f, variantDescLines[i], hyphen = true)
-            }
             drawWrappedLines(c, variantDescLines[i], variantDescCount[i],
                 tmpR.centerX(), tmpR.top + 58 * dp, 12.5f, Ui.TEXT, Paint.Align.CENTER)
-            val imgH = min(72 * dp, tmpR.height() * 0.32f)
-            val iy = tmpR.bottom - 28 * dp
-            // Każda sylwetka ma własny obszar. Pojazdy skalujemy także po szerokości.
-            val slotW = tmpR.width() / 4f
+            val tall = variantTall
+            // Dzień 70: na zewnętrznym Foldzie siatka 2×2 (większe sylwetki), na reszcie jeden rząd.
+            val gridLeft = if (tall) tmpR.left + CHOICE_TEXT_PAD * dp else tmpR.left
+            val slotW = if (tall) (tmpR.width() - 2 * CHOICE_TEXT_PAD * dp) / 2f else tmpR.width() / 4f
+            val imgH = if (tall) variantRowH - 18 * dp else min(72 * dp, tmpR.height() * 0.32f)
+            val gridTop = tmpR.bottom - CHOICE_TEXT_PAD * dp - 2 * variantRowH
             for (role in 0..3) {
                 val def = Defs.unit(era, roles[role], choices[i])
-                val xx = tmpR.left + (role + 0.5f) * slotW
+                val col = if (tall) role % 2 else role
+                val xx = gridLeft + (col + 0.5f) * slotW
+                // Każda sylwetka ma własny obszar. Pojazdy skalujemy także po szerokości.
+                val iy = if (tall) gridTop + (role / 2 + 1) * variantRowH - 12 * dp else tmpR.bottom - 28 * dp
+                val slotTop = if (tall) iy + 12 * dp - variantRowH else tmpR.top
+                val slotBottom = if (tall) iy + 12 * dp else tmpR.bottom - 4 * dp
                 // Dzień 69: zmieniona rola na karcie nowej jednostki ma złotą kreskę pod sylwetką.
                 if (choices[i] >= 0 && recruitRole == roles[role]) {
                     val glow = ui.fill
@@ -2083,16 +2157,13 @@ class BattleScreen(
                     c.drawRoundRect(xx - slotW * 0.38f, iy + 4 * dp, xx + slotW * 0.38f, iy + 8 * dp, 2 * dp, 2 * dp, glow)
                 }
                 c.save()
-                c.clipRect(tmpR.left + role * slotW + 4 * dp, tmpR.top,
-                    tmpR.left + (role + 1) * slotW - 4 * dp, tmpR.bottom - 4 * dp)
+                c.clipRect(gridLeft + col * slotW + 4 * dp, slotTop,
+                    gridLeft + (col + 1) * slotW - 4 * dp, slotBottom)
                 r.drawUnitIcon(c, def, xx, iy, imgH, Ui.PLAYER,
                     maxWidth = slotW - 12 * dp)
                 c.restore()
             }
         }
-        variantDescLanguage = L.lang
-        variantDescWidth = variantBtn[0].r.width() - 2 * CHOICE_TEXT_PAD * dp
-        variantDescScale = ui.textScale
     }
 
     private fun drawChoices(c: Canvas) {

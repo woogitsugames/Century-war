@@ -79,6 +79,11 @@ class HintOverlay(
         const val COMMANDER = 24
         /** R2-02: trzecia porażka z rzędu na etapie: poziom trudności (okno etapu). */
         const val DIFFICULTY = 25
+        /**
+         * D70: okno wyboru w epoce jednej roli (Tarczownik, Lekki wóz, Taran, Strzelec z osłoną).
+         * Wieża się tam nie zmienia, więc tekst [VARIANT] („inne jednostki i wieże”) byłby nieprawdziwy.
+         */
+        const val RECRUIT = 26
         const val OK_ID = 920
 
         private val DEFINITIONS = arrayOf(
@@ -98,6 +103,7 @@ class HintOverlay(
             HintDef(TURRET_TIER, "tier145_hint", 81),
             HintDef(DAILY, "hint_daily_battle", 96),
             HintDef(VARIANT, "hint_variant54", 110),
+            HintDef(RECRUIT, "hint218_recruit", 110),
             HintDef(WEATHER, "hint_weather54", 86),
             HintDef(ENEMY_ELITE, "elite141_enemy_hint", 92),
             HintDef(COMMANDER, "comm125_hint", 94),
@@ -159,7 +165,7 @@ class HintOverlay(
     fun update(dt: Float, blocked: Boolean = false) {
         val b = battle
         val suppressed = blocked || b?.pendingChoice != null || b?.pendingCards != null
-        if (b?.pendingVariant != null && activeId >= 0 && activeId != VARIANT) dismiss()
+        if (b?.pendingVariant != null && activeId >= 0 && !choiceHint(activeId)) dismiss()
         if (activeId >= 0) {
             elapsed += dt
             if (suppressed || !g.profile.hintsEnabled || elapsed >= DISPLAY_TIME) dismiss()
@@ -176,7 +182,7 @@ class HintOverlay(
         if (b.pendingVariant == null && b.time - lastShownAt < gap) return
         var best: HintDef? = null
         for (def in DEFINITIONS) {
-            if (b.pendingVariant != null && def.id != VARIANT) continue
+            if (b.pendingVariant != null && !choiceHint(def.id)) continue
             if (g.profile.hintsSeen and (1L shl def.id) != 0L) continue
             if (best != null && def.priority <= best.priority) continue
             if (eligible(def.id)) best = def
@@ -248,13 +254,17 @@ class HintOverlay(
                 affordable
             }
             DAILY -> b.cfg.mode == Mode.DAILY && rankedDaily && b.time < 18f
-            VARIANT -> b.pendingVariant != null
+            VARIANT -> b.pendingVariant?.let { Defs.spec(it).variants.isNotEmpty() } == true
+            RECRUIT -> b.pendingVariant?.let { Defs.spec(it).variants.isEmpty() && Defs.spec(it).recruit != null } == true
             WEATHER -> b.weather != Weather.CLEAR
             ENEMY_ELITE -> !p.eliteUnlocked && enemyHasElite()
             COMMANDER -> b.commanderAvailable && b.canSummonCommander(p)
             else -> false
         }
     }
+
+    /** Dymek okna wyboru wariantu (pełny wariant albo nowa jednostka epoki). */
+    private fun choiceHint(id: Int): Boolean = id == VARIANT || id == RECRUIT
 
     private fun activate(id: Int, key: String) {
         if (!g.profile.markHintSeen(id)) return
@@ -296,14 +306,14 @@ class HintOverlay(
         if (safeW < 110f * dp || body.isEmpty()) return
 
         // Nad wariantami zostaje wąski pas pionowy; korzystamy z całej szerokości.
-        val maxW = if (activeId == VARIANT) safeW else min(min(600f * dp, safeW), max(150f * dp, limit))
+        val maxW = if (choiceHint(activeId)) safeW else min(min(600f * dp, safeW), max(150f * dp, limit))
         // Tura 9: tekst i „OK” z odstępem od złotej lamówki (Ui.PANEL_TRIM_INSET), cel OK ≥ 48 dp.
         val buttonW = OK_W * dp + 8f * dp
         val padding = TEXT_PAD * dp
         hintFont = 12.5f
         var measured = g.ui.measure(body, hintFont)
         // Rozszerzone opisy wariantów próbujemy najpierw zmieścić w jednym wierszu.
-        if (activeId == VARIANT && measured > maxW - buttonW - 3f * padding) {
+        if (choiceHint(activeId) && measured > maxW - buttonW - 3f * padding) {
             hintFont = max(10.5f / scale, hintFont * (maxW - buttonW - 3f * padding) / measured)
             measured = g.ui.measure(body, hintFont)
         }
@@ -382,7 +392,7 @@ class HintOverlay(
             FOG -> t.field
             CARD, THEME, BOSS -> if (t.minimap.width() > 0f) t.minimap else t.field
             OLD_TURRET, TURRET_TIER -> t.turrets.r
-            VARIANT -> if (t.variants[0].visible) t.variants[0].r else null
+            VARIANT, RECRUIT -> if (t.variants[0].visible) t.variants[0].r else null
             WEATHER -> t.weather
             ENEMY_ELITE -> t.eliteUnit?.r
             COMMANDER -> t.commander?.r
@@ -420,7 +430,7 @@ class HintOverlay(
     private fun placePanel(target: RectF?, safeL: Float, safeT: Float, safeR: Float, safeB: Float,
                            dp: Float): Boolean {
         val f = targets?.field
-        if (battle == null || f == null || f.height() <= 0f || activeId == VARIANT) {
+        if (battle == null || f == null || f.height() <= 0f || choiceHint(activeId)) {
             // Poza bitwą dymek omija inne widoczne przyciski ekranu, jeśli to możliwe.
             avoidRects.clear()
             val screen = g.current

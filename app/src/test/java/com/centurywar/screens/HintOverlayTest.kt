@@ -230,6 +230,29 @@ class HintOverlayTest {
         assertEquals(-1, again.activeId)
     }
 
+    /** D70: w epoce jednej roli (wieża bez zmian) dymek mówi o nowej jednostce, nie o „innych wieżach”. */
+    @Test
+    fun recruitChoiceShowsOwnHintAndKeepsVariantHint() {
+        val g = game()
+        val onlyNew = (1L shl HintOverlay.VARIANT) or (1L shl HintOverlay.RECRUIT)
+        g.profile.hintsSeen = Profile.HINT_VALID_MASK and onlyNew.inv()
+        val b = Battle(BattleConfig(Mode.SKIRMISH, 70L, 1f, startEra = 0, maxEra = 0, eraRecruits = true))
+        assertEquals(0, b.pendingVariant)
+        val h = HintOverlay(g, b, targets())
+        h.update(0.3f)
+        assertEquals(HintOverlay.RECRUIT, h.activeId)
+        assertEquals(com.centurywar.engine.L["hint218_recruit"], h.accessibilityBody)
+        h.dismiss()
+        assertEquals(1L shl HintOverlay.RECRUIT, g.profile.hintsSeen and onlyNew)
+
+        // Pełne warianty epoki pary nadal mają własny dymek o jednostkach i wieżach.
+        val steam = Battle(BattleConfig(Mode.SKIRMISH, 71L, 1f, startEra = 5, maxEra = 6))
+        val hs = HintOverlay(g, steam, targets())
+        hs.update(0.3f)
+        assertEquals(HintOverlay.VARIANT, hs.activeId)
+        assertEquals(com.centurywar.engine.L["hint_variant54"], hs.accessibilityBody)
+    }
+
     @Test
     fun variantHintInterruptsOtherHintAndIgnoresCooldown() {
         val g = game()

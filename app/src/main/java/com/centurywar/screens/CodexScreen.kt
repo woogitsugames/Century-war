@@ -96,13 +96,19 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
     private val compare = CodexComparePanel(this, startEra)
 
     private var era = startEra.coerceIn(0, Defs.ERA_COUNT - 1)
-    private var selectedVariant = if (Defs.spec(era).variants.isNotEmpty()) 0 else -1
+    /**
+     * Wartość [com.centurywar.game.Side.eraVariant] pokazywana na stronie wariantów. D70: w epoce
+     * jednej roli (Tarczownik, Lekki wóz, Taran, Strzelec z osłoną) -1 = podstawowy skład, 0 = nowa jednostka.
+     */
+    private var selectedVariant = defaultVariant(era)
     private var withResearch = false
     private var page = PAGE_ERAS
     private var activeCards = CARDS
     private var variantTitle = ""
     private val variantLines = arrayOfNulls<String>(MAX_GUIDE_LINES)
     private var variantLineCount = 0
+    /** D70: kolejność kart; na stronie wariantu jednej roli zmieniona jednostka stoi pierwsza. */
+    private val cardOrder = IntArray(CARDS) { it }
     private var dt = 0f
 
     // układ
@@ -254,7 +260,8 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             maxEraScroll = 0f
         }
 
-        val variants = Defs.spec(era).variants
+        // D70: karty jak w oknie wyboru bitwy (pełne warianty albo podstawowy skład / nowa jednostka).
+        val variants = Defs.variantChoices(era)
         val vbW = (contentW - 10 * dp) / 2f
         for (i in variantBtn.indices) {
             val b = variantBtn[i]
@@ -367,10 +374,21 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         val e = Defs.eras[era]
         val variantIndex = if (page == PAGE_VARIANTS) selectedVariant else -1
         val variant = Defs.spec(era).variants.getOrNull(variantIndex)
-        variantTitle = if (variant == null) L["cx62_no_variants"] else L[variant.nameKey]
+        val recruit = Defs.spec(era).recruit
         // Tura 10 (szlif 2): epoka bez wariantów ma „Brak wariantów” tylko w nagłówku (z opisem).
-        variantLineCount = wrapWords(if (variant == null) L["cx62_no_variants_d"] else L[variant.descKey],
-            contentW - 20 * dp, 12.5f, variantLines)
+        // D70: epoka jednej roli opisuje wybraną kartę tak samo jak okno wyboru w bitwie.
+        variantTitle = when {
+            variant != null -> L[variant.nameKey]
+            recruit != null -> if (selectedVariant >= 0) L[recruit.nameKey] else L["v_base"]
+            else -> L["cx62_no_variants"]
+        }
+        val variantDesc = when {
+            variant != null -> L[variant.descKey]
+            recruit != null -> if (selectedVariant >= 0) L[recruit.descKey]
+                else L.f(recruit.baseDescKey, L[Defs.unit(era, recruit.role).nameKey])
+            else -> L["cx62_no_variants_d"]
+        }
+        variantLineCount = wrapWords(variantDesc, contentW - 20 * dp, 12.5f, variantLines)
         eraName = L[e.nameKey]
         eraNum = L.f("cx_era_n", era + 1, Defs.ERA_COUNT)
         evolveText = if (e.evolveXp == Int.MAX_VALUE) L["cx_final"] else L.f("cx_evolve", num(e.evolveXp.toFloat()))
@@ -446,10 +464,17 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         toggle.label = if (compactToggle) "" else L["cx_research"]
         toggle.sub = if (compactToggle) "" else if (withResearch) L["on"] else L["off"]
         toggle.highlight = withResearch
+        val choices = Defs.variantChoices(era)
+        val first = if (page == PAGE_VARIANTS && recruit != null && variant == null) recruit.role.ordinal else 0
+        cardOrder[0] = first
+        var slot = 1
+        for (i in 0 until CARDS) if (i != first) cardOrder[slot++] = i
         for (i in variantBtn.indices) {
             val vb = variantBtn[i]
-            if (i < Defs.spec(era).variants.size) vb.label = L[Defs.spec(era).variants[i].nameKey]
-            vb.selected = i == selectedVariant
+            val full = Defs.spec(era).variants.getOrNull(i)
+            if (full != null) vb.label = L[full.nameKey]
+            else if (recruit != null) vb.label = if (i == 0) L["v_base"] else L[recruit.nameKey]
+            vb.selected = i < choices.size && choices[i] == selectedVariant
             vb.highlight = vb.selected
         }
         bossSectionTitle = L["cx_endless_bosses"]
@@ -477,9 +502,15 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         when (page) {
             PAGE_VARIANTS -> {
                 // Zbiorczy spis wszystkich ścieżek, także gdy bieżąca epoka ich nie ma.
-                for (e in Defs.specs.indices) for (variant in Defs.spec(e).variants) {
-                    addGuide(Icons.CODEX, L[variant.nameKey], L[variant.descKey],
-                        L[Defs.eraKeys[e]])
+                for (e in Defs.specs.indices) {
+                    for (variant in Defs.spec(e).variants) {
+                        addGuide(Icons.CODEX, L[variant.nameKey], L[variant.descKey],
+                            L[Defs.eraKeys[e]])
+                    }
+                    // D70: nowe jednostki epok (na razie tylko w potyczce).
+                    val recruit = Defs.spec(e).recruit ?: continue
+                    addGuide(Icons.HELMET, L[recruit.nameKey], L[recruit.descKey],
+                        L[Defs.eraKeys[e]] + " · " + L["cx218_skirmish"])
                 }
             }
             PAGE_ABILITIES -> {
@@ -745,7 +776,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 val i = when (page) {
                     PAGE_TOWERS -> TURRET
                     PAGE_ABILITIES -> BARRAGE
-                    else -> slot
+                    else -> cardOrder[slot]
                 }
                 val x = left + (slot % cols) * (cw + gap)
                 val y = gridTop + (slot / cols) * (ch + gap)
@@ -844,7 +875,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
 
     private fun drawCard(c: Canvas, i: Int) {
         val roleCol = ROLE_COL[i]
-        ui.card(c, card, CARD_BODY, 14f, Ui.blend(roleCol, Color.WHITE, 0.25f))
+        // D70: karta nowej jednostki epoki ma złotą ramkę (jak złota kreska w oknie wyboru).
+        val recruit = Defs.spec(era).recruit
+        val isRecruit = page == PAGE_VARIANTS && selectedVariant >= 0 && recruit != null &&
+            Defs.spec(era).variants.isEmpty() && i == recruit.role.ordinal
+        ui.card(c, card, CARD_BODY, 14f,
+            if (isRecruit) Ui.GOLD else Ui.blend(roleCol, Color.WHITE, 0.25f))
         val pad = 10 * dp
 
         // podgląd
@@ -958,6 +994,13 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         c.restore()
     }
 
+    /** Do testów (D70): tytuł karty jednostki roli [role] i opis w nagłówku strony wariantów. */
+    internal fun unitTitleForTest(role: Int): String = titles[role] ?: ""
+    internal fun variantHeaderForTest(): String =
+        (0 until variantLineCount).joinToString(" ") { variantLines[it] ?: "" }
+    /** Do testów (D70): przewinięcie treści o ułamek [fraction] zakresu. */
+    internal fun scrollForTest(fraction: Float) { scroll = maxScroll * fraction }
+
     /** Do testów: napisy siatki statystyk aktywnych kart (etykiety i wartości). */
     internal fun statTextsForTest(): Set<String> {
         val out = HashSet<String>()
@@ -978,6 +1021,12 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
         renderer.drawUnitIcon(c, unit, x, y, size, Ui.PLAYER)
     }
 
+    /** Pełny wariant: pierwszy; epoka jednej roli: nowa jednostka (0); inaczej podstawowy skład. */
+    private fun defaultVariant(e: Int): Int {
+        val spec = Defs.spec(e.coerceIn(0, Defs.ERA_COUNT - 1))
+        return if (spec.variants.isNotEmpty() || spec.recruit != null) 0 else -1
+    }
+
     override fun onClick(b: Button) {
         if (page == PAGE_COMPARE && compare.onClick(b)) {
             layout()
@@ -987,7 +1036,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
             b.id == -1 -> g.pop()
             b.id == -2 -> { withResearch = !withResearch; layout() }
             b.id == -3 || b.id == -4 -> {
-                selectedVariant = -3 - b.id
+                selectedVariant = Defs.variantChoices(era).getOrElse(-3 - b.id) { -1 }
                 scroll = 0f
                 layout()
             }
@@ -996,7 +1045,7 @@ class CodexScreen(g: Game, startEra: Int = 0) : Screen(g) {
                 val e = b.id - 100
                 if (e != era) {
                     era = e
-                    selectedVariant = if (Defs.spec(e).variants.isEmpty()) -1 else 0
+                    selectedVariant = defaultVariant(e)
                     scroll = 0f
                     layout()
                     revealEra(e)

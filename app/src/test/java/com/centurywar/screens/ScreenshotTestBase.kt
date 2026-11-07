@@ -283,10 +283,9 @@ abstract class ScreenshotTestBase {
             val titleSize = g.ui.fit(title, 19f, textW)
             assertTrue("$tag: tytuł wariantu nie mieści się w karcie",
                 g.ui.measure(title, titleSize) <= textW + dp)
-            val imgH = minOf(72 * dp, b.r.height() * 0.32f)
-            val iconTop = b.r.bottom - 28 * dp - imgH
-            val lineEnd = b.r.top + 58 * dp +
-                maxOf(0, descriptions[i] - 1) * 12.5f * dp * g.ui.textScale * 1.3f
+            val iconTop = bs.variantIconTop(i)
+            // D70: dolna krawędź opisu w skali, w której karta była rysowana (HUD bitwy: do 115%).
+            val lineEnd = b.r.top + bs.variantTextOffset(i)
             assertTrue("$tag: opis wariantu $i nachodzi na sylwetki: $lineEnd >= $iconTop",
                 descriptions[i] == 0 || lineEnd + 3 * dp < iconTop)
             assertTrue("$tag: pola sylwetek za wąskie",
