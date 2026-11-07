@@ -15,3 +15,4 @@
 - 2026-11-06 UTC: D62: kafel Rozkazy sztabu w menu (obok Misji)
 - 2026-11-06 UTC: D65: pasek „następnego celu” pod logo, nad kaflami (R2-01)
 - 2026-11-06 UTC: Zlecenie 192: okno etapu na 720p — modyfikatory w wierszu nagłówka, odstęp od „Trudność” ≥ 10 dp
+- 2026-11-07 UTC: D68: nowe style przeciwnika w ustawieniach potyczki
