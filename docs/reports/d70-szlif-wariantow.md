@@ -62,4 +62,4 @@ kartami i przez 8 s zasłania wstęgę „Wybierz wariant epoki”; zachowanie b
 - `HintOverlayTest.recruitChoiceShowsOwnHintAndKeepsVariantHint`.
 - Wzorce PNG regresji (`src/test/resources/screens`) bez zmian.
 
-Pełne testy: patrz wynik w opisie końcowym sesji.
+**Pełne testy** (`:app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun :app:lintDebug :app:assembleDebug --continue`): EXIT=0, BUILD SUCCESSFUL w 29 min 37 s; app 994 testy (0 błędów, 13 pominiętych), sim 381 (0, 4 pominięte), serwer 125 (0, 1 pominięty).
