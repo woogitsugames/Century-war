@@ -185,9 +185,18 @@ class Stage(
     val aiPower: Float,
     val modifiers: Set<Modifier>,
     val weather: Weather = Weather.CLEAR,
+    /** Dzień 68: stały styl przeciwnika etapu; null = losowanie z seeda (pula [AiPersonality.LEGACY]). */
+    val personality: AiPersonality? = null,
 )
 
 object Campaign {
+    /**
+     * Dzień 68 (R170, decyzja właściciela 7.11): pojedyncze późne etapy z nowym stylem
+     * przeciwnika (numery od 1). Samouczek i wczesne etapy losują jak dotąd. Pomiar trudności
+     * przed/po: docs/reports/d68-osobowosci-ai.md.
+     */
+    val STAGE_PERSONALITIES: Map<Int, AiPersonality> = mapOf()
+
     /**
      * Cztery etapy na epokę. Każdy etap ma ograniczony zakres epok, więc bitwa trwa
      * kilka minut, a cała kampania wiele godzin. Do tego dochodzą gwiazdki do zdobycia.
@@ -219,9 +228,10 @@ object Campaign {
                 1 -> Weather.WIND
                 else -> Weather.NIGHT
             } else Weather.CLEAR
-            add(Stage(i, "stage_${i + 1}", start, max, power, mods, weather))
+            add(Stage(i, "stage_${i + 1}", start, max, power, mods, weather, STAGE_PERSONALITIES[i + 1]))
         }
     }
+
 
     /**
      * Mnożnik siły AI w drugiej połowie kampanii. Zmierzony w BalanceReport (docs/BALANCE.md):
@@ -300,6 +310,7 @@ object Campaign {
         stage.startEra,
         if (tutorial) maxOf(stage.maxEra, minOf(Defs.ERA_COUNT - 1, stage.startEra + 1)) else stage.maxEra,
         stage.modifiers, bonuses, stage.index, tutorial,
+        aiPersonality = if (tutorial) null else stage.personality,
         weather = stage.weather,
     )
 
@@ -684,7 +695,8 @@ object Daily {
         val eventMax = maxOf(maxEra, eventStart)
         val eventPower = if (event == DailyEvent.MIRROR_ARMY) 1f else power
         val personality = if (event == DailyEvent.MIRROR_ARMY)
-            AiPersonality.entries[Rng(day * 1_000_003L + 71L).nextInt(AiPersonality.entries.size)]
+            // Dzień 68: zamrożona piątka — nowe style nie przelosowują dni z lustrzaną armią.
+            AiPersonality.LEGACY[Rng(day * 1_000_003L + 71L).nextInt(AiPersonality.LEGACY.size)]
         else null
         return BattleConfig(Mode.DAILY, day, eventPower,
             eventStart, eventMax, mods, normalizedBonuses(), aiPersonality = personality,

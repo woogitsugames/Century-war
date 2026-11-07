@@ -62,4 +62,37 @@ enum class AiPersonality(
         4, 4, 5, false, 0.60f, 2,
         1.40f, 0.55f, 1.05f, 18, true,
     ),
+
+    // Dzień 68 (R170): nowe style dopisane NA KOŃCU — ordinal jest w zapisie bitwy i historii.
+    /** „Osłona i strzała”: jedna–dwie jednostki wręcz z przodu, za nimi strzelcy. */
+    SCREEN(
+        24, 46, 20, 10,
+        35f, 0.42f, 6f, 0.86f, 6f, 1.3f,
+        4, 4, 5, false, 0.60f, 2,
+        1.40f, 0.55f, 1.05f, 18, true,
+    ),
+    /** „Krótkie uderzenia”: małe grupy ([pushArmySize]) wychodzą falami z przerwami. */
+    RAIDS(
+        40, 26, 24, 10,
+        35f, 0.42f, 6f, 0.86f, 6f, 1.3f,
+        4, 4, 5, false, 0.60f, 3,
+        1.40f, 0.55f, 1.05f, 18, true,
+    ),
+    /** „Zryw w kontakcie”: mieszana grupa, Zryw dopiero przy zetknięciu z widoczną obroną. */
+    CONTACT_RALLY(
+        32, 30, 28, 10,
+        35f, 0.42f, 6f, 0.86f, 6f, 1.3f,
+        4, 4, 3, false, 0.60f, 2,
+        1.40f, 0.55f, 1.05f, 18, true,
+    ),
+    ;
+
+    companion object {
+        /**
+         * Dzień 68: zamrożona pula losowania z seeda (pięć stylów sprzed dnia 68). Używają jej
+         * wszystkie tryby poza potyczką — kampania, wyzwanie dnia (także MIRROR_ARMY), Endless,
+         * tydzień i Rozkazy — więc stare seedy i historyczne wyniki nie przelosowują przeciwnika.
+         */
+        val LEGACY: List<AiPersonality> = listOf(ASSAULT, ENGINEER, ECONOMIST, SIEGER, BALANCED)
+    }
 }

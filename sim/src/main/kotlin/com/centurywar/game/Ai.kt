@@ -66,10 +66,17 @@ class Ai(
     private var ownPower = 0f
     private var enemyPower = 0f
 
+    /**
+     * Dzień 68: tylko przeciwnik w potyczce losuje ze wszystkich stylów; pozostałe tryby i AI
+     * gracza używają zamrożonej piątki [AiPersonality.LEGACY], więc te same seedy dają tego
+     * samego dowódcę co przed dodaniem nowych stylów (wyzwania dnia, Endless, tydzień, Rozkazy).
+     */
     private fun personalityForSeed(seed: Long, index: Int): AiPersonality {
         val n = seed xor (seed ushr 32) xor (index.toLong() * 0x5DEECE66DL)
-        val choice = ((n and Long.MAX_VALUE) % AiPersonality.entries.size).toInt()
-        return AiPersonality.entries[choice]
+        val pool = if (b.cfg.mode == Mode.SKIRMISH && index == 1) AiPersonality.entries
+            else AiPersonality.LEGACY
+        val choice = ((n and Long.MAX_VALUE) % pool.size).toInt()
+        return pool[choice]
     }
 
     // Rozkazy AI gracza przechodzą przez rejestrator powtórki; przeciwnik działa bezpośrednio.
@@ -176,6 +183,10 @@ class Ai(
 
     /** Gromadzenie fali i obrona wież są odrębne od krótkiego odwrotu pozostałych. */
     private fun managePosture() {
+        if (personality == AiPersonality.RAIDS) {
+            raidPosture()
+            return
+        }
         if (personality == AiPersonality.SIEGER) {
             val launch = me.aliveCount >= personality.pushArmySize ||
                 (danger >= 3 && me.aliveCount >= personality.pushArmySize - 2 &&
@@ -237,6 +248,38 @@ class Ai(
         }
     }
 
+    /** Własne jednostki za linią postoju, czyli te, które już wyszły do uderzenia. */
+    private fun unitsOut(): Int {
+        val line = me.baseFront + me.dir * (Battle.HOLD_DIST + RAID_MARGIN)
+        var out = 0
+        for (u in b.units) if (u.alive && u.side == me.index && (u.x - line) * me.dir > 0f) out++
+        return out
+    }
+
+    /**
+     * Dzień 68, „Krótkie uderzenia”: postój zbiera przy bazie grupę [AiPersonality.pushArmySize]
+     * jednostek, która rusza razem na [RAID_STRIKE] s; potem znowu postój (ocalali stają tam,
+     * gdzie są, i walczą dalej), a przy bazie zbiera się następna grupa. Wróg blisko bazy
+     * zwalnia postój, a po [RAID_MAX_WAIT] s wychodzą choćby dwie jednostki.
+     * Stan: istniejące [holdUntil] i [nextHoldAt] (zapisywane w snapshocie), bez nowych pól.
+     */
+    private fun raidPosture() {
+        if (me.hold) {
+            val out = unitsOut()
+            val gathered = me.aliveCount - out
+            // Pełny limit armii: nikt więcej nie dojdzie, więc grupa rusza od razu.
+            if (gathered >= personality.pushArmySize || danger >= 3 || me.aliveCount + me.queueSize >= me.cap ||
+                (b.time >= holdUntil && (gathered >= 2 || out > 0))
+            ) {
+                stance(false)
+                nextHoldAt = b.time + RAID_STRIKE
+            }
+        } else if (b.time >= nextHoldAt && danger < 2) {
+            stance(true)
+            holdUntil = b.time + RAID_MAX_WAIT
+        }
+    }
+
     private fun useAbilities() {
         val threatened = danger >= 2 && me.baseHp < me.baseMaxHp * 0.6f
         // Oblężnik osłania wysuniętą armię ostrzałem w kierunku bazy w granicach zasięgu.
@@ -251,9 +294,12 @@ class Ai(
             val target = if (forward.isFinite()) forward else biggestVisibleCluster()
             if (target.isFinite()) barrage(target)
         }
-        if (b.abilityReady(me, 1) && me.aliveCount >= personality.rallyMin &&
-            (personality.rallyOnMarch || danger > 0 || pushing() || closeContact > 0)
-        ) {
+        // Dzień 68, „Zryw w kontakcie”: Zryw tylko przy zetknięciu z widocznym wrogiem
+        // (albo w obronie zagrożonej bazy), nigdy na marszu.
+        val rallyNow = if (personality == AiPersonality.CONTACT_RALLY)
+            closeContact >= CONTACT_MIN || (threatened && me.aliveCount >= 2)
+        else personality.rallyOnMarch || danger > 0 || pushing() || closeContact > 0
+        if (b.abilityReady(me, 1) && me.aliveCount >= personality.rallyMin && rallyNow) {
             rally()
         }
     }
@@ -385,6 +431,18 @@ class Ai(
         if (melee > ranged + heavy + 3) wm = wm * 2 / 3
         if (ranged < melee) wr += 10
         if (heavy * 3 < melee + ranged) wh += 20
+        // Dzień 68, „Osłona i strzała”: najpierw osłona z dwóch wręcz, potem strzelcy za nią.
+        if (profile == AiPersonality.SCREEN) {
+            var front = melee
+            for (i in 0 until me.queueSize) if (Defs.allUnits[me.queue[i]].role == Role.MELEE) front++
+            if (front < SCREEN_FRONT) {
+                wm += 70
+                wr /= 2
+            } else {
+                wr += 45
+                wm /= 3
+            }
+        }
 
         // Nie planuj drogich formacji zbyt wcześnie: oszczędzanie jest świadomą decyzją.
         if (me.gold < me.unit(Role.HEAVY).cost * 0.65f) wh = 0
@@ -433,6 +491,9 @@ class Ai(
             AiPersonality.ECONOMIST -> 60
             AiPersonality.ASSAULT -> 35
             AiPersonality.BALANCED -> 50
+            AiPersonality.SCREEN -> 55
+            AiPersonality.RAIDS -> 40
+            AiPersonality.CONTACT_RALLY -> 50
         }
         val opponent = b.sides[1 - me.index]
         if (opponent.era == era && opponent.eraVariant >= 0) {
@@ -464,6 +525,16 @@ class Ai(
     private companion object {
         /** Obniżka wagi Zakładu dla profili innych niż szturmowy (strojenie: docs/BALANCE.md). */
         const val WAGER_CAUTION = 30f
+        /** Dzień 68: tyle wręcz (żywych i w kolejce) stanowi osłonę stylu „Osłona i strzała”. */
+        const val SCREEN_FRONT = 2
+        /** Dzień 68: jednostka dalej niż linia postoju + margines jest już „w polu”. */
+        const val RAID_MARGIN = 60f
+        /** Dzień 68: czas uderzenia grupy, zanim wróci postój i zbiórka następnej [s]. */
+        const val RAID_STRIKE = 20f
+        /** Dzień 68: najdłuższe zbieranie grupy, zanim wyjdą choćby dwie jednostki [s]. */
+        const val RAID_MAX_WAIT = 10f
+        /** Dzień 68: tylu widocznych wrogów przy froncie oznacza kontakt dla Zrywu. */
+        const val CONTACT_MIN = 2
     }
 
     /** Wartość dodatkowej karty w zależności od profilu; bez modyfikacji jej efektu. */
@@ -507,6 +578,22 @@ class Ai(
                 EndlessCard.FORTRESS, EndlessCard.SUPPLY_LINE,
                 EndlessCard.FIELD_MEDICS, EndlessCard.SHIELD_WALL,
                 EndlessCard.PIKE_SQUARE -> 12f
+                else -> 0f
+            }
+            // Dzień 68: nowe style nie są losowane w Endless; preferencje tylko dla kompletności.
+            AiPersonality.SCREEN -> when (card) {
+                EndlessCard.SHARPSHOOTERS, EndlessCard.FRONTLINE_PLATE,
+                EndlessCard.SHIELD_WALL, EndlessCard.PIKE_SQUARE -> 18f
+                else -> 0f
+            }
+            AiPersonality.RAIDS -> when (card) {
+                EndlessCard.MARCH, EndlessCard.WAR_DRUMS, EndlessCard.MOBILIZATION,
+                EndlessCard.VANGUARD -> 18f
+                else -> 0f
+            }
+            AiPersonality.CONTACT_RALLY -> when (card) {
+                EndlessCard.RALLY_MASTER, EndlessCard.WAR_HORNS,
+                EndlessCard.BERSERK, EndlessCard.LAST_STAND -> 18f
                 else -> 0f
             }
         }
@@ -623,6 +710,18 @@ class Ai(
         AiPersonality.BALANCED -> when (d) {
             Doctrine.FURY -> 0; Doctrine.ECONOMY -> 1; Doctrine.BULWARK -> 2
             Doctrine.SWIFT -> 3; Doctrine.BANNER -> 4; else -> 5
+        }
+        AiPersonality.SCREEN -> when (d) {
+            Doctrine.BULWARK -> 0; Doctrine.FURY -> 1; Doctrine.ECONOMY -> 2
+            Doctrine.TACTICS -> 3; Doctrine.SWIFT -> 4; else -> 5
+        }
+        AiPersonality.RAIDS -> when (d) {
+            Doctrine.SWIFT -> 0; Doctrine.FURY -> 1; Doctrine.ECONOMY -> 2
+            Doctrine.PLUNDER -> 3; Doctrine.SUPPLY -> 4; else -> 5
+        }
+        AiPersonality.CONTACT_RALLY -> when (d) {
+            Doctrine.BANNER -> 0; Doctrine.TACTICS -> 1; Doctrine.FURY -> 2
+            Doctrine.BULWARK -> 3; Doctrine.ECONOMY -> 4; else -> 5
         }
     }
 }
