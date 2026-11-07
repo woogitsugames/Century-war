@@ -13,7 +13,7 @@ class ModelsValidationTest {
     private val zeros = List(Research.defs.size) { 0 }
 
     private fun submission(board: String = "endless") = ScoreSubmission(
-        board = board, player = player, nick = "Gracz", gameVersion = "0.8.13",
+        board = board, player = player, nick = "Gracz", gameVersion = "0.8.15",
         seed = 1, replay = "", score = 1, research = zeros,
     )
 

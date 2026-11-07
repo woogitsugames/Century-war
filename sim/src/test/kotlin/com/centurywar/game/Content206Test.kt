@@ -190,7 +190,7 @@ class Content206Test {
     }
 
     @Test fun olderSnapshotFormatsStillResume() {
-        assertEquals(23, BattleSnapshot.VERSION)
+        assertEquals(25, BattleSnapshot.VERSION)
         val a = endless(2_061L)
         a.playerAi = Ai(a, 0)
         repeat(60 * 60) { a.step(); a.fx.count = 0 }

@@ -169,7 +169,7 @@ nie jest poprawną, zweryfikowaną powtórką):
   "board": "endless",
   "player": "a16036d5-800a-4898-aea3-11b6548de7b4",
   "nick": "Gracz_12",
-  "gameVersion": "0.8.13",
+  "gameVersion": "0.8.15",
   "seed": 12345,
   "replay": "AoQH...",
   "score": 257,
@@ -319,7 +319,7 @@ Wgląd tylko administracyjnie: `server admin reports [limit]`.
   nie wykryje automatycznego wyszukiwania optymalnych komend ani botów.
   Dla daily i weekly seed jest stały; dla pozostałych trybów klient deklaruje seed.
 - Wspólna wersja protokołu jest zdefiniowana jako `SimVersion.PROTOCOL`
-  w `:sim` (obecnie `0.8.13`). Używa jej klient oraz domyślny serwer.
+  w `:sim` (obecnie `0.8.15`). Używa jej klient oraz domyślny serwer.
   `CW_GAME_VERSION` nie jest już konfigurowana w Docker Compose.
   Jej podbicie po zmianach przebiegu symulacji wykonuje koordynator.
   `Replay.VERSION` (obecnie 7) wersjonuje tylko format powtórek.

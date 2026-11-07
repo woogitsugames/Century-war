@@ -53,9 +53,34 @@ class UnitDef(
     val siegeMul: Float,
     val variant: Int = -1,
     val art: EraArt = Defs.spec(era).art,
+    /** Dzień 69: jedna cecha jednostki wariantu epoki ([Trait]); zwykłe jednostki: [Trait.NONE]. */
+    val trait: Int = Trait.NONE,
 ) {
     /** Klucze lokalizowanych nazw trzech stopni. */
     val tierNameKeys = arrayOf(nameKey, nameKey + "_t2", nameKey + "_t3")
+}
+
+/**
+ * Dzień 69 (R171): cechy pojedynczych jednostek z wariantów epok. Każda jednostka ma
+ * najwyżej jedną cechę, bez losowania; stan zużycia i liczników trzyma [Fighter].
+ */
+object Trait {
+    const val NONE = 0
+    /** Tarczownik: po pierwszym otrzymanym trafieniu przez [SHIELD_TIME] s obrażenia × [SHIELD_MUL]. */
+    const val SHIELD = 1
+    /** Lekki wóz: do pierwszego ataku albo pierwszego trafienia prędkość × [DASH_MUL]. */
+    const val DASH = 2
+    /** Taran: pierwsze uderzenie w bazę zadaje × [RAM_MUL] (nie dotyczy jednostek ani wież). */
+    const val RAM = 3
+    /** Strzelec z osłoną: po [BRACE_TIME] s bez ruchu następny strzał × [BRACE_MUL]. */
+    const val BRACE = 4
+
+    const val SHIELD_TIME = 2f
+    const val SHIELD_MUL = 0.8f
+    const val DASH_MUL = 1.25f
+    const val RAM_MUL = 1.25f
+    const val BRACE_TIME = 2f
+    const val BRACE_MUL = 1.15f
 }
 
 class TurretDef(
@@ -124,6 +149,36 @@ class EraSpec(
     val accent: Int,
     val fastTurret: Boolean,
     val variants: Array<EraVariant> = emptyArray(),
+    /** Dzień 69: jedna nowa jednostka zamiast jednej roli (wybór „podstawowy skład” albo ona). */
+    val recruit: EraRecruit? = null,
+)
+
+/**
+ * Dzień 69 (R171): wariant epoki zmieniający tylko jedną rolę. Wieża, ostrzał i styl
+ * pozostają z epoki; pozostałe trzy jednostki są podstawowe. Mnożniki liczone od
+ * jednostki podstawowej tej roli; null = wartość podstawowej jednostki.
+ */
+class EraRecruit(
+    val key: String,
+    val nameKey: String,
+    val descKey: String,
+    /** Opis karty „podstawowy skład” (z nazwą zastępowanej jednostki jako %1\$s). */
+    val baseDescKey: String,
+    val role: Role,
+    val unitName: String,
+    val trait: Int,
+    val body: Int,
+    val weapon: Int,
+    val projectile: Int,
+    val costMul: Float,
+    val hpMul: Float,
+    val dmgMul: Float,
+    val speedMul: Float,
+    val trainMul: Float = 1f,
+    val range: Float? = null,
+    val splash: Float? = null,
+    val size: Float? = null,
+    val siegeMul: Float? = null,
 )
 
 /** Odmienny skład, wieża i ostrzał w obrębie epoki. Kolejność pól statystyk odpowiada Role. */
@@ -192,17 +247,26 @@ object Defs {
             intArrayOf(Weapon.CLUB, Weapon.SLING, Weapon.CLUB, Weapon.SPEAR), Body.HUMAN, Body.BEAST,
             Proj.STONE, Proj.NONE, Proj.NONE, "t_rock", Proj.STONE, "ab_rocks", Proj.BOULDER,
             950, EraArt.TRIBAL, Terrain.WOODS,
-            intArrayOf(0xFF6EBEF0.toInt(), 0xFFC8E6FA.toInt(), 0xFF7FA0B8.toInt(), 0xFF5A8C50.toInt(), 0xFF3C6E3C.toInt(), 0xFF967846.toInt()), 0xFF96683C.toInt(), false),
+            intArrayOf(0xFF6EBEF0.toInt(), 0xFFC8E6FA.toInt(), 0xFF7FA0B8.toInt(), 0xFF5A8C50.toInt(), 0xFF3C6E3C.toInt(), 0xFF967846.toInt()), 0xFF96683C.toInt(), false,
+            recruit = EraRecruit("shieldbearer", "v_shieldbearer", "v_shieldbearer_d", "v_base_d", Role.HEAVY,
+                "u_shieldbearer", Trait.SHIELD, Body.HUMAN, Weapon.CLUB, Proj.NONE,
+                costMul = 1f, hpMul = 1.1f, dmgMul = 0.85f, speedMul = 0.88f)),
         EraSpec("era_bronze", arrayOf("u_spearman", "u_javelineer", "u_chariot", "u_warbeast"),
             intArrayOf(Weapon.SPEAR, Weapon.SPEAR, Weapon.BOW, Weapon.SPEAR), Body.BEAST, Body.BEAST,
             Proj.JAVELIN, Proj.ARROW, Proj.NONE, "t_ballista", Proj.JAVELIN, "ab_spears", Proj.JAVELIN,
             2400, EraArt.BRONZE, Terrain.DESERT,
-            intArrayOf(0xFF78B4E6.toInt(), 0xFFF0DCB4.toInt(), 0xFFC8AA7A.toInt(), 0xFFB48C5A.toInt(), 0xFF9C7448.toInt(), 0xFFC8AA6E.toInt()), 0xFFC48032.toInt(), false),
+            intArrayOf(0xFF78B4E6.toInt(), 0xFFF0DCB4.toInt(), 0xFFC8AA7A.toInt(), 0xFFB48C5A.toInt(), 0xFF9C7448.toInt(), 0xFFC8AA6E.toInt()), 0xFFC48032.toInt(), false,
+            recruit = EraRecruit("light_cart", "v_light_cart", "v_light_cart_d", "v_base_d", Role.HEAVY,
+                "u_light_cart", Trait.DASH, Body.SIEGE, Weapon.BOW, Proj.ARROW,
+                costMul = 0.9f, hpMul = 0.8f, dmgMul = 1f, speedMul = 1f)),
         EraSpec("era_iron", arrayOf("u_iron_guard", "u_iron_bow", "u_iron_rider", "u_iron_scorpion"),
             intArrayOf(Weapon.SPEAR, Weapon.BOW, Weapon.SWORD, Weapon.CROSSBOW), Body.BEAST, Body.SIEGE,
             Proj.ARROW, Proj.NONE, Proj.BOLT, "t_iron_ballista", Proj.BOLT, "ab_iron_pilum", Proj.JAVELIN,
             4100, EraArt.IRON, Terrain.PAVED_HILLS,
-            intArrayOf(0xFF79A9DA.toInt(), 0xFFD9D5C0.toInt(), 0xFF97A0AC.toInt(), 0xFF718C62.toInt(), 0xFF667D50.toInt(), 0xFF857C61.toInt()), 0xFFA9744C.toInt(), false),
+            intArrayOf(0xFF79A9DA.toInt(), 0xFFD9D5C0.toInt(), 0xFF97A0AC.toInt(), 0xFF718C62.toInt(), 0xFF667D50.toInt(), 0xFF857C61.toInt()), 0xFFA9744C.toInt(), false,
+            recruit = EraRecruit("iron_ram", "v_iron_ram", "v_iron_ram_d", "v_base_d", Role.ELITE,
+                "u_iron_ram", Trait.RAM, Body.SIEGE, Weapon.CLUB, Proj.NONE,
+                costMul = 1f, hpMul = 1.2f, dmgMul = 1.1f, speedMul = 0.85f, range = 44f, splash = 0f)),
         EraSpec("era_feudal", arrayOf("u_footman", "u_crossbow", "u_knight", "u_trebuchet"),
             intArrayOf(Weapon.SWORD, Weapon.CROSSBOW, Weapon.PIKE, Weapon.SWORD), Body.BEAST, Body.SIEGE,
             Proj.BOLT, Proj.NONE, Proj.BOULDER, "t_arrow", Proj.ARROW, "ab_arrows", Proj.ARROW,
@@ -212,7 +276,10 @@ object Defs {
             intArrayOf(Weapon.PIKE, Weapon.MUSKET, Weapon.SWORD, Weapon.MUSKET), Body.BEAST, Body.CANNON,
             Proj.BULLET, Proj.NONE, Proj.BALL, "t_cannon", Proj.BALL, "ab_cannons", Proj.BALL,
             14500, EraArt.POWDER, Terrain.WOODS,
-            intArrayOf(0xFF82AAD2.toInt(), 0xFFE6D2BE.toInt(), 0xFF8C9AA0.toInt(), 0xFF6E8250.toInt(), 0xFF506440.toInt(), 0xFF8C7850.toInt()), 0xFF963A32.toInt(), false),
+            intArrayOf(0xFF82AAD2.toInt(), 0xFFE6D2BE.toInt(), 0xFF8C9AA0.toInt(), 0xFF6E8250.toInt(), 0xFF506440.toInt(), 0xFF8C7850.toInt()), 0xFF963A32.toInt(), false,
+            recruit = EraRecruit("mantlet", "v_mantlet", "v_mantlet_d", "v_base_d", Role.RANGED,
+                "u_mantlet_gunner", Trait.BRACE, Body.HUMAN, Weapon.MUSKET, Proj.BULLET,
+                costMul = 1f, hpMul = 1.2f, dmgMul = 0.9f, speedMul = 0.9f, trainMul = 1.25f)),
         EraSpec("era_steam", arrayOf("u_rifleman", "u_sharpshooter", "u_walker", "u_ironclad"),
             intArrayOf(Weapon.RIFLE, Weapon.RIFLE, Weapon.MG, Weapon.MG), Body.MECH, Body.VEHICLE,
             Proj.BULLET, Proj.BULLET, Proj.SHELL, "t_gatling", Proj.BULLET, "ab_shells", Proj.SHELL,
@@ -325,9 +392,27 @@ object Defs {
             }
         }
     }
+    /** Dzień 69: jednostki wariantów jednej roli, za wszystkimi dotychczasowymi identyfikatorami. */
+    private val recruitUnits: Array<UnitDef?> = run {
+        var next = ERA_COUNT * Role.entries.size +
+            specs.sumOf { it.variants.size } * Role.entries.size
+        Array(ERA_COUNT) { era ->
+            val r = specs[era].recruit
+            if (r == null) null else {
+                val base = eras[era].units[r.role.ordinal]
+                UnitDef(next++, era, r.role, r.unitName,
+                    (base.cost * r.costMul).toInt(), base.hp * r.hpMul, base.dmg * r.dmgMul,
+                    r.range ?: base.range, base.cooldown, base.speed * r.speedMul,
+                    base.trainTime * r.trainMul, r.size ?: base.size, r.splash ?: base.splash,
+                    r.projectile, r.weapon, r.body, r.siegeMul ?: base.siegeMul,
+                    variant = -1, art = specs[era].art, trait = r.trait)
+            }
+        }
+    }
     val allUnits: Array<UnitDef> = buildList {
         for (e in eras) addAll(e.units)
         for (e in variantUnits) for (v in e) addAll(v)
+        for (u in recruitUnits) if (u != null) add(u)
     }.toTypedArray()
 
     private val variantTurrets: Array<Array<TurretDef>> = Array(ERA_COUNT) { era ->
@@ -347,15 +432,50 @@ object Defs {
         }
     }
 
-    fun unit(era: Int, role: Role, variant: Int = -1): UnitDef =
-        if (variant < 0) eras[era].units[role.ordinal] else variantUnits[era][variant][role.ordinal]
-    fun turret(era: Int, variant: Int = -1): TurretDef =
-        if (variant < 0) eras[era].turret else variantTurrets[era][variant]
-    fun barrage(era: Int, variant: Int = -1): BarrageDef =
-        if (variant < 0) baseBarrage[era] else variantBarrage[era][variant]
+    /**
+     * Jednostka roli dla [Side.eraVariant]. W epoce z [EraSpec.recruit] wartość 0 oznacza
+     * wybraną nową jednostkę (pozostałe role bez zmian), -1 podstawowy skład.
+     */
+    fun unit(era: Int, role: Role, variant: Int = -1): UnitDef = when {
+        variant < 0 -> eras[era].units[role.ordinal]
+        specs[era].variants.isEmpty() -> recruitUnits[era]?.takeIf { it.role == role } ?: eras[era].units[role.ordinal]
+        else -> variantUnits[era][variant][role.ordinal]
+    }
+    /** Nowa jednostka wariantu jednej roli albo null. */
+    fun recruitUnit(era: Int): UnitDef? = recruitUnits[era]
+    /** Indeks pełnego wariantu stylu (wieża, ostrzał, wygląd); wariant jednej roli = -1. */
+    fun styleVariant(era: Int, variant: Int): Int =
+        if (variant >= 0 && variant < specs[era].variants.size) variant else -1
+    /** Liczba poprawnych nieujemnych wartości [Side.eraVariant] w danej epoce. */
+    fun variantLimit(era: Int): Int =
+        if (specs[era].variants.isNotEmpty()) specs[era].variants.size
+        else if (specs[era].recruit != null) 1 else 0
+    private val noChoices = IntArray(0)
+    private val variantChoiceTable: Array<IntArray> = Array(ERA_COUNT) { era ->
+        when {
+            specs[era].variants.isNotEmpty() -> IntArray(specs[era].variants.size) { it }
+            specs[era].recruit != null -> intArrayOf(-1, 0)
+            else -> noChoices
+        }
+    }
+    /**
+     * Wartości [Side.eraVariant] na kartach wyboru (indeks = numer karty i argument komendy
+     * VARIANT). Wariant jednej roli: karta 0 to jawny podstawowy skład (-1), karta 1 nowa jednostka.
+     */
+    fun variantChoices(era: Int): IntArray = variantChoiceTable[era]
+    fun turret(era: Int, variant: Int = -1): TurretDef {
+        val v = styleVariant(era, variant)
+        return if (v < 0) eras[era].turret else variantTurrets[era][v]
+    }
+    fun barrage(era: Int, variant: Int = -1): BarrageDef {
+        val v = styleVariant(era, variant)
+        return if (v < 0) baseBarrage[era] else variantBarrage[era][v]
+    }
     fun eraOf(art: EraArt): Int = specs.indexOfFirst { it.art == art }
-    fun sideArt(era: Int, variant: Int): EraArt =
-        if (variant < 0) specs[era].art else specs[era].variants[variant].art
+    fun sideArt(era: Int, variant: Int): EraArt {
+        val v = styleVariant(era, variant)
+        return if (v < 0) specs[era].art else specs[era].variants[v].art
+    }
 
     /** Koszt zależy od epoki, roli i kupowanego stopnia. */
     fun unitUpgradeCost(era: Int, role: Role, nextTier: Int): Int {

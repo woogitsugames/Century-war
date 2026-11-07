@@ -101,7 +101,13 @@ enum class SnapshotReject { OK, CORRUPT, OLDER_FORMAT, NEWER_FORMAT, BALANCE_CHA
 object BattleSnapshot {
     /** 22: dzień 62 — Mode.ORDERS i pola Rozkazów sztabu w konfiguracji (tylko dla ORDERS). */
     /** 23: dzień 66 — [BattleConfig.orderFlags] (eskorta) w konfiguracji, tylko dla ORDERS. */
-    const val VERSION = 23
+    /**
+     * 25: dzień 69 — stan cech wariantów epok ([Fighter.traitUsed], [Fighter.traitT])
+     * i licznik [Side.traitUses]. Numer 24 zostaje wolny dla równoległej zmiany formatu.
+     */
+    const val VERSION = 25
+    /** Pierwsza wersja ze stanem cech jednostek wariantów epok (dzień 69). */
+    private const val FIRST_WITH_TRAITS = 25
     /** Pierwsza wersja z bajtem [BattleConfig.orderFlags] w konfiguracji Rozkazów. */
     private const val FIRST_WITH_ORDER_FLAGS = 23
     /** Wersje 16–18 nie zapisywały [Side.siegeDamageTaken] (Dzień 2); brak pola = 0. */
@@ -150,6 +156,14 @@ object BattleSnapshot {
             mix(Defs.unitUpgradeCost(u.era, u.role, 2)); mix(Defs.unitUpgradeCost(u.era, u.role, 3))
             mixF(Defs.unitRange(u, 3)); mixF(Defs.unitSplash(u, 3))
             mixF(Defs.unitSpeed(u, 3)); mixF(Defs.unitTrainRate(u, 3))
+            mix(u.trait); mix(u.body)
+        }
+        // Dzień 69: parametry cech i karty wyboru wariantów jednej roli.
+        mixF(Trait.SHIELD_TIME); mixF(Trait.SHIELD_MUL); mixF(Trait.DASH_MUL)
+        mixF(Trait.RAM_MUL); mixF(Trait.BRACE_TIME); mixF(Trait.BRACE_MUL)
+        for (era in 0 until Defs.ERA_COUNT) {
+            mix(Defs.recruitUnit(era)?.id ?: -1)
+            for (v in Defs.variantChoices(era)) mix(v)
         }
         for (e in Defs.eras) {
             val t = e.turret
@@ -226,6 +240,7 @@ object BattleSnapshot {
             o.writeFloat(u.bossCd); o.writeFloat(u.bossSummonCd); o.writeBoolean(u.bossRageActive)
             o.writeFloat(u.burnDps); o.writeFloat(u.burnLeft); o.writeFloat(u.slowLeft)
             o.writeBoolean(u.isCommander); o.writeFloat(u.commanderSkillCd)
+            if (formatVersion >= FIRST_WITH_TRAITS) { o.writeBoolean(u.traitUsed); o.writeFloat(u.traitT) }
         }
         o.writeShort(b.projs.count { it.active })
         for ((i, p) in b.projs.withIndex()) {
@@ -315,6 +330,7 @@ object BattleSnapshot {
         o.writeFloat(s.heavyBaseDmgMul); o.writeFloat(s.turretRangeMul); o.writeBoolean(s.fogSight)
         o.writeFloat(s.commanderCd)
         if (formatVersion >= FIRST_WITH_SIEGE_DAMAGE) o.writeFloat(s.siegeDamageTaken)
+        if (formatVersion >= FIRST_WITH_TRAITS) o.writeInt(s.traitUses)
     }
 
     private fun writeAi(o: DataOutputStream, ai: Ai?) {
@@ -352,7 +368,7 @@ object BattleSnapshot {
     }
 
     private fun supported(version: Int): Boolean =
-        version == VERSION || version == 22 || version == 21 || version == 20 || version == 19 || version == 18 || version == 17 ||
+        version == VERSION || version == 23 || version == 22 || version == 21 || version == 20 || version == 19 || version == 18 || version == 17 ||
             version == LEGACY_VERSION_WITHOUT_ID
 
     /**
@@ -467,6 +483,13 @@ object BattleSnapshot {
             u.commanderSkillCd = i.readFloat().also {
                 require(it.isFinite() && it in 0f..Battle.COMMANDER_SKILL_COOLDOWN)
             }
+            // Starsze zrzuty nie znały cech: jednostki bez cechy mają zawsze stan zerowy.
+            if (version >= FIRST_WITH_TRAITS) {
+                u.traitUsed = i.readBoolean()
+                u.traitT = i.readFloat().also { require(it.isFinite() && it >= 0f && it <= 1_000_000f) }
+            } else {
+                u.traitUsed = false; u.traitT = 0f
+            }
         }
         for (side in b.sides) {
             val activeCommanders = b.units.count { it.alive && it.side == side.index && it.isCommander }
@@ -537,7 +560,7 @@ object BattleSnapshot {
 
     private fun readSide(i: DataInputStream, s: Side, version: Int) {
         s.era = era(i.readByte().toInt())
-        s.eraVariant = variant(s.era, i.readByte().toInt()); s.gold = i.readFloat(); s.xp = i.readFloat(); s.baseHp = i.readFloat(); s.baseMaxHp = i.readFloat()
+        s.eraVariant = sideVariant(s.era, i.readByte().toInt()); s.gold = i.readFloat(); s.xp = i.readFloat(); s.baseHp = i.readFloat(); s.baseMaxHp = i.readFloat()
         s.queueSize = i.readByte().toInt(); s.queueMax = i.readByte().toInt()
         require(s.queueSize in 0..Battle.QUEUE_CAP && s.queueMax in 0..Battle.QUEUE_CAP)
         for (k in 0 until s.queueSize) s.queue[k] = i.readShort().toInt().also { require(it in Defs.allUnits.indices) }
@@ -587,6 +610,7 @@ object BattleSnapshot {
         s.siegeDamageTaken = if (version >= FIRST_WITH_SIEGE_DAMAGE) i.readFloat().also {
             require(it.isFinite() && it >= 0f)
         } else 0f
+        s.traitUses = if (version >= FIRST_WITH_TRAITS) i.readInt().also { require(it >= 0) } else 0
     }
 
     /** false = niezgodność (zrzut ma AI wroga, a bitwa nie, albo odwrotnie). */
@@ -617,6 +641,11 @@ object BattleSnapshot {
 
     private fun variant(era: Int, value: Int): Int {
         require(value in -1 until Defs.spec(era).variants.size)
+        return value
+    }
+    /** Dzień 69: wybór strony obejmuje też wariant jednej roli (0 = nowa jednostka). */
+    private fun sideVariant(era: Int, value: Int): Int {
+        require(value in -1 until Defs.variantLimit(era))
         return value
     }
     private fun era(v: Int): Int { require(v in 0 until Defs.ERA_COUNT); return v }

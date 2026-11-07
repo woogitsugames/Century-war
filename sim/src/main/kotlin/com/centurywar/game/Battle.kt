@@ -51,6 +51,10 @@ class Fighter {
     /** Dowódca jest specjalną jednostką tej samej epoki, bez zmiany UnitDef. */
     var isCommander = false
     var commanderSkillCd = 0f
+    /** Dzień 69: cecha jednorazowa ([Trait.SHIELD], [Trait.DASH], [Trait.RAM]) została zużyta. */
+    var traitUsed = false
+    /** Dzień 69: czas osłony tarczownika albo czas postoju strzelca z osłoną, w sekundach symulacji. */
+    var traitT = 0f
     val isBoss get() = bossKind != EndlessBosses.NONE
     val radius get() = 16f * def.size
     val alive get() = active && dying < 0f
@@ -170,6 +174,8 @@ class Side(val index: Int) {
     var barragesUsed = 0
     var ralliesUsed = 0
     var erasAdvanced = 0
+    /** Dzień 69: ile razy zadziałała cecha jednostek wariantu epoki (pomiar balansu, zapisywane). */
+    var traitUses = 0
     var baseDamageTaken = 0f
     /**
      * Dzień 2: HP bazy utracone przez presję oblężniczą szybszą niż standardowa (etapy 2–7:
@@ -470,7 +476,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             s.baseHp = s.baseMaxHp
             s.front = s.baseFront
         }
-        if (cfg.variantsEnabled && Defs.spec(cfg.startEra).variants.isNotEmpty()) {
+        if (variantsOffered(cfg.startEra)) {
             for (s in sides) offerVariant(s)
         }
         // Karta startowa nie zużywa RNG bitwy i jest częścią zapisanej konfiguracji.
@@ -486,7 +492,11 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     /** Czy rozkaz pozwala tej stronie szkolić daną rolę (poza Rozkazami zawsze tak). */
     fun roleAllowed(side: Side, role: Role): Boolean = allowedMask(side) and OrderRules.roleBit(role) != 0
 
-    fun commanderCost(side: Side): Int = side.unit(Role.HEAVY).cost * 2
+    /** Dowódca to ciężka jednostka stylu epoki; wariant jednej roli go nie zmienia. */
+    private fun commanderDef(side: Side): UnitDef =
+        Defs.unit(side.era, Role.HEAVY, Defs.styleVariant(side.era, side.eraVariant))
+
+    fun commanderCost(side: Side): Int = commanderDef(side).cost * 2
 
     fun canSummonCommander(side: Side): Boolean = commanderAvailable && !over &&
         allowedMask(side) and OrderRules.COMMANDER != 0 &&
@@ -495,7 +505,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     private fun spawnCommander(side: Side): Boolean {
         if (!commanderAvailable || over || side.commanderCd != 0f || side.aliveCount >= side.cap ||
             allowedMask(side) and OrderRules.COMMANDER == 0) return false
-        val f = spawnFighter(side, side.unit(Role.HEAVY), 1.8f) ?: return false
+        val f = spawnFighter(side, commanderDef(side), 1.8f) ?: return false
         f.isCommander = true
         f.dmg *= 1.15f
         f.commanderSkillCd = 0f
@@ -586,14 +596,24 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         side.baseMaxHp = Defs.baseHp(side.era) * side.baseHpMul
         side.baseHp = min(side.baseMaxHp, side.baseMaxHp * ratio + side.baseMaxHp * 0.1f)
         fx.add(FxBuffer.EVOLVE, side.baseFront, 0f, side.index, eraId = side.era)
-        if (cfg.variantsEnabled && Defs.spec(side.era).variants.isNotEmpty()) offerVariant(side)
+        if (variantsOffered(side.era)) offerVariant(side)
         else if (!endless) offerDoctrines(side)
         return true
     }
 
+    /**
+     * Czy w tej epoce strony wybierają wariant. Dzień 69: warianty jednej roli
+     * ([EraSpec.recruit]) na początek tylko w potyczce; kampania, Endless, wyzwania
+     * i Rozkazy grają podstawowym składem.
+     */
+    fun variantsOffered(era: Int): Boolean {
+        if (!cfg.variantsEnabled || era !in 0 until Defs.ERA_COUNT) return false
+        val spec = Defs.spec(era)
+        return spec.variants.isNotEmpty() || (spec.recruit != null && cfg.mode == Mode.SKIRMISH)
+    }
+
     private fun offerVariant(side: Side) {
-        val variants = Defs.spec(side.era).variants
-        if (variants.isEmpty()) return
+        if (!variantsOffered(side.era)) return
         if (side.index == 0 && (playerAi == null || commandController != null)) {
             pendingVariant = side.era
         } else {
@@ -602,16 +622,18 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         }
     }
 
+    /** [index] to numer karty z [Defs.variantChoices]. */
     private fun applyVariant(side: Side, index: Int) {
-        require(index in Defs.spec(side.era).variants.indices)
-        side.eraVariant = index
+        val choices = Defs.variantChoices(side.era)
+        require(index in choices.indices)
+        side.eraVariant = choices[index]
         if (!endless && side.erasAdvanced > 0) offerDoctrines(side)
     }
 
     /** Decyzja gracza dopiero po przyjęciu komendy przez BattleController. */
     fun chooseVariant(index: Int): Boolean {
         val era = pendingVariant ?: return false
-        if (era != player.era || index !in Defs.spec(era).variants.indices) return false
+        if (era != player.era || index !in Defs.variantChoices(era).indices) return false
         pendingVariant = null
         applyVariant(player, index)
         return true
@@ -875,7 +897,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
-        side.turretVariant[slot] = side.eraVariant
+        side.turretVariant[slot] = Defs.styleVariant(side.era, side.eraVariant)
         side.turretTier[slot] = 1
         side.turretCd[slot] = 0.5f
         side.turretsBuilt++
@@ -894,7 +916,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (over || cost < 0 || side.gold < cost) return false
         side.gold -= cost
         side.turretEra[slot] = side.era
-        side.turretVariant[slot] = side.eraVariant
+        side.turretVariant[slot] = Defs.styleVariant(side.era, side.eraVariant)
         return true
     }
 
@@ -964,7 +986,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             p.side = side.index
             p.type = type
             p.era = side.era
-            p.variant = side.eraVariant
+            p.variant = Defs.styleVariant(side.era, side.eraVariant)
             p.x = tx - side.dir * 260f
             p.h = 950f
             p.tx = tx
@@ -1294,6 +1316,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         f.slowLeft = 0f
         f.isCommander = false
         f.commanderSkillCd = 0f
+        f.traitUsed = false
+        f.traitT = 0f
         f.cd = 0.3f
         f.anim = rng.nextFloat() * 6f
         f.attackAnim = 0f
@@ -1348,6 +1372,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             return
         }
         if (u.slowLeft > 0f) u.slowLeft = max(0f, u.slowLeft - dt)
+        if (u.def.trait == Trait.SHIELD && u.traitT > 0f) u.traitT = max(0f, u.traitT - dt)
         if (u.burnLeft > 0f) {
             val tick = min(dt, u.burnLeft)
             u.burnLeft -= tick
@@ -1415,6 +1440,7 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             else attackRange * projectileRangeMul(u.side)
         if (gap <= effectiveRange) {
             u.moving = false
+            if (def.trait == Trait.BRACE) u.traitT += dt
             if (endless && u.hasBossAbility(EndlessBosses.KNOCKBACK) &&
                 u.bossCd <= 0f && target != null && target.alive) {
                 target.x = max(e.baseFront + 16f, target.x - 90f)
@@ -1424,21 +1450,35 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             if (u.cd <= 0f) {
                 u.cd = def.cooldown
                 u.attackAnim = 0.25f
+                var traitDmg = attackDmg
+                when (def.trait) {
+                    Trait.DASH -> if (!u.traitUsed) { u.traitUsed = true; s.traitUses++ }
+                    Trait.BRACE -> {
+                        if (u.traitT >= Trait.BRACE_TIME) { traitDmg *= Trait.BRACE_MUL; s.traitUses++ }
+                        u.traitT = 0f
+                    }
+                }
                 if (def.projectile == Proj.NONE) {
                     if (Defs.unitSplash(def, u.tier) > 0f) {
                         val cx = if (target != null) target.x else e.baseFront
                         splashDamage(u.side, cx, Defs.unitSplash(def, u.tier), attackDmg, def.siegeMul, def.role, -1)
                     } else if (target != null) {
-                        damageUnit(target, attackDmg, u.side, def.role, -1)
+                        damageUnit(target, traitDmg, u.side, def.role, -1)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx,
                             eraId = target.def.era, bodyId = target.def.body)
                     } else {
-                        damageBase(e, attackDmg * def.siegeMul, u.side, def.role)
+                        // Taran: tylko pierwsze uderzenie w bazę jest wzmocnione.
+                        if (def.trait == Trait.RAM && !u.traitUsed) {
+                            u.traitUsed = true
+                            s.traitUses++
+                            traitDmg *= Trait.RAM_MUL
+                        }
+                        damageBase(e, traitDmg * def.siegeMul, u.side, def.role)
                     }
                 } else {
                     val tx = target?.x ?: (e.baseFront + e.dir * 30f)
                     val h = 38f * def.size
-                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, attackDmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era, def.role, variant = def.variant)
+                    launch(u.side, u.x + s.dir * u.radius, h, tx, def.projectile, traitDmg, Defs.unitSplash(def, u.tier), def.siegeMul, def.era, def.role, variant = def.variant)
                     fx.add(FxBuffer.MUZZLE, u.x + s.dir * u.radius * 1.3f, h, u.side,
                         def.projectile.toFloat(), def.era, def.body)
                 }
@@ -1488,15 +1528,18 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
         if (!blocked) {
             val slowMul = if (endless && u.slowLeft > 0f)
                 1f - min(0.45f, 0.15f * e.cardStacks[EndlessCard.IRON_CURTAIN.ordinal]) else 1f
-            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally * slowMul
+            val dashMul = if (def.trait == Trait.DASH && !u.traitUsed) Trait.DASH_MUL else 1f
+            val normalSpeed = Defs.unitSpeed(def, u.tier) * s.speedMul * u.waveSpeedMul * rally * slowMul * dashMul
             val v = if (weather == Weather.RAIN) normalSpeed * Weather.RAIN.moveSpeed else normalSpeed
             u.x += s.dir * v * dt
             u.anim += v * dt * 0.09f
             u.moving = true
             u.stride = min(1f, u.stride + dt * STRIDE_RATE)
+            if (def.trait == Trait.BRACE) u.traitT = 0f
         } else {
             u.moving = false
             u.stride = max(0f, u.stride - dt * STRIDE_RATE)
+            if (def.trait == Trait.BRACE) u.traitT += dt
         }
     }
 
@@ -1652,10 +1695,22 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
             (u.def.role == Role.MELEE || u.def.role == Role.HEAVY))
             max(EndlessCards.SHIELD_WALL_MIN_MUL, 1f - EndlessCards.SHIELD_WALL_REDUCTION *
                 EndlessCards.totalStackPower(sides[0].cardStacks[EndlessCard.SHIELD_WALL.ordinal])) else 1f
-        val dealt = d * multiplier * rallyArmor * firstGuard * sappers * shieldWall *
+        // Dzień 69: osłona tarczownika po pierwszym trafieniu.
+        val traitGuard = if (u.def.trait == Trait.SHIELD && u.traitT > 0f) Trait.SHIELD_MUL else 1f
+        val dealt = d * multiplier * rallyArmor * firstGuard * sappers * shieldWall * traitGuard *
             (if (endless) card206Mul(u, attacker, shooterRole, projectile) else 1f) *
             (1f + EndlessCards.totalStackPower(emberStacks) * 0.10f) * (if (shield) 0.5f else 1f)
         u.hp -= dealt
+        if (direct && !u.traitUsed && u.hp > 0f) {
+            when (u.def.trait) {
+                Trait.SHIELD -> {
+                    u.traitUsed = true
+                    u.traitT = Trait.SHIELD_TIME
+                    sides[u.side].traitUses++
+                }
+                Trait.DASH -> { u.traitUsed = true; sides[u.side].traitUses++ }
+            }
+        }
         if (endless && turretEra >= 0 && attacker == 0 && u.hp > 0f &&
             sides[attacker].cardStacks[EndlessCard.IRON_CURTAIN.ordinal] > 0) {
             u.slowLeft = max(u.slowLeft, 2f)

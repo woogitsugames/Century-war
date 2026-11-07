@@ -56,8 +56,7 @@ class BattleController(
     fun evolve(): Boolean {
         // AI-gracz zapisuje awans, wariant i doktrynę w tym samym kroku.
         val next = battle.player.era + 1
-        val hasVariant = next < Defs.ERA_COUNT && battle.cfg.variantsEnabled &&
-            Defs.spec(next).variants.isNotEmpty()
+        val hasVariant = next < Defs.ERA_COUNT && battle.variantsOffered(next)
         val needed = if (battle.playerAi != null) (if (hasVariant) 3 else 2) else 1
         if (!canAct(needed) || !battle.evolve(battle.player)) return false
         append(Replay.Kind.EVOLVE)
@@ -145,7 +144,7 @@ class BattleController(
     fun variant(index: Int): Boolean {
         val era = battle.pendingVariant ?: return false
         if (battle.over || battle.stepCount >= Replay.MAX_STEPS || !capacity() ||
-            index !in Defs.spec(era).variants.indices) return false
+            index !in Defs.variantChoices(era).indices) return false
         if (!battle.chooseVariant(index)) return false
         append(Replay.Kind.VARIANT, index)
         return true
