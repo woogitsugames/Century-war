@@ -22,6 +22,8 @@ class SecondHourControlTest {
      * Wynik zapisany przy PROTOCOL 0.8.8: etap 21 ma nadal stare zasady presji i siłę AI.
      * Dzień 58: tylko skrót zrzutu zmieniony (format v21 z 4 nowymi stosami kart), reszta bez zmian.
      * Dzień 62: tylko skrót zrzutu (nagłówek v22), wynik, kroki i zabójstwa bez zmian.
+     * Dzień 68 (PROTOCOL 0.8.14): etap 21 ma stały styl przeciwnika „Zryw w kontakcie”, więc
+     * nowy wynik; zasady presji i siła AI etapu nadal bez zmian.
      */
     @Test
     fun stageTwentyOneUnchanged() {
@@ -43,8 +45,8 @@ class SecondHourControlTest {
     }
 
     companion object {
-        const val STAGE_21_BEFORE = "\"expected\": {\"score\":23482,\"winner\":1,\"wave\":0,\"steps\":36436," +
-            "\"kills\":149,\"enemyKills\":297,\"timeBits\":1142411538," +
-            "\"snapshotSha256\":\"7b40e2240e2c59a44b6d53c3e8a3c1a9b3c179d3a539dce485180415137220f6\"}"
+        const val STAGE_21_BEFORE = "\"expected\": {\"score\":19981,\"winner\":1,\"wave\":0,\"steps\":32551," +
+            "\"kills\":123,\"enemyKills\":297,\"timeBits\":1141350674," +
+            "\"snapshotSha256\":\"2a11b955c1722882aa47a33f7921a1c1e966213dfe02cd28db5ceae03b24e53d\"}"
     }
 }

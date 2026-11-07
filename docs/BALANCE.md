@@ -2165,3 +2165,23 @@ są identyczne; zmienił się wyłącznie `snapshotSha256` (format v21 z 4 dodat
 - 2026-11-06 — regeneracja złotych powtórek: D62: Rozkazy sztabu - Mode.ORDERS, pola ograniczeń i limitu czasu (domyślne), zrzut v22, PROTOCOL 0.8.12; wyniki istniejących trybów bez zmian.
 
 - 2026-11-06 — regeneracja złotych powtórek: D66: Rozkazy sztabu partia 2 - orderFlags (eskorta) w konfiguracji ORDERS, zrzut v23, ReplayRecord v3, PROTOCOL 0.8.13; wyniki istniejacych trybow bez zmian.
+
+- 2026-11-07 — regeneracja złotych powtórek: D68: nowe style przeciwnika.
+
+## Dzień 68 — nowe style przeciwnika (PROTOCOL 0.8.14)
+
+Trzy nowe osobowości AI z R170 (tylko decyzje): Osłona i strzała (`SCREEN`), Krótkie uderzenia
+(`RAIDS`), Zryw w kontakcie (`CONTACT_RALLY`). Potyczka losuje z ośmiu stylów; pozostałe tryby
+z zamrożonej piątki (`AiPersonality.LEGACY`), więc kampania (poza etapami 13/18/21), wyzwania dnia
+i tygodnia, Endless i Rozkazy bez zmian — po regeneracji zmieniły się tylko cztery złote powtórki
+potyczek (skirmish-modifiers, skirmish-night, steam-variant-wind, silicon-variant).
+
+| Pomiar | Wynik |
+|---|---|
+| Gracz BALANCED vs styl, 100 seedów × (0→3, 2→2) | SCREEN 43,5%, RAIDS 37,5%, CONTACT_RALLY 43,5% (bramka 30–70%) |
+| Etap 13 → Osłona i strzała (120 seedów, profil docelowy) | 68,33% → 75,00% (+6,7 p.p.) |
+| Etap 18 → Krótkie uderzenia | 58,33% → 65,00% (+6,7 p.p.) |
+| Etap 21 → Zryw w kontakcie | 75,00% → 71,67% (−3,3 p.p.) |
+
+Kandydaci R170 9/11/25 odrzuceni (+11,7 / +13,3 / −23,3 p.p. przy 60 seedach). Szczegóły:
+`docs/reports/d68-osobowosci-ai.md`.
