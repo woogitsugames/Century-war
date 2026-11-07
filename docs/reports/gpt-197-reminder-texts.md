@@ -34,3 +34,7 @@ Uruchomiono Gradle w Windows z JDK 17 i SDK 36:
 ```
 
 Kod nie został zmieniony; wymagany zakres zmian tekstów pozostaje otwarty.
+
+## Decyzja koordynatora (7.11.2026)
+
+Przegląd nie wykazał błędów ani presji w tekstach powiadomień we wszystkich 10 językach; zmiany nie są potrzebne. Zlecenie zamknięte bez zmian w `L.kt`.

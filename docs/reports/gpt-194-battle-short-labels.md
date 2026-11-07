@@ -57,3 +57,7 @@ ReplayShareProviderTest > onlyReadOnlyReplayFilesAreExposed FAILED
 ```
 
 `fastTest` przerwano po błędzie; pełny wynik nie jest zielony. Kod i teksty aplikacji nie zostały zmienione, zrzutów nie aktualizowano. Dalsza praca: rozstrzygnąć zakres zmiany istniejącego klucza i ocenić czytelność pełnych nazw na Foldzie; osobno zbadać błąd `ReplayShareProviderTest` na Windows.
+
+## Decyzja koordynatora (7.11.2026)
+
+Pomiar wystarcza: obecne skróty mieszczą się na phone720 i zewnętrznym Foldzie przy 130%, a pełne nazwy z `armory` w części języków (de, nl) się nie mieszczą. Zostawiamy obecne teksty; zlecenie zamknięte bez zmian w `L.kt`. Test pomiarowy `BattleShortLabels194Test` zostaje.

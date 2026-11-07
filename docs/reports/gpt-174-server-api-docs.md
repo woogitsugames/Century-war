@@ -1,4 +1,4 @@
-﻿# Zlecenie 174 — dokumentacja API serwera
+# Zlecenie 174 — dokumentacja API serwera
 
 Data: 2026-11-06. Baza `origin/main`: `7d847576e27bc5411bfd93877c1ba6df18af05cd`. Gałąź `gpt/174-server-api-docs`; hash końcowego commita podaje `git rev-parse HEAD`.
 
