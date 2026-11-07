@@ -237,7 +237,10 @@ class HintOverlay(
             VETERAN -> p.era >= b.cfg.maxEra && p.rank > 0 &&
                 !(b.cfg.mode == Mode.CAMPAIGN && b.cfg.stageIndex == 0)
             SIEGE -> !b.endless && b.time >= b.siegeStart && b.siegePressure() > 1f
-            MODIFIERS -> b.cfg.modifiers.isNotEmpty() && b.time < 60f
+            // Audyt 74: sama mgła ma własny dymek (FOG); „Zasady bitwy” zostają wtedy na etap
+            // z innym modyfikatorem (np. Szybkie wojska), zamiast dwóch dymków o mgle po 20 s.
+            MODIFIERS -> b.cfg.modifiers.isNotEmpty() && b.time < 60f &&
+                !(b.cfg.modifiers.size == 1 && b.fog)
             FOG -> b.fog && b.time < 80f
             CARD -> b.endless && b.wave > 0 && (b.wave + 1) % Battle.ENDLESS_CHOICE_EVERY == 0 &&
                 b.waveTimer <= 8f && b.pendingCards == null

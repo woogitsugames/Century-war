@@ -16,7 +16,8 @@ import java.util.Locale
 
 /**
  * D61, „Pierwsze wrażenie”: pierwsze ~10 minut świeżego gracza — start, samouczek krok po kroku,
- * reszta pierwszej bitwy z dymkami, wyniki, mapa, powrót do menu i „Następny cel”.
+ * reszta pierwszej bitwy z dymkami, wyniki, mapa, powrót do menu i „Następny cel”; audyt 74: dalej
+ * badanie z celu, kolejne etapy kampanii do 30. minuty czasu gracza, menu i Rozkazy sztabu.
  * Telefon 1600×720 d=2 (phone720) i zewnętrzny Fold 904×2316 d=2,7 (foldOuter), pl i en.
  *
  * Zrzuty każdego kroku: `CW_D61_OUT` (domyślnie build/screenshots/d61)/<urządzenie>_<język>/NN_*.png,
@@ -195,8 +196,136 @@ class FirstHourImpression61Test : FirstHourJourneyBase() {
             note(g, "cel z menu otwiera ${name(g.current)}")
             snap(g, "cel_ekran")
         }
+        thirtyMinutes(g)
         g.history?.close()
     }
+
+    /**
+     * Audyt 74: dalsza część pierwszych 30 minut — badania z celu, kolejne etapy kampanii (mapa,
+     * okno etapu, start bitwy, każdy dymek, zapowiedź epoki, wyniki) aż do [THIRTY] s czasu gracza,
+     * potem menu i Rozkazy sztabu. Zrzuty w tym samym katalogu co pierwsza bitwa.
+     */
+    private fun thirtyMinutes(g: Game) {
+        // Gracz idzie za dymkiem/celem menu: OK, potem pasek celu albo kafel Badań.
+        var goalText = ""
+        (g.current as? MenuScreen)?.let { menu ->
+            goalText = menu.goalText
+            hintsOf(menu)?.let { h -> if (h.activeId >= 0) tap(g, h.okBtn, "menu/OK dymka") }
+            tick(g, 0.1f, 3)
+            note(g, "menu po OK: pasek celu widoczny ${menu.goalBtn.visible} „${menu.goalText}”")
+            snap(g, "menu_po_ok")
+            tap(g, if (menu.goalBtn.visible) menu.goalBtn else button(menu, 5), "menu/cel lub badania")
+            tick(g, 0.2f, 8)
+        }
+        // Ekran celu (zwykle Badania): dymek, zakup najtańszego dostępnego badania jak gracz.
+        (g.current as? ResearchScreen)?.let { rs ->
+            dwell(g, "badania", 1f)
+            hintsOf(rs)?.let { h -> if (h.activeId >= 0) {
+                note(g, "badania: dymek #${h.activeId} „${hintBody(h).take(70)}”")
+                snap(g, "badania_dymek")
+                tap(g, h.okBtn, "badania/OK")
+            } }
+            // Kupuje badanie z celu (jak gracz idący za podpowiedzią), inaczej najtańsze.
+            val cards = rs.buttons.filter { it.tag is com.centurywar.game.ResearchDef && it.visible && it.enabled }
+            val card = cards.firstOrNull { goalText.contains(L[(it.tag as com.centurywar.game.ResearchDef).key]) }
+                ?: cards.minByOrNull { (it.tag as com.centurywar.game.ResearchDef).let { d -> d.cost(g.profile.level(d.key)) } }
+            if (card != null) {
+                val d = card.tag as com.centurywar.game.ResearchDef
+                tap(g, card, "badania/kup")
+                tick(g, 0.1f, 4)
+                note(g, "badania: kupione ${L[d.key]}")
+            } else problem("badania: nic do kupienia z celu")
+            snap(g, "badania_po_zakupie")
+        }
+        backToMenu(g, "po badaniach")
+        var index = 1
+        var attempt = 0
+        while (clock < THIRTY && index < 12) {
+            attempt++
+            val where = "etap ${index + 1}" + if (attempt > 1) " ($attempt)" else ""
+            val bs = stageWithSnaps(g, index, where) ?: break
+            val b = bs.battle
+            note(g, "$where: start — wróg „${bs.enemyLabelForAudit()}”, modyfikatory ${b.cfg.modifiers}, pogoda ${b.cfg.weather}")
+            tick(g, 1f / 30f, 4)
+            snap(g, "e${index + 1}_start")
+            b.playerAi = Ai(b, 0)
+            val seen = HashSet<Int>()
+            var guard = 0
+            while (!bs.finished && guard++ < 20000) {
+                val h = hintsOf(bs)
+                if (h != null && h.activeId >= 0 && seen.add(h.activeId)) { tick(g, 0.1f, 5); snap(g, "e${index + 1}_dymek_${h.activeId}") }
+                if (eraIntro(bs)?.active == true && seen.add(1000 + b.player.era)) { tick(g, 0.1f, 6); snap(g, "e${index + 1}_epoka_${b.player.era + 1}") }
+                if (b.pendingVariant != null && seen.add(2000)) snap(g, "e${index + 1}_wariant")
+                if (b.pendingChoice != null && seen.add(3000 + b.player.era)) { snap(g, "e${index + 1}_doktryna"); tap(g, bs.doctrineBtn[0], "$where/doktryna"); continue }
+                if (handleOverlays(g, bs, where)) continue
+                tick(g, 1f / 3f)
+                checkBattle(g, bs, where)
+                if (!b.over && b.time > 18 * 60f) surrender(g, bs, where)
+            }
+            tick(g, 0.25f, 16)
+            checkResults(g, bs, where)
+            val won = b.winner == 0
+            note(g, "$where: ${if (won) "WYGRANA" else "porażka"} ${"%.1f".format(b.time / 60f)} min, ${b.stars()}★, " +
+                "nagroda ${bs.reward}, łącznie +${bs.totalMedalsGained}, cel „${bs.tipText}”")
+            snap(g, "e${index + 1}_wyniki")
+            tap(g, bs.continueBtn, "$where/dalej")
+            tick(g, 0.2f, 6)
+            if (g.current is ResearchScreen) { note(g, "$where: Dalej otwiera Badania (pomoc)"); g.requestBack(); tick(g, 0.2f, 4) }
+            if (won) { index++; attempt = 0 } else if (attempt >= 3) { note(g, "$where: trzy porażki — gracz utknął"); break }
+        }
+        note(g, "koniec 30 minut (etapów wygranych: ${index - 1})")
+        backToMenu(g, "po 30 min")
+        dwell(g, "menu 30 min", 4f)
+        val menu = g.current as MenuScreen
+        note(g, "menu 30 min: cel „${menu.goalText}” (${menu.goalKind}), widoczny ${menu.goalBtn.visible}")
+        snap(g, "menu_30min")
+        hintsOf(menu)?.let { h -> if (h.activeId >= 0) { snap(g, "menu_30min_dymek"); tap(g, h.okBtn, "menu/OK") } }
+        if (menu.orders.visible) {
+            tap(g, menu.orders, "menu/rozkazy")
+            tick(g, 0.2f, 8)
+            note(g, "Rozkazy: ${name(g.current)}")
+            snap(g, "rozkazy")
+            hintsOf(g.current!!)?.let { h -> if (h.activeId >= 0) { note(g, "rozkazy: dymek „${hintBody(h).take(70)}”"); snap(g, "rozkazy_dymek") } }
+            backToMenu(g, "rozkazy")
+        }
+    }
+
+    /** Mapa → okno etapu → start, ze zrzutami (jak [startStage], ale do katalogu d61). */
+    private fun stageWithSnaps(g: Game, index: Int, where: String): BattleScreen? {
+        if (g.current !is CampaignScreen) {
+            if (g.current !is MenuScreen) backToMenu(g, where)
+            tap(g, button(g.current!!, 1), "$where/kampania")
+            tick(g, 0.2f, 8)
+        }
+        val cs = g.current as? CampaignScreen ?: run { problem("$where: brak mapy (${name(g.current)})"); return null }
+        dwell(g, "$where/mapa", 1f)
+        hintsOf(cs)?.let { h -> if (h.activeId >= 0) {
+            note(g, "$where: mapa, dymek #${h.activeId} „${hintBody(h).take(70)}”")
+            snap(g, "e${index + 1}_mapa_dymek_${h.activeId}")
+            tap(g, h.okBtn, "$where/OK mapy")
+        } }
+        val intro = field(cs, "eraIntro").get(cs) as EraIntroOverlay?
+        if (intro?.active == true) {
+            note(g, "$where: mapa, zapowiedź nowej epoki")
+            tick(g, 0.1f, 6); snap(g, "e${index + 1}_mapa_epoka")
+            tapAt(g, g.width / 2f, g.height / 2f); tick(g, 0.1f, 4)
+        }
+        val tile = cs.buttons.first { it.tag === com.centurywar.game.Campaign.stages[index] }
+        if (!tile.visible || !tile.enabled) {
+            cs.onDrag(-(tile.r.centerX() - g.width / 2f), -(tile.r.centerY() - g.height / 2f)); tick(g, 0.1f, 4)
+        }
+        if (!tile.enabled) { problem("$where: etap zablokowany"); return null }
+        tap(g, tile, "$where/etap")
+        tick(g, 0.2f, 6)
+        snap(g, "e${index + 1}_okno_etapu")
+        val start = cs.buttons.firstOrNull { it.id == -2 && it.visible } ?: run { problem("$where: brak startu"); return null }
+        tap(g, start, "$where/start")
+        tick(g, 0.1f, 2)
+        return g.current as? BattleScreen
+    }
+
+    private fun BattleScreen.enemyLabelForAudit(): String =
+        battle.cfg.aiPersonality?.name ?: "losowy"
 
     /** Czeka (z kontrolą ekranu co 0,1 s) najwyżej [limit] s, aż na ekranie pojawi się dymek. */
     private fun waitForHint(g: Game, where: String, limit: Float) {
@@ -215,5 +344,8 @@ class FirstHourImpression61Test : FirstHourJourneyBase() {
 
         /** Stałe ziarno bitew (dawniej `System.nanoTime()` — test bywał niestabilny). */
         const val SEED = 20261106L
+
+        /** Audyt 74: ścieżka trwa do 30. minuty czasu gracza. */
+        const val THIRTY = 30f * 60f
     }
 }

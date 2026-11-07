@@ -34,10 +34,13 @@ class StageNoveltyTest {
 
     @Test fun everyEnemyEraIsIntroducedExactlyOnceInOrder() {
         val eras = StageNovelty.items.flatten().filter { it.kind == NoveltyKind.ENEMY_ERA }.map { it.era }
-        assertEquals((1 until Defs.ERA_COUNT).toList(), eras)
+        // Audyt 74: epokę o jeden wyżej gracz poznaje już w samouczku (etap 1, tutorial = true).
+        val tutorialEra = Campaign.config(Campaign.stages[0], Bonuses(), 1L, tutorial = true).maxEra
+        assertEquals((tutorialEra + 1 until Defs.ERA_COUNT).toList(), eras)
         for ((i, list) in StageNovelty.items.withIndex()) {
             val era = list.firstOrNull { it.kind == NoveltyKind.ENEMY_ERA } ?: continue
             assertEquals(Campaign.stages[i].maxEra, era.era)
+            assertTrue(tutorialEra < era.era)
             for (k in 0 until i) assertTrue("etap ${k + 1}", Campaign.stages[k].maxEra < era.era)
         }
     }
@@ -88,14 +91,15 @@ class StageNoveltyTest {
     @Test fun computeOnCustomStages() {
         val stages = listOf(
             Stage(0, "s1", 0, 0, 1f, emptySet()),
-            Stage(1, "s2", 0, 1, 1f, setOf(Modifier.FOG_OF_WAR), Weather.RAIN),
+            // Samouczek (s1, epoka 0) dopuszcza epokę 1, więc nowością jest dopiero epoka 2.
+            Stage(1, "s2", 0, 2, 1f, setOf(Modifier.FOG_OF_WAR), Weather.RAIN),
             Stage(2, "s3", 1, 1, 1f, setOf(Modifier.FOG_OF_WAR, Modifier.FAST_UNITS), Weather.RAIN),
             Stage(3, "s4", 0, 1, 1f, emptySet()),
         )
         val r = StageNovelty.compute(stages, commanderStage = 3)
         assertTrue(r[0].isEmpty())
         assertEquals(listOf(NoveltyKind.ENEMY_ERA, NoveltyKind.WEATHER, NoveltyKind.MODIFIER), r[1].map { it.kind })
-        assertEquals(1, r[1][0].era)
+        assertEquals(2, r[1][0].era)
         assertEquals(Weather.RAIN, r[1][1].weather)
         assertEquals(Modifier.FOG_OF_WAR, r[1][2].modifier)
         assertEquals(listOf(Modifier.FAST_UNITS), r[2].map { it.modifier })

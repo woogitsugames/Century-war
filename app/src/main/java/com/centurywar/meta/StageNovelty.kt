@@ -59,8 +59,10 @@ internal object StageNovelty {
         for ((position, s) in stages.withIndex()) {
             val list = ArrayList<NoveltyItem>(2)
             if (position == 0) {
-                // Samouczek: punkt odniesienia, wszystko na nim jest „pierwsze”.
-                seenEra = s.maxEra
+                // Samouczek: punkt odniesienia, wszystko na nim jest „pierwsze”. Audyt 74: samouczek
+                // dopuszcza epokę wyżej (lustro `Campaign.config(tutorial = true)`), więc gracz i wróg
+                // widzą ją już w pierwszej bitwie — etap 3 nie zapowiada jej jako nowości.
+                seenEra = maxOf(s.maxEra, minOf(Defs.ERA_COUNT - 1, s.startEra + 1))
                 seenWeather.add(s.weather)
                 seenModifiers.addAll(s.modifiers)
                 result.add(emptyList())
