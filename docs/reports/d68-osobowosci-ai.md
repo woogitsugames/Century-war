@@ -125,7 +125,14 @@ Brak regresji > 10 p.p.; czasy bez zmian; patów 0%. Pozostałe etapy nie zmieni
   sprawdza standardową presję na etapie 22 zamiast 21 (seed etapu 21 kończy się teraz przed presją).
 * `AiCaps97Test`: preferencje doktryn trzech nowych stylów.
 
-WYNIK_TESTOW
+Pełny przebieg: `./gradlew :app:testDebugUnitTest --rerun :sim:test --rerun :server:test --rerun
+:app:lintDebug :app:assembleDebug --continue` — **EXIT=0, BUILD SUCCESSFUL (25 min 55 s)**: app 988
+testów (12 pominiętych), sim 369 (4 pominięte), server 125 (1 pominięty), 0 FAILED. Wcześniejszy
+przebieg miał jeden niestabilny `RecordedMusicTest.musicResumesAfterTrimMemoryInBackground`
+(muzyka, niezwiązany ze zmianą; osobno przechodzi). Złote powtórki: zmieniły się tylko cztery
+potyczki (skirmish-modifiers, skirmish-night, steam-variant-wind, silicon-variant); kampania (etapy 1
+i 29), dzień, tydzień i Endless bez zmian. Wzorzec zrzutu: `foldOpen_reg100_skirmish_setup`
+(lista stylów w jednej kolumnie, obejrzany).
 
 ## Nowe teksty (`L.kt`, `part216`, 10 języków)
 
