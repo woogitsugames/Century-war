@@ -453,6 +453,14 @@ class HintOverlay(
             if (!keepClear.isEmpty) avoidRects.add(keepClear)
             val placed = HintFrame.placeAvoiding(target, safeL, safeT, safeR, safeB,
                 hintWidth, hintHeight, 4f * dp, panel, connector, avoidRects)
+            if (!placed && choiceHint(activeId) && hintWidth <= safeR - safeL && hintHeight <= safeB - safeT) {
+                // D70: karty wyboru zajmują prawie cały niski ekran (720p, 130%), więc obok nich nie ma
+                // miejsca. Dymek staje wtedy przy dolnej krawędzi (bez wskaźnika) zamiast zniknąć.
+                val x = (safeL + safeR - hintWidth) * 0.5f
+                panel.set(x, safeB - hintHeight, x + hintWidth, safeB)
+                connector.setEmpty()
+                return true
+            }
             if (activeId == FIRST_BATTLE && !mapRoute.isEmpty && RectF.intersects(panel, mapRoute)) {
                 // Priorytet: odsłonięta droga, tytuł i Wstecz; inne kafle są mniej ważne.
                 avoidRects.clear()

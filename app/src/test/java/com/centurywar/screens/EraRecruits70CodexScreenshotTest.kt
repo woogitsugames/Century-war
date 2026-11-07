@@ -70,4 +70,38 @@ class EraRecruits70CodexScreenshotTest : ScreenshotTestBase() {
             L.lang = originalLang
         }
     }
+
+    /** Dymek okna wyboru w epoce jednej roli: tekst o nowej jednostce, mieści się przy 130%. */
+    @Test
+    fun recruitChoiceHint() {
+        val originalLang = L.lang
+        try {
+            for ((tag, dims) in mapOf(
+                "phone720" to intArrayOf(1600, 720, 2),
+                "foldOuter" to intArrayOf(904, 2316, 3),
+            )) for (lang in arrayOf("pl", "de", "tr")) {
+                val g = game(dims[0], dims[1], dims[2] * 0.9f,
+                    if (tag == "phone720") Quality.LOW else Quality.HIGH)
+                g.profile.lang = lang
+                g.profile.textScale = 130
+                g.profile.hintsEnabled = true
+                g.profile.eraIntrosEnabled = false
+                g.profile.hintsSeen = com.centurywar.meta.Profile.HINT_VALID_MASK and
+                    (1L shl HintOverlay.RECRUIT).inv()
+                g.onLanguageChanged()
+                g.applyAccessibility()
+                val bs = BattleScreen(g, com.centurywar.game.BattleConfig(com.centurywar.game.Mode.SKIRMISH,
+                    7000L, 1f, startEra = 0, maxEra = 0, eraRecruits = true))
+                g.setScreen(bs)
+                val hints = field(bs, "hints").get(bs) as HintOverlay
+                shot(g, "codex70_hint_${tag}_$lang", 24)
+                assertEquals("$tag/$lang", HintOverlay.RECRUIT, hints.activeId)
+                val panel = android.graphics.RectF(hints.panelRect)
+                assertTrue("$tag/$lang: dymek poza ekranem $panel",
+                    panel.width() > 0f && panel.left >= 0f && panel.right <= g.width && panel.bottom <= g.height)
+            }
+        } finally {
+            L.lang = originalLang
+        }
+    }
 }
