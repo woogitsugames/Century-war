@@ -172,6 +172,12 @@ class BattleConfig(
     val holdWins: Boolean = false,
     /** Dzień 66: dodatkowe reguły rozkazu ([OrderFlags]); domyślnie brak. */
     val orderFlags: Int = 0,
+    /**
+     * Dzień 69 (R171): w potyczce gracz i AI wybierają w epokach z [EraSpec.recruit]
+     * podstawowy skład albo nową jednostkę. Włączają je tylko ekrany potyczki i serwer
+     * (ranking potyczki); w innych trybach pole jest ignorowane.
+     */
+    val eraRecruits: Boolean = false,
 ) {
     /** Dzień 66: dowódca gracza na starcie, jego śmierć = porażka ([OrderFlags.ESCORT]). */
     val escort: Boolean get() = orderFlags and OrderFlags.ESCORT != 0

@@ -609,7 +609,8 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
     fun variantsOffered(era: Int): Boolean {
         if (!cfg.variantsEnabled || era !in 0 until Defs.ERA_COUNT) return false
         val spec = Defs.spec(era)
-        return spec.variants.isNotEmpty() || (spec.recruit != null && cfg.mode == Mode.SKIRMISH)
+        return spec.variants.isNotEmpty() ||
+            (spec.recruit != null && cfg.mode == Mode.SKIRMISH && cfg.eraRecruits)
     }
 
     private fun offerVariant(side: Side) {
@@ -1461,7 +1462,15 @@ class Battle(val cfg: BattleConfig, val turretTiersEnabled: Boolean = true,
                 if (def.projectile == Proj.NONE) {
                     if (Defs.unitSplash(def, u.tier) > 0f) {
                         val cx = if (target != null) target.x else e.baseFront
-                        splashDamage(u.side, cx, Defs.unitSplash(def, u.tier), attackDmg, def.siegeMul, def.role, -1)
+                        val radius = Defs.unitSplash(def, u.tier)
+                        // Taran: pierwsze uderzenie obejmujące bazę jest wzmocnione (tylko część dla bazy).
+                        var baseMul = 1f
+                        if (def.trait == Trait.RAM && !u.traitUsed && (cx - e.baseFront) * -e.dir >= -radius) {
+                            u.traitUsed = true
+                            s.traitUses++
+                            baseMul = Trait.RAM_MUL
+                        }
+                        splashDamage(u.side, cx, radius, traitDmg, def.siegeMul * baseMul, def.role, -1)
                     } else if (target != null) {
                         damageUnit(target, traitDmg, u.side, def.role, -1)
                         fx.add(FxBuffer.HIT, target.x, 40f * target.def.size, eIdx,

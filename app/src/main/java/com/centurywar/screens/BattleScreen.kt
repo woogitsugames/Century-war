@@ -1004,9 +1004,9 @@ class BattleScreen(
             }
             in VARIANT0..VARIANT0 + 1 -> {
                 val era = battle.pendingVariant ?: return false
-                val variant = Defs.spec(era).variants[b.id - VARIANT0]
-                title = L[variant.nameKey]
-                body = L[variant.descKey]
+                if (b.id - VARIANT0 !in Defs.variantChoices(era).indices) return false
+                title = variantCardName(era, b.id - VARIANT0)
+                body = variantCardDesc(era, b.id - VARIANT0)
             }
             else -> return false
         }
@@ -1113,7 +1113,7 @@ class BattleScreen(
         mode, if (mode == Mode.DAILY || weekly >= 0L) seed else seed + 1, aiPower,
         startEra, maxEra, modifiers, playerBonuses, stageIndex,
         tutorial && !g.profile.tutorialDone, aiPersonality, variantsEnabled, weather, weekly, weeklyCard,
-        dailyEvent, playerAllowed, enemyAllowed, timeLimitSteps, holdWins, orderFlags,
+        dailyEvent, playerAllowed, enemyAllowed, timeLimitSteps, holdWins, orderFlags, eraRecruits,
     )
 
     /** R2-01: ekran celu z wiersza wskazówki; Wstecz z niego wraca do menu. */
@@ -1356,8 +1356,27 @@ class BattleScreen(
 
     internal fun variantAccessibilityText(i: Int): String {
         val era = battle.pendingVariant ?: return ""
-        val variant = Defs.spec(era).variants.getOrNull(i) ?: return ""
-        return L[variant.nameKey] + ". " + L[variant.descKey]
+        if (i !in Defs.variantChoices(era).indices) return ""
+        return variantCardName(era, i) + ". " + variantCardDesc(era, i)
+    }
+
+    /**
+     * Dzień 69: nazwa karty wyboru. Pełne warianty mają własne nazwy; wariant jednej roli
+     * ma kartę 0 „podstawowy skład” i kartę 1 z nową jednostką.
+     */
+    internal fun variantCardName(era: Int, i: Int): String {
+        val spec = Defs.spec(era)
+        spec.variants.getOrNull(i)?.let { return L[it.nameKey] }
+        val recruit = spec.recruit ?: return ""
+        return if (i == 0) L["v_base"] else L[recruit.nameKey]
+    }
+
+    internal fun variantCardDesc(era: Int, i: Int): String {
+        val spec = Defs.spec(era)
+        spec.variants.getOrNull(i)?.let { return L[it.descKey] }
+        val recruit = spec.recruit ?: return ""
+        return if (i == 0) L.f(recruit.baseDescKey, L[Defs.unit(era, recruit.role).nameKey])
+        else L[recruit.descKey]
     }
 
     /**
@@ -2022,17 +2041,18 @@ class BattleScreen(
     /** Modal dwóch wariantów: ikonki tych samych jednostek co na polu bitwy. */
     private fun drawVariants(c: Canvas) {
         val era = battle.pendingVariant ?: return
-        val variants = Defs.spec(era).variants
+        val choices = Defs.variantChoices(era)
+        val recruitRole = Defs.spec(era).recruit?.role
         c.drawColor(Color.argb(175, 0, 0, 0))
         ui.ribbon(c, w / 2, variantBtn[0].r.top - 27 * dp,
             L["choose_variant"], 21f, Ui.RIBBON, min(340 * dp, w * 0.7f))
-        for (i in variants.indices) {
-            val v = variants[i]
+        for (i in choices.indices) {
+            if (i >= variantBtn.size) break
             val b = variantBtn[i]
             val off = if (b.pressed) 3 * dp else 0f
             tmpR.set(b.r.left, b.r.top + off, b.r.right, b.r.bottom + off)
             ui.panel(c, tmpR, Color.argb(247, 40, 48, 70), 14f)
-            val name = L[v.nameKey]
+            val name = variantCardName(era, i)
             ui.textO(c, name, tmpR.centerX(), tmpR.top + 34 * dp,
                 ui.fit(name, 19f, tmpR.width() - 16 * dp), Ui.GOLD, Paint.Align.CENTER)
             // Dzień 60: opis z tym samym marginesem od lamówki co karty doktryn (był tuż przy ramce).
@@ -2041,7 +2061,7 @@ class BattleScreen(
             if (variantDescKey[i] != key || variantDescLanguage != L.lang ||
                 variantDescWidth != wrapWidth || variantDescScale != ui.textScale) {
                 variantDescKey[i] = key
-                variantDescCount[i] = HintFrame.wrapHintInto(ui, L[v.descKey],
+                variantDescCount[i] = HintFrame.wrapHintInto(ui, variantCardDesc(era, i),
                     wrapWidth, 12.5f, variantDescLines[i], hyphen = true)
             }
             drawWrappedLines(c, variantDescLines[i], variantDescCount[i],
@@ -2051,8 +2071,15 @@ class BattleScreen(
             // Każda sylwetka ma własny obszar. Pojazdy skalujemy także po szerokości.
             val slotW = tmpR.width() / 4f
             for (role in 0..3) {
-                val def = Defs.unit(era, roles[role], i)
+                val def = Defs.unit(era, roles[role], choices[i])
                 val xx = tmpR.left + (role + 0.5f) * slotW
+                // Dzień 69: zmieniona rola na karcie nowej jednostki ma złote podłoże.
+                if (choices[i] >= 0 && recruitRole == roles[role]) {
+                    val glow = ui.fill
+                    glow.shader = null
+                    glow.color = Color.argb(70, 232, 192, 74)
+                    c.drawCircle(xx, iy - imgH * 0.45f, min(slotW * 0.48f, imgH * 0.62f), glow)
+                }
                 c.save()
                 c.clipRect(tmpR.left + role * slotW + 4 * dp, tmpR.top,
                     tmpR.left + (role + 1) * slotW - 4 * dp, tmpR.bottom - 4 * dp)

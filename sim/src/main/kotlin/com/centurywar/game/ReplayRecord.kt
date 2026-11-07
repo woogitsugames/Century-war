@@ -9,7 +9,8 @@ import java.util.zip.CRC32
 /** Samodzielny plik powtórki, niezależny od zapisu przerwanej bitwy. */
 object ReplayRecord {
     /** 3: dzień 66 — bajt [BattleConfig.orderFlags] w konfiguracji Rozkazów (v2 = bez niego). */
-    const val VERSION = 3
+    /** 4: dzień 69 — bajt [BattleConfig.eraRecruits] w konfiguracji potyczki. */
+    const val VERSION = 4
     private const val MAGIC = 0x43575231 // CWR1
     private const val MAX_BYTES = 1 shl 20
     private const val MAX_LOG_BYTES = 600_000
@@ -86,7 +87,8 @@ object ReplayRecord {
             require(CRC32().apply { update(bytes, 24, length) }.value.toInt() == crc) { "Niepoprawny CRC" }
             val input = DataInputStream(ByteArrayInputStream(bytes, 24, length))
             // Wersja 1 nie zawierała bajtu zdarzenia dnia; stare wyniki pozostają na liście.
-            val cfg = requireNotNull(BattleSnapshot.readConfig(input, recordVersion >= 2, recordVersion >= 3)) { "Niepoprawna konfiguracja" }
+            val cfg = requireNotNull(BattleSnapshot.readConfig(input, recordVersion >= 2, recordVersion >= 3,
+                recordVersion >= 4)) { "Niepoprawna konfiguracja" }
             val logLength = input.readInt()
             require(logLength in 1..MAX_LOG_BYTES && logLength <= input.available()) { "Niepoprawna długość dziennika" }
             val logBytes = ByteArray(logLength)

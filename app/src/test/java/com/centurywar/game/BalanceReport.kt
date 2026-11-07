@@ -588,12 +588,19 @@ class BalanceReport {
         File(dir, "endless-commander$tag.md").writeText(md.toString())
     }
 
-    /** Jeden pojedynek wariantów: bez globalnej losowości przy wskazaniu strony. */
+    /**
+     * Jeden pojedynek wariantów: bez globalnej losowości przy wskazaniu strony.
+     * [first] i [second] to wartości [Side.eraVariant]; -1 = jawny podstawowy skład
+     * (dzień 69: karta 0 wariantu jednej roli), a nie zerowy wariant.
+     */
     private fun variantDuel(era: Int, seed: Long, first: Int, second: Int): Battle {
         val cfg = BattleConfig(Mode.SKIRMISH, seed, 1f, startEra = era, maxEra = era,
-            playerBonuses = Bonuses(eliteUnlocked = true, rallyUnlocked = true))
+            playerBonuses = Bonuses(eliteUnlocked = true, rallyUnlocked = true), eraRecruits = true)
         val b = Battle(cfg)
-        check(b.chooseVariant(first))
+        val choice = Defs.variantChoices(era).indexOf(first)
+        check(choice >= 0) { "Wariant $first niedostępny w epoce $era" }
+        check(b.chooseVariant(choice))
+        check(b.player.eraVariant == first)
         b.enemy.eraVariant = second
         // Lustro: przeciwnik nie losuje osobowości z seeda, obie strony grają tak samo.
         b.ai = Ai(b, 1, AiPersonality.BALANCED)
@@ -680,6 +687,58 @@ class BalanceReport {
             }
         }
         File(dir, "variants.md").writeText(out.append(campaign).toString())
+    }
+
+    /**
+     * Dzień 69 (R171): podstawowy skład (-1) przeciw nowej jednostce wariantu jednej roli (0).
+     * 200 seedów × zamiana stron, BALANCED po obu stronach, limit 30 min. Cel: 180–220
+     * zwycięstw nowego wariantu na 400 i zero patów. Plik build/balance/recruits.md.
+     */
+    @Test
+    fun recruitReport() {
+        val runs = (System.getenv("BALANCE_VARIANT_RUNS")?.toIntOrNull() ?: 200).coerceAtLeast(200)
+        val dir = File(System.getenv("BALANCE_OUT") ?: "build/balance")
+        dir.mkdirs()
+        val out = StringBuilder("# Warianty epok jednej roli (dzień 69)\n\n")
+            .append("Seedów na epokę: $runs, z zamianą stron (łącznie ${runs * 2} bitew), BALANCED × BALANCED, limit 30 min.\n\n")
+            .append("| Epoka | Nowa jednostka | Wygrane nowej | Wygrane podstawowej | Paty | Mediana [min] | " +
+                "Użycia cechy | Nowe jednostki | Użycia / jednostkę |\n")
+            .append("|---|---|---:|---:|---:|---:|---:|---:|---:|\n")
+        for (era in 0 until Defs.ERA_COUNT) {
+            val recruit = Defs.recruitUnit(era) ?: continue
+            var winsNew = 0
+            var winsBase = 0
+            var stalemates = 0
+            var uses = 0L
+            var fielded = 0L
+            val minutes = ArrayList<Double>()
+            for (seed in 0 until runs) {
+                for (swap in 0..1) {
+                    val newSide = swap
+                    val b = variantDuel(era, 200_003L + seed * 997L + era * 11_113L,
+                        if (newSide == 0) 0 else -1, if (newSide == 0) -1 else 0)
+                    when {
+                        !b.over -> stalemates++
+                        b.winner == newSide -> winsNew++
+                        else -> winsBase++
+                    }
+                    minutes += b.time / 60.0
+                    uses += b.sides[newSide].traitUses
+                    fielded += b.sides[newSide].spawnedByRole[recruit.role.ordinal]
+                }
+            }
+            minutes.sort()
+            val median = (minutes[minutes.size / 2 - 1] + minutes[minutes.size / 2]) / 2.0
+            val perUnit = if (fielded == 0L) 0.0 else uses.toDouble() / fielded
+            out.append("| ${Defs.spec(era).art.name} | ${recruit.nameKey} | $winsNew | $winsBase | $stalemates | " +
+                "${fmt(median)} | $uses | $fielded | ${fmt(perUnit)} |\n")
+            println("RECRUIT ${recruit.nameKey}: new=$winsNew base=$winsBase pats=$stalemates " +
+                "median=${fmt(median)}m traitUses=$uses fielded=$fielded perUnit=${fmt(perUnit)}")
+            assertEquals("Paty: ${recruit.nameKey}", 0, stalemates)
+            assertTrue("${recruit.nameKey}: $winsNew zwycięstw nowego wariantu poza 180–220",
+                winsNew * 400 in 180 * runs * 2..220 * runs * 2)
+        }
+        File(dir, "recruits.md").writeText(out.toString())
     }
 
     /** Lustrzane pojedynki bez badań, z tą samą siłą i możliwością elit obu stron. */

@@ -73,6 +73,88 @@ class ArtGalleryTest {
     }
 
     /**
+     * Dzień 69 (R171): cztery nowe jednostki wariantów epok obok jednostek, które zastępują.
+     * Duże kafle do oceny kształtu, a niżej te same sylwetki w rozmiarze z pola bitwy
+     * (ok. 720p i zewnętrzny ekran Folda) w barwach gracza i wroga.
+     * Pliki: build/screenshots/gallery_recruits69*.png
+     */
+    @Test
+    fun eraRecruits() {
+        val recruits = (0 until Defs.ERA_COUNT).mapNotNull { Defs.recruitUnit(it) }
+        check(recruits.size == 4)
+        val g = game(1600, 900, Quality.HIGH)
+        val r = BattleRenderer(g, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
+        val ground = Paint().apply { color = Color.rgb(150, 126, 84) }
+        val labels = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(28, 35, 46); textSize = 18f; isFakeBoldText = true
+        }
+        val cell = 300
+        val big = Bitmap.createBitmap(4 * cell, recruits.size * cell, Bitmap.Config.ARGB_8888)
+        Canvas(big).apply {
+            drawColor(Color.rgb(196, 214, 228))
+            for ((row, def) in recruits.withIndex()) {
+                val base = Defs.unit(def.era, def.role)
+                val y = row * cell.toFloat()
+                drawRect(0f, y + cell * 0.86f, 4f * cell, y + cell, ground)
+                val cells = listOf(base to Ui.PLAYER, def to Ui.PLAYER, def to Ui.ENEMY, base to Ui.ENEMY)
+                for ((col, entry) in cells.withIndex()) {
+                    r.drawUnitIcon(this, entry.first, col * cell + cell / 2f, y + cell * 0.86f,
+                        cell * 0.74f, entry.second)
+                    drawText(com.centurywar.engine.L[entry.first.nameKey], col * cell + 8f, y + 22f, labels)
+                }
+            }
+        }
+        save(big, "gallery_recruits69")
+        big.recycle()
+
+        // Rozmiar z pola bitwy: wysokość sylwetki zbliżona do bitwy na 720p (≈ 46 px)
+        // i na zewnętrznym ekranie Folda (≈ 34 px), niska jakość jak na słabszych telefonach.
+        for ((tag, h) in listOf("720p" to 46, "fold_outer" to 34)) {
+            val lowG = game(1600, 900, Quality.LOW)
+            val lowR = BattleRenderer(lowG, Battle(BattleConfig(Mode.SKIRMISH, 1L, 1f)))
+            val w = h * 2 + 12
+            val bmp = Bitmap.createBitmap(4 * w, recruits.size * (h + 10), Bitmap.Config.ARGB_8888)
+            Canvas(bmp).apply {
+                drawColor(Color.rgb(120, 150, 96))
+                for ((row, def) in recruits.withIndex()) {
+                    val base = Defs.unit(def.era, def.role)
+                    val y = row * (h + 10f) + h + 4f
+                    val heightOf = { d: UnitDef -> h * d.size / 1.3f }
+                    listOf(base to Ui.PLAYER, def to Ui.PLAYER, def to Ui.ENEMY, base to Ui.ENEMY)
+                        .forEachIndexed { col, (d, team) ->
+                            lowR.drawUnitIcon(this, d, col * w + w / 2f, y, heightOf(d), team)
+                        }
+                }
+            }
+            // Powiększenie ×4 bez wygładzania: piksele widać tak, jak na ekranie.
+            val zoom = Bitmap.createScaledBitmap(bmp, bmp.width * 4, bmp.height * 4, false)
+            save(zoom, "gallery_recruits69_$tag")
+            zoom.recycle(); bmp.recycle()
+        }
+
+        // Cykl ruchu i ataku nowych sylwetek.
+        val frames = 12
+        val strip = Bitmap.createBitmap(frames * 180, recruits.size * 180, Bitmap.Config.ARGB_8888)
+        Canvas(strip).apply {
+            drawColor(Color.rgb(196, 214, 228))
+            for ((row, def) in recruits.withIndex()) {
+                val y = row * 180f
+                drawRect(0f, y + 180 * 0.86f, frames * 180f, y + 180f, ground)
+                for (f in 0 until frames) {
+                    val walk = minOf(f, 4) * 0.55f
+                    val stride = if (f < 4) 1f else 0f
+                    val windup = if (f in 4..7) (f - 4) / 3f else if (f >= 8) 0f else -1f
+                    val atk = if (f >= 8) 1f - (f - 8) / 4f else 0f
+                    r.drawUnitPose(this, def, f * 180 + 90f, y + 180 * 0.86f, 180 * 0.74f,
+                        Ui.PLAYER, walk, stride, atk, windup)
+                }
+            }
+        }
+        save(strip, "gallery_recruits69_animation")
+        strip.recycle()
+    }
+
+    /**
      * Klatki cyklu: marsz z zatrzymaniem (krok wygasa), potem odnowienie (napinanie/zamach)
      * i atak (puszczenie/cios). Sąsiednie klatki mają się różnić niewiele: bez skoków pozy.
      */

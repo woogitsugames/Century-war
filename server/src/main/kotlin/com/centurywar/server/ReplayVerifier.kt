@@ -71,7 +71,9 @@ object ReplayVerifier {
             }
             "skirmish" -> {
                 require(input.day == null) { "invalid_day" }
-                BattleConfig(Mode.SKIRMISH, input.seed, Skirmish.power(input.difficulty!!), playerBonuses = bonuses)
+                // Dzień 69: ranking potyczki gra z wariantami epok jednej roli, jak klient.
+                BattleConfig(Mode.SKIRMISH, input.seed, Skirmish.power(input.difficulty!!), playerBonuses = bonuses,
+                    eraRecruits = true)
             }
             "campaign" -> {
                 require(input.day == null) { "invalid_day" }
@@ -100,7 +102,7 @@ object ReplayVerifier {
             val normalizedConfig = when (input.board) {
                 "endless" -> BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = zero)
                 "skirmish" -> BattleConfig(Mode.SKIRMISH, input.seed,
-                    Skirmish.power(input.difficulty!!), playerBonuses = zero)
+                    Skirmish.power(input.difficulty!!), playerBonuses = zero, eraRecruits = true)
                 else -> Campaign.config(Campaign.stages[input.stage!!], zero, input.seed)
             }
             Replay.normalized(normalizedConfig, log, budget?.let { it::check }).score

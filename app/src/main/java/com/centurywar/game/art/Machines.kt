@@ -569,6 +569,52 @@ class Machines(private val p: Pen, private val men: Soldiers) {
         wheel(28f, -12f, 12f, walk, WOOD, 7)
     }
 
+    /**
+     * Dzień 69, Lekki wóz epoki brązu: dwa duże koła, niska skośna platforma,
+     * trójkątna płachta w barwie drużyny i mały łucznik. Koła i płachtę rozdziela kontur.
+     */
+    fun lightCart(team: Int, walk: Float, atk: Float) {
+        val bob = if (p.hi) sin((walk + phase) * 2f) * stride * 0.8f else 0f
+        cv.save(); cv.translate(0f, bob)
+        // Maszt i płachta za łucznikiem: największa plama barwy drużyny.
+        p.seg(-8f, -32f, -8f, -90f, 3f, WOOD_D)
+        p.tri(-10f, -88f, -10f, -38f, -44f, -40f); p.shape(team)
+        if (p.hi) p.segF(-12f, -80f, -36f, -42f, 1.4f, dark(team, 0.3f))
+        // Łucznik na platformie.
+        cv.save(); cv.translate(12f, -31f); cv.scale(0.7f, 0.7f)
+        men.draw(1, true, Weapon.BOW, team, 0f, atk, false, false)
+        cv.restore()
+        // Niska skośna platforma.
+        p.quad(-44f, -36f, 36f, -30f, 34f, -21f, -42f, -24f); p.shape(WOOD)
+        p.segF(-42f, -31f, 34f, -26f, 2f, BRONZE)
+        p.seg(30f, -25f, 46f, -19f, 2.6f, WOOD_D) // dyszel z przodu
+        cv.restore()
+        wheel(-24f, -16f, 16f, walk, WOOD, 8)
+        wheel(18f, -16f, 16f, walk, WOOD, 8)
+    }
+
+    /**
+     * Dzień 69, Taran epoki żelaza: niski prostokątny dach na dwóch kołach, duży
+     * wysunięty klin z żelaza i pas barwy drużyny na dachu.
+     */
+    fun ram(team: Int, walk: Float, atk: Float) {
+        // Przed uderzeniem klin cofa się, w chwili ciosu wyskakuje do przodu.
+        val thrust = if (atk > 0f) 11f * atk else -6f * ready(atk)
+        // Belka z klinem pod dachem.
+        p.seg(-30f + thrust, -30f, 34f + thrust, -30f, 7f, WOOD_D)
+        p.quad(30f + thrust, -43f, 46f + thrust, -38f, 66f + thrust, -29f, 30f + thrust, -16f)
+        p.shape(IRON)
+        if (p.hi) p.segF(34f + thrust, -38f, 60f + thrust, -29.5f, 1.4f, light(IRON, 0.35f))
+        // Ściany i niski dach.
+        p.rect(-44f, -42f, 30f, -18f, WOOD)
+        if (p.hi) for (i in 0..3) p.segF(-38f + i * 18f, -41f, -38f + i * 18f, -19f, 1.2f, dark(WOOD, 0.3f))
+        p.quad(-50f, -44f, -38f, -60f, 26f, -60f, 36f, -44f); p.shape(dark(team, 0.15f))
+        p.rect(-40f, -57f, 28f, -48f, team)
+        if (p.hi) p.rivets(-36f, -45f, 24f, 6, 1.1f, IRON)
+        wheel(-28f, -14f, 14f, walk, WOOD, 7)
+        wheel(14f, -14f, 14f, walk, WOOD, 7)
+    }
+
     fun trebuchet(team: Int, walk: Float, atk: Float) {
         val wd = dark(WOOD, 0.25f)
         // rama na kołach

@@ -611,6 +611,47 @@ class Soldiers(private val p: Pen) {
 
     private fun line() = p.line
 
+    /**
+     * Dzień 69, Tarczownik: duży pionowy owal przed tułowiem, szeroki ciemny rant
+     * i jeden poziomy pas barwy drużyny. Rysowany po postaci, więc zasłania tułów.
+     */
+    fun towerShield(team: Int) {
+        val rim = 0xFF3A2616.toInt()
+        val wood = 0xFF9A6A3C.toInt()
+        p.oval(2f, -64f, 30f, -8f, rim)
+        p.ovalF(6.5f, -59.5f, 25.5f, -12.5f, wood)
+        p.rr(6.5f, -41f, 25.5f, -31f, 2f, team)
+        if (p.hi) {
+            p.segF(16f, -58f, 16f, -42f, 1.1f, dark(wood, 0.3f))
+            p.segF(16f, -30f, 16f, -14f, 1.1f, dark(wood, 0.3f))
+        }
+        p.circle(16f, -36f, 3.2f, 0xFFB8BEC4.toInt())
+    }
+
+    /**
+     * Dzień 69, Strzelec z osłoną: wysoka prostokątna osłona w barwie drużyny stojąca
+     * przed korpusem i długa lufa wystająca przez szczelinę.
+     */
+    fun mantlet(team: Int, atk: Float) {
+        val frame = 0xFF3A2A1C.toInt()
+        val kick = atk * atk * 2.5f
+        p.rect(13f, -60f, 25f, 0f, frame)
+        p.rect(15.5f, -57f, 22.5f, -3f, team)
+        p.rect(15.5f, -46f, 22.5f, -40f, frame)
+        if (p.hi) {
+            p.segF(15.5f, -22f, 22.5f, -22f, 1.4f, dark(team, 0.3f))
+            p.rivets(17f, -54f, 21f, 2, 0.9f, 0xFFB8BEC4.toInt())
+        }
+        // Lufa przechodzi przez szczelinę osłony; przy strzale cofa się jak muszkiet.
+        p.seg(10f - kick, -43f, 46f - kick, -43f, 2.6f, GUNMETAL)
+        p.rect(44f - kick, -45f, 47f - kick, -41f, GUNMETAL)
+        if (atk >= 0.65f) {
+            p.glow(50f - kick, -43f, 6f, FLASH)
+            p.tri(47f - kick, -45.5f, 60f - kick, -43f, 47f - kick, -40.5f)
+            p.cv.drawPath(p.path, p.gp(0xF0FFFFFF.toInt()))
+        }
+    }
+
     private fun gunBody(x0: Float, x1: Float, wood: Int, metal: Int, stockH: Float, barrelW: Float) {
         // kolba + łoże drewniane, lufa stalowa
         val pa = p.path; pa.reset()

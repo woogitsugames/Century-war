@@ -824,7 +824,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     private fun drawBody(def: UnitDef, team: Int, walk: Float, atk: Float, tier: Int = 1) {
         pen.ow = 1.5f / def.size
         mach.size = def.size
-        if (def.variant >= 0 && (def.role == Role.HEAVY || def.role == Role.ELITE)) {
+        if (def.trait != Trait.NONE) {
+            drawTraitBody(def, team, walk, atk)
+        } else if (def.variant >= 0 && (def.role == Role.HEAVY || def.role == Role.ELITE)) {
             mach.variantMachine(def.art, def.role == Role.ELITE, team, walk, atk)
         } else when (def.body) {
             Body.HUMAN -> men.draw(def.art, def.role == Role.RANGED, def.weapon, team, walk, atk, false, def.role == Role.HEAVY)
@@ -841,7 +843,28 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
     }
 
-    private fun shadowW(d: UnitDef) = when (d.body) {
+    /** Dzień 69: sylwetki jednostek wariantów epok jednej roli (R171). */
+    private fun drawTraitBody(def: UnitDef, team: Int, walk: Float, atk: Float) {
+        when (def.trait) {
+            Trait.SHIELD -> {
+                men.draw(def.art, false, def.weapon, team, walk, atk, false, true)
+                men.towerShield(team)
+            }
+            Trait.BRACE -> {
+                // Przysadzista postać: szersza i niższa od zwykłego muszkietera.
+                pen.cv.save()
+                pen.cv.scale(1.1f, 0.92f)
+                men.draw(def.art, true, def.weapon, team, walk, atk, false, false)
+                men.mantlet(team, atk)
+                pen.cv.restore()
+            }
+            Trait.DASH -> mach.lightCart(team, walk, atk)
+            Trait.RAM -> mach.ram(team, walk, atk)
+            else -> men.draw(def.art, def.role == Role.RANGED, def.weapon, team, walk, atk, false, false)
+        }
+    }
+
+    private fun shadowW(d: UnitDef) = if (d.trait == Trait.DASH) 40f else if (d.trait == Trait.RAM) 46f else when (d.body) {
         Body.HUMAN -> 13f; Body.BEAST -> if (d.role == Role.ELITE) 40f else 32f
         Body.VEHICLE -> 50f; Body.HOVER -> 0f; Body.MECH -> 22f; else -> 38f
     }
@@ -912,6 +935,12 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     }
 
     private fun unitWidth(d: UnitDef): Float {
+        when (d.trait) {
+            Trait.SHIELD -> return 54f
+            Trait.BRACE -> return 76f
+            Trait.DASH -> return 92f
+            Trait.RAM -> return 118f
+        }
         if (isVariantMachine(d)) return variantMachineWidth(d)
         return when (d.body) {
             Body.HUMAN -> 50f; Body.BEAST -> if (d.role == Role.ELITE) 110f else 80f
@@ -922,11 +951,18 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
     }
 
-    private fun iconShift(d: UnitDef) = if (isVariantMachine(d)) 0f else when (d.body) {
+    private fun iconShift(d: UnitDef) = if (d.trait != Trait.NONE) when (d.trait) {
+        Trait.SHIELD -> 7f; Trait.BRACE -> 14f; Trait.DASH -> 0f; else -> 8f
+    } else if (isVariantMachine(d)) 0f else when (d.body) {
         Body.HUMAN -> 4f; Body.VEHICLE -> 6f; Body.SIEGE -> 4f; Body.CANNON -> 0f; else -> 8f
     }
 
     private fun unitHeight(d: UnitDef): Float {
+        when (d.trait) {
+            Trait.SHIELD, Trait.BRACE -> return 68f
+            Trait.DASH -> return 92f
+            Trait.RAM -> return 64f
+        }
         if (isVariantMachine(d)) return when (d.art) {
             EraArt.COMBUSTION -> if (d.role == Role.ELITE) 90f else 77f
             EraArt.GALVANIC -> if (d.role == Role.ELITE) 77f else 100f
