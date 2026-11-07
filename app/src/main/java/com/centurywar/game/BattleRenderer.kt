@@ -42,6 +42,12 @@ class BattleRenderer(private val g: Game, private val b: Battle,
     var lerp = 1f
     var k = 1f
     var groundY = 0f
+    /**
+     * Audyt 72: strona, której baza właśnie padła (-1: brak), i postęp zapadania 0..1.
+     * Tylko obraz (BattleScreen po końcu bitwy gracza); symulacja i powtórka bez zmian.
+     */
+    var collapseSide = -1
+    var collapse = 0f
     var viewW = 0f
     private var fieldTop = 0f
     private var trauma = 0f
@@ -459,6 +465,13 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         c.translate(bx, groundY)
         c.scale(k * s.dir, k)
         pen.alpha = 1f; pen.flash = false; pen.ow = 2.4f
+        if (s.index == collapseSide && collapse > 0f) {
+            // Zburzona baza osuwa się pod ziemię z lekkim przechyłem (ziemia ją przycina).
+            c.clipRect(-1200f, -3000f, 1200f, 0f)
+            val e2 = collapse * collapse
+            c.translate(0f, e2 * 520f)
+            c.rotate(e2 * 7f, -170f, 0f)
+        }
         if (g.quality.shadows) {
             fill.color = Color.argb(55, 0, 0, 0)
             rect.set(-345f, -10f, 10f, 12f); c.drawOval(rect, fill)
@@ -1209,6 +1222,9 @@ class BattleRenderer(private val g: Game, private val b: Battle,
         }
     }
 
+    /** Audyt 72: dodatkowy wybuch „wypłaty” przy zburzeniu bazy (tylko efekt, bez symulacji). */
+    fun cinematicBlast(x: Float, h: Float, size: Float, side: Int) = emitExplosion(x, h, size, side)
+
     private fun emitExplosion(x: Float, h: Float, size: Float, side: Int) {
         val scale = size.coerceIn(0.25f, 3.5f)
         val es = b.sides[side.coerceIn(0, 1)]
@@ -1305,7 +1321,8 @@ class BattleRenderer(private val g: Game, private val b: Battle,
                     val v = fx.value[i]
                     if (v == 0f || v == 1f) {
                         val label = if (v > 0f) rankLabels[sd.rank.coerceIn(0, 20)] else L["next_era"]
-                        addText(x - sd.dir * 150f, 360f, label,
+                        // Audyt 72: napis „Nowa epoka” niżej (na 720p wchodził pod górny pasek).
+                        addText(x - sd.dir * 150f, if (v > 0f) 360f else 285f, label,
                             if (sd.index == 0) 0xFFFFE070.toInt() else Ui.ENEMY, 22f, v > 0f)
                     }
                 }

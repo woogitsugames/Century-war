@@ -190,6 +190,15 @@ internal class BattleTopBar(private val owner: BattleScreen) {
             val gl = if (leftHud) goldEdge - bw0 else l
             goldDrawn.set(gl, t + 11 * dp - bh * 0.42f - 2 * dp, gl + bw0, t + 11 * dp + bh * 0.42f + 2 * dp)
         }
+        // Audyt 72: odmowa zakupu z braku złota — dwa czerwone pulsy obrysu licznika.
+        if (goldDeniedFlash > 0f) {
+            val k = goldDeniedFlash / 0.6f
+            val pulse = kotlin.math.abs(kotlin.math.sin(k * 6.283f))
+            ui.stroke.color = Color.argb((60 + 195 * pulse).toInt(), 235, 70, 60)
+            ui.stroke.strokeWidth = 2.5f * dp
+            val rr = goldDrawn.height() * 0.5f
+            c.drawRoundRect(goldDrawn, rr, rr, ui.stroke)
+        }
         // armia
         val ck = p.aliveCount * 100 + p.cap
         if (ck != capKey) { capKey = ck; capText = "${p.aliveCount}/${p.cap}" }

@@ -347,13 +347,16 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
 
     fun drawResults(c: Canvas) {
         with(owner) {
-        val a = min(1f, resultTime * 2f)
+        // Audyt 72: przez pierwsze 0,3 s widać zburzenie bazy; panel jest pełny po 0,8 s,
+        // razem z przyciskami (jak dotąd).
+        val a = ((resultTime - 0.3f) / (BattleScreen.FINAL_BLOW_TIME - 0.3f)).coerceIn(0f, 1f)
         c.drawColor(Color.argb((170 * a).toInt(), 0, 0, 0))
         val won = battle.winner == 0
         val rp = resultPanel
         // Wjazd panelu od dołu.
         val slide = (1f - a) * 60 * dp
-        c.save()
+        // Audyt 72: panel wyłania się (przezroczystość), zamiast stać od pierwszej klatki nad wybuchem bazy.
+        val panelLayer = if (a < 1f) c.saveLayerAlpha(0f, 0f, w, h, (a * 255f).toInt()) else c.save()
         c.translate(0f, slide)
         ui.panel(c, rp)
         val good = won || cfg.mode == Mode.ENDLESS
@@ -463,7 +466,7 @@ internal class BattleResultsPanel(private val owner: BattleScreen) {
             resultGoalDrawn = goal && lines > 0
         }
         }
-        c.restore()
+        c.restoreToCount(panelLayer)
         if (resultStatsTab.visible) ui.button(c, resultStatsTab, 12f)
         if (resultChartTab.visible) ui.button(c, resultChartTab, 12f)
         ui.button(c, continueBtn, 17f)

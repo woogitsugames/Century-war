@@ -20,6 +20,7 @@ import com.centurywar.game.EraArt
 import com.centurywar.game.Proj
 import com.centurywar.engine.Ui
 import com.centurywar.game.Battle
+import com.centurywar.game.DailyEvent
 import com.centurywar.game.Campaign
 import com.centurywar.game.CampaignDifficulty
 import com.centurywar.game.BattleController
@@ -188,6 +189,11 @@ class BattleScreen(
     internal var resultTipCount = 0
 
     internal companion object {
+        /** Audyt 72: czas „wypłaty” po zburzeniu bazy (s); wtedy też pełny panel i przyciski wyników. */
+        const val FINAL_BLOW_TIME = 0.8f
+        /** Audyt 72: jak długo wybór doktryny/składu wjeżdża nad żywym polem po awansie (s). */
+        const val EVOLVE_REVEAL_TIME = 0.55f
+        private val FINAL_BLASTS = floatArrayOf(0.06f, 0.2f, 0.36f, 0.55f)
         /** R11-03: wstęgi progów tygodnia (pełne zdania: rodzaj gramatyczny progu). */
         val MILESTONE_TIER_KEYS = arrayOf("ms198_tier0", "ms198_tier1", "ms198_tier2")
         val WEEKLY_TIER_NAMES = arrayOf("weekly_bronze", "weekly_silver", "weekly_gold")
@@ -339,6 +345,14 @@ class BattleScreen(
     private var missingXpRemaining = 0f
     internal val lockedTooltip = TooltipBubble()
     internal var lockedRemaining = 0f
+    /** Audyt 72: odmowa zakupu (brak złota / pełna kolejka) — dymek, dźwięk i błysk licznika złota. */
+    private val deniedTooltip = TooltipBubble()
+    internal var deniedRemaining = 0f
+    private var deniedAnchor: Button? = null
+    /** Audyt 72: czerwone pulsowanie licznika złota po tapnięciu zakupu bez złota (sekundy). */
+    internal var goldDeniedFlash = 0f
+    /** Audyt 72: czas od awansu epoki gracza, gdy zaraz po nim pojawia się wybór (s). */
+    private var evolveReveal = EVOLVE_REVEAL_TIME
     private var introDelay = 0f
     private var introRemaining = 0f
     private var introChecked = false
@@ -728,6 +742,8 @@ class BattleScreen(
         }
         maybeShowEraIntro()
         if (paused || finished || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) effectiveSpeed = speedFactor(speed)
+        // Audyt 72: wybuch bazy w lekkim zwolnieniu, niezależnie od tempa ×3/×5.
+        if (finished) effectiveSpeed = if (resultTime < FINAL_BLOW_TIME) 0.6f else 1f
         // Awans rangi jest zdarzeniem interfejsu, nie modyfikuje bitwy ani powtórki.
         val newRank = battle.player.rank
         if (newRank > lastSfxRank) g.sfx(Sound.RANK_UP, 0.62f, 250, priority = 2)
@@ -779,8 +795,18 @@ class BattleScreen(
         if (finished) { if (milestoneRibbon.active) milestoneRibbon.clear() }
         else milestoneRibbon.update(dt, milestoneRibbonHeld())
         alertPulse = (alertPulse + dt) % 1f
-        if (finished) resultTime += dt
-        if (manualCam > 0f) manualCam -= dt else if (!finished) {
+        if (finished) {
+            val before = resultTime
+            resultTime += dt
+            finalBlow(before, resultTime)
+        }
+        if (finished && resultTime < FINAL_BLOW_TIME && !surrendered) {
+            // Audyt 72: kamera dojeżdża do zburzonej bazy, zanim wyniki przykryją pole.
+            val loser = battle.sides[1 - battle.winner.coerceIn(0, 1)]
+            val target = loser.baseFront - loser.dir * 120f - r.worldVisible * 0.5f
+            r.camX += (target - r.camX) * min(1f, dt * 5f)
+            r.clampCam()
+        } else if (manualCam > 0f) manualCam -= dt else if (!finished) {
             followRamp = (followRamp + dt * 0.8f).coerceAtMost(1f)
             r.follow(dt, followRamp)
         }
@@ -788,6 +814,11 @@ class BattleScreen(
         if (lockedRemaining > 0f) {
             lockedRemaining = if (finished || paused) 0f else (lockedRemaining - dt).coerceAtLeast(0f)
         }
+        if (deniedRemaining > 0f) {
+            deniedRemaining = if (finished || paused) 0f else (deniedRemaining - dt).coerceAtLeast(0f)
+        }
+        if (evolveReveal < EVOLVE_REVEAL_TIME) evolveReveal += dt
+        if (goldDeniedFlash > 0f) goldDeniedFlash = (goldDeniedFlash - dt).coerceAtLeast(0f)
         if (missingXpRemaining > 0f) {
             if (finished || paused || battle.canEvolve(battle.player)) missingXpRemaining = 0f
             else missingXpRemaining = (missingXpRemaining - dt).coerceAtLeast(0f)
@@ -1062,6 +1093,7 @@ class BattleScreen(
             EvolveBanner.GO -> { evolveBanner.dismiss(); onClick(evolveBtn) }
             EvolveBanner.WAIT -> evolveBanner.dismiss()
             EVOLVE -> if (commands.evolve()) {
+                if (battle.pendingChoice != null || battle.pendingVariant != null) evolveReveal = 0f
                 evolveBanner.dismiss()
                 missingXpRemaining = 0f
                 haptics.onEvolve()
@@ -1289,6 +1321,8 @@ class BattleScreen(
             missingXpRemaining = 3.5f
             return
         }
+        if (!paused && !finished && !aimingBarrage && (tut == null || tut.finished) &&
+            showUpgrade < 0 && denyPurchaseTap(x, y)) return
         if (aimingBarrage) {
             if (!paused && !finished && !aimMoved && aimStartedInField &&
                 battle.abilityReady(battle.player, 0) &&
@@ -1314,6 +1348,52 @@ class BattleScreen(
             return
         }
         if (showTurrets && !panel.contains(x, y)) showTurrets = false
+    }
+
+    /**
+     * Audyt 72: krótki tap wyłączonego zakupu (jednostka, zbrojownia) nie przepada w ciszy —
+     * dźwięk odmowy, lekka wibracja, dymek z brakującym złotem i czerwony błysk licznika złota.
+     * Tylko interfejs: żadna komenda nie trafia do symulacji.
+     */
+    private fun denyPurchaseTap(x: Float, y: Float): Boolean {
+        val p = battle.player
+        for (i in 0..3) {
+            val b = unitBtn[i]
+            if (!b.visible || b.enabled || !b.contains(x, y)) continue
+            val role = roles[i]
+            if (role == Role.ELITE && !p.eliteUnlocked) return false
+            // Rola zakazana (wydarzenie dnia, epoka bez jednostki): to nie jest brak złota.
+            if (battle.cfg.dailyEvent == DailyEvent.MARKSMEN && role != Role.RANGED) return false
+            if (!battle.roleAllowed(p, role)) return false
+            val cost = battle.unitCost(p, role)
+            val text = when {
+                p.gold < cost -> L.f("a72_need_gold", kotlin.math.ceil((cost - p.gold).toDouble()).toInt())
+                p.queueSize >= min(p.queueMax, Battle.QUEUE_CAP) -> L["a72_queue_full"]
+                else -> return false
+            }
+            val def = p.unit(role)
+            showDenied(b, L[def.tierNameKeys[(p.unitTier[i] - 1).coerceIn(0, 2)]], text, p.gold < cost)
+            return true
+        }
+        val a = armoryBtn
+        if (a.visible && !a.enabled && a.contains(x, y) && p.armory < 15) {
+            val cost = battle.armoryCost(p)
+            if (p.gold < cost) {
+                showDenied(a, L["armory"], L.f("a72_need_gold",
+                    kotlin.math.ceil((cost - p.gold).toDouble()).toInt()), true)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun showDenied(b: Button, title: String, text: String, gold: Boolean) {
+        deniedTooltip.set(title, text)
+        deniedAnchor = b
+        deniedRemaining = 2.2f
+        if (gold) goldDeniedFlash = 0.6f
+        g.sfx(Sound.ERROR, 0.45f, 150)
+        g.haptic()
     }
 
     /**
@@ -1451,6 +1531,33 @@ class BattleScreen(
         LostBattle.meta(cfg, battle, rankedDaily, battleId, System.currentTimeMillis()).encode()
 
     // ---------------------------------------------------------------- koniec bitwy
+
+    /**
+     * Audyt 72: „wypłata” końca bitwy — seria wybuchów na zburzonej bazie, z dźwiękiem,
+     * a baza osuwa się pod ziemię, zanim panel wyników zakryje pole (czas przycisków bez zmian).
+     */
+    private fun finalBlow(before: Float, now: Float) {
+        if (surrendered || battle.winner !in 0..1) {
+            r.collapseSide = -1
+            return
+        }
+        val loser = battle.sides[1 - battle.winner]
+        r.collapseSide = loser.index
+        r.collapse = (now / FINAL_BLOW_TIME).coerceIn(0f, 1f)
+        for (i in FINAL_BLASTS.indices) {
+            val at = FINAL_BLASTS[i]
+            if (before < at && now >= at) {
+                val x = loser.baseFront - loser.dir * (60f + i * 70f)
+                r.cinematicBlast(x, 90f + (i % 2) * 110f, 1.5f + i * 0.2f, loser.index)
+                if (g.sound != null) {
+                    val style = Defs.sideArt(loser.era, loser.eraVariant)
+                    g.sfx(BattleSfx.explosionSound(style), 0.7f, 0,
+                        pitch = BattleSfx.eraPitch(style) * (1f - i * 0.05f), priority = 3)
+                    if (i == FINAL_BLASTS.size - 1) g.sfx(Sound.THUMP, 0.8f, 0, priority = 3)
+                }
+            }
+        }
+    }
 
     private fun onFinished() {
         aimingBarrage = false
@@ -1914,7 +2021,9 @@ class BattleScreen(
     override fun render(c: Canvas) {
         // Interpolacja między krokami symulacji (płynny ruch przy 90/120 Hz).
         r.lerp = (acc / Battle.STEP).coerceIn(0f, 1f)
-        r.render(c, if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h,
+        // Audyt 72: przez chwilę po awansie wybuch awansu i nowa baza żyją pod wjeżdżającym wyborem.
+        val revealing = evolveReveal < EVOLVE_REVEAL_TIME && !paused && eraIntro?.active != true
+        r.render(c, if (revealing) frameDt else if (paused || eraIntro?.active == true || battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) 0f else frameDt * effectiveSpeed * (tut?.timeScale ?: 1f), w, h,
             realDt = frameDt)
         if (aimingBarrage) barrageView.drawAim(c)
         // HUD zachowuje czytelność i nie zasłania pola gry przy 130%.
@@ -1934,7 +2043,15 @@ class BattleScreen(
         drawBaseAlert(c)
         if (showTurrets && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawTurretPanel(c)
         if (showUpgrade >= 0 && battle.pendingChoice == null && battle.pendingCards == null && battle.pendingVariant == null && !paused && !finished) upgradesView.drawUpgradePanel(c)
-        if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) drawChoices(c)
+        if ((battle.pendingVariant != null || battle.pendingChoice != null || battle.pendingCards != null) && !finished) {
+            if (revealing) {
+                // Wybór wjeżdża (przezroczystość), przyciski działają od razu jak dotąd.
+                val a = (evolveReveal / EVOLVE_REVEAL_TIME).coerceIn(0.15f, 1f)
+                val save = c.saveLayerAlpha(0f, 0f, w, h, (a * 255f).toInt())
+                drawChoices(c)
+                c.restoreToCount(save)
+            } else drawChoices(c)
+        }
         if (!finished && !paused) evolveBanner.draw(c, ui)
         if (!finished) {
             if (eraIntro?.active != true) tut?.draw(c)
@@ -1956,6 +2073,12 @@ class BattleScreen(
         }
         if (!paused && !finished && eraIntro?.active != true && lockedRemaining > 0f && !isTooltipHeld) {
             ui.tooltip(c, unitBtn[3].r, lockedTooltip, g.insetL, g.insetT,
+                w - g.insetR, h - g.insetB)
+        }
+        val denied = deniedAnchor
+        if (!paused && !finished && eraIntro?.active != true && deniedRemaining > 0f &&
+            denied != null && denied.visible && !isTooltipHeld && hints.activeId < 0) {
+            ui.tooltip(c, denied.r, deniedTooltip, g.insetL, g.insetT,
                 w - g.insetR, h - g.insetB)
         }
         if (!paused && !finished && eraIntro?.active != true) drawHeldTooltip(c)

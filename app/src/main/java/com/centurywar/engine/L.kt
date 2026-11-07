@@ -206,6 +206,7 @@ object L {
         putAll(part216())
         putAll(part217())
         putAll(part218())
+        putAll(part220())
         }
     }
 
@@ -2545,5 +2546,11 @@ object L {
     private fun part218(): Array<Pair<String, Array<out String>>> = arrayOf(
         "hint218_recruit" to t("Wybierz skład: podstawowy albo z nową jednostką w jednej roli. Wieża i ostrzał zostają te same.", "Choose your army: standard, or with a new unit in one role. Turret and barrage stay the same.", "Wähle deine Armee: Standard oder mit einer neuen Einheit in einer Rolle. Turm und Sperrfeuer bleiben gleich.", "Elige tu ejército: el estándar o con una tropa nueva en un papel. La torre y el bombardeo no cambian.", "Choisissez votre armée : standard, ou avec une nouvelle unité dans un rôle. Tourelle et barrage restent les mêmes.", "Scegli l'esercito: standard o con una nuova unità in un ruolo. Torre e sbarramento restano uguali.", "Escolhe o exército: padrão ou com uma nova unidade numa função. A torre e a barragem mantêm-se.", "Обери військо: звичайне або з новим бійцем в одній ролі. Вежа й обстріл не змінюються.", "Kies je leger: standaard of met een nieuwe eenheid in één rol. Toren en spervuur blijven gelijk.", "Ordunu seç: standart ya da tek bir rolde yeni birimle. Kule ve baraj aynı kalır."),
         "cx218_skirmish" to t("Tylko w potyczce", "Skirmish only", "Nur im Gefecht", "Solo en escaramuza", "Escarmouche uniquement", "Solo in schermaglia", "Só em escaramuça", "Лише в сутичці", "Alleen in schermutseling", "Yalnızca çatışmada"),
+    )
+
+    /** Audyt 72 (czucie bitwy): odmowa zakupu w bitwie. */
+    private fun part220(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "a72_need_gold" to t("Brakuje %d złota", "Need %d more gold", "Noch %d Gold nötig", "Faltan %d de oro", "Il manque %d or", "Mancano %d oro", "Faltam %d de ouro", "Бракує %d золота", "Nog %d goud nodig", "%d altın eksik"),
+        "a72_queue_full" to t("Kolejka pełna — poczekaj na szkolenie", "Queue full — wait for training", "Warteschlange voll — warte auf die Ausbildung", "Cola llena: espera al entrenamiento", "File pleine — attendez la formation", "Coda piena: attendi l'addestramento", "Fila cheia — espera pelo treino", "Черга заповнена — зачекай на навчання", "Wachtrij vol — wacht op de training", "Sıra dolu — eğitimi bekle"),
     )
 }
