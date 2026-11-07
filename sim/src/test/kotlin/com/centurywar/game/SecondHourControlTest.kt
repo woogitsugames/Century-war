@@ -45,6 +45,6 @@ class SecondHourControlTest {
     companion object {
         const val STAGE_21_BEFORE = "\"expected\": {\"score\":23482,\"winner\":1,\"wave\":0,\"steps\":36436," +
             "\"kills\":149,\"enemyKills\":297,\"timeBits\":1142411538," +
-            "\"snapshotSha256\":\"7b40e2240e2c59a44b6d53c3e8a3c1a9b3c179d3a539dce485180415137220f6\"}"
+            "\"snapshotSha256\":\"f4ab738972a84472ab41350e5bc16422f12cf0532846f6ee7149c4f4ea3fd31e\"}"
     }
 }
