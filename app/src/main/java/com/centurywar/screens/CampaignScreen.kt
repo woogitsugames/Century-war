@@ -127,6 +127,8 @@ class CampaignScreen(
     private var infoModifiers = ""
     private var compactModifiers = ""
     private var infoPower = ""
+    /** Dzień 68: „Wróg: <styl>” dla etapu ze stałym stylem przeciwnika; "" = losowy jak dotąd. */
+    private var infoEnemy = ""
     private var infoDifficulty = CampaignDifficulty.NORMAL
 
     private fun refreshInfo(s: Stage) {
@@ -141,6 +143,7 @@ class CampaignScreen(
         compactModifiers = if (s.modifiers.isEmpty()) L["none"]
             else s.modifiers.joinToString(" · ") { L[it.key] }
         infoPower = L.f("ai_power", (s.aiPower * difficulty.powerMultiplier * 100f).toInt())
+        infoEnemy = s.personality?.let { L.f("d68_enemy", L["sk_person_" + it.ordinal]) } ?: ""
     }
 
     override fun isDragScreen() = selected == null
@@ -747,7 +750,10 @@ class CampaignScreen(
         val compact = info.height() < 352 * dp
         var y = info.top + (if (compact) 44 else 48) * dp
         // Tylko niski panel: odzyskaj miejsce między modyfikatorami a trudnością (≥ 10 dp także przy 130%).
-        val row = if (compact) 21 * dp else 28 * dp
+        // Dzień 68: wysoki panel z wierszem „Wróg: …” ma ciaśniejsze wiersze, żeby chipy modyfikatorów
+        // dalej mieściły się nad trudnością; niski panel (szeroki ekran) pokazuje styl obok pogody.
+        val styled = infoEnemy.isNotEmpty()
+        val row = if (compact) 21 * dp else if (styled) 24 * dp else 28 * dp
         val x = info.left + 24 * dp
         val tw = info.width() - 48 * dp
         // gwiazdki
@@ -788,8 +794,24 @@ class CampaignScreen(
         y += row
         Icons.draw(c, Icons.weatherIcon(s.weather), x + isz / 2, y - 5 * dp, isz, dp = dp)
         val weather = L[s.weather.key]
-        ui.textO(c, weather, x + isz + 8 * dp, y, ui.fit(weather, 14f, tw - isz - 8 * dp), Ui.TEXT)
+        if (styled && compact) {
+            // Niski panel: pogoda i styl wroga w jednym wierszu, każde z własną ikoną.
+            val half = (tw - 2 * (isz + 8 * dp) - 12 * dp)
+            val ws = ui.fit(weather, 14f, half * 0.4f)
+            ui.textO(c, weather, x + isz + 8 * dp, y, ws, Ui.TEXT)
+            val ex = x + isz + 8 * dp + ui.measure(weather, ws, true) + 12 * dp
+            Icons.draw(c, Icons.HELMET, ex + isz / 2, y - 5 * dp, isz, dp = dp)
+            val room = x + tw - (ex + isz + 8 * dp)
+            ui.textO(c, infoEnemy, ex + isz + 8 * dp, y, ui.fit(infoEnemy, 14f, room), Ui.TEXT)
+        } else {
+            ui.textO(c, weather, x + isz + 8 * dp, y, ui.fit(weather, 14f, tw - isz - 8 * dp), Ui.TEXT)
+        }
         y += row
+        if (styled && !compact) {
+            Icons.draw(c, Icons.HELMET, x + isz / 2, y - 5 * dp, isz, dp = dp)
+            ui.textO(c, infoEnemy, x + isz + 8 * dp, y, ui.fit(infoEnemy, 14f, tw - isz - 8 * dp), Ui.TEXT)
+            y += row
+        }
         Icons.draw(c, Icons.FLAG, x + isz / 2, y - 5 * dp, isz, dp = dp)
         ui.textO(c, infoModifiers, x + isz + 8 * dp, y, 14f, Ui.GOLD)
         if (compact) {
@@ -1161,7 +1183,8 @@ class CampaignScreen(
         text.append(infoRange).append(". ")
             .append(infoPower).append(", ").append(enemy).append(". ")
             .append(L.f("a196_weather", L[s.weather.key])).append(". ")
-            .append(infoModifiers).append(' ')
+        if (infoEnemy.isNotEmpty()) text.append(infoEnemy).append(". ")
+        text.append(infoModifiers).append(' ')
             .append(if (s.modifiers.isEmpty()) L["none"] else s.modifiers.joinToString(", ") { L[it.key] })
             .append(". ")
             .append(L.f("a196_difficulty", L[difficulty.key]))

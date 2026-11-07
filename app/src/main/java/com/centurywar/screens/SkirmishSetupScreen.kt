@@ -11,6 +11,7 @@ import com.centurywar.engine.L
 import com.centurywar.engine.Screen
 import com.centurywar.engine.TouchEvent
 import com.centurywar.engine.Ui
+import com.centurywar.game.AiPersonality
 import com.centurywar.game.Defs
 import com.centurywar.game.Modifier
 import com.centurywar.meta.SkirmishSetup
@@ -29,7 +30,8 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     private val defaults = btn(-3)
     private val shuffle = btn(-4)
     private val eraButtons = Array(4) { btn(10 + it) }
-    private val personalities = Array(6) { btn(100 + it) }
+    // Dzień 68: losowy + osiem stylów (AiPersonality), identyfikatory 100..108.
+    private val personalities = Array(AiPersonality.entries.size + 1) { btn(100 + it) }
     private val presets = Array(4) { btn(200 + it) }
     private val powerButtons = Array(2) { btn(220 + it) }
     private val mods = Array(Modifier.values().size) { btn(300 + it) }
@@ -58,11 +60,13 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     private var toY = 0f
     private var powerY = 0f
     private var descriptionY = 0f
+    private var enemyY = 0f
     private var modLimitY = 0f
     private var fromName = ""
     private var toName = ""
     private var powerName = ""
     private var description = ""
+    private var enemyName = ""
     private var summary = ""
     private var rankingText = ""
     /** R11-01: wersja napisów (rebuildLabels); tekst dla czytnika powstaje dopiero po zmianie. */
@@ -72,6 +76,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
 
     private val personIcons = intArrayOf(
         Icons.CROSSED_SWORDS, Icons.WRENCH, Icons.COIN, Icons.TOWER, Icons.SHIELD,
+        Icons.CROSSHAIR, Icons.SPEED, Icons.FLAME,
     )
     private val modIcons = intArrayOf(
         Icons.COIN, Icons.WALL, Icons.SPEED, Icons.TOWER, Icons.CROSSHAIR,
@@ -146,17 +151,22 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         sectionX[1] = x; labelsY[1] = y + 13 * dp
         y += 24 * dp
         val gap = 6 * dp
-        val bw = (colW - gap) / 2
+        // Dzień 68: „Losowy” na całą szerokość, pod nim style w dwóch kolumnach albo, w wąskiej
+        // kolumnie (telefon w pionie, zewnętrzny Fold), w jednej — dłuższe nazwy stylów przy 130%.
+        val perRow = if (colW >= 330 * dp) 2 else 1
+        val bw = (colW - gap * (perRow - 1)) / perRow
         for (i in personalities.indices) {
             val b = personalities[i]
-            place(b, x + (i % 2) * (bw + gap), y + (i / 2) * 54 * dp, bw, 48 * dp)
+            if (i == 0) place(b, x, y, colW, 48 * dp)
+            else place(b, x + ((i - 1) % perRow) * (bw + gap), y + (1 + (i - 1) / perRow) * 54 * dp, bw, 48 * dp)
             b.label = if (i == 0) L["sk_random"] else L["sk_person_" + (i - 1)]
             b.iconId = if (i == 0) Icons.CROSSED_SWORDS else personIcons[i - 1]
             b.selected = setup.personality == i - 1
         }
-        y += 166 * dp
-        descriptionY = y + 10 * dp
-        y += 45 * dp
+        y += ((1 + (personalities.size - 1 + perRow - 1) / perRow) * 54 + 4) * dp
+        enemyY = y + 10 * dp
+        descriptionY = y + 30 * dp
+        y += 52 * dp
         sectionX[2] = x; labelsY[2] = y + 14 * dp
         y += 25 * dp
         val pGap = 5 * dp
@@ -208,6 +218,9 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         powerName = L.f("ai_power", setup.powerPercent)
         description = if (setup.personality == -1) L["sk_desc_random"]
             else L["sk_desc_" + setup.personality]
+        // Dzień 68: krótka nazwa stylu przeciwnika nad opisem („Wróg: …”).
+        enemyName = L.f("d68_enemy",
+            if (setup.personality == -1) L["sk_random"] else L["sk_person_" + setup.personality])
         summary = L.f("eras_range", L[Defs.eraKeys[setup.startEra]], L[Defs.eraKeys[setup.maxEra]]) +
             "   " + L.f("ai_power", setup.powerPercent)
         rankingText = L[if (setup.isRanked()) "sk_ranked" else "sk_unranked"]
@@ -249,6 +262,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         textIfVisible(c, fromName, colL + colW / 2, fromY, 14f, Ui.TEXT, Paint.Align.CENTER, colW - 106 * dp)
         textIfVisible(c, toName, colL + colW / 2, toY, 14f, Ui.TEXT, Paint.Align.CENTER, colW - 106 * dp)
         textIfVisible(c, L["sk_opponent"], sectionX[1], labelsY[1], 17f, Ui.GOLD)
+        textIfVisible(c, enemyName, colL + colW / 2, enemyY, 14f, Ui.TEXT, Paint.Align.CENTER, colW - 12 * dp)
         textIfVisible(c, description, colL + colW / 2, descriptionY, 12f, Ui.DIM, Paint.Align.CENTER, colW - 12 * dp)
         textIfVisible(c, L["sk_strength"], sectionX[2], labelsY[2], 17f, Ui.GOLD)
         textIfVisible(c, powerName, colL + colW / 2, powerY, 14f, Ui.GOLD, Paint.Align.CENTER, colW)
@@ -325,7 +339,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
         val last = Random.nextInt(first, Defs.ERA_COUNT)
         var mask = 0
         repeat(Random.nextInt(4)) { mask = mask or (1 shl Random.nextInt(Modifier.values().size)) }
-        saveSetup(SkirmishSetup(first, last, Random.nextInt(-1, 5),
+        saveSetup(SkirmishSetup(first, last, Random.nextInt(-1, AiPersonality.entries.size),
             60 + Random.nextInt(29) * 5, mask))
     }
 
@@ -349,7 +363,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     override fun accessibilityKey(b: Button): Int = if (b.id in 10..13 || b.id in 220..221) labelsVersion else 0
 
     override fun accessibilityCheckable(b: Button): Boolean =
-        b.id in 100..105 || b.id in 200..203 || b.id in 300 until 300 + mods.size
+        b.id in 100 until 100 + personalities.size || b.id in 200..203 || b.id in 300 until 300 + mods.size
 
     override fun accessibilityInfoCount(): Int = 1
 
@@ -357,7 +371,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
     override fun accessibilityInfo(i: Int): String {
         if (a11yVersion != labelsVersion) {
             a11yVersion = labelsVersion
-            val text = accessibilitySentences(summary, rankingText, L["sk_opponent"] + ": " + description)
+            val text = accessibilitySentences(summary, rankingText, enemyName, L["sk_opponent"] + ": " + description)
             if (text != a11yText) a11yText = text
         }
         return a11yText
@@ -386,7 +400,7 @@ class SkirmishSetupScreen(g: Game) : Screen(g) {
             11 -> saveSetup(setup.copy(startEra = (setup.startEra + 1).coerceAtMost(setup.maxEra)))
             12 -> saveSetup(setup.copy(maxEra = (setup.maxEra - 1).coerceAtLeast(setup.startEra)))
             13 -> saveSetup(setup.copy(maxEra = (setup.maxEra + 1).coerceAtMost(Defs.ERA_COUNT - 1)))
-            in 100..105 -> saveSetup(setup.copy(personality = b.id - 101))
+            in 100 until 100 + personalities.size -> saveSetup(setup.copy(personality = b.id - 101))
             in 200..203 -> saveSetup(setup.copy(powerPercent = SkirmishSetup.PRESET_POWER[b.id - 200]))
             220 -> saveSetup(setup.copy(powerPercent = setup.powerPercent - 5))
             221 -> saveSetup(setup.copy(powerPercent = setup.powerPercent + 5))

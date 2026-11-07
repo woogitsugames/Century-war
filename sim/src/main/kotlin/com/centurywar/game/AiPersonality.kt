@@ -80,9 +80,9 @@ enum class AiPersonality(
     ),
     /** „Zryw w kontakcie”: mieszana grupa, Zryw dopiero przy zetknięciu z widoczną obroną. */
     CONTACT_RALLY(
-        32, 30, 28, 10,
-        35f, 0.42f, 6f, 0.86f, 6f, 1.3f,
-        4, 4, 3, false, 0.60f, 2,
+        36, 26, 28, 10,
+        80f, 0.25f, 6f, 0.86f, 6f, 1.3f,
+        5, 6, 3, false, 0.60f, 2,
         1.40f, 0.55f, 1.05f, 18, true,
     ),
     ;

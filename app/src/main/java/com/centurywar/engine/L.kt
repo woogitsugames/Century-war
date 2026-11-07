@@ -203,8 +203,23 @@ object L {
         putAll(part210())
         putAll(part211())
         putAll(part212())
+        putAll(part216())
         }
     }
+
+    /** Dzień 68 (R170): trzy nowe style przeciwnika i krótka nazwa stylu „Wróg: …”. */
+    private fun part216(): Array<Pair<String, Array<out String>>> = arrayOf(
+        "sk_person_5" to t("Osłona i strzała", "Shield and Arrow", "Schild und Pfeil", "Escudo y flecha", "Bouclier et flèche", "Scudo e freccia", "Escudo e flecha", "Щит і стріла", "Schild en pijl", "Kalkan ve ok"),
+        "sk_person_6" to t("Krótkie uderzenia", "Quick Raids", "Kurze Vorstöße", "Golpes rápidos", "Frappes brèves", "Colpi rapidi", "Golpes rápidos", "Короткі удари", "Korte aanvallen", "Kısa baskınlar"),
+        "sk_person_7" to t("Zryw w kontakcie", "Rally on Contact", "Ansturm bei Kontakt", "Ímpetu al contacto", "Élan au contact", "Slancio al contatto", "Ímpeto no contacto", "Ривок у сутичці", "Stormloop bij contact", "Temasta atılım"),
+        "bh_ai_5" to t("Osłona i strzała", "Shield and Arrow", "Schild und Pfeil", "Escudo y flecha", "Bouclier et flèche", "Scudo e freccia", "Escudo e flecha", "Щит і стріла", "Schild en pijl", "Kalkan ve ok"),
+        "bh_ai_6" to t("Krótkie uderzenia", "Quick Raids", "Kurze Vorstöße", "Golpes rápidos", "Frappes brèves", "Colpi rapidi", "Golpes rápidos", "Короткі удари", "Korte aanvallen", "Kısa baskınlar"),
+        "bh_ai_7" to t("Zryw w kontakcie", "Rally on Contact", "Ansturm bei Kontakt", "Ímpetu al contacto", "Élan au contact", "Slancio al contatto", "Ímpeto no contacto", "Ривок у сутичці", "Stormloop bij contact", "Temasta atılım"),
+        "sk_desc_5" to t("Za osłoną piechoty ustawia strzelców.", "Puts ranged troops behind an infantry screen.", "Stellt Schützen hinter eine Infanteriereihe.", "Coloca tiradores tras su infantería.", "Place ses tireurs derrière son infanterie.", "Schiera tiratori dietro la fanteria.", "Coloca atiradores atrás da infantaria.", "Ставить стрільців за піхотою.", "Zet schutters achter een rij infanterie.", "Nişancıları piyadenin arkasına dizer."),
+        "sk_desc_6" to t("Atakuje małymi grupami z krótkimi przerwami.", "Attacks in small groups with short pauses.", "Greift in kleinen Gruppen mit kurzen Pausen an.", "Ataca en grupos pequeños con breves pausas.", "Attaque par petits groupes, avec de courtes pauses.", "Attacca in piccoli gruppi con brevi pause.", "Ataca em pequenos grupos com pausas curtas.", "Атакує малими групами з короткими перервами.", "Valt aan in kleine groepen met korte pauzes.", "Kısa aralarla küçük gruplar hâlinde saldırır."),
+        "sk_desc_7" to t("Zryw zostawia na zetknięcie z twoją obroną.", "Saves Rally for contact with your defense.", "Spart den Ansturm für den Kontakt mit deiner Abwehr.", "Guarda el Ímpetu para el choque con tu defensa.", "Garde son Élan pour le contact avec votre défense.", "Tiene lo Slancio per lo scontro con la tua difesa.", "Guarda o Ímpeto para o contacto com a tua defesa.", "Береже Ривок до зіткнення з твоєю обороною.", "Bewaart Stormloop voor contact met je verdediging.", "Atılımı savunmanla temas anına saklar."),
+        "d68_enemy" to t("Wróg: %1\$s", "Enemy: %1\$s", "Gegner: %1\$s", "Enemigo: %1\$s", "Ennemi : %1\$s", "Nemico: %1\$s", "Inimigo: %1\$s", "Ворог: %1\$s", "Vijand: %1\$s", "Düşman: %1\$s"),
+    )
 
     /** Dzień 61 (paczka 208, „Pierwsze wrażenie”): dymek ulepszenia nazywa szewrony, jak dymek stopnia wieży. */
     private fun part208(): Array<Pair<String, Array<out String>>> = arrayOf(

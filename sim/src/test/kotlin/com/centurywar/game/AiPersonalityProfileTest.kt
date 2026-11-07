@@ -58,7 +58,12 @@ class AiPersonalityProfileTest {
                 steps++
                 if (wasHolding && !b.enemy.hold) {
                     waveReleases++
-                    waveReleaseUnits += b.enemy.aliveCount
+                    // Dzień 68: liczymy grupę ruszającą spod bazy, nie ocalałych z poprzedniej
+                    // fali, którzy stali w polu (Krótkie uderzenia zatrzymują ich postojem).
+                    val line = b.enemy.baseFront + b.enemy.dir * (Battle.HOLD_DIST + 60f)
+                    for (u in b.units) {
+                        if (u.alive && u.side == 1 && (u.x - line) * b.enemy.dir <= 0f) waveReleaseUnits++
+                    }
                 }
                 wasHolding = b.enemy.hold
                 if (b.time <= 90f) early = b.enemy.spawnedByRole[Role.MELEE.ordinal]

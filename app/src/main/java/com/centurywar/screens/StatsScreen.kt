@@ -39,7 +39,7 @@ class StatsScreen(g: Game) : Screen(g) {
     private val modeKeys = arrayOf("campaign", "skirmish", "endless", "daily")
     private val modeIcons = intArrayOf(Icons.MAP, Icons.CROSSED_SWORDS, Icons.TOWER, Icons.CALENDAR)
     private val roleKeys = arrayOf("bh_role_0", "bh_role_1", "bh_role_2", "bh_role_3")
-    private val aiKeys = arrayOf("bh_ai_0", "bh_ai_1", "bh_ai_2", "bh_ai_3", "bh_ai_4")
+    private val aiKeys = Array(AiPersonality.entries.size) { "bh_ai_$it" }
     private var tab = 0
     private var selected = -1
     private var scroll = 0f
@@ -52,8 +52,8 @@ class StatsScreen(g: Game) : Screen(g) {
     private val bestTexts = Array(4) { "" }
     private val extraKeys = arrayOf("bh_streak", "bh_best_streak", "bh_total_time", "bh_role", "bh_doctrine")
     private val extraTexts = Array(5) { "" }
-    private val aiNames = Array(5) { "" }
-    private val aiTexts = Array(5) { "" }
+    private val aiNames = Array(AiPersonality.entries.size) { "" }
+    private val aiTexts = Array(AiPersonality.entries.size) { "" }
     private var emptyText = ""
     private var battlesLegend = ""
     private var winsLegend = ""
