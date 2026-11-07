@@ -278,7 +278,7 @@ abstract class ScreenshotTestBase {
             val b = cards[i]
             assertTrue("$tag: karta wariantu $i niewidoczna", b.visible)
             assertTrue("$tag: karta wariantu $i poza ekranem: ${b.r}", safe.contains(b.r))
-            val title = L[Defs.spec(era).variants[i].nameKey]
+            val title = bs.variantCardName(era, i)
             val textW = b.r.width() - 16 * dp
             val titleSize = g.ui.fit(title, 19f, textW)
             assertTrue("$tag: tytuł wariantu nie mieści się w karcie",

@@ -23,7 +23,7 @@ import java.util.UUID
 
 class ResearchSubmissionTest {
     private val now = 1_800_000_000_000L
-    private val version = "0.8.14"
+    private val version = "0.8.15"
     private val json = Json { encodeDefaults = true }
     private val full = IntArray(Research.defs.size) { Research.defs[it].max }
 
@@ -34,7 +34,7 @@ class ResearchSubmissionTest {
         val bonuses = Research.bonuses(levels)
         val cfg = when (board) {
             "endless" -> BattleConfig(Mode.ENDLESS, seed, 1f, playerBonuses = bonuses)
-            "skirmish" -> BattleConfig(Mode.SKIRMISH, seed, Skirmish.power(difficulty), playerBonuses = bonuses)
+            "skirmish" -> BattleConfig(Mode.SKIRMISH, seed, Skirmish.power(difficulty), playerBonuses = bonuses, eraRecruits = true)
             "campaign" -> Campaign.config(Campaign.stages[0], bonuses, seed, tutorial)
             "daily" -> Daily.config(todayUtc(now), bonuses)
             else -> error("board")
@@ -86,7 +86,7 @@ class ResearchSubmissionTest {
                 val normalizedCfg = when (board) {
                     "endless" -> BattleConfig(Mode.ENDLESS, input.seed, 1f, playerBonuses = zero)
                     "skirmish" -> BattleConfig(Mode.SKIRMISH, input.seed,
-                        Skirmish.power(input.difficulty!!), playerBonuses = zero)
+                        Skirmish.power(input.difficulty!!), playerBonuses = zero, eraRecruits = true)
                     else -> Campaign.config(Campaign.stages[input.stage!!], zero, input.seed)
                 }
                 Replay.normalized(normalizedCfg, Replay.decode(input.replay)).score

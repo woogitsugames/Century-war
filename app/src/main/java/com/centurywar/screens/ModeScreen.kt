@@ -721,7 +721,8 @@ class ModeScreen(g: Game, private val mode: Mode, private var weeklySelected: Bo
                             g.setScreen(BattleScreen(g, Daily.config(today, pr.bonuses()), ranked))
                         }
                     }
-                    else -> g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, aiPower(), playerBonuses = pr.bonuses())))
+                    else -> g.setScreen(BattleScreen(g, BattleConfig(Mode.SKIRMISH, seed, aiPower(),
+                        playerBonuses = pr.bonuses(), eraRecruits = true)))
                 }
             }
             in 0..3 -> { pr.skirmishDiff = b.id; pr.save(); labelTimer = 0f }

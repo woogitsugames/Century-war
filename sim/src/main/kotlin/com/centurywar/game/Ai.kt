@@ -481,7 +481,7 @@ class Ai(
     /** Warianty nie pobierają losowań z głównego RNG ani nie zmieniają starych epok. */
     fun chooseVariant(era: Int): Int {
         val variants = Defs.spec(era).variants
-        if (variants.isEmpty()) return -1
+        if (variants.isEmpty()) return if (Defs.spec(era).recruit != null) chooseRecruit(era) else -1
         val armored = variants.indexOfFirst {
             it.art == EraArt.COMBUSTION || it.art == EraArt.BIOTECH
         }.let { if (it < 0) 0 else it }
@@ -500,6 +500,20 @@ class Ai(
             if (opponent.eraVariant == armored) weight -= 8 else weight += 8
         }
         return if (b.rng.nextAiInt(me.index, 100) < weight) armored else 1 - armored
+    }
+
+    /**
+     * Dzień 69: karta 0 = podstawowy skład, karta 1 = nowa jednostka wariantu jednej roli.
+     * Jedno losowanie ze strumienia AI tej strony, jak przy pełnych wariantach; osobowość
+     * przesuwa szansę tylko o kilka punktów, żeby obie karty pojawiały się w grze.
+     */
+    private fun chooseRecruit(era: Int): Int {
+        val role = Defs.spec(era).recruit?.role ?: return 0
+        var weight = 50
+        if (personality == AiPersonality.SIEGER && role == Role.ELITE) weight += 10
+        if (personality == AiPersonality.ASSAULT && role == Role.HEAVY) weight += 6
+        if (personality == AiPersonality.ENGINEER && role == Role.RANGED) weight += 6
+        return if (b.rng.nextAiInt(me.index, 100) < weight) 1 else 0
     }
 
     /** Marginalny zysk z redukcji odnowienia, z uwzględnieniem twardego minimum. */

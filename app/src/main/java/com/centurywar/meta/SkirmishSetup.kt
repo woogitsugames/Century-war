@@ -89,6 +89,7 @@ data class SkirmishSetup(
         BattleConfig(
             Mode.SKIRMISH, seed, s.powerPercent / 100f, s.startEra, s.maxEra,
             s.modifiers(), bonuses, aiPersonality = AiPersonality.values().getOrNull(s.personality),
+            eraRecruits = true,
         )
     }
 }
