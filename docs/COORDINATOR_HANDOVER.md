@@ -5,6 +5,7 @@
 - `tools/check_doc_links.py` znajduje 19 zepsutych linków w docs — do poprawy.
 - Niestabilny pod obciążeniem: `TestLoopActivityTest.playerFilesStayByteForByteUnchanged` (osobno zielony).
 - Budżet punktów PGS: właściciel — zostaje 1650.
+- **7.11 ~16:40 UTC: main = 30683140** — D68 (3 style przeciwnika: Osłona i strzała / Krótkie uderzenia / Zryw w kontakcie; potyczka + etapy 13, 18, 21; „Wróg: …” w opisie; part216) + D69 (4 warianty epok tylko w potyczce: Tarczownik, Lekki wóz, Taran, Strzelec z osłoną; `BattleConfig.eraRecruits`; zrzut v25, ReplayRecord v4; part217). PROTOCOL **0.8.15**. Następna wolna część tekstów: **part218**. Pełne testy zielone (991/381/125). Do zrobienia: Kodeks nie pokazuje nowych jednostek; dymek `hint_variant54` mówi o „innych wieżach” (w nowych epokach nieprawda); karty wyboru na zewn. Foldzie mają dużo pustego miejsca. Niestabilne: `RecordedMusicTest.musicResumesAfterTrimMemoryInBackground`.
 - Research 170 (osobowości AI) i 171 (warianty epok) gotowe: `docs/research/R170-wrogowie.md`, `R171-warianty-epok.md` — propozycje do decyzji właściciela.
 
 # KONIEC SESJI 6.11.2026 ok. 16:15 UTC (limit tygodniowy właściciela)
