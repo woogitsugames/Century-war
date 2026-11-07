@@ -102,6 +102,8 @@ class AiCaps97Test {
             val favored = arrayOf(
                 Doctrine.FURY, Doctrine.VIGILANCE, Doctrine.ECONOMY,
                 Doctrine.SIEGE, Doctrine.FURY,
+                // Dzień 68: Osłona i strzała, Krótkie uderzenia, Zryw w kontakcie.
+                Doctrine.FURY, Doctrine.FURY, Doctrine.FURY,
             )
             for (i in AiPersonality.entries.indices) {
                 val brain = Ai(b, 0, AiPersonality.entries[i])

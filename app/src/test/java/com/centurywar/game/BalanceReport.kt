@@ -271,6 +271,25 @@ class BalanceReport {
     private val powerScaleStages: Set<Int>? = System.getenv("BALANCE_POWER_SCALE_STAGES")
         ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()?.ifEmpty { null }
 
+    /**
+     * Dzień 68: BALANCE_AI_PERSONALITY="9:SCREEN,11:SEED" wymusza styl przeciwnika etapu
+     * (SEED = losowanie z seeda jak przed dniem 68) — pomiar trudności przed/po wstawieniu stylu.
+     */
+    private val personalityOverride: Map<Int, String> = System.getenv("BALANCE_AI_PERSONALITY")
+        ?.split(',')?.mapNotNull { part ->
+            val bits = part.split(':')
+            val stage = bits.getOrNull(0)?.trim()?.toIntOrNull()
+            val name = bits.getOrNull(1)?.trim()
+            if (stage == null || name.isNullOrEmpty()) null else stage to name
+        }?.toMap() ?: emptyMap()
+
+    private fun personalityFor(stage: Stage, base: AiPersonality?): AiPersonality? =
+        when (val name = personalityOverride[stage.index + 1]) {
+            null -> base
+            "SEED" -> null
+            else -> AiPersonality.valueOf(name)
+        }
+
     private fun scaleFor(stage: Stage): Float =
         if (powerScaleStages == null || stage.index + 1 in powerScaleStages) powerScale else 1f
 
@@ -280,8 +299,9 @@ class BalanceReport {
     ): Result {
         val base = Campaign.config(stage, bonus, seed, difficulty = difficulty)
         val scale = scaleFor(stage)
-        val battle = Battle(if (scale == 1f) base else BattleConfig(base.mode, base.seed, base.aiPower * scale,
-            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, base.aiPersonality, base.variantsEnabled, base.weather))
+        val personality = personalityFor(stage, base.aiPersonality)
+        val battle = Battle(if (scale == 1f && personality == base.aiPersonality) base else BattleConfig(base.mode, base.seed, base.aiPower * scale,
+            base.startEra, base.maxEra, base.modifiers, base.playerBonuses, base.stageIndex, base.tutorial, personality, base.variantsEnabled, base.weather))
         battle.playerAi = Ai(battle, 0).also { it.commanderOverride = commanderOverride }
         val maxSteps = (30f * 60f / Battle.STEP).toInt()
         var steps = 0

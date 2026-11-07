@@ -2,7 +2,7 @@ package com.centurywar.game
 
 /** Wspólna wersja protokołu klienta i serwera. Zmiany symulacji wersjonuje koordynator. */
 object SimVersion {
-    const val PROTOCOL = "0.8.13"
+    const val PROTOCOL = "0.8.14"
 
     /**
      * Formaty [Replay] przyjmowane do rankingu wersji zasad [PROTOCOL] (A156-04).

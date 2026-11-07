@@ -154,7 +154,7 @@ class ReplayVerifierTest {
 
     @Test fun verifiesRealScoreFromSim() {
         val input = validEndless()
-        val result = ReplayVerifier.verify(input, now, "0.8.13")
+        val result = ReplayVerifier.verify(input, now, "0.8.14")
         assertEquals("endless", result.board)
         assertEquals(input.score, result.score)
     }
@@ -162,7 +162,7 @@ class ReplayVerifierTest {
     @Test fun rejectsForgedScore() {
         val input = validEndless()
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(input.copy(score = input.score + 1000L), now, "0.8.13")
+            ReplayVerifier.verify(input.copy(score = input.score + 1000L), now, "0.8.14")
         }
     }
 
@@ -173,7 +173,7 @@ class ReplayVerifierTest {
                 withLog(input, replayOf(input).let { log ->
                     log.copy(commands = listOf(Replay.Command(0, Replay.Kind.BUY_TURRET, 3)) + log.commands)
                 }),
-                now, "0.8.13",
+                now, "0.8.14",
             )
         }
     }
@@ -181,13 +181,13 @@ class ReplayVerifierTest {
     @Test fun rejectsUnfinishedAndOverlongReplay() {
         val input = validEndless()
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(withLog(input, replayOf(input).copy(commands = emptyList())), now, "0.8.13")
+            ReplayVerifier.verify(withLog(input, replayOf(input).copy(commands = emptyList())), now, "0.8.14")
         }
         assertThrows(IllegalArgumentException::class.java) {
             Replay.encode(replayOf(input).copy(steps = Replay.MAX_STEPS + 1))
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(input.copy(replay = "!!nie-base64!!"), now, "0.8.13")
+            ReplayVerifier.verify(input.copy(replay = "!!nie-base64!!"), now, "0.8.14")
         }
     }
 
@@ -240,7 +240,7 @@ class ReplayVerifierTest {
         assertThrows(IllegalArgumentException::class.java) {
             ReplayVerifier.verify(
                 input.copy(board = "daily", day = todayUtc(now), seed = todayUtc(now) + 1),
-                now, "0.8.13",
+                now, "0.8.14",
             )
         }
     }
@@ -248,21 +248,21 @@ class ReplayVerifierTest {
     @Test fun rejectsChangedSimulationVersion() {
         val input = validEndless()
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(input.copy(gameVersion = "9.9.9"), now, "0.8.13")
+            ReplayVerifier.verify(input.copy(gameVersion = "9.9.9"), now, "0.8.14")
         }
     }
 
     @Test fun rejectsEarlySurrenderAndTutorialGoldOutsideTutorial() {
         val input = validEndless(steps = 30)
         assertThrows(IllegalArgumentException::class.java) {
-            ReplayVerifier.verify(input, now, "0.8.13")
+            ReplayVerifier.verify(input, now, "0.8.14")
         }
         val full = validEndless()
         val log = replayOf(full)
         assertThrows(IllegalArgumentException::class.java) {
             ReplayVerifier.verify(
                 withLog(full, log.copy(commands = listOf(Replay.Command(0, Replay.Kind.TUTORIAL_GOLD, 15)) + log.commands)),
-                now, "0.8.13",
+                now, "0.8.14",
             )
         }
     }

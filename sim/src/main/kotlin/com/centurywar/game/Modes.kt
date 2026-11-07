@@ -195,7 +195,11 @@ object Campaign {
      * przeciwnika (numery od 1). Samouczek i wczesne etapy losują jak dotąd. Pomiar trudności
      * przed/po: docs/reports/d68-osobowosci-ai.md.
      */
-    val STAGE_PERSONALITIES: Map<Int, AiPersonality> = mapOf()
+    val STAGE_PERSONALITIES: Map<Int, AiPersonality> = mapOf(
+        13 to AiPersonality.SCREEN,
+        18 to AiPersonality.RAIDS,
+        21 to AiPersonality.CONTACT_RALLY,
+    )
 
     /**
      * Cztery etapy na epokę. Każdy etap ma ograniczony zakres epok, więc bitwa trwa
